@@ -12,7 +12,7 @@
 use super::*;
 
 pub(super) use super::MountAnchor;
-pub(super) use super::session::SessionLease;
+pub(super) use super::session::{SessionLease, TransferLease};
 pub(super) use super::state::SessionGeneration;
 pub(super) use super::testing::*;
 
@@ -62,6 +62,8 @@ fn make_test_volume_full(volume_id: &str, host: VolumeHost, share_root: &str, mo
     let mount_path = PathBuf::from(mount_path);
     let share_root = share_root.to_string();
     let volume_id = volume_id.to_string();
+    let params = Arc::new(tokio::sync::RwLock::new(params));
+    let transfer = transfer_session::TransferSession::new(Arc::clone(&params), volume_id.clone(), host.runtime());
     SmbVolume {
         name: "TestShare".to_string(),
         mount_path: mount_path.clone(),
@@ -71,7 +73,7 @@ fn make_test_volume_full(volume_id: &str, host: VolumeHost, share_root: &str, mo
             share_root_by_mount: StdRwLock::new(std::collections::HashMap::from([(mount_path.clone(), share_root)])),
             share_name: "TestShare".to_string(),
             volume_id,
-            params: Arc::new(tokio::sync::RwLock::new(params)),
+            params,
             session: Arc::new(tokio::sync::Mutex::new(None)),
             state: SessionCell::new(ConnectionState::Disconnected, SessionGeneration::FIRST),
             watcher_cancel: std::sync::Mutex::new(None),
@@ -85,6 +87,7 @@ fn make_test_volume_full(volume_id: &str, host: VolumeHost, share_root: &str, mo
             credit_copy_capacity: AtomicUsize::new(0),
             spellings: spelling::SpellingCache::default(),
             live_connection: liveness::LiveConnection::new(None),
+            transfer,
             active_mount_path: Arc::new(StdRwLock::new(mount_path)),
             host,
         }),
@@ -112,15 +115,26 @@ pub(super) async fn drain(mut stream: Box<dyn VolumeReadStream>) -> Vec<u8> {
     out
 }
 
-/// `(requests_sent, compound_requests_sent)` on the volume's main connection:
+/// `(requests_sent, compound_requests_sent)` across the volume's main connection
+/// AND its transfer session, where the byte paths ride (`transfer_session.rs`):
 /// sub-ops, then frames. Shared by every suite that counts what a call cost on
 /// the wire (`DETAILS.md` § "The suites" says why a frame assertion needs both).
+///
+/// Opens the transfer session first, so its login lands before the count a
+/// suite takes as "before", never inside the call it measures.
 pub(super) async fn request_counts(vol: &SmbVolume) -> (u64, u64) {
+    drop(vol.transfer_lease().await.expect("a connected volume leases"));
     let d = vol.diagnostics().await.expect("a connected volume has diagnostics");
-    (
+    let mut counts = (
         d.primary.metrics.requests_sent,
         d.primary.metrics.compound_requests_sent,
-    )
+    );
+    if let Some(member) = vol.inner.transfer.member_for_test() {
+        let t = member.client.lock().await.diagnostics();
+        counts.0 += t.primary.metrics.requests_sent;
+        counts.1 += t.primary.metrics.compound_requests_sent;
+    }
+    counts
 }
 
 /// Runs `command` inside the guest fixture container, as root, against the

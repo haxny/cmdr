@@ -25,6 +25,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize};
 
 mod attributes;
 mod copy;
+mod dfs_links;
 mod foreground_yield;
 mod links;
 mod liveness;
@@ -42,6 +43,7 @@ mod slow_calls;
 mod spelling;
 mod stamping;
 mod state;
+mod transfer_session;
 mod volume_impl;
 mod watcher;
 mod write_stream;
@@ -326,6 +328,11 @@ struct SmbVolumeInner {
     /// (`Volume::connection_liveness`) and how many bytes it has sent. Swapped in
     /// lockstep with `client`; see [`liveness::LiveConnection`].
     live_connection: liveness::LiveConnection,
+    /// The share's transfer session: one extra smb2 session the byte-moving
+    /// calls ride, so browsing stays responsive while a copy runs. Opened lazily
+    /// by the first transfer, closed when the share goes idle. See
+    /// `transfer_session.rs`.
+    transfer: Arc<transfer_session::TransferSession>,
     /// Everything this backend asks the application around it: the pane listings,
     /// the secret store, the file index, the frontend event channel, the live
     /// concurrency knob, and the runtime background work spawns onto. A value the
@@ -362,6 +369,8 @@ impl SmbVolume {
         let MountAnchor { mount_path, share_root } = anchor;
         let volume_id = volume_id.into();
         let live_connection = liveness::LiveConnection::new(Some(client.connection().clone()));
+        let params = Arc::new(tokio::sync::RwLock::new(params));
+        let transfer = transfer_session::TransferSession::new(Arc::clone(&params), volume_id.clone(), host.runtime());
         Self {
             name: name.into(),
             mount_path: mount_path.clone(),
@@ -374,7 +383,7 @@ impl SmbVolume {
                     mount_path.clone(),
                     share_root,
                 )])),
-                params: Arc::new(tokio::sync::RwLock::new(params)),
+                params,
                 session: Arc::new(tokio::sync::Mutex::new(Some(session::MainSession::new(
                     client,
                     tree,
@@ -392,6 +401,7 @@ impl SmbVolume {
                 credit_copy_capacity: AtomicUsize::new(0),
                 spellings: spelling::SpellingCache::default(),
                 live_connection,
+                transfer,
                 active_mount_path: Arc::new(StdRwLock::new(mount_path)),
                 host,
             }),
@@ -670,6 +680,8 @@ mod black_hole_proxy;
 mod conformance_test;
 #[cfg(test)]
 mod credit_cap_proxy;
+#[cfg(test)]
+mod dfs_links_integration_test;
 #[cfg(test)]
 mod forbidden_chars_integration_test;
 #[cfg(test)]

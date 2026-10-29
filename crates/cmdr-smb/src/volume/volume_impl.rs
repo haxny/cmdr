@@ -10,7 +10,6 @@
 //! answers, whose whole content is the reasoning in their doc comments.
 
 use super::copy::ProgressOnly;
-use super::read_stream::{InlineReadStream, fits_one_compound_read};
 use super::session::SessionLease;
 use super::state::ConnectionState;
 use super::{SmbVolume, foreground_yield};
@@ -239,11 +238,13 @@ impl Volume for SmbVolume {
     }
 
     fn supports_foreground_yield(&self) -> bool {
-        // A running copy and the pane's listings share ONE SMB session, so a
-        // transfer off this share competes with every navigation on it. Opting in
-        // tells `CheckpointStream` not to start the next chunk while the user is
-        // browsing this share. The read holds nothing between chunks, so this is a
-        // park in place, not a session release. See `foreground_yield.rs`.
+        // A running copy rides its own session, but shares the link and the
+        // server's disks with the pane's listings, so a transfer off this share
+        // still competes with every navigation on it (measured: a slow link's
+        // queue, `foreground_yield.rs`). Opting in tells `CheckpointStream` not to
+        // start the next chunk while the user is browsing this share. The read
+        // holds nothing between chunks, so this is a park in place, not a session
+        // release.
         true
     }
 
@@ -260,15 +261,19 @@ impl Volume for SmbVolume {
     }
 
     fn connection_liveness(&self) -> Option<ConnectionLiveness> {
-        // smb2's own reading of the main session, off the handle swapped in
-        // lockstep with the client (`liveness.rs`, which also owns the mapping).
-        // Only the main session: a copy rides it via `clone_session`, and the scan
+        // smb2's own reading of the connection a copy rides, off the handle
+        // swapped in lockstep with its client (`liveness.rs`, which also owns
+        // the mapping): the transfer session while one is up, else the main
+        // session, which transfers fall back to (`transfer_session.rs`). The scan
         // pool's and the watcher's sessions carry no transfer bytes.
-        self.inner.live_connection.verdict()
+        self.transfer_connection().verdict()
     }
 
+    /// The same connection as [`connection_liveness`](Self::connection_liveness).
+    /// It drops to a new count when the transfer session comes or goes, which
+    /// the watchdog tolerates (it only compares its own readings).
     fn connection_bytes_received(&self) -> Option<u64> {
-        self.inner.live_connection.bytes_received()
+        self.transfer_connection().bytes_received()
     }
 
     fn foreground_pending<'a>(&'a self) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>> {
@@ -530,107 +535,14 @@ impl Volume for SmbVolume {
         })
     }
 
+    /// The compound fast path for a file whose size the caller knows, else
+    /// the stream (`read_stream.rs`).
     fn open_read_stream_with_hint<'a>(
         &'a self,
         path: &'a Path,
         size_hint: Option<u64>,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
-        Box::pin(async move {
-            let smb_path = self.to_smb_path(path)?;
-
-            // Compound fast-path: if the caller-provided hint fits the
-            // connection's `quick_read_limit()` (`fits_one_compound_read` says
-            // why that limit and not `max_read`), send CREATE+READ+CLOSE as a
-            // single compound frame (1 RTT) instead of the streaming open's
-            // extra round trips. Drives the compound on a cloned
-            // `Connection` with no lock held, so N concurrent small reads
-            // pipeline over one SMB session.
-            //
-            // The READ is sized to the HINT, never to `max_read`: the credit
-            // charge follows the response size the request asks for, so an
-            // unsized read of a 100 KB file books a whole 8 MB `max_read` (128
-            // credits), and a handful of them exhaust the connection's budget
-            // while barely filling the wire.
-            //
-            // Falls through to the streaming path when the hint is missing or
-            // over the limit, when the credit window can't fund the one READ,
-            // or when the file changed size since the
-            // scan. `expected_size` is a HARD bound, so the two drift arms split
-            // cleanly and TOGETHER are what keeps a changed file from being
-            // copied truncated: a file that SHRANK comes back short of the hint
-            // (`data.len() != size`), and one that GREW comes back as a typed
-            // `ErrorKind::TooLarge`, because smb2 compares the server's
-            // authoritative size against the length asked for and refuses rather
-            // than hand back a prefix. ❌ Neither arm is decoration; dropping
-            // either one copies a changed file under its final name, short.
-            if let Some(size) = size_hint {
-                let SessionLease {
-                    tree,
-                    mut conn,
-                    generation,
-                } = self.clone_session().await?;
-                if fits_one_compound_read(conn.quick_read_limit(), size) {
-                    debug!(
-                        "SmbVolume::open_read_stream_with_hint: share={:?}, path={:?}, size={}; using compound fast-path",
-                        LogPrivate::volume(&self.inner.share_name),
-                        LogPrivate::file_path(&smb_path),
-                        size
-                    );
-                    // The date rides on the frame's own CREATE response.
-                    let read_result = tree
-                        .read_file_compound_sized_with_info(&mut conn, &smb_path, size)
-                        .await;
-                    match read_result {
-                        Err(e) if matches!(e.kind(), smb2::ErrorKind::TooLarge) => {
-                            debug!(
-                                "SmbVolume::open_read_stream_with_hint: file grew past the hinted size since the scan ({}); falling back to streaming",
-                                e
-                            );
-                        }
-                        // The credit window can't fund this READ in one go.
-                        // `quick_read_limit` counts the window's ceiling, so this
-                        // is the ceiling arriving or shrinking after that check.
-                        // smb2 refused before anything reached the wire, and a
-                        // stream needs only a chunk's worth at a time. A server
-                        // that stopped granting altogether starves the stream
-                        // too, which reports it then.
-                        Err(e @ smb2::Error::CreditStarvation { .. }) => {
-                            debug!(
-                                "SmbVolume::open_read_stream_with_hint: the credit window can't fund one compound read ({}); falling back to streaming",
-                                e
-                            );
-                        }
-                        read_result => {
-                            let (data, info) = self.handle_smb_result(
-                                "open_read_stream_with_hint(compound)",
-                                &smb_path,
-                                generation,
-                                read_result,
-                            )?;
-                            if data.len() as u64 == size {
-                                let modified_at = info.modified.to_system_time();
-                                return Ok(Box::new(
-                                    InlineReadStream::new(data, modified_at).with_source_info(&info, &smb_path),
-                                ) as Box<dyn VolumeReadStream>);
-                            }
-                            debug!(
-                                "SmbVolume::open_read_stream_with_hint: compound read returned {} bytes, expected {}; falling back to streaming",
-                                data.len(),
-                                size
-                            );
-                        }
-                    }
-                }
-            }
-
-            debug!(
-                "SmbVolume::open_read_stream_with_hint: share={:?}, path={:?}; using streaming path",
-                LogPrivate::volume(&self.inner.share_name),
-                LogPrivate::file_path(&smb_path)
-            );
-            let stream = self.open_smb_download_stream(&smb_path).await?;
-            Ok(Box::new(stream) as Box<dyn VolumeReadStream>)
-        })
+        Box::pin(self.open_read_stream_with_hint_impl(path, size_hint))
     }
 
     fn open_read_stream_for_scan<'a>(
@@ -853,6 +765,9 @@ impl Volume for SmbVolume {
         // reconnect loops bail and drop this reference; the member sessions close
         // when the last `Arc` drops (within one backoff step). See `scan_pool.rs`.
         self.close_scan_pool_sync();
+        // And the transfer session: nothing may open, reconnect, or idle on an
+        // unmounted volume.
+        self.inner.transfer.close();
 
         // Drop the smb2 session. Uses blocking_lock() since on_unmount is sync
         // (called from FSEvents thread, no Tokio runtime). Safe because we just

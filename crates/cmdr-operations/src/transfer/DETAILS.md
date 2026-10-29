@@ -1795,11 +1795,13 @@ defaults (`false` / no-op) and never auto-yield.
   another 400 ms on top.
 
   **Why a LISTING can hold a lease even though an SMB CONNECTION can't.** MTP answers "a foreground op is in flight
-  RIGHT NOW" from a per-device gate, because a PTP session is a single scarce resource with an explicit holder. The SMB
-  connection has no such holder — every `SmbVolume` clone multiplexes frames over one session, so there is nothing there
-  to count, and that is why this signal was time-based to begin with. But a listing is a scoped operation with a
-  beginning and an end, so it can hold a claim of its own; the holder is the WORK, not the transport. ❌ Don't reach for
-  the connection to make this exact.
+  RIGHT NOW" from a per-device gate, because a PTP session is a single scarce resource with an explicit holder. An SMB
+  connection has no such holder — every clone multiplexes frames over its one session, so there is nothing there to
+  count, and that is why this signal was time-based to begin with. (The copy and the pane ride separate sessions now;
+  the yield stays because they still share the link's queue and the server's disks, which a measurement settled:
+  `crates/cmdr-smb/src/volume/foreground_yield.rs`.) But a listing is a scoped operation with a beginning and an end, so
+  it can hold a claim of its own; the holder is the WORK, not the transport. ❌ Don't reach for the connection to make
+  this exact.
 
   **Decision/Why per-volume scope:** a transfer is work the user asked for and is watching a progress bar for, so it
   must only stand aside for the share it actually contends with; the app-wide signal would park a NAS copy because the
@@ -2260,8 +2262,9 @@ races it, and the park becomes a typed `ConnectionTimeout` the retry above treat
 
 **Status: the teeth are ON for SMB, and inert everywhere else.** `SmbVolume::connection_liveness()` answers from
 `smb2`'s own pollable reading (`Connection::liveness()`, 0.23.0+), read off the handle the share swaps in lockstep with
-its client (`crates/cmdr-smb/src/volume/liveness.rs`, which owns the mapping). Every other backend answers `None`, so
-for them the watchdog dumps the in-flight table, heartbeats the UI's stall signal, and acts on nothing.
+its client (`crates/cmdr-smb/src/volume/liveness.rs`, which owns the mapping), for the connection the copy rides: the
+share's transfer session while one is up, else the main one. Every other backend answers `None`, so for them the
+watchdog dumps the in-flight table, heartbeats the UI's stall signal, and acts on nothing.
 
 **Why gated, and why elapsed time is not allowed to be the evidence.** Telling "slow but alive" from "dead" needs a
 keepalive: an ECHO the server either answers inside a window or does not. A silence deadline ALONE cannot do it, because

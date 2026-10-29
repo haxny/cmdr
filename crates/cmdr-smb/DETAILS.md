@@ -157,19 +157,21 @@ on", not by watching a number.
   metadata, existence, space); `mutation` changes it and patches the listings that showed it; then `session`,
   `reconnect`, `state`, `read_stream` (a file read as chunks), `write_stream` (a stream written into a file),
   `random_reader` (one held-open `FileReader` read by offset, which the file viewer keeps for a whole session, #303),
-  `scan`, `scan_pool`, `watcher`, `foreground_yield`, `links` (what a stat reads as through a link), `slow_calls` (the
-  rolled-up `warn` for a metadata call the server held over a second), `attributes` (Hidden and Locked by path), and the
-  stateless `mapping`. Splitting further needs a responsibility you can name the same way; a line count is not one.
-  `e5ea10d02` reverted four splits invented to satisfy the counter, and every one of them had widened a visibility or
-  torn a struct from its trait impl to do it. These carry the same `pub(super)` the crate already used and leave no
+  `scan`, `scan_pool`, `transfer_session` (the extra session byte-moving calls ride), `dfs_links` (a transfer through a
+  DFS link inside the share), `watcher`, `foreground_yield`, `links` (what a stat reads as through a link), `slow_calls`
+  (the rolled-up `warn` for a metadata call the server held over a second), `attributes` (Hidden and Locked by path),
+  and the stateless `mapping`. Splitting further needs a responsibility you can name the same way; a line count is not
+  one. `e5ea10d02` reverted four splits invented to satisfy the counter, and every one of them had widened a visibility
+  or torn a struct from its trait impl to do it. These carry the same `pub(super)` the crate already used and leave no
   module reaching into another's internals.
 - **`volume/foreground_yield.rs` answers "should a background transfer stand aside?" from the WORK, not the transport.**
-  MTP has an explicit holder for its single scarce USB pipe; SMB frames just interleave over one connection, so there is
-  nothing on the transport to count. A foreground LISTING is a scoped operation, though, so it holds a per-volume lease
-  for its real duration, and the share stays busy for `TRANSFER_FOREGROUND_IDLE_THRESHOLD` after the last one ends. The
-  two halves are composed once, in `cmdr_fs::volume::host::activity::volume_busy_for_user`. Scope is PER VOLUME on
-  purpose, so browsing a local folder never slows a NAS copy. `CheckpointStream`'s auto-yield parks on these two
-  functions and `SmbVolume`'s `Volume` foreground-yield methods delegate to them.
+  MTP has an explicit holder for its single scarce USB pipe; SMB frames just interleave over a connection, so there is
+  nothing on the transport to count. It survives the transfer session because the copy and the pane still share the link
+  and the server's disks (§ "The transfer session"). A foreground LISTING is a scoped operation, though, so it holds a
+  per-volume lease for its real duration, and the share stays busy for `TRANSFER_FOREGROUND_IDLE_THRESHOLD` after the
+  last one ends. The two halves are composed once, in `cmdr_fs::volume::host::activity::volume_busy_for_user`. Scope is
+  PER VOLUME on purpose, so browsing a local folder never slows a NAS copy. `CheckpointStream`'s auto-yield parks on
+  these two functions and `SmbVolume`'s `Volume` foreground-yield methods delegate to them.
 - **`SmbVolumeInner` is private to `volume/`**, and nothing outside it may name the type. What the app gets is
   `SmbVolume`, `SmbConnectionParams`, `ConnectionState`, and `connect_smb_volume`.
 
@@ -284,8 +286,11 @@ is about.
   (`spawn_watcher_death_reconnect(share, generation)`; a watcher outliving a reconnect marks nothing, and the loop finds
   the share `Direct` and stops). The watcher doesn't classify its error by kind: any death of its dedicated session
   counts as the link failing, as before. The scan pool's members never touch the main state, so they carry no
-  generation. Probes whose failure only means "no" (`exists`, the rename's directory and destination stats) report
-  nothing to the funnel.
+  generation. A transfer lease carries `RanOn` (`state.rs`): `Main(generation)`, or `Transfer(TransferGeneration)` on
+  the transfer session, whose loss `note_error` routes to `TransferSession::lose` and ❌ never to the main state (§ "The
+  transfer session"). `handle_smb_result` and the stamp helpers take `impl Into<RanOn>`, so a main-session call passes
+  its generation as before. Probes whose failure only means "no" (`exists`, the rename's directory and destination
+  stats) report nothing to the funnel.
 - Pinned by `state_test.rs` (the cell, the predicate) and `reconnect_test.rs` (`a_late_loss_from_a_replaced_session_*`,
   `a_send_failure_and_a_disconnect_*`, `the_reported_generation_moves_only_when_a_session_is_installed`), through both
   `handle_smb_result` and `note_smb_error`.
@@ -303,7 +308,8 @@ new one's setup returns.
   the still-installed `MainSession` before dialing. A scan-pool member sets its dead session's id aside in
   `PoolMember::retired` as `mark_member_dead` clears the slot, and its `reconnect_member` takes it. A dying watcher
   stores its own in `SmbVolumeInner::retired_watcher_session`, and the next `spawn_watcher` passes it to the new
-  watcher's `ClientConfig`. ❌ Never a sibling's: each names only its own predecessor.
+  watcher's `ClientConfig`. The transfer session sets its lost session's id aside in `TransferSession::lose`, and its
+  background reconnect takes it. ❌ Never a sibling's: each names only its own predecessor.
 - **❗ Only a session smb2 tore down** (`session::retired_session_id`: `Some` only once the client's connection
   `is_disconnected()`). The server ends a named session whether or not it's still working, and every request on it after
   that comes back unsigned, so smb2 fails it as `SignatureInvalid`, which the app records as a security refusal. A main
@@ -379,6 +385,78 @@ walk that ignores its boundary still returns the right numbers and nothing else 
 an `authoritative_listing` shortcut, so only a backend with one can take it. The conflict matcher and the batch fold are
 `cmdr_fs::volume::scan_walk`'s, deliberately, so every backend hands the conflict dialog the same shape rather than each
 growing its own near-miss.
+
+## The transfer session
+
+Canonical home for the share's transfer session (`crates/cmdr-smb/src/volume/transfer_session.rs`, vdavid/cmdr#133).
+
+One SMB connection is strictly ordered both ways: a listing response waits behind every READ response queued ahead of
+it, a listing request waits behind every WRITE frame already in the send queue, and the server serializes per connection
+on top (§ "SMB scan-connection pool" below). So while a copy shared the pane's session, browsing that share stalled for
+as long as whatever was in flight took to drain: a `stat` waited 23.4 s behind an 8 MiB download at 375 KB/s, and Cmdr's
+own 1 MiB WRITEs sat 5–12 s in the send queue on a loaded QNAP (ERR-CNK7M). The byte-moving calls now ride ONE extra
+smb2 session (its own `SmbClient`, so its own TCP connection), and the main session stays free for navigation.
+
+- **What rides it**: everything that takes a `TransferLease` from `SmbVolume::transfer_lease`: the streaming download
+  (`read_stream.rs`), the hinted compound read (`volume_impl.rs`), `write_from_stream` (both arms), and the server-side
+  copy (`copy.rs`, both ends on one lease, so the resume key never crosses sessions and a 16 MiB copychunk slice no
+  longer holds up listings behind it). Listings, `stat`s, create, rename, delete, the copy's destination probes, and a
+  failed write's partial-file delete stay on the main session (`clone_session`).
+- **One per share, opened lazily, closed when idle.** The first lease opens it INLINE (single-flight on `opening`), so a
+  lone big copy doesn't ride the main session because its first file got there first. `TransferHold`, carried by the
+  lease (a download's producer task owns it), counts the transfers using it; `TRANSFER_SESSION_IDLE` (15 s) after the
+  last one drops, it closes. A burst of small copies shares one login.
+- **The share must read `Direct` to lease at all.** The main session stays the one answer to "is the share up", which is
+  what a transfer's outage wait asks (`crates/cmdr-operations/src/transfer/volume_outage.rs`).
+- **Which session a loss is about**: a lease carries `RanOn::Transfer(TransferGeneration)` and every error funnels
+  through `SmbVolumeInner::note_error` with it, so a transfer-session loss marks only that session lost (§ "Which
+  session a loss is about"). The failed file gets the engine's per-file retry (`transfer/retry.rs`), which rides the
+  main session while this one reconnects in the background: attempt at once, then `1 s`, `3 s`, `10 s`, cut short when
+  the main session comes back (`share_is_back`, from `do_attempt_reconnect`). It names its own dead predecessor
+  (`retired_session_id`), ❌ never the main one's.
+- **Gotcha/Why the reconnect tries at once and wakes on the main session's return**: with a 1 s sleep before its first
+  attempt, the overwrite outage cell (`smb_outage_test.rs::smb_integration_an_overwrite_waits_out_a_dropped_network_*`)
+  left a `.cmdr-tmp-*` behind about one run in four (base code 8 of 8 green; after the change 31 of 31). The temp was
+  most likely the transfer session's, held open on the server until a reconnect named that session or the server noticed
+  it gone, which a reconnect sleeping out its first step made late.
+- **Degrades to today's behavior, never fails a copy.** A refused open (a server capping sessions per user, a transient
+  failure) or a reconnect out of backoff leaves the slot `Down`: every transfer rides the main session until the share
+  goes idle, and the next burst tries again. An auth refusal gives up at once; the main session owns the credential
+  dance. Params are read fresh at each open, so a session after a sign-in uses what worked.
+- **Liveness and the receive rate follow it.** `connection_liveness` and `connection_bytes_received` read
+  `transfer_connection()`: the transfer session's `LiveConnection` while one is up, else the main one's, which is where
+  a lease falls back to. The count restarts when it swaps; the watchdog only compares its own readings.
+- **Credits follow it.** `credit_copy_capacity` is measured from the connection a transfer lease hands out;
+  `clone_session` measures it only while no transfer session is up, so a small-window server clamps the very first batch
+  too.
+- **The one-frame write promise reads it.** `write_is_single_shot` asks the transfer session's `quick_write_limit` while
+  one is up, else the main one's. A promise made on main and written on a fresh transfer session is covered: the real
+  name keeps `max_write`, the same on both sessions of one server (`one_frame_write_limit`).
+- **Footprint**: a share holds up to three sessions during a copy (main, watcher, transfer), seven while an index scan
+  runs too. Steady state between transfers is unchanged.
+- ❗ **What it can't fix: the link.** Two TCP connections over one saturated Wi-Fi or WAN hop still share its queue
+  (bufferbloat). The transfer session removes SMB-level and server-level head-of-line blocking, not physics, so a browse
+  during a copy on a slow link still waits for the link's queue, just no longer for whatever the copy had in flight.
+- **Scope**: Cmdr's own smb2 connections only. A share reached through the OS mount is macOS `smbfs`'s business. A file
+  behind a DFS link rides the session too: § "A DFS link inside the share".
+- Pinned by `transfer_session_test.rs` (Docker: a download and both upload shapes ride it while the main connection
+  moves under 256 KiB, browsing mid-download, the idle close and reopen, a loss leaving the share `Direct` and falling
+  back then reconnecting, a refused open falling back, the watchdog's readings; server-free: no lease while
+  disconnected, nothing after unmount). The wire-shape suite counts frames across both sessions
+  (`test_support.rs::request_counts`, which opens the transfer session before its "before").
+
+**Measured** (smb2's `benchmarks/read-ahead/` with its side `stat` on a session of its own, `--probe-conn separate`,
+against Samba in Docker, 2026-10-29; full tables and method: `docs/notes/smb-transfer-session-2026-10-29.md`):
+
+- **Fast link**: a browse during a copy drops to 1–4 ms p50, and under two background writers the worst `stat` drops
+  from 34 to 9 ms (upload) and 11 to 7 ms (download). A compound 8 MiB read no longer holds one behind it (8 → 2 ms).
+- **Shaped slow link (+60 ms, 375 KB/s)**: no change, 1.44 s p50 both ways. netem's queue is one FIFO both connections
+  share, and smb2's adaptive window already keeps about one chunk on the wire: the remaining wait is the link's, which
+  is why the foreground yield stays (`foreground_yield.rs`).
+- **Throughput**: equal or better in every cell (fast: 1,332 → 1,929 MB/s download, 253 → 950 MB/s upload; slow: within
+  1%).
+- **Not reproduced here**: the field cases (ten concurrent copies on a loaded QNAP, ksmbd serializing per connection). A
+  by-hand copy-and-browse on the NAS is the open confirmation.
 
 ## SMB scan-connection pool
 
@@ -623,6 +701,34 @@ goes out after a TreeConnect has already been refused.
 own targets, so the tree lands where the namespace root is, and walking into a link underneath it earns
 `STATUS_PATH_NOT_COVERED`, which smb2's older reactive path resolves. The share stays ONE path segment either way, which
 is the invariant the anchor is built on.
+
+## A DFS link inside the share
+
+A share can hold an `msdfs:` link to a folder on another server. smb2 follows one on every `SmbClient` call that takes a
+path (0.27.0, vdavid/smb2#15), but Cmdr drives the lock-free `Tree` API on cloned connections, which doesn't, and the
+`SmbClient` calls take `&mut SmbClient`. `dfs_links.rs` bridges it for the TRANSFER calls only:
+
+- **Tree first, link on refusal.** Each transfer call runs on the `Tree` as always; only a CREATE refused with
+  `STATUS_PATH_NOT_COVERED` (`is_behind_dfs_link`, the trigger smb2 uses) runs again through the lease's own `SmbClient`
+  (`SmbVolumeInner::link_client`: the transfer member's, or the main session's while its generation still matches). The
+  client is held for the OPEN only: smb2 resolves the referral and connects the target (pooled on that client), and the
+  handle owns the target's connection. A refused CREATE wrote nothing, so the retry is safe.
+- **Writes**: `create_file_writer[_exclusive]` and the one-frame `write_file_compound[_exclusive]` through the link,
+  then the frame's date by path through the same client; a failed write's partial goes the same way.
+- **Reads**: a `FileReader` through the link, streamed by `LinkDownload`'s fixed window of four 512 KiB positioned
+  reads. ❗ Not smb2's adaptive `FileDownload`: `SmbClient::download` borrows the client for the download's whole life,
+  which would hold the main session's client (and so every listing) for as long as the file takes. An owned link
+  download in smb2 would retire `LinkDownload`. The hinted compound read refused at a link falls through to it.
+- **The server-side copy** answers `NotSupported` through a link (`handle_copy_result`), and the engine streams.
+- ❗ **The rest of the share's calls don't follow a link yet**: listings, `stat`, the copy scan, and every mutation
+  (create, rename, delete) drive the `Tree` too and answer `STATUS_PATH_NOT_COVERED` behind one (verified against smb2's
+  `smb-dfs-root` fixture, Samba on Alpine 3.21, smb2 0.36.0, 2026-10-29). So browsing into a link and a copy into or out
+  of one still fail, at the scan or the landing rename, though every byte the copy would move follows the link.
+  `smb_dfs_the_main_sessions_calls_dont_follow_a_link_yet` pins the gap; it flips when those calls learn the same trick.
+- Pinned by `dfs_links_integration_test.rs` against smb2's INTERNAL DFS fixtures (`smb-dfs-root` → `smb-dfs-target`),
+  which Cmdr's vendored stack doesn't carry, so its cells are `smb_dfs_*`, outside CI's `smb_integration_` lane; its
+  header says how to start the two containers. The target's container name reaches loopback through
+  `session::TEST_DFS_TARGET_OVERRIDES` (`testing` builds only; a shipped build overrides nothing).
 
 ## Re-rooting a share
 
@@ -876,9 +982,10 @@ the check and the send:
 
 **`max_concurrent_ops` is clamped by what the window can carry.** The answer is
 `min(setting, credit_capacity_for(512 KB))`, floored at 1 and never raised above what the user chose.
-`Connection::credit_capacity_for` is sync but the connection lives behind an async mutex, so `clone_session` stores the
-figure in `SmbVolumeInner::credit_copy_capacity` on its way through (every read and write passes there) and the sync
-method reads the atomic; `0` means nothing has measured it yet and the setting stands.
+`Connection::credit_capacity_for` is sync but the connection lives behind an async mutex, so `transfer_lease` stores the
+figure in `SmbVolumeInner::credit_copy_capacity` on its way through (every read and write passes there, measuring the
+session it rides), `clone_session` too while no transfer session is up, and the sync method reads the atomic; `0` means
+nothing has measured it yet and the setting stands.
 
 `credit_capacity_for` divides the smaller of smb2's `CREDIT_TARGET` (512) and the server's known credit ceiling by the
 request's charge. On a generous server (both reference servers grant 513, and Samba's default maximum is 8,192) the
@@ -1094,8 +1201,8 @@ for NEGOTIATE and SESSION_SETUP, then restore smb2's 30 s default before TreeCon
 
 `SmbVolume::connection_liveness()` reads the `ServerUnresponsive` verdict as pollable state (`Connection::liveness()`),
 before any request has paid for it, off a handle swapped in lockstep with the client (`src/volume/liveness.rs`, which
-owns the mapping). What the transfer watchdog does with it: `crates/cmdr-operations/src/transfer/DETAILS.md` § "The
-watchdog ACTS".
+owns the mapping), for the connection a transfer rides (§ "The transfer session"). What the transfer watchdog does with
+it: `crates/cmdr-operations/src/transfer/DETAILS.md` § "The watchdog ACTS".
 
 **The numbers stay as they are, and the case for widening them is closed.** The base deadline no longer has to be sized
 for the slowest healthy case, because the ECHO stretch already covers a connection that is alive but busy; and a breach
@@ -1366,6 +1473,10 @@ Which side each one lives on, and why: § "Which side a test lives on" above.
   or period, and so on), which the `unicode` fixture container seeds in the private-use bytes macOS smbfs writes: they
   list as the characters themselves with no private-use code point left, open and read (also through a directory whose
   own name carries one), and a name Cmdr writes round-trips.
+- `transfer_session_test.rs` — the transfer session against a real server, plus two server-free cells (§ "The transfer
+  session").
+- `dfs_links_integration_test.rs` — transfers through a DFS link, against smb2's internal DFS fixtures, run by hand (§
+  "A DFS link inside the share").
 - `session_integration_test.rs` — what the SESSION does: the connection gate the fresh-listing oracle reads, the
   reconnect cycle, the refcounted scan pool, and what a supersede leaves alone.
 - `previous_session_integration_test.rs` — a reconnect naming the session it replaces, on the `auth` fixture through

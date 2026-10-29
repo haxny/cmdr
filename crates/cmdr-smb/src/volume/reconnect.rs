@@ -272,6 +272,9 @@ impl SmbVolumeInner {
         // Flip state and emit. Doing this last means an observer that wakes
         // up on the event will see a fully-installed session.
         self.transition_to_direct(generation);
+        // A transfer session the outage took down tries again now, so the
+        // transfers resuming on the share leave the main session promptly.
+        self.transfer.share_is_back();
 
         // The session is back. Resume the drive index if the user had it enabled
         // (a persisted index DB with a completed scan). Fire-and-forget: the hook

@@ -3,7 +3,8 @@
 //! session (re)build helpers.
 
 use super::mapping::map_smb_error;
-use super::state::{ConnectionState, SessionGeneration};
+use super::state::{ConnectionState, RanOn, SessionGeneration};
+use super::transfer_session::{Member, TransferHold};
 use super::{SmbConnectionParams, SmbVolume};
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::VolumeError;
@@ -54,6 +55,27 @@ pub(super) struct SessionLease {
     pub(super) tree: Arc<Tree>,
     pub(super) conn: smb2::client::Connection,
     pub(super) generation: SessionGeneration,
+}
+
+/// A lease for a byte-moving call ([`SmbVolume::transfer_lease`]): the tree, a
+/// connection clone, and which session they belong to.
+///
+/// ❗ An error from a call on these goes through the funnel with
+/// [`ran_on`](Self::ran_on), exactly as a [`SessionLease`]'s generation does.
+/// Keep the lease alive for as long as the connection clone is in use: on the
+/// transfer session it carries the hold that stops the idle close.
+pub(super) struct TransferLease {
+    pub(super) tree: Arc<Tree>,
+    pub(super) conn: smb2::client::Connection,
+    pub(super) ran_on: RanOn,
+    pub(super) on: LeaseOn,
+}
+
+/// Which session a [`TransferLease`] came from, and what it needs to reach that
+/// session's client (`dfs_links.rs`).
+pub(super) enum LeaseOn {
+    Main,
+    Transfer { member: Arc<Member>, _hold: TransferHold },
 }
 
 impl SmbVolume {
@@ -118,15 +140,67 @@ impl SmbVolume {
             );
             lease
         };
-        // Refresh what the credit window can carry, while a `Connection` is in
-        // hand: `Volume::max_concurrent_ops` is sync and can't reach one, and
-        // this is the single place every read and write passes through. See
-        // `REPRESENTATIVE_COPY_REQUEST_BYTES`.
+        // Measure the window before any transfer has: a small-window server's
+        // first batch is clamped too. Once a transfer session is up, ITS window
+        // is what copies spend, and only `transfer_lease` measures it.
+        if !self.inner.transfer.is_up() {
+            self.note_credit_capacity(&lease.conn);
+        }
+        Ok(lease)
+    }
+
+    /// Refresh what the credit window can carry, while a `Connection` is in
+    /// hand: `Volume::max_concurrent_ops` is sync and can't reach one. See
+    /// `REPRESENTATIVE_COPY_REQUEST_BYTES`.
+    fn note_credit_capacity(&self, conn: &smb2::client::Connection) {
         self.inner.credit_copy_capacity.store(
-            lease.conn.credit_capacity_for(super::REPRESENTATIVE_COPY_REQUEST_BYTES),
+            conn.credit_capacity_for(super::REPRESENTATIVE_COPY_REQUEST_BYTES),
             Ordering::Relaxed,
         );
-        Ok(lease)
+    }
+
+    /// The connection a transfer rides right now, for the watchdog's liveness
+    /// and receive-rate readings: the transfer session's while one is up, else
+    /// the main session's, which is where [`transfer_lease`](Self::transfer_lease)
+    /// falls back to.
+    pub(super) fn transfer_connection(&self) -> &super::liveness::LiveConnection {
+        if self.inner.transfer.is_up() {
+            &self.inner.transfer.live
+        } else {
+            &self.inner.live_connection
+        }
+    }
+
+    /// A lease for a BYTE-MOVING call: on the share's transfer session
+    /// (`transfer_session.rs`), opening it first if nothing is open, or on the
+    /// main session while the transfer session is down.
+    ///
+    /// The share must read `Direct` either way: the main session is the one
+    /// answer to "is the share up", which a transfer's outage wait asks.
+    pub(super) async fn transfer_lease(&self) -> Result<TransferLease, VolumeError> {
+        self.check_connection()?;
+        if !self.inner.unmounted.load(Ordering::Relaxed)
+            && let Some(leased) = self.inner.transfer.lease().await
+        {
+            self.note_credit_capacity(&leased.conn);
+            return Ok(TransferLease {
+                tree: Arc::clone(&leased.member.tree),
+                conn: leased.conn,
+                ran_on: RanOn::Transfer(leased.generation),
+                on: LeaseOn::Transfer {
+                    member: leased.member,
+                    _hold: leased.hold,
+                },
+            });
+        }
+        let SessionLease { tree, conn, generation } = self.clone_session().await?;
+        self.note_credit_capacity(&conn);
+        Ok(TransferLease {
+            tree,
+            conn,
+            ran_on: RanOn::Main(generation),
+            on: LeaseOn::Main,
+        })
     }
 
     /// Maps an smb2 result, handling connection state transitions on error.
@@ -142,7 +216,7 @@ impl SmbVolume {
         &self,
         op_name: &str,
         smb_path: &str,
-        ran_on: SessionGeneration,
+        ran_on: impl Into<RanOn>,
         result: Result<T, smb2::Error>,
     ) -> Result<T, VolumeError> {
         let e = match result {
@@ -150,17 +224,23 @@ impl SmbVolume {
             Err(e) => e,
         };
         let kind = e.kind();
-        if self.inner.note_smb_error(ran_on, &e) {
+        let ran_on = ran_on.into();
+        if self.inner.note_error(ran_on, &e) {
+            let lost = match ran_on {
+                RanOn::Main(_) => "the session is lost",
+                RanOn::Transfer(_) => "the transfer session is lost, the share stays up",
+            };
             // A refused signature lands here too: it leaves the signed session in a
             // state nothing can vouch for, so whatever runs next (the pane's
             // reconnect, the notice's Reconnect) builds a fresh, freshly signed one.
             warn!(
-                "SmbVolume::{}(share={:?}): source=backend, backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}; the session is lost",
+                "SmbVolume::{}(share={:?}): source=backend, backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}; {}",
                 op_name, // allowed-log-private: the volume method's name, not a user value
                 LogPrivate::volume(&self.inner.share_name),
                 kind,
                 e.status(),
-                cmdr_fs::log_detail::LogDetail(&e.to_string()).marking(&[LogPrivate::path(smb_path)])
+                cmdr_fs::log_detail::LogDetail(&e.to_string()).marking(&[LogPrivate::path(smb_path)]),
+                lost
             );
         } else if matches!(
             kind,
@@ -236,7 +316,7 @@ pub(super) async fn build_session(
         // TreeConnect has been refused by a server that advertised DFS, so an
         // ordinary NAS pays nothing for this being on.
         dfs_enabled: true,
-        dfs_target_overrides: Default::default(),
+        dfs_target_overrides: dfs_target_overrides(),
         // Safe because Cmdr asks for no durable handles: on Windows 8.1+ this
         // also closes the old session's durable opens, which a client meaning to
         // reclaim one must keep.
@@ -246,6 +326,28 @@ pub(super) async fn build_session(
     let mut client = crate::connection::connect_volume_client(config).await?;
     let tree = client.connect_share(&params.share_name).await?;
     Ok((client, tree))
+}
+
+/// Where a DFS referral's server names actually answer: always nothing in a
+/// shipped build. The DFS suite (`dfs_links_integration_test.rs`) points smb2's
+/// `smb-dfs-target` container name at its port-mapped loopback address, which
+/// a referral can't know.
+#[cfg(not(any(test, feature = "testing")))]
+fn dfs_target_overrides() -> std::collections::HashMap<String, String> {
+    std::collections::HashMap::new()
+}
+
+#[cfg(any(test, feature = "testing"))]
+pub(super) static TEST_DFS_TARGET_OVERRIDES: std::sync::Mutex<Option<std::collections::HashMap<String, String>>> =
+    std::sync::Mutex::new(None);
+
+#[cfg(any(test, feature = "testing"))]
+fn dfs_target_overrides() -> std::collections::HashMap<String, String> {
+    use cmdr_fs::ignore_poison::IgnorePoison;
+    TEST_DFS_TARGET_OVERRIDES
+        .lock_ignore_poison()
+        .clone()
+        .unwrap_or_default()
 }
 
 /// Re-fetches credentials from the secret store for the given server/share.

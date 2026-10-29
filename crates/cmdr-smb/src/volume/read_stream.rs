@@ -5,12 +5,14 @@
 //! taking that fast path. Writing a stream into a file is `write_stream`.
 
 use super::SmbVolume;
+use super::dfs_links::{LinkDownload, is_behind_dfs_link};
 use super::mapping::{map_smb_error, user_flags_of};
-use super::session::SessionLease;
+use super::session::TransferLease;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, UserFlags};
 use cmdr_fs::volume::{ChannelReadStream, StreamLength, VolumeError, VolumeReadStream};
 use log::{debug, warn};
+use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -114,6 +116,56 @@ fn name_of(smb_path: &str) -> &str {
     smb_path.rsplit(['\\', '/']).next().unwrap_or(smb_path)
 }
 
+/// A streaming download's source: smb2's own adaptive download on the share's
+/// tree, or the fixed-window read through a DFS link (`dfs_links.rs`).
+enum Download<'a> {
+    /// Boxed: smb2's download carries its whole read-ahead window state.
+    Direct(Box<smb2::client::stream::FileDownload<'a>>),
+    Link(LinkDownload),
+}
+
+impl Download<'_> {
+    fn size(&self) -> u64 {
+        match self {
+            Self::Direct(d) => d.size(),
+            Self::Link(d) => d.size(),
+        }
+    }
+
+    fn info(&self) -> Option<&smb2::FileInfo> {
+        match self {
+            Self::Direct(d) => d.info(),
+            Self::Link(d) => Some(d.info()),
+        }
+    }
+
+    fn bytes_received(&self) -> u64 {
+        match self {
+            Self::Direct(d) => d.bytes_received(),
+            Self::Link(d) => d.bytes_received(),
+        }
+    }
+
+    async fn next_chunk(&mut self) -> Option<Result<Vec<u8>, smb2::Error>> {
+        match self {
+            Self::Direct(d) => d.next_chunk().await,
+            Self::Link(d) => d.next_chunk().await,
+        }
+    }
+
+    /// After the last byte: collects the CLOSE's answer (smb2 sent it as the
+    /// last chunk landed), or closes the link's reader.
+    async fn finish(self) -> Result<(), smb2::Error> {
+        match self {
+            Self::Direct(mut d) => match d.next_chunk().await {
+                Some(Err(e)) => Err(e),
+                _ => Ok(()),
+            },
+            Self::Link(d) => d.close().await,
+        }
+    }
+}
+
 impl VolumeReadStream for InlineReadStream {
     fn next_chunk(&mut self) -> Pin<Box<dyn Future<Output = Option<Result<Vec<u8>, VolumeError>>> + Send + '_>> {
         Box::pin(async move {
@@ -146,21 +198,137 @@ impl VolumeReadStream for InlineReadStream {
 }
 
 impl SmbVolume {
+    /// Inherent body for the `open_read_stream_with_hint` trait method (thin
+    /// delegator in `volume_impl`).
+    pub(super) async fn open_read_stream_with_hint_impl(
+        &self,
+        path: &Path,
+        size_hint: Option<u64>,
+    ) -> Result<Box<dyn VolumeReadStream>, VolumeError> {
+        let smb_path = self.to_smb_path(path)?;
+
+        // Compound fast-path: if the caller-provided hint fits the
+        // connection's `quick_read_limit()` (`fits_one_compound_read` says
+        // why that limit and not `max_read`), send CREATE+READ+CLOSE as a
+        // single compound frame (1 RTT) instead of the streaming open's
+        // extra round trips. Drives the compound on a cloned
+        // `Connection` with no lock held, so N concurrent small reads
+        // pipeline over one SMB session.
+        //
+        // The READ is sized to the HINT, never to `max_read`: the credit
+        // charge follows the response size the request asks for, so an
+        // unsized read of a 100 KB file books a whole 8 MB `max_read` (128
+        // credits), and a handful of them exhaust the connection's budget
+        // while barely filling the wire.
+        //
+        // Falls through to the streaming path when the hint is missing or
+        // over the limit, when the credit window can't fund the one READ,
+        // or when the file changed size since the
+        // scan. `expected_size` is a HARD bound, so the two drift arms split
+        // cleanly and TOGETHER are what keeps a changed file from being
+        // copied truncated: a file that SHRANK comes back short of the hint
+        // (`data.len() != size`), and one that GREW comes back as a typed
+        // `ErrorKind::TooLarge`, because smb2 compares the server's
+        // authoritative size against the length asked for and refuses rather
+        // than hand back a prefix. ❌ Neither arm is decoration; dropping
+        // either one copies a changed file under its final name, short.
+        if let Some(size) = size_hint {
+            // On the transfer session, like every byte-moving read
+            // (`transfer_session.rs`). The lease lives to the end of this
+            // block, so the session can't idle-close under the frame.
+            let TransferLease {
+                tree,
+                mut conn,
+                ran_on,
+                on: _lease,
+            } = self.transfer_lease().await?;
+            if fits_one_compound_read(conn.quick_read_limit(), size) {
+                debug!(
+                    "SmbVolume::open_read_stream_with_hint: share={:?}, path={:?}, size={}; using compound fast-path",
+                    LogPrivate::volume(&self.inner.share_name),
+                    LogPrivate::file_path(&smb_path),
+                    size
+                );
+                // The date rides on the frame's own CREATE response.
+                let read_result = tree
+                    .read_file_compound_sized_with_info(&mut conn, &smb_path, size)
+                    .await;
+                match read_result {
+                    Err(e) if matches!(e.kind(), smb2::ErrorKind::TooLarge) => {
+                        debug!(
+                            "SmbVolume::open_read_stream_with_hint: file grew past the hinted size since the scan ({}); falling back to streaming",
+                            e
+                        );
+                    }
+                    // The credit window can't fund this READ in one go.
+                    // `quick_read_limit` counts the window's ceiling, so this
+                    // is the ceiling arriving or shrinking after that check.
+                    // smb2 refused before anything reached the wire, and a
+                    // stream needs only a chunk's worth at a time. A server
+                    // that stopped granting altogether starves the stream
+                    // too, which reports it then.
+                    Err(e @ smb2::Error::CreditStarvation { .. }) => {
+                        debug!(
+                            "SmbVolume::open_read_stream_with_hint: the credit window can't fund one compound read ({}); falling back to streaming",
+                            e
+                        );
+                    }
+                    // Behind a DFS link: the compound's CREATE was refused,
+                    // so nothing was read, and the streaming path follows
+                    // the link (`dfs_links.rs`).
+                    Err(e) if is_behind_dfs_link(&e) => {
+                        debug!(
+                            "SmbVolume::open_read_stream_with_hint: the file sits behind a DFS link; streaming it through the link"
+                        );
+                    }
+                    read_result => {
+                        let (data, info) = self.handle_smb_result(
+                            "open_read_stream_with_hint(compound)",
+                            &smb_path,
+                            ran_on,
+                            read_result,
+                        )?;
+                        if data.len() as u64 == size {
+                            let modified_at = info.modified.to_system_time();
+                            return Ok(Box::new(
+                                InlineReadStream::new(data, modified_at).with_source_info(&info, &smb_path),
+                            ) as Box<dyn VolumeReadStream>);
+                        }
+                        debug!(
+                            "SmbVolume::open_read_stream_with_hint: compound read returned {} bytes, expected {}; falling back to streaming",
+                            data.len(),
+                            size
+                        );
+                    }
+                }
+            }
+        }
+
+        debug!(
+            "SmbVolume::open_read_stream_with_hint: share={:?}, path={:?}; using streaming path",
+            LogPrivate::volume(&self.inner.share_name),
+            LogPrivate::file_path(&smb_path)
+        );
+        let stream = self.open_smb_download_stream(&smb_path).await?;
+        Ok(Box::new(stream) as Box<dyn VolumeReadStream>)
+    }
+
     /// Opens a streaming download on the given SMB-relative path.
     ///
-    /// Briefly locks the client mutex to clone the underlying `Connection`,
-    /// releases the lock, then spawns a background task that owns the clone
-    /// and drives `Tree::download` on it. Each concurrent call gets its own
-    /// cloned `Connection` (all multiplexing frames over the same SMB
-    /// session), so N downloads run pipelined instead of serializing on the
-    /// session mutex. Chunks flow through a bounded mpsc channel to the
-    /// caller-facing [`ChannelReadStream`].
+    /// Takes a [`TransferLease`] (the share's transfer session, or the main
+    /// session while that one is down), then spawns a background task that owns
+    /// the lease and drives `Tree::download` on its connection clone. Each
+    /// concurrent call gets its own clone, all multiplexing frames over one SMB
+    /// session, so N downloads run pipelined instead of serializing on a mutex.
+    /// Chunks flow through a bounded mpsc channel to the caller-facing
+    /// [`ChannelReadStream`]. A file behind a DFS link streams through the link
+    /// instead (`dfs_links.rs`).
     ///
     /// This is the single streaming-read primitive for `SmbVolume`. The
     /// cross-volume streaming path (`open_read_stream`) goes through here, so
     /// no path has to buffer whole files in memory.
     pub(super) async fn open_smb_download_stream(&self, smb_path: &str) -> Result<ChannelReadStream, VolumeError> {
-        let SessionLease { tree, conn, generation } = self.clone_session().await?;
+        let lease = self.transfer_lease().await?;
 
         // The open reports the size and the date together: both ride on the
         // download's own CREATE response, so the date costs no round trip.
@@ -179,15 +347,32 @@ impl SmbVolume {
         let display_path = self.to_display_path(smb_path);
 
         self.inner.host().runtime().spawn(async move {
-            // The task owns its `Connection` clone and an `Arc<Tree>` reference.
-            // No lock is held, so other tasks can spawn in parallel and each
-            // drive their own download on a fresh `Connection` clone, all
-            // multiplexed over the same SMB session by smb2's receiver task.
-            let mut conn = conn;
-            let mut download = match tree.download(&mut conn, &smb_path_owned).await {
+            // The task owns the lease (its connection clone, its `Arc<Tree>`, and
+            // on the transfer session the hold that keeps it open). No lock is
+            // held, so other tasks can spawn in parallel and each drive their own
+            // download, all multiplexed over the same SMB session by smb2's
+            // receiver task.
+            let TransferLease {
+                tree,
+                mut conn,
+                ran_on,
+                on,
+            } = lease;
+            let opened = match tree.download(&mut conn, &smb_path_owned).await {
+                Ok(d) => Ok(Download::Direct(Box::new(d))),
+                Err(e) if is_behind_dfs_link(&e) => {
+                    match share.open_link_reader(ran_on, &on, &tree, &smb_path_owned).await {
+                        Some(Ok(reader)) => Ok(Download::Link(LinkDownload::new(reader))),
+                        Some(Err(link_err)) => Err(link_err),
+                        None => Err(e),
+                    }
+                }
+                Err(e) => Err(e),
+            };
+            let mut download = match opened {
                 Ok(d) => d,
                 Err(e) => {
-                    share.note_smb_error(generation, &e);
+                    share.note_error(ran_on, &e);
                     warn!(
                         "SmbVolume::download(share={:?}, path={:?}): {}",
                         LogPrivate::volume(&share_name),
@@ -200,11 +385,12 @@ impl SmbVolume {
             };
 
             let total_size = download.size();
+            let info = download.info();
             let opened = OpenedDownload {
                 total_size,
-                modified_at: download.info().and_then(|info| info.modified.to_system_time()),
-                created: download.info().and_then(|info| info.created.to_system_time()),
-                flags: download.info().map_or(UserFlags::NONE, |info| {
+                modified_at: info.and_then(|info| info.modified.to_system_time()),
+                created: info.and_then(|info| info.created.to_system_time()),
+                flags: info.map_or(UserFlags::NONE, |info| {
                     user_flags_of(info.attributes, name_of(&smb_path_owned))
                 }),
             };
@@ -241,7 +427,7 @@ impl SmbVolume {
                             }
                         }
                         Some(Err(e)) => {
-                            share.note_smb_error(generation, &e);
+                            share.note_error(ran_on, &e);
                             warn!(
                                 "SmbVolume::download(share={:?}, path={:?}): chunk error: {}",
                                 LogPrivate::volume(&share_name),
@@ -262,10 +448,10 @@ impl SmbVolume {
             // request the consumer sends afterwards is behind it on the wire,
             // and the download opened with `FILE_SHARE_DELETE` anyway.
             drop(chunk_tx);
-            if finished && let Some(Err(e)) = download.next_chunk().await {
+            if finished && let Err(e) = download.finish().await {
                 // The consumer has every byte, so there's nobody to hand this to.
-                // A dead connection still counts for the volume's state.
-                share.note_smb_error(generation, &e);
+                // A dead connection still counts for the session's state.
+                share.note_error(ran_on, &e);
                 debug!(
                     "SmbVolume::download(share={:?}, path={:?}): CLOSE after the last byte: {}",
                     LogPrivate::volume(&share_name),
@@ -276,8 +462,8 @@ impl SmbVolume {
             // `download` drops here. After the last byte its handle is closed
             // (the CLOSE is out); a download stopped earlier (cancel, consumer
             // gone, error) queues its CLOSE on the drop (smb2 0.32.0).
-            // `conn` and `tree` drop here: the `Arc<Connection>` inner and the
-            // `Arc<Tree>` unwind when every concurrent task finishes.
+            // `conn`, `tree`, and the lease's hold drop here: the transfer
+            // session closes once its last hold is gone and it has idled.
         });
 
         let opened = match opened_rx.await {

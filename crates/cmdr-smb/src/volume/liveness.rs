@@ -58,6 +58,12 @@ impl LiveConnection {
             .map(|c| c.inbound().bytes_received)
     }
 
+    /// Asks the current connection something sync (no wire), or `None` while
+    /// there is no client.
+    pub(super) fn with_connection<T>(&self, ask: impl FnOnce(&Connection) -> T) -> Option<T> {
+        self.current.read_ignore_poison().as_ref().map(ask)
+    }
+
     #[cfg(test)]
     pub(super) fn current(&self) -> Option<Connection> {
         self.current.read_ignore_poison().clone()

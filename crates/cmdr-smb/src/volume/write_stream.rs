@@ -6,8 +6,10 @@
 //! a file as a stream is `read_stream`.
 
 use super::SmbVolume;
-use super::session::SessionLease;
+use super::dfs_links::is_behind_dfs_link;
+use super::session::{LeaseOn, SessionLease, TransferLease};
 use super::stamping::{source_times, stamped};
+use super::state::RanOn;
 use cmdr_fs::error_detail::ErrorDetail;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::MetadataClasses;
@@ -144,17 +146,50 @@ impl SmbVolume {
             .map(|p| p.max_write_size as u64)
     }
 
-    /// The largest write worth sending as one compound frame on the live
-    /// session right now (smb2's `quick_write_limit`, see
-    /// [`fits_one_compound_write`]), or `None` when there isn't a session. Same
-    /// no-clone, no-wire read as [`negotiated_max_write`](Self::negotiated_max_write).
+    /// The largest write worth sending as one compound frame right now (smb2's
+    /// `quick_write_limit`, see [`fits_one_compound_write`]) on the connection a
+    /// write would ride: the transfer session's while one is up, else the main
+    /// session's. `None` when there's neither. No clone, no wire.
+    ///
+    /// A promise made on the main session's limit and then written on a freshly
+    /// opened transfer session is covered: the real name keeps `max_write`, the
+    /// same on both sessions of one server (`one_frame_write_limit`).
     async fn quick_write_limit(&self) -> Option<u64> {
+        if let Some(limit) = self
+            .inner
+            .transfer
+            .live
+            .with_connection(|c| c.params().is_some().then(|| c.quick_write_limit()))
+            .flatten()
+        {
+            return Some(limit);
+        }
         let guard = self.inner.session.lock().await;
         guard
             .as_ref()
             .map(|s| &s.client)
             .filter(|c| c.params().is_some())
             .map(|c| c.connection().quick_write_limit())
+    }
+
+    /// [`open_file_writer`] on the lease's tree, or through the DFS link the
+    /// path sits behind (`dfs_links.rs`).
+    async fn open_writer(
+        &self,
+        tree: &Arc<smb2::client::Tree>,
+        conn: smb2::client::Connection,
+        lease: (RanOn, &LeaseOn),
+        path: &str,
+        mode: WriteMode,
+    ) -> Result<smb2::client::stream::FileWriter, smb2::Error> {
+        match open_file_writer(tree, conn, path, mode).await {
+            Err(e) if is_behind_dfs_link(&e) => self
+                .inner
+                .open_link_writer(lease.0, lease.1, tree, path, mode)
+                .await
+                .unwrap_or(Err(e)),
+            opened => opened,
+        }
     }
 
     /// Inherent body for the `write_is_single_shot` trait method (thin delegator
@@ -204,14 +239,16 @@ impl SmbVolume {
                 LogPrivate::file_path(&smb_path)
             );
 
-            // Acquire a cloned session once, up front. Both the compound
-            // fast-path and the streaming fallback drive their write on
-            // this same clone — no second `clone_session` needed.
-            let SessionLease {
+            // Acquire a lease once, up front, on the transfer session
+            // (`transfer_session.rs`). Both the compound fast-path and the
+            // streaming fallback drive their write on this same clone, and the
+            // lease lives to the end of the write.
+            let TransferLease {
                 tree,
                 mut conn,
-                generation,
-            } = self.clone_session().await?;
+                ran_on,
+                on,
+            } = self.transfer_lease().await?;
             // The creation date and Hidden ride the dates' frame; Read-only
             // waits for the landing (the copy's `apply_metadata`). A share has
             // no mode, and xattrs wait for named streams (vdavid/smb2#9).
@@ -231,8 +268,18 @@ impl SmbVolume {
             // (`writer.abort()` where the writer is still owned), else this
             // delete hits a sharing violation against the still-open handle.
             let delete_partial = || async {
-                if let Ok(SessionLease { tree, mut conn, .. }) = self.clone_session().await {
-                    let _ = tree.delete_file(&mut conn, &smb_path).await;
+                if let Ok(SessionLease {
+                    tree,
+                    mut conn,
+                    generation,
+                }) = self.clone_session().await
+                    && let Err(e) = tree.delete_file(&mut conn, &smb_path).await
+                    && is_behind_dfs_link(&e)
+                {
+                    let _ = self
+                        .inner
+                        .link_delete_file(generation.into(), &LeaseOn::Main, &tree, &smb_path)
+                        .await;
                 }
             };
 
@@ -312,12 +359,23 @@ impl SmbVolume {
                     // opened, nothing written) and never replaced. That
                     // refusal is a CREATE failure, so the cleanup below leaves
                     // their file alone.
-                    let write_result = match mode {
+                    let mut write_result = match mode {
                         WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder => {
                             tree.write_file_compound_exclusive(&mut conn, &smb_path, &buffer).await
                         }
                         WriteMode::CreateOrReplace => tree.write_file_compound(&mut conn, &smb_path, &buffer).await,
                     };
+                    // Behind a DFS link the CREATE was refused and nothing was
+                    // written, so the same frame goes to the link's target.
+                    let through_link = matches!(&write_result, Err(e) if is_behind_dfs_link(e));
+                    if through_link
+                        && let Some(linked) = self
+                            .inner
+                            .link_write_compound(ran_on, &on, &tree, &smb_path, &buffer, mode)
+                            .await
+                    {
+                        write_result = linked;
+                    }
                     if !(dest_is_scratch && matches!(write_result, Err(smb2::Error::CreditStarvation { .. }))) {
                         if create_succeeded_but_write_failed(&write_result) {
                             // The server created (hence truncated) the file and
@@ -332,7 +390,7 @@ impl SmbVolume {
                             delete_partial().await;
                         }
                         let written =
-                            self.handle_smb_result("write_from_stream(compound)", &smb_path, generation, write_result)?;
+                            self.handle_smb_result("write_from_stream(compound)", &smb_path, ran_on, write_result)?;
                         // The frame's CLOSE already stamped the server's own
                         // dates, so these go by path, after it. A refusal
                         // keeps the server's; a lost connection fails the
@@ -341,8 +399,17 @@ impl SmbVolume {
                         // real one, so the transfer settles it
                         // (`settle_unanswered_create`).
                         if let Some(times) = times {
-                            let stamp = tree.set_times(&mut conn, &smb_path, times).await;
-                            times_refused = !self.stamp_taken(&smb_path, generation, stamp)?;
+                            let stamp = match through_link {
+                                false => tree.set_times(&mut conn, &smb_path, times).await,
+                                true => match self.inner.link_set_times(ran_on, &on, &tree, &smb_path, times).await {
+                                    Some(stamp) => stamp,
+                                    // The lease's session was replaced: the
+                                    // path's own refusal, which keeps the
+                                    // server's dates.
+                                    None => tree.set_times(&mut conn, &smb_path, times).await,
+                                },
+                            };
+                            times_refused = !self.stamp_taken(&smb_path, ran_on, stamp)?;
                         }
                         break 'write written;
                     }
@@ -359,17 +426,14 @@ impl SmbVolume {
                         "SmbVolume::write_from_stream: the credit window can't fund one compound write; streaming the drained {} bytes to the staging temp instead",
                         buffer.len()
                     );
-                    let writer_result = open_file_writer(&tree, conn, &smb_path, mode).await;
+                    let writer_result = self.open_writer(&tree, conn, (ran_on, &on), &smb_path, mode).await;
                     let mut writer =
-                        self.handle_smb_result("write_from_stream(open)", &smb_path, generation, writer_result)?;
+                        self.handle_smb_result("write_from_stream(open)", &smb_path, ran_on, writer_result)?;
                     if !buffer.is_empty() {
                         let write_result = writer.write_chunk(&buffer).await;
-                        if let Err(ve) = self.handle_smb_result(
-                            "write_from_stream(write_chunk)",
-                            &smb_path,
-                            generation,
-                            write_result,
-                        ) {
+                        if let Err(ve) =
+                            self.handle_smb_result("write_from_stream(write_chunk)", &smb_path, ran_on, write_result)
+                        {
                             // Writer still owned: abort (closes the leaked
                             // handle) then delete the partial, mirroring the
                             // cancel branch, then propagate the original error.
@@ -381,7 +445,7 @@ impl SmbVolume {
                     // The source signalled end-of-stream by returning None
                     // above (we exited the drain loop). No further chunks.
                     if let Some(times) = times {
-                        match self.stamp_writer(&mut writer, times, &smb_path, generation).await {
+                        match self.stamp_writer(&mut writer, times, &smb_path, ran_on).await {
                             Ok(took) => times_refused = !took,
                             Err(ve) => {
                                 let _ = writer.abort().await;
@@ -394,7 +458,7 @@ impl SmbVolume {
                     // handle is already gone (best-effort delete only).
                     let finish_result = writer.finish().await;
                     if let Err(ve) =
-                        self.handle_smb_result("write_from_stream(finish)", &smb_path, generation, finish_result)
+                        self.handle_smb_result("write_from_stream(finish)", &smb_path, ran_on, finish_result)
                     {
                         delete_partial().await;
                         return Err(ve);
@@ -406,9 +470,8 @@ impl SmbVolume {
                 // owned `FileWriter` on the cloned `Connection` directly —
                 // no client mutex is held while WRITEs are in flight, so N
                 // concurrent large copies pipeline over one SMB session.
-                let writer_result = open_file_writer(&tree, conn, &smb_path, mode).await;
-                let mut writer =
-                    self.handle_smb_result("write_from_stream(open)", &smb_path, generation, writer_result)?;
+                let writer_result = self.open_writer(&tree, conn, (ran_on, &on), &smb_path, mode).await;
+                let mut writer = self.handle_smb_result("write_from_stream(open)", &smb_path, ran_on, writer_result)?;
 
                 loop {
                     let chunk = match stream.next_chunk().await {
@@ -429,7 +492,7 @@ impl SmbVolume {
 
                     let write_result = writer.write_chunk(&chunk).await;
                     if let Err(ve) =
-                        self.handle_smb_result("write_from_stream(write_chunk)", &smb_path, generation, write_result)
+                        self.handle_smb_result("write_from_stream(write_chunk)", &smb_path, ran_on, write_result)
                     {
                         let _ = writer.abort().await;
                         delete_partial().await;
@@ -476,7 +539,7 @@ impl SmbVolume {
                 }
 
                 if let Some(times) = times {
-                    match self.stamp_writer(&mut writer, times, &smb_path, generation).await {
+                    match self.stamp_writer(&mut writer, times, &smb_path, ran_on).await {
                         Ok(took) => times_refused = !took,
                         Err(ve) => {
                             // The connection died under the stamp: the same
@@ -491,7 +554,7 @@ impl SmbVolume {
                 // already gone, so we can only best-effort delete the partial.
                 let finish_result = writer.finish().await;
                 let confirmed =
-                    match self.handle_smb_result("write_from_stream(finish)", &smb_path, generation, finish_result) {
+                    match self.handle_smb_result("write_from_stream(finish)", &smb_path, ran_on, finish_result) {
                         Ok(confirmed) => confirmed,
                         Err(ve) => {
                             delete_partial().await;

@@ -309,10 +309,6 @@
       "lines": 945,
       "reason": "The crate's headline invariant is that `russh` is named in exactly one module so a breaking minor stays one file's problem (eight breaking minors in eight months), stated in the module doc and again in `crates/cmdr-sftp/CLAUDE.md`; everything russh-free has already been pushed out to `auth.rs`, `trust.rs`, `known_hosts.rs`, `extensions.rs`, and `errors.rs`, so what remains is one dial conversation (`open_session` to `authenticate` to `hello`) plus the `PendingEngine` teardown guard and the two `Handler` impls, under a 57-line module doc for the three abort hazards the shape defends against."
     },
-    "crates/cmdr-smb/src/volume/volume_impl.rs": {
-      "lines": 816,
-      "reason": "The SMB backend's one `impl Volume` block, which Rust can't split across files. Every method that does real work is already a thin delegator into its concern module (`paths`, `query`, `mutation`, `attributes`, `scan`, `scan_pool`, `streams`, `copy`, `reconnect`), as the module doc says; what stays is the dispatch surface and the capability answers, whose content is the reasoning in their doc comments. The length tracks the `Volume` surface, not logic that could leave."
-    },
     "scripts/check/checks/desktop-rust-cfg-gate_test.go": {
       "lines": 1228,
       "reason": "TODO: split the end-to-end group out. The `TestRunCfgGate_*` tests write whole temp workspaces through `seedCfgGateWorkspaceRoot` and `writeCfgGateWorkspace` and run to roughly 460 lines across the two banners `RunCfgGate integration tests` and `Workspace coverage`; everything else is string-level unit tests over `extractMacOSCrateModules`, `findCfgGatedModules`, `hasMacOSCfgAttribute`, `isMacOSGateAttribute`, `collectAttribute`, `isAttributeContinuation`, `buildModuleGatedFileSet`, and `scanForUngatedUses`, each carrying its fixture inline. Move the first group plus its two seed helpers to `desktop-rust-cfg-gate_run_test.go`, leaving roughly 770 lines here, and name the second file in `DETAILS.md` § Key files, whose layout rule currently reads as one test file per check."

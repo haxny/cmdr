@@ -33,10 +33,11 @@ use smb2::types::FileId;
 use smb2::{FileInfo, ResumeKey};
 
 use super::SmbVolume;
+use super::dfs_links::is_behind_dfs_link;
 use super::mapping::user_flags_of;
-use super::session::SessionLease;
+use super::session::TransferLease;
 use super::stamping::source_times;
-use super::state::SessionGeneration;
+use super::state::RanOn;
 
 /// How much of a file one slice asks the server to copy: exactly one copychunk
 /// request at smb2's opening limits (16 chunks of 1 MiB, which Windows and
@@ -65,11 +66,17 @@ impl SmbVolume {
             LogPrivate::file_path(&smb_from),
             LogPrivate::file_path(&smb_to)
         );
-        let SessionLease {
+        // Both ends on ONE lease, the transfer session's (`transfer_session.rs`):
+        // a copychunk keeps the server busy for a slice at a time, and ksmbd
+        // serializes per connection, so on the main session a slice held up
+        // every listing behind it. One session for both handles also keeps the
+        // resume key on the session that issued it.
+        let TransferLease {
             tree,
             mut conn,
-            generation,
-        } = self.clone_session().await?;
+            ran_on: generation,
+            on: _lease,
+        } = self.transfer_lease().await?;
 
         // The dates come from a `stat`, the handle from an open; both ride one
         // round trip on the multiplexed connection.
@@ -178,7 +185,7 @@ impl SmbVolume {
         tree: &Tree,
         conn: &mut Connection,
         smb_to: &str,
-        generation: SessionGeneration,
+        generation: RanOn,
     ) -> Result<FileId, VolumeError> {
         let op = "copy_on_server(open destination)";
         let (dest, existing) =
@@ -242,10 +249,22 @@ impl SmbVolume {
         &self,
         op_name: &str,
         smb_path: &str,
-        ran_on: SessionGeneration,
+        ran_on: impl Into<RanOn>,
         result: Result<T, smb2::Error>,
     ) -> Result<T, VolumeError> {
         match result {
+            // Behind a DFS link the copy's handles would live on the link's
+            // target, which this lock-free path can't reach; the CREATE was
+            // refused, so nothing was touched, and the engine streams the file
+            // through the link instead (`dfs_links.rs`).
+            Err(e) if is_behind_dfs_link(&e) => {
+                debug!(
+                    // allowed-log-private: `op_name` is the volume method's name, not a user value
+                    "SmbVolume::{op_name}(share={:?}): the path sits behind a DFS link; the caller streams instead",
+                    LogPrivate::volume(&self.inner.share_name),
+                );
+                Err(VolumeError::NotSupported)
+            }
             Err(e) if e.kind() == smb2::ErrorKind::Unsupported => {
                 debug!(
                     // allowed-log-private: `op_name` is the volume method's name, not a user value
@@ -270,7 +289,7 @@ struct SliceCopy<'a> {
     smb_from: &'a str,
     smb_to: &'a str,
     /// The session the copy runs on, for the error funnel.
-    generation: SessionGeneration,
+    generation: RanOn,
 }
 
 /// `copy_within`'s bare progress callback as a [`ServerCopyProgress`]: reports

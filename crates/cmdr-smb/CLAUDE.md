@@ -33,8 +33,8 @@ keychain, mounts, and human-facing words stay in the app's `network/`.
   `quick_write_limit()`. ❌ A refused one-frame write to a non-scratch name never streams (`one_frame_write_limit`).
 - **A streamed read ends at its last byte**: ❌ don't wait for `None` to drop `chunk_tx`.
 - **`scan_recursive` asks its `ScanBoundary` per entry, `dir()` BEFORE the listing** (`DETAILS.md` § "Scanning").
-- **Bulk work draws on the refcounted pool of extra sessions** (`scan_pool.rs`); a dead member retries on a sibling, ❌
-  never moving the MAIN volume's state.
+- **Bulk work rides EXTRA sessions** (scans: `scan_pool.rs`; bytes: `transfer_session.rs`); a loss there ❌ never moves
+  the MAIN state.
 - **An error funnels with its lease's generation**, ❌ never a fresh read (DETAILS § "Which session a loss is about").
 - **A rebuilt session names only its OWN dead predecessor** (`retired_session_id`), ❌ never a live one.
 - **smb2 bounds every wait itself**: ❌ no timeout layer of ours.
