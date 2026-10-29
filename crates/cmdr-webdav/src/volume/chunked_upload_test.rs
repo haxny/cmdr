@@ -5,7 +5,7 @@ use std::pin::Pin;
 
 use cmdr_fs::volume::{StreamLength, VolumeError, VolumeReadStream};
 
-use super::SharedSource;
+use super::{ABANDON_RETRIES, Abandoned, SharedSource, retry_abandon};
 
 /// A source yielding `bytes` in pieces of the given lengths, in turn.
 struct Pieces {
@@ -97,4 +97,37 @@ async fn a_source_that_ends_early_says_how_much_it_had() {
     let source = SharedSource::new(pieces(10, &[3]));
     assert_eq!(drain(&source, 12).await.len(), 10);
     assert_eq!(source.ran_dry().await, Some(10));
+}
+
+/// A DELETE the server refused because a cut-off chunk still holds the upload's
+/// lock goes again once the chunk is done, and stops at the first that lands.
+/// Paused clock: the waits cost no wall time.
+#[tokio::test(start_paused = true)]
+async fn a_refused_abandon_goes_again_until_the_collection_is_gone() {
+    let tries = std::sync::atomic::AtomicUsize::new(0);
+    let gone = retry_abandon(|| {
+        let n = tries.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        async move { if n < 2 { Abandoned::Refused } else { Abandoned::Gone } }
+    })
+    .await;
+    assert!(gone);
+    assert_eq!(
+        tries.load(std::sync::atomic::Ordering::SeqCst),
+        3,
+        "it stops at the first DELETE that lands"
+    );
+}
+
+/// One the server keeps refusing ends after its rounds, for the server's own
+/// one-day expiry to take.
+#[tokio::test(start_paused = true)]
+async fn an_abandon_refused_every_time_gives_up_after_its_rounds() {
+    let tries = std::sync::atomic::AtomicUsize::new(0);
+    let gone = retry_abandon(|| {
+        tries.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        async { Abandoned::Refused }
+    })
+    .await;
+    assert!(!gone);
+    assert_eq!(tries.load(std::sync::atomic::Ordering::SeqCst), ABANDON_RETRIES.len());
 }
