@@ -21,9 +21,27 @@ static SERVICE_NAME_CACHE: OnceLock<String> = OnceLock::new();
 /// convention in `instance-id.js` where the env var either holds a non-empty value or is
 /// absent). Unset → `"Cmdr"`; set → `"Cmdr-<instance>"`.
 fn compute_service_name(instance_id: Option<&str>) -> String {
+    service_name_for(instance_id, crate::config::BUNDLE_ID)
+}
+
+/// [`compute_service_name`] with the bundle id injected, so a fork's naming is testable from a
+/// test build (which always carries the upstream id).
+fn service_name_for(instance_id: Option<&str>, bundle_id: &str) -> String {
+    let base = base_service_name(bundle_id);
     match instance_id {
-        Some(s) if !s.trim().is_empty() => format!("{PROD_SERVICE_NAME}-{}", s.trim()),
-        _ => PROD_SERVICE_NAME.to_string(),
+        Some(s) if !s.trim().is_empty() => format!("{base}-{}", s.trim()),
+        _ => base.to_string(),
+    }
+}
+
+/// Official Cmdr keeps `"Cmdr"`; a fork built under its own identity (`config::is_fork_build`)
+/// names its items after that identity, so it never reads or overwrites official Cmdr's
+/// credentials (which a differently signed app can't use without a Keychain prompt anyway).
+fn base_service_name(bundle_id: &str) -> &str {
+    if bundle_id == crate::config::UPSTREAM_BUNDLE_ID {
+        PROD_SERVICE_NAME
+    } else {
+        bundle_id
     }
 }
 
@@ -186,5 +204,12 @@ mod tests {
         // Also assert the cache content is non-empty so a future refactor that returns "" by
         // accident is caught here, not in production.
         assert!(!first.is_empty());
+    }
+
+    #[test]
+    fn a_fork_build_names_its_items_after_its_own_identity() {
+        assert_eq!(service_name_for(None, "com.haxny.cmdr"), "com.haxny.cmdr");
+        assert_eq!(service_name_for(Some("dev"), "com.haxny.cmdr"), "com.haxny.cmdr-dev");
+        assert_eq!(service_name_for(None, crate::config::UPSTREAM_BUNDLE_ID), "Cmdr");
     }
 }

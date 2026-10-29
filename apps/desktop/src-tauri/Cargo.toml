@@ -54,6 +54,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+# `build.rs` reads the `tauri build --config` override's identifier (`src/bundle_identity.rs`).
+serde_json = "1"
 
 [dependencies]
 # Filesystem vocabulary and host primitives shared across the workspace: the

@@ -32,6 +32,7 @@ pub mod agent;
 mod ai;
 mod analytics;
 mod app_lifecycle;
+mod bundle_identity;
 // Core Foundation property lists as `plist::Value`, shared by every CFPreferences reader.
 /// Test-only: invariants over the `capabilities/` manifests, which no other
 /// code references (Tauri reads them at build time).

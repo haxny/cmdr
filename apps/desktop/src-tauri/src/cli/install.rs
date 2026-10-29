@@ -22,6 +22,12 @@ pub(crate) const BUNDLE_SCRIPT: &str = "Contents/Resources/bin/cmdr";
 /// and E2E instances add a `-<instance>` suffix (`apps/desktop/scripts/instance-id.ts`).
 const CMDR_BUNDLE_ID_PREFIX: &str = "com.veszelovszki.cmdr";
 
+/// Whether a bundle id is one of Cmdr's: the upstream family, or this build's own identity (a
+/// fork's, `crate::config::BUNDLE_ID`), so a fork recognizes the link it installed itself.
+fn is_cmdr_bundle_id(id: &str) -> bool {
+    id.starts_with(CMDR_BUNDLE_ID_PREFIX) || id == crate::config::BUNDLE_ID
+}
+
 /// The Homebrew cask's token. A cask install leaves `<prefix>/Caskroom/cmdr` behind, which is how
 /// we tell its link from ours when both would sit in `/usr/local/bin` (Intel Macs).
 const CASK_TOKEN: &str = "cmdr";
@@ -232,9 +238,7 @@ impl<H: CommandHost> CliInstall<H> {
         let Some(bundle) = bundle_of_script(&target) else {
             return false;
         };
-        self.host
-            .bundle_id(&bundle)
-            .is_none_or(|id| id.starts_with(CMDR_BUNDLE_ID_PREFIX))
+        self.host.bundle_id(&bundle).is_none_or(|id| is_cmdr_bundle_id(&id))
     }
 
     /// Put the link in place, asking for the administrator password when the folder needs it.
@@ -670,5 +674,13 @@ mod tests {
         let cli = installer(host);
         assert_eq!(cli.uninstall("prompt").outcome, CliCommandOutcome::Uninstalled);
         assert!(cli.host.admin_calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn the_upstream_family_and_this_builds_own_id_are_cmdrs() {
+        assert!(is_cmdr_bundle_id("com.veszelovszki.cmdr"));
+        assert!(is_cmdr_bundle_id("com.veszelovszki.cmdr-dev-foo"));
+        assert!(is_cmdr_bundle_id(crate::config::BUNDLE_ID));
+        assert!(!is_cmdr_bundle_id("com.apple.finder"));
     }
 }

@@ -143,6 +143,9 @@ enum SkipReason {
     NotAnAppBundle,
     /// One of [`crate::prod_instance::NON_PROD_ENV_VARS`] is set in this process's environment.
     NonProdEnv(&'static str),
+    /// A fork's build under its own identity (`config::is_fork_build`): official Cmdr's update
+    /// is Developer-ID signed, so it would pass the trust check and sync official Cmdr over the fork.
+    ForkBuild,
 }
 
 impl std::fmt::Display for SkipReason {
@@ -150,6 +153,7 @@ impl std::fmt::Display for SkipReason {
         match self {
             Self::NotAnAppBundle => f.write_str("not running from a .app bundle"),
             Self::NonProdEnv(name) => write!(f, "{name} is set"),
+            Self::ForkBuild => f.write_str("this is a fork build with its own identity"),
         }
     }
 }
@@ -168,6 +172,9 @@ fn skip_reason_for(in_app_bundle: bool, env_is_set: &dyn Fn(&str) -> bool) -> Op
 
 /// The gate against this process's real environment and executable location.
 fn skip_reason() -> Option<SkipReason> {
+    if crate::config::is_fork_build() {
+        return Some(SkipReason::ForkBuild);
+    }
     skip_reason_for(installer::is_running_from_app_bundle(), &|name| {
         std::env::var_os(name).is_some()
     })

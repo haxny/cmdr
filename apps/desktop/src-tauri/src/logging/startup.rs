@@ -41,13 +41,13 @@ pub fn init() {
         #[cfg(target_os = "macos")]
         {
             dirs::home_dir()
-                .map(|h| h.join("Library/Logs/com.veszelovszki.cmdr"))
+                .map(|h| h.join("Library/Logs").join(crate::config::BUNDLE_ID))
                 .unwrap_or_else(|| std::path::PathBuf::from("./logs"))
         }
         #[cfg(not(target_os = "macos"))]
         {
             dirs::data_local_dir()
-                .map(|d| d.join("com.veszelovszki.cmdr/logs"))
+                .map(|d| d.join(crate::config::BUNDLE_ID).join("logs"))
                 .unwrap_or_else(|| std::path::PathBuf::from("./logs"))
         }
     };

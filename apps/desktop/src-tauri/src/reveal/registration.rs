@@ -18,10 +18,10 @@ use serde::{Deserialize, Serialize};
 /// writes the same one.
 const NS_FILE_VIEWER_KEY: &str = "NSFileViewer";
 
-/// The bundle identifier a shipped Cmdr carries (`tauri.conf.json` § `identifier`). Dev,
-/// per-worktree, and E2E instances carry a `-<instance>` suffix instead, which is what
-/// keeps them out of the key. See [`own_bundle_id`].
-const PRODUCTION_BUNDLE_ID: &str = "com.veszelovszki.cmdr";
+/// The bundle identifier a shipped Cmdr carries (`tauri.conf.json` § `identifier`, or a fork
+/// build's own, `crate::config::BUNDLE_ID`). Dev, per-worktree, and E2E instances carry a
+/// `-<instance>` suffix instead, which is what keeps them out of the key. See [`own_bundle_id`].
+const PRODUCTION_BUNDLE_ID: &str = crate::config::BUNDLE_ID;
 
 /// What the Settings row shows, read through to the OS every time it asks.
 ///

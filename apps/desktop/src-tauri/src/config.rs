@@ -49,8 +49,18 @@ fn data_dir_from_env(env_value: Option<&str>) -> Option<PathBuf> {
     }
 }
 
-/// Bundle id from `tauri.conf.json`, which names the OS-default data dir. Keep in sync.
-pub const BUNDLE_ID: &str = "com.veszelovszki.cmdr";
+/// The bundle id this binary was built under, which names the OS-default data, cache, and log
+/// dirs: `tauri.conf.json`'s `identifier`, or a fork build's own (`build.rs` picks it, rule and
+/// tests in `crate::bundle_identity`).
+pub const BUNDLE_ID: &str = env!("CMDR_BUNDLE_ID");
+
+pub use crate::bundle_identity::UPSTREAM_BUNDLE_ID;
+
+/// Whether this is a fork's build under its own identity rather than official Cmdr. Such a build
+/// must never take an official update: the updater would sync official Cmdr into the fork's bundle.
+pub fn is_fork_build() -> bool {
+    BUNDLE_ID != UPSTREAM_BUNDLE_ID
+}
 
 /// The app data dir for code that runs without an `AppHandle` (stores read before setup, or
 /// behind a plain function signature): `CMDR_DATA_DIR` when set, else the OS default for

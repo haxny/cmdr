@@ -71,6 +71,10 @@ fn the_bundle_condition_is_reported_first() {
 fn reasons_name_the_condition() {
     assert_eq!(SkipReason::NotAnAppBundle.to_string(), "not running from a .app bundle");
     assert_eq!(
+        SkipReason::ForkBuild.to_string(),
+        "this is a fork build with its own identity"
+    );
+    assert_eq!(
         SkipReason::NonProdEnv("CMDR_DATA_DIR").to_string(),
         "CMDR_DATA_DIR is set"
     );

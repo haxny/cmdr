@@ -1,5 +1,9 @@
+#[path = "src/bundle_identity.rs"]
+mod bundle_identity;
+
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
+    emit_bundle_id();
     // Only where the fetch writes it: on any other host `download-llama-server.go` lays down a
     // placeholder and no `.version`, and cargo reads a watched path that doesn't exist as
     // "changed" on EVERY invocation. That re-ran this script and recompiled `cmdr` for each cargo
@@ -57,6 +61,17 @@ fn main() {
             panic!("tauri-build failed: {error:#}");
         }
     }
+}
+
+/// Hands `config::BUNDLE_ID` the identifier this build runs under: a `tauri build --config`
+/// override naming another product (a fork's own identity) moves it, so every handle-less data,
+/// cache, and log path follows the bundle. `src/bundle_identity.rs` has the rule and its tests.
+fn emit_bundle_id() {
+    println!("cargo:rerun-if-changed=src/bundle_identity.rs");
+    println!("cargo:rerun-if-env-changed=TAURI_CONFIG");
+    let override_json = std::env::var("TAURI_CONFIG").ok();
+    let id = bundle_identity::pick_bundle_id(override_json.as_deref());
+    println!("cargo:rustc-env=CMDR_BUNDLE_ID={id}");
 }
 
 /// Compiles the frontend's authoritative command-id tuple into a Rust slice.
