@@ -75,7 +75,7 @@ fn the_built_in_goes_in_once_and_a_deleted_one_stays_deleted() {
     };
     assert!(seed_in(&mut list, MAX_PRESETS));
     assert_eq!(names(&list.entries), ["Mine", "Czech part words → numbers"]);
-    assert_eq!(list.entries[1].steps.len(), 20);
+    assert_eq!(list.entries[1].steps.len(), 21);
     list.entries.pop();
     assert!(!seed_in(&mut list, MAX_PRESETS), "already at the current version");
     assert_eq!(names(&list.entries), ["Mine"]);

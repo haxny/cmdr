@@ -227,6 +227,15 @@ describe('ReplacePanel', () => {
       expect(root.textContent).toContain('No saved lists yet.')
     })
 
+    it('says so when a delete fails and keeps the list', async () => {
+      ipc.deleteTagReplacePreset.mockRejectedValue(new Error('no'))
+      const { root } = await mountPanel()
+      await settle()
+      await click(root.querySelector<HTMLButtonElement>('button[aria-label="Delete Czech part words → numbers"]')!)
+      expect(root.textContent).toContain('Couldn’t delete the list.')
+      expect(root.textContent).toContain('Czech part words → numbers')
+    })
+
     it('words a refused save', async () => {
       const { ReplacePresetRefused } = await import('#lib/tauri-commands/index.js')
       ipc.saveTagReplacePreset.mockRejectedValue(new ReplacePresetRefused({ type: 'listFull', max: 200 }))

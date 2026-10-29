@@ -15169,11 +15169,6 @@ export type RenameValidityResult = {
   byMove: RenameByMove | null
 }
 
-/**
- *  Snapshot of mutable repo state for the breadcrumb chip.
- *
- *  Computed at portal entry and re-emitted by the watcher on every relevant
- *  `.git/*` change. The frontend never polls.
 // One saved list.
 export type ReplacePreset = {
   id: string
@@ -15206,6 +15201,11 @@ export type RepoInfo = {
   // Canonical repo root (the working tree dir, not `.git`).
   repoRoot: string
   // Short branch name (`main`), or `None` if detached or unborn.
+/**
+ *  Snapshot of mutable repo state for the breadcrumb chip.
+ *
+ *  Computed at portal entry and re-emitted by the watcher on every relevant
+ *  `.git/*` change. The frontend never polls.
   branch: string | null
   // Short SHA when detached (`a1b2c3d`). `None` otherwise.
   detachedSha: string | null
@@ -18892,11 +18892,6 @@ export type TagTextTool =
       regex: boolean
     }
   /**
-   *  Rebuilds `field` from a Multi-Rename `mask`. `[N]` is the field's current FIRST value (a
-   *  multi-value field loses its other values: the whole field becomes the one rendered value),
-   *  `[=tag.album]` and the like read the file's other fields. A file whose mask has no value
-   *  for it (a `FieldGap`) is left unchanged; the result is trimmed, and an empty one removes the field.
-  /**
    *  Runs `steps` one after another over every track, as ONE edit (one undo step). Each step is
    *  `Replace`; all of them compile first, and one that doesn't is `BadRegex` with nothing changed.
    */
@@ -18906,6 +18901,11 @@ export type TagTextTool =
   /**
    *  Runs the ticked Multi-Rename text options over every value of each listed field, in
    *  Multi-Rename's order: Greek to Latin, Remove diacritics, Normalize Unicode (NFC), so the
+  /**
+   *  Rebuilds `field` from a Multi-Rename `mask`. `[N]` is the field's current FIRST value (a
+   *  multi-value field loses its other values: the whole field becomes the one rendered value),
+   *  `[=tag.album]` and the like read the file's other fields. A file whose mask has no value
+   *  for it (a `FieldGap`) is left unchanged; the result is trimmed, and an empty one removes the field.
    *  results match file renames. Fields not listed (Comment and Description by default in the
    *  UI) are untouched.
    */

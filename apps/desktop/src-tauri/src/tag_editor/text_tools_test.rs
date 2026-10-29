@@ -608,3 +608,52 @@ fn masks_and_the_tags_window_read_the_same_tag_fields_from_one_file() {
         assert!(masks.get(MediaField::TagTotalTracks).is_some(), "{name}");
     }
 }
+
+#[test]
+fn czech_part_words_only_as_whole_words() {
+    let (dir, _listing, id) = album("tag-steps-whole");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Podíl první"),
+            set_title(&dir, "b.mp3", "Rozdíl druhý"),
+            set_title(&dir, "c.mp3", "Kniha, část dvacátá první"),
+        ],
+    )
+    .expect("edits");
+    let view = run(&id, czech_part_words(), None).expect("runs");
+    assert_eq!(
+        titles(&view),
+        vec![
+            Some("Podíl první"),
+            Some("Rozdíl druhý"),
+            Some("Kniha, část dvacátá první")
+        ],
+        "a compound ordinal (21+) is left alone, not half-converted"
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn czech_part_words_tidy_the_separator() {
+    let (dir, _listing, id) = album("tag-steps-sep");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Část první"),
+            set_title(&dir, "b.mp3", "Kniha,  část první"),
+            set_title(&dir, "c.mp3", "Kniha, část druhá (živě)"),
+        ],
+    )
+    .expect("edits");
+    let view = run(&id, czech_part_words(), None).expect("runs");
+    assert_eq!(
+        titles(&view),
+        vec![Some("01"), Some("Kniha 01"), Some("Kniha 02 (živě)")]
+    );
+    close(&id);
+    close_rename(&id);
+}

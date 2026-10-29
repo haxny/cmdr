@@ -1925,26 +1925,6 @@
   "@multiRename.tags.tools.replace.run": {
     "description": "Button that runs Find and replace on the tag values of the files in the tag editor window. Disabled while the Find box is empty."
   },
-  "multiRename.tags.tools.format.field": "Field",
-  "@multiRename.tags.tools.format.field": {
-    "description": "Label of the tag field picker in the Format a field panel of the tag editor window."
-  },
-  "multiRename.tags.tools.format.mask": "Mask",
-  "@multiRename.tags.tools.format.mask": {
-    "description": "Label of the mask text box in the Format a field panel of the tag editor window. The mask is a Multi-rename mask where [N] stands for the field’s current value."
-  },
-  "multiRename.tags.tools.format.hint": "Format keeps only the first value of a field that holds several, such as Artist or Genre.",
-  "@multiRename.tags.tools.format.hint": {
-    "description": "Hint under the Format a field panel in the tag editor window: a field with several values (Artist, Genre) ends with just one value, built from the first."
-  },
-  "multiRename.tags.tools.format.run": "Format",
-  "@multiRename.tags.tools.format.run": {
-    "description": "Button that rebuilds the chosen tag field from the mask in the tag editor window."
-  },
-  "multiRename.tags.tools.name.mode": "How to read the file names",
-  "@multiRename.tags.tools.name.mode": {
-    "description": "Accessible name of the switch between a simple pattern and a regular expression in the From file name panel of the tag editor window."
-  },
   "multiRename.tags.tools.replace.lists.heading": "Saved lists",
   "@multiRename.tags.tools.replace.lists.heading": {
     "description": "Heading of the saved lists of replacements in the Find and replace panel of the tag editor window. A list is several find/replace steps kept under a name and run together."
@@ -2025,6 +2005,10 @@
   "@multiRename.tags.tools.name.modeRegex": {
     "description": "Option in the From file name panel of the tag editor window: read file names with a regular expression whose named groups are tag fields."
   },
+  "multiRename.tags.tools.replace.lists.deleteFailed": "Couldn’t delete the list.",
+  "@multiRename.tags.tools.replace.lists.deleteFailed": {
+    "description": "Shown when deleting a saved list of replacements in the tag editor window failed."
+  },
   "multiRename.tags.tools.name.patternPattern": "Pattern, like %track% - %title%",
   "@multiRename.tags.tools.name.patternPattern": {
     "description": "Label of the pattern text box in the From file name panel of the tag editor window while the Pattern mode is on. The percent signs wrap tag field names and must stay as they are."
@@ -2037,6 +2021,26 @@
     }
   },
   "multiRename.tags.tools.name.recent": "Recent patterns",
+  "multiRename.tags.tools.format.field": "Field",
+  "@multiRename.tags.tools.format.field": {
+    "description": "Label of the tag field picker in the Format a field panel of the tag editor window."
+  },
+  "multiRename.tags.tools.format.mask": "Mask",
+  "@multiRename.tags.tools.format.mask": {
+    "description": "Label of the mask text box in the Format a field panel of the tag editor window. The mask is a Multi-rename mask where [N] stands for the field’s current value."
+  },
+  "multiRename.tags.tools.format.hint": "Format keeps only the first value of a field that holds several, such as Artist or Genre.",
+  "@multiRename.tags.tools.format.hint": {
+    "description": "Hint under the Format a field panel in the tag editor window: a field with several values (Artist, Genre) ends with just one value, built from the first."
+  },
+  "multiRename.tags.tools.format.run": "Format",
+  "@multiRename.tags.tools.format.run": {
+    "description": "Button that rebuilds the chosen tag field from the mask in the tag editor window."
+  },
+  "multiRename.tags.tools.name.mode": "How to read the file names",
+  "@multiRename.tags.tools.name.mode": {
+    "description": "Accessible name of the switch between a simple pattern and a regular expression in the From file name panel of the tag editor window."
+  },
   "@multiRename.tags.tools.name.recent": {
     "description": "Accessible name of the list of the patterns used last in the From file name panel of the tag editor window. Picking one fills the pattern box."
   },

@@ -116,7 +116,12 @@
     }
 
     async function deleteList(id: string): Promise<void> {
-        presets = await deleteTagReplacePreset(id)
+        listProblem = null
+        try {
+            presets = await deleteTagReplacePreset(id)
+        } catch {
+            listProblem = tString('multiRename.tags.tools.replace.lists.deleteFailed')
+        }
     }
 
     async function runList(preset: ReplacePreset): Promise<void> {

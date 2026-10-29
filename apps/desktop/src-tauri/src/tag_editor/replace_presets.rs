@@ -126,20 +126,35 @@ const ORDINALS: [&str; 20] = [
 ];
 
 /// `, část první` → ` 01` … `, díl dvacátá` → ` 20` on Title, one step per number (so each
-/// replacement is a plain literal). The comma and space before the word go too.
+/// replacement is a plain literal), then a trim step for a title that was nothing but the part.
+///
+/// The part word must start a word (after a comma, a space or the start, so "Podíl první" stays),
+/// and the ordinal must end the title or be followed by punctuation or a digit (kept as it was).
+/// That leaves compound ordinals alone ("část dvacátá první", 21 and up) and also a part word followed
+/// by more words ("část první a druhá"): the limit is 1 to 20, by design.
 fn czech_part_steps() -> Vec<ReplaceStep> {
-    ORDINALS
+    let title = || Some(vec![cmdr_tags::TagField::Title]);
+    let mut steps: Vec<ReplaceStep> = ORDINALS
         .iter()
         .enumerate()
         .map(|(at, forms)| ReplaceStep {
-            fields: Some(vec![cmdr_tags::TagField::Title]),
-            search: format!(r",? ?(?:část|cast|díl|dil) (?:{forms})(?:\b|$)"),
-            replace: format!(" {:02}", at + 1),
+            fields: title(),
+            search: format!(r"(?:\s*,\s*|\s+|^)(?:část|cast|díl|dil) (?:{forms})(\s*[^\p{{L}}\s]|\s*$)"),
+            replace: format!(" {:02}$1", at + 1),
             case_sensitive: false,
             first_only: false,
             regex: true,
         })
-        .collect()
+        .collect();
+    steps.push(ReplaceStep {
+        fields: title(),
+        search: r"^\s+|\s+$".to_string(),
+        replace: String::new(),
+        case_sensitive: false,
+        first_only: false,
+        regex: true,
+    });
+    steps
 }
 
 /// Adds the built-ins this list hasn't taken yet (those past its `seed_version`), skipping a name the
