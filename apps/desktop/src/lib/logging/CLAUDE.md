@@ -12,7 +12,9 @@ timestamps. The Rust side's fern dispatch tree, with its per-output level filter
 - **`describe-for-log.ts`**: renders every logged value.
 - **`log-markers.ts`**: marks a value for error reports, mirroring `cmdr_fs::log_private` (table: `log-markers.json`).
 - **`uncaught-errors.ts`**: forwards `window` `error` / `unhandledrejection` to `log.error` under the `uncaught`
-  category (registered from `routes/+layout.ts`); `logPageCrash` does it for throws SvelteKit catches.
+  category (registered from `routes/+layout.ts`); `logPageCrash` does it for throws SvelteKit catches. An `error` event
+  with no thrown value (`event.error == null`, a browser notice like WebKit's ResizeObserver loop) logs at warn, so it
+  never auto-sends a report.
 - **`log-once.ts`**: `LogOnceGate`, which lets a failure that recurs per event, poll tick, or call log once until it
   clears.
 - Rust side: `src-tauri/src/commands/logging.rs` (batch IPC receiver + runtime level control); the dispatch tree is in

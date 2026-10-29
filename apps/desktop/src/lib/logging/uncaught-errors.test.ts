@@ -7,10 +7,10 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const h = vi.hoisted(() => ({ error: vi.fn() }))
+const h = vi.hoisted(() => ({ error: vi.fn(), warn: vi.fn() }))
 
 vi.mock('./logger', () => ({
-  getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: h.error }),
+  getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: h.warn, error: h.error }),
   whenLoggerReady: (emit: () => void) => {
     emit()
   },
@@ -25,6 +25,7 @@ registerUncaughtErrorLogging()
 
 beforeEach(() => {
   h.error.mockClear()
+  h.warn.mockClear()
 })
 
 describe('uncaught error logging', () => {
@@ -83,6 +84,22 @@ describe('uncaught error logging', () => {
     expect(h.error).toHaveBeenCalledTimes(1)
     const [, ctx] = h.error.mock.calls[0] as [string, { detail: unknown }]
     expect(ctx.detail).toBe(event.reason)
+  })
+
+  it('logs a message-only error event at warn, so a browser notice never auto-sends a report', () => {
+    // WebKit fires `error` with a message and NO thrown value for its "ResizeObserver loop
+    // completed with undelivered notifications" notice (cmdr-reports#86). Error is the auto-report
+    // threshold, and a real throw always carries its value, so the typed check is `event.error`.
+    window.dispatchEvent(
+      new ErrorEvent('error', { message: 'ResizeObserver loop completed', filename: 'app.js', lineno: 0, colno: 0 }),
+    )
+
+    expect(h.error).not.toHaveBeenCalled()
+    expect(h.warn).toHaveBeenCalledTimes(1)
+    const [template, ctx] = h.warn.mock.calls[0] as [string, { source: string; detail: unknown }]
+    expect(template).toBe('Uncaught error event without a thrown value at {source}: {detail}')
+    expect(ctx.source).toBe('app.js:0:0')
+    expect(ctx.detail).toBe('ResizeObserver loop completed')
   })
 
   it('ignores a resource-load error, which is not a crash', () => {

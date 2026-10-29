@@ -11,7 +11,9 @@
  * Registered once from `routes/+layout.ts` (a stable module, like
  * `hmr-recovery.ts`) so the listeners survive layout re-evaluation during HMR.
  * `log.error` is forwarded to Rust in production too — the prod sinks carry
- * `error+` — so these land in the log file and in error-report bundles.
+ * `error+` — so these land in the log file and in error-report bundles. An `error`
+ * event with a message but no thrown value logs at warn: it's a browser notice, and
+ * error level would auto-send a report for it.
  */
 
 import { describeForLog } from './describe-for-log'
@@ -63,7 +65,19 @@ export function registerUncaughtErrorLogging(): void {
     if (thrown === null && !event.message) return
     const { filename, lineno, colno } = event
     const source = filename ? `${filename}:${String(lineno)}:${String(colno)}` : 'unknown'
-    const detail = thrown ?? event.message
+    if (thrown === null) {
+      // A message with no thrown value is a browser notice, not a throw: WebKit's
+      // "ResizeObserver loop completed with undelivered notifications" is the one we see
+      // (cmdr-reports#86), and it only means a layout change waited a frame. A real throw
+      // always carries its value. Warn keeps the line in the log and in any bundle, but
+      // stays under the error level that auto-sends a report.
+      const message = event.message
+      whenLoggerReady(() => {
+        log.warn('Uncaught error event without a thrown value at {source}: {detail}', { source, detail: message })
+      })
+      return
+    }
+    const detail = thrown
     const stack = framesOf(thrown)
     whenLoggerReady(() => {
       if (stack) log.error('Uncaught error at {source}: {detail}\n{stack}', { source, detail, stack })
