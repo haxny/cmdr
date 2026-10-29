@@ -87,6 +87,27 @@ from PR #386 (Jiri Slovacek): a plain table reads `ευ` as `eu`, which no Greek
 Not in v1, all planned in #372: alphabetic counters, `\` to move into subfolders (the executor's one-parent rule refuses
 it today), "next step" chaining, and editing names in an editor.
 
+## foobar2000 patterns (`foobar/`)
+
+A second mask syntax: foobar2000 title formatting as the user writes it in foobar, so a pasted pattern renders as
+foobar's File Operations would. `foobar::parse` once, `Pattern::render(&RowFacts)` per row; pure, and not yet wired
+into the sheet. The grammar and its limits are in `foobar/mod.rs`, the fields in `foobar/fields.rs`, the functions and
+truth rules in `foobar/eval.rs`; `foobar_vectors.json` holds the user's own patterns with their exact names and every
+error with its byte offset.
+
+- **Truth decides `[ ]`.** A field with a value is true, literal text false, a sequence true when any part is.
+  `$if`/`$if2`/`$if3` return the branch they pick; every other function carries its first argument's truth, so
+  `[$num(%discnumber%,1)$num(%tracknumber%,2)]` drops when both are missing.
+  Decision/Why: foobar documents truth only for fields and the control functions; carrying the subject's truth is
+  what makes the user's SFT pattern drop its numbers, which a literal-true `$num` would turn into `000`.
+- **A missing field outside `[ ]` is no text**, not foobar's `?`: File Operations, which renames, shows `()` for a
+  missing `%year%` (the user's screenshot), rather than a `?` in the new name.
+- **Fallbacks:** `%album artist%` → artist, `%title%` → the name without extension; `%tracknumber%`/`%track%` pad to
+  two digits; `%year%` is the date's first four characters when they're digits, else the reader's year.
+- **No input panics or runs away:** nesting stops at `MAX_DEPTH` (32) before recursing, every value is cut at
+  `MAX_TEXT_BYTES`, `$num`/`$pad` widths at `MAX_WIDTH`, numbers saturate. A 10,000-pattern random loop and a
+  200,000-deep bomb guard it.
+
 ## Search & replace (`transform.rs`)
 
 - Plain search: case-insensitive unless `case_sensitive`, `*` / `?` wildcards (`*` is lazy), `a|b|c` lists paired with

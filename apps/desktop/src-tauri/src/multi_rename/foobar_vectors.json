@@ -1,0 +1,172 @@
+{
+  "$comment": "Shared test vectors for the foobar2000 title-formatting engine (`foobar/`), read by `foobar_test.rs` (and by a frontend mirror, if one is ever built). `facts` are named rows: `fileName` and `parent` are the file on disk, `media` (absent = not a media file) the tags read from it, in `MediaFacts` field names (camelCase). Each `render` entry is a pattern, the row it renders for, and the exact name. Each `errors` entry is a pattern and its `FoobarError` as the IPC sends it; `at` is a byte offset into the pattern.",
+  "facts": {
+    "anneFrank": {
+      "fileName": "03.mp3",
+      "parent": "Denik",
+      "media": {
+        "title": "Pondeli",
+        "artist": "Anne Frank",
+        "albumArtist": "Anne Frank",
+        "album": "Denik",
+        "year": 1947,
+        "date": "1947",
+        "performer": ["Vera Sluneckova"],
+        "publisher": "audioteka 2011",
+        "track": 3
+      }
+    },
+    "noArtist": {
+      "fileName": "03.mp3",
+      "parent": "Denik",
+      "media": {
+        "album": "Denik",
+        "year": 1947,
+        "date": "1947",
+        "performer": ["Vera Sluneckova"],
+        "publisher": "audioteka 2011",
+        "track": 3
+      }
+    },
+    "artistOnly": {
+      "fileName": "03.mp3",
+      "parent": "Denik",
+      "media": { "artist": "Anne Frank", "album": "Denik", "track": 3 }
+    },
+    "noYear": {
+      "fileName": "03.mp3",
+      "parent": "Denik",
+      "media": { "albumArtist": "Anne Frank", "album": "Denik", "track": 3 }
+    },
+    "sft": {
+      "fileName": "07 Title.flac",
+      "parent": "SFT",
+      "media": {
+        "title": "Title",
+        "artist": "Artist",
+        "date": "2024-05-01",
+        "year": 2024,
+        "disc": 1,
+        "track": 7
+      }
+    },
+    "sftNoNumbers": {
+      "fileName": "Title.flac",
+      "parent": "SFT",
+      "media": { "title": "Title", "artist": "Artist", "date": "2024-05-01" }
+    },
+    "everything": {
+      "fileName": "01 Intro.m4a",
+      "parent": "Album Folder",
+      "media": {
+        "title": "Intro",
+        "artist": "Band",
+        "albumArtist": "Various",
+        "album": "Live",
+        "genre": "Rock",
+        "comment": "a note",
+        "track": 1,
+        "disc": 2,
+        "totalTracks": 12,
+        "totalDiscs": 3,
+        "date": "1999-12-31",
+        "year": 1999,
+        "performer": ["One", "Two"],
+        "composer": ["Writer"],
+        "publisher": "Label",
+        "description": "about it",
+        "translator": ["Tran"],
+        "www": ["https://example.com"]
+      }
+    },
+    "untitled": {
+      "fileName": "Chapter 9.mp3",
+      "parent": "Book",
+      "media": { "artist": "Someone", "track": 123 }
+    },
+    "plainFile": { "fileName": "notes.final.txt", "parent": "Docs" },
+    "oddDate": {
+      "fileName": "x.mp3",
+      "parent": "p",
+      "media": { "date": "May 2001", "year": 2001 }
+    }
+  },
+  "render": [
+    { "pattern": "[%album artist% - ]'('%year%')' %album% - %track%", "facts": "anneFrank", "expected": "Anne Frank - (1947) Denik - 03" },
+    { "pattern": "[%artist% -] %album%", "facts": "anneFrank", "expected": "Anne Frank - Denik" },
+    { "pattern": "[%album artist% - ]'('%year%')' %album% - %track% %title%", "facts": "anneFrank", "expected": "Anne Frank - (1947) Denik - 03 Pondeli" },
+    { "pattern": "[%album artist% - ]'('%year%')' %album% '('cte %performer%')' - %disc%$num(%tracknumber%,2) %title%", "facts": "anneFrank", "expected": "Anne Frank - (1947) Denik (cte Vera Sluneckova) - 03 Pondeli" },
+    { "pattern": "[%album artist% - ]'('%year%')' %album% '('cte %performer%')' - %disc%$num(%tracknumber%,2)", "facts": "anneFrank", "expected": "Anne Frank - (1947) Denik (cte Vera Sluneckova) - 03" },
+    { "pattern": "[%album artist% - ]'('%year%')' %album% '('cte %performer%, %publisher%')' - %disc%$num(%tracknumber%,2)", "facts": "anneFrank", "expected": "Anne Frank - (1947) Denik (cte Vera Sluneckova, audioteka 2011) - 03" },
+    { "pattern": "SFT %date% '('[$num(%discnumber%,1)$num(%tracknumber%,2)]')' %title% '('%artist%')'", "facts": "sft", "expected": "SFT 2024-05-01 (107) Title (Artist)" },
+
+    { "pattern": "[%album artist% - ]'('%year%')' %album% '('cte %performer%, %publisher%')' - %disc%$num(%tracknumber%,2)", "facts": "noArtist", "expected": "(1947) Denik (cte Vera Sluneckova, audioteka 2011) - 03" },
+    { "pattern": "[%artist% -] %album%", "facts": "noArtist", "expected": " Denik" },
+    { "pattern": "[%album artist% - ]%album%", "facts": "artistOnly", "expected": "Anne Frank - Denik" },
+    { "pattern": "[%album artist% - ]'('%year%')' %album% - %track%", "facts": "noYear", "expected": "Anne Frank - () Denik - 03" },
+    { "pattern": "SFT %date% '('[$num(%discnumber%,1)$num(%tracknumber%,2)]')' %title% '('%artist%')'", "facts": "sftNoNumbers", "expected": "SFT 2024-05-01 () Title (Artist)" },
+    { "pattern": "%disc%$num(%tracknumber%,2)", "facts": "sft", "expected": "107" },
+
+    { "pattern": "%artist%|%album artist%|%album%|%title%|%genre%|%comment%", "facts": "everything", "expected": "Band|Various|Live|Intro|Rock|a note" },
+    { "pattern": "%tracknumber%|%track%|%discnumber%|%disc%|%totaltracks%|%totaldiscs%", "facts": "everything", "expected": "01|01|2|2|12|3" },
+    { "pattern": "%date%|%year%|%performer%|%composer%|%publisher%", "facts": "everything", "expected": "1999-12-31|1999|One, Two|Writer|Label" },
+    { "pattern": "%description%|%translator%|%www%|%filename%|%directoryname%", "facts": "everything", "expected": "about it|Tran|https://example.com|01 Intro|Album Folder" },
+    { "pattern": "%ARTIST% %Album Artist% %TrackNumber%", "facts": "everything", "expected": "Band Various 01" },
+    { "pattern": "%title% - %track%", "facts": "untitled", "expected": "Chapter 9 - 123" },
+    { "pattern": "%title%|%filename%|%directoryname%|[%artist%]|%artist%", "facts": "plainFile", "expected": "notes.final|notes.final|Docs||" },
+    { "pattern": "%year%|%date%", "facts": "oddDate", "expected": "2001|May 2001" },
+    { "pattern": "%year%|%date%", "facts": "noYear", "expected": "|" },
+    { "pattern": "%year%", "facts": "anneFrank", "expected": "1947" },
+
+    { "pattern": "'it''s' ''[%artist%]'%'' $ [ ]'", "facts": "anneFrank", "expected": "its 'Anne Frank% $ [ ]" },
+    { "pattern": "a (b), c] d)", "facts": "anneFrank", "expected": "a (b), c] d)" },
+    { "pattern": "[x]['('%artist%')'][ - %comment%]", "facts": "anneFrank", "expected": "(Anne Frank)" },
+    { "pattern": "[[%artist%] %comment%]|[[%comment%] %artist%]", "facts": "anneFrank", "expected": "Anne Frank | Anne Frank" },
+    { "pattern": "Čtení: %album% – ž", "facts": "anneFrank", "expected": "Čtení: Denik – ž" },
+
+    { "pattern": "$num(7,3)|$num(42,1)|$num(-4,4)|$num(-4,1)|$num(5,0)|$num(abc,2)|$num(12x,3)|$num(-4.8,5)", "facts": "plainFile", "expected": "007|42|-004|-4|5|00|012|-0004" },
+    { "pattern": "$num(%track%,3)|[$num(%comment%,2)]|[$num(5,2)]", "facts": "anneFrank", "expected": "003||" },
+    { "pattern": "$num(1,99999999999999999999999)", "facts": "plainFile", "expected": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001" },
+    { "pattern": "$if(%artist%,yes,no)|$if(%comment%,yes,no)|$if(%comment%,yes)|$if(x,yes,no)", "facts": "anneFrank", "expected": "yes|no||no" },
+    { "pattern": "[$if(%comment%,yes,no)]|[$if(%artist%,yes,no)]|[$if(%artist%,%album%,no)]", "facts": "anneFrank", "expected": "||Denik" },
+    { "pattern": "$if2(%comment%,none)|$if2(%artist%,none)|[$if2(%comment%,none)]|[$if2(%comment%,%album%)]", "facts": "anneFrank", "expected": "none|Anne Frank||Denik" },
+    { "pattern": "$if3(%comment%,%genre%,%album%,last)|$if3(%comment%,%genre%,last)|$if3(a,b)", "facts": "anneFrank", "expected": "Denik|last|b" },
+    { "pattern": "$left(%album%,3)|$left(%album%,0)|$left(%album%,-2)|$left(%album%,99)|$left(Čtení,2)", "facts": "anneFrank", "expected": "Den|||Denik|Čt" },
+    { "pattern": "$right(%album%,3)|$right(%album%,-1)|$right(%album%,99)|$right(Čtení,2)", "facts": "anneFrank", "expected": "nik||Denik|ní" },
+    { "pattern": "$replace(%album%,e,E)|$replace(a-b_c,-,' ',_,+)|$replace(aaa,a,aa)|$replace(abc,,x)|$replace(ab,a,b,b,c)", "facts": "anneFrank", "expected": "DEnik|a b+c|aaaaaa|abc|cc" },
+    { "pattern": "$lower(ŽLUŤOUČKÝ Kůň)|$upper(žluťoučký kůň)|$caps(hELLO wORLD '('live')' o''neil)", "facts": "plainFile", "expected": "žluťoučký kůň|ŽLUŤOUČKÝ KŮŇ|Hello World (Live) O'neil" },
+    { "pattern": "$trim(  two words  )|$pad(ab,5)|$pad(ab,5,_)|$pad(abcdef,3)|$pad(ab,-1)", "facts": "plainFile", "expected": "two words|ab   |ab___|abcdef|ab" },
+    { "pattern": "[$upper(%comment%)]|[$upper(%artist%)]|[$left(%comment%,2)]|[$pad(%comment%,3,x)]|[$trim(%comment%)]", "facts": "anneFrank", "expected": "|ANNE FRANK|||" },
+    { "pattern": "$IF(%artist%,y,n)|$Upper(a)", "facts": "anneFrank", "expected": "y|A" },
+    { "pattern": "$if(%artist%,$if(%album%,$upper(%album%),x),y)", "facts": "anneFrank", "expected": "DENIK" },
+    { "pattern": "$if(%artist%,'a,b','(c)')", "facts": "anneFrank", "expected": "a,b" },
+    { "pattern": "$if(%artist%,[%comment%],[%album%])|$if(,a,b)", "facts": "anneFrank", "expected": "|b" },
+    { "pattern": "", "facts": "anneFrank", "expected": "" }
+  ],
+  "errors": [
+    { "pattern": "%nope%", "error": { "type": "unknownField", "name": "nope", "at": 0 } },
+    { "pattern": "ab %album  artist%", "error": { "type": "unknownField", "name": "album  artist", "at": 3 } },
+    { "pattern": "x%%", "error": { "type": "unknownField", "name": "", "at": 1 } },
+    { "pattern": "Čž %<artist>%", "error": { "type": "unknownField", "name": "<artist>", "at": 5 } },
+    { "pattern": "a $foo(x)", "error": { "type": "unknownFunction", "name": "foo", "at": 2 } },
+    { "pattern": "$(x)", "error": { "type": "unknownFunction", "name": "", "at": 0 } },
+    { "pattern": "x $", "error": { "type": "unknownFunction", "name": "", "at": 2 } },
+    { "pattern": "$upper", "error": { "type": "badArguments", "function": "upper", "at": 0 } },
+    { "pattern": "$num(1)", "error": { "type": "badArguments", "function": "num", "at": 0 } },
+    { "pattern": "a$upper(a,b)", "error": { "type": "badArguments", "function": "upper", "at": 1 } },
+    { "pattern": "$if(a)", "error": { "type": "badArguments", "function": "if", "at": 0 } },
+    { "pattern": "$if(a,b,c,d)", "error": { "type": "badArguments", "function": "if", "at": 0 } },
+    { "pattern": "$if3(a)", "error": { "type": "badArguments", "function": "if3", "at": 0 } },
+    { "pattern": "$replace(a,b)", "error": { "type": "badArguments", "function": "replace", "at": 0 } },
+    { "pattern": "$replace(a,b,c,d)", "error": { "type": "badArguments", "function": "replace", "at": 0 } },
+    { "pattern": "$trim()", "error": { "type": "badArguments", "function": "trim", "at": 0 } },
+    { "pattern": "$pad(a,1,2,3)", "error": { "type": "badArguments", "function": "pad", "at": 0 } },
+    { "pattern": "ab %album", "error": { "type": "unclosed", "what": "field", "at": 3 } },
+    { "pattern": "[%album% - ", "error": { "type": "unclosed", "what": "bracket", "at": 0 } },
+    { "pattern": "[a][b[c]", "error": { "type": "unclosed", "what": "bracket", "at": 3 } },
+    { "pattern": "x 'open", "error": { "type": "unclosed", "what": "quote", "at": 2 } },
+    { "pattern": "$num(%track%,2", "error": { "type": "unclosed", "what": "function", "at": 0 } },
+    { "pattern": "$if(a,[b)", "error": { "type": "unclosed", "what": "bracket", "at": 6 } },
+    { "pattern": "$upper('a)", "error": { "type": "unclosed", "what": "quote", "at": 7 } }
+  ]
+}
