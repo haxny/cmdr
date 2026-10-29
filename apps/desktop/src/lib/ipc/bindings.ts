@@ -1904,15 +1904,16 @@ export const commands = {
   getIcons: (iconIds: string[], useAppIconsForDocuments: boolean) =>
     __TAURI_INVOKE<TimedOut<{ [key in string]: string }>>('get_icons', { iconIds, useAppIconsForDocuments }),
   /**
-   *  Detects which of the given VISIBLE directory paths carry a Finder custom-icon
-   *  flag, returning the `path:{dir}` icon id for each. The frontend calls this for
-   *  visible directory rows, then feeds the returned ids into `get_icons` to fetch
-   *  the real icons. The `getxattr` check is cheap (no NSWorkspace, no TCC), but
-   *  still deferred off the bulk-listing hot path, so it's safe to run without the
-   *  FDA gate. Empty result while there's nothing to report.
+   *  Detects which of the given VISIBLE directory paths carry a Finder custom icon,
+   *  returning the `path:{dir}` icon id for each plus whether macOS tints it with the
+   *  accent (so the gold recolor applies). The frontend calls this for visible
+   *  directory rows, then feeds the returned ids into `get_icons` to fetch the real
+   *  icons. The `getxattr` checks are cheap (no NSWorkspace, no TCC), but still
+   *  deferred off the bulk-listing hot path, so it's safe to run without the FDA
+   *  gate. Empty result while there's nothing to report.
    */
   getCustomFolderIconIds: (directoryPaths: string[]) =>
-    __TAURI_INVOKE<TimedOut<string[]>>('get_custom_folder_icon_ids', { directoryPaths }),
+    __TAURI_INVOKE<TimedOut<CustomFolderIconId[]>>('get_custom_folder_icon_ids', { directoryPaths }),
   /**
    *  Refreshes icons for a directory listing.
    *  Fetches icons in parallel for all directories and extensions.
@@ -8000,6 +8001,18 @@ export type CreditInfoDto = {
    *  the wedge is on OUR side of the wire, not the server's.
    */
   send_queue_depth: number
+}
+
+// One visible folder that carries a Finder custom icon, as `get_custom_folder_icon_ids` reports it.
+export type CustomFolderIconId = {
+  // The `path:{dir}` id to fetch the real icon with.
+  iconId: string
+  /**
+   *  True for a Customize Folder symbol or emoji that macOS tints with the system accent, so the
+   *  frontend applies the gold recolor to it like to a plain folder. False for pasted artwork and
+   *  for a color the person chose with a tag, which are drawn as-is.
+   */
+  followsAccent: boolean
 }
 
 // Why a wipe didn't start. Nothing was deleted in either case.

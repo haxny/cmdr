@@ -43,8 +43,8 @@ lives in `FilePane.svelte` as a `Set<number>`).
 - **`SelectionInfo`'s date is `displayedDateColumn(effectiveSortBy)`** (`../displayed-date.ts`), the date Full would
   show, ❌ never a derivation of its own. `DETAILS.md` § display modes.
 - **`FileIcon` resolves a folder by PATH before `iconId`** (`getCachedCustomFolderIcon`): a custom-icon folder keeps the
-  generic `dir` id, so gold recolor must skip it (`src-tauri/src/icons/DETAILS.md`). A cache miss draws the bundled
-  macOS default, ❌ not an emoji, then swaps to the live icon on `$iconCacheVersion`.
+  generic `dir` id, so gold recolor skips it unless `isAccentTintedCustomFolder` (`src-tauri/src/icons/DETAILS.md`). A
+  cache miss draws the bundled macOS default, ❌ not an emoji, then swaps to the live icon on `$iconCacheVersion`.
 
 ## Status-bar hints (`SelectionInfo`)
 

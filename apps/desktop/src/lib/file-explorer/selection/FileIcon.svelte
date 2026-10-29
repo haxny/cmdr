@@ -1,6 +1,11 @@
 <script lang="ts">
     import type { FileEntry, SyncStatus } from '../types'
-    import { getCachedIcon, getCachedCustomFolderIcon, iconCacheVersion } from '#lib/icon-cache.js'
+    import {
+        getCachedIcon,
+        getCachedCustomFolderIcon,
+        iconCacheVersion,
+        isAccentTintedCustomFolder,
+    } from '#lib/icon-cache.js'
     import { getIsCmdrGold } from '#lib/settings/reactive-settings.svelte.js'
     import { dependOn } from '#lib/utils/reactivity.js'
     import Icon from '#lib/ui/Icon.svelte'
@@ -64,15 +69,21 @@
     //     Trash, home). Without this they keep the raw OS bitmap, whose folder
     //     tint is the system accent, so they'd leak through non-gold.
     // Deliberately EXCLUDED: `pkg:*` (full-color `.app`/bundle icons the filter
-    // would destroy) and `path:*` (folders with a user-assigned custom icon we
-    // must not override).
+    // would destroy). Custom-icon folders are decided per folder below.
     const isFolderIcon = $derived(
         file.iconId === 'dir' || file.iconId === 'symlink-dir' || file.iconId.startsWith('special:'),
     )
-    // `!customFolderIconUrl` because a custom-icon folder keeps the `dir` iconId,
-    // so `isFolderIcon` is true for it too — without this the filter would repaint
-    // the user's own artwork gold, the one thing the exclusion above forbids.
-    const recolorToGold = $derived(isFolderIcon && !customFolderIconUrl && getIsCmdrGold())
+    // A custom-icon folder keeps the `dir` iconId, so `isFolderIcon` is true for it
+    // too. Its icon gets the filter only when it's a macOS Customize Folder symbol or
+    // emoji that macOS tinted with the system accent (issue #110); pasted artwork and
+    // a color the person chose with a tag stay as drawn.
+    const customIconFollowsAccent = $derived.by((): boolean => {
+        dependOn(_cacheVersion) // Track cache version for reactivity
+        return customFolderIconUrl !== undefined && isAccentTintedCustomFolder(file.path)
+    })
+    const recolorToGold = $derived(
+        isFolderIcon && (!customFolderIconUrl || customIconFollowsAccent) && getIsCmdrGold(),
+    )
 
     // Git portal icons resolve in the frontend via Lucide instead of going
     // through the OS icon provider. The four IDs are reserved by the

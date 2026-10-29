@@ -426,10 +426,10 @@ repeats a key in the keyed `#each` and shifts the old rows by one. Pinned in `fu
 Virtual scrolling renders only ~50 items, so prefetch only visible. Re-fetch on scroll. The same visible-range pass in
 `fetchVisibleRange` also drives Tier-C custom-folder icons: it collects the visible directory rows' paths and calls
 `prefetchCustomFolderIcons` (→ backend `get_custom_folder_icon_ids`), which runs the `kHasCustomIcon` `getxattr` only
-for that bounded on-screen set and returns `path:{dir}` ids to fetch. The bulk listing never pays the per-entry syscall;
-packages already arrive as `pkg:` ids from `get_icon_id`. `FilePane` evicts a directory's `path:*` / `pkg:*` icons via
-`evictPerPathIconsForDir(loadedPath)` when its listing ends (navigation away / unmount), so a folder re-iconed while
-away is re-detected next time it's shown.
+for that bounded on-screen set and returns `path:{dir}` ids to fetch, each flagged `followsAccent` for the gold recolor.
+The bulk listing never pays the per-entry syscall; packages already arrive as `pkg:` ids from `get_icon_id`. `FilePane`
+evicts a directory's `path:*` / `pkg:*` icons via `evictPerPathIconsForDir(loadedPath)` when its listing ends
+(navigation away / unmount), so a folder re-iconed while away is re-detected next time it's shown.
 
 **Decision**: Finder tag dots (`TagDots.svelte`) ride the same visible-range pass as custom-folder icons, and reserve
 their cluster width in the column math **Why**: Tags (`com.apple.metadata:_kMDItemUserTags`) are a per-file `getxattr`,

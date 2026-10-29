@@ -38,6 +38,7 @@ import {
   evictPerPathIconsForDir,
   prefetchIcons,
   prefetchCustomFolderIcons,
+  isAccentTintedCustomFolder,
   clearDirectoryIconCache,
   initIconDisplayVariant,
   cleanupIconDisplayVariant,
@@ -212,7 +213,7 @@ describe('prefetchCustomFolderIcons', () => {
 
   it('fetches the returned custom-folder ids through getIcons', async () => {
     vi.mocked(getCustomFolderIconIds).mockResolvedValue({
-      data: ['path:/Users/me/Custom'],
+      data: [{ iconId: 'path:/Users/me/Custom', followsAccent: false }],
       timedOut: false,
     })
     vi.mocked(getIcons).mockResolvedValue({
@@ -224,6 +225,30 @@ describe('prefetchCustomFolderIcons', () => {
 
     expect(getIcons).toHaveBeenCalledWith(['path:/Users/me/Custom'], false)
     expect(getCachedIcon('path:/Users/me/Custom')).toBe('custom-url')
+    expect(isAccentTintedCustomFolder('/Users/me/Custom')).toBe(false)
+  })
+
+  it('remembers which custom icons follow the accent, until their key leaves the cache', async () => {
+    vi.mocked(getCustomFolderIconIds).mockResolvedValue({
+      data: [
+        { iconId: 'path:/Users/me/Work/Symbol', followsAccent: true },
+        { iconId: 'path:/Users/me/Work/Artwork', followsAccent: false },
+      ],
+      timedOut: false,
+    })
+    vi.mocked(getIcons).mockResolvedValue({
+      data: { 'path:/Users/me/Work/Symbol': 'symbol-url', 'path:/Users/me/Work/Artwork': 'artwork-url' },
+      timedOut: false,
+    })
+
+    await prefetchCustomFolderIcons(['/Users/me/Work/Symbol', '/Users/me/Work/Artwork'], false)
+
+    expect(isAccentTintedCustomFolder('/Users/me/Work/Symbol')).toBe(true)
+    expect(isAccentTintedCustomFolder('/Users/me/Work/Artwork')).toBe(false)
+
+    // Navigating away drops the icon, and the flag with it, so a re-icon is re-detected.
+    evictPerPathIconsForDir('/Users/me/Work')
+    expect(isAccentTintedCustomFolder('/Users/me/Work/Symbol')).toBe(false)
   })
 
   it('does nothing on an empty input and never throws on backend error', async () => {

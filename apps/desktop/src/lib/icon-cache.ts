@@ -11,6 +11,7 @@ import {
   clearDirectoryIconCache as clearDirectoryIconCacheCommand,
   getDisplayAccessibility,
   onDisplayAccessibilityChanged,
+  type CustomFolderIconId,
 } from './tauri-commands'
 import { getAppLogger } from '#lib/logging/logger.js'
 
@@ -117,6 +118,25 @@ const pathKeyCap = 256
  */
 const memoryCache = new Map<string, string>()
 
+/**
+ * The `path:` keys whose custom icon follows the system accent (`followsAccent` from
+ * `getCustomFolderIconIds`). Only meaningful while the key is in `memoryCache`, so every
+ * removal goes through `deleteCacheEntry` / `clearMemoryCache`, which keep the two in step.
+ */
+const accentTintedCustomFolderKeys = new Set<string>()
+
+/** Removes one cache entry, with its accent flag. */
+function deleteCacheEntry(key: string): void {
+  memoryCache.delete(key)
+  accentTintedCustomFolderKeys.delete(key)
+}
+
+/** Empties the in-memory cache, with every accent flag. */
+function clearMemoryCache(): void {
+  memoryCache.clear()
+  accentTintedCustomFolderKeys.clear()
+}
+
 /** Number of per-path keys (`path:*` + `pkg:*`) currently held in `memoryCache`. */
 function countPathKeys(): number {
   let count = 0
@@ -140,7 +160,7 @@ function setCacheEntry(id: string, url: string): void {
       // Front-most per-path key is the oldest; evict it.
       for (const key of memoryCache.keys()) {
         if (isPerPathKey(key)) {
-          memoryCache.delete(key)
+          deleteCacheEntry(key)
           break
         }
       }
@@ -306,15 +326,31 @@ export async function prefetchCustomFolderIcons(
   const unknown = directoryPaths.filter((p) => !memoryCache.has(`${PATH_KEY_PREFIX}${p}`))
   if (unknown.length === 0) return
 
-  let ids: string[]
+  let found: CustomFolderIconId[]
   try {
     const { data } = await getCustomFolderIconIds(unknown)
-    ids = data
+    found = data
   } catch {
     return // Best-effort: keep the generic dir glyph.
   }
-  if (ids.length === 0) return
-  await prefetchIcons(ids, useAppIconsForDocuments)
+  if (found.length === 0) return
+  for (const { iconId, followsAccent } of found) {
+    if (followsAccent) accentTintedCustomFolderKeys.add(iconId)
+    else accentTintedCustomFolderKeys.delete(iconId)
+  }
+  await prefetchIcons(
+    found.map((f) => f.iconId),
+    useAppIconsForDocuments,
+  )
+}
+
+/**
+ * True when a folder's cached custom icon is a macOS Customize Folder symbol or emoji that
+ * macOS tints with the system accent, so the gold recolor applies to it like to a plain folder.
+ * False for pasted artwork, a color the person chose with a tag, and folders with no custom icon.
+ */
+export function isAccentTintedCustomFolder(directoryPath: string): boolean {
+  return accentTintedCustomFolderKeys.has(`${PATH_KEY_PREFIX}${directoryPath}`)
 }
 
 /**
@@ -339,7 +375,7 @@ export function evictPerPathIconsForDir(dirPath: string): void {
     if (!isPerPathKey(key)) continue
     const embeddedPath = key.slice(key.indexOf(':') + 1)
     if (embeddedPath.startsWith(childPrefix)) {
-      memoryCache.delete(key)
+      deleteCacheEntry(key)
       removed = true
     }
   }
@@ -423,7 +459,7 @@ export async function clearExtensionIconCache(): Promise<void> {
   // Clear frontend cache (extension icons only)
   for (const key of memoryCache.keys()) {
     if (key.startsWith('ext:')) {
-      memoryCache.delete(key)
+      deleteCacheEntry(key)
     }
   }
 
@@ -451,7 +487,7 @@ export async function clearDirectoryIconCache(): Promise<void> {
 
   for (const key of memoryCache.keys()) {
     if (key === 'dir' || key === 'symlink-dir' || isPerPathKey(key) || key.startsWith(SPECIAL_KEY_PREFIX)) {
-      memoryCache.delete(key)
+      deleteCacheEntry(key)
     }
   }
 
@@ -490,7 +526,7 @@ function syncToDisplayOptions(options: IconDisplayOptions): void {
   }
   log.debug('Display options changed the icon look from {previous} to {variant}, refetching', { previous, variant })
   startNewEpoch()
-  memoryCache.clear()
+  clearMemoryCache()
   saveToStorage()
   iconCacheCleared.update((v) => v + 1)
   iconCacheVersion.update((v) => v + 1)
@@ -526,7 +562,7 @@ export function cleanupIconDisplayVariant(): void {
 
 /** Test-only: clears the in-memory cache so each test starts from a known state, drawn under the standard look. */
 export function _resetIconCacheForTests(): void {
-  memoryCache.clear()
+  clearMemoryCache()
   activeVariant = 'standard'
 }
 

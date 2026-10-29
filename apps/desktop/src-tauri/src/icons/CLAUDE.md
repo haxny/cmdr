@@ -28,6 +28,7 @@ Full details: `DETAILS.md`.
 - **Custom-icon detection (`getxattr`) must NOT run during bulk listing** (a syscall per directory): only for the
   visible paths the FE asks about via `get_custom_folder_icon_ids`. So a custom-icon folder KEEPS the `dir` id: the FE
   resolves it by PATH (`getCachedCustomFolderIcon`), ❌ never `iconId`, or the icon is fetched and never drawn.
+- **Gold recolors a custom icon only if `followsAccent`** (Customize Folder symbol/emoji, no colored tag). `DETAILS.md`.
 - **`dir` / `symlink-dir` sample a Cmdr-owned empty temp folder, ❌ never `~`.** macOS bakes the home folder's house
   badge (and any custom icon on `~`) into the bitmap, stamping it onto ~99% of rows.
 - **Real-folder NSWorkspace fetches run on 8 MB-stack OS threads (`fetch_path_icons`), never rayon**: a cloud folder's
@@ -41,10 +42,9 @@ Full details: `DETAILS.md`.
 - **System-only changes need explicit flushes**, since the mtime token can't see them: a theme/accent change drops the
   folder keys and the disk tier (`clear_directory_icon_cache`); an `IconVariant` change (Increase contrast, Invert
   colors redraw file AND folder icons) drops all memory keys, and the disk tier keys by it.
-- **Every cache write is epoch-guarded** (`cache_icon(epoch, ..)`, FE `applyIconsToCache(.., epoch)`), with the epoch
-  taken BEFORE asking macOS, or a fetch outliving a flush restores the old look seconds later. `DETAILS.md` § Flushes
-  and in-flight fetches.
+- **Every cache write is epoch-guarded** (`cache_icon(epoch, ..)`, FE `applyIconsToCache(.., epoch)`), epoch taken
+  BEFORE asking macOS, or a fetch outliving a flush restores the old look. `DETAILS.md` § Flushes.
 - **Disk-cache staleness token is the folder's mtime**, ❌ not a watcher: Finder bumps it when re-iconing.
-- **Linux skips NSWorkspace** and resolves via XDG theme lookup, so `special:*` degrades to the generic folder icon.
-- **The macOS fetch is ours (`macos_workspace.rs`), not a crate**: an icon crate can hard-link a framework newer than
-  the macOS floor, so dyld refuses to launch. Drawing rules in `DETAILS.md`.
+- **Linux skips NSWorkspace** (XDG theme lookup), so `special:*` degrades to the generic folder.
+- **The macOS fetch is ours (`macos_workspace.rs`), not a crate**: one can hard-link a framework newer than the macOS
+  floor, so dyld refuses to launch. Drawing rules in `DETAILS.md`.

@@ -182,6 +182,7 @@ export {
   clearExtensionIconCache,
   clearDirectoryIconCache,
 } from './icons'
+export type { CustomFolderIconId } from './icons'
 
 // App state (MCP pane state, dialog tracking, menu context, window lifecycle)
 export {

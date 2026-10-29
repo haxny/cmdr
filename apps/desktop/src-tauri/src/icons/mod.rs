@@ -216,8 +216,20 @@ fn real_path_for_real_folder_id(icon_id: &str) -> Option<String> {
     None
 }
 
-/// Detects which of the given VISIBLE directory paths carry a Finder custom-icon
-/// flag, and returns the `path:{dir}` icon id for each that does.
+/// One visible folder that carries a Finder custom icon, as `get_custom_folder_icon_ids` reports it.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomFolderIconId {
+    /// The `path:{dir}` id to fetch the real icon with.
+    pub icon_id: String,
+    /// True for a Customize Folder symbol or emoji that macOS tints with the system accent, so the
+    /// frontend applies the gold recolor to it like to a plain folder. False for pasted artwork and
+    /// for a color the person chose with a tag, which are drawn as-is.
+    pub follows_accent: bool,
+}
+
+/// Detects which of the given VISIBLE directory paths carry a Finder custom icon,
+/// and returns the `path:{dir}` icon id for each that does, with whether it follows the accent.
 ///
 /// This is the deferred half of Tier-C custom-icon detection: the `getxattr`
 /// check is too costly to run for every entry during a bulk listing, so the
@@ -227,11 +239,16 @@ fn real_path_for_real_folder_id(icon_id: &str) -> Option<String> {
 ///
 /// Packages aren't included here — they're detected during listing by the pure
 /// suffix check in `get_icon_id` and already arrive as `pkg:` ids.
-pub fn custom_folder_icon_ids(directory_paths: Vec<String>) -> Vec<String> {
+pub fn custom_folder_icon_ids(directory_paths: Vec<String>) -> Vec<CustomFolderIconId> {
     directory_paths
         .into_iter()
-        .filter(|path| per_path::has_custom_folder_icon(Path::new(path)))
-        .map(|path| format!("{PATH_KEY_PREFIX}{path}"))
+        .filter_map(|path| {
+            let icon = per_path::custom_folder_icon(Path::new(&path))?;
+            Some(CustomFolderIconId {
+                icon_id: format!("{PATH_KEY_PREFIX}{path}"),
+                follows_accent: icon.follows_accent(),
+            })
+        })
         .collect()
 }
 

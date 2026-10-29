@@ -6,9 +6,9 @@
  * system accent. The subtle contract this pins:
  *   - special system folders (`special:*`) ARE recolored, so Downloads/Desktop/
  *     etc. don't leak the system accent through,
- *   - packages (`pkg:*`, full-color `.app` icons) and custom-icon folders
- *     (`path:*`, a user-assigned icon) are NEVER recolored, since the filter
- *     would ruin the former and override the latter.
+ *   - packages (`pkg:*`, full-color `.app` icons) are NEVER recolored, since the
+ *     filter would ruin them. Which custom-icon folders recolor is pinned in
+ *     `FileIcon.custom-folder-icon.test.ts`.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount, unmount, flushSync } from 'svelte'
@@ -22,6 +22,7 @@ vi.mock('#lib/icon-cache.js', async () => {
     // solely on iconId. The custom-icon case is pinned in
     // `FileIcon.custom-folder-icon.test.ts`.
     getCachedCustomFolderIcon: () => undefined,
+    isAccentTintedCustomFolder: () => false,
     iconCacheVersion: writable(0),
   }
 })

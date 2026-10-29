@@ -510,7 +510,7 @@ of that color).
 
 **D11 — never touch `com.apple.FinderInfo`.** The write path touches ONLY `_kMDItemUserTags`. That 32-byte `FinderInfo`
 blob carries `kHasCustomIcon` (`0x0400` at offset 8, see `icons/per_path.rs`) plus type/creator codes; zeroing it would
-destroy custom folder icons and break `has_custom_folder_icon`. Modern Finder reads tags straight from
+destroy custom folder icons and break `custom_folder_icon`. Modern Finder reads tags straight from
 `_kMDItemUserTags`, so the dot/color shows without the legacy label bits — verified to survive in
 `tags_write_test.rs::tagging_preserves_finder_info_custom_icon_flag`. `setxattr` is atomic per attribute, so a single
 file is never half-written; a multi-file toggle that fails mid-loop leaves earlier files updated and propagates the
