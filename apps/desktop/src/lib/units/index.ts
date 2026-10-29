@@ -48,7 +48,6 @@ export {
   type ByteCount,
   type BytesPerSecond,
   type TieredSize,
-  type PairedSize,
   type SizePair,
   formatExactBytes,
   bytes,
