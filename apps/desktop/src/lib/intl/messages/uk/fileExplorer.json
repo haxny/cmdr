@@ -1547,6 +1547,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Справді вилучити розширення «.{oldExt}»? macOS показуватиме це як звичайну папку, а не як один елемент.} other {Справді вилучити розширення «.{oldExt}»? Без нього ваш Mac може не знати, якою програмою відкривати файл.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Справді додати розширення «.{newExt}»? macOS може показувати цю папку як один елемент.} other {Справді додати розширення «.{newExt}»? Наступного разу файл може відкритися в іншій програмі.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "Залишити без розширення",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": "Вилучити .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Завжди дозволяти зміну розширення",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"
