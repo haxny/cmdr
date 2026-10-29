@@ -2,8 +2,9 @@
 
 Analyzes the git history of `main` to generate a CSV showing how the codebase size evolved over time.
 
-For each day between the first and latest commit, it picks the latest commit and counts lines of code, broken down by
-language and prod/test.
+For each day between the first and latest commit, it picks the state `main` was in at the end of that day (its
+first-parent history, so a branch commit a later merge brought in never counts as a snapshot) and counts lines of code,
+broken down by language and prod/test.
 
 Processes commits in parallel (one worker per CPU core), so it saturates the machine nicely.
 

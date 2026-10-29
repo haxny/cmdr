@@ -25,13 +25,18 @@ type result struct {
 }
 
 func main() {
-	commits, err := getCommits()
+	tips, err := getCommits(true)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting commits: %v\n", err)
+		os.Exit(1)
+	}
+	commits, err := getCommits(false)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting commits: %v\n", err)
 		os.Exit(1)
 	}
 
-	dailyCommits := groupCommitsByDate(commits)
+	dailyCommits := groupCommitsByDate(tips, commits)
 	if len(dailyCommits) == 0 {
 		return
 	}

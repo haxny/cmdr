@@ -41,8 +41,17 @@ func gitCommand(args ...string) *exec.Cmd {
 	return exec.Command("git", fullArgs...)
 }
 
-func getCommits() ([]commit, error) {
-	cmd := gitCommand("log", "--format=%H|%cd|%s", "--date=short", "main")
+// getCommits lists main's commits, newest first. firstParent: only main's own tips, skipping the
+// commits a merge brought in, so each one is a state `main` was really in. Otherwise every commit
+// but the merges themselves, for the messages.
+func getCommits(firstParent bool) ([]commit, error) {
+	args := []string{"log", "--format=%H|%cd|%s", "--date=short"}
+	if firstParent {
+		args = append(args, "--first-parent")
+	} else {
+		args = append(args, "--no-merges")
+	}
+	cmd := gitCommand(append(args, "main")...)
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to run git log: %w", err)
@@ -71,22 +80,36 @@ func getCommits() ([]commit, error) {
 	return commits, scanner.Err()
 }
 
-// groupCommitsByDate keeps the latest commit hash per day but collects all messages.
-func groupCommitsByDate(commits []commit) map[string]commit {
-	dailyCommits := make(map[string]commit)
-
-	for _, c := range commits {
-		existing, ok := dailyCommits[c.date]
-		if !ok {
-			// First commit for this date (latest chronologically since git log is reverse order)
-			dailyCommits[c.date] = c
-		} else {
-			existing.messages = append(existing.messages, c.messages...)
-			dailyCommits[c.date] = existing
+// groupCommitsByDate picks, per day, the state `main` was in at its end and that day's commit
+// messages. tips is `main`'s first-parent history and all its non-merge commits, both newest
+// first. A merge commit brings in branch commits dated before it, so a day can have messages but
+// no tip of its own; it takes the latest earlier tip, since `main` didn't change that day.
+func groupCommitsByDate(tips, all []commit) map[string]commit {
+	daily := make(map[string]commit)
+	for _, c := range tips {
+		if _, ok := daily[c.date]; !ok {
+			// Newest first, so the first tip of a date is that day's last.
+			daily[c.date] = commit{hash: c.hash, date: c.date}
 		}
 	}
-
-	return dailyCommits
+	for _, c := range all {
+		day, ok := daily[c.date]
+		if !ok {
+			// ISO dates sort as strings; tips run newest first, so the first older one is the latest.
+			for _, t := range tips {
+				if t.date < c.date {
+					day, ok = commit{hash: t.hash, date: c.date}, true
+					break
+				}
+			}
+			if !ok {
+				continue
+			}
+		}
+		day.messages = append(day.messages, c.messages...)
+		daily[c.date] = day
+	}
+	return daily
 }
 
 type fileEntry struct {
