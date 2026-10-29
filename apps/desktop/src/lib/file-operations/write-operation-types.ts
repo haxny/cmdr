@@ -10,6 +10,7 @@
 
 import type {
   ArchiveNameRefusal,
+  FilesystemKind,
   ItemKinds,
   MountedVolumeAction,
   NamedLeavesRefusal,
@@ -269,8 +270,8 @@ export type WriteOperationError =
   | { type: 'source_changed'; path: string }
   | {
       type: 'files_too_large_for_filesystem'
-      /** The destination filesystem kind (snake_case tag, e.g. 'fat32'). */
-      filesystem: string
+      /** The destination filesystem, so the message can name it ("FAT32"). */
+      filesystem: FilesystemKind
       maxSize: number
       files: OversizedFile[]
       totalCount: number
