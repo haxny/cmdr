@@ -13,15 +13,16 @@ use std::time::Duration;
 
 use cmdr_operation_log::types::OperationId;
 
+use super::super::OperationEventSink;
+use super::super::event_sinks::SinkDecorator;
 use super::super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::state::WriteSettledGuard;
 use super::super::summary::volume_items;
 use super::super::types::ReadOnlySide;
 use super::super::types::{
     CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationError,
-    WriteOperationStartResult, WriteOperationType, WriteProgressEvent,
+    WriteOperationStartResult, WriteOperationType,
 };
-use super::super::{ArmedConflict, OperationEventSink};
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
@@ -370,44 +371,15 @@ impl SuppressTerminalsSink {
     }
 }
 
-impl OperationEventSink for SuppressTerminalsSink {
-    fn emit_progress(&self, event: WriteProgressEvent) {
-        self.inner.emit_progress(event);
+impl SinkDecorator for SuppressTerminalsSink {
+    fn inner(&self) -> &dyn OperationEventSink {
+        &*self.inner
     }
     fn emit_complete(&self, event: WriteCompleteEvent) {
         *self.captured_complete.lock_ignore_poison() = Some(event);
     }
     fn emit_cancelled(&self, _event: WriteCancelledEvent) {}
     fn emit_error(&self, _event: WriteErrorEvent) {}
-    fn emit_conflict(&self, event: ArmedConflict) {
-        self.inner.emit_conflict(event);
-    }
-    fn emit_conflict_resolved(&self, event: super::super::types::WriteConflictResolvedEvent) {
-        // Forwarded like the prompt itself: it is what takes that prompt back
-        // off screen. Only the copy's TERMINAL events are withheld here.
-        self.inner.emit_conflict_resolved(event);
-    }
-    fn emit_source_item_done(&self, event: super::super::types::WriteSourceItemDoneEvent) {
-        self.inner.emit_source_item_done(event);
-    }
-    fn emit_sources_gone(&self, event: super::super::types::WriteSourcesGoneEvent) {
-        self.inner.emit_sources_gone(event);
-    }
-    fn emit_locked_sources(&self, event: super::super::types::WriteLockedSourcesEvent) {
-        self.inner.emit_locked_sources(event);
-    }
-    fn emit_scan_progress(&self, event: super::super::types::ScanProgressEvent) {
-        self.inner.emit_scan_progress(event);
-    }
-    fn emit_scan_conflict(&self, conflict: super::super::types::ConflictInfo) {
-        self.inner.emit_scan_conflict(conflict);
-    }
-    fn emit_dry_run_complete(&self, result: super::super::types::DryRunResult) {
-        self.inner.emit_dry_run_complete(result);
-    }
-    fn emit_settled(&self, event: super::super::types::WriteSettledEvent) {
-        self.inner.emit_settled(event);
-    }
     fn note_source_landed_clean(&self, source: &Path) {
         self.landed_clean.lock_ignore_poison().push(source.to_path_buf());
     }

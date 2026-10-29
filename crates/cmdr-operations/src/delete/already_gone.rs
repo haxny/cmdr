@@ -19,13 +19,10 @@
 
 use std::path::{Path, PathBuf};
 
-use super::super::conflict_slot::ArmedConflict;
-use super::super::event_sinks::OperationEventSink;
+use super::super::event_sinks::{OperationEventSink, SinkDecorator};
 use super::super::queued_sources::{local_source_is_gone, volume_source_is_gone};
 use super::super::types::{
-    AlreadyGone, ConflictInfo, DryRunResult, ScanProgressEvent, SourceItemOutcome, WriteCancelledEvent,
-    WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteLockedSourcesEvent, WriteOperationType,
-    WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
+    AlreadyGone, SourceItemOutcome, WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::Volume;
@@ -135,12 +132,9 @@ pub(crate) fn complete_all_gone(
 }
 
 /// A sink that stamps `already_gone` on the completion the walk emits, and
-/// forwards everything else untouched. The walkers stay unaware of the
-/// pre-flight; the note rides the one terminal event the FE already reads.
-///
-/// ❗ Forwards EVERY method, the defaulted ones included (`emit_sources_gone`,
-/// `emit_locked_sources`, `note_source_landed_clean`): a wrapper that drops one
-/// leaves a parked question unasked forever.
+/// forwards everything else untouched (a [`SinkDecorator`]). The walkers stay
+/// unaware of the pre-flight; the note rides the one terminal event the FE
+/// already reads.
 pub(crate) struct AlreadyGoneSink<'a> {
     inner: &'a dyn OperationEventSink,
     already_gone: Option<AlreadyGone>,
@@ -152,50 +146,14 @@ impl<'a> AlreadyGoneSink<'a> {
     }
 }
 
-impl OperationEventSink for AlreadyGoneSink<'_> {
-    fn emit_progress(&self, event: WriteProgressEvent) {
-        self.inner.emit_progress(event);
+impl SinkDecorator for AlreadyGoneSink<'_> {
+    fn inner(&self) -> &dyn OperationEventSink {
+        self.inner
     }
     fn emit_complete(&self, mut event: WriteCompleteEvent) {
         if event.already_gone.is_none() {
             event.already_gone.clone_from(&self.already_gone);
         }
         self.inner.emit_complete(event);
-    }
-    fn emit_cancelled(&self, event: WriteCancelledEvent) {
-        self.inner.emit_cancelled(event);
-    }
-    fn emit_error(&self, event: WriteErrorEvent) {
-        self.inner.emit_error(event);
-    }
-    fn emit_conflict(&self, event: ArmedConflict) {
-        self.inner.emit_conflict(event);
-    }
-    fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {
-        self.inner.emit_conflict_resolved(event);
-    }
-    fn emit_source_item_done(&self, event: WriteSourceItemDoneEvent) {
-        self.inner.emit_source_item_done(event);
-    }
-    fn emit_sources_gone(&self, event: WriteSourcesGoneEvent) {
-        self.inner.emit_sources_gone(event);
-    }
-    fn emit_locked_sources(&self, event: WriteLockedSourcesEvent) {
-        self.inner.emit_locked_sources(event);
-    }
-    fn emit_scan_progress(&self, event: ScanProgressEvent) {
-        self.inner.emit_scan_progress(event);
-    }
-    fn emit_scan_conflict(&self, conflict: ConflictInfo) {
-        self.inner.emit_scan_conflict(conflict);
-    }
-    fn emit_dry_run_complete(&self, result: DryRunResult) {
-        self.inner.emit_dry_run_complete(result);
-    }
-    fn emit_settled(&self, event: WriteSettledEvent) {
-        self.inner.emit_settled(event);
-    }
-    fn note_source_landed_clean(&self, source: &Path) {
-        self.inner.note_source_landed_clean(source);
     }
 }

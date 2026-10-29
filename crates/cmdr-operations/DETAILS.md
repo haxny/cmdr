@@ -2201,8 +2201,9 @@ job still had plans for those files.
 - **Observable and answerable by an agent**: `cmdr://state` renders the parked question as `pendingSourcesGone`, and the
   `queue` tool's `continue_without_gone` answers it (`cancel` is the other answer).
 - `OperationEventSink::emit_sources_gone` has a default no-op so the many single-purpose test sinks needn't spell it
-  out; ❗ a sink that WRAPS another (the suggestion bridge's `ProposalReportingSink`) must forward it, or nobody is
-  asked and the operation waits until cancelled.
+  out; a sink that WRAPS another implements `SinkDecorator`, which forwards it by default (`src/host/DETAILS.md`), or,
+  app-side (the suggestion bridge's `ProposalReportingSink`), forwards it by hand: a dropped one leaves nobody asked and
+  the operation waiting until cancelled.
 
 Pinned by `queued_sources_tests.rs`. The frontend half: `apps/desktop/src/lib/file-operations/DETAILS.md` § "Sources
 that left while an operation queued".
@@ -2249,8 +2250,8 @@ then stopped in Phase 4 with every original kept: the files in both places and a
   removal on a cross-drive move after its lock is lifted: a mode, which no Locked answer covers.
 - **Observable and answerable by an agent**: `cmdr://state` renders the parked question as `pendingLockedSources`, and
   the `queue` tool's `move_locked` / `skip_locked` answer it.
-- `OperationEventSink::emit_locked_sources` defaults to a no-op; ❗ a sink that WRAPS another must forward it, or nobody
-  is asked and the move waits until cancelled.
+- `OperationEventSink::emit_locked_sources` defaults to a no-op; a wrapping sink forwards it (`SinkDecorator` does by
+  default), as a dropped one leaves nobody asked and the move waiting until cancelled.
 
 Pinned by `locked_sources_tests.rs`, the move cells in `src/transfer/metadata_matrix_tests.rs`, and
 `src/transfer/volume/move_locked_tests.rs`. The frontend half: `apps/desktop/src/lib/file-operations/DETAILS.md` §

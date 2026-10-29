@@ -19,7 +19,11 @@ Each line: the question the seam asks, its trait file, who answers it in Cmdr, a
   App: `operations_host/events.rs` (Tauri emits through `operations_host/wire.rs`, `priority::transfers`, PostHog,
   `log_error!`). Required.
 - **One operation's events**: `OperationEventSink` (`operation_sink.rs`), handed to each start; one scan preview's:
-  `ScanPreviewEventSink` (`scan_preview_sink.rs`). App: `operations_host/sinks.rs`, built at the IPC edge.
+  `ScanPreviewEventSink` (`scan_preview_sink.rs`). App: `operations_host/sinks.rs`, built at the IPC edge. A sink that
+  WRAPS another implements `SinkDecorator` (beside the trait) and overrides only what it changes: every other method,
+  the defaulted no-ops included, forwards to `inner()`, so a wrapper can't swallow a parked question. Users:
+  `AlreadyGoneSink` and `SuppressTerminalsSink`. It's crate-private (the surface cap), so the app's one wrapper, the
+  suggestion bridge's `ProposalReportingSink`, still forwards every method by hand.
 - **A sink for an op the engine starts itself**: `OperationSinkFactory` (`mod.rs`). App: the Tauri sink factory in
   `operations_host::app_answers`. Default: none, so an instant op routed into a zip refuses plainly.
 - **"Cmdr is about to write here"**: `OwnWrites` (`own_writes.rs`), reached only through `EngineHost::announce` /
