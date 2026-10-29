@@ -207,6 +207,9 @@ pub struct LocalPosixVolume {
     /// a detached host silently turns off the scan oracle's fast path and leaves
     /// panes stale after every local copy.
     host: VolumeHost,
+    /// Handed to every `list_directory` tally: see [`Self::with_listing_hook`].
+    #[cfg(any(test, feature = "testing"))]
+    listing_hook: Option<crate::reading::ListingHook>,
     /// Raw errno to inject on the next `list_directory` call. Cleared after use.
     #[cfg(feature = "playwright-e2e")]
     injected_error: std::sync::Mutex<Option<i32>>,
@@ -238,9 +241,22 @@ impl LocalPosixVolume {
             mount,
             sidecar_probe: cmdr_fs::apple_double::volume_keeps_sidecars,
             host,
+            #[cfg(any(test, feature = "testing"))]
+            listing_hook: None,
             #[cfg(feature = "playwright-e2e")]
             injected_error: std::sync::Mutex::new(None),
         }
+    }
+
+    /// This volume with `hook` run on the lister's thread after each entry a
+    /// `list_directory` counts, so a test can hold a read partway until its
+    /// progress tick lands. The ticks are sampled on a timer, and a starved async
+    /// side can wake only after a fast read is done, so without a hold no tick is
+    /// guaranteed.
+    #[cfg(any(test, feature = "testing"))]
+    pub fn with_listing_hook(mut self, hook: crate::reading::ListingHook) -> Self {
+        self.listing_hook = Some(hook);
+        self
     }
 
     /// This volume with an injected sidecar probe, so a test on APFS can read
@@ -354,6 +370,9 @@ impl Volume for LocalPosixVolume {
             // this side samples it on a timer, leaving the callback on the async task that
             // owns it. Without this the pane sits on "Opening folder…" for a big folder's
             // whole read. `DETAILS.md` § "The local reader".
+            #[cfg(any(test, feature = "testing"))]
+            let tally = Arc::new(ListingTally::with_hook(self.listing_hook.clone()));
+            #[cfg(not(any(test, feature = "testing")))]
             let tally = Arc::new(ListingTally::default());
             let tally_for_listing = Arc::clone(&tally);
             let host = self.host.clone();

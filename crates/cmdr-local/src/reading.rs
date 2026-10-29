@@ -166,15 +166,37 @@ pub(crate) struct ListingTally {
     files: AtomicUsize,
     dirs: AtomicUsize,
     bytes: AtomicU64,
+    /// Runs on the lister's thread after each entry is counted, so a test can hold
+    /// the read partway and see a tick land deterministically, whatever the
+    /// machine's load ([`crate::LocalPosixVolume::with_listing_hook`]).
+    #[cfg(any(test, feature = "testing"))]
+    after_record: Option<ListingHook>,
 }
 
+/// See [`ListingTally`]'s `after_record`.
+#[cfg(any(test, feature = "testing"))]
+pub type ListingHook = std::sync::Arc<dyn Fn() + Send + Sync>;
+
 impl ListingTally {
+    /// A tally that calls `hook` after each entry it counts.
+    #[cfg(any(test, feature = "testing"))]
+    pub(crate) fn with_hook(hook: Option<ListingHook>) -> Self {
+        Self {
+            after_record: hook,
+            ..Self::default()
+        }
+    }
+
     fn record(&self, entry: &FileEntry) {
         if entry.is_directory {
             self.dirs.fetch_add(1, Ordering::Relaxed);
         } else {
             self.files.fetch_add(1, Ordering::Relaxed);
             self.bytes.fetch_add(entry.size.unwrap_or(0), Ordering::Relaxed);
+        }
+        #[cfg(any(test, feature = "testing"))]
+        if let Some(hook) = &self.after_record {
+            hook();
         }
     }
 

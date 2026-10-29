@@ -216,8 +216,10 @@ emitted, because the blocking pool may not have picked the task up yet and "Load
 
 Putting the throttle in the sampler rather than the stat loop means one place decides how often the number changes, and
 it's the place that knows it's driving a UI. `PROGRESS_SAMPLE_INTERVAL` is 200 ms in production and 1 ms in a test
-build, so `listing_a_local_directory_reports_progress_while_it_reads` can pin the wiring against a 5,000-entry scratch
-dir instead of needing one big enough to outlast a real interval.
+build. Even 1 ms guarantees no tick: under load the async side can wake only after a fast read is done (#755, 2 in 40
+red under 32 CPU hogs). So `listing_a_local_directory_reports_progress_while_it_reads` pins the wiring by holding the
+read after its first entry until a tick lands, through `LocalPosixVolume::with_listing_hook` (a `testing`-gated hook the
+tally runs after each entry it counts). ❌ Don't pin it with a bigger folder: no size outlasts a starved sampler.
 
 SMB and MTP wire `on_progress` through their own listing loops directly, having no `spawn_blocking` hop to cross.
 
