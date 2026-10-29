@@ -1363,6 +1363,16 @@ var AllChecks = []CheckDefinition{
 		Inputs:      websiteInputs,
 		Run:         RunWebsiteCSPConnectSrc,
 	},
+	{
+		ID:          "website-trust-sources",
+		Nickname:    "trust-sources",
+		DisplayName: "trust page source map",
+		App:         AppWebsite,
+		Tech:        "🚀 Astro",
+		IsFast:      false,           // `go run` compiles the review tool
+		Inputs:      wholeRepoInputs, // the map's patterns name files anywhere in the repo
+		Run:         RunWebsiteTrustSources,
+	},
 
 	// API server checks
 	{

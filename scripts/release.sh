@@ -46,7 +46,8 @@ RELEASE_SUBJECT="chore(release): $TAG"
 # uncommitted for this script: the changelog, the roadmap (content in roadmap.ts, layout in
 # roadmap.astro), the feature-status source of truth (plus the features page, which needs a card for
 # every new feature id or it fails the build), and the security advisory list (its new entry names
-# this version, which the `desktop-security-advisories` check only accepts once the bump lands).
+# this version, which the `desktop-security-advisories` check only accepts once the bump lands), and
+# the trust pages, whose review stamps `verifiedAgainst` with this version (docs/guides/trust-page-review.md).
 PREP_FILES=(
   CHANGELOG.md
   feature-status.json
@@ -54,6 +55,13 @@ PREP_FILES=(
   apps/website/src/lib/roadmap.ts
   apps/website/src/pages/roadmap.astro
   apps/desktop/src-tauri/resources/security-advisories.json
+  apps/website/src/lib/trust.ts
+  apps/website/src/lib/trust-mdm.ts
+  apps/website/src/lib/trust-development.ts
+  apps/website/src/lib/trust-sources.json
+  apps/website/src/lib/accessibility-report.ts
+  apps/website/src/pages/trust.astro
+  apps/website/src/pages/trust
 )
 # Who signs the update archives (docs/guides/releasing.md § Who signs the update archives). Unset is `ci`.
 SIGNING=$(gh variable get RELEASE_UPDATE_SIGNING 2>/dev/null || echo ci)
@@ -90,7 +98,7 @@ prepare_release() {
     exclude+=(":!$f")
   done
   if ! git diff --quiet -- "${exclude[@]}" || ! git diff --staged --quiet -- "${exclude[@]}"; then
-    echo "Error: Working tree has uncommitted changes (other than the changelog, roadmap, feature status and its page, and security advisory list). Commit or stash them first."
+    echo "Error: Working tree has uncommitted changes (other than the release-prep files: the changelog, roadmap, feature status and its page, security advisory list, and trust pages). Commit or stash them first."
     exit 1
   fi
 
@@ -130,6 +138,17 @@ prepare_release() {
     if [[ -z "$unreleased" ]]; then
       echo "Error: The [Unreleased] section in CHANGELOG.md is empty."
       echo "Add release notes under it before releasing!"
+      exit 1
+    fi
+
+    # getcmdr.com/trust must be true of the release it describes. Its review (prep step 5) ends by
+    # stamping `verifiedAgainst` with this version; a stamp left behind means nobody checked the
+    # page against what's shipping. Before this gate, the stamp drifted six releases unnoticed.
+    local verified
+    verified=$(sed -n "s/^export const verifiedAgainst = { version: '\([0-9.]*\)'.*/\1/p" apps/website/src/lib/trust.ts)
+    if [[ "$verified" != "$VERSION" ]]; then
+      echo "Error: getcmdr.com/trust says it was verified against ${verified:-an unknown version}, not $VERSION."
+      echo "Review it first: docs/guides/trust-page-review.md (start with ./scripts/trust-review.sh)."
       exit 1
     fi
   fi
@@ -334,7 +353,7 @@ restore_prep_edits() {
   fi
   if git diff "$r^" "$r" -- "${PREP_FILES[@]}" | git apply; then
     sed -i '' "s/^## \[${VERSION//./\\.}\] - .*/## [Unreleased]/" CHANGELOG.md
-    echo "Put the release prep (changelog, roadmap, feature status, advisories) back as uncommitted edits."
+    echo "Put the release prep (changelog, roadmap, feature status, advisories, trust pages) back as uncommitted edits."
   else
     echo "Couldn't put the release prep back on this tree. It's in ${r:0:12}; take it with:"
     echo "  git diff $r^ $r -- ${PREP_FILES[*]} | git apply"

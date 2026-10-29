@@ -321,7 +321,10 @@ check.
      red release CI run. One finding is expected: a new security advisory entry fails `desktop-security-advisories` (its
      `fixedIn` is newer than the app version until `release.sh` bumps it).
 6. **Advise the version** (patch: bug fixes, minor: new features, major: major launches), and give the user the
-   `./scripts/release.sh x.x.x` command.
+   `./scripts/release.sh x.x.x` command. Once the version is picked, **review the trust pages** per
+   `docs/guides/trust-page-review.md` (start with `./scripts/trust-review.sh`) and stamp `verifiedAgainst` with it;
+   `release.sh` refuses to run while the stamp names another version. The edits ride the release commit, and David
+   reviews them with the rest of the prep.
 7. **Offer to run the release script**, and wait for confirmation before running it. Run it as a background command (a
    few minutes): it syncs `main`, runs the release-prep checks (§ Release prep checks that abort before tagging),
    commits `chore(release): vX.Y.Z` (call it R) on a `release/vX.Y.Z` branch on top of `origin/main`, signs the tag on
@@ -477,13 +480,15 @@ Steps:
      alert first.
 5. **Changelog, then the release commit and tag.** Add a `## [Unreleased]` section with a one-line lead and only
    `### Security` entries, per § Writing the CHANGELOG, citing this branch's hashes. Add the fix's entry to the security
-   advisory list too (§ Security advisories), and include it in the release commit. Run
-   `pnpm check changelog-links --fresh`, then do by hand every step of `scripts/release.sh` from the version bump
-   (`npm pkg set version=...`) through `git tag -s`, in its order, with the new version: the settings-defaults stamp,
-   `tauri.conf.json`, `Cargo.toml` plus `cargo update --workspace`, the CHANGELOG heading, the `LICENSE` change date,
-   the visual baselines, both `oxfmt` passes, the strict `i18n-stale` check, the `chore(release): vX.Y.Z+1` commit, and
-   the signed tag. Skip its pull, its pushes, and its CI dispatch (step 4 replaced them). The commit subject must match
-   exactly, or the CI gate looks for a full CI run on the release commit itself and fails.
+   advisory list too (§ Security advisories), and include it in the release commit. Review the trust pages from the last
+   release's tag (`./scripts/trust-review.sh -since vX.Y.Z`, `docs/guides/trust-page-review.md`) and stamp
+   `verifiedAgainst` with the new version. Run `pnpm check changelog-links --fresh`, then do by hand every step of
+   `scripts/release.sh` from the version bump (`npm pkg set version=...`) through `git tag -s`, in its order, with the
+   new version: the settings-defaults stamp, `tauri.conf.json`, `Cargo.toml` plus `cargo update --workspace`, the
+   CHANGELOG heading, the `LICENSE` change date, the visual baselines, both `oxfmt` passes, the strict `i18n-stale`
+   check, the `chore(release): vX.Y.Z+1` commit, and the signed tag. Skip its pull, its pushes, and its CI dispatch
+   (step 4 replaced them). The commit subject must match exactly, or the CI gate looks for a full CI run on the release
+   commit itself and fails.
 6. **Push the tag only** (`git push origin vX.Y.Z+1`), then follow § The release procedure from step 8 on: in `local`
    mode `release-finish.sh`, run from this worktree so it reads the tag's own `tauri.conf.json` pubkey, then the build
    monitoring, step 12's checks, and step 13's evidence. Step 11 doesn't apply: step 7 below merges the patch back.

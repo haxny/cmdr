@@ -1577,6 +1577,11 @@ jobs:
       - name: Check no dead links in docs
         run: ./scripts/check/check --check docs-dead-links --ci
 
+      # Here, not in the website job: the map's patterns name files anywhere in the repo, so a rename
+      # outside `apps/website/` can break it.
+      - name: Check the trust page source map
+        run: ./scripts/check/check --check website-trust-sources --ci
+
       - name: Check § pointers name real headings
         run: ./scripts/check/check --check docs-section-refs --ci
 

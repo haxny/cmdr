@@ -1,0 +1,535 @@
+{
+  "sections": [
+    {
+      "page": "/trust",
+      "anchor": "summary",
+      "paths": [
+        "apps/desktop/src-tauri/src/ai/cloud_consent.rs",
+        "apps/desktop/src-tauri/src/analytics/mod.rs",
+        "apps/desktop/src-tauri/src/managed_policy/keys.rs",
+        "apps/desktop/src/lib/settings/definitions/updates-privacy.ts",
+        "apps/desktop/src/lib/settings/definitions/ai.ts",
+        "apps/desktop/src-tauri/Entitlements.plist",
+        "apps/desktop/src-tauri/Info.plist",
+        "apps/desktop/src-tauri/tauri.conf.json",
+        "docs/open-source-policy.md",
+        ".github/workflows/release*.yml"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "compliance",
+      "paths": [
+        "apps/website/public/images/badges/**",
+        "docs/threat-model.md",
+        "docs/open-source-policy.md",
+        "SECURITY.md",
+        "apps/website/src/pages/privacy-policy.astro",
+        ".github/workflows/release.yml",
+        ".github/workflows/release-pipeline.yml"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "network",
+      "paths": [
+        "apps/desktop/src-tauri/src/managed_policy/egress.rs",
+        "apps/desktop/src-tauri/src/server_request.rs",
+        "apps/desktop/src-tauri/tauri.conf.json",
+        "apps/desktop/src-tauri/src/updater/**",
+        "apps/desktop/src-tauri/src/update_schedule.rs",
+        "apps/desktop/src/lib/updates/**",
+        "apps/desktop/src/lib/settings/definitions/advanced.ts",
+        "apps/desktop/src-tauri/src/analytics/**",
+        "apps/desktop/src-tauri/src/install_id.rs",
+        "apps/desktop/src/lib/onboarding/**",
+        "apps/desktop/src-tauri/src/crash_reporter/**",
+        "apps/desktop/src-tauri/src/error_reporter/**",
+        "apps/desktop/src-tauri/src/redact/**",
+        "apps/desktop/src-tauri/src/diagnostics_snapshot.rs",
+        "apps/desktop/src-tauri/src/licensing/**",
+        "apps/desktop/src-tauri/src/feedback.rs",
+        "apps/desktop/src-tauri/src/commands/feedback.rs",
+        "apps/desktop/src-tauri/src/commands/beta_signup.rs",
+        "apps/desktop/src-tauri/src/ai/client.rs",
+        "apps/desktop/src-tauri/src/ai/client/**",
+        "apps/desktop/src-tauri/src/ai/connection_check.rs",
+        "apps/desktop/src-tauri/src/ai/cloud_consent.rs",
+        "apps/desktop/src-tauri/src/ai/install.rs",
+        "apps/desktop/src-tauri/src/ai/download.rs",
+        "apps/desktop/src-tauri/src/agent/tools/**",
+        "crates/cmdr-index/src/media_index/clip/**",
+        "apps/desktop/src-tauri/src/file_viewer/markdown_images.rs",
+        "crates/cmdr-smb/**",
+        "crates/cmdr-nfs/**",
+        "crates/cmdr-webdav/**",
+        "crates/cmdr-s3/**",
+        "crates/cmdr-mtp/**",
+        "crates/cmdr-adb/**",
+        "crates/cmdr-git/Cargo.toml",
+        "crates/cmdr-restic/Cargo.toml",
+        "apps/desktop/src-tauri/src/network/**",
+        "apps/desktop/src/lib/settings/definitions/file-systems.ts",
+        "apps/desktop/src-tauri/src/s3_costs/**",
+        "apps/api-server/src/s3-prices/**",
+        "apps/api-server/src/telemetry/**",
+        "apps/api-server/src/scheduled.ts",
+        "crates/cmdr-http/**",
+        "docs/notes/proxy-and-tls-inspection-2026-10.md",
+        "apps/desktop/src-tauri/Cargo.toml",
+        "crates/*/Cargo.toml",
+        "clippy.toml",
+        "apps/website/src/layouts/Layout.astro",
+        "apps/website/public/scripts/posthog-init.js",
+        "apps/website/nginx-security-headers.conf"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "mdm",
+      "paths": [
+        "apps/desktop/src-tauri/src/managed_policy/**",
+        "apps/website/src/lib/trust-mdm.ts",
+        "apps/website/public/mdm/**",
+        "apps/desktop/src/lib/settings/components/**",
+        "apps/desktop/src/lib/intl/messages/en/settings.json",
+        "apps/desktop/src/lib/intl/messages/en/updates.json",
+        "apps/desktop/src-tauri/src/mcp/executor/async_tools.rs",
+        "apps/desktop/src-tauri/src/server_request.rs",
+        "apps/desktop/src-tauri/src/analytics/**",
+        "apps/desktop/src-tauri/src/crash_reporter/**",
+        "apps/desktop/src-tauri/src/error_reporter/**",
+        "apps/desktop/src-tauri/src/updater/**",
+        "apps/desktop/src-tauri/src/ai/client.rs",
+        "apps/desktop/src-tauri/src/ai/install.rs",
+        "apps/desktop/src-tauri/src/ai/managed.rs",
+        "apps/desktop/src-tauri/src/ai/connection_check.rs",
+        "apps/desktop/src-tauri/src/settings/ai_gates.rs",
+        "apps/desktop/src-tauri/src/settings/ask_cmdr.rs",
+        "apps/desktop/src-tauri/src/security_log/**",
+        "apps/desktop/src-tauri/src/licensing/**",
+        "apps/desktop/src-tauri/src/s3_costs/**",
+        "crates/cmdr-index/src/media_index/clip/**",
+        "apps/desktop/src-tauri/src/file_viewer/markdown_images.rs",
+        "apps/desktop/src-tauri/src/config.rs",
+        "apps/desktop/src-tauri/tauri.conf.json",
+        "apps/desktop/src-tauri/Info.plist",
+        ".github/workflows/release-pipeline.yml",
+        "scripts/build-pkg.sh",
+        "apps/desktop/packaging/homebrew/**",
+        "docs/guides/homebrew-cask.md"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "eu",
+      "paths": [
+        "apps/api-server/wrangler.toml",
+        "apps/api-server/src/email/**",
+        "apps/api-server/src/website/**",
+        "apps/api-server/src/github-issues.ts",
+        "apps/api-server/src/report-cards.ts",
+        "apps/api-server/src/report-outbox.ts",
+        "apps/api-server/src/types.ts",
+        "apps/api-server/scripts/setup-cf-infra.sh",
+        "infra/listmonk/**",
+        "apps/desktop/src-tauri/src/updater/**",
+        "apps/desktop/src-tauri/src/ai/**",
+        "crates/cmdr-index/src/media_index/clip/**",
+        "apps/website/src/layouts/**"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "subprocessors",
+      "paths": [
+        "apps/api-server/wrangler.toml",
+        "apps/api-server/src/**",
+        "apps/api-server/migrations/*.sql",
+        "apps/api-server/scripts/setup-cf-infra.sh",
+        "infra/listmonk/**",
+        "docs/threat-model.md",
+        "apps/website/src/layouts/**",
+        "apps/website/nginx-security-headers.conf"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "storage",
+      "paths": [
+        "apps/desktop/src-tauri/src/config.rs",
+        "apps/desktop/src-tauri/src/logging/**",
+        "apps/desktop/src/lib/settings/definitions/behavior.ts",
+        "apps/desktop/src/lib/settings/definitions/advanced.ts",
+        "apps/desktop/src/lib/settings/definitions/indexing.ts",
+        "apps/desktop/src/lib/settings/definitions/updates-privacy.ts",
+        "crates/cmdr-index/src/volume_files.rs",
+        "crates/cmdr-index/src/importance/store/**",
+        "crates/cmdr-index/src/media_index/store/**",
+        "crates/cmdr-index/src/indexing/store/**",
+        "crates/cmdr-operation-log/src/**",
+        "apps/desktop/src-tauri/src/security_log/**",
+        "apps/desktop/src-tauri/src/agent/store/**",
+        "apps/desktop/src-tauri/src/agent/memory/**",
+        "apps/desktop/src-tauri/src/ai/llm_log/**",
+        "apps/desktop/src-tauri/src/usage/**",
+        "apps/desktop/src-tauri/src/secrets/**",
+        "apps/desktop/src-tauri/src/network/keychain.rs",
+        "apps/desktop/src-tauri/src/licensing/key_storage.rs",
+        "apps/desktop/src-tauri/src/ai/api_keys.rs",
+        "apps/desktop/src-tauri/src/data_wipe/**",
+        "apps/desktop/src-tauri/src/reveal/**",
+        "apps/desktop/packaging/homebrew/cmdr.rb",
+        "apps/api-server/src/scheduled.ts",
+        "apps/api-server/src/index.ts",
+        "apps/api-server/src/report-cards.ts",
+        "apps/api-server/src/report-outbox.ts",
+        "apps/api-server/src/github-issues.ts",
+        "apps/api-server/src/licensing/**",
+        "apps/api-server/src/website/**",
+        "apps/api-server/migrations/*.sql",
+        "apps/api-server/scripts/setup-cf-infra.sh",
+        "apps/website/src/pages/privacy-policy.astro"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "signing",
+      "paths": [
+        "apps/desktop/src-tauri/tauri.conf.json",
+        "apps/desktop/src-tauri/Entitlements.plist",
+        "apps/desktop/src-tauri/updater-backup.pub",
+        "apps/website/src/lib/trust-mdm.ts",
+        "docs/notes/system-requirements-and-es2025.md",
+        "apps/desktop/src/lib/utils/webkit-compat.ts",
+        "apps/website/src/components/Download.astro",
+        ".github/workflows/release.yml",
+        ".github/workflows/release-pipeline.yml",
+        ".github/release-signers",
+        "scripts/release-finish*",
+        "scripts/release-finish/**",
+        "scripts/build-pkg.sh",
+        "docs/guides/releasing.md",
+        "apps/desktop/src-tauri/src/updater/**",
+        "crates/cmdr-update-trust/**"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "permissions",
+      "paths": [
+        "apps/desktop/src-tauri/Entitlements.plist",
+        "apps/desktop/src-tauri/Info.plist",
+        "apps/desktop/src/lib/onboarding/**",
+        "apps/desktop/src-tauri/src/file_system/get_info.rs",
+        "apps/desktop/src-tauri/src/mtp/**",
+        "apps/desktop/src-tauri/src/secrets/**",
+        "apps/desktop/src-tauri/src/ai/process.rs",
+        "apps/desktop/src-tauri/build.rs",
+        "apps/desktop/src-tauri/src/mcp/server.rs",
+        "apps/desktop/src-tauri/src/mcp/auth.rs",
+        "apps/desktop/src-tauri/src/mcp/port_file.rs",
+        "apps/desktop/src/lib/settings/definitions/ai.ts",
+        "apps/desktop/src-tauri/src/tauri_builder.rs",
+        "apps/desktop/src-tauri/src/network/mdns_discovery.rs",
+        "crates/cmdr-adb/src/server.rs"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "ai",
+      "paths": [
+        "apps/desktop/src/lib/settings/definitions/ai.ts",
+        "apps/desktop/src/lib/settings/cloud-providers.ts",
+        "apps/desktop/src-tauri/src/ai/**",
+        "apps/desktop/src-tauri/src/selection/ai/**",
+        "apps/desktop/src-tauri/src/search/ai/**",
+        "apps/desktop/src-tauri/src/agent/tools/**",
+        "apps/desktop/src-tauri/src/agent/wake/**",
+        "apps/desktop/src-tauri/src/agent/chat/context.rs",
+        "apps/desktop/src-tauri/src/agent/chat/context/**",
+        "apps/desktop/src-tauri/src/agent/suggested_ops/**",
+        "crates/cmdr-index/src/media_index/**",
+        "apps/desktop/src/lib/ai/**"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "development",
+      "paths": [
+        "apps/website/src/lib/trust-development.ts",
+        "docs/threat-model.md",
+        "scripts/check/CLAUDE.md",
+        ".github/workflows/**",
+        "renovate.json",
+        "pnpm-workspace.yaml"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "accessibility",
+      "paths": ["apps/website/src/lib/accessibility-report.ts", "docs/notes/accessibility-audit-2026-10.md"]
+    },
+    {
+      "page": "/trust",
+      "anchor": "company",
+      "paths": [
+        "LICENSE",
+        "apps/website/src/pages/terms-and-conditions.astro",
+        "apps/website/src/pages/privacy-policy.astro",
+        "apps/api-server/src/email/**",
+        "apps/desktop/src-tauri/src/licensing/**",
+        "docs/open-source-policy.md",
+        "SECURITY.md"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "report",
+      "paths": [
+        "SECURITY.md",
+        "apps/website/public/.well-known/security.txt",
+        "docs/security-incident-procedure.md",
+        "CHANGELOG.md"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "gaps",
+      "paths": [
+        "apps/desktop/src-tauri/src/updater/**",
+        "apps/website/src/lib/trust-mdm.ts",
+        "apps/desktop/src-tauri/src/managed_policy/**",
+        "apps/desktop/src-tauri/src/redact/**",
+        "crates/cmdr-fs/src/log_private.rs",
+        ".github/workflows/*.yml",
+        "crates/cmdr-http/**",
+        "apps/desktop/src-tauri/src/ai/install.rs",
+        "apps/desktop/src-tauri/src/ai/mod.rs",
+        "apps/api-server/wrangler.toml"
+      ]
+    },
+    {
+      "page": "/trust",
+      "anchor": "product-information",
+      "paths": [
+        "apps/desktop/src-tauri/tauri.conf.json",
+        ".github/workflows/release-pipeline.yml",
+        "apps/desktop/src-tauri/src/mcp/server.rs",
+        "apps/desktop/src-tauri/src/mcp/auth.rs",
+        "apps/desktop/src/lib/settings/definitions/**",
+        "apps/desktop/src/lib/settings/components/SettingRow.svelte",
+        "apps/desktop/src/lib/onboarding/**",
+        "crates/cmdr-smb/**",
+        "crates/cmdr-webdav/**",
+        "crates/cmdr-sftp/**",
+        "docs/threat-model.md",
+        "apps/desktop/src/lib/updates/**",
+        "apps/desktop/src-tauri/src/updater/**",
+        "apps/desktop/src-tauri/src/data_wipe/**",
+        "docs/guides/privacy-requests.md"
+      ]
+    },
+    {
+      "page": "/trust/development",
+      "anchor": "short",
+      "paths": ["apps/website/src/lib/trust-development.ts", ".github/workflows/**", ".github/rulesets/**"]
+    },
+    {
+      "page": "/trust/development",
+      "anchor": "design",
+      "paths": ["docs/design-principles.md", "docs/specs/**", "docs/security.md", "docs/threat-model.md"]
+    },
+    {
+      "page": "/trust/development",
+      "anchor": "code",
+      "paths": [
+        "Cargo.toml",
+        "clippy.toml",
+        "crates/*/Cargo.toml",
+        "apps/desktop/src-tauri/tauri.conf.json",
+        "scripts/check/checks/desktop-rust-error-string-match.go",
+        "scripts/check/checks/index-crate-isolation.go",
+        "scripts/check/checks/desktop-workflows-hardening.go",
+        "scripts/check/checks/desktop-third-party-notices.go",
+        ".github/workflows/scorecard.yml",
+        ".github/workflows/codeql.yml",
+        ".github/codeql/**",
+        ".gitguardian.yaml",
+        "scripts/check/CLAUDE.md"
+      ]
+    },
+    {
+      "page": "/trust/development",
+      "anchor": "review",
+      "paths": [".github/rulesets/**", "scripts/land/**", ".github/workflows/ci.yml", "AGENTS.md"]
+    },
+    {
+      "page": "/trust/development",
+      "anchor": "test",
+      "paths": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/macos-lane.yml",
+        ".github/workflows/slow-checks.yml",
+        ".github/workflows/advisories.yml",
+        ".github/workflows/release-pipeline.yml",
+        "scripts/release-ci-gate.sh",
+        "scripts/release-codeql-gate.sh",
+        "scripts/release.sh",
+        "scripts/check/checks/registry.go",
+        "fuzz/fuzz_targets/**",
+        "apps/desktop/test/**",
+        "scripts/soak-smb.sh"
+      ]
+    },
+    {
+      "page": "/trust/development",
+      "anchor": "dependencies",
+      "paths": [
+        "deny.toml",
+        "osv-scanner.toml",
+        "renovate.json",
+        "pnpm-workspace.yaml",
+        "vendor/*/CMDR-PATCH.md",
+        "Cargo.toml",
+        ".github/workflows/advisories.yml",
+        ".github/workflows/slow-checks.yml",
+        "apps/desktop/scripts/download-llama-server.go",
+        ".mise.toml"
+      ]
+    },
+    {
+      "page": "/trust/development",
+      "anchor": "release",
+      "paths": [
+        ".github/workflows/release.yml",
+        ".github/workflows/release-pipeline.yml",
+        ".github/release-signers",
+        "scripts/release.sh",
+        "scripts/release-finish.sh",
+        "scripts/release-finish/**",
+        "scripts/release-ci-gate.sh",
+        "scripts/release-codeql-gate.sh",
+        "docs/guides/releasing.md"
+      ]
+    },
+    {
+      "page": "/trust/development",
+      "anchor": "updates",
+      "paths": [
+        "apps/desktop/src-tauri/src/updater/**",
+        "apps/desktop/src-tauri/tauri.conf.json",
+        "crates/cmdr-update-trust/**",
+        "apps/desktop/src-tauri/src/managed_policy/**"
+      ]
+    },
+    {
+      "page": "/trust/development",
+      "anchor": "vulnerabilities",
+      "paths": ["SECURITY.md", "CHANGELOG.md"]
+    },
+    {
+      "page": "/trust/development",
+      "anchor": "platforms",
+      "paths": [
+        "apps/desktop/src-tauri/tauri.conf.json",
+        "apps/desktop/src/lib/utils/webkit-compat.ts",
+        "apps/desktop/src/app.html",
+        "apps/desktop/vite.config.js",
+        "docs/notes/system-requirements-and-es2025.md",
+        "scripts/check/checks/desktop-rust-macos-availability.go",
+        "SECURITY.md"
+      ]
+    },
+    {
+      "page": "/trust/development",
+      "anchor": "method",
+      "paths": ["apps/website/src/lib/trust-development.ts"]
+    },
+    {
+      "page": "/trust/accessibility",
+      "anchor": "details",
+      "paths": ["apps/desktop/src-tauri/tauri.conf.json", "apps/desktop/src/lib/intl/messages/*/settings.json"]
+    },
+    {
+      "page": "/trust/accessibility",
+      "anchor": "notes",
+      "paths": [
+        "apps/desktop/src/lib/commands/sources/**",
+        "apps/desktop/src/lib/file-explorer/**",
+        "apps/desktop/src/lib/ui/**",
+        "apps/desktop/src/lib/display-accessibility.ts",
+        "apps/desktop/src-tauri/src/display_accessibility.rs",
+        "apps/desktop/src/app.css"
+      ]
+    },
+    {
+      "page": "/trust/accessibility",
+      "anchor": "methods",
+      "paths": [
+        "apps/desktop/test/e2e-playwright/accessibility.spec.ts",
+        "scripts/check/checks/desktop-svelte-a11y-contrast.go",
+        "scripts/check/checks/desktop-svelte-a11y-coverage.go"
+      ]
+    },
+    {
+      "page": "/trust/accessibility",
+      "anchor": "applicable-standards",
+      "paths": ["apps/website/src/lib/accessibility-report.ts"]
+    },
+    {
+      "page": "/trust/accessibility",
+      "anchor": "terms",
+      "paths": ["apps/website/src/lib/accessibility-report.ts"]
+    },
+    {
+      "page": "/trust/accessibility",
+      "anchor": "legal",
+      "paths": ["apps/website/src/lib/accessibility-report.ts"]
+    },
+    {
+      "page": "/trust/accessibility-guide",
+      "anchor": "keyboard",
+      "paths": [
+        "apps/desktop/src/lib/commands/sources/**",
+        "apps/desktop/src/lib/settings/sections/KeyboardShortcutsSection.svelte",
+        "apps/desktop/src/lib/file-operations/**"
+      ]
+    },
+    {
+      "page": "/trust/accessibility-guide",
+      "anchor": "screen-readers",
+      "paths": ["apps/desktop/src/lib/file-explorer/**", "apps/desktop/src/lib/ui/**"]
+    },
+    {
+      "page": "/trust/accessibility-guide",
+      "anchor": "seeing",
+      "paths": [
+        "apps/desktop/src/lib/settings/definitions/appearance.ts",
+        "apps/desktop/src/lib/display-accessibility.ts",
+        "apps/desktop/src-tauri/src/display_accessibility.rs",
+        "apps/desktop/src/app.css"
+      ]
+    },
+    {
+      "page": "/trust/accessibility-guide",
+      "anchor": "motion",
+      "paths": ["apps/desktop/src/app.css", "apps/desktop/src/lib/display-accessibility.ts"]
+    },
+    {
+      "page": "/trust/accessibility-guide",
+      "anchor": "notifications",
+      "paths": ["apps/desktop/src/lib/ui/toast/**", "apps/desktop/src/lib/settings/definitions/behavior.ts"]
+    },
+    {
+      "page": "/trust/accessibility-guide",
+      "anchor": "gaps",
+      "paths": ["apps/website/src/lib/accessibility-report.ts"]
+    },
+    {
+      "page": "/trust/accessibility-guide",
+      "anchor": "help",
+      "paths": ["apps/desktop/src-tauri/src/menu/**"]
+    }
+  ]
+}
