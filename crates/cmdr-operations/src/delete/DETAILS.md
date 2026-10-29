@@ -10,8 +10,9 @@ the best-effort directory pass left standing reports `source_removed: false`. Wi
 source at all, and an approved AI suggestion's ops stayed `pending` with their files gone. Regression anchor:
 `volume_source_done_tests.rs`.
 
-`delete_volume_files_with_progress_inner` consumes the scan preview via `take_cached_scan_result(preview_id, sources)`.
-On hit, top-level files come straight from `CopyScanResult` with no `is_directory` probe; top-level dirs recurse via the
+`delete_volume_files_with_progress_probed` (the walk; tests enter through the `_inner` wrapper, gated
+`any(test, feature = "testing")`) consumes the scan preview via `take_cached_scan_result(preview_id, sources)`. On hit,
+top-level files come straight from `CopyScanResult` with no `is_directory` probe; top-level dirs recurse via the
 oracle-aware walker. On no-preview paths (MCP, programmatic), the parent oracle answers the top-level type when the
 source's parent is watcher-fresh in the listing cache, and otherwise the walker resolves it. Both emit paths use
 `with_scan_meta(current_dir, dirs_done, None)` so the scanning UI shows the dir count and the directory the walker is

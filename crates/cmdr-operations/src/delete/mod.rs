@@ -17,6 +17,7 @@ mod volume_start;
 mod volume_walker;
 mod walker;
 
+#[cfg(any(test, feature = "testing"))]
 pub(crate) use volume_walker::delete_volume_files_with_progress_inner;
 pub(crate) use walker::delete_files_with_progress_inner;
 

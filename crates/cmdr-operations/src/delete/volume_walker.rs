@@ -152,13 +152,10 @@ fn emit_cancelled_if_aborted(
     }
 }
 
-/// Deletes files on a non-local volume (like MTP) with progress reporting.
-///
-/// Uses `volume.list_directory()` for scanning, and `volume.delete()` per file or
-/// `volume.delete_files()` per batch where the backend batches
-/// (`Volume::delete_batch_size`), then `volume.delete_directory()` per folder.
-/// Emits the same events as `delete_files_with_progress` so the frontend progress
-/// dialog works unchanged.
+/// [`delete_volume_files_with_progress_probed`] with no pre-check answers: the
+/// entry tests drive the walk through. Production always comes through
+/// `volume_start.rs`, which runs the already-gone pre-check first.
+#[cfg(any(test, feature = "testing"))]
 #[allow(
     clippy::too_many_arguments,
     reason = "Matches the parameter pattern of other write operation functions"
@@ -185,9 +182,17 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
     .await
 }
 
-/// [`delete_volume_files_with_progress_inner`], with what the already-gone
-/// pre-check's probe learned of each top-level source (`already_gone::split_on`),
-/// so the walk asks the volume nothing twice.
+/// Deletes files on a non-local volume (like MTP) with progress reporting.
+///
+/// Uses `volume.list_directory()` for scanning, and `volume.delete()` per file or
+/// `volume.delete_files()` per batch where the backend batches
+/// (`Volume::delete_batch_size`), then `volume.delete_directory()` per folder.
+/// Emits the same events as `delete_files_with_progress` so the frontend progress
+/// dialog works unchanged.
+///
+/// `probed` is what the already-gone pre-check's probe learned of each
+/// top-level source (`already_gone::split_on`), so the walk asks the volume
+/// nothing twice.
 #[allow(
     clippy::too_many_arguments,
     reason = "the walk's inputs plus the pre-check's answers"
