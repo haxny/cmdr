@@ -1,7 +1,7 @@
 /** Client-side filename validation for instant keystroke feedback. */
 
 import { tString } from '#lib/intl/messages.svelte.js'
-import { fileExtension } from './file-extension'
+import { fileExtension, kindOfRenamedName, type NameKind } from './file-extension'
 
 /** Defaults match macOS. Call initPathLimits() at startup to get platform-specific values from the backend. */
 let maxNameBytes = 255
@@ -107,8 +107,8 @@ const EXTENSION_TO_GROUP: ReadonlyMap<string, number> = new Map(
   EQUIVALENT_EXTENSION_GROUPS.flatMap((group, i) => group.map((ext) => [ext, i] as const)),
 )
 
-function normalizedExt(filename: string, isDirectory: boolean): string {
-  return fileExtension(filename, isDirectory).toLowerCase()
+function normalizedExt(filename: string, kind: NameKind): string {
+  return fileExtension(filename, kind).toLowerCase()
 }
 
 /**
@@ -117,9 +117,10 @@ function normalizedExt(filename: string, isDirectory: boolean): string {
  * between known equivalents (`photo.jpeg` → `photo.jpg`, `notes.md` → `notes.txt`),
  * so users aren't pestered to confirm what's effectively a metadata tweak.
  */
-export function extensionsDifferMeaningfully(oldName: string, newName: string, isDirectory = false): boolean {
-  const oldExt = normalizedExt(oldName, isDirectory)
-  const newExt = normalizedExt(newName.trim(), isDirectory)
+export function extensionsDifferMeaningfully(oldName: string, newName: string, kind: NameKind = 'file'): boolean {
+  const trimmed = newName.trim()
+  const oldExt = normalizedExt(oldName, kind)
+  const newExt = normalizedExt(trimmed, kindOfRenamedName(kind, trimmed))
   if (oldExt === newExt) return false
   const oldGroup = EXTENSION_TO_GROUP.get(oldExt)
   return oldGroup === undefined || oldGroup !== EXTENSION_TO_GROUP.get(newExt)
@@ -127,12 +128,16 @@ export function extensionsDifferMeaningfully(oldName: string, newName: string, i
 
 /**
  * True if renaming `oldName` to `newName` changes the extension enough to confirm.
- * What an extension is comes from `file-extension.ts`: a folder has one only when
- * it's a macOS package, so `release.v1.2` → `release.v1.3` asks nothing while
- * `Cmdr.app` → `Cmdr.old` does.
+ * What an extension is comes from `file-extension.ts`, and `kind` is the
+ * entry's (`nameKindOf`): a folder has one only when the backend says it's a
+ * macOS package, so `release.v1.2` → `release.v1.3` asks nothing while
+ * `Cmdr.app` → `Cmdr.old` does, and so does a package the backend learned of
+ * from macOS (`Sketch.myBundle`). The new name's kind is `kindOfRenamedName`'s,
+ * so a folder turning into a listed package (`Plugins` → `Plugins.bundle`)
+ * asks too.
  */
-export function extensionChangeNeedsConfirmation(oldName: string, newName: string, isDirectory: boolean): boolean {
-  return extensionsDifferMeaningfully(oldName, newName, isDirectory)
+export function extensionChangeNeedsConfirmation(oldName: string, newName: string, kind: NameKind): boolean {
+  return extensionsDifferMeaningfully(oldName, newName, kind)
 }
 
 /** Validates extension change against the user's preference. */
@@ -140,14 +145,14 @@ export function validateExtensionChange(
   oldName: string,
   newName: string,
   allowExtensionChanges: 'yes' | 'no' | 'ask',
-  isDirectory = false,
+  kind: NameKind = 'file',
 ): ValidationResult {
   if (allowExtensionChanges === 'yes') return OK_RESULT
 
-  if (!extensionChangeNeedsConfirmation(oldName, newName, isDirectory)) return OK_RESULT
+  if (!extensionChangeNeedsConfirmation(oldName, newName, kind)) return OK_RESULT
 
   if (allowExtensionChanges === 'no') {
-    const ext = fileExtension(oldName, isDirectory)
+    const ext = fileExtension(oldName, kind)
     const oldExt = ext ? `.${ext}` : ''
     return {
       severity: 'error',
@@ -233,24 +238,25 @@ export function validateFilename(
   parentPath: string,
   siblingNames: string[],
   allowExtensionChanges: 'yes' | 'no' | 'ask',
-  isDirectory = false,
+  kind: NameKind = 'file',
 ): ValidationResult {
   const trimmed = newName.trim()
+  const isDir = kind !== 'file'
 
   // Error checks
-  const emptyCheck = validateNotEmpty(newName)
+  const emptyCheck = validateNotEmpty(newName, isDir)
   if (emptyCheck.severity === 'error') return emptyCheck
 
-  const charCheck = validateDisallowedChars(trimmed)
+  const charCheck = validateDisallowedChars(trimmed, isDir)
   if (charCheck.severity === 'error') return charCheck
 
-  const nameLen = validateNameLength(newName)
+  const nameLen = validateNameLength(newName, isDir)
   if (nameLen.severity === 'error') return nameLen
 
   const pathLen = validatePathLength(parentPath, newName)
   if (pathLen.severity === 'error') return pathLen
 
-  const extCheck = validateExtensionChange(originalName, newName, allowExtensionChanges, isDirectory)
+  const extCheck = validateExtensionChange(originalName, newName, allowExtensionChanges, kind)
   if (extCheck.severity === 'error') return extCheck
 
   // Warning checks

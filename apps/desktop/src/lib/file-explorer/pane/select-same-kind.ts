@@ -15,6 +15,7 @@
  */
 
 import type { FileEntry } from '../types'
+import { nameKindOf } from '#lib/utils/file-extension.js'
 import { getDisplayExtension } from '../views/full-list-utils'
 
 /**
@@ -37,7 +38,7 @@ function isParentRow(entry: FileEntry): boolean {
 
 /** One row's extension as the Ext column shows it, lowercased. Empty for a folder. */
 function displayExtensionOf(entry: FileEntry): string {
-  return getDisplayExtension(entry.name, entry.isDirectory).toLowerCase()
+  return getDisplayExtension(entry.name, nameKindOf(entry)).toLowerCase()
 }
 
 /**

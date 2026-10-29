@@ -6,11 +6,11 @@
 //! expensive NSWorkspace fetch (FDA-gated, 8 MB thread) runs only for the rare
 //! folder that truly has its own icon:
 //!
-//! - **Packages** — a directory whose name ends in a known package extension
-//!   (`.app`, `.bundle`, …). A pure suffix check with no I/O, cheap enough to run
-//!   for every entry during listing, so it routes straight to a `pkg:{dir}` key
-//!   in `get_icon_id`. It lives in `cmdr_fs::icons::packages` (where `FileEntry`
-//!   can reach it) and is re-exported below.
+//! - **Packages**: a directory whose name ends in a listed package extension
+//!   (`cmdr_fs::file_extension::is_listed_package`, no I/O) routes straight to a
+//!   `pkg:{dir}` key in `get_icon_id`. A dotted folder the list doesn't know is
+//!   asked of macOS once visible (`file_system::packages`), and a yes patches the
+//!   same key onto its entry. The key prefix is re-exported below.
 //! - **Custom-icon folders** — a folder carrying the `kHasCustomIcon` flag in its
 //!   `com.apple.FinderInfo` xattr. Detecting this needs a `getxattr` syscall, so
 //!   it is NOT run during bulk listing (a syscall per directory entry would
@@ -27,7 +27,7 @@
 use std::path::Path;
 
 use cmdr_fs::entry::TagRef;
-pub use cmdr_fs::icons::packages::{PKG_KEY_PREFIX, is_package_dir, package_icon_id};
+pub use cmdr_fs::icons::packages::PKG_KEY_PREFIX;
 
 /// Byte offset of the Finder flags within a `com.apple.FinderInfo` buffer.
 ///
@@ -163,8 +163,8 @@ mod tests {
     // Only the macOS-gated cases below build a real directory.
     #[cfg(target_os = "macos")]
     use crate::test_support::TestDir;
-    // The package half (`is_package_dir`, `package_icon_id`) is tested where it
-    // lives, in `cmdr_fs::icons::packages`; only the xattr half is covered here.
+    // The package half is tested where it lives, in `cmdr_fs` (`icons::packages`,
+    // `file_extension`); only the xattr half is covered here.
 
     /// Builds a minimal `com.apple.FinderInfo` buffer with the given Finder flags.
     fn finder_info_with_flags(flags: u16) -> Vec<u8> {

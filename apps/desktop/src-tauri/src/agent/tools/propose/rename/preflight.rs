@@ -328,8 +328,11 @@ pub(super) fn rename_warnings(source_path: &str, destination_name: &str) -> Vec<
 /// extension rule (`cmdr_fs::file_extension`). Sources are always files: the
 /// preflight blocks a folder before it gets here.
 fn extensions_match(source_name: &str, destination_name: &str) -> bool {
-    use cmdr_fs::file_extension::extension_of;
-    match (extension_of(source_name, false), extension_of(destination_name, false)) {
+    use cmdr_fs::file_extension::{NameKind, extension_of};
+    match (
+        extension_of(source_name, NameKind::File),
+        extension_of(destination_name, NameKind::File),
+    ) {
         (Some(source), Some(destination)) => source.eq_ignore_ascii_case(destination),
         (None, None) => true,
         (Some(_), None) | (None, Some(_)) => false,

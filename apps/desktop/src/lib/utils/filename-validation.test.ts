@@ -329,35 +329,47 @@ describe('validateExtensionChange', () => {
   })
 
   it('lets a folder change its "extension" freely: a dot in a folder name is just part of the name', () => {
-    expect(validateExtensionChange('release.v1.2', 'release.v1.3', 'no', true).severity).toBe('ok')
-    expect(validateExtensionChange('photos.2025', 'photos', 'no', true).severity).toBe('ok')
+    expect(validateExtensionChange('release.v1.2', 'release.v1.3', 'no', 'folder').severity).toBe('ok')
+    expect(validateExtensionChange('photos.2025', 'photos', 'no', 'folder').severity).toBe('ok')
   })
 
   it('still guards a folder whose extension makes it a macOS package', () => {
-    expect(validateExtensionChange('Cmdr.app', 'Cmdr.bak', 'no', true).severity).toBe('error')
-    expect(validateExtensionChange('Plugins', 'Plugins.bundle', 'no', true).severity).toBe('error')
+    expect(validateExtensionChange('Cmdr.app', 'Cmdr.bak', 'no', 'package').severity).toBe('error')
+    expect(validateExtensionChange('Plugins', 'Plugins.bundle', 'no', 'folder').severity).toBe('error')
   })
 })
 
 describe('extensionChangeNeedsConfirmation', () => {
   it('asks for a file whose extension changes meaningfully', () => {
-    expect(extensionChangeNeedsConfirmation('file.txt', 'file.json', false)).toBe(true)
+    expect(extensionChangeNeedsConfirmation('file.txt', 'file.json', 'file')).toBe(true)
   })
 
   it('never asks for a plain folder, dot or no dot', () => {
-    expect(extensionChangeNeedsConfirmation('release.v1.2', 'release.v1.3', true)).toBe(false)
-    expect(extensionChangeNeedsConfirmation('my.project', 'my-project', true)).toBe(false)
+    expect(extensionChangeNeedsConfirmation('release.v1.2', 'release.v1.3', 'folder')).toBe(false)
+    expect(extensionChangeNeedsConfirmation('my.project', 'my-project', 'folder')).toBe(false)
+  })
+
+  it('never asks for a folder the backend says is plain, even with a listed suffix', () => {
+    // `isPackage` is false on a folder named like a bundle only when it's not one
+    // to macOS (a symlink, say): the entry outranks the name.
+    expect(extensionChangeNeedsConfirmation('Cmdr.app', 'Cmdr.old', 'folder')).toBe(false)
   })
 
   it('asks for a folder that stops or starts being a macOS package', () => {
-    expect(extensionChangeNeedsConfirmation('Cmdr.app', 'Cmdr.old', true)).toBe(true)
-    expect(extensionChangeNeedsConfirmation('Library', 'Library.photoslibrary', true)).toBe(true)
-    expect(extensionChangeNeedsConfirmation('Cmdr.APP', 'Cmdr', true)).toBe(true)
+    expect(extensionChangeNeedsConfirmation('Cmdr.app', 'Cmdr.old', 'package')).toBe(true)
+    expect(extensionChangeNeedsConfirmation('Library', 'Library.photoslibrary', 'folder')).toBe(true)
+    expect(extensionChangeNeedsConfirmation('Cmdr.APP', 'Cmdr', 'package')).toBe(true)
+  })
+
+  it('asks for a package macOS reported that the list does not know', () => {
+    expect(extensionChangeNeedsConfirmation('Sketch.myBundle', 'Sketch.old', 'package')).toBe(true)
+    expect(extensionChangeNeedsConfirmation('Sketch.myBundle', 'Sketch', 'package')).toBe(true)
+    expect(extensionChangeNeedsConfirmation('Sketch.myBundle', 'Sketch v2.myBundle', 'package')).toBe(false)
   })
 
   it('does not ask for a package folder renamed within its extension', () => {
-    expect(extensionChangeNeedsConfirmation('Cmdr.app', 'Cmdr 2.app', true)).toBe(false)
-    expect(extensionChangeNeedsConfirmation('Cmdr.app', 'Cmdr.APP', true)).toBe(false)
+    expect(extensionChangeNeedsConfirmation('Cmdr.app', 'Cmdr 2.app', 'package')).toBe(false)
+    expect(extensionChangeNeedsConfirmation('Cmdr.app', 'Cmdr.APP', 'package')).toBe(false)
   })
 })
 

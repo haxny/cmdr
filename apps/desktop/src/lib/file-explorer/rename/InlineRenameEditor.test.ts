@@ -230,7 +230,7 @@ describe('InlineRenameEditor keyboard and focus', () => {
   })
 
   it('pre-selects a plain folder whole, dot and all', async () => {
-    const { input } = setup({ value: 'release.v1.2', isDirectory: true, onInput: noop })
+    const { input } = setup({ value: 'release.v1.2', nameKind: 'folder', onInput: noop })
     await tick()
     await tick()
 

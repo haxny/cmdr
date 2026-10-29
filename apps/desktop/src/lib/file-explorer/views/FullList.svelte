@@ -64,6 +64,7 @@
         isHiddenRowDimmed,
     } from './full-list-utils'
     import { computeFullListColumnWidths, holdSizeColumnWidth } from './measure-column-widths'
+    import { nameKindOf } from '#lib/utils/file-extension.js'
     import { dateOf, displayedDateColumn } from '../displayed-date'
     import { buildDateTooltip } from '../selection/selection-info-utils'
     import { sortFallbackNote } from '../pane/sort-fallback'
@@ -926,7 +927,7 @@
                                     class="col-name-text"
                                     class:is-hidden={rowIsHiddenDimmed}
                                     use:useShortenMiddle={{
-                                        text: getNameColumnText(file.name, file.isDirectory, showExtensionInName),
+                                        text: getNameColumnText(file.name, nameKindOf(file), showExtensionInName),
                                         preferBreakAt: file.name.includes('/') ? '/' : '.',
                                         startRatio: 0.7,
                                         tooltipWhenTruncated: true,
@@ -1070,7 +1071,7 @@
                 <RenameOverlay anchor={renameSlot} scroller={scrollContainer}>
                     <InlineRenameEditor
                         value={renameState.currentName}
-                        isDirectory={renameState.target?.isDirectory ?? false}
+                        nameKind={renameState.target?.nameKind ?? 'file'}
                         severity={renameState.validation.severity}
                         shaking={renameState.shaking}
                         ariaLabel={tString('fileExplorer.rename.fieldAriaLabel', {

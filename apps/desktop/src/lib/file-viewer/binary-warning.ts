@@ -146,7 +146,7 @@ export interface ViewerWarning {
 export function categorizeForViewerWarning(fileName: string): ViewerWarning {
   // The viewer only opens files. The product's one rule, so `README`, `.bashrc`,
   // and `name.` have none, and `src.tar.gz` has `tar.gz`.
-  const ext = fileExtension(fileName, false).toLowerCase()
+  const ext = fileExtension(fileName, 'file').toLowerCase()
   if (!ext) return { shouldWarn: false, category: null, ext: '' }
   if (IMAGE_EXTS.has(ext)) return { shouldWarn: true, category: 'image', ext: '' }
   if (DOCUMENT_EXTS.has(ext)) return { shouldWarn: true, category: 'document', ext: '' }

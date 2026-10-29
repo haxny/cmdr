@@ -3,7 +3,7 @@ import { nextRenameSelection, renameSelectionStages, wordStopSelection, type Wor
 
 describe('renameSelectionStages', () => {
   it('cycles name, whole name, extension for a file with one', () => {
-    expect(renameSelectionStages('report.pdf', false)).toEqual([
+    expect(renameSelectionStages('report.pdf', 'file')).toEqual([
       { start: 0, end: 6 },
       { start: 0, end: 10 },
       { start: 7, end: 10 },
@@ -11,7 +11,7 @@ describe('renameSelectionStages', () => {
   })
 
   it('treats a compound tar as one extension', () => {
-    expect(renameSelectionStages('src.tar.gz', false)).toEqual([
+    expect(renameSelectionStages('src.tar.gz', 'file')).toEqual([
       { start: 0, end: 3 },
       { start: 0, end: 10 },
       { start: 4, end: 10 },
@@ -19,14 +19,14 @@ describe('renameSelectionStages', () => {
   })
 
   it('has one stage for a name with no extension, so the steps that would repeat it are skipped', () => {
-    expect(renameSelectionStages('README', false)).toEqual([{ start: 0, end: 6 }])
-    expect(renameSelectionStages('.gitignore', false)).toEqual([{ start: 0, end: 10 }])
-    expect(renameSelectionStages('Smlouva v. 2 final', false)).toEqual([{ start: 0, end: 18 }])
+    expect(renameSelectionStages('README', 'file')).toEqual([{ start: 0, end: 6 }])
+    expect(renameSelectionStages('.gitignore', 'file')).toEqual([{ start: 0, end: 10 }])
+    expect(renameSelectionStages('Smlouva v. 2 final', 'file')).toEqual([{ start: 0, end: 18 }])
   })
 
   it('has one stage for a plain folder, dot or no dot, and three for a package', () => {
-    expect(renameSelectionStages('release.v1.2', true)).toEqual([{ start: 0, end: 12 }])
-    expect(renameSelectionStages('Cmdr.app', true)).toEqual([
+    expect(renameSelectionStages('release.v1.2', 'folder')).toEqual([{ start: 0, end: 12 }])
+    expect(renameSelectionStages('Cmdr.app', 'package')).toEqual([
       { start: 0, end: 4 },
       { start: 0, end: 8 },
       { start: 5, end: 8 },
@@ -34,38 +34,38 @@ describe('renameSelectionStages', () => {
   })
 
   it('has no stage for an empty field', () => {
-    expect(renameSelectionStages('', false)).toEqual([])
+    expect(renameSelectionStages('', 'file')).toEqual([])
   })
 })
 
 describe('nextRenameSelection', () => {
   it('moves to the next stage and wraps around', () => {
-    expect(nextRenameSelection('report.pdf', false, { start: 0, end: 6 })).toEqual({ start: 0, end: 10 })
-    expect(nextRenameSelection('report.pdf', false, { start: 0, end: 10 })).toEqual({ start: 7, end: 10 })
-    expect(nextRenameSelection('report.pdf', false, { start: 7, end: 10 })).toEqual({ start: 0, end: 6 })
+    expect(nextRenameSelection('report.pdf', 'file', { start: 0, end: 6 })).toEqual({ start: 0, end: 10 })
+    expect(nextRenameSelection('report.pdf', 'file', { start: 0, end: 10 })).toEqual({ start: 7, end: 10 })
+    expect(nextRenameSelection('report.pdf', 'file', { start: 7, end: 10 })).toEqual({ start: 0, end: 6 })
   })
 
   it('starts over at the name when the selection is anything else', () => {
-    expect(nextRenameSelection('report.pdf', false, { start: 3, end: 3 })).toEqual({ start: 0, end: 6 })
+    expect(nextRenameSelection('report.pdf', 'file', { start: 3, end: 3 })).toEqual({ start: 0, end: 6 })
   })
 
   it('reads the name as typed, not as it was', () => {
-    expect(nextRenameSelection('report.docx', false, { start: 0, end: 6 })).toEqual({ start: 0, end: 11 })
+    expect(nextRenameSelection('report.docx', 'file', { start: 0, end: 6 })).toEqual({ start: 0, end: 11 })
   })
 
   it('keeps reselecting the whole name when that is the only stage', () => {
-    expect(nextRenameSelection('README', false, { start: 0, end: 6 })).toEqual({ start: 0, end: 6 })
+    expect(nextRenameSelection('README', 'file', { start: 0, end: 6 })).toEqual({ start: 0, end: 6 })
   })
 
   it('leaves the caret where it is in an empty field', () => {
-    expect(nextRenameSelection('', false, { start: 0, end: 0 })).toEqual({ start: 0, end: 0 })
+    expect(nextRenameSelection('', 'file', { start: 0, end: 0 })).toEqual({ start: 0, end: 0 })
   })
 })
 
 function stop(overrides: Partial<WordStopInput>) {
   return wordStopSelection({
     value: 'IMG_2041.jpg',
-    isDirectory: false,
+    nameKind: 'file',
     selectionStart: 12,
     selectionEnd: 12,
     selectionDirection: 'none',
@@ -120,7 +120,7 @@ describe('wordStopSelection', () => {
 
   it('does nothing for a name without an extension', () => {
     expect(stop({ value: 'Smlouva v. 2 final', selectionStart: 18, selectionEnd: 18 })).toBeNull()
-    expect(stop({ value: 'release.v1', isDirectory: true, selectionStart: 10, selectionEnd: 10 })).toBeNull()
+    expect(stop({ value: 'release.v1', nameKind: 'folder', selectionStart: 10, selectionEnd: 10 })).toBeNull()
   })
 
   it('leaves a compound extension to the system, which may stop inside it', () => {

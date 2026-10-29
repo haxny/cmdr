@@ -71,10 +71,12 @@ pub fn is_hidden_by_name(name: &str) -> bool {
 /// comparison (no NSWorkspace, no TCC), so it's safe to run per entry.
 ///
 /// Package/bundle directories (`Safari.app`, `Foo.bundle`, …) route to a
-/// `pkg:{path}` key (Tier C) by a pure suffix check on the name — also no I/O, so
-/// safe per entry. Custom-icon folders (the `kHasCustomIcon` xattr) are NOT
-/// detected here: that check is a `getxattr` syscall, too costly to run for every
-/// entry in a 100k-directory listing, so it's deferred to the visible-range fetch
+/// `pkg:{path}` key (Tier C) by `file_extension::is_listed_package`, a pure suffix
+/// check on the name, also no I/O, so safe per entry. A package the list doesn't
+/// know gets its key later, from `FileEntry::set_package`. Custom-icon folders
+/// (the `kHasCustomIcon` xattr) are NOT detected here: that check is a
+/// `getxattr` syscall, too costly to run for every entry in a 100k-directory
+/// listing, so it's deferred to the visible-range fetch
 /// (`icons::custom_folder_icon_ids`), which the frontend drives only for visible
 /// directory rows.
 ///
@@ -94,8 +96,8 @@ pub fn get_icon_id(is_dir: bool, is_symlink: bool, name: &str, path: &str) -> St
         if let Some(special_id) = crate::icons::special_folders::icon_id_for_path(Path::new(path)) {
             return special_id;
         }
-        if let Some(pkg_id) = crate::icons::packages::package_icon_id(name, path) {
-            return pkg_id;
+        if crate::file_extension::is_listed_package(name) {
+            return crate::icons::packages::package_icon_id(path);
         }
         return "dir".to_string();
     }
@@ -149,8 +151,11 @@ pub struct FileEntry {
     /// wins), so this is always `false` for directories.
     pub is_archive: bool,
     /// `true` for a macOS package (`Safari.app`, `Foo.bundle`, …): a directory
-    /// Finder presents as one item. A pure suffix test on the name
-    /// ([`crate::icons::packages::is_package_dir`]), so it costs no I/O. The
+    /// Finder presents as one item. The listing sets it from the name
+    /// ([`crate::file_extension::is_listed_package`], no I/O); for a dotted folder
+    /// the list doesn't know, the app asks macOS once the row is visible and
+    /// patches it in ([`FileEntry::set_package`]). It decides the row's extension
+    /// (`file_extension::NameKind`), its `pkg:` icon, and its accessible kind. The
     /// frontend names the row a "package" for screen readers from this, ❌ never
     /// from the `pkg:` prefix of `icon_id`. Always `false` for a file or a symlink.
     pub is_package: bool,
@@ -253,7 +258,7 @@ impl FileEntry {
             // Extension-only, and never for a directory (a folder named
             // `foo.zip` is browsed as itself, not as an archive).
             is_archive: !is_dir && crate::archive_format::has_supported_archive_extension(&name),
-            is_package: is_dir && !is_symlink && crate::icons::packages::is_package_dir(&name),
+            is_package: is_dir && !is_symlink && crate::file_extension::is_listed_package(&name),
             is_hidden: is_hidden_by_name(&name),
             name,
             path,
@@ -281,6 +286,30 @@ impl FileEntry {
             restic_meta: None,
             in_cold_storage: false,
         }
+    }
+
+    /// Which of file, folder, or package this entry's name is, for
+    /// `file_extension::extension_of`.
+    pub fn name_kind(&self) -> crate::file_extension::NameKind {
+        crate::file_extension::NameKind::of(self.is_directory, self.is_package)
+    }
+
+    /// Records what macOS said about whether this folder is a package, and
+    /// moves its icon to match: a `pkg:` key when it is, the name's own icon
+    /// when it isn't. A file or a symlink never becomes one, the way
+    /// [`FileEntry::new`] never makes one. Returns whether anything changed.
+    pub fn set_package(&mut self, is_package: bool) -> bool {
+        let is_package = is_package && self.is_directory && !self.is_symlink;
+        if self.is_package == is_package {
+            return false;
+        }
+        self.is_package = is_package;
+        self.icon_id = if is_package {
+            crate::icons::packages::package_icon_id(&self.path)
+        } else {
+            get_icon_id(self.is_directory, self.is_symlink, &self.name, &self.path)
+        };
+        true
     }
 }
 
@@ -387,6 +416,43 @@ mod is_package_tests {
         assert!(!entry("thing.app", false, false).is_package);
         // A symlink to a bundle reads as a symlink, the way its icon does.
         assert!(!entry("Safari.app", true, true).is_package);
+    }
+
+    #[test]
+    fn every_listed_suffix_makes_a_package_with_a_pkg_icon() {
+        // The listing, the icon, and the extension rule read ONE list.
+        for ext in crate::file_extension::PACKAGE_EXTENSIONS {
+            let bundle = entry(&format!("Thing.{ext}"), true, false);
+            assert!(bundle.is_package, "{ext}");
+            assert_eq!(bundle.icon_id, format!("pkg:/Applications/Thing.{ext}"));
+        }
+    }
+
+    #[test]
+    fn set_package_moves_the_icon_both_ways() {
+        let mut bundle = entry("Sketch.myBundle", true, false);
+        assert!(!bundle.is_package);
+        assert_eq!(bundle.icon_id, "dir");
+
+        assert!(bundle.set_package(true));
+        assert!(bundle.is_package);
+        assert_eq!(bundle.icon_id, "pkg:/Applications/Sketch.myBundle");
+        assert_eq!(bundle.name_kind(), crate::file_extension::NameKind::Package);
+        assert!(!bundle.set_package(true), "no change the second time");
+
+        assert!(bundle.set_package(false));
+        assert!(!bundle.is_package);
+        assert_eq!(bundle.icon_id, "dir");
+    }
+
+    #[test]
+    fn set_package_never_makes_a_file_or_a_symlink_one() {
+        let mut file = entry("Sketch.myBundle", false, false);
+        assert!(!file.set_package(true));
+        assert!(!file.is_package);
+        let mut link = entry("Sketch.myBundle", true, true);
+        assert!(!link.set_package(true));
+        assert_eq!(link.icon_id, "symlink-dir");
     }
 }
 

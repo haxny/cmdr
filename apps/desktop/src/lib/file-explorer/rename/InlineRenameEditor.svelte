@@ -5,12 +5,13 @@
     import type { RenameSessionId } from './rename-state.svelte'
     import { renameStepDirection, type RenameStepDirection } from './rename-step'
     import { nextRenameSelection, renameSelectionStages, wordStopSelection } from './rename-selection'
+    import type { NameKind } from '#lib/utils/file-extension.js'
 
     interface Props {
         /** Current filename value (two-way bindable via onInput) */
         value: string
-        /** Whether the entry is a folder: a folder's dot is part of its name unless it's a package */
-        isDirectory?: boolean
+        /** File, folder, or package (`nameKindOf`): a folder's dot is part of its name unless it's a package */
+        nameKind?: NameKind
         /** The rename session this editor was opened for; handed back with `onCancel` */
         sessionId: RenameSessionId
         /** Validation severity for border coloring */
@@ -41,7 +42,7 @@
 
     const {
         value,
-        isDirectory = false,
+        nameKind = 'file',
         sessionId,
         severity,
         shaking,
@@ -69,14 +70,14 @@
     function focusAndSelect() {
         if (!inputElement) return
         inputElement.focus()
-        const first = renameSelectionStages(value, isDirectory).at(0) ?? { start: 0, end: 0 }
+        const first = renameSelectionStages(value, nameKind).at(0) ?? { start: 0, end: 0 }
         inputElement.setSelectionRange(first.start, first.end)
     }
 
     /** `file.rename` pressed again: step the selection through name, whole name, extension. */
     function cycleSelection(input: HTMLInputElement) {
         const current = { start: input.selectionStart ?? 0, end: input.selectionEnd ?? 0 }
-        const next = nextRenameSelection(input.value, isDirectory, current)
+        const next = nextRenameSelection(input.value, nameKind, current)
         input.setSelectionRange(next.start, next.end)
     }
 
@@ -91,7 +92,7 @@
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return false
         const stop = wordStopSelection({
             value: input.value,
-            isDirectory,
+            nameKind,
             selectionStart: input.selectionStart ?? 0,
             selectionEnd: input.selectionEnd ?? 0,
             selectionDirection: input.selectionDirection ?? 'none',

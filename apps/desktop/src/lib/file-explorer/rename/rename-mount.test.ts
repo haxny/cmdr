@@ -8,6 +8,7 @@ function target(overrides: Partial<RenameTarget> = {}): RenameTarget {
     originalName: 'file.txt',
     parentPath: '/dir',
     isDirectory: false,
+    nameKind: 'file',
     ...overrides,
   }
 }

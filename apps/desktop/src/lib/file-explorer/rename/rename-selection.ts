@@ -6,7 +6,7 @@
  * typed. `DETAILS.md` § "Selection: the F2 cycle and the dot stops".
  */
 
-import { fileExtension } from '#lib/utils/file-extension.js'
+import { fileExtension, type NameKind } from '#lib/utils/file-extension.js'
 
 /** A selection in the field, in UTF-16 offsets, as `setSelectionRange` takes it. */
 export interface TextRange {
@@ -20,8 +20,8 @@ export interface TextRange {
  * alone. A step that would be empty or repeat the one before is left out, so a
  * name with no extension has the one stage.
  */
-export function renameSelectionStages(value: string, isDirectory: boolean): TextRange[] {
-  const ext = fileExtension(value, isDirectory)
+export function renameSelectionStages(value: string, kind: NameKind): TextRange[] {
+  const ext = fileExtension(value, kind)
   const stemEnd = ext ? value.length - ext.length - 1 : value.length
   const candidates: TextRange[] = [
     { start: 0, end: stemEnd },
@@ -38,8 +38,8 @@ export function renameSelectionStages(value: string, isDirectory: boolean): Text
 }
 
 /** The stage after the one `current` is, or the first one when it's none of them. */
-export function nextRenameSelection(value: string, isDirectory: boolean, current: TextRange): TextRange {
-  const stages = renameSelectionStages(value, isDirectory)
+export function nextRenameSelection(value: string, kind: NameKind, current: TextRange): TextRange {
+  const stages = renameSelectionStages(value, kind)
   if (stages.length === 0) return current
   const at = stages.findIndex((range) => range.start === current.start && range.end === current.end)
   return stages[(at + 1) % stages.length]
@@ -48,7 +48,8 @@ export function nextRenameSelection(value: string, isDirectory: boolean, current
 /** The selection a word move reads: the input's own three fields, plus the move. */
 export interface WordStopInput {
   value: string
-  isDirectory: boolean
+  /** File, folder, or package, which decides where the extension starts. */
+  nameKind: NameKind
   selectionStart: number
   selectionEnd: number
   selectionDirection: 'forward' | 'backward' | 'none'
@@ -80,7 +81,7 @@ const PLAIN_EXTENSION_CHARS = /^[A-Za-z0-9]*$/
  */
 export function wordStopSelection(input: WordStopInput): WordStopResult | null {
   const { value, selectionStart, selectionEnd, selectionDirection, direction, extend } = input
-  const ext = fileExtension(value, input.isDirectory)
+  const ext = fileExtension(value, input.nameKind)
   if (!ext) return null
   // A plain move with a selection collapses it first, which is the system's call.
   if (!extend && selectionStart !== selectionEnd) return null

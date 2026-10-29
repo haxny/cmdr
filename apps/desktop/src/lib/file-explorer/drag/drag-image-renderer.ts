@@ -49,7 +49,7 @@ export function truncateMiddle(name: string, maxLength: number): string {
 
   // The product's one extension rule, read as a file's: only a name is known
   // here, and keeping a short tail visible is harmless for a folder too.
-  const ext = fileExtension(name, false)
+  const ext = fileExtension(name, 'file')
   const extension = ext ? `.${ext}` : ''
   const baseName = name.slice(0, name.length - extension.length)
 

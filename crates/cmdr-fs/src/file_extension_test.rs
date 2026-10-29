@@ -10,10 +10,28 @@ struct Spec {
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum SpecKind {
+    File,
+    Folder,
+    Package,
+}
+
+impl From<&SpecKind> for NameKind {
+    fn from(kind: &SpecKind) -> Self {
+        match kind {
+            SpecKind::File => NameKind::File,
+            SpecKind::Folder => NameKind::Folder,
+            SpecKind::Package => NameKind::Package,
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Case {
     name: String,
-    is_directory: bool,
+    kind: SpecKind,
     extension: String,
 }
 
@@ -27,15 +45,18 @@ fn spec() -> Spec {
 #[test]
 fn every_shared_case_holds() {
     for case in spec().cases {
-        let got = extension_of(&case.name, case.is_directory).unwrap_or("");
+        let kind = NameKind::from(&case.kind);
+        let got = extension_of(&case.name, kind).unwrap_or("");
         assert_eq!(
             got, case.extension,
-            "{:?} (folder: {}) should have extension {:?}",
-            case.name, case.is_directory, case.extension
+            "{:?} ({kind:?}) should have extension {:?}",
+            case.name, case.extension
         );
     }
 }
 
+/// The frontend keeps a copy for names no entry describes yet (a folder's new
+/// name in the rename field); both sides compare theirs with this one.
 #[test]
 fn the_package_list_is_the_shared_one() {
     let mut ours: Vec<&str> = PACKAGE_EXTENSIONS.to_vec();
@@ -63,20 +84,66 @@ fn the_compounds_are_the_dotted_archive_labels() {
 }
 
 #[test]
+fn every_listed_suffix_is_a_package_by_name() {
+    for ext in PACKAGE_EXTENSIONS {
+        assert!(is_listed_package(&format!("Thing.{ext}")), "{ext}");
+        assert!(
+            is_listed_package(&format!("Thing.{}", ext.to_uppercase())),
+            "{ext} uppercased"
+        );
+    }
+}
+
+#[test]
+fn a_package_by_name_needs_a_stem_and_a_listed_suffix() {
+    assert!(!is_listed_package(".app"));
+    assert!(!is_listed_package("Documents"));
+    assert!(!is_listed_package("folder.with.dots"));
+    assert!(!is_listed_package("archive.zip"));
+    assert!(!is_listed_package("Thing.app.old"));
+}
+
+#[test]
+fn by_name_reads_the_list_and_only_for_folders() {
+    assert_eq!(NameKind::by_name("Cmdr.app", true), NameKind::Package);
+    assert_eq!(NameKind::by_name("Cmdr.app", false), NameKind::File);
+    assert_eq!(NameKind::by_name("release.v1.2", true), NameKind::Folder);
+    assert_eq!(NameKind::by_name("Sketch.myBundle", true), NameKind::Folder);
+}
+
+#[test]
+fn of_trusts_the_entry_over_the_name() {
+    assert_eq!(NameKind::of(true, true), NameKind::Package);
+    assert_eq!(NameKind::of(true, false), NameKind::Folder);
+    assert_eq!(NameKind::of(false, true), NameKind::File);
+}
+
+#[test]
+fn only_an_unlisted_dotted_folder_needs_macos() {
+    assert!(needs_package_lookup("Sketch.myBundle"));
+    assert!(needs_package_lookup("release.v1.2"));
+    assert!(!needs_package_lookup("Cmdr.app"));
+    assert!(!needs_package_lookup("Documents"));
+    assert!(!needs_package_lookup(".config"));
+    assert!(!needs_package_lookup("trailing."));
+}
+
+#[test]
 fn name_without_extension_strips_the_dot_too() {
-    assert_eq!(name_without_extension("report.pdf", false), "report");
-    assert_eq!(name_without_extension("src.tar.gz", false), "src");
+    assert_eq!(name_without_extension("report.pdf", NameKind::File), "report");
+    assert_eq!(name_without_extension("src.tar.gz", NameKind::File), "src");
     assert_eq!(
-        name_without_extension("Smlouva v. 2 final", false),
+        name_without_extension("Smlouva v. 2 final", NameKind::File),
         "Smlouva v. 2 final"
     );
-    assert_eq!(name_without_extension("release.v1.2", true), "release.v1.2");
-    assert_eq!(name_without_extension("Cmdr.app", true), "Cmdr");
+    assert_eq!(name_without_extension("release.v1.2", NameKind::Folder), "release.v1.2");
+    assert_eq!(name_without_extension("Cmdr.app", NameKind::Package), "Cmdr");
 }
 
 #[test]
 fn a_multibyte_tail_never_panics() {
-    assert_eq!(extension_of("ünïcödé.tär.gz", false), Some("gz"));
-    assert_eq!(extension_of("日本語", false), None);
-    assert_eq!(extension_of("é.gz", false), Some("gz"));
+    assert_eq!(extension_of("ünïcödé.tär.gz", NameKind::File), Some("gz"));
+    assert_eq!(extension_of("日本語", NameKind::File), None);
+    assert_eq!(extension_of("é.gz", NameKind::File), Some("gz"));
+    assert_eq!(extension_of("Bündel.pâquet", NameKind::Package), Some("pâquet"));
 }

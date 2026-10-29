@@ -181,6 +181,29 @@ fn extension_sort_follows_the_product_extension_rule() {
     );
 }
 
+/// A folder macOS called a package sorts by its extension, though the package
+/// list doesn't know it: the sort reads the entry's `is_package`, not the name.
+#[test]
+fn extension_sort_reads_a_detected_package_off_the_entry() {
+    let mut detected = make_entry("Sketch.mybundle", true, None, None);
+    detected.set_package(true);
+    let mut entries = vec![
+        detected,
+        make_entry("Cmdr.app", true, None, None),
+        make_entry("Notes.zz", true, None, None),
+    ];
+
+    sort_entries(
+        &mut entries,
+        SortColumn::Extension,
+        SortOrder::Ascending,
+        DirectorySortMode::LikeFiles,
+    );
+
+    let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
+    assert_eq!(names, vec!["Notes.zz", "Cmdr.app", "Sketch.mybundle"]);
+}
+
 #[test]
 fn test_extension_sort_same_ext_by_name() {
     let mut entries = vec![

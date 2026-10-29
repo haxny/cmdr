@@ -5,7 +5,7 @@
  */
 
 import { extensionChangeNeedsConfirmation } from '#lib/utils/filename-validation.js'
-import { fileExtension } from '#lib/utils/file-extension.js'
+import { fileExtension, kindOfRenamedName } from '#lib/utils/file-extension.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 
 export interface ConflictFileInfo {
@@ -98,12 +98,12 @@ export async function executeRenameSave(
   if (
     !skipExtensionCheck &&
     extensionPolicy === 'ask' &&
-    extensionChangeNeedsConfirmation(target.originalName, trimmedName, target.isDirectory)
+    extensionChangeNeedsConfirmation(target.originalName, trimmedName, target.nameKind)
   ) {
     return {
       type: 'extension-ask',
-      oldExtension: fileExtension(target.originalName, target.isDirectory),
-      newExtension: fileExtension(trimmedName, target.isDirectory),
+      oldExtension: fileExtension(target.originalName, target.nameKind),
+      newExtension: fileExtension(trimmedName, kindOfRenamedName(target.nameKind, trimmedName)),
     }
   }
 

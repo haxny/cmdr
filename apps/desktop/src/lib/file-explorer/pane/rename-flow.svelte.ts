@@ -3,7 +3,7 @@ import { moveToTrash, type RenameValidityResult } from '#lib/tauri-commands/inde
 import { asMutationError } from '#lib/file-operations/mutation-error.js'
 import { renderMutationError } from '#lib/file-operations/mutation-error-messages.js'
 import { validateFilename } from '#lib/utils/filename-validation.js'
-import { fileExtension, withExtension } from '#lib/utils/file-extension.js'
+import { fileExtension, nameKindOf, kindOfRenamedName, withExtension } from '#lib/utils/file-extension.js'
 import { cancelClickToRename } from '../rename/rename-activation'
 import { executeRenameSave, performRename, checkPermission, type RenameResult } from '../rename/rename-operations'
 import { getSetting } from '#lib/settings/index.js'
@@ -182,7 +182,7 @@ export function createRenameFlow(deps: RenameFlowDeps) {
    * the Move dialog's in-place rename), so this is where a row the `.git` portal
    * serves is refused. Returns whether the editor opened.
    */
-  function activateRename(entry: Pick<FileEntry, 'path' | 'name' | 'isDirectory'>, initialName?: string): boolean {
+  function activateRename(entry: Pick<FileEntry, 'path' | 'name' | 'isDirectory' | 'isPackage'>, initialName?: string) {
     if (rowIsServedByGitPortal(entry.path)) {
       if (rename.active) closeEditor()
       addToast(tString('fileExplorer.readOnly.gitPortalMessage'), { level: 'info' })
@@ -194,6 +194,7 @@ export function createRenameFlow(deps: RenameFlowDeps) {
       originalName: entry.name,
       parentPath: deps.getCurrentPath(),
       isDirectory: entry.isDirectory,
+      nameKind: nameKindOf(entry),
     }
 
     rename.activate(target)
@@ -211,7 +212,7 @@ export function createRenameFlow(deps: RenameFlowDeps) {
         deps.getCurrentPath(),
         siblingNames.names,
         effectiveExtensionPolicy(),
-        entry.isDirectory,
+        target.nameKind,
       )
       rename.setValidation(result)
     }
@@ -599,7 +600,7 @@ export function createRenameFlow(deps: RenameFlowDeps) {
         deps.getCurrentPath(),
         siblingNames.names,
         extensionPolicy,
-        rename.target?.isDirectory ?? false,
+        rename.target?.nameKind ?? 'file',
       )
       rename.setValidation(result)
     },
@@ -646,9 +647,10 @@ export function createRenameFlow(deps: RenameFlowDeps) {
       if (rename.target) {
         // Put the old extension back, also when the edit removed it or added one
         // where there was none, so "Keep" always means the original extension.
-        const { originalName, isDirectory } = rename.target
-        const oldExt = fileExtension(originalName, isDirectory)
-        rename.setCurrentName(withExtension(rename.getTrimmedName(), oldExt, isDirectory))
+        const { originalName, nameKind } = rename.target
+        const oldExt = fileExtension(originalName, nameKind)
+        const typed = rename.getTrimmedName()
+        rename.setCurrentName(withExtension(typed, oldExt, kindOfRenamedName(nameKind, typed)))
       }
       rename.requestRefocus()
     },
