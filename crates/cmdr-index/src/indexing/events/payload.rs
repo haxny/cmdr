@@ -101,11 +101,10 @@ pub enum CoveragePhase {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum RescanReason {
-    /// Event ID gap too large: app hasn't run for a long time.
-    StaleIndex,
-    /// FSEvents journal unavailable (gap detected during replay).
+    /// The FSEvents journal can't serve the stored position: its history was
+    /// purged, or it runs behind the stored event id.
     JournalGap,
-    /// Replay processed too many events (safety limit exceeded).
+    /// Replaying would process more paths than a full reconcile walks.
     ReplayOverflow,
     /// DriveWatcher failed to start for replay.
     WatcherStartFailed,

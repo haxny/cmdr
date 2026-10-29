@@ -139,10 +139,10 @@ its own terms: the frontend ORs in `isVolumeAggregating` plus the per-folder `re
 (`views/FullList.svelte`), and `list_dir` leans on its coverage block for that window
 (`apps/desktop/src-tauri/src/agent/tools/DETAILS.md` § The honesty (coverage) contract).
 
-`RescanReason` lives here too: `StaleIndex`, `JournalGap`, `ReplayOverflow`, `WatcherStartFailed`,
-`ReconcilerBufferOverflow`, `IncompletePreviousScan`, `WatcherChannelOverflow`, `IngestionBacklog`. Every path that
-falls back to a full rescan reports one through `emit_rescan_notification`, which also logs the reason; the frontend
-maps each to a toast. The triggers that CHOOSE each reason live in `../watch/DETAILS.md` and `../reconcile/DETAILS.md`.
+`RescanReason` lives here too: `JournalGap`, `ReplayOverflow`, `WatcherStartFailed`, `ReconcilerBufferOverflow`,
+`IncompletePreviousScan`, `WatcherChannelOverflow`, `IngestionBacklog`. Every path that falls back to a full rescan
+reports one through `emit_rescan_notification`, which also logs the reason; the frontend maps each to a toast. The
+triggers that CHOOSE each reason live in `../watch/DETAILS.md` and `../reconcile/DETAILS.md`.
 
 Two reports that could look like they belong here but don't: `AggregationProgress` is the writer's
 (`../writer/DETAILS.md`), and `SearchIndexReadyEvent` (`search-index-ready`) is `commands/search.rs`'s.

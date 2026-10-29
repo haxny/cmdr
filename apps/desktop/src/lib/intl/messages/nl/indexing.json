@@ -166,10 +166,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "De index van je schijf is verouderd. De app lijkt een tijd niet te zijn gebruikt. Cmdr doorzoekt de schijf opnieuw om bij te werken.",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "Het wijzigingslogboek van het systeem gaat niet ver genoeg terug. Cmdr doorzoekt de schijf opnieuw om de index opnieuw op te bouwen.",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

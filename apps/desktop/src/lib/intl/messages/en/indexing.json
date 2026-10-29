@@ -286,11 +286,6 @@
     "screenshotNote": "The drive-indexing checklist, pictured here. Your string is how much time it says is left, in the form it uses for longer waits."
   },
 
-  "indexing.rescan.staleIndex": "Your drive index is outdated. It looks like the app hasn’t run for a while. Running a fresh scan to catch up.",
-  "@indexing.rescan.staleIndex": {
-    "description": "Info toast explaining why Cmdr is rescanning the drive: the index went stale because the app wasn't open for a while. Calm and explanatory."
-  },
-
   "indexing.rescan.journalGap": "The system’s file change log doesn’t go back far enough. Running a fresh scan to rebuild the index.",
   "@indexing.rescan.journalGap": {
     "description": "Info toast explaining why Cmdr is rescanning: the macOS file-change journal no longer covers the gap since last run. Calm and explanatory."

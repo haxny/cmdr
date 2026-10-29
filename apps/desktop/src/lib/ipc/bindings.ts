@@ -15250,11 +15250,12 @@ export type RequestedSort = {
  *  a transparent, user-friendly toast.
  */
 export type RescanReason =
-  // Event ID gap too large: app hasn't run for a long time.
-  | 'stale_index'
-  // FSEvents journal unavailable (gap detected during replay).
+  /**
+   *  The FSEvents journal can't serve the stored position: its history was
+   *  purged, or it runs behind the stored event id.
+   */
   | 'journal_gap'
-  // Replay processed too many events (safety limit exceeded).
+  // Replaying would process more paths than a full reconcile walks.
   | 'replay_overflow'
   // DriveWatcher failed to start for replay.
   | 'watcher_start_failed'

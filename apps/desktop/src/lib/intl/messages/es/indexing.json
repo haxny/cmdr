@@ -166,10 +166,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "El índice de tu unidad está desactualizado. Parece que la app no se ha ejecutado en un tiempo. Haciendo un análisis nuevo para ponerlo al día.",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "El registro de cambios de archivos del sistema no llega lo bastante atrás. Haciendo un análisis nuevo para reconstruir el índice.",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

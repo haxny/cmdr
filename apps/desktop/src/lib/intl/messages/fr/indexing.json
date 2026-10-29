@@ -165,10 +165,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "L’index de votre disque est obsolète. L’application n’a pas été ouverte depuis un moment, semble-t-il. Une nouvelle analyse est en cours pour se remettre à jour.",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "Le journal des modifications de fichiers du système ne remonte pas assez loin. Une nouvelle analyse est en cours pour reconstruire l’index.",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

@@ -165,10 +165,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "你的磁碟機索引已經過時了。看起來這個 App 有一陣子沒開了。正在重新掃描一次來跟上。",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "系統的檔案變更記錄回溯得不夠久。正在重新掃描一次來重建索引。",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

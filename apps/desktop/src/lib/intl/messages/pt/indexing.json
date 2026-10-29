@@ -166,10 +166,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "O índice do seu disco está desatualizado. Parece que o app não foi aberto há um tempo. Examinando o disco de novo para colocar tudo em dia.",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "O registro de alterações de arquivos do sistema não vai longe o suficiente. Examinando o disco de novo para reconstruir o índice.",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

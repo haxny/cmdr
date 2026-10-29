@@ -165,10 +165,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "Dein Laufwerksindex ist veraltet. Die App war anscheinend eine Weile nicht geöffnet. Ein neuer Durchlauf bringt ihn auf den aktuellen Stand.",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "Das Änderungsprotokoll des Systems reicht nicht weit genug zurück. Ein neuer Durchlauf baut den Index neu auf.",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

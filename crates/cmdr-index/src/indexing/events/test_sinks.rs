@@ -78,8 +78,8 @@ pub fn one_of_every_kind() -> Vec<IndexEvent> {
         },
         IndexEvent::RescanScheduled {
             volume_id: "root".into(),
-            reason: RescanReason::StaleIndex,
-            details: Diagnostic("stale".into()),
+            reason: RescanReason::JournalGap,
+            details: Diagnostic("gap".into()),
         },
         IndexEvent::AggregationProgress {
             volume_id: "root".into(),

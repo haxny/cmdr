@@ -165,10 +165,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "Indexet för din enhet är inaktuellt. Det verkar som att appen inte har körts på ett tag. Gör en ny genomsökning för att komma ikapp.",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "Systemets logg över filändringar sträcker sig inte tillräckligt långt tillbaka. Gör en ny genomsökning för att bygga om indexet.",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

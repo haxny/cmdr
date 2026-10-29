@@ -2513,7 +2513,6 @@ export type MessageKey =
   | 'indexing.rescan.journalGap'
   | 'indexing.rescan.reconcilerBufferOverflow'
   | 'indexing.rescan.replayOverflow'
-  | 'indexing.rescan.staleIndex'
   | 'indexing.rescan.watcherChannelOverflow'
   | 'indexing.rescan.watcherStartFailed'
   | 'indexing.run.changeCheck'
