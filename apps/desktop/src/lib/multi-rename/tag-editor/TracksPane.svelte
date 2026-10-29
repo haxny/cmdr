@@ -7,8 +7,10 @@
      * (`tags.edit`) edits the cursor row's active cell in place (← / → move it between #, Disc and Title), ⇧F2 (`tags.editNumber`) its #, F3 or ⌥Space
      * (`tags.play`) plays it, and Tab (`tags.switchPane`) goes to the Album pane. A single-file book has
      * no # column: it has no track number. The Disc column is always drawn, narrow; its header sorts like # (disc, then track).
+     * ⌘F (`tags.filter`) opens the filter field above the header (`TrackFilterBar`): the pane then lists the `shown` rows
+     * alone, by their indices in `tracks`, so the selection, the cursor and the editor keep working on absolute indices.
      */
-    import type { Snippet } from 'svelte'
+    import { tick, type Snippet } from 'svelte'
     import { classifySelectionKey } from '#lib/file-explorer/pane/selection-keys.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -25,6 +27,7 @@
     import './tag-pane.css'
     import { formatTrackLength, parseFieldText, trackCellValue } from './shared-field-input'
     import TagValueEditor from './TagValueEditor.svelte'
+    import TrackFilterBar from './TrackFilterBar.svelte'
     import TrackSortHeader from './TrackSortHeader.svelte'
     import { dialogIsOpen, isClearKey, startsComposition, typedSeed, type TrackCell } from './typed-key'
     import type { TagsCommandId } from './tags-function-keys'
@@ -53,6 +56,12 @@
         footer?: Snippet
         /** Whether this key press is the echo of one the native menu already delivered (`createTagsKeyEcho`). */
         isEcho?: (id: TagsCommandId) => boolean
+        /** The filter's text, or `null` while it is closed. */
+        filter?: string | null
+        /** The indices (in `tracks`) of the rows the filter shows, or `null` with no filter. */
+        shown?: number[] | null
+        /** A new filter text, or `null`: cleared and closed. */
+        onFilterChange?: (text: string | null) => void
     }
 
     const {
@@ -71,6 +80,9 @@
         onSort,
         footer,
         isEcho,
+        filter = null,
+        shown = null,
+        onFilterChange,
     }: Props = $props()
 
     type EditedField = TrackCell
@@ -105,7 +117,13 @@
         ].join(' '),
     )
     const at = $derived(Math.max(0, Math.min(cursor, tracks.length - 1)))
-    const allSelected = $derived(tracks.length > 0 && selection.count === tracks.length)
+    /** The rows drawn: every track, or the ones the filter shows; `index` is the track's place in `tracks`. */
+    const rows = $derived(
+        shown === null ? tracks.map((track, index) => ({ track, index })) : shown.map((index) => ({ track: tracks[index], index })),
+    )
+    /** The cursor's place among the drawn rows. */
+    const atRow = $derived(Math.max(0, rows.findIndex((row) => row.index === at)))
+    const allSelected = $derived(rows.length > 0 && rows.every((row) => selection.has(row.index)))
 
     let list = $state<HTMLElement>()
     let scroller = $state<HTMLElement>()
@@ -124,6 +142,20 @@
 
     /** Gives the pane focus (Tab from the other pane). */
     export function focus(): void {
+        list?.focus()
+    }
+
+    let filterBar = $state<{ focus: () => void }>()
+
+    /** ⌘F: opens the filter field (or goes back to it) and focuses it. */
+    export async function openFilter(): Promise<void> {
+        if (filter === null) onFilterChange?.('')
+        await tick()
+        filterBar?.focus()
+    }
+
+    function closeFilter(): void {
+        onFilterChange?.(null)
         list?.focus()
     }
 
@@ -216,7 +248,7 @@
         if (command === 'selection.toggle') selection.toggleAt(at)
         else if (command === 'selection.toggleAndDown') {
             selection.toggleAt(at)
-            moveTo(Math.min(at + 1, tracks.length - 1))
+            moveTo(rows[Math.min(atRow + 1, rows.length - 1)].index)
         } else if (command === 'selection.selectAll') selection.selectAll()
         else if (command === 'selection.deselectAll') selection.deselectAll()
         else selection.invert()
@@ -285,14 +317,23 @@
         return true
     }
 
+    /** Esc on the list while the filter is on clears and closes it, rather than closing the window. */
+    function answerFilterKey(e: KeyboardEvent): boolean {
+        if (filter === null || e.key !== 'Escape' || e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return false
+        claimKey(e)
+        closeFilter()
+        return true
+    }
+
     function onkeydown(e: KeyboardEvent): void {
-        if (e.isComposing || e.target !== list || tracks.length === 0) return
+        if (e.isComposing || e.target !== list || answerFilterKey(e) || rows.length === 0) return
         if (answerPaneKey(e) || answerSelectionKey(e) || answerCellKey(e) || answerTypedKey(e)) return
-        const move = paneCursorMove(e, { count: tracks.length, from: at, visibleRows: visibleRowCount(scroller, rowHeight) })
+        const move = paneCursorMove(e, { count: rows.length, from: atRow, visibleRows: visibleRowCount(scroller, rowHeight) })
         if (move === null) return
         claimKey(e)
-        if (move.extend) selection.extend({ from: at, to: move.to, overflow: move.overflow })
-        moveTo(move.to)
+        const to = rows[move.to].index
+        if (move.extend) selection.extend({ from: at, to, overflow: move.overflow })
+        moveTo(to)
     }
 
     /** A double-click edits the number on #, the disc on Disc, else the Title (also from Length and File). ☐ and ▶ open nothing. */
@@ -317,6 +358,18 @@
 </script>
 
 <div class="tag-pane full-list-container" class:is-focused={focused}>
+    {#if filter !== null}
+        <TrackFilterBar
+            bind:this={filterBar}
+            text={filter}
+            shownCount={rows.length}
+            total={tracks.length}
+            hiddenCount={selection.hiddenCount}
+            onChange={(text: string) => { onFilterChange?.(text) }}
+            onClose={closeFilter}
+            onLeave={() => list?.focus()}
+        />
+    {/if}
     <div
         class="tag-pane-header"
         role="group"
@@ -331,7 +384,7 @@
                 ariaLabel={tString('multiRename.tags.select.all')}
                 checked={allSelected}
                 indeterminate={selection.count > 0 && !allSelected}
-                disabled={tracks.length === 0}
+                disabled={rows.length === 0}
                 onCheckedChange={() => { selection.setAll(!allSelected) }}
             />
         </span>
@@ -355,10 +408,10 @@
             tabindex="0"
             aria-multiselectable="true"
             aria-label={tString('multiRename.tags.tracks.label')}
-            aria-activedescendant={tracks.length > 0 ? `tag-track-row-${String(at)}` : undefined}
+            aria-activedescendant={rows[atRow]?.index === at ? `tag-track-row-${String(at)}` : undefined}
             {onkeydown}
         >
-            {#each tracks as track, index (track.path)}
+            {#each rows as { track, index }, row (track.path)}
                 {@const selected = selection.has(index)}
                 <!-- Not focusable, as in `FullList`: the listbox holds focus and names the cursor row through
                      `aria-activedescendant`, so a click never strands the keys on a row. -->
@@ -370,7 +423,7 @@
                     class="file-entry"
                     class:is-under-cursor={index === at}
                     class:is-selected={selected}
-                    class:is-striped={striped && index % 2 === 1}
+                    class:is-striped={striped && row % 2 === 1}
                     class:is-unreadable={track.readError !== null}
                     class:is-changed={track.changed}
                     data-index={index}

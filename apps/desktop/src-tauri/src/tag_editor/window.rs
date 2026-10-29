@@ -92,7 +92,7 @@ pub(crate) fn native_edit_id_of(action: TagsClipboardAction) -> &'static str {
 /// for an item the window doesn't take.
 ///
 /// The Tags window installs the main menu (greyed), whose File / Select items register F2–F8,
-/// ⇧F2, ⇧F4 and ⇧F8. On macOS a bare-key accelerator fires ahead of the page, and the file-scoped
+/// ⇧F2, ⇧F4 and ⇧F8, and Edit > Search files ⌘F (the Tracks pane's filter). On macOS a bare-key accelerator fires ahead of the page, and the file-scoped
 /// focus guard would drop it, so `menu_handlers.rs` sends the press here instead (`TagsMenuKey`).
 /// Each item maps to the Tags command holding the same default key; the window checks the item
 /// still has that key before acting, so a rebound file command never runs a tag tool.
@@ -102,7 +102,7 @@ pub(crate) fn native_edit_id_of(action: TagsClipboardAction) -> &'static str {
 pub(crate) fn menu_key_command_of(id: &str) -> Option<&'static str> {
     use crate::menu::{
         COMPARE_DIRECTORIES_ID, EDIT_ID, FILE_COPY_ID, FILE_DELETE_ID, FILE_DELETE_PERMANENTLY_ID, FILE_MOVE_ID,
-        FILE_NEW_FILE_ID, FILE_NEW_FOLDER_ID, FILE_VIEW_ID, RENAME_ID,
+        FILE_NEW_FILE_ID, FILE_NEW_FOLDER_ID, FILE_VIEW_ID, RENAME_ID, SEARCH_FILES_ID,
     };
     match id {
         RENAME_ID => Some("tags.edit"),
@@ -115,6 +115,7 @@ pub(crate) fn menu_key_command_of(id: &str) -> Option<&'static str> {
         FILE_NEW_FOLDER_ID => Some("tags.number"),
         FILE_DELETE_ID => Some("tags.clearField"),
         FILE_DELETE_PERMANENTLY_ID => Some("tags.removeExtras"),
+        SEARCH_FILES_ID => Some("tags.filter"),
         _ => None,
     }
 }

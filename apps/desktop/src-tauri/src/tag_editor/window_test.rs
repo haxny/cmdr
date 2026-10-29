@@ -104,7 +104,7 @@ fn deselect_all_goes_to_the_focused_tags_window_only() {
 fn the_file_and_select_f_keys_name_the_tag_command_with_the_same_key() {
     use crate::menu::{
         COMPARE_DIRECTORIES_ID, EDIT_ID, FILE_COPY_ID, FILE_DELETE_ID, FILE_DELETE_PERMANENTLY_ID, FILE_MOVE_ID,
-        FILE_NEW_FILE_ID, FILE_NEW_FOLDER_ID, FILE_VIEW_ID, RENAME_ID,
+        FILE_NEW_FILE_ID, FILE_NEW_FOLDER_ID, FILE_VIEW_ID, RENAME_ID, SEARCH_FILES_ID,
     };
     let expected = [
         (RENAME_ID, "tags.edit"),                          // F2
@@ -117,6 +117,7 @@ fn the_file_and_select_f_keys_name_the_tag_command_with_the_same_key() {
         (FILE_NEW_FOLDER_ID, "tags.number"),               // F7
         (FILE_DELETE_ID, "tags.clearField"),               // F8
         (FILE_DELETE_PERMANENTLY_ID, "tags.removeExtras"), // ⇧F8
+        (SEARCH_FILES_ID, "tags.filter"),                  // ⌘F
     ];
     for (id, command) in expected {
         assert_eq!(menu_key_command_of(id), Some(command), "{id}");

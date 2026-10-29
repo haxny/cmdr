@@ -672,6 +672,10 @@
   "@commands.tagsRedo.label": {
     "description": "Row in the Keyboard shortcuts list: what Command+Shift+Z does in the tag editor window when no value is being typed. It puts back the unwritten tag edit Command+Z just took back. Read-only (the key can’t be rebound)."
   },
+  "commands.tagsFilter.label": "Filter the tracks",
+  "@commands.tagsFilter.label": {
+    "description": "Row in the Keyboard shortcuts list: what Command+F does in the tag editor window. It opens a filter field above the list of audio files (tracks) that narrows it to the tracks matching the typed text; the tag tools then work on the tracks it shows. Read-only (the key can’t be rebound)."
+  },
   "commands.queueCursorUp.label": "Previous operation",
   "@commands.queueCursorUp.label": {
     "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the operation above.",

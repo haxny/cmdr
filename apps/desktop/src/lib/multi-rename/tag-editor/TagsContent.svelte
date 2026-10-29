@@ -7,7 +7,8 @@
      * command, from the bar or from the window's keydown (`TagsWindow.svelte`). Tab switches the panes
      * (`tags-panes.svelte.ts`). ⌘X / ⌘C / ⌘V from the native menu act on the field under the cursor (`clipboard`).
      * ⌘⏎ and ⌘S write at once and say in the status line how many files (`writeAtOnce`); ⇧⌘S opens the Write dialog,
-     * the change list first.
+     * the change list first. ⌘F filters the Tracks pane: with nothing selected, the tools and the Album pane then work
+     * on the tracks it shows, named by path (`ToolScope` `shown`), never on hidden ones.
      * It opens the tag session when it mounts.
      */
     import { onDestroy, onMount, untrack } from 'svelte'
@@ -53,9 +54,11 @@
     import { createTagsPanes, type TagsPaneId } from './tags-panes.svelte'
     import { dialogIsOpen, type TrackCell } from './typed-key'
     import { createTrackSelection, type ToolScope } from './track-selection.svelte'
+    import { shownTrackIndices } from './track-filter'
     import { createTrackPlayer } from './track-player.svelte'
     import { createTagPlayer } from './tag-player.svelte'
-    import { SETTLE_LIMIT_MS, type TagEditorState, type TagStateError } from './tag-editor-state.svelte'
+    import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
+    import { createEditsComing } from './edits-coming'
 
     interface Props {
         state: TagEditorState
@@ -66,8 +69,14 @@
     /** The selected tracks; the tools work on these alone. Created once per mount, synced on every view change. */
     const selection = createTrackSelection()
     const allPaths = $derived(tags.view?.tracks.map((track) => track.path) ?? [])
-    /** Changes with the selected tracks and the track list: a file-name preview is only good for the tracks it listed. */
-    const scopeKey = $derived(JSON.stringify([[...selection.selected].sort(), allPaths]))
+    /** The Tracks pane's filter text (⌘F), or `null` while it is closed. */
+    let filter = $state<string | null>(null)
+    /** The rows the filter shows (indices in the view's tracks), or `null` with no filter. */
+    const shown = $derived(shownTrackIndices(tags.view?.tracks ?? [], filter))
+    /** Changes with the scoped tracks and the track list: a file-name preview is only good for the tracks it listed. */
+    const scopeKey = $derived(JSON.stringify([[...selection.scoped].sort(), allPaths]))
+    /** No track selected and the filter on: the tools and the Album pane work on the shown tracks. */
+    const filtering = $derived(shown !== null && selection.count === 0)
 
     let selectionGone = $state(false)
 
@@ -75,10 +84,13 @@
     $effect(() => {
         selection.sync(allPaths)
     })
+    $effect(() => {
+        selection.setShown(shown === null ? null : shown.map((index) => allPaths[index]))
+    })
 
-    // The Album pane sums up the selected tracks (every track while none is).
+    // The Album pane sums up the selected tracks, else the shown ones (every track while neither narrows it).
     const viewScope = followViewScope({
-        selected: () => selection.selected,
+        selected: () => selection.scoped,
         shownCount: () => tags.view?.scopeCount,
         settled: () => tags.settled(),
         setViewScope: (paths) => tags.setViewScope(paths),
@@ -96,6 +108,7 @@
         playAtCursor: () => void
         activeField: () => TrackCell
         settleEditor: () => boolean
+        openFilter: () => Promise<void>
     }>()
     /** One key press by both roads (keydown and the native menu's accelerator) acts once. */
     const isEcho = createTagsKeyEcho()
@@ -115,6 +128,14 @@
         if (moved >= 0 && moved !== untrack(() => panes.tracksCursor)) panes.tracksCursor = moved
     })
 
+    // A filter that hides the cursor row moves the cursor to the next shown row (the last one when none follows).
+    $effect(() => {
+        const rows = shown
+        const cursor = untrack(() => panes.tracksCursor)
+        if (rows === null || rows.length === 0 || rows.includes(cursor)) return
+        panes.tracksCursor = rows.find((index) => index > cursor) ?? rows[rows.length - 1]
+    })
+
     // The window opens with the Album pane focused, as the main window opens with a file pane focused.
     let focusedOnce = false
     $effect(() => {
@@ -123,7 +144,7 @@
         albumPane.focus()
     })
 
-    /** ⌘A from the native menu (`TagsWindow`): every track, as in a file pane. */
+    /** ⌘A from the native menu (`TagsWindow`): every track, as in a file pane; the shown ones under a filter. */
     export function selectAllTracks(): void {
         selection.selectAll()
     }
@@ -261,7 +282,12 @@
             return undefined
         }
         selectionGone = false
-        return await call(scope.kind === 'some' ? scope.paths : null)
+        if (scope.kind === 'shown' && scope.paths.length === 0) {
+            // The filter shows nothing: never widen to every track.
+            notice = 'multiRename.tags.filter.noneShown'
+            return undefined
+        }
+        return await call(scope.kind === 'all' ? null : scope.paths)
     }
 
     async function runTool(tool: TagTool): Promise<void> {
@@ -347,37 +373,12 @@
     /** A key's answer that has nowhere else to go ("There's no tag write to undo."); the next command clears it. */
     let notice = $state<MessageKey | null>(null)
 
-    /**
-     * Album and clipboard edits started but not yet handed to the state (a paste reading the clipboard, a commit
-     * waiting for the pane's scope): ⌘⏎ and ⌘Z wait for them (`editsSent`), so the edit just made is the one they see.
-     */
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping of pending promises, nothing renders from it
-    const coming = new Set<Promise<unknown>>()
+    /** Album and clipboard edits on their way: ⌘⏎ and ⌘Z wait for them (`edits-coming.ts`). */
+    const coming = createEditsComing()
     function editComing<T>(run: Promise<T>): Promise<T> {
-        coming.add(run)
-        void run.then(
-            () => coming.delete(run),
-            () => coming.delete(run),
-        )
-        return run
+        return coming.track(run)
     }
-    async function editsSent(): Promise<boolean> {
-        let timer: ReturnType<typeof setTimeout> | undefined
-        const gaveUp = new Promise<false>((resolve) => {
-            timer = setTimeout(() => {
-                resolve(false)
-            }, SETTLE_LIMIT_MS)
-        })
-        const sent = (async () => {
-            while (coming.size > 0) await Promise.allSettled([...coming])
-            return true as const
-        })()
-        try {
-            return await Promise.race([sent, gaveUp])
-        } finally {
-            clearTimeout(timer)
-        }
-    }
+    const editsSent = (): Promise<boolean> => coming.sent()
 
     /** ⌘⏎ / ⌘S: the write at once and what the status line says of it (`write-now-status.svelte.ts`). */
     const writeNow = createWriteNowStatus({
@@ -454,12 +455,14 @@
         'tags.review': () => { openReview() },
         'tags.undo': () => void undoLast(),
         'tags.redo': () => void redoLast(),
+        'tags.filter': () => void tracksPane?.openFilter(),
     }
 
     /** Whether `id` can act on the tags as they are now. */
     function canRun(id: TagsCommandId): boolean {
         // A write on its way (seconds on a share): its answer may open a dialog, so nothing else opens one meanwhile.
-        if (writeNow.writingNow || tags.writing) return id === 'tags.play'
+        if (writeNow.writingNow || tags.writing) return id === 'tags.play' || id === 'tags.filter'
+        if (id === 'tags.filter') return tags.view !== null
         if (id === 'tags.undo' || id === 'tags.redo') return tags.view?.editable === true
         return enabledCommands.has(id)
     }
@@ -510,6 +513,12 @@
         if (writeMode === null) notice = 'multiRename.tags.window.closeWaits'
     }
 
+    /** The Album heading's scope: the view's narrowed count, "(filtered)" when the filter narrows it; `null` for all. */
+    function albumScope(scopeCount: number | null, total: number): { count: number; total: number; filtered: boolean } | null {
+        if (filtering && shown?.length === 0) return { count: 0, total, filtered: true }
+        return scopeCount === null ? null : { count: scopeCount, total, filtered: filtering }
+    }
+
     async function listCandidates() {
         const res = await tags.coverCandidates()
         return res.ok ? res.value : null
@@ -535,10 +544,10 @@
             <div class="pane-slot album" data-pane="album">
                 <AlbumPane
                     bind:this={albumPane}
-                    rows={view.shared}
+                    rows={filtering && shown?.length === 0 ? [] : view.shared}
                     editable={view.editable}
                     badDates={view.badDates}
-                    scope={view.scopeCount === null ? null : { count: view.scopeCount, total: view.tracks.length }}
+                    scope={albumScope(view.scopeCount, view.tracks.length)}
                     focused={inPanes && panes.active === 'album'}
                     cursor={panes.albumCursor}
                     onCursorChange={(index: number) => { panes.albumCursor = index }}
@@ -568,6 +577,9 @@
                     onSort={(sort: TrackSort) => void tags.sortTracks(sort)}
                     isEcho={(id: TagsCommandId) => isEcho(id, 'keyboard')}
                     footer={tracksFooter}
+                    {filter}
+                    {shown}
+                    onFilterChange={(text: string | null) => { filter = text }}
                 />
             </div>
         </div>
@@ -611,6 +623,7 @@
         field={tool.field}
         trackCount={tags.view.tracks.length}
         selectedCount={selection.count}
+        shownCount={filtering ? (shown?.length ?? 0) : null}
         extras={tags.view.extras}
         state={tags}
         {runScoped}

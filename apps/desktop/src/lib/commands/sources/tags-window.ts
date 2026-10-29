@@ -48,4 +48,7 @@ export const tagsWindowCommands: CommandSource[] = [
   // ⇧⌘Z) stay the box's own text undo.
   { id: 'tags.undo', nameKey: 'commands.tagsUndo.label', shortcuts: ['⌘Z'], ...tagsWindowKey },
   { id: 'tags.redo', nameKey: 'commands.tagsRedo.label', shortcuts: ['⌘⇧Z'], ...tagsWindowKey },
+  // Opens the Tracks pane's filter field (`TracksPane`), as ⌘F searches in the main window. Edit > Search files holds
+  // ⌘F too, so the press also comes by the native menu (`menu_key_command_of`).
+  { id: 'tags.filter', nameKey: 'commands.tagsFilter.label', shortcuts: ['⌘F'], ...tagsWindowKey },
 ]

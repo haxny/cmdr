@@ -264,7 +264,7 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
   error boundary whether closing would lose anything: unwritten edits in the session (`session::has_unwritten`) or a
   tag write running (`at_quit::is_writing`). It also
   names what a main-menu key means in a focused Tags window (`menu_selection_of` for ⌘A / ⌘⇧A and ⌘X / ⌘C / ⌘V, `menu_key_command_of`
-  for F2–F8, ⇧F2, ⇧F4, ⇧F8; never Tab), which `menu_route.rs` emits there instead of dropping. `native_edit_id_of` names the Edit item whose native action
+  for F2–F8, ⇧F2, ⇧F4, ⇧F8 and Edit > Search files' ⌘F; never Tab), which `menu_route.rs` emits there instead of dropping. `native_edit_id_of` names the Edit item whose native action
   `tags_native_edit` hands back for a text box or the cover section.
 - `playback.rs` `cmdr-media://` audio tokens per session (dropped on release and in `session::close`, not only at the
   viewer's choke point) and "open in <app>" (`plan_launch`, `choices_of` pure; `player_choices` lists the apps that open the tracks, one

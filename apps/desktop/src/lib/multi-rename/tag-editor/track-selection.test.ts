@@ -89,3 +89,80 @@ describe('createTrackSelection', () => {
     expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/02.mp3'] })
   })
 })
+
+describe('createTrackSelection under a filter (⌘F)', () => {
+  /** Rows 1 and 3 show (`/b/02.mp3`, `/b/04.mp3`). */
+  const SHOWN = ['/b/02.mp3', '/b/04.mp3']
+
+  function filtered() {
+    const selection = fresh()
+    selection.setShown(SHOWN)
+    return selection
+  }
+
+  it('with nothing selected, the scope is the shown tracks, passed by path', () => {
+    const selection = filtered()
+    expect(selection.scope()).toEqual({ kind: 'shown', paths: SHOWN })
+    expect([...selection.scoped].sort()).toEqual(SHOWN)
+    selection.setShown([])
+    expect(selection.scope()).toEqual({ kind: 'shown', paths: [] })
+    selection.setShown(null)
+    expect(selection.scope()).toEqual({ kind: 'all' })
+    expect(selection.scoped.size).toBe(0)
+  })
+
+  it('a selection wins over the filter, hidden selected tracks included', () => {
+    const selection = fresh()
+    selection.toggleAt(0)
+    selection.setShown(SHOWN)
+    expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/01.mp3'] })
+    expect(selection.hiddenCount).toBe(1)
+    expect(selection.has(0)).toBe(true)
+  })
+
+  it('selectAll (⌘A) selects exactly the shown tracks; the header box clears only those', () => {
+    const selection = fresh()
+    selection.toggleAt(0)
+    selection.setShown(SHOWN)
+    selection.selectAll()
+    expect(selection.scope()).toEqual({ kind: 'some', paths: SHOWN })
+    expect(selection.hiddenCount).toBe(0)
+    selection.toggleAt(0)
+    selection.setAll(false)
+    expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/01.mp3'] })
+  })
+
+  it('invert flips the shown tracks and leaves the hidden ones as they are', () => {
+    const selection = fresh()
+    selection.toggleAt(0)
+    selection.toggleAt(1)
+    selection.setShown(SHOWN)
+    selection.invert()
+    expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/01.mp3', '/b/04.mp3'] })
+  })
+
+  it('⇧↓ fills over the shown rows only, never a hidden one between them', () => {
+    const selection = filtered()
+    selection.extend({ from: 1, to: 3, overflow: true })
+    expect(selection.scope()).toEqual({ kind: 'some', paths: SHOWN })
+    selection.extend({ from: 3, to: 1, overflow: false })
+    expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/02.mp3'] })
+  })
+
+  it('⇧-click selects the shown rows from the cursor to the row clicked', () => {
+    const selection = filtered()
+    selection.extendTo(3, 1)
+    expect(selection.scope()).toEqual({ kind: 'some', paths: SHOWN })
+  })
+
+  it('the selection survives a filter change and clearing it', () => {
+    const selection = filtered()
+    selection.toggleAt(3)
+    selection.setShown(['/b/01.mp3'])
+    expect(selection.hiddenCount).toBe(1)
+    expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/04.mp3'] })
+    selection.setShown(null)
+    expect(selection.hiddenCount).toBe(0)
+    expect(selection.scope()).toEqual({ kind: 'some', paths: ['/b/04.mp3'] })
+  })
+})

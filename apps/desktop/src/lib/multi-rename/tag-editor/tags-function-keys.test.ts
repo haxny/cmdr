@@ -63,11 +63,17 @@ describe('menuKeyCommand', () => {
     'file.copy': ['⌘C'],
     'tags.replace': ['F4'],
     'tags.format': ['F5'],
+    'search.open': ['⌘F', '⌥F7'],
+    'tags.filter': ['⌘F'],
   }
   const shortcutsOf = (id: CommandId): string[] => store[id] ?? []
 
   it('names the Tags command whose key the menu item holds', () => {
     expect(menuKeyCommand({ commandId: 'tags.replace', menuCommandId: 'file.edit' }, shortcutsOf)).toBe('tags.replace')
+  })
+
+  it('Edit > Search files’ ⌘F opens the Tracks filter', () => {
+    expect(menuKeyCommand({ commandId: 'tags.filter', menuCommandId: 'search.open' }, shortcutsOf)).toBe('tags.filter')
   })
 
   it('a file command rebound to another key never runs the tag tool', () => {

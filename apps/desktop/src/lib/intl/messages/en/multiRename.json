@@ -1290,6 +1290,47 @@
   "@multiRename.tags.album.colValue": {
     "description": "Column header in the album pane of the tag editor window, above the tag values the files share."
   },
+  "multiRename.tags.album.scopeFiltered": "{total, plural, one {{countText} of {totalText} track (filtered)} other {{countText} of {totalText} tracks (filtered)}}",
+  "@multiRename.tags.album.scopeFiltered": {
+    "description": "Shown at the right of the album pane’s header in the tag editor window while a filter narrows the tracks pane and no track is selected: the album pane then shows and edits the tags of the tracks the filter shows only. Screen readers read it as the pane’s description.",
+    "placeholders": {
+      "countText": "how many tracks the filter shows, formatted (for example 12)",
+      "total": "how many tracks the window lists, for the plural",
+      "totalText": "the same number, formatted (for example 98)"
+    }
+  },
+  "multiRename.tags.filter.label": "Filter the tracks",
+  "@multiRename.tags.filter.label": {
+    "description": "Accessible name of the filter field that Command+F opens above the list of audio files (tracks) in the tag editor window. Typing narrows the list to the tracks whose number, disc, title, length, or file name holds the text."
+  },
+  "multiRename.tags.filter.placeholder": "Filter, or title: text",
+  "@multiRename.tags.filter.placeholder": {
+    "description": "Placeholder inside the tracks filter field of the tag editor window. Hints that plain text matches any column and that a column name with a colon (title:, disc:, #:, file:) matches one column. Keep `title:` as is: it is the syntax the user types."
+  },
+  "multiRename.tags.filter.count": "{total, plural, one {{shownText} of {totalText} track} other {{shownText} of {totalText} tracks}}",
+  "@multiRename.tags.filter.count": {
+    "description": "Beside the tracks filter field of the tag editor window, announced to screen readers as it changes: how many tracks the filter shows of all the tracks listed.",
+    "placeholders": {
+      "shownText": "how many tracks match the filter, formatted (for example 12)",
+      "total": "how many tracks the window lists, for the plural",
+      "totalText": "the same number, formatted (for example 98)"
+    }
+  },
+  "multiRename.tags.filter.hiddenSelected": "{count, plural, one {{countText} selected track hidden} other {{countText} selected tracks hidden}}",
+  "@multiRename.tags.filter.hiddenSelected": {
+    "description": "After the count beside the tracks filter field of the tag editor window: selected tracks that the filter hides. They stay selected, and the tag tools still work on them.",
+    "placeholders": {
+      "countText": "how many selected tracks the filter hides, formatted (for example 3)"
+    }
+  },
+  "multiRename.tags.filter.noneShown": "No track matches the filter, so nothing was changed. Change the filter, or press Esc in it to show every track.",
+  "@multiRename.tags.filter.noneShown": {
+    "description": "Status line in the tag editor window: a tag tool or an edit was pressed while the tracks filter matched no track and no track was selected, so it did nothing rather than change every track."
+  },
+  "multiRename.tags.clearField.shown": "{count, plural, one {Empties {field} on the track the filter shows.} other {Empties {field} on the {countText} tracks the filter shows.}}",
+  "@multiRename.tags.clearField.shown": {
+    "description": "What the Clear a field dialog will do when no track is selected and a filter narrows the tracks pane. {field} is a tag field’s name, like Title; {countText} is the formatted number of tracks the filter shows."
+  },
   "multiRename.tags.album.scope": "{total, plural, one {{countText} of {totalText} track} other {{countText} of {totalText} tracks}}",
   "@multiRename.tags.album.scope": {
     "description": "Shown at the right of the album pane’s header in the tag editor window while some tracks are selected in the tracks pane: the album pane then shows and edits the tags of the selected tracks only. Screen readers read it as the pane’s description.",

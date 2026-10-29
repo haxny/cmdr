@@ -35,8 +35,11 @@
         editable: boolean
         /** How many files carry a Date the writer would refuse; the Date row is red while it is above 0. */
         badDates?: number
-        /** The tracks the rows sum up when the Tracks pane has a selection (`count` of `total`); `null` for all. */
-        scope?: { count: number; total: number } | null
+        /**
+         * The tracks the rows sum up when the Tracks pane has a selection or, with none, a filter (`count` of
+         * `total`, `filtered`); `null` for all.
+         */
+        scope?: { count: number; total: number; filtered?: boolean } | null
         /** This pane has focus: its cursor shows as the active one (`.is-focused`). */
         focused: boolean
         cursor: number
@@ -79,7 +82,11 @@
     )
 
     /** "5 of 42 tracks" while a selection narrows the rows; nothing while they cover every track. */
-    const scopeText = $derived(scopeParams === null ? null : tString('multiRename.tags.album.scope', scopeParams))
+    const scopeText = $derived(
+        scopeParams === null
+            ? null
+            : tString(scope?.filtered === true ? 'multiRename.tags.album.scopeFiltered' : 'multiRename.tags.album.scope', scopeParams),
+    )
 
     const rowHeight = $derived(getRowHeight())
     const striped = $derived(getStripedRows())

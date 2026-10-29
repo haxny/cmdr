@@ -42,6 +42,8 @@
         trackCount: number
         /** How many tracks are selected (0: the tools work on all). */
         selectedCount: number
+        /** With nothing selected and the Tracks filter on: how many tracks it shows (the tools' scope); else `null`. */
+        shownCount?: number | null
         /** The files' extra (unmanaged) tag keys. */
         extras: string[]
         state: TagEditorState
@@ -54,7 +56,7 @@
         onClose: () => void
     }
 
-    const { open, field, trackCount, selectedCount, extras, state: tags, runScoped, scopeKey, onTool, onClear, onClose }: Props =
+    const { open, field, trackCount, selectedCount, shownCount = null, extras, state: tags, runScoped, scopeKey, onTool, onClear, onClose }: Props =
         $props()
 
     const TITLES: Record<TagToolId, MessageKey> = {
@@ -209,7 +211,13 @@
                     />
                 </div>
                 <p class="hint">
-                    {selectedCount === 0
+                    {shownCount !== null
+                        ? tString('multiRename.tags.clearField.shown', {
+                              field: clearingName,
+                              count: shownCount,
+                              countText: formatInteger(shownCount),
+                          })
+                        : selectedCount === 0
                         ? tString('multiRename.tags.clearField.all', { field: clearingName })
                         : tString('multiRename.tags.clearField.some', {
                               field: clearingName,

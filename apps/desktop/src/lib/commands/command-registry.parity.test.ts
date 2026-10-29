@@ -72,6 +72,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'tags.review': 'Review the changes, then write',
   'tags.undo': 'Undo the last tag edit or write',
   'tags.redo': 'Redo the last undone tag edit',
+  'tags.filter': 'Filter the tracks',
   'viewer.toggleWordWrap': 'Turn word wrap on or off',
   'viewer.toggleTail': 'Turn tail mode on or off',
   'viewer.viewAsMedia': 'View as image or PDF',

@@ -23,10 +23,9 @@ Backend: `src-tauri/src/tag_editor/CLAUDE.md`.
 - **F3 / ⌥Space** is `tags.play`: plays or stops the Tracks pane's cursor row; plain Space selects, as on files. ⌥Space
   is claimed (macOS types a non-breaking space for it). Playback stops on unmount, another play, `ended`, and a write
   (`onWriting`); each stop releases the URL.
-- **Scope**: tools and the Album pane work on the Tracks pane's selection, ONE selection model
-  (`track-selection.svelte.ts` over the file panes' `createSelectionState`; the ☐ column draws it): `all` / `some` /
-  `gone` through `TagsContent`'s `runScoped`; a vanished selection never widens to every track. "Open in <app>" follows
-  the same scope.
+- **Scope**: tools, "Open in <app>" and the Album pane work on the Tracks pane's selection, ONE model
+  (`track-selection.svelte.ts` over `createSelectionState`): `all` / `some` / `shown` (⌘F's filter, none selected) /
+  `gone` through `TagsContent`'s `runScoped`; a vanished selection or an empty filter never widens to every track.
 - **Totals are fields** (TrackTotal, DiscTotal), and `store` normalizes every edit for its format (an M4A's `01` shows
   as `1`). Find/replace and format run in the app's Rust (`tag_editor/text_tools.rs`) because they reuse Multi-Rename's
   own engine, not `cmdr-tags`; file name → tags stays the engine's `TagTool::FromFileName`.

@@ -115,48 +115,47 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   open to run again; Case, Clean up, Remove extras and Clear close once run. ⌘⏎ and ⌘S (`tags.write`) write at once
   (`write-now-status.svelte.ts`): `TagEditorState.writeNow` is the Write dialog's own write without its list. It first
   waits for an edit started but not yet handed to the state (a paste reading the clipboard, an Album commit flushing its
-  scope: `TagsContent`'s `editComing` / `editsSent`), as ⌘Z and ⇧⌘Z do, so the edit just made is the one they see. Then
-  it waits for the edits out, lists as the remembered kind, writes nothing when nothing would change, and sends the same
-  apply request. ❗ When the kind would remove a field from any file (`removes`, an MP3's conductor for Audiobook) it
-  writes nothing and opens the list instead (`reviewFirst`, worded in the status line): a removal is only ever written
-  from the list that names it. The backend enforces it (`ApplyRequest.allowRemovals` → `wouldRemove`, backend
-  `DETAILS.md` § Write and undo): ⌘⏎ allows none, the dialog's write only the files it listed with a removal, and a file
-  held back at the write opens the list again, continuing the press. With `multiRename.tagEditor.absSideFiles` on, the
-  list also names Audiobookshelf's `reader.txt` / `desc.txt` under the files (`side-files.ts`; asked only with the
-  setting on and a file to change, the setting read once per press and sent as `sideFiles`, so off changes nothing):
-  side files ride along with a tag write, never alone; ⌘⏎ creates a missing one but opens the list for one that says
-  something else (`reviewFirst.replacing`), and the dialog's write sends back only the replacements it showed with their
-  old and new text (`allowSideFiles`); one held back at the write is listed as not written (backend `DETAILS.md` § Write
-  and undo). An edit landing between ⌘⏎'s list and its write writes nothing and lists again (`changed`). The player
-  stops first, a second press while it runs does nothing, would-drop files ask in a `WouldDropDialog` over the panes
-  ("Write anyway" is `answerWriteAnyway`, shared with the dialog: an edit landed meanwhile opens the list, continuing
-  the press so Undo keeps both applies), and the status line says how many files were written and how many weren't,
-  until the next edit or 10 s. Refusals reuse the dialog's words (`refusalOf`). ⌘⇧S (`tags.review`) opens `WriteDialog`
-  listing the changes (`ApplyPanel.start()`), where ⌘⏎ or Write tags writes; it can't close while a write is out. ⌘Z
-  with a write to undo opens it on the undo question (`ApplyPanel.undo()`; a "no" closes it), and without one says so in
-  the status line. ⌘W reaches the window as the native Close tab item, which closes a focused child window through its
-  close request, so it meets the same discard guard as Esc. A text tool runs again on each press while its dialog stays
-  open (a second Format re-applies the mask to the value the first one made), as the in-flow panels did. A command that
-  can't act (tags still being read, read-only, no extras, a dialog open) does nothing: the reading notice or the status
-  line already says why. Closing the Write dialog on a write that left files unwritten keeps "Some files weren't
-  written" in the status line.
+  scope: `edits-coming.ts`), as ⌘Z and ⇧⌘Z do, so the edit just made is the one they see. Then it waits for the edits
+  out, lists as the remembered kind, writes nothing when nothing would change, and sends the same apply request. ❗ When
+  the kind would remove a field from any file (`removes`, an MP3's conductor for Audiobook) it writes nothing and opens
+  the list instead (`reviewFirst`, worded in the status line): a removal is only ever written from the list that names
+  it. The backend enforces it (`ApplyRequest.allowRemovals` → `wouldRemove`, backend `DETAILS.md` § Write and undo): ⌘⏎
+  allows none, the dialog's write only the files it listed with a removal, and a file held back at the write opens the
+  list again, continuing the press. With `multiRename.tagEditor.absSideFiles` on, the list also names Audiobookshelf's
+  `reader.txt` / `desc.txt` under the files (`side-files.ts`; asked only with the setting on and a file to change, the
+  setting read once per press and sent as `sideFiles`, so off changes nothing): side files ride along with a tag write,
+  never alone; ⌘⏎ creates a missing one but opens the list for one that says something else (`reviewFirst.replacing`),
+  and the dialog's write sends back only the replacements it showed with their old and new text (`allowSideFiles`); one
+  held back at the write is listed as not written (backend `DETAILS.md` § Write and undo). An edit landing between ⌘⏎'s
+  list and its write writes nothing and lists again (`changed`). The player stops first, a second press while it runs
+  does nothing, would-drop files ask in a `WouldDropDialog` over the panes ("Write anyway" is `answerWriteAnyway`,
+  shared with the dialog: an edit landed meanwhile opens the list, continuing the press so Undo keeps both applies), and
+  the status line says how many files were written and how many weren't, until the next edit or 10 s. Refusals reuse the
+  dialog's words (`refusalOf`). ⌘⇧S (`tags.review`) opens `WriteDialog` listing the changes (`ApplyPanel.start()`),
+  where ⌘⏎ or Write tags writes; it can't close while a write is out. ⌘Z with a write to undo opens it on the undo
+  question (`ApplyPanel.undo()`; a "no" closes it), and without one says so in the status line. ⌘W reaches the window as
+  the native Close tab item, which closes a focused child window through its close request, so it meets the same discard
+  guard as Esc. A text tool runs again on each press while its dialog stays open (a second Format re-applies the mask to
+  the value the first one made), as the in-flow panels did. A command that can't act (tags still being read, read-only,
+  no extras, a dialog open) does nothing: the reading notice or the status line already says why. Closing the Write
+  dialog on a write that left files unwritten keeps "Some files weren't written" in the status line.
 - **Keys the native menu takes first** (macOS): this window installs the main menu (greyed), whose File / Select items
-  register F2–F8, ⇧F2, ⇧F4 and ⇧F8. Those accelerators fire ahead of the page and the file-scoped guard would drop them,
-  so `menu_handlers.rs` sends each to the focused `tags-*` window as `TagsMenuKey`
-  (`tag_editor::window::menu_key_command_of`: the item's Tags command, plus the item's own command). `menuKeyCommand`
-  acts only while that item's first key is still one of the Tags command's keys (a rebound file command never runs a tag
-  tool), under the keydown's rules (no dialog open, no value being typed). If the page sees the key too, the press acts
-  once: `TagsContent`'s `createTagsKeyEcho` (per command, `createKeyRoadEcho`'s 300 ms) drops the other road's twin; the
-  panes ask it for F2, ⇧F2 and F3 (never Enter or ⌥Space, which no menu item holds). Main focused: no Tags window is,
-  and the items run as before. ❌ View > Switch pane's Tab is never routed. Decision/Why: the page sees Tab despite that
-  accelerator (main's dialogs and inline rename move focus with it, and main's keydown resolver leaves Tab unclaimed in
-  a dialog for exactly that, `routes/(main)/DETAILS.md` § The dialog gate); a routed Tab would switch panes from a
-  dialog or a field where Tab must move focus. The panes answer Tab themselves; elsewhere it is the browser's and the
-  dialog focus trap's. Edit > Undo (⌘Z) is a predefined item, so it can't be routed: its key reaches the page's keydown
-  (as ⌘G does in main, both roads fire for a ⌘ chord), which runs `tags.undo` (the last pending edit at once when
-  `view.canUndoEdit`, else the last write after asking; ⇧⌘Z is `tags.redo`) outside a text box and leaves ⌘Z to the
-  box's text undo inside one; the native `undo:` may then also run, with no text edit to undo. ⌘S, ⇧F3, ⇧F5, ⌥Space and
-  Esc have no menu item and reach the page directly; ⌘W is Close tab. Pinned: `menu_bar_test`'s
+  register F2–F8, ⇧F2, ⇧F4 and ⇧F8, and Edit > Search files ⌘F (`tags.filter`). Those accelerators fire ahead of the
+  page and the file-scoped guard would drop them, so `menu_handlers.rs` sends each to the focused `tags-*` window as
+  `TagsMenuKey` (`tag_editor::window::menu_key_command_of`: the item's Tags command, plus the item's own command).
+  `menuKeyCommand` acts only while that item's first key is still one of the Tags command's keys (a rebound file command
+  never runs a tag tool), under the keydown's rules (no dialog open, no value being typed). If the page sees the key
+  too, the press acts once: `TagsContent`'s `createTagsKeyEcho` (per command, `createKeyRoadEcho`'s 300 ms) drops the
+  other road's twin; the panes ask it for F2, ⇧F2 and F3 (never Enter or ⌥Space, which no menu item holds). Main
+  focused: no Tags window is, and the items run as before. ❌ View > Switch pane's Tab is never routed. Decision/Why:
+  the page sees Tab despite that accelerator (main's dialogs and inline rename move focus with it, and main's keydown
+  resolver leaves Tab unclaimed in a dialog for exactly that, `routes/(main)/DETAILS.md` § The dialog gate); a routed
+  Tab would switch panes from a dialog or a field where Tab must move focus. The panes answer Tab themselves; elsewhere
+  it is the browser's and the dialog focus trap's. Edit > Undo (⌘Z) is a predefined item, so it can't be routed: its key
+  reaches the page's keydown (as ⌘G does in main, both roads fire for a ⌘ chord), which runs `tags.undo` (the last
+  pending edit at once when `view.canUndoEdit`, else the last write after asking; ⇧⌘Z is `tags.redo`) outside a text box
+  and leaves ⌘Z to the box's text undo inside one; the native `undo:` may then also run, with no text edit to undo. ⌘S,
+  ⇧F3, ⇧F5, ⌥Space and Esc have no menu item and reach the page directly; ⌘W is Close tab. Pinned: `menu_bar_test`'s
   `every_main_menu_key_a_tags_window_command_holds_reaches_the_tags_window`. ❗ Not yet checked by hand in a built app:
   F2–F8, ⇧F2–⇧F5, ⇧F8, Tab (panes, a tool dialog, the value box), ⌘S, ⌘Z (in and out of a box), ⌘W, Esc (Plan 2c Task 4b
   fix rounds 1–2, 2026-10-28).
@@ -257,6 +256,18 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   hides a later scope or edit. A newest view whose `scopeCount` doesn't match the selection sends the scope again, once.
   The editor's and Clear's accessible names say "for 5 of 42 tracks" while scoped (`editLabelScoped`,
   `clearRowLabelScoped`).
+- **Filter** (⌘F, `tags.filter`, also routed from Edit > Search files): `TrackFilterBar` above the Tracks header,
+  matched by pure `track-filter.ts` (any column, or `title:` / `disc:` / `#:` / `track:` / `file:` / `length:`; case and
+  diacritics folded, NFC first for macOS names; a number on # or Disc matches the value's first number; an unknown name
+  is plain text). `TrackRow` has no other tags, so Album fields can't be filtered on. `TagsContent` holds the text and
+  derives `shown` (indices); the pane draws those rows with their absolute indices, so the cursor, the selection and the
+  editor stay on the whole list, and a hidden cursor row moves to the next shown one. `TrackSelection.setShown` makes
+  the selection filter-aware: hidden selected tracks stay selected (`hiddenCount`, said beside the field), ⌘A selects
+  exactly the shown ones, invert and the header box act on the shown ones, ⇧ fills skip hidden rows. Scope: the
+  selection if any (hidden included), else `shown` (the filter's paths, passed explicitly to every tool, the Album
+  pane's `setViewScope` and its edits, paste and Delete), else all. A filter showing nothing refuses the run
+  (`filter.noneShown`) rather than widen to all, and the Album pane shows no rows and "0 of N tracks (filtered)". Esc in
+  the field or on the list (while the filter is on) clears and closes it; ⌘⏎ still writes every changed file.
 - **Totals and normalization**: TrackTotal and DiscTotal are tag fields (the numbering wizard sets them; a write keeps
   them). The backend's `store` runs every edit through `cmdr_tags::normalize_for`, so the window shows what the format
   will hold (M4A integers). The one-file-BOOK rule (no track number) is decided on every audio track the session lists
