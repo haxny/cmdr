@@ -1,5 +1,5 @@
 /** Tier 3 a11y tests for `CoverPanel.svelte`: covers with counts, none, the open picker, a notice, and read-only. */
-import { afterEach, describe, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { tick } from 'svelte'
 import type { CoverChoice, CoverSummary } from '#lib/ipc/bindings.js'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
@@ -59,11 +59,24 @@ describe('CoverPanel a11y', () => {
 
   it('covers that look the same, with the offer to use the largest, have no violations', async () => {
     await expectNoA11yViolations(await mountPanel({ kind: 'multiple' }, [{ ...FRONT, files: 50, nearDuplicates: 49 }]))
+    cleanup?.()
+    cleanup = undefined
+    await expectNoA11yViolations(
+      await mountPanel({ kind: 'multiple' }, [
+        { ...FRONT, files: 24, nearDuplicates: 23 },
+        { ...NONE, files: 26 },
+      ]),
+    )
   })
 
   it('more covers than tiles, with "N more", have no violations', async () => {
     const many = Array.from({ length: 10 }, (_, i) => ({ ...FRONT, key: `m${String(i)}` }))
-    await expectNoA11yViolations(await mountPanel({ kind: 'multiple' }, [...many, NONE]))
+    const root = await mountPanel({ kind: 'multiple' }, [...many, NONE])
+    await expectNoA11yViolations(root)
+    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === '2 more')?.click()
+    await settle()
+    expect(root.querySelector('[aria-expanded="true"]')).not.toBeNull()
+    await expectNoA11yViolations(root)
   })
 
   it('no cover has no violations', async () => {

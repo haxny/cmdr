@@ -1451,25 +1451,43 @@
   "@multiRename.tags.cover.cantShow": {
     "description": "Shown in the dialog showing one cover large, in the tag editor window, when the picture's data can't be displayed."
   },
-  "multiRename.tags.cover.lookAlike": "{count, plural, one {These {countText} covers look almost the same} other {These {countText} covers look almost the same}}",
+  "multiRename.tags.cover.lookAlike": "{count, plural, one {{countText} covers look almost the same} other {{countText} covers look almost the same}}",
   "@multiRename.tags.cover.lookAlike": {
     "description": "In the cover section of the tag editor window, above a single cover tile: every file carries a cover, and they are the same picture saved with different bytes (re-encoded or resized), so they show as one. Always two or more.",
     "placeholders": {
-      "count": "how many distinct covers look the same, which picks the plural form",
+      "count": "how many files carry one of these covers, which picks the plural form",
       "countText": "the formatted number of covers, like 50"
     }
   },
-  "multiRename.tags.cover.useLargest": "Use the largest one for all files",
+  "multiRename.tags.cover.lookAlikeSomeNone": "{count, plural, one {{countText} covers look almost the same} other {{countText} covers look almost the same}}; {none, plural, one {{noneText} file has none} other {{noneText} files have none}}",
+  "@multiRename.tags.cover.lookAlikeSomeNone": {
+    "description": "In the cover section of the tag editor window, above a single cover tile: the files that have a cover carry the same picture saved with different bytes (re-encoded or resized), so they show as one, and the other files have no cover at all.",
+    "placeholders": {
+      "count": "how many files carry one of these covers (two or more), which picks the plural form",
+      "countText": "the formatted number of covers, like 24",
+      "none": "how many files have no cover, which picks the plural form",
+      "noneText": "the formatted number of files without a cover, like 26"
+    }
+  },
+  "multiRename.tags.cover.useLargest": "{count, plural, one {Use it for the {countText} file} other {Use it for all {countText} files}}",
   "@multiRename.tags.cover.useLargest": {
-    "description": "Button beside \"These N covers look almost the same\" in the tag editor window: gives every file the copy of that picture with the most pixels, so all files carry one identical cover. Nothing is written into the files until Write."
+    "description": "Button beside \"N covers look almost the same\" in the tag editor window: gives every file (also those without a cover) the copy of that picture with the most pixels, so all files carry one identical cover. Nothing is written into the files until Write.",
+    "placeholders": {
+      "count": "how many files get the cover, which picks the plural form",
+      "countText": "the formatted number of files, like 50"
+    }
   },
   "multiRename.tags.cover.more": "{count, plural, one {{countText} more} other {{countText} more}}",
   "@multiRename.tags.cover.more": {
-    "description": "Button under the cover tiles in the tag editor window when the files carry more than eight different covers: shows the rest.",
+    "description": "Toggle button under the cover tiles in the tag editor window when the files carry more than eight different covers: shows the rest.",
     "placeholders": {
       "count": "how many covers are not shown yet, which picks the plural form",
       "countText": "the formatted number, like 3"
     }
+  },
+  "multiRename.tags.cover.fewer": "Show fewer",
+  "@multiRename.tags.cover.fewer": {
+    "description": "The same toggle button under the cover tiles in the tag editor window once the rest are shown: shows only the first eight covers again."
   },
   "multiRename.tags.cover.useForAll": "Use for all files",
   "@multiRename.tags.cover.useForAll": {

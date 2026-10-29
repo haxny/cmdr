@@ -1,18 +1,20 @@
-//! Decoding cover pictures, for the two places a cover's pixels matter: a pasted TIFF (a macOS image copy can carry
+//! Decoding cover pictures, for the three places a cover's pixels matter: a pasted TIFF (a macOS image copy can carry
 //! only TIFF) becomes a PNG, or a JPEG when the PNG is over the cap; and a tile's thumbnail, a small PNG cached by the
-//! cover's key so the section never ships every full-size cover to draw 88 px tiles.
+//! cover's key so the section never ships every full-size cover to draw 88 px tiles; and a cover's likeness
+//! (`cover_likeness`), cached the same way, to tell copies of one picture.
 //!
 //! Every decode runs under `contain_panics` with `image::Limits`, so a hostile picture costs its thumbnail or its
 //! paste, not the app or its memory. Pure CPU: no file is read here.
 
 use std::collections::HashMap;
 use std::io::Cursor;
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use cmdr_tags::Cover;
 use image::{DynamicImage, ImageFormat, ImageReader, Limits};
 
 use super::cover::MAX_COVER_BYTES;
+use super::cover_likeness::{Likeness, likeness};
 use super::session::TagEditorError;
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
@@ -139,48 +141,41 @@ pub(super) fn thumbnail_encodes() -> usize {
     ENCODES.with(std::cell::Cell::get)
 }
 
-/// How many cover hashes stay cached; past it the cache starts over. A book whose every file carries its own
-/// re-encoded copy of the cover has one per file, so this is well above a big book's file count.
-const HASH_CACHE_LIMIT: usize = 4096;
+/// How many likenesses stay cached; past it the cache starts over. A book whose every file carries its own re-encoded
+/// copy of the cover has one per file, so this is well above a big book's file count (each is about 1 KiB).
+const LIKENESS_CACHE_LIMIT: usize = 2048;
 
-/// Perceptual hashes by cover key and length, as [`THUMBNAILS`]; `None` for a cover that doesn't decode.
-static HASHES: LazyLock<Mutex<HashMap<String, Option<u64>>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+/// Likenesses by cover key and length, as [`THUMBNAILS`]; `None` for a cover that doesn't decode.
+static LIKENESSES: LazyLock<Mutex<HashMap<String, Option<Arc<Likeness>>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// `cover`'s 64-bit difference hash (dHash), cached by `key` and the byte length; `None` when it doesn't decode.
-/// Two covers whose hashes differ in few bits ([`hamming`]) look the same: the same picture re-encoded or resized.
-/// Decoding happens outside the cache's lock, and never under the session's (the caller copied the cover out).
-pub(super) fn dhash_of(cover: &Cover, key: &str) -> Option<u64> {
+/// What `cover` looks like, small (`cover_likeness`), cached by `key` and the byte length; `None` when it doesn't
+/// decode. Decoding happens outside the cache's lock, and never under the session's (the caller copied the cover out).
+pub(super) fn likeness_of(cover: &Cover, key: &str) -> Option<Arc<Likeness>> {
     let key = format!("{key}:{}", cover.data.len());
-    if let Some(cached) = HASHES.lock_ignore_poison().get(&key) {
-        return *cached;
+    if let Some(cached) = LIKENESSES.lock_ignore_poison().get(&key) {
+        return cached.clone();
     }
-    let made = dhash(cover);
-    let mut cache = HASHES.lock_ignore_poison();
-    if cache.len() >= HASH_CACHE_LIMIT {
+    #[cfg(test)]
+    LIKENESS_DECODES.with(|count| count.set(count.get() + 1));
+    let made = decode(&cover.data, None)
+        .and_then(|picture| contain_panics(|| likeness(&picture)))
+        .map(Arc::new);
+    let mut cache = LIKENESSES.lock_ignore_poison();
+    if cache.len() >= LIKENESS_CACHE_LIMIT {
         cache.clear();
     }
-    cache.insert(key, made);
+    cache.insert(key, made.clone());
     made
 }
 
-/// The picture boxed down to 9×8 grey pixels; bit `y * 8 + x` says whether pixel `x` of row `y` is brighter than its
-/// right neighbor. Box sampling (`thumbnail_exact`) averages every source pixel, so a re-encode's noise and a resize
-/// wash out and only the picture's layout of light and dark is left.
-fn dhash(cover: &Cover) -> Option<u64> {
-    let picture = decode(&cover.data, None)?;
-    let grey = contain_panics(|| picture.thumbnail_exact(9, 8).to_luma8())?;
-    let mut hash = 0u64;
-    for y in 0..8 {
-        for x in 0..8 {
-            if grey.get_pixel(x, y)[0] > grey.get_pixel(x + 1, y)[0] {
-                hash |= 1 << (y * 8 + x);
-            }
-        }
-    }
-    Some(hash)
+// How many likenesses this thread decoded: per thread, as `ENCODES`.
+#[cfg(test)]
+thread_local! {
+    static LIKENESS_DECODES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
-/// How many bits two hashes differ in.
-pub(super) fn hamming(a: u64, b: u64) -> u32 {
-    (a ^ b).count_ones()
+#[cfg(test)]
+pub(super) fn likeness_decodes() -> usize {
+    LIKENESS_DECODES.with(std::cell::Cell::get)
 }

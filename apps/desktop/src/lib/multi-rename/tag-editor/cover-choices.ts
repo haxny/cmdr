@@ -14,14 +14,23 @@ export const NO_COVER_KEY = 'none'
 /** How many cover tiles show before the rest fold under "N more" (the files without a cover always show). */
 export const MAX_COVER_TILES = 8
 
+/** One look on every covered file: the choice, how many files have no cover, and all the files. */
+export interface OneLook {
+  choice: CoverChoice
+  without: number
+  total: number
+}
+
 /**
- * The one choice every file falls in when the files' covers differ by bytes but look the same (re-encoded or resized
- * copies of one picture, merged by the backend), so offering its largest copy for every file makes sense; else `null`.
+ * The one look the files' covers have when they differ by bytes but look the same (re-encoded or resized copies of one
+ * picture, merged by the backend: `nearDuplicates`), with or without files that have none, so offering its largest copy
+ * for every file makes sense; else `null`.
  */
-export function oneLookForAll(choices: readonly CoverChoice[]): CoverChoice | null {
-  if (choices.length !== 1) return null
-  const [only] = choices
-  return only.key !== NO_COVER_KEY && only.nearDuplicates > 0 ? only : null
+export function oneLookForAll(choices: readonly CoverChoice[]): OneLook | null {
+  const covered = choices.filter((choice) => choice.key !== NO_COVER_KEY)
+  if (covered.length !== 1 || covered[0].nearDuplicates === 0) return null
+  const without = choices.find((choice) => choice.key === NO_COVER_KEY)?.files ?? 0
+  return { choice: covered[0], without, total: covered[0].files + without }
 }
 
 /** The largest picture a paste sends: the backend refuses more (`MAX_COVER_BYTES`, 10 MiB). */

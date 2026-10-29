@@ -4,7 +4,7 @@
 //!
 //! A cover is named by its key (`Loaded::cover_key`, taken once per read or new cover, never
 //! here), so grouping by bytes hashes nothing. Covers that look the same (one picture re-encoded or
-//! resized, so different bytes) are then one choice too: see [`NEAR_DUPLICATE_BITS`]. Unreadable
+//! resized, so different bytes) are then one choice too (`cover_likeness` decides). Unreadable
 //! files are never written, so they count in no choice.
 
 use std::path::{Path, PathBuf};
@@ -20,20 +20,13 @@ use serde::Serialize;
 use tokio::sync::Semaphore;
 
 use super::cover::{cover_from_bytes, thumbnail_url};
-use super::cover_image::{dhash_of, hamming, thumbnail_of};
+use super::cover_image::{likeness_of, thumbnail_of};
+use super::cover_likeness::Likeness;
 use super::session::{Loaded, TagEdit, TagEditorError, edit, with_loaded};
 use super::view::{TagEditorView, common_cover, cover_key, pixel_size};
 
 /// The key of the choice that stands for the files without a cover.
 pub const NO_COVER_KEY: &str = "none";
-
-/// Two covers whose 64-bit dHashes (`cover_image::dhash_of`) differ in at most this many bits look
-/// the same and are one choice. Copies of one picture land at 0 bits (JPEG quality 90 against 70,
-/// and 30 at 200 px; 600 px against 500 px; PNG against JPEG: the pictures in `cover_near_test.rs`;
-/// and the 24 distinct re-encoded copies of one real audiobook's cover, all 0 bits apart), while
-/// different pictures land at 29 or more (the same layout mirrored: 60). Five keeps a wide margin
-/// on both sides (verified with `image` 0.25.10, the generated pictures and one real MP3 book, 2026-10-29).
-pub const NEAR_DUPLICATE_BITS: u32 = 5;
 
 /// One distinct cover across the readable files, or (`key: "none"`, empty `mime`, 0 bytes) the
 /// files that have none.
@@ -79,11 +72,10 @@ struct Group<'a> {
 }
 
 /// Distinct covers that look the same, while merging: the largest one's cover and key stand for
-/// them (`face`), compared by the first one's hash (`seed`, so likeness never chains on).
+/// them (`face`), the files summed, `merged` the others counted in.
 struct Alike<'a> {
     face: Group<'a>,
     size: Option<(u32, u32)>,
-    seed: Option<u64>,
     files: u32,
     merged: u32,
 }
@@ -123,22 +115,56 @@ fn exact_groups(files: &[FileCover]) -> (Vec<Group<'_>>, u32) {
     (groups, uncovered)
 }
 
-/// `groups` with the ones that look the same as one: the largest in pixels stands (the first on a
-/// tie), the files summed. A cover that doesn't decode has no hash and stays alone.
-fn merge_alike(groups: Vec<Group<'_>>) -> Vec<Alike<'_>> {
-    let mut merged: Vec<Alike<'_>> = Vec::new();
-    for group in groups {
-        let hash = dhash_of(group.cover, &key_text(group.key));
-        let size = pixel_size(group.cover);
-        let near = hash.and_then(|hash| {
-            merged.iter_mut().find(|alike| {
-                alike
-                    .seed
-                    .is_some_and(|seed| hamming(seed, hash) <= NEAR_DUPLICATE_BITS)
-            })
+/// For each item, the index of the seed it joins (its own when it is one), walking in order: an
+/// item joins the NEAREST earlier seed within reach (`distance` is `Some`), else becomes a seed.
+/// Compared with seeds only, so likeness never chains on (A like B, B like C, A unlike C: C is
+/// never in A's group). An item without a likeness (`None`) is always its own seed.
+pub(super) fn seeds_of<T>(items: &[Option<T>], distance: impl Fn(&T, &T) -> Option<u32>) -> Vec<usize> {
+    let mut seeds: Vec<usize> = Vec::new();
+    let mut joined = Vec::with_capacity(items.len());
+    for (index, item) in items.iter().enumerate() {
+        let nearest = item.as_ref().and_then(|item| {
+            seeds
+                .iter()
+                .filter_map(|&seed| {
+                    let seed_item = items[seed].as_ref()?;
+                    distance(seed_item, item).map(|apart| (apart, seed))
+                })
+                .min_by_key(|&(apart, seed)| (apart, seed))
+                .map(|(_, seed)| seed)
         });
-        match near {
-            Some(alike) => {
+        match nearest {
+            Some(seed) => joined.push(seed),
+            None => {
+                seeds.push(index);
+                joined.push(index);
+            }
+        }
+    }
+    joined
+}
+
+/// `groups` with the ones that look the same as one: the largest in pixels stands (the first on a
+/// tie), the files summed. A cover that doesn't decode has no likeness and stays alone. With one
+/// group or none there is nothing to compare, and nothing is decoded.
+fn merge_alike(groups: Vec<Group<'_>>) -> Vec<Alike<'_>> {
+    let likenesses: Vec<Option<Arc<Likeness>>> = if groups.len() > 1 {
+        groups
+            .iter()
+            .map(|group| likeness_of(group.cover, &key_text(group.key)))
+            .collect()
+    } else {
+        vec![None; groups.len()]
+    };
+    let seeds = seeds_of(&likenesses, |seed, item| seed.distance(item));
+    let mut merged: Vec<Alike<'_>> = Vec::new();
+    // Where each seed's group sits in `merged`.
+    let mut slot_of: Vec<Option<usize>> = vec![None; groups.len()];
+    for (index, group) in groups.into_iter().enumerate() {
+        let size = pixel_size(group.cover);
+        match slot_of[seeds[index]] {
+            Some(slot) => {
+                let alike = &mut merged[slot];
                 alike.files += group.files;
                 alike.merged += 1;
                 if area(size) > area(alike.size) {
@@ -146,13 +172,15 @@ fn merge_alike(groups: Vec<Group<'_>>) -> Vec<Alike<'_>> {
                     alike.size = size;
                 }
             }
-            None => merged.push(Alike {
-                files: group.files,
-                face: group,
-                size,
-                seed: hash,
-                merged: 0,
-            }),
+            None => {
+                slot_of[index] = Some(merged.len());
+                merged.push(Alike {
+                    files: group.files,
+                    face: group,
+                    size,
+                    merged: 0,
+                });
+            }
         }
     }
     merged
@@ -160,7 +188,7 @@ fn merge_alike(groups: Vec<Group<'_>>) -> Vec<Alike<'_>> {
 
 /// The distinct covers of `files`, the most carried first (ties in file order), then the files
 /// without one. Same MIME, size, and key is one cover, and so are covers that look the same.
-/// Reads no file; decodes each distinct cover once (`dhash_of` caches), so call it off any lock.
+/// Reads no file; decodes each distinct cover once (`likeness_of` caches), so call it off any lock.
 pub(super) fn choices_of(files: &[FileCover]) -> Vec<CoverChoice> {
     let (groups, uncovered) = exact_groups(files);
     let mut merged = merge_alike(groups);

@@ -1,12 +1,14 @@
 //! Covers that look the same: re-encoded or resized copies of one picture (different bytes) are
-//! one choice, the largest standing for them; visibly different pictures never merge. Every
-//! picture is generated here.
+//! one choice, the largest standing for them; visibly different pictures never merge, not even
+//! solid colours, one template with another title or photo, or one template in another colour.
+//! Every picture is generated here.
 
 use cmdr_tags::{ContentKind, Cover, FileTags, TagField, WriteOptions, write_tags};
 use image::{DynamicImage, ImageFormat, Rgb, RgbImage, imageops::FilterType};
 
-use super::cover_choices::{CoverChoice, NEAR_DUPLICATE_BITS, choices_of, covers_of, list, use_for_all};
-use super::cover_image::{dhash_of, hamming};
+use super::cover_choices::{CoverChoice, choices_of, covers_of, list, seeds_of, use_for_all};
+use super::cover_image::{likeness_decodes, likeness_of};
+use super::cover_likeness::Likeness;
 use super::history::undo_edit;
 use super::session::{Entry, Loaded, changes, close, open};
 use super::session_test::{album, tags};
@@ -49,6 +51,52 @@ fn mirrored_artwork(side: u32) -> DynamicImage {
     artwork(side).fliph()
 }
 
+fn solid(colour: [u8; 3]) -> DynamicImage {
+    DynamicImage::ImageRgb8(RgbImage::from_pixel(500, 500, Rgb(colour)))
+}
+
+/// A glyph of `c`: a 3×5 block pattern taken from its code, so two titles differ where letters do.
+fn glyph(c: char, col: u32, row: u32) -> bool {
+    let code = u32::from(c).wrapping_mul(2_654_435_761) >> 7;
+    c != ' ' && (code >> (row * 3 + col)) & 1 == 1
+}
+
+/// A series template: a tinted gradient, a light title band with `title` in dark blocks, and a
+/// "photo" (`photo` picks its pattern) below it.
+fn template(side: u32, title: &str, tint: [f32; 3], photo: u32) -> DynamicImage {
+    let s = side as f32;
+    let letters: Vec<char> = title.chars().collect();
+    let glyph_width = 0.8 / letters.len() as f32;
+    DynamicImage::ImageRgb8(RgbImage::from_fn(side, side, |x, y| {
+        let (fx, fy) = (x as f32 / s, y as f32 / s);
+        if (0.08..0.28).contains(&fy) {
+            if (0.1..0.9).contains(&fx) {
+                let at = (fx - 0.1) / glyph_width;
+                let letter = letters[(at as usize).min(letters.len() - 1)];
+                let col = (at.fract() * 4.0) as u32;
+                let row = ((fy - 0.08) / 0.2 * 5.0) as u32;
+                if col < 3 && glyph(letter, col, row.min(4)) {
+                    return Rgb([30, 25, 20]);
+                }
+            }
+            return Rgb([240, 230, 200]);
+        }
+        if (0.35..0.95).contains(&fy) && (0.1..0.9).contains(&fx) {
+            let wave = match photo {
+                0 => ((fx * 9.0).sin() * (fy * 7.0).cos() + 1.0) / 2.0,
+                _ => (((fx - 0.5).powi(2) + (fy - 0.65).powi(2)).sqrt() * 30.0).sin().abs(),
+            };
+            let v = (40.0 + 180.0 * wave) as u8;
+            return Rgb([v, v / 2 + 40, 255 - v]);
+        }
+        let v = 255.0 * (fx * 0.6 + fy * 0.4);
+        Rgb([(v * tint[0]) as u8, (v * tint[1]) as u8, (v * tint[2]) as u8])
+    }))
+}
+
+const BLUE: [f32; 3] = [0.3, 0.5, 1.0];
+const GREEN: [f32; 3] = [0.3, 1.0, 0.5];
+
 fn jpeg(picture: &DynamicImage, quality: u8) -> Cover {
     let mut out = Vec::new();
     image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, quality)
@@ -77,8 +125,12 @@ fn key_text(cover: &Cover) -> String {
     format!("{:016x}", cover_key(cover))
 }
 
-fn hash(cover: &Cover) -> u64 {
-    dhash_of(cover, &key_text(cover)).expect("decodes")
+fn look(cover: &Cover) -> std::sync::Arc<Likeness> {
+    likeness_of(cover, &key_text(cover)).expect("decodes")
+}
+
+fn apart(a: &Cover, b: &Cover) -> Option<u32> {
+    look(a).distance(&look(b))
 }
 
 fn loaded(cover: Option<Cover>) -> Entry {
@@ -101,30 +153,81 @@ fn choices(covers: &[Option<Cover>]) -> Vec<CoverChoice> {
     choices_of(&covers_of(&files))
 }
 
+/// Copies of one picture: the encoder, its quality, the size, and the format change; the picture
+/// doesn't.
+fn copies_of(master: &DynamicImage) -> Vec<Cover> {
+    vec![
+        jpeg(master, 90),
+        jpeg(master, 70),
+        jpeg(&resized(master, 500), 85),
+        png(&resized(master, 550)),
+    ]
+}
+
 #[test]
-fn re_encoded_and_resized_copies_hash_within_the_threshold() {
-    let master = artwork(600);
-    let q90 = jpeg(&master, 90);
-    let q70 = jpeg(&master, 70);
-    let small = jpeg(&resized(&master, 500), 85);
-    let as_png = png(&resized(&master, 550));
-    for copy in [&q70, &small, &as_png] {
-        let distance = hamming(hash(&q90), hash(copy));
-        assert!(distance <= NEAR_DUPLICATE_BITS, "Hamming distance {distance}");
+fn re_encoded_and_resized_copies_look_the_same() {
+    for master in [artwork(600), other_artwork(600), template(600, "Book One", BLUE, 0)] {
+        let copies = copies_of(&master);
+        for copy in &copies[1..] {
+            assert!(
+                apart(&copies[0], copy).is_some(),
+                "a copy looks different: {:?}",
+                look(&copies[0]).spread(&look(copy))
+            );
+        }
     }
 }
 
 #[test]
-fn different_pictures_hash_far_apart() {
+fn different_pictures_never_look_the_same() {
+    let book = |title, tint, photo| jpeg(&template(600, title, tint, photo), 90);
     let pairs = [
-        (jpeg(&artwork(600), 90), jpeg(&other_artwork(600), 90)),
-        (jpeg(&artwork(600), 90), jpeg(&mirrored_artwork(600), 90)),
-        (jpeg(&other_artwork(500), 80), jpeg(&mirrored_artwork(500), 80)),
+        (
+            "another picture",
+            jpeg(&artwork(600), 90),
+            jpeg(&other_artwork(600), 90),
+        ),
+        ("mirrored", jpeg(&artwork(600), 90), jpeg(&mirrored_artwork(600), 90)),
+        (
+            "two solid colours",
+            jpeg(&solid([200, 30, 30]), 90),
+            jpeg(&solid([30, 30, 200]), 90),
+        ),
+        (
+            "two dark solids",
+            jpeg(&solid([12, 12, 12]), 90),
+            jpeg(&solid([40, 30, 30]), 90),
+        ),
+        ("another title", book("Book One", BLUE, 0), book("Book Two", BLUE, 0)),
+        ("another photo", book("Book One", BLUE, 0), book("Book One", BLUE, 1)),
+        ("another colour", book("Book One", BLUE, 0), book("Book One", GREEN, 0)),
     ];
-    for (a, b) in &pairs {
-        let distance = hamming(hash(a), hash(b));
-        assert!(distance > NEAR_DUPLICATE_BITS * 2, "Hamming distance only {distance}");
+    for (what, a, b) in &pairs {
+        assert_eq!(apart(a, b), None, "{what}: {:?}", look(a).spread(&look(b)));
     }
+}
+
+/// A solid or smooth cover has no detail to tell copies by, so it never merges, even with itself
+/// re-encoded.
+#[test]
+fn a_flat_cover_never_merges() {
+    let red = solid([200, 30, 30]);
+    assert!(!look(&jpeg(&red, 90)).informative());
+    assert_eq!(apart(&jpeg(&red, 90), &jpeg(&red, 70)), None);
+    assert!(look(&jpeg(&artwork(300), 90)).informative());
+}
+
+/// Each item joins the NEAREST seed, and only a seed: A like B and B like C with A unlike C keeps
+/// C apart from A's group (no chaining), whatever the order.
+#[test]
+fn likeness_joins_the_nearest_seed_and_never_chains() {
+    let within_five = |a: &i32, b: &i32| (a.abs_diff(*b) <= 5).then_some(a.abs_diff(*b));
+    // 4 is like 0 and like 8, 8 is unlike 0: 8 starts its own group.
+    assert_eq!(seeds_of(&[Some(0), Some(4), Some(8)], within_five), vec![0, 0, 2]);
+    // 5 is within reach of both seeds 0 and 9; 9 is nearer.
+    assert_eq!(seeds_of(&[Some(0), Some(9), Some(5)], within_five), vec![0, 1, 1]);
+    // No likeness: alone.
+    assert_eq!(seeds_of(&[Some(0), None, Some(1)], within_five), vec![0, 1, 0]);
 }
 
 /// The user's book: every file carries the same picture with different bytes. One choice, all
@@ -182,10 +285,20 @@ fn a_cover_that_does_not_decode_stays_its_own_choice() {
         mime: "image/jpeg".to_string(),
         data: b"\xFF\xD8\xFF\xE0 not really a jpeg".to_vec().into(),
     };
-    assert_eq!(dhash_of(&broken, &key_text(&broken)), None);
+    assert!(likeness_of(&broken, &key_text(&broken)).is_none());
     let listed = choices(&[Some(real), Some(broken)]);
     assert_eq!(listed.len(), 2);
     assert!(listed.iter().all(|choice| choice.near_duplicates == 0));
+}
+
+/// One cover by bytes (the common case) has nothing to be compared with: nothing is decoded.
+#[test]
+fn one_distinct_cover_is_not_decoded() {
+    let only = jpeg(&template(320, "Only One", GREEN, 1), 88);
+    let before = likeness_decodes();
+    let listed = choices(&[Some(only.clone()), Some(only), None]);
+    assert_eq!(listed.len(), 2);
+    assert_eq!(likeness_decodes(), before);
 }
 
 /// "Use the largest one for all files" is `use_for_all` with the face's key: every file gets it,

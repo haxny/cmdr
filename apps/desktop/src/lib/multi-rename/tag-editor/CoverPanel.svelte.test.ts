@@ -204,17 +204,27 @@ describe('CoverPanel', () => {
   describe('covers that look the same', () => {
     const ALIKE: CoverChoice = { ...FRONT, files: 50, nearDuplicates: 49 }
 
-    it('when one look covers every file, says so and offers the largest for all, as one edit', async () => {
+    it('when one look covers every file, says so and offers it for all, as one edit', async () => {
       const { root, onUseForAll } = await mountPanel({ choices: [ALIKE] })
       expect(tiles(root)).toHaveLength(1)
-      expect(root.textContent).toContain('These 50 covers look almost the same')
-      button(root, 'Use the largest one for all files').click()
+      expect(root.querySelector('.alike p')?.textContent.trim()).toBe('50 covers look almost the same')
+      button(root, 'Use it for all 50 files').click()
       expect(onUseForAll).toHaveBeenCalledTimes(1)
       expect(onUseForAll).toHaveBeenCalledWith('k1')
     })
 
-    it('says nothing when the files share one cover by bytes, some have none, or the covers differ', async () => {
-      for (const choices of [[FRONT], [ALIKE, NONE], [ALIKE, BACK]]) {
+    it('the user’s book: one look on some files and none on the rest still offers it for every file', async () => {
+      const some: CoverChoice = { ...FRONT, files: 24, nearDuplicates: 23 }
+      const { root, onUseForAll } = await mountPanel({ choices: [some, { ...NONE, files: 26 }] })
+      expect(root.querySelector('.alike p')?.textContent.trim()).toBe(
+        '24 covers look almost the same; 26 files have none',
+      )
+      button(root, 'Use it for all 50 files').click()
+      expect(onUseForAll).toHaveBeenCalledWith('k1')
+    })
+
+    it('says nothing when the files share one cover by bytes, or the covers differ', async () => {
+      for (const choices of [[FRONT], [FRONT, NONE], [ALIKE, BACK], [ALIKE, BACK, NONE]]) {
         const { root } = await mountPanel({ choices })
         expect(root.textContent).not.toContain('look almost the same')
         cleanup?.()
@@ -224,23 +234,32 @@ describe('CoverPanel', () => {
 
     it('the offer is off when read-only', async () => {
       const { root } = await mountPanel({ choices: [ALIKE], editable: false })
-      expect(button(root, 'Use the largest one for all files').disabled).toBe(true)
+      expect(button(root, 'Use it for all 50 files').disabled).toBe(true)
     })
   })
 
   describe('many covers', () => {
     const many: CoverChoice[] = Array.from({ length: 11 }, (_, i) => ({ ...BACK, key: `m${String(i)}` }))
 
-    it('shows eight tiles and "3 more", which shows the rest; the files without a cover always show', async () => {
+    it('shows eight tiles and "3 more", a toggle that keeps focus; the files without a cover always show', async () => {
       const { root } = await mountPanel({ choices: [...many, NONE] })
       expect(tiles(root)).toHaveLength(9)
       expect(tiles(root).at(-1)?.textContent).toContain('No cover')
       const more = button(root, '3 more')
       expect(more.getAttribute('aria-expanded')).toBe('false')
+      more.focus()
       more.click()
       await settle()
       expect(tiles(root)).toHaveLength(12)
-      expect([...root.querySelectorAll('button')].some((b) => b.textContent.trim() === '3 more')).toBe(false)
+      expect(more.isConnected).toBe(true)
+      expect(document.activeElement).toBe(more)
+      expect(more.getAttribute('aria-expanded')).toBe('true')
+      expect(more.textContent.trim()).toBe('Show fewer')
+      more.click()
+      await settle()
+      expect(tiles(root)).toHaveLength(9)
+      expect(more.getAttribute('aria-expanded')).toBe('false')
+      expect(more.textContent.trim()).toBe('3 more')
     })
 
     it('eight covers show without a "more"', async () => {
