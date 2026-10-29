@@ -5,13 +5,14 @@
 //! taking that fast path. Writing a stream into a file is `write_stream`.
 
 use super::SmbVolume;
-use super::dfs_links::{LinkDownload, is_behind_dfs_link};
+use super::dfs_links::is_behind_dfs_link;
 use super::mapping::{map_smb_error, user_flags_of};
 use super::session::TransferLease;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, UserFlags};
 use cmdr_fs::volume::{ChannelReadStream, StreamLength, VolumeError, VolumeReadStream};
 use log::{debug, warn};
+use smb2::client::stream::FileDownload;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -116,53 +117,12 @@ fn name_of(smb_path: &str) -> &str {
     smb_path.rsplit(['\\', '/']).next().unwrap_or(smb_path)
 }
 
-/// A streaming download's source: smb2's own adaptive download on the share's
-/// tree, or the fixed-window read through a DFS link (`dfs_links.rs`).
-enum Download<'a> {
-    /// Boxed: smb2's download carries its whole read-ahead window state.
-    Direct(Box<smb2::client::stream::FileDownload<'a>>),
-    Link(LinkDownload),
-}
-
-impl Download<'_> {
-    fn size(&self) -> u64 {
-        match self {
-            Self::Direct(d) => d.size(),
-            Self::Link(d) => d.size(),
-        }
-    }
-
-    fn info(&self) -> Option<&smb2::FileInfo> {
-        match self {
-            Self::Direct(d) => d.info(),
-            Self::Link(d) => Some(d.info()),
-        }
-    }
-
-    fn bytes_received(&self) -> u64 {
-        match self {
-            Self::Direct(d) => d.bytes_received(),
-            Self::Link(d) => d.bytes_received(),
-        }
-    }
-
-    async fn next_chunk(&mut self) -> Option<Result<Vec<u8>, smb2::Error>> {
-        match self {
-            Self::Direct(d) => d.next_chunk().await,
-            Self::Link(d) => d.next_chunk().await,
-        }
-    }
-
-    /// After the last byte: collects the CLOSE's answer (smb2 sent it as the
-    /// last chunk landed), or closes the link's reader.
-    async fn finish(self) -> Result<(), smb2::Error> {
-        match self {
-            Self::Direct(mut d) => match d.next_chunk().await {
-                Some(Err(e)) => Err(e),
-                _ => Ok(()),
-            },
-            Self::Link(d) => d.close().await,
-        }
+/// After a download's last byte: collects the CLOSE's answer, which smb2 sent
+/// as the last chunk landed.
+async fn finish_download(mut download: FileDownload<'_>) -> Result<(), smb2::Error> {
+    match download.next_chunk().await {
+        Some(Err(e)) => Err(e),
+        _ => Ok(()),
     }
 }
 
@@ -358,16 +318,14 @@ impl SmbVolume {
                 ran_on,
                 on,
             } = lease;
+            // A file behind a DFS link opens through the link, and that
+            // download owns the target's connection (`dfs_links.rs`).
             let opened = match tree.download(&mut conn, &smb_path_owned).await {
-                Ok(d) => Ok(Download::Direct(Box::new(d))),
-                Err(e) if is_behind_dfs_link(&e) => {
-                    match share.open_link_reader(ran_on, &on, &tree, &smb_path_owned).await {
-                        Some(Ok(reader)) => Ok(Download::Link(LinkDownload::new(reader))),
-                        Some(Err(link_err)) => Err(link_err),
-                        None => Err(e),
-                    }
-                }
-                Err(e) => Err(e),
+                Err(e) if is_behind_dfs_link(&e) => share
+                    .open_link_download(ran_on, &on, &tree, &smb_path_owned)
+                    .await
+                    .unwrap_or(Err(e)),
+                opened => opened,
             };
             let mut download = match opened {
                 Ok(d) => d,
@@ -448,7 +406,7 @@ impl SmbVolume {
             // request the consumer sends afterwards is behind it on the wire,
             // and the download opened with `FILE_SHARE_DELETE` anyway.
             drop(chunk_tx);
-            if finished && let Err(e) = download.finish().await {
+            if finished && let Err(e) = finish_download(download).await {
                 // The consumer has every byte, so there's nobody to hand this to.
                 // A dead connection still counts for the session's state.
                 share.note_error(ran_on, &e);

@@ -22,12 +22,9 @@
 //!
 //! - **Writes** open a `FileWriter` there (`'static`), or send the one compound
 //!   frame there, and set the dates through the same client.
-//! - **Reads** open a `FileReader` there and stream it with [`LinkDownload`]'s
-//!   fixed window of positioned reads. smb2's `SmbClient::download` borrows the
-//!   client for the download's life, which would hold the session's client
-//!   (the main one's would stall browsing) for as long as the file takes, so the
-//!   link path trades the adaptive read-ahead for a fixed window. A link is the
-//!   rare case; an owned link download in smb2 would let this go.
+//! - **Reads** open smb2's `FileDownload` there (`open_file_download`, which
+//!   borrows the client for the open only and owns the target's connection
+//!   after), so a download through a link keeps the adaptive read-ahead window.
 //! - **A server-side copy through a link** answers `NotSupported` (`copy.rs`),
 //!   and the engine streams the file through the paths above.
 //! - The caller's tree never moves (smb2's own rule): the next path on it still
@@ -37,12 +34,9 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use futures_util::StreamExt;
-use futures_util::stream::FuturesOrdered;
-
 use cmdr_fs::volume::WriteMode;
 use smb2::SmbClient;
-use smb2::client::stream::{FileReader, FileWriter};
+use smb2::client::stream::{FileDownload, FileReader, FileWriter};
 use smb2::client::tree::{FileInfo, Tree};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -238,16 +232,19 @@ impl SmbVolumeInner {
         }
     }
 
-    /// Opens `smb_path` for reading through the DFS link it sits behind.
-    pub(super) async fn open_link_reader(
+    /// Opens a streaming download of `smb_path` through the DFS link it sits
+    /// behind (smb2 0.36.1's `open_file_download`). The client is held for the
+    /// open only; the download owns the target's connection and tree, so it
+    /// keeps smb2's adaptive read-ahead window.
+    pub(super) async fn open_link_download(
         &self,
         ran_on: RanOn,
         on: &LeaseOn,
         tree: &Tree,
         smb_path: &str,
-    ) -> Option<Result<FileReader, smb2::Error>> {
+    ) -> Option<Result<FileDownload<'static>, smb2::Error>> {
         let mut client = self.link_client(ran_on, on).await?;
-        Some(client.client().open_file_reader(tree, smb_path).await)
+        Some(client.client().open_file_download(tree, smb_path).await)
     }
 
     /// Opens the streaming writer `mode` asks for through the DFS link
@@ -316,89 +313,6 @@ impl SmbVolumeInner {
     ) -> Option<Result<(), smb2::Error>> {
         let mut client = self.link_client(ran_on, on).await?;
         Some(client.client().delete_file(tree, smb_path).await)
-    }
-}
-
-/// How many positioned reads a link download keeps in flight, each one
-/// `smb2::DOWNLOAD_CHUNK_SIZE` (512 KiB): 2 MiB on the wire, half of what
-/// smb2's adaptive window grows to on a fast link, and a fixed queue ahead of
-/// anything else on the target's connection.
-const LINK_READ_WINDOW: usize = 4;
-
-type ChunkRead = Pin<Box<dyn Future<Output = Result<Vec<u8>, smb2::Error>> + Send>>;
-
-/// A streaming read of a file behind a DFS link: [`LINK_READ_WINDOW`]
-/// positioned reads in flight on one open `FileReader`, delivered in order.
-pub(super) struct LinkDownload {
-    reader: Arc<FileReader>,
-    size: u64,
-    next_offset: u64,
-    received: u64,
-    in_flight: FuturesOrdered<ChunkRead>,
-}
-
-impl LinkDownload {
-    pub(super) fn new(reader: FileReader) -> Self {
-        let size = reader.size();
-        Self {
-            reader: Arc::new(reader),
-            size,
-            next_offset: 0,
-            received: 0,
-            in_flight: FuturesOrdered::new(),
-        }
-    }
-
-    pub(super) fn size(&self) -> u64 {
-        self.size
-    }
-
-    pub(super) fn info(&self) -> &FileInfo {
-        self.reader.info()
-    }
-
-    pub(super) fn bytes_received(&self) -> u64 {
-        self.received
-    }
-
-    /// The next chunk, in file order; `None` at the end (a file that shrank
-    /// ends early).
-    pub(super) async fn next_chunk(&mut self) -> Option<Result<Vec<u8>, smb2::Error>> {
-        let chunk = smb2::DOWNLOAD_CHUNK_SIZE as u64;
-        while self.in_flight.len() < LINK_READ_WINDOW && self.next_offset < self.size {
-            let reader = Arc::clone(&self.reader);
-            let offset = self.next_offset;
-            let len = chunk.min(self.size - offset);
-            self.in_flight
-                .push_back(Box::pin(async move { reader.read_at(offset, len).await }));
-            self.next_offset += len;
-        }
-        match self.in_flight.next().await? {
-            Ok(bytes) if bytes.is_empty() => {
-                self.in_flight = FuturesOrdered::new();
-                self.next_offset = self.size;
-                None
-            }
-            Ok(bytes) => {
-                self.received += bytes.len() as u64;
-                Some(Ok(bytes))
-            }
-            Err(e) => {
-                self.in_flight = FuturesOrdered::new();
-                self.next_offset = self.size;
-                Some(Err(e))
-            }
-        }
-    }
-
-    /// Closes the handle once nothing is in flight. Dropping the download
-    /// instead closes it too (smb2 queues the CLOSE on the reader's drop).
-    pub(super) async fn close(mut self) -> Result<(), smb2::Error> {
-        self.in_flight = FuturesOrdered::new();
-        match Arc::try_unwrap(self.reader) {
-            Ok(reader) => reader.close().await,
-            Err(_) => Ok(()),
-        }
     }
 }
 

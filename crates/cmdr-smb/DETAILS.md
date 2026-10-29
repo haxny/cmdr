@@ -731,10 +731,11 @@ the transfers, vdavid/cmdr#815 for the rest):
   link resolver in smb2 (path → target tree and connection) would let a known link go straight to its target.
 - **Writes**: `create_file_writer[_exclusive]` and the one-frame `write_file_compound[_exclusive]` through the link,
   then the frame's date by path through the same client; a failed write's partial goes the same way.
-- **Reads**: a `FileReader` through the link, streamed by `LinkDownload`'s fixed window of four 512 KiB positioned
-  reads. ❗ Not smb2's adaptive `FileDownload`: `SmbClient::download` borrows the client for the download's whole life,
-  which would hold the main session's client (and so every listing) for as long as the file takes. An owned link
-  download in smb2 would retire `LinkDownload`. The hinted compound read refused at a link falls through to it.
+- **Reads**: smb2's own adaptive `FileDownload` through the link, opened by `SmbClient::open_file_download` (smb2
+  0.36.1, vdavid/smb2#26), which borrows the client for the open only and owns the target's connection after. ❗ Not
+  `SmbClient::download`: that one borrows the client for the download's whole life, which would hold the main session's
+  client (and so every listing) for as long as the file takes. The hinted compound read refused at a link falls through
+  to it.
 - **The server-side copy** answers `NotSupported` through a link (`handle_copy_result`), and the engine streams.
 - ❗ **No watch behind a link.** The share's `CHANGE_NOTIFY` runs on the share's own server, and a link's target never
   reports to it. So every path a call followed a link from is remembered (`LinkPaths`, one entry per link a person
