@@ -100,6 +100,51 @@ export function bytesLabel(count: number): string {
 }
 
 /**
+ * A byte count written out whole, grouped the way the UI language groups
+ * ("1,234,567 bytes", German "1.234.567 Bytes"). For a size tooltip, and for the
+ * side-by-side sizes {@link formatSizePairWithFormat} has to tell apart.
+ */
+export function formatExactBytes(byteCount: number): string {
+  return `${getNumberFormatter({ maximumFractionDigits: 0 }).format(byteCount)} ${bytesLabel(byteCount)}`
+}
+
+/** One side of two sizes shown side by side. */
+export interface PairedSize {
+  /** What to show: the friendly size, or the exact bytes when the friendly ones would look the same. */
+  text: string
+  /** The exact bytes, for a tooltip. */
+  exact: string
+}
+
+/** Two sizes shown side by side, worded so they never look the same while they differ. */
+export interface SizePair {
+  first: PairedSize
+  second: PairedSize
+  /** The two byte counts are equal. */
+  same: boolean
+}
+
+/**
+ * Two EXACT sizes a person compares side by side, like a "file already exists"
+ * prompt's existing and incoming files. When the friendly forms read the same
+ * but the byte counts differ, both sides switch to exact bytes, so a choice that
+ * feeds an overwrite never rests on two identical-looking "1.18 MiB". ❌ Not for
+ * a floor or an unknown size: an exact-bytes claim there is a lie.
+ */
+export function formatSizePairWithFormat(first: number, second: number, format: FileSizeFormat): SizePair {
+  const firstText = formatFileSizeWithFormat(first, format)
+  const secondText = formatFileSizeWithFormat(second, format)
+  const firstExact = formatExactBytes(first)
+  const secondExact = formatExactBytes(second)
+  const lookAlike = first !== second && firstText === secondText
+  return {
+    first: { text: lookAlike ? firstExact : firstText, exact: firstExact },
+    second: { text: lookAlike ? secondExact : secondText, exact: secondExact },
+    same: first === second,
+  }
+}
+
+/**
  * The user-facing label for `kB`/`MB`/`GB` under the current binary/SI base,
  * in the UI language: English binary shows `KiB` / `MiB` / `GiB`, SI shows
  * `kB` / `MB` / `GB`. The tokens are the stable unit IDs, not the labels.

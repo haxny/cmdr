@@ -841,6 +841,7 @@ export type MessageKey =
   | 'common.attachEmailPrompt'
   | 'common.downloadsFdaHint'
   | 'common.sentenceJoin'
+  | 'common.sizeComparison.same'
   | 'common.sizeUnit.byte'
   | 'common.sizeUnit.gibibyte'
   | 'common.sizeUnit.gigabyte'

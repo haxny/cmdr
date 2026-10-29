@@ -7,7 +7,7 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
     import { containingFolder } from './transfer-dialog-utils'
-    import { formatByteSize, dynamicTierIndex } from '#lib/units/index.js'
+    import { formatByteSize, formatExactBytes, formatSizePair, dynamicTierIndex } from '#lib/units/index.js'
     import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
     import { sizeTierClasses } from '#lib/file-explorer/selection/selection-info-utils.js'
     import { formatDate } from '#lib/file-explorer/selection/selection-info-utils.js'
@@ -111,12 +111,21 @@
     const destSizeUnknown = $derived(destSize === null)
     const destSizeIsFloor = $derived(destSize?.kind === 'atLeast')
     const destSizeClass = $derived(sizeClass(destSize))
-    const destSizeText = $derived(sizeText(destSize))
     const srcSize = $derived(conflictEvent.sourceSize)
     const srcSizeUnknown = $derived(srcSize === null)
     const srcSizeIsFloor = $derived(srcSize?.kind === 'atLeast')
     const srcSizeClass = $derived(sizeClass(srcSize))
-    const srcSizeText = $derived(sizeText(srcSize))
+    /** Two exact sizes are worded as a pair, so two files a few bytes apart never
+     *  both read "1.18 MiB" (exact bytes then) and equal ones say so. A floor or an
+     *  unknown size keeps its own rendering and makes no exact-size claim. */
+    const exactPair = $derived(
+        destSize?.kind === 'exact' && srcSize?.kind === 'exact' ? formatSizePair(destSize.bytes, srcSize.bytes) : null,
+    )
+    const destSizeText = $derived(exactPair?.first.text ?? sizeText(destSize))
+    const srcSizeText = $derived(exactPair?.second.text ?? sizeText(srcSize))
+    const destExactTooltip = $derived(destSize?.kind === 'exact' ? formatExactBytes(destSize.bytes) : undefined)
+    const srcExactTooltip = $derived(srcSize?.kind === 'exact' ? formatExactBytes(srcSize.bytes) : undefined)
+    const sameSize = $derived(exactPair?.same ?? false)
     /** "Overwrite all smaller" compares against the existing side, so it needs
      *  that side's whole size: a floor can't say which is smaller. */
     const destSizeComparable = $derived(destSize?.kind === 'exact')
@@ -259,7 +268,7 @@
                     ><span class="size-lower-bound-prefix">{LOWER_BOUND_GLYPH}</span>{destSizeText}</span
                 >
             {:else}
-                <span class="conflict-file-size {destSizeClass}">{destSizeText}</span>
+                <span class="conflict-file-size {destSizeClass}" use:tooltip={destExactTooltip}>{destSizeText}</span>
             {/if}
             {#if existingIsLarger}<span class="conflict-annotation larger"
                     >{tString('fileOperations.transferProgress.annotationLarger')}</span
@@ -284,10 +293,12 @@
                     ><span class="size-lower-bound-prefix">{LOWER_BOUND_GLYPH}</span>{srcSizeText}</span
                 >
             {:else}
-                <span class="conflict-file-size {srcSizeClass}">{srcSizeText}</span>
+                <span class="conflict-file-size {srcSizeClass}" use:tooltip={srcExactTooltip}>{srcSizeText}</span>
             {/if}
             {#if newIsLarger}<span class="conflict-annotation larger"
                     >{tString('fileOperations.transferProgress.annotationLarger')}</span
+                >{:else if sameSize}<span class="conflict-annotation same"
+                    >{tString('common.sizeComparison.same')}</span
                 >{/if}
             <span class="conflict-file-date"
                 >{conflictEvent.sourceModified ? formatDate(conflictEvent.sourceModified) : ''}</span
@@ -583,6 +594,10 @@
 
     .conflict-annotation.larger {
         color: var(--color-size-mb);
+    }
+
+    .conflict-annotation.same {
+        color: var(--color-text-secondary);
     }
 
     /* Every button as wide as the widest, and never a wrapped label: in a grid

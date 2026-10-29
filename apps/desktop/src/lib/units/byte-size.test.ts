@@ -11,6 +11,8 @@ import {
   fixedUnitFor,
   dynamicTierIndex,
   unitLabel,
+  formatExactBytes,
+  formatSizePairWithFormat,
 } from './byte-size'
 import { _setCatalogForTests } from '#lib/intl/messages.svelte.js'
 import driveFigureCases from './drive-figure-cases.json'
@@ -360,5 +362,59 @@ describe('size units come from the catalog, in the UI language', () => {
     // A forced unit keeps the magnitude's tier, the same color dynamic mode would give.
     expect(formatTieredSize(349, 'binary', 'MB')).toEqual({ text: '0,00 Mio', tier: 0 })
     expect(formatTieredSize(1024 ** 5, 'binary').tier).toBe(4)
+  })
+})
+
+describe('formatExactBytes', () => {
+  afterEach(() => {
+    _setLocaleForTests(null)
+  })
+
+  it('writes the whole count with thousands separators and the byte word', () => {
+    expect(formatExactBytes(1_234_567)).toBe('1,234,567 bytes')
+    expect(formatExactBytes(1)).toBe('1 byte')
+  })
+
+  it('groups the way the locale does', () => {
+    _setLocaleForTests('de-DE')
+    expect(formatExactBytes(1_234_567)).toBe('1.234.567 Bytes')
+  })
+})
+
+describe('formatSizePairWithFormat', () => {
+  // A "file already exists" prompt shows two sizes side by side, and the choice
+  // feeds an overwrite: two files a few bytes apart must not both read "1.18 MiB" (#782).
+  it('shows the friendly sizes when they already read differently', () => {
+    const pair = formatSizePairWithFormat(1024, 2048, 'binary')
+    expect(pair.first.text).toBe('1.00 KiB')
+    expect(pair.second.text).toBe('2.00 KiB')
+    expect(pair.same).toBe(false)
+  })
+
+  it('switches both sides to exact bytes when the friendly sizes look the same but differ', () => {
+    const pair = formatSizePairWithFormat(1_234_567, 1_234_570, 'binary')
+    expect(pair.first.text).toBe('1,234,567 bytes')
+    expect(pair.second.text).toBe('1,234,570 bytes')
+    expect(pair.same).toBe(false)
+  })
+
+  it('keeps the friendly sizes and says they are the same when the bytes match', () => {
+    const pair = formatSizePairWithFormat(1_234_567, 1_234_567, 'si')
+    expect(pair.first.text).toBe('1.23 MB')
+    expect(pair.second.text).toBe('1.23 MB')
+    expect(pair.same).toBe(true)
+  })
+
+  it('carries the exact bytes for each side either way, for the tooltip', () => {
+    const pair = formatSizePairWithFormat(1024, 2048, 'binary')
+    expect(pair.first.exact).toBe('1,024 bytes')
+    expect(pair.second.exact).toBe('2,048 bytes')
+  })
+
+  it('judges the look-alike under the base in use', () => {
+    // 1,000,000 vs 1,000,004 bytes read "1.00 MB" twice in SI; in binary,
+    // 976.56 KiB vs 976.57 KiB already tells them apart.
+    expect(formatSizePairWithFormat(1_000_000, 1_000_004, 'si').first.text).toBe('1,000,000 bytes')
+    expect(formatSizePairWithFormat(1_000_000, 1_000_006, 'binary').first.text).toBe('976.56 KiB')
   })
 })

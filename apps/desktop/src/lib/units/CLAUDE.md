@@ -19,8 +19,8 @@ code-side rate formatter that bakes in the noun: `'files/s'` once shipped Englis
 - `index.ts`: the public surface. `formatByteSize` reads the user's `appearance.fileSizeFormat`; everything else
   re-exports from the two leaves.
 - `byte-size.ts`: the unit math with the base passed in (`formatFileSizeWithFormat`, `formatTieredSize`,
-  `formatDriveFigure`, `formatRoundSize`, `unitLabel`, `bytesLabel`, `fixedUnitFor`, `dynamicTierIndex`, `baseFor`),
-  plus the `ByteCount` / `BytesPerSecond` brands.
+  `formatDriveFigure`, `formatRoundSize`, `unitLabel`, `bytesLabel`, `formatExactBytes`, `formatSizePairWithFormat`,
+  `fixedUnitFor`, `dynamicTierIndex`, `baseFor`), plus the `ByteCount` / `BytesPerSecond` brands.
 - `duration.ts`: `formatDuration` (seconds, worded by `#lib/intl/duration-format` in the UI language),
   `formatMilliseconds` (sub-second precision), `formatFilesPerSecond` (the rounding policy plus a locale-formatted
   `text` and the `value` the catalog pluralizes on), and the `Seconds` brand.

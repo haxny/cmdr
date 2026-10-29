@@ -21,6 +21,11 @@ So: one implementation per quantity, and a lint that keeps it that way.
   from `appearance.fileSizeFormat`. `<Size bytes>` is the same output plus tier colors. A forced unit
   (`'kB'`/`'MB'`/`'GB'`) keeps a directory's sizes comparable; the file list's own unit mode routes through
   `formatSizeForDisplay`.
+- **Two sizes compared side by side** (the transfer and rename conflict prompts) go through `formatSizePair(a, b)`. When
+  the friendly forms read the same but the byte counts differ, both sides switch to `formatExactBytes` ("1,234,567
+  bytes", locale-grouped), because the choice feeds an overwrite and two "1.18 MiB" would hide the difference (#782).
+  `same` drives the `common.sizeComparison.same` note, and each side's `exact` feeds its tooltip. ❌ Never pair a floor
+  (`atLeast`) or an unknown size: an exact-bytes claim there is false, so those keep their own rendering.
 - **A speed** is the backend's `write-progress.bytesPerSecond` (`EtaEstimator` in `crates/cmdr-operations/src/eta.rs`),
   rendered as a `<Size>` inside the `fileOperations.shared.byteRate` catalog phrasing (`<size></size>/s`). The
   per-second marker is user-facing copy, so it belongs to the catalog, not to a code-side formatter; this module owns

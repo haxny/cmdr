@@ -17,6 +17,23 @@ vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeUnit: vi.fn(() => 'bytes'),
 }))
 
+// Records each tooltip's text on its host, so a test can read what hovering would show.
+vi.mock('#lib/tooltip/tooltip.js', async (importOriginal) => {
+  const tooltipText = (param: unknown): string =>
+    typeof param === 'string' ? param : ((param as { text?: string } | undefined)?.text ?? '')
+  return {
+    ...(await importOriginal<Record<string, unknown>>()),
+    tooltip: (node: HTMLElement, param: unknown) => {
+      node.dataset.tooltip = tooltipText(param)
+      return {
+        update: (next: unknown) => {
+          node.dataset.tooltip = tooltipText(next)
+        },
+      }
+    },
+  }
+})
+
 function conflict(destinationPath: string): WriteConflictEvent {
   return {
     operationId: 'op-1',
@@ -166,5 +183,53 @@ describe('a folder whose size the drive index has only partly counted', () => {
   it('shows an exact size bare', async () => {
     const target = await mountDialog(conflict(path))
     expect(existingSize(target)).toBe('1.00 KiB')
+  })
+
+  it('keeps the floor’s own tooltip, with no exact-bytes claim', async () => {
+    const target = await mountDialog(fileOverPartlyCountedFolder)
+    const size = target.querySelector<HTMLElement>('.conflict-file .conflict-file-size')
+    expect(size?.dataset.tooltip).toContain('At least this much')
+    expect(size?.dataset.tooltip).not.toContain('bytes')
+  })
+})
+
+describe('two sizes that look the same', () => {
+  // Two files a few bytes apart both read "1.18 MiB", and the choice feeds an
+  // overwrite: the prompt must show they differ, or say they don't (#782).
+  function sizesOf(target: HTMLElement): (string | undefined)[] {
+    return [...target.querySelectorAll('.conflict-file-size')].map((el) => el.textContent.trim())
+  }
+
+  function pair(destinationBytes: number, sourceBytes: number): WriteConflictEvent {
+    return {
+      ...conflict('/Volumes/Backup/f001'),
+      destinationSize: { kind: 'exact', bytes: destinationBytes },
+      sourceSize: { kind: 'exact', bytes: sourceBytes },
+      sizeDifference: destinationBytes - sourceBytes,
+    }
+  }
+
+  it('shows exact bytes on both sides when the friendly sizes match but the bytes differ', async () => {
+    const target = await mountDialog(pair(1_234_567, 1_234_570))
+    expect(sizesOf(target)).toEqual(['1,234,567 bytes', '1,234,570 bytes'])
+    expect(target.querySelector('.conflict-annotation.same')).toBeNull()
+  })
+
+  it('says "same size" when the bytes match', async () => {
+    const target = await mountDialog(pair(1_234_567, 1_234_567))
+    expect(sizesOf(target)).toEqual(['1.18 MiB', '1.18 MiB'])
+    expect(target.querySelector('.conflict-annotation.same')?.textContent.trim()).toBe('(same size)')
+  })
+
+  it('keeps friendly sizes that already differ, with exact bytes on hover', async () => {
+    const target = await mountDialog(pair(1024, 2048))
+    expect(sizesOf(target)).toEqual(['1.00 KiB', '2.00 KiB'])
+    const tooltips = [...target.querySelectorAll<HTMLElement>('.conflict-file-size')].map((el) => el.dataset.tooltip)
+    expect(tooltips).toEqual(['1,024 bytes', '2,048 bytes'])
+  })
+
+  it('never says "same size" against an unknown size', async () => {
+    const target = await mountDialog({ ...pair(1024, 1024), destinationSize: null, sizeDifference: null })
+    expect(target.querySelector('.conflict-annotation.same')).toBeNull()
   })
 })
