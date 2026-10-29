@@ -19,7 +19,9 @@ use std::time::{Duration, Instant};
 
 use notify_debouncer_full::DebouncedEvent;
 use notify_debouncer_full::notify::Event;
-use notify_debouncer_full::notify::event::{DataChange, EventKind, ModifyKind};
+use notify_debouncer_full::notify::event::{
+    CreateKind, DataChange, EventKind, MetadataKind, ModifyKind, RemoveKind, RenameMode,
+};
 
 use super::watcher::{handle_directory_change, handle_directory_change_incremental};
 use crate::test_support::{TestDir, wait_until};
@@ -166,6 +168,73 @@ fn an_other_kind_falls_back_to_a_full_re_read() {
     handle_directory_change_incremental(listing.id(), vec![event(EventKind::Other, &seen)]);
 
     wait_for_the_full_re_read(&listing);
+}
+
+/// Another app moved a file out of the pane's folder: macOS names only the old path
+/// (`ItemRenamed`), which no longer exists, so the stat says gone and the row goes.
+#[test]
+fn a_child_renamed_away_leaves_the_listing() {
+    let scratch = TestDir::new("watch-rename-away");
+    let moved = scratch.join("moved.txt");
+    std::fs::write(&moved, b"m").expect("scratch dir is writable");
+    std::fs::write(scratch.join("stays.txt"), b"s").expect("scratch dir is writable");
+    let listing = listing_of(&scratch, "watch-rename-away");
+    hold_diffs(listing.engine(), listing.id());
+
+    let elsewhere = TestDir::new("watch-rename-away-dest");
+    std::fs::rename(&moved, elsewhere.join("moved.txt")).expect("scratch dir is writable");
+    handle_directory_change_incremental(
+        listing.id(),
+        vec![event(EventKind::Modify(ModifyKind::Name(RenameMode::Any)), &moved)],
+    );
+
+    let queued: Vec<(DiffChangeType, String)> = pending_changes(listing.engine(), listing.id())
+        .into_iter()
+        .map(|c| (c.change_type, c.entry.name))
+        .collect();
+    assert_eq!(queued, [(DiffChangeType::Remove, "moved.txt".to_string())]);
+}
+
+/// A replaced watch root (`Remove(Folder)` + `Create(Folder)` on the root itself, no
+/// removes for the old children) can't be classified child by child: it re-reads.
+#[test]
+fn a_replaced_watch_root_falls_back_to_a_full_re_read() {
+    let (scratch, _seen, listing) = listing_missing_a_file("watch-root-replaced-batch");
+
+    handle_directory_change_incremental(
+        listing.id(),
+        vec![
+            event(EventKind::Remove(RemoveKind::Folder), &scratch),
+            event(EventKind::Create(CreateKind::Folder), &scratch),
+        ],
+    );
+
+    wait_for_the_full_re_read(&listing);
+}
+
+/// The root's own mtime bump rides along with every child change, so it must NOT
+/// escalate to a re-read; neither does a change two levels down.
+#[test]
+fn root_metadata_and_grandchild_events_change_nothing() {
+    let scratch = TestDir::new("watch-ignored-events");
+    let sub = scratch.join("sub");
+    std::fs::create_dir(&sub).expect("scratch dir is writable");
+    let listing = listing_of(&scratch, "watch-ignored-events");
+    hold_diffs(listing.engine(), listing.id());
+    let deep = sub.join("deep.txt");
+    std::fs::write(&deep, b"d").expect("scratch dir is writable");
+    // Behind the cache's back, so a re-read would show up as an add.
+    std::fs::write(scratch.join("unseen.txt"), b"u").expect("scratch dir is writable");
+
+    handle_directory_change_incremental(
+        listing.id(),
+        vec![
+            event(EventKind::Modify(ModifyKind::Metadata(MetadataKind::Any)), &scratch),
+            event(EventKind::Create(CreateKind::File), &deep),
+        ],
+    );
+
+    assert!(pending_changes(listing.engine(), listing.id()).is_empty());
 }
 
 /// No wait after the await: the re-read must already be in the cache.
