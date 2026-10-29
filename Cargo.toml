@@ -70,11 +70,16 @@ zip = { path = "vendor/zip" }
 [profile.release]
 lto = "thin"
 
-# The Linux Docker E2E build (`apps/desktop/scripts/e2e-linux.sh`), and nothing else. It's
-# `release` minus thin LTO, whose build cost (+35% on a clean build, measured above) lands on
-# the CI job that gates every land, where it buys nothing: that binary is a test target we
-# never ship (we ship macOS). `debug-assertions` and `overflow-checks` stay pinned to release's
-# values, so the app under test behaves the way a release build does. #557.
+# Both E2E builds: the Linux Docker one (`apps/desktop/scripts/e2e-linux.sh`) and the macOS
+# Playwright one (`pnpm test:e2e:playwright:build`). It's `release` minus thin LTO, whose build
+# cost (+35% on a clean build, measured above) buys nothing on a test target we never ship.
+# `debug-assertions` and `overflow-checks` stay pinned to release's values, so the app under test
+# behaves the way a release build does. #557.
+#
+# Incremental is NOT set here: the Linux build's `target/` is a CI cache entry, and incremental
+# state would bloat it toward GitHub's 10 GB repo cap. The macOS build, which no CI job caches,
+# turns it on with `CARGO_INCREMENTAL=1` in its script, because its `vite build` rewrites the
+# embedded frontend on every run and so recompiles `cmdr` even when nothing changed.
 [profile.e2e]
 inherits = "release"
 lto = false

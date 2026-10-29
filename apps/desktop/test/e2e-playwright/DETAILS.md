@@ -117,7 +117,7 @@ pnpm test:e2e:playwright:build
 # this app and nothing else. `wait` keeps the terminal attached to the app's
 # output exactly as a foreground launch would.
 CMDR_E2E_MODE=1 CMDR_DATA_DIR=/tmp/cmdr-e2e-data CMDR_E2E_START_PATH=/tmp/cmdr-e2e-fixtures \
-    CMDR_MCP_ENABLED=true CMDR_MCP_PORT=27614 /path/to/target/.../release/Cmdr &
+    CMDR_MCP_ENABLED=true CMDR_MCP_PORT=27614 /path/to/target/<triple>/e2e/Cmdr &
 echo $! > /tmp/cmdr-e2e-app.pid && wait
 
 # Run the tests (app must be running with socket at /tmp/tauri-playwright.sock).
@@ -134,7 +134,7 @@ neither the test runner nor `closeScopedWindow` kills the main process, so leaks
 `;` (instead of `&&`) keeps the cleanup running even when the tests fail.
 
 ❌ **Never clean up with `pkill -f 'target.*Cmdr'` (or any other argv pattern).** Every Cmdr on the machine is launched
-from the same `target/<triple>/release/Cmdr` argv — the checker's three E2E shards included — and the only thing that
+from the same `target/<triple>/e2e/Cmdr` argv — the checker's three E2E shards included — and the only thing that
 distinguishes them is their ENVIRONMENT (`CMDR_INSTANCE_ID`, `CMDR_DATA_DIR`, MCP port). `pkill -f` matches the command
 line, never the environment (verified on macOS 15, `pgrep -f` against an env value matches nothing, 2026-08-13), so
 there is no pattern that reaches your app and spares a suite running in another worktree. Broad `pkill` has SIGTERM'd a
@@ -662,7 +662,7 @@ never granted Full Disk Access to the process launching the run): 88 of 290 test
   specs all fall over behind it. That reads exactly like a product regression, which is what makes it worth pinning.
 
 Granting FDA to the launching process is the alternative, and on a headless box it's the awkward one: a bare
-`target/…/release/Cmdr` isn't a bundle, so TCC attributes the grant to the responsible parent (the terminal app, or
+`target/…/e2e/Cmdr` isn't a bundle, so TCC attributes the grant to the responsible parent (the terminal app, or
 `/usr/libexec/sshd-keygen-wrapper` for an SSH session), and adding it needs a GUI visit. The env var needs none, and it
 makes the suite say out loud what it depends on.
 

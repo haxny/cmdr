@@ -43,7 +43,7 @@ Once the certificate exists, the E2E check script (`pnpm check desktop-e2e-playw
 launching. For manual E2E runs, sign after building:
 
 ```bash
-codesign --force -s "Cmdr Dev" ./target/$(rustc -vV | grep host | cut -d' ' -f2)/release/Cmdr
+codesign --force -s "Cmdr Dev" ./target/$(rustc -vV | grep host | cut -d' ' -f2)/e2e/Cmdr
 ```
 
 If you already have Cmdr Keychain items from unsigned builds, delete them so they get re-created with the correct ACL:

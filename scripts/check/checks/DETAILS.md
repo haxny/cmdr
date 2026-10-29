@@ -1108,6 +1108,17 @@ rewrites `apps/desktop/build/`, which the app crate embeds, so cargo's fingerpri
 invocation no matter what changed. "Cargo is incremental, so a no-op build is free" is simply false here. An
 instrumented session paid this three times.
 
+**Decision**: the Playwright build uses `--profile e2e` (release minus thin LTO; root `Cargo.toml`) with
+`CARGO_INCREMENTAL=1`, writing `target/<triple>/e2e/Cmdr` (`e2eBinaryPath`). **Why**: the forced `cmdr` recompile above
+was a full thin-LTO one. Measured on this M1 Max at load 65–135 (other agents' runs, so wall times are noisy; CPU-s is
+the steadier number), `pnpm test:e2e:playwright:build`, 2026-10-29: the release profile's no-op rebuild took 406 s wall
+and 1,348 CPU-s (a one-line change can't cost less: `cmdr` rebuilds from scratch either way); the e2e profile's no-op
+took 132 s and 297 CPU-s, a one-line change in `cmdr` 80 s and 292 CPU-s, and its cold build 480 s. The binary behaves
+like a release one (`debug-assertions` and `overflow-checks` stay off). Incremental comes from the script's env, never
+the profile, because the Linux Docker build shares the profile and its `target/` is a CI cache entry. The fingerprint
+covers both (`apps/desktop/package.json` and `Cargo.toml` are `e2eBinaryInputs`), so the switch itself forces one
+rebuild.
+
 The stamped set is narrower than the lane's `Inputs` on purpose: it drops `apps/desktop/test/**`. Playwright reads its
 specs, its config, and the shared fixture helpers from disk when the suite runs, so editing one changes what the suite
 asserts, never what it asserts against — and an E2E debugging loop edits exactly those files.

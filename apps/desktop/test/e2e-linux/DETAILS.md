@@ -143,7 +143,9 @@ release build (`docs/notes/index-extraction-baseline.md` § Build times) on the 
 nothing for a Linux binary we never ship. Measured in CI on a cold cache (GitHub `ubuntu-latest`, 2026-10-19, #557): the
 cargo build went from 20m29s–21m17s (`release`, three runs) to 15m38s (`e2e`, run 39326403796), and the `cmdr` crate's
 tail (last dependency done to `Finished`) from 11m50s to 6m39s. A warm build's tail was 10m07s on `release`, so expect
-roughly 5 min off a warm run too.
+roughly 5 min off a warm run too. The macOS Playwright build shares the profile and adds `CARGO_INCREMENTAL=1`; this one
+stays non-incremental, because its `target/` is a CI cache entry that incremental state would bloat toward GitHub's 10
+GB repo cap (`scripts/check/checks/DETAILS.md` § "The Playwright lane's binary is fingerprinted").
 
 ## SMB E2E networking
 
