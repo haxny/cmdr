@@ -209,6 +209,7 @@
             bind:value={draft}
             {id}
             class="tag-value-editor multiline"
+            style:min-height={place ? `${String(place.height)}px` : undefined}
             aria-label={ariaLabel}
             aria-invalid={invalid ? 'true' : undefined}
             aria-describedby={describedByAll}
@@ -225,7 +226,7 @@
             {id}
             type="text"
             class="tag-value-editor"
-            style:height={place?.height === null || place === undefined ? undefined : `${String(place.height)}px`}
+            style:height={place ? `${String(place.height)}px` : undefined}
             aria-label={ariaLabel}
             aria-invalid={invalid ? 'true' : undefined}
             aria-describedby={describedByAll}
@@ -247,32 +248,51 @@
         padding-bottom: var(--spacing-xs);
     }
 
-    /* The inline rename field's look (`InlineRenameEditor`), in the accent rather than a severity color. */
+    /*
+     * The editor IS the cell: the cell's font, size, weight, letter spacing and left edge (`font: inherit`, no inline
+     * padding, no border width, so nothing shifts when it opens), its box from `place`, and the cell's own block
+     * padding (`.cut`'s descender room) so the baseline stays. Focus is the inline rename field's accent glow, drawn
+     * inset so it stays inside the cell box.
+     */
     .tag-value-editor {
         display: block;
         box-sizing: border-box;
         width: 100%;
         margin: 0;
-        padding: 0 var(--spacing-xxs);
+        padding: 0.2em 0;
         font: inherit;
+        letter-spacing: inherit;
+        line-height: inherit;
         color: var(--color-text-primary);
         background: var(--color-bg-primary);
-        border: 2px solid var(--color-accent);
+        border: 0;
         border-radius: var(--radius-sm);
         outline: none;
+        box-shadow: inset 0 0 0 1px var(--color-accent), inset 0 0 6px 1px var(--color-accent);
         user-select: text;
         -webkit-user-select: text;
         cursor: text;
     }
 
+    @media (prefers-reduced-motion: no-preference) {
+        .tag-value-editor {
+            animation: tag-value-glow 300ms ease-out;
+        }
+    }
+
+    @keyframes tag-value-glow {
+        from {
+            box-shadow: inset 0 0 0 1px transparent, inset 0 0 0 0 transparent;
+        }
+    }
+
     .tag-value-editor.multiline {
-        padding: var(--spacing-xxs);
         line-height: var(--font-line-height-normal);
         resize: none;
     }
 
     .tag-value-editor[aria-invalid='true'] {
-        border-color: var(--color-error);
+        box-shadow: inset 0 0 0 1px var(--color-error), inset 0 0 6px 1px var(--color-error);
     }
 
     .tag-value-hint {

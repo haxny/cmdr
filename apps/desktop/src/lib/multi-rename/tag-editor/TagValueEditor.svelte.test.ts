@@ -1,6 +1,7 @@
 /** The in-place editor over a pane row: Enter commits a change, an unchanged value sends nothing, click-away commits. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TagValueEditor from './TagValueEditor.svelte'
+import editorSource from './TagValueEditor.svelte?raw'
 import { leave, mountInto, press, typeInto } from './tag-cell.test-helper'
 
 let cleanup: (() => void) | undefined
@@ -142,5 +143,56 @@ describe('TagValueEditor seed', () => {
     expect(input.selectionEnd).toBe(1)
     await press(input, 'Enter')
     expect(onCommit).toHaveBeenCalledWith('H')
+  })
+})
+
+describe('TagValueEditor looks like the cell', () => {
+  const style = editorSource.slice(editorSource.indexOf('<style>'))
+
+  it('takes the cell box: the single line gets its height, the multiline starts at it and may grow', async () => {
+    const place = { top: 50, left: 20, width: 120, height: 22 }
+    const line = await mountInto(TagValueEditor, {
+      value: 'a',
+      ariaLabel: 'T',
+      place,
+      onCommit: vi.fn(),
+      onClose: vi.fn(),
+    })
+    const frame = line.root.querySelector<HTMLElement>('.tag-value-frame')
+    expect(frame?.style.top).toBe('50px')
+    expect(frame?.style.left).toBe('20px')
+    expect(frame?.style.width).toBe('120px')
+    expect(line.root.querySelector<HTMLInputElement>('input')?.style.height).toBe('22px')
+    line.cleanup()
+    const multi = await mountInto(TagValueEditor, {
+      value: 'a',
+      ariaLabel: 'T',
+      multiline: true,
+      place,
+      onCommit: vi.fn(),
+      onClose: vi.fn(),
+    })
+    cleanup = multi.cleanup
+    const area = multi.root.querySelector<HTMLTextAreaElement>('textarea')
+    expect(area?.style.minHeight).toBe('22px')
+    expect(area?.style.height).toBe('')
+    expect(area?.classList.contains('tag-value-editor')).toBe(true)
+  })
+
+  it('inherits the cell text and adds no border width or inline padding that would shift it', () => {
+    const rule = /\.tag-value-editor \{[^}]*\}/.exec(style)?.[0] ?? ''
+    expect(rule).toContain('font: inherit')
+    expect(rule).toContain('letter-spacing: inherit')
+    expect(rule).toContain('border: 0')
+    expect(rule).toMatch(/padding: 0\.2em 0;/)
+    expect(rule).not.toMatch(/border: [1-9]/)
+  })
+
+  it('shows focus as the accent glow inside the cell, calmed by reduced motion', () => {
+    expect(style).toMatch(/box-shadow: inset [^;]*var\(--color-accent\)/)
+    expect(style).toMatch(/aria-invalid='true'\] \{[^}]*var\(--color-error\)/)
+    const media = style.indexOf('@media (prefers-reduced-motion: no-preference)')
+    expect(media).toBeGreaterThan(-1)
+    expect(style.indexOf('animation:')).toBeGreaterThan(media)
   })
 })

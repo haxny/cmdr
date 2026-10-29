@@ -157,7 +157,7 @@
         const row = shown.at(index)
         const cell = list?.querySelector<HTMLElement>(`[data-index="${String(index)}"] .col-value`)
         if (row === undefined || !cell || !scroller) return null
-        return editorBox(scroller, cell, isMultiLineField(row.field) ? null : rowHeight)
+        return editorBox(scroller, cell)
     }
 
     function openEditor(index: number, seed?: string): void {

@@ -205,7 +205,7 @@
         const column = CELL_COLUMN[field]
         const cell = list?.querySelector<HTMLElement>(`[data-index="${String(index)}"] [data-col="${column}"]`)
         if (!cell || !scroller) return null
-        return editorBox(scroller, cell, rowHeight)
+        return editorBox(scroller, cell)
     }
 
     function openEditor(index: number, field: EditedField, seed?: string): void {

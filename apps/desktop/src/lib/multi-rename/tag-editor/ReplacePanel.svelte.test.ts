@@ -167,12 +167,17 @@ describe('ReplacePanel', () => {
   })
 
   describe('saved lists', () => {
+    const buttonBySelector = (root: ParentNode, selector: string): HTMLButtonElement => {
+      const button = root.querySelector<HTMLButtonElement>(selector)
+      if (!button) throw new Error(`no button ${selector}`)
+      return button
+    }
     const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
     it('shows the saved lists and runs one as a single steps tool on the scope', async () => {
       const { root, tags } = await mountPanel()
       await settle()
-      await click(root.querySelector<HTMLButtonElement>('button[aria-label="Run Czech part words → numbers"]')!)
+      await click(buttonBySelector(root, 'button[aria-label="Run Czech part words → numbers"]'))
       expect(tags.textTool).toHaveBeenCalledTimes(1)
       expect(tags.textTool).toHaveBeenCalledWith({ kind: 'steps', steps: CZECH.steps }, SCOPE)
     })
@@ -180,7 +185,7 @@ describe('ReplacePanel', () => {
     it('runs on every track when none is checked', async () => {
       const { root, tags } = await mountPanel({ scope: null })
       await settle()
-      await click(root.querySelector<HTMLButtonElement>('button[aria-label^="Run "]')!)
+      await click(buttonBySelector(root, 'button[aria-label^="Run "]'))
       expect(tags.textTool).toHaveBeenCalledWith(expect.anything(), null)
     })
 
@@ -222,7 +227,7 @@ describe('ReplacePanel', () => {
       ipc.deleteTagReplacePreset.mockResolvedValue([])
       const { root } = await mountPanel()
       await settle()
-      await click(root.querySelector<HTMLButtonElement>('button[aria-label="Delete Czech part words → numbers"]')!)
+      await click(buttonBySelector(root, 'button[aria-label="Delete Czech part words → numbers"]'))
       expect(ipc.deleteTagReplacePreset).toHaveBeenCalledWith('czech')
       expect(root.textContent).toContain('No saved lists yet.')
     })
@@ -231,7 +236,7 @@ describe('ReplacePanel', () => {
       ipc.deleteTagReplacePreset.mockRejectedValue(new Error('no'))
       const { root } = await mountPanel()
       await settle()
-      await click(root.querySelector<HTMLButtonElement>('button[aria-label="Delete Czech part words → numbers"]')!)
+      await click(buttonBySelector(root, 'button[aria-label="Delete Czech part words → numbers"]'))
       expect(root.textContent).toContain('Couldn’t delete the list.')
       expect(root.textContent).toContain('Czech part words → numbers')
     })
