@@ -352,6 +352,12 @@ pub struct FaultyVolume<V: Volume> {
     inner: Arc<V>,
     faults: HashMap<FaultyOp, ArmedFault>,
     calls: StdMutex<HashMap<FaultyOp, usize>>,
+    /// `Some(n)`: every `rename` onto a name longer than `n` UTF-8 bytes is
+    /// refused with `InvalidName`, the way an
+    /// eCryptfs-backed share answers one (cmdr-reports#83).
+    name_cap: Option<usize>,
+    /// How many names the cap refused.
+    names_refused: std::sync::atomic::AtomicUsize,
 }
 
 impl<V: Volume + 'static> FaultyVolume<V> {
@@ -362,7 +368,34 @@ impl<V: Volume + 'static> FaultyVolume<V> {
             inner,
             faults: HashMap::new(),
             calls: StdMutex::new(HashMap::new()),
+            name_cap: None,
+            names_refused: std::sync::atomic::AtomicUsize::new(0),
         }
+    }
+
+    /// Refuses every name longer than `max_bytes` UTF-8 bytes at a `rename`'s
+    /// destination, with `InvalidName`: a share
+    /// with a short name limit, where the staged temp (at most 143 bytes) fits
+    /// and the final name doesn't.
+    pub fn refusing_names_longer_than(mut self, max_bytes: usize) -> Self {
+        self.name_cap = Some(max_bytes);
+        self
+    }
+
+    /// How many names [`refusing_names_longer_than`](Self::refusing_names_longer_than)
+    /// refused, so a cell can prove its refusals fired.
+    pub fn names_refused(&self) -> usize {
+        self.names_refused.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// The refusal for `path` when its name is over the cap.
+    fn over_name_cap(&self, path: &Path) -> Option<VolumeError> {
+        let cap = self.name_cap?;
+        let leaf = path.file_name()?.as_encoded_bytes().len();
+        (leaf > cap).then(|| {
+            self.names_refused.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            VolumeError::InvalidName("STATUS_OBJECT_NAME_INVALID".into())
+        })
     }
 
     /// Arms `op` to fail on its `nth` call (1-based) with `error`. One fault per
@@ -588,6 +621,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         match self
             .fault_for(FaultyOp::RenameFrom, from)
             .or_else(|| self.fault_for(FaultyOp::Rename, to))
+            .or_else(|| self.over_name_cap(to))
         {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.rename(from, to, force),

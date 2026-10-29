@@ -42,6 +42,7 @@ pub(crate) fn placeholder_conflict(conflict_id: ConflictId) -> WriteConflictEven
         source_is_directory: false,
         destination_is_directory: false,
         destination_is_look_alike: false,
+        refused_name: None,
     }
 }
 

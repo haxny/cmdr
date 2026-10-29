@@ -132,8 +132,9 @@ async fn a_leaf_too_long_for_the_filesystem_refuses_at_the_start() {
     for via in STARTS {
         let (_tmp, source, dest) = fixture("named_leaf_entry_long");
         let result = start(&engine, via, vec![source.clone()], &dest, &"n".repeat(256)).await;
+        // Typed as the name being too long, so the dialog says so.
         assert!(
-            matches!(result, Err(WriteOperationError::IoError { .. })),
+            matches!(result, Err(WriteOperationError::NameTooLong { .. })),
             "{via:?}: {result:?}"
         );
         assert_untouched(&source, &dest);

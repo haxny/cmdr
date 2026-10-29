@@ -676,6 +676,7 @@ fn build_conflict_event(
         source_is_directory: source.is_directory,
         destination_is_directory: destination.is_directory,
         destination_is_look_alike: is_look_alike_clash(source.path, destination.path),
+        refused_name: None,
     }
 }
 

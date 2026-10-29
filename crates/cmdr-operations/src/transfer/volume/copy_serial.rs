@@ -35,6 +35,7 @@ use super::super::transfer_probe::{DriverPhase, OperationProbe, TaskRole, TaskRo
 use super::copy::CopyCells;
 use super::preflight::SourceFileFacts;
 use super::preflight::SourceHint;
+use super::refused_item::{RefusalSubject, skip_if_refused};
 use super::strategy::copy_single_path;
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error};
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -292,6 +293,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                         }
                     };
                     let source_facts = SourceFileFacts::from_hint(hint);
+                    let source_size = source_facts.size;
 
                     // Per-file intra-progress: a fresh per-source
                     // throttle mutex (the serial-path closure outlives
@@ -481,6 +483,30 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             Ok(TransferOutcome::Transferred { bytes: bytes_copied })
                         }
                         Err(e) => {
+                            // The destination refused this source's OWN name
+                            // (a deep one is its walker's to ask about), and
+                            // nothing of it landed: ask, and a Skip is the
+                            // driver's to count, like a conflict Skip.
+                            let e = if created.files.lock_ignore_poison().is_empty() {
+                                let subject = RefusalSubject {
+                                    source: &source_path,
+                                    dest: &dest_item_path,
+                                    source_size,
+                                    source_is_directory: source_is_dir,
+                                };
+                                match skip_if_refused(&merge_ctx, &subject, e).await {
+                                    Ok(()) => {
+                                        let dirs = std::mem::take(&mut *created.dirs.lock_ignore_poison());
+                                        created_dirs.lock_ignore_poison().extend(dirs);
+                                        return Ok(TransferOutcome::Skipped {
+                                            bytes_accounted: source_size.unwrap_or(0),
+                                        });
+                                    }
+                                    Err(e) => e,
+                                }
+                            } else {
+                                e
+                            };
                             // For a DIRECTORY source interrupted mid-stream
                             // (cancel/rollback/error while still copying its
                             // children), hand the per-file ledger to the

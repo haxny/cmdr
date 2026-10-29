@@ -157,6 +157,7 @@ fn prompt_archive_conflict(
         source_is_directory,
         destination_is_directory,
         destination_is_look_alike: is_look_alike_clash(src_path, &archive_path.join(inner)),
+        refused_name: None,
     });
 
     let conflict_id = event.conflict_id;

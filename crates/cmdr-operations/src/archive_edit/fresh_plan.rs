@@ -440,6 +440,7 @@ async fn prompt_duplicate_source(
         source_is_directory: incoming_meta.as_ref().is_some_and(|meta| meta.is_directory),
         destination_is_directory: existing_meta.as_ref().is_some_and(|meta| meta.is_directory),
         destination_is_look_alike: false,
+        refused_name: None,
     });
     let conflict_id = event.conflict_id;
     state.announce_human_wait(context.events);

@@ -812,6 +812,33 @@ pub struct WriteConflictEvent {
     /// screen can show the difference. `look_alike.rs::is_look_alike_clash`.
     #[serde(default)]
     pub destination_is_look_alike: bool,
+    /// `Some` ⇒ this is NOT a clash: the destination refused to store the
+    /// item under its name, and nothing exists at `destination_path`. The only
+    /// answers are Skip (this item, or every refused name from here on with
+    /// apply-to-all) and cancelling the operation; any other resolution stops
+    /// the operation with the refusal as its error. Both sizes but the
+    /// source's, both mtimes, and the directory flags carry nothing for it.
+    /// `refused_name.rs`.
+    #[serde(default)]
+    pub refused_name: Option<RefusedNameReason>,
+}
+
+/// Why a destination refused an item's name, for a
+/// [`WriteConflictEvent::refused_name`] prompt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+#[allow(
+    missing_docs,
+    reason = "a wire type: every `///` here reaches `bindings.ts` as JSDoc, so its fields and variants stay as they ship"
+)]
+pub enum RefusedNameReason {
+    /// The name is longer than the destination can store
+    /// (`WriteOperationError::NameTooLong`).
+    TooLong,
+    /// The destination can't store the name for another reason: a reserved
+    /// name (`CON`), or a character its filesystem can't hold
+    /// (`WriteOperationError::InvalidName`).
+    NotAllowed,
 }
 
 /// A Stop-mode clash is over: the operation took an answer for it and carried
@@ -1044,6 +1071,7 @@ mod write_conflict_event_serde_tests {
             source_is_directory: true,
             destination_is_directory: true,
             destination_is_look_alike: false,
+            refused_name: None,
         }
     }
 

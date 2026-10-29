@@ -40,6 +40,7 @@ mod move_same;
 mod naming;
 mod piped_file;
 mod preflight;
+mod refused_item;
 mod rename_merge;
 mod scan_wait;
 mod sequential_extract;
@@ -173,6 +174,10 @@ mod dest_precheck_failure_tests;
 /// A refusal deep in a folder transfer is named against the side that refused.
 #[cfg(test)]
 mod failure_side_tests;
+
+/// A name the destination refuses asks Skip / Skip all / Stop per item.
+#[cfg(test)]
+mod refused_name_tests;
 
 /// A stopped transfer names the new files its stop kept at the destination.
 #[cfg(test)]

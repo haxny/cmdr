@@ -54,6 +54,8 @@ Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`.
   `preflight.rs`, ❌ never in the dispatcher. One engine may hand off to the other: `move_same` calls
   `move_cross::move_volumes_with_progress` when a rename copies (§ "A same-volume move whose renames copy"), and
   `move_cross` names nothing back, so the edge stays one-way.
+- **`refused_item.rs` turns a failure into the refused-name question** for the item its caller owns (a merge walker's
+  leaf, or a top-level source), through `../../refused_name.rs`. `../../DETAILS.md` § "A name the destination refuses".
 - **`conflict.rs` DECIDES; two thin siblings act and answer.** The resolver keeps the policy (`resolve_volume_conflict`,
   `apply_volume_conflict_resolution`, the conditional reduction). `top_level_conflict.rs` is the serial copy's and
   cross-volume move's top-level resolver closure, built from ONE capture set (`TopLevelConflicts`) so the two drivers

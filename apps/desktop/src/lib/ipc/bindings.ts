@@ -15073,6 +15073,23 @@ export type RefusalReason =
   | { kind: 'memory'; refusal: MemoryRefusalKind }
 
 /**
+ *  Why a destination refused an item's name, for a
+ *  [`WriteConflictEvent::refused_name`] prompt.
+ */
+export type RefusedNameReason =
+  /**
+   *  The name is longer than the destination can store
+   *  (`WriteOperationError::NameTooLong`).
+   */
+  | 'tooLong'
+  /**
+   *  The destination can't store the name for another reason: a reserved
+   *  name (`CON`), or a character its filesystem can't hold
+   *  (`WriteOperationError::InvalidName`).
+   */
+  | 'notAllowed'
+
+/**
  *  Typed errors from a registration attempt. The FE branches on `kind`;
  *  never match on the message string.
  */
@@ -21197,6 +21214,16 @@ export type WriteConflictEvent = {
    *  screen can show the difference. `look_alike.rs::is_look_alike_clash`.
    */
   destinationIsLookAlike?: boolean
+  /**
+   *  `Some` ⇒ this is NOT a clash: the destination refused to store the
+   *  item under its name, and nothing exists at `destination_path`. The only
+   *  answers are Skip (this item, or every refused name from here on with
+   *  apply-to-all) and cancelling the operation; any other resolution stops
+   *  the operation with the refusal as its error. Both sizes but the
+   *  source's, both mtimes, and the directory flags carry nothing for it.
+   *  `refused_name.rs`.
+   */
+  refusedName?: RefusedNameReason | null
 }
 
 /**

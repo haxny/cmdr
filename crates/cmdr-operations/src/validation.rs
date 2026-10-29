@@ -429,9 +429,8 @@ pub(crate) fn validate_path_length(dest_path: &Path) -> Result<(), WriteOperatio
     if let Some(name) = dest_path.file_name()
         && name.len() > MAX_NAME_BYTES
     {
-        return Err(WriteOperationError::IoError {
+        return Err(WriteOperationError::NameTooLong {
             path: dest_path.display().to_string(),
-            message: format!("File name exceeds maximum length of {} bytes", MAX_NAME_BYTES).into(),
         });
     }
 

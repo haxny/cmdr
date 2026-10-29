@@ -44,6 +44,7 @@ use super::landing::{DestFolder, NewName, where_it_lands};
 use super::merge_ctx::{CreatedPaths, FileWindow, MergeCtx, MergeProbe};
 use super::naming::take_back_reservation;
 use super::preflight::SourceFileFacts;
+use super::refused_item::{RefusalSubject, refused_here, skip_if_refused};
 use super::rename_merge::merges_as_a_directory;
 use super::strategy::Replaces;
 use super::strategy::{LandingName, WriteStaging, staging_for};
@@ -53,7 +54,26 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{ChildName, DirectoryCreation, Volume, VolumeError};
 
 /// What one leaf file's copy reports back to the walker.
-type LeafResult = Result<u64, PathedVolumeError>;
+type LeafResult = Result<LeafEnd, PathedVolumeError>;
+
+/// How a leaf that didn't fail the walk ended.
+enum LeafEnd {
+    /// The file landed, with this many bytes.
+    Landed(u64),
+    /// The destination refused the file's name. Nothing of it is there (its
+    /// temp went with the failed landing), and the WALKER asks the person
+    /// about it (`LeafPool::settle_refused`): a leaf may never wait on one.
+    Refused(RefusedLeaf),
+}
+
+/// A leaf whose name the destination refused, waiting for its walker to ask.
+struct RefusedLeaf {
+    source: PathBuf,
+    dest: PathBuf,
+    size: Option<u64>,
+    node: Option<NodeId>,
+    error: PathedVolumeError,
+}
 
 /// What a leaf is called in the operation's in-flight table. Built even when no
 /// probe is registered (the tests), which costs two `PathBuf` clones per file
@@ -95,6 +115,9 @@ struct LeafPool<'a> {
     /// file that actually broke, and a second error piled on top of it says
     /// nothing the user can act on (same rule `cleanup.rs::remove_tree` follows).
     first_error: Option<PathedVolumeError>,
+    /// Leaves whose names the destination refused, in the order they came
+    /// back, for the walker to ask about.
+    refused: std::collections::VecDeque<RefusedLeaf>,
     /// Every folder below the root this walk created, noted as the walk leaves
     /// it, so the subtree can date them once its leaves have drained.
     folders: FolderMetadata,
@@ -109,13 +132,15 @@ impl<'a> LeafPool<'a> {
             in_flight: FuturesUnordered::new(),
             bytes: 0,
             first_error: None,
+            refused: std::collections::VecDeque::new(),
             folders: FolderMetadata::default(),
         }
     }
 
     fn fold(&mut self, result: LeafResult) {
         match result {
-            Ok(bytes) => self.bytes += bytes,
+            Ok(LeafEnd::Landed(bytes)) => self.bytes += bytes,
+            Ok(LeafEnd::Refused(refused)) => self.refused.push_back(refused),
             Err(e) => {
                 if self.first_error.is_none() {
                     self.first_error = Some(e);
@@ -259,6 +284,40 @@ impl<'a> LeafPool<'a> {
             self.fold(landed);
         }
     }
+
+    /// Asks the person about every leaf whose name the destination refused,
+    /// on the WALKER, with this walker's other leaves still moving (`drive`).
+    ///
+    /// A Skip records the leaf exactly like a conflict Skip (`record_skip`,
+    /// which a move's source sweep spares, and out of the carried-source
+    /// ledger too) and credits the bars. Anything else is the walk's failure.
+    /// With no merge context there's nobody to ask through, so the refusal
+    /// stands, as it did before the question existed.
+    async fn settle_refused(
+        &mut self,
+        merge: Option<&MergeCtx<'_>>,
+        created: &CreatedPaths,
+        progress: &Arc<SourceProgress>,
+    ) -> Result<(), PathedVolumeError> {
+        while let Some(refused) = self.refused.pop_front() {
+            let Some(ctx) = merge else {
+                return Err(refused.error);
+            };
+            let subject = RefusalSubject {
+                source: &refused.source,
+                dest: &refused.dest,
+                source_size: refused.size,
+                source_is_directory: false,
+            };
+            self.drive(skip_if_refused(ctx, &subject, refused.error.clone()))
+                .await?;
+            let bytes = refused.size.unwrap_or(0);
+            created.forget_carried_source(&refused.source);
+            created.record_skip(refused.source, bytes);
+            progress.skip_leaf(bytes, refused.node);
+        }
+        Ok(())
+    }
 }
 
 /// Streams ONE file to the destination and records it, which is everything the
@@ -289,6 +348,7 @@ async fn copy_leaf<'a>(
     // also the file's tree row, active from here.
     let leaf = progress.begin_leaf(node);
     let on_chunk = |file_bytes_done: u64, _file_bytes_total: u64| leaf.on_chunk(file_bytes_done);
+    let source_size = source_facts.size;
     // ❗ This is the deepest frame that knows WHICH file failed, and the error
     // leaves it carrying that file's path on the side that refused. Report it
     // one level up and the user gets the name of the folder they selected
@@ -320,7 +380,27 @@ async fn copy_leaf<'a>(
     }) = &streamed
     {
         created.record_skip(child_source, 0);
-        return Ok(0);
+        return Ok(LeafEnd::Landed(0));
+    }
+    // The destination refused this file's NAME: one item the person decides
+    // about, ❌ never the end of its folder. Handed back for the walker to ask,
+    // since a leaf must never wait on a person (`LeafPool`).
+    if let Err(error) = &streamed {
+        let subject = RefusalSubject {
+            source: &child_source,
+            dest: &write_dest,
+            source_size,
+            source_is_directory: false,
+        };
+        if refused_here(&subject, error).is_some() {
+            return Ok(LeafEnd::Refused(RefusedLeaf {
+                error: error.clone(),
+                source: child_source,
+                dest: write_dest,
+                size: source_size,
+                node,
+            }));
+        }
     }
     let piped = streamed?;
     let bytes = piped.bytes;
@@ -334,7 +414,7 @@ async fn copy_leaf<'a>(
     }
     created.record_file(write_dest, bytes, piped.landed);
     leaf.complete(bytes);
-    Ok(bytes)
+    Ok(LeafEnd::Landed(bytes))
 }
 
 /// Copies (merges) a directory tree from source to destination, streaming each
@@ -442,6 +522,8 @@ pub(super) async fn copy_directory_streaming(
     if let Some(e) = pool.first_error.take() {
         return Err(e);
     }
+    // The last leaves' refused names, now that nothing is in flight.
+    pool.settle_refused(merge, created, progress).await?;
 
     // Every leaf landed, so no write can bump a folder's date after this. A
     // failed or cancelled subtree returned above and dates nothing.
@@ -832,7 +914,9 @@ async fn merge_level<'a>(
 
         // Past every Skip, so this child is one the move carries. Recording it
         // here rather than when its bytes land is safe: a leaf that fails fails
-        // the whole source, and a failed source is never swept.
+        // the whole source, and a failed source is never swept. The one leaf
+        // that fails WITHOUT failing its source, a refused name the person
+        // skipped, comes off again (`LeafPool::settle_refused`).
         created.record_carried_source(&child_source, entry);
 
         // PLAN MODE (one-pass sequential extract): the destination + conflict are
@@ -881,6 +965,9 @@ async fn merge_level<'a>(
             ),
         )
         .await?;
+        // Ask about any name refused so far before walking on, so the prompt
+        // comes while the person still sees the file it's about.
+        pool.settle_refused(merge, created, progress).await?;
     }
 
     // The level is in place, which is all an empty folder's row waits for. A

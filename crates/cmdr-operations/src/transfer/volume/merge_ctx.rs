@@ -220,6 +220,16 @@ impl CreatedPaths {
         }
     }
 
+    /// Takes back a carried source file that never landed (a refused name the
+    /// person skipped), so nothing about it reads as carried. The sweep spares
+    /// a skipped path whatever the ledger says; this keeps the ledger true as
+    /// well. A no-op on a copy.
+    pub(super) fn forget_carried_source(&self, file: &Path) {
+        if let Some(ledger) = &self.source_ledger {
+            ledger.lock_ignore_poison().forget_carried_file(file);
+        }
+    }
+
     /// The source ledger a move's sweep reads, handed over whole. Empty on a
     /// copy.
     pub(super) fn take_source_ledger(&self) -> SourceLedger {
