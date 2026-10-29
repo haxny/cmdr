@@ -1,0 +1,83 @@
+{
+  "mtp.connectedToast.title": "Підʼєднано: {deviceName}",
+  "@mtp.connectedToast.title": {
+    "sourceHash": "562319d"
+  },
+  "mtp.connectedToast.bodyMac": "Cmdr призупинив системний демон камери macOS (ptpcamerad), щоб отримати доступ до цього пристрою. Щоб використовувати пристрій в іншій програмі, вимкніть підтримку MTP у Параметрах.",
+  "@mtp.connectedToast.bodyMac": {
+    "sourceHash": "3ace37b"
+  },
+  "mtp.connectedToast.bodyOther": "Щоб використовувати цей пристрій в іншій програмі, вимкніть підтримку MTP у Параметрах.",
+  "@mtp.connectedToast.bodyOther": {
+    "sourceHash": "6f42620"
+  },
+  "mtp.connectedToast.dontShowAgain": "Більше не показувати",
+  "@mtp.connectedToast.dontShowAgain": {
+    "sourceHash": "f6f62e0"
+  },
+  "mtp.connectedToast.disableMtp": "Вимкнути MTP…",
+  "@mtp.connectedToast.disableMtp": {
+    "sourceHash": "17c54f2"
+  },
+  "mtp.connectedToast.ok": "OK",
+  "@mtp.connectedToast.ok": {
+    "sourceHash": "565339b",
+    "sameAsSourceJustification": "Ukrainian macOS labels its acknowledge button OK (AppKit alerts), so the Latin OK is the native label."
+  },
+  "mtp.permissionDialog.title": "Не вдається отримати доступ до USB-пристрою",
+  "@mtp.permissionDialog.title": {
+    "sourceHash": "1b440ed"
+  },
+  "mtp.permissionDialog.description": "Cmdr не має прав доступу до цього пристрою. У Linux потрібні правила udev, щоб надати доступ до MTP-пристроїв.",
+  "@mtp.permissionDialog.description": {
+    "sourceHash": "fdb8772"
+  },
+  "mtp.permissionDialog.explanation": "Виконайте цю команду в терміналі, щоб інсталювати правила й перезавантажити їх:",
+  "@mtp.permissionDialog.explanation": {
+    "sourceHash": "6bc70dd"
+  },
+  "mtp.permissionDialog.helpText": "Виконавши команду, відʼєднайте пристрій і підʼєднайте знову, а тоді спробуйте ще раз.",
+  "@mtp.permissionDialog.helpText": {
+    "sourceHash": "519f195"
+  },
+  "mtp.permissionDialog.close": "Закрити",
+  "@mtp.permissionDialog.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "mtp.permissionDialog.retry": "Підʼєднатися ще раз",
+  "@mtp.permissionDialog.retry": {
+    "sourceHash": "eccee4e"
+  },
+  "mtp.ptpcameradDialog.title": "Не вдається підʼєднатися до MTP-пристрою",
+  "@mtp.ptpcameradDialog.title": {
+    "sourceHash": "8cb1f59"
+  },
+  "mtp.ptpcameradDialog.inUseBy": "Пристрій використовує процес <processName>{process}</processName>.",
+  "@mtp.ptpcameradDialog.inUseBy": {
+    "sourceHash": "5b97c25"
+  },
+  "mtp.ptpcameradDialog.inUseGeneric": "Інший процес має монопольний доступ до пристрою.",
+  "@mtp.ptpcameradDialog.inUseGeneric": {
+    "sourceHash": "cfba635"
+  },
+  "mtp.ptpcameradDialog.explanation": "У macOS системний демон <code>ptpcamerad</code> автоматично захоплює Android-пристрої. Щоб обійти це, виконайте в Терміналі таку команду (не зупиняйте її, поки користуєтеся Cmdr):",
+  "@mtp.ptpcameradDialog.explanation": {
+    "sourceHash": "65b6ee3"
+  },
+  "mtp.ptpcameradDialog.helpText": "Поки ця команда працює, вона постійно зупиняє ptpcamerad. Коли закінчите, натисніть <key>Ctrl+C</key> у Терміналі, щоб її зупинити.",
+  "@mtp.ptpcameradDialog.helpText": {
+    "sourceHash": "85b5060"
+  },
+  "mtp.ptpcameradDialog.close": "Закрити",
+  "@mtp.ptpcameradDialog.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "mtp.ptpcameradDialog.retry": "Підʼєднатися ще раз",
+  "@mtp.ptpcameradDialog.retry": {
+    "sourceHash": "eccee4e"
+  },
+  "mtp.deviceFallbackName": "MTP-пристрій",
+  "@mtp.deviceFallbackName": {
+    "sourceHash": "8ba7a69"
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "ui.alertDialog.defaultButton": "OK",
+  "@ui.alertDialog.defaultButton": {
+    "sourceHash": "565339b"
+  },
+  "ui.alertDialog.copyPathAria": "Copy path to clipboard",
+  "@ui.alertDialog.copyPathAria": {
+    "sourceHash": "333608a"
+  },
+  "ui.modalDialog.close": "Close",
+  "@ui.modalDialog.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "ui.popover.defaultAriaLabel": "Options",
+  "@ui.popover.defaultAriaLabel": {
+    "sourceHash": "d0db8b5"
+  },
+  "ui.select.placeholder": "Select…",
+  "@ui.select.placeholder": {
+    "sourceHash": "731fe04"
+  },
+  "ui.combobox.emptyText": "No matches. Keep typing to use your own value.",
+  "@ui.combobox.emptyText": {
+    "sourceHash": "d41f776"
+  },
+  "ui.combobox.loadingSuggestions": "Loading suggestions",
+  "@ui.combobox.loadingSuggestions": {
+    "sourceHash": "6fcf509"
+  },
+  "ui.combobox.showSuggestions": "Show suggestions",
+  "@ui.combobox.showSuggestions": {
+    "sourceHash": "a80b6a6"
+  },
+  "ui.copyBox.copyAria": "Copy command to clipboard",
+  "@ui.copyBox.copyAria": {
+    "sourceHash": "334c24c"
+  },
+  "ui.copyBox.copy": "Copy",
+  "@ui.copyBox.copy": {
+    "sourceHash": "e21f935"
+  },
+  "ui.copyBox.copied": "Copied!",
+  "@ui.copyBox.copied": {
+    "sourceHash": "ea61bc1"
+  },
+  "ui.shortcutChip.customizeAria": "Customize the {commandName} shortcut",
+  "@ui.shortcutChip.customizeAria": {
+    "sourceHash": "a1d00b2"
+  },
+  "ui.shortcutChip.customizeTooltip": "Customize this shortcut",
+  "@ui.shortcutChip.customizeTooltip": {
+    "sourceHash": "9a7817d"
+  },
+  "ui.toast.dismissAria": "Dismiss notification",
+  "@ui.toast.dismissAria": {
+    "sourceHash": "b7bb3f3"
+  },
+  "ui.toast.noneToFocus": "No notifications",
+  "@ui.toast.noneToFocus": {
+    "sourceHash": "cbce204"
+  },
+  "ui.toast.age": "{durationText} ago",
+  "@ui.toast.age": {
+    "sourceHash": "6dcfed0"
+  },
+  "ui.loadingIcon.finalizing": "All {countText} {count, plural, one {file} other {files}} loaded. Sorting your files, preparing view…",
+  "@ui.loadingIcon.finalizing": {
+    "sourceHash": "0de5a42"
+  },
+  "ui.loadingIcon.loaded": "Loaded {countText} {count, plural, one {file} other {files}}…",
+  "@ui.loadingIcon.loaded": {
+    "sourceHash": "69d2b22"
+  },
+  "ui.loadingIcon.loadingBackupIndex": "Loading the backup index: {amountText}",
+  "@ui.loadingIcon.loadingBackupIndex": {
+    "sourceHash": "965d284"
+  },
+  "ui.loadingIcon.backupIndexAmount": "{doneText} of {totalText}",
+  "@ui.loadingIcon.backupIndexAmount": {
+    "sourceHash": "edce3be"
+  },
+  "ui.loadingIcon.backupIndexAria": "Backup index",
+  "@ui.loadingIcon.backupIndexAria": {
+    "sourceHash": "661044a"
+  },
+  "ui.loadingIcon.openingFolder": "Opening folder…",
+  "@ui.loadingIcon.openingFolder": {
+    "sourceHash": "c3ab98e"
+  },
+  "ui.loadingIcon.loading": "Loading…",
+  "@ui.loadingIcon.loading": {
+    "sourceHash": "ba3bbbe"
+  },
+  "ui.loadingIcon.cancelHint": "Press <key></key> to cancel and go back",
+  "@ui.loadingIcon.cancelHint": {
+    "sourceHash": "400dd28"
+  },
+  "ui.numberInput.decrease": "Decrease {label}",
+  "@ui.numberInput.decrease": {
+    "sourceHash": "995a5d6"
+  },
+  "ui.numberInput.increase": "Increase {label}",
+  "@ui.numberInput.increase": {
+    "sourceHash": "bbf5fc9"
+  },
+  "ui.confirmDialog.cancel": "Cancel",
+  "@ui.confirmDialog.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "ui.dialogBoundary.closedToast": "That dialog ran into a problem, so we closed it. Please try again.",
+  "@ui.dialogBoundary.closedToast": {
+    "sourceHash": "b735ae2"
+  }
+}

@@ -1,0 +1,474 @@
+{
+  "viewer.window.fallbackTitle": "Viewer",
+  "@viewer.window.fallbackTitle": {
+    "sourceHash": "678bfa6"
+  },
+  "viewer.window.titleSuffix": "{fileName} | Viewer",
+  "@viewer.window.titleSuffix": {
+    "sourceHash": "5ebd7f4"
+  },
+  "viewer.srHeading": "File viewer",
+  "@viewer.srHeading": {
+    "sourceHash": "b32f632"
+  },
+  "viewer.loading": "Loading…",
+  "@viewer.loading": {
+    "sourceHash": "ba3bbbe"
+  },
+  "viewer.error.noPath": "No file path specified",
+  "@viewer.error.noPath": {
+    "sourceHash": "2b069fc"
+  },
+  "viewer.error.readFailed": "Couldn’t read this file. Try again?",
+  "@viewer.error.readFailed": {
+    "sourceHash": "8c420fd"
+  },
+  "viewer.error.notFound": "Couldn’t find this file. It may have been moved, renamed, or deleted.",
+  "@viewer.error.notFound": {
+    "sourceHash": "9257fab"
+  },
+  "viewer.error.isDirectory": "This is a folder, so there’s nothing to view here. Open it in the main window to see what’s inside.",
+  "@viewer.error.isDirectory": {
+    "sourceHash": "5abb771"
+  },
+  "viewer.error.timeout": "Couldn’t load the file. The volume may be slow or unresponsive.",
+  "@viewer.error.timeout": {
+    "sourceHash": "74b9656"
+  },
+  "viewer.error.tooLargeToPreview": "This file is too big to preview from here. Copy it out first, then open it.",
+  "@viewer.error.tooLargeToPreview": {
+    "sourceHash": "8696039"
+  },
+  "viewer.error.archiveUnreadable": "Couldn’t open this file from the archive. It may be encrypted, damaged, or use a format Cmdr can’t read.",
+  "@viewer.error.archiveUnreadable": {
+    "sourceHash": "e0b8f4e"
+  },
+  "viewer.error.coldStorage": "This file is archived, so there’s nothing to show until it’s restored. Restore it in your storage provider’s console, then open it again.",
+  "@viewer.error.coldStorage": {
+    "sourceHash": "236cd1b"
+  },
+  "viewer.error.retry": "Retry",
+  "@viewer.error.retry": {
+    "sourceHash": "942087c"
+  },
+  "viewer.error.cancel": "Cancel",
+  "@viewer.error.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "viewer.error.stoppedResponding": "This file stopped arriving. Check that the phone or server is still connected, then try again.",
+  "@viewer.error.stoppedResponding": {
+    "sourceHash": "f88b690"
+  },
+  "viewer.pull.title": "Fetching {fileName} to preview it",
+  "@viewer.pull.title": {
+    "sourceHash": "3a02768"
+  },
+  "viewer.pull.progress": "{doneText} of {totalText}",
+  "@viewer.pull.progress": {
+    "sourceHash": "edce3be"
+  },
+  "viewer.pull.progressUnknownTotal": "{doneText} so far",
+  "@viewer.pull.progressUnknownTotal": {
+    "sourceHash": "548095e"
+  },
+  "viewer.content.ariaLabel": "File content: {fileName}",
+  "@viewer.content.ariaLabel": {
+    "sourceHash": "57b8613"
+  },
+  "viewer.binaryWarning.body": "This is the raw view of the file. You might want to view the actual <kindName>{category, select, image {image} document {document} other {{ext} file}}</kindName> instead. To do that, close this window and press <quickLookKey></quickLookKey> to open Quick Look, or press <openKey></openKey> (or double-click the file) to open it in the associated app.",
+  "@viewer.binaryWarning.body": {
+    "sourceHash": "fd5cfb7"
+  },
+  "viewer.binaryWarning.dismiss": "Close",
+  "@viewer.binaryWarning.dismiss": {
+    "sourceHash": "7d9eb7a"
+  },
+  "viewer.binaryWarning.suppressForever": "Never show this warning again",
+  "@viewer.binaryWarning.suppressForever": {
+    "sourceHash": "b85b92b"
+  },
+  "viewer.search.placeholder": "Find in file…",
+  "@viewer.search.placeholder": {
+    "sourceHash": "a3268b3"
+  },
+  "viewer.search.ariaLabel": "Search text",
+  "@viewer.search.ariaLabel": {
+    "sourceHash": "38d268a"
+  },
+  "viewer.search.caseSensitive": "Case sensitive",
+  "@viewer.search.caseSensitive": {
+    "sourceHash": "e124ba4"
+  },
+  "viewer.search.regex": "Regex",
+  "@viewer.search.regex": {
+    "sourceHash": "0f27125"
+  },
+  "viewer.search.matchPosition": "{current} of {total}{more, select, yes {+} other {}}",
+  "@viewer.search.matchPosition": {
+    "sourceHash": "ec24db4"
+  },
+  "viewer.search.searching": "Searching…",
+  "@viewer.search.searching": {
+    "sourceHash": "c31723a"
+  },
+  "viewer.search.partial": "(partial)",
+  "@viewer.search.partial": {
+    "sourceHash": "d0ffde3"
+  },
+  "viewer.search.noMatches": "No matches",
+  "@viewer.search.noMatches": {
+    "sourceHash": "2df01a0"
+  },
+  "viewer.search.stop": "Stop searching",
+  "@viewer.search.stop": {
+    "sourceHash": "c48cf72"
+  },
+  "viewer.search.stopTooltip": "Stop scanning and keep results",
+  "@viewer.search.stopTooltip": {
+    "sourceHash": "b86629c"
+  },
+  "viewer.search.previous": "Previous match",
+  "@viewer.search.previous": {
+    "sourceHash": "daa2f8c"
+  },
+  "viewer.search.next": "Next match",
+  "@viewer.search.next": {
+    "sourceHash": "825e5ab"
+  },
+  "viewer.search.close": "Close search",
+  "@viewer.search.close": {
+    "sourceHash": "55656b5"
+  },
+  "viewer.search.closeTooltip": "Close",
+  "@viewer.search.closeTooltip": {
+    "sourceHash": "7d9eb7a"
+  },
+  "viewer.toolbar.viewMode.ariaLabel": "View mode",
+  "@viewer.toolbar.viewMode.ariaLabel": {
+    "sourceHash": "18997f2"
+  },
+  "viewer.toolbar.viewMode.text": "Text",
+  "@viewer.toolbar.viewMode.text": {
+    "sourceHash": "71988c4"
+  },
+  "viewer.toolbar.viewMode.binary": "Binary",
+  "@viewer.toolbar.viewMode.binary": {
+    "sourceHash": "ee1c827"
+  },
+  "viewer.toolbar.viewMode.hex": "Hex",
+  "@viewer.toolbar.viewMode.hex": {
+    "sourceHash": "69493e6"
+  },
+  "viewer.toolbar.viewMode.viewAsText": "View as text",
+  "@viewer.toolbar.viewMode.viewAsText": {
+    "sourceHash": "a0059b8"
+  },
+  "viewer.toolbar.viewMode.viewAsImage": "View as image",
+  "@viewer.toolbar.viewMode.viewAsImage": {
+    "sourceHash": "ae04259"
+  },
+  "viewer.toolbar.viewMode.viewAsPdf": "View as PDF",
+  "@viewer.toolbar.viewMode.viewAsPdf": {
+    "sourceHash": "ee89800"
+  },
+  "viewer.kind.image": "Image",
+  "@viewer.kind.image": {
+    "sourceHash": "1aa4cb0"
+  },
+  "viewer.kind.pdf": "PDF",
+  "@viewer.kind.pdf": {
+    "sourceHash": "1d393b0"
+  },
+  "viewer.kind.text": "Text",
+  "@viewer.kind.text": {
+    "sourceHash": "71988c4"
+  },
+  "viewer.kind.markdown": "Markdown",
+  "@viewer.kind.markdown": {
+    "sourceHash": "0e52f6b"
+  },
+  "viewer.toolbar.viewMode.viewFormatted": "View formatted",
+  "@viewer.toolbar.viewMode.viewFormatted": {
+    "sourceHash": "475194e"
+  },
+  "viewer.markdown.loading": "Loading document",
+  "@viewer.markdown.loading": {
+    "sourceHash": "990df85"
+  },
+  "viewer.markdown.error": "Sorry, we couldn’t format this document. You can still read it as text.",
+  "@viewer.markdown.error": {
+    "sourceHash": "c06f373"
+  },
+  "viewer.markdown.remoteImages.notice": "Images from the web are hidden. Loading them lets those sites see your IP address.",
+  "@viewer.markdown.remoteImages.notice": {
+    "sourceHash": "4cff98e"
+  },
+  "viewer.markdown.remoteImages.load": "Load images from the web",
+  "@viewer.markdown.remoteImages.load": {
+    "sourceHash": "ec1b218"
+  },
+  "viewer.markdown.image.remote": "Image from the web",
+  "@viewer.markdown.image.remote": {
+    "sourceHash": "b698d98"
+  },
+  "viewer.markdown.image.blocked": "Image not shown",
+  "@viewer.markdown.image.blocked": {
+    "sourceHash": "22d87c7"
+  },
+  "viewer.markdown.image.missing": "Image not found",
+  "@viewer.markdown.image.missing": {
+    "sourceHash": "c837039"
+  },
+  "viewer.markdown.link.missing": "We couldn’t find the file this link points to.",
+  "@viewer.markdown.link.missing": {
+    "sourceHash": "e89bea2"
+  },
+  "viewer.markdown.link.folder": "This link points to a folder, so there’s nothing to show here.",
+  "@viewer.markdown.link.folder": {
+    "sourceHash": "a8740f1"
+  },
+  "viewer.markdown.link.blocked": "The viewer only follows web links and links to files on this drive.",
+  "@viewer.markdown.link.blocked": {
+    "sourceHash": "f931a8d"
+  },
+  "viewer.markdown.link.unreadable": "We couldn’t open what this link points to.",
+  "@viewer.markdown.link.unreadable": {
+    "sourceHash": "e199e8c"
+  },
+  "viewer.toolbar.encoding.placeholder": "Encoding",
+  "@viewer.toolbar.encoding.placeholder": {
+    "sourceHash": "4d25a47"
+  },
+  "viewer.toolbar.encoding.group.unicode": "Unicode",
+  "@viewer.toolbar.encoding.group.unicode": {
+    "sourceHash": "f922e0d"
+  },
+  "viewer.toolbar.encoding.group.western": "Western",
+  "@viewer.toolbar.encoding.group.western": {
+    "sourceHash": "d7d2f0f"
+  },
+  "viewer.toolbar.encoding.detectedSuffix": "{label} (Detected)",
+  "@viewer.toolbar.encoding.detectedSuffix": {
+    "sourceHash": "2096536"
+  },
+  "viewer.toolbar.tail.label": "Tail",
+  "@viewer.toolbar.tail.label": {
+    "sourceHash": "ae9c3bd"
+  },
+  "viewer.toolbar.tail.ariaLabel": "Tail mode: follow file changes",
+  "@viewer.toolbar.tail.ariaLabel": {
+    "sourceHash": "af0477f"
+  },
+  "viewer.toolbar.tail.tooltip": "Auto-follow file changes",
+  "@viewer.toolbar.tail.tooltip": {
+    "sourceHash": "733e57f"
+  },
+  "viewer.toolbar.reindexing": "Reindexing…",
+  "@viewer.toolbar.reindexing": {
+    "sourceHash": "f668818"
+  },
+  "viewer.statusBar.ariaLabel": "File information",
+  "@viewer.statusBar.ariaLabel": {
+    "sourceHash": "375b97d"
+  },
+  "viewer.statusBar.lineCount": "{count} {count, plural, one {line} other {lines}}",
+  "@viewer.statusBar.lineCount": {
+    "sourceHash": "1af08ec"
+  },
+  "viewer.statusBar.badge.inMemory": "in memory",
+  "@viewer.statusBar.badge.inMemory": {
+    "sourceHash": "d9b8483"
+  },
+  "viewer.statusBar.badge.inMemoryTooltip": "You have the file entirely in memory. You can quickly scroll to any line.",
+  "@viewer.statusBar.badge.inMemoryTooltip": {
+    "sourceHash": "4eb50b8"
+  },
+  "viewer.statusBar.badge.indexed": "indexed",
+  "@viewer.statusBar.badge.indexed": {
+    "sourceHash": "658a3e8"
+  },
+  "viewer.statusBar.badge.indexedTooltip": "You have the file indexed, so the line numbers are accurate, and you can quickly scroll to any point.",
+  "@viewer.statusBar.badge.indexedTooltip": {
+    "sourceHash": "2604f1a"
+  },
+  "viewer.statusBar.badge.streamingIndexing": "streaming, indexing…",
+  "@viewer.statusBar.badge.streamingIndexing": {
+    "sourceHash": "db1718e"
+  },
+  "viewer.statusBar.badge.streamingIndexingTooltip": "This is a large file in streaming mode. We’re building an index in background (max {seconds} sec)… Line numbers are currently approximate.",
+  "@viewer.statusBar.badge.streamingIndexingTooltip": {
+    "sourceHash": "60095b8"
+  },
+  "viewer.statusBar.badge.streaming": "streaming",
+  "@viewer.statusBar.badge.streaming": {
+    "sourceHash": "b304adc"
+  },
+  "viewer.statusBar.badge.streamingTooltip": "This is a large file in streaming mode. Indexing would’ve taken longer than {seconds} sec, so we didn’t do it. The line numbers are estimates.",
+  "@viewer.statusBar.badge.streamingTooltip": {
+    "sourceHash": "b1a14ac"
+  },
+  "viewer.statusBar.badge.wrap": "wrap",
+  "@viewer.statusBar.badge.wrap": {
+    "sourceHash": "f0a2899"
+  },
+  "viewer.statusBar.badge.wrapTooltip": "Lines wrap at the window edge",
+  "@viewer.statusBar.badge.wrapTooltip": {
+    "sourceHash": "af2ca76"
+  },
+  "viewer.statusBar.hint.image": "Click 100% / fit · Scroll zoom · Drag pan",
+  "@viewer.statusBar.hint.image": {
+    "sourceHash": "bca0205"
+  },
+  "viewer.statusBar.hint.wrap": "{key} wrap",
+  "@viewer.statusBar.hint.wrap": {
+    "sourceHash": "b30ce00"
+  },
+  "viewer.statusBar.hint.tail": "{key} tail",
+  "@viewer.statusBar.hint.tail": {
+    "sourceHash": "63d25d1"
+  },
+  "viewer.statusBar.hint.search": "{key} search",
+  "@viewer.statusBar.hint.search": {
+    "sourceHash": "1cf8c07"
+  },
+  "viewer.media.dimensions": "{width} × {height}",
+  "@viewer.media.dimensions": {
+    "sourceHash": "ece2cad"
+  },
+  "viewer.image.loading": "Loading image",
+  "@viewer.image.loading": {
+    "sourceHash": "65999b8"
+  },
+  "viewer.image.error": "Sorry, we couldn’t show this image. The file may be damaged or in a format we can’t display.",
+  "@viewer.image.error": {
+    "sourceHash": "1e8c6d9"
+  },
+  "viewer.pdf.loading": "Loading PDF",
+  "@viewer.pdf.loading": {
+    "sourceHash": "7f9acf3"
+  },
+  "viewer.copyDialog.confirmTitleKnown": "Copy {size} to the clipboard?",
+  "@viewer.copyDialog.confirmTitleKnown": {
+    "sourceHash": "7f97ebf"
+  },
+  "viewer.copyDialog.confirmTitleUnknown": "Copy this selection to the clipboard?",
+  "@viewer.copyDialog.confirmTitleUnknown": {
+    "sourceHash": "0956c8b"
+  },
+  "viewer.copyDialog.confirmBody": "Large pastes can slow down other apps. Try search (⌘F) to narrow it down.",
+  "@viewer.copyDialog.confirmBody": {
+    "sourceHash": "c1f2927"
+  },
+  "viewer.copyDialog.cancel": "Cancel",
+  "@viewer.copyDialog.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "viewer.copyDialog.saveAsFile": "Save as file…",
+  "@viewer.copyDialog.saveAsFile": {
+    "sourceHash": "7b9b279"
+  },
+  "viewer.copyDialog.copy": "Copy",
+  "@viewer.copyDialog.copy": {
+    "sourceHash": "e21f935"
+  },
+  "viewer.copyDialog.refuseBody": "That’s larger than the 100 MB clipboard limit. Try search (⌘F) to find what you need, or save the selection as a file.",
+  "@viewer.copyDialog.refuseBody": {
+    "sourceHash": "3eaf921"
+  },
+  "viewer.reloadToast.grew": "File changed on disk. Reload?",
+  "@viewer.reloadToast.grew": {
+    "sourceHash": "d66b013"
+  },
+  "viewer.reloadToast.rotated": "File replaced on disk. Reload to see the new content.",
+  "@viewer.reloadToast.rotated": {
+    "sourceHash": "50804c2"
+  },
+  "viewer.reloadToast.reload": "Reload",
+  "@viewer.reloadToast.reload": {
+    "sourceHash": "bdc090e"
+  },
+  "viewer.reloadToast.dismissTooltip": "Dismiss without reloading",
+  "@viewer.reloadToast.dismissTooltip": {
+    "sourceHash": "7f829ed"
+  },
+  "viewer.copy.onClipboard": "{size} on your clipboard",
+  "@viewer.copy.onClipboard": {
+    "sourceHash": "45934ed"
+  },
+  "viewer.copy.clipboardUnreachable": "Couldn’t reach the clipboard. Try again?",
+  "@viewer.copy.clipboardUnreachable": {
+    "sourceHash": "3c8ddb8"
+  },
+  "viewer.copy.readTooLong": "The read took too long. Try a smaller selection?",
+  "@viewer.copy.readTooLong": {
+    "sourceHash": "2275e83"
+  },
+  "viewer.copy.copyFailed": "Couldn’t copy the selection. Try again?",
+  "@viewer.copy.copyFailed": {
+    "sourceHash": "b08416d"
+  },
+  "viewer.copy.readFailed": "Couldn’t read the selection. Try again?",
+  "@viewer.copy.readFailed": {
+    "sourceHash": "24ea14a"
+  },
+  "viewer.saveAs.title": "Save selection",
+  "@viewer.saveAs.title": {
+    "sourceHash": "dd183ea"
+  },
+  "viewer.saveAs.defaultName": "selection",
+  "@viewer.saveAs.defaultName": {
+    "sourceHash": "6504513"
+  },
+  "viewer.saveAs.panelFailed": "Couldn’t open the save panel. Try again?",
+  "@viewer.saveAs.panelFailed": {
+    "sourceHash": "ade021c"
+  },
+  "viewer.saveAs.saved": "Selection saved to {name}",
+  "@viewer.saveAs.saved": {
+    "sourceHash": "5083c12"
+  },
+  "viewer.saveAs.savedInSourceEncoding": "Selection saved to {name} in the file’s original encoding, since some characters couldn’t be converted.",
+  "@viewer.saveAs.savedInSourceEncoding": {
+    "sourceHash": "9ac85a1"
+  },
+  "viewer.saveAs.tooLong": "Saving took too long. Try a smaller selection?",
+  "@viewer.saveAs.tooLong": {
+    "sourceHash": "f31d7f4"
+  },
+  "viewer.saveAs.saveFailed": "Couldn’t save the selection. Try again?",
+  "@viewer.saveAs.saveFailed": {
+    "sourceHash": "ca5709f"
+  },
+  "viewer.saveAs.destinationReadOnly": "That location is read-only. Pick another folder to save into?",
+  "@viewer.saveAs.destinationReadOnly": {
+    "sourceHash": "8d627aa"
+  },
+  "viewer.row.continuesTooltip": "Cmdr split this line because it was very long. There is no actual line break here in the file.",
+  "@viewer.row.continuesTooltip": {
+    "sourceHash": "7df69ed"
+  },
+  "viewer.row.continuesLabel": "Cmdr split this line because it was very long. There is no actual line break here in the file.",
+  "@viewer.row.continuesLabel": {
+    "sourceHash": "7df69ed"
+  },
+  "viewer.selection.toEndOfFile": "Selected from line {line} to the end of the file",
+  "@viewer.selection.toEndOfFile": {
+    "sourceHash": "62d95be"
+  },
+  "viewer.selection.singleLine": "Selected {chars, plural, one {# character} other {# characters}} on line {line}",
+  "@viewer.selection.singleLine": {
+    "sourceHash": "eb11697"
+  },
+  "viewer.selection.multiLine": "Selected lines {startLine} to {endLine}, {chars, plural, one {# character} other {# characters}}",
+  "@viewer.selection.multiLine": {
+    "sourceHash": "5ba7791"
+  },
+  "viewer.selection.charsOnly": "Selected {chars, plural, one {# character} other {# characters}}",
+  "@viewer.selection.charsOnly": {
+    "sourceHash": "3db2c4e"
+  },
+  "viewer.selection.toEndOfFileNoLine": "Selected to the end of the file",
+  "@viewer.selection.toEndOfFileNoLine": {
+    "sourceHash": "e7e0442"
+  }
+}

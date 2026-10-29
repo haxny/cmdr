@@ -1,0 +1,927 @@
+{
+  "multiRename.title": "Групове перейменування",
+  "@multiRename.title": {
+    "sourceHash": "5ceb1a2"
+  },
+  "multiRename.scope.selection": "{count, plural, one {{countText} вибраний файл} few {{countText} вибрані файли} many {{countText} вибраних файлів} other {{countText} вибраного файлу}}",
+  "@multiRename.scope.selection": {
+    "sourceHash": "30a7b9f"
+  },
+  "multiRename.scope.wholeFolder": "{count, plural, =1 {Єдиний файл у цій папці (нічого не вибрано)} one {Уся папка: {countText} файл (нічого не вибрано)} few {Уся папка: {countText} файли (нічого не вибрано)} many {Уся папка: {countText} файлів (нічого не вибрано)} other {Уся папка: {countText} файлу (нічого не вибрано)}}",
+  "@multiRename.scope.wholeFolder": {
+    "sourceHash": "37dc7a2"
+  },
+  "multiRename.nameMask": "Маска імені",
+  "@multiRename.nameMask": {
+    "sourceHash": "3dcc6e4"
+  },
+  "multiRename.extensionMask": "Розширення",
+  "@multiRename.extensionMask": {
+    "sourceHash": "395aeb9"
+  },
+  "multiRename.insertPlaceholder": "Вставити заповнювач",
+  "@multiRename.insertPlaceholder": {
+    "sourceHash": "f467cda"
+  },
+  "multiRename.mediaButton": "медіа",
+  "@multiRename.mediaButton": {
+    "sourceHash": "721c952"
+  },
+  "multiRename.mediaButtonName": "Поля медіа",
+  "@multiRename.mediaButtonName": {
+    "sourceHash": "7f448e6"
+  },
+  "multiRename.search": "Знайти",
+  "@multiRename.search": {
+    "sourceHash": "6ea8f74"
+  },
+  "multiRename.replace": "Замінити на",
+  "@multiRename.replace": {
+    "sourceHash": "8382d31"
+  },
+  "multiRename.caseSensitive": "Враховувати регістр",
+  "@multiRename.caseSensitive": {
+    "sourceHash": "6198801"
+  },
+  "multiRename.firstOnly": "Лише перший збіг",
+  "@multiRename.firstOnly": {
+    "sourceHash": "1ddb563"
+  },
+  "multiRename.includeExtension": "Включати розширення",
+  "@multiRename.includeExtension": {
+    "sourceHash": "10c3dc5"
+  },
+  "multiRename.regex": "Регулярний вираз",
+  "@multiRename.regex": {
+    "sourceHash": "9f896c3"
+  },
+  "multiRename.substitute": "Замінити всю назву",
+  "@multiRename.substitute": {
+    "sourceHash": "1cee1b2"
+  },
+  "multiRename.searchOptions": "Параметри пошуку",
+  "@multiRename.searchOptions": {
+    "sourceHash": "556a085"
+  },
+  "multiRename.searchOptionHelp.setup": "Заміна <code>{search}</code> на <code>{replace}</code> у назві <code>{name}</code>:",
+  "@multiRename.searchOptionHelp.setup": {
+    "sourceHash": "28e2893"
+  },
+  "multiRename.searchOptionHelp.on": "Увімк.",
+  "@multiRename.searchOptionHelp.on": {
+    "sourceHash": "1300117"
+  },
+  "multiRename.searchOptionHelp.off": "Вимк.",
+  "@multiRename.searchOptionHelp.off": {
+    "sourceHash": "ca7981b"
+  },
+  "multiRename.case": "Регістр літер",
+  "@multiRename.case": {
+    "sourceHash": "9785096"
+  },
+  "multiRename.case.unchanged": "Без змін",
+  "@multiRename.case.unchanged": {
+    "sourceHash": "88b6f74"
+  },
+  "multiRename.case.lower": "нижній регістр",
+  "@multiRename.case.lower": {
+    "sourceHash": "46ede93"
+  },
+  "multiRename.case.upper": "ВЕРХНІЙ РЕГІСТР",
+  "@multiRename.case.upper": {
+    "sourceHash": "9755f22"
+  },
+  "multiRename.case.firstUpper": "Перша літера велика",
+  "@multiRename.case.firstUpper": {
+    "sourceHash": "4da45d5"
+  },
+  "multiRename.case.words": "Кожне Слово З Великої",
+  "@multiRename.case.words": {
+    "sourceHash": "fdeb85e"
+  },
+  "multiRename.removeDiacritics": "Вилучити діакритичні знаки",
+  "@multiRename.removeDiacritics": {
+    "sourceHash": "4103ca1"
+  },
+  "multiRename.greekToLatin": "Грецькі літери латиницею",
+  "@multiRename.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.normalizeUnicode": "Нормалізувати Unicode",
+  "@multiRename.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
+  },
+  "multiRename.presets.title": "Набори параметрів",
+  "@multiRename.presets.title": {
+    "sourceHash": "954f93f"
+  },
+  "multiRename.presets.edited": "{preset} (змінено)",
+  "@multiRename.presets.edited": {
+    "sourceHash": "6247d29"
+  },
+  "multiRename.presets.tooltip": "Завантажувати, зберігати й упорядковувати набори параметрів",
+  "@multiRename.presets.tooltip": {
+    "sourceHash": "e63a28f"
+  },
+  "multiRename.presets.saved": "Ваші набори параметрів",
+  "@multiRename.presets.saved": {
+    "sourceHash": "e83f142"
+  },
+  "multiRename.presets.reset": "Скинути всі поля",
+  "@multiRename.presets.reset": {
+    "sourceHash": "39bf87f"
+  },
+  "multiRename.presets.saveAs": "Зберегти як набір параметрів…",
+  "@multiRename.presets.saveAs": {
+    "sourceHash": "da93e96"
+  },
+  "multiRename.presets.rename": "Перейменувати…",
+  "@multiRename.presets.rename": {
+    "sourceHash": "6fa62b3"
+  },
+  "multiRename.presets.update": "Оновити поточними параметрами",
+  "@multiRename.presets.update": {
+    "sourceHash": "7440a35"
+  },
+  "multiRename.presets.moveUp": "Перемістити вище",
+  "@multiRename.presets.moveUp": {
+    "sourceHash": "c66feb5"
+  },
+  "multiRename.presets.moveDown": "Перемістити нижче",
+  "@multiRename.presets.moveDown": {
+    "sourceHash": "40bb50d"
+  },
+  "multiRename.presets.delete": "Видалити",
+  "@multiRename.presets.delete": {
+    "sourceHash": "e2d0a54"
+  },
+  "multiRename.presets.saveTitle": "Зберегти набір параметрів",
+  "@multiRename.presets.saveTitle": {
+    "sourceHash": "362a137"
+  },
+  "multiRename.presets.renameTitle": "Перейменувати набір параметрів",
+  "@multiRename.presets.renameTitle": {
+    "sourceHash": "0e7392e"
+  },
+  "multiRename.presets.save": "Зберегти",
+  "@multiRename.presets.save": {
+    "sourceHash": "1509f56"
+  },
+  "multiRename.presets.renameConfirm": "Перейменувати",
+  "@multiRename.presets.renameConfirm": {
+    "sourceHash": "3064d79"
+  },
+  "multiRename.presets.clash": "Набір параметрів «{preset}» уже існує. Замінити його?",
+  "@multiRename.presets.clash": {
+    "sourceHash": "7b084a2"
+  },
+  "multiRename.presets.listFull": "У вас уже найбільша кількість наборів параметрів, яку зберігає Cmdr ({max, number}). Видаліть один, щоб зберегти цей.",
+  "@multiRename.presets.listFull": {
+    "sourceHash": "36531ed"
+  },
+  "multiRename.presets.replace": "Замінити",
+  "@multiRename.presets.replace": {
+    "sourceHash": "95e1543"
+  },
+  "multiRename.preset.dateAndTime": "Дата й час",
+  "@multiRename.preset.dateAndTime": {
+    "sourceHash": "a079c3b"
+  },
+  "multiRename.preset.removeDiacritics": "Вилучити діакритичні знаки",
+  "@multiRename.preset.removeDiacritics": {
+    "sourceHash": "4103ca1"
+  },
+  "multiRename.preset.greekToLatin": "Грецькі літери латиницею",
+  "@multiRename.preset.greekToLatin": {
+    "sourceHash": "84f2cdc"
+  },
+  "multiRename.preset.normalizeUnicode": "Нормалізувати Unicode",
+  "@multiRename.preset.normalizeUnicode": {
+    "sourceHash": "6e1c97e"
+  },
+  "multiRename.presetName": "Назва набору параметрів",
+  "@multiRename.presetName": {
+    "sourceHash": "e534a66"
+  },
+  "multiRename.preview": "Попередній перегляд",
+  "@multiRename.preview": {
+    "sourceHash": "324b134"
+  },
+  "multiRename.readingTags": "Читання тегів: {readText} з {totalText}",
+  "@multiRename.readingTags": {
+    "sourceHash": "a15c17f"
+  },
+  "multiRename.oldName": "Стара назва",
+  "@multiRename.oldName": {
+    "sourceHash": "f192b20"
+  },
+  "multiRename.newName": "Нова назва",
+  "@multiRename.newName": {
+    "sourceHash": "04eea2a"
+  },
+  "multiRename.statusColumn": "Стан",
+  "@multiRename.statusColumn": {
+    "sourceHash": "920e413"
+  },
+  "multiRename.status.unchanged": "Без змін",
+  "@multiRename.status.unchanged": {
+    "sourceHash": "41f9d57"
+  },
+  "multiRename.status.duplicate": "Така сама назва, як в іншого файлу",
+  "@multiRename.status.duplicate": {
+    "sourceHash": "ff0347b"
+  },
+  "multiRename.status.targetExists": "Назву вже зайнято",
+  "@multiRename.status.targetExists": {
+    "sourceHash": "629f53b"
+  },
+  "multiRename.status.invalidName": "Неприпустима назва",
+  "@multiRename.status.invalidName": {
+    "sourceHash": "f1e6391"
+  },
+  "multiRename.status.disallowedCharacter": "Не може містити {character}",
+  "@multiRename.status.disallowedCharacter": {
+    "sourceHash": "2f21c26"
+  },
+  "multiRename.error.unclosed": "У заповнювачі бракує закривної «]»",
+  "@multiRename.error.unclosed": {
+    "sourceHash": "aa4efba"
+  },
+  "multiRename.error.unknown": "Cmdr не знає заповнювача [{placeholder}]",
+  "@multiRename.error.unknown": {
+    "sourceHash": "7845fb5"
+  },
+  "multiRename.error.badRegex": "Неприпустимий регулярний вираз",
+  "@multiRename.error.badRegex": {
+    "sourceHash": "176cb2f"
+  },
+  "multiRename.error.gone": "Ця папка вже не відкрита. Закрийте вікно «Групове перейменування» й відкрийте його знову.",
+  "@multiRename.error.gone": {
+    "sourceHash": "8420f29"
+  },
+  "multiRename.error.nothingToRename": "Нема чого перейменовувати: кожна нова назва збігається зі старою або має проблему",
+  "@multiRename.error.nothingToRename": {
+    "sourceHash": "cf68ee2"
+  },
+  "multiRename.error.notConnected": "Це розташування зараз не підʼєднано",
+  "@multiRename.error.notConnected": {
+    "sourceHash": "21b3bd0"
+  },
+  "multiRename.error.couldntStart": "Не вдалося почати перейменування. Спробуйте ще раз за мить.",
+  "@multiRename.error.couldntStart": {
+    "sourceHash": "4b123be"
+  },
+  "multiRename.error.timedOut": "Це тривало надто довго, тож Cmdr перестав чекати. Спробуйте ще раз або виберіть менше файлів.",
+  "@multiRename.error.timedOut": {
+    "sourceHash": "a336ee5"
+  },
+  "multiRename.summary": "{ready, plural, one {# до перейменування} few {# до перейменування} many {# до перейменування} other {# до перейменування}} · {unchanged, plural, one {# без змін} few {# без змін} many {# без змін} other {# без змін}} · <problemsToggle>{problems, plural, one {# проблема} few {# проблеми} many {# проблем} other {# проблеми}}</problemsToggle>",
+  "@multiRename.summary": {
+    "sourceHash": "ca7be9b"
+  },
+  "multiRename.summaryReading": "{ready, plural, one {# до перейменування} few {# до перейменування} many {# до перейменування} other {# до перейменування}} · {unchanged, plural, one {# без змін} few {# без змін} many {# без змін} other {# без змін}} · <problemsToggle>{problems, plural, one {# проблема} few {# проблеми} many {# проблем} other {# проблеми}}</problemsToggle> · {reading, plural, one {# ще читається} few {# ще читаються} many {# ще читаються} other {# ще читається}}",
+  "@multiRename.summaryReading": {
+    "sourceHash": "4c73b60"
+  },
+  "multiRename.cancel": "Скасувати",
+  "@multiRename.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "multiRename.undo": "Відмінити перейменування",
+  "@multiRename.undo": {
+    "sourceHash": "4e0f79b"
+  },
+  "multiRename.undoTooltip": "{count, plural, one {Повертає # файлу стару назву} few {Повертає # файлам старі назви} many {Повертає # файлам старі назви} other {Повертає # файлу старі назви}}",
+  "@multiRename.undoTooltip": {
+    "sourceHash": "522ad32"
+  },
+  "multiRename.undoStarted": "{count, plural, one {Повернення старої назви # файлу} few {Повернення старих назв # файлів} many {Повернення старих назв # файлів} other {Повернення старих назв # файлу}}.",
+  "@multiRename.undoStarted": {
+    "sourceHash": "b6bd565"
+  },
+  "multiRename.results": "Результати…",
+  "@multiRename.results": {
+    "sourceHash": "0140aa5"
+  },
+  "multiRename.results.editing": "Змініть нові назви в текстовому редакторі й збережіть файл. Їх буде показано тут, коли ви повернетеся до цього вікна.",
+  "@multiRename.results.editing": {
+    "sourceHash": "0a54cdc"
+  },
+  "multiRename.movedRow": "Переміщено на позицію {positionText} з {totalText}",
+  "@multiRename.movedRow": {
+    "sourceHash": "cc7f474"
+  },
+  "multiRename.results.edited": "{count, plural, one {# назву взято з вашого зміненого списку} few {# назви взято з вашого зміненого списку} many {# назв взято з вашого зміненого списку} other {# назви взято з вашого зміненого списку}}.",
+  "@multiRename.results.edited": {
+    "sourceHash": "9899216"
+  },
+  "multiRename.results.readNow": "Прочитати назви зараз",
+  "@multiRename.results.readNow": {
+    "sourceHash": "aaa6bd2"
+  },
+  "multiRename.results.discard": "Знову використати параметри",
+  "@multiRename.results.discard": {
+    "sourceHash": "dc20f4f"
+  },
+  "multiRename.results.gone": "Списку назв більше немає. Відкрийте «Результати» знову, щоб записати новий.",
+  "@multiRename.results.gone": {
+    "sourceHash": "8aa255a"
+  },
+  "multiRename.error.couldntWriteNames": "Не вдалося записати список назв. Перевірте, чи є вільне місце на стартовому диску.",
+  "@multiRename.error.couldntWriteNames": {
+    "sourceHash": "bb5e415"
+  },
+  "multiRename.resultsTooltip": "Змініть нові назви в текстовому редакторі, а тоді поверніться сюди, щоб використати їх.",
+  "@multiRename.resultsTooltip": {
+    "sourceHash": "cc9b9ff"
+  },
+  "multiRename.editedName": "Цю назву ви ввели у списку «Результати»",
+  "@multiRename.editedName": {
+    "sourceHash": "346c8d8"
+  },
+  "multiRename.history": "Історія",
+  "@multiRename.history": {
+    "sourceHash": "0e76960"
+  },
+  "multiRename.rename": "{count, plural, =0 {Перейменувати} one {Перейменувати # файл} few {Перейменувати # файли} many {Перейменувати # файлів} other {Перейменувати # файлу}}",
+  "@multiRename.rename": {
+    "sourceHash": "9789ca5"
+  },
+  "multiRename.starting": "Запуск…",
+  "@multiRename.starting": {
+    "sourceHash": "bbe5fc3"
+  },
+  "multiRename.renameWaitsTooltip": "Теги деяких файлів ще читаються. Перейменування очікує на них, а тоді почнеться.",
+  "@multiRename.renameWaitsTooltip": {
+    "sourceHash": "208afe0"
+  },
+  "multiRename.startingTooltip": "Перейменування почнеться, щойно буде прочитано теги всіх файлів. Клацніть ще раз, щоб скасувати.",
+  "@multiRename.startingTooltip": {
+    "sourceHash": "bbeb76e"
+  },
+  "multiRename.queuedAnnounce": "Перейменування почнеться, щойно буде прочитано теги",
+  "@multiRename.queuedAnnounce": {
+    "sourceHash": "7c11af5"
+  },
+  "multiRename.queueCanceled": "Перейменування скасовано",
+  "@multiRename.queueCanceled": {
+    "sourceHash": "cdd1d0e"
+  },
+  "multiRename.started": "{count, plural, one {Перейменування # файлу} few {Перейменування # файлів} many {Перейменування # файлів} other {Перейменування # файлу}}. Його можна відкотити в журналі операцій.",
+  "@multiRename.started": {
+    "sourceHash": "55b4878"
+  },
+  "multiRename.error.previewOutOfDate": "Папка змінилася після попереднього перегляду. Перевірте новий попередній перегляд і перейменуйте ще раз.",
+  "@multiRename.error.previewOutOfDate": {
+    "sourceHash": "46432fe"
+  },
+  "multiRename.error.readOnly": "У цій папці не можна перейменовувати: вона в архіві чи іншому місці, доступному лише для читання",
+  "@multiRename.error.readOnly": {
+    "sourceHash": "f576c74"
+  },
+  "multiRename.status.missing": "Більше немає в цій папці",
+  "@multiRename.status.missing": {
+    "sourceHash": "80d16af"
+  },
+  "multiRename.status.ready": "Буде перейменовано",
+  "@multiRename.status.ready": {
+    "sourceHash": "f032574"
+  },
+  "multiRename.reason.duplicate": "Інший елемент у цьому пакеті перейменувань отримає таку саму нову назву, тож жоден із них не буде перейменовано.",
+  "@multiRename.reason.duplicate": {
+    "sourceHash": "de3e331"
+  },
+  "multiRename.reason.targetExists": "Елемент, який лишається в цій папці, уже має таку назву, тож цей зберігає свою назву.",
+  "@multiRename.reason.targetExists": {
+    "sourceHash": "2356c66"
+  },
+  "multiRename.reason.missing": "Цей елемент перемістили або видалили після відкриття групового перейменування, тож його пропущено.",
+  "@multiRename.reason.missing": {
+    "sourceHash": "8697aa3"
+  },
+  "multiRename.status.reading": "Читання…",
+  "@multiRename.status.reading": {
+    "sourceHash": "874bfa5"
+  },
+  "multiRename.status.noValue": "{field}: немає значення",
+  "@multiRename.status.noValue": {
+    "sourceHash": "619464f"
+  },
+  "multiRename.reason.noValue": "У цього елемента немає значення «{field}», тож він зберігає свою назву.",
+  "@multiRename.reason.noValue": {
+    "sourceHash": "25d9a0f"
+  },
+  "multiRename.reason.noDate": "У цього елемента немає значення «{field}», тож він зберігає свою назву. Редактор заповнювача може натомість використати дату останньої зміни файлу.",
+  "@multiRename.reason.noDate": {
+    "sourceHash": "239bc84"
+  },
+  "multiRename.status.unreadable": "Не вдається прочитати теги",
+  "@multiRename.status.unreadable": {
+    "sourceHash": "fe6ad18"
+  },
+  "multiRename.reason.unreadable": "Під час групового перейменування не вдалося прочитати теги чи інформацію про фото цього елемента, тож у нього немає значення «{field}», і він зберігає свою назву.",
+  "@multiRename.reason.unreadable": {
+    "sourceHash": "099ce1f"
+  },
+  "multiRename.mediaField.exifTaken": "Дата знімання",
+  "@multiRename.mediaField.exifTaken": {
+    "sourceHash": "a2f4fe8"
+  },
+  "multiRename.mediaField.exifCamera": "Камера",
+  "@multiRename.mediaField.exifCamera": {
+    "sourceHash": "03494b0"
+  },
+  "multiRename.mediaField.exifMake": "Виробник камери",
+  "@multiRename.mediaField.exifMake": {
+    "sourceHash": "78929e9"
+  },
+  "multiRename.mediaField.exifModel": "Модель камери",
+  "@multiRename.mediaField.exifModel": {
+    "sourceHash": "ddbfabf"
+  },
+  "multiRename.mediaField.exifLens": "Обʼєктив",
+  "@multiRename.mediaField.exifLens": {
+    "sourceHash": "4317a99"
+  },
+  "multiRename.mediaField.exifIso": "ISO",
+  "@multiRename.mediaField.exifIso": {
+    "sourceHash": "6dc87bf",
+    "sameAsSourceJustification": "ISO is the international photo-sensitivity unit; Ukrainian Photos and camera UIs keep the Latin ISO."
+  },
+  "multiRename.mediaField.exifFocal": "Фокусна відстань (мм)",
+  "@multiRename.mediaField.exifFocal": {
+    "sourceHash": "6a87ca3"
+  },
+  "multiRename.mediaField.exifWidth": "Ширина (пікселі)",
+  "@multiRename.mediaField.exifWidth": {
+    "sourceHash": "7929f0d"
+  },
+  "multiRename.mediaField.exifHeight": "Висота (пікселі)",
+  "@multiRename.mediaField.exifHeight": {
+    "sourceHash": "37d0cb6"
+  },
+  "multiRename.mediaField.exifOrientation": "Орієнтація",
+  "@multiRename.mediaField.exifOrientation": {
+    "sourceHash": "e3d1124"
+  },
+  "multiRename.mediaField.tagTitle": "Назва",
+  "@multiRename.mediaField.tagTitle": {
+    "sourceHash": "7e8cd20"
+  },
+  "multiRename.mediaField.tagArtist": "Виконавець",
+  "@multiRename.mediaField.tagArtist": {
+    "sourceHash": "1d3981b"
+  },
+  "multiRename.mediaField.tagAlbumArtist": "Виконавець альбому",
+  "@multiRename.mediaField.tagAlbumArtist": {
+    "sourceHash": "334ae82"
+  },
+  "multiRename.mediaField.tagAlbum": "Альбом",
+  "@multiRename.mediaField.tagAlbum": {
+    "sourceHash": "f05e840"
+  },
+  "multiRename.mediaField.tagTrack": "Номер доріжки",
+  "@multiRename.mediaField.tagTrack": {
+    "sourceHash": "de8de0b"
+  },
+  "multiRename.mediaField.tagDisc": "Номер диска",
+  "@multiRename.mediaField.tagDisc": {
+    "sourceHash": "0fd0aef"
+  },
+  "multiRename.mediaField.tagYear": "Рік",
+  "@multiRename.mediaField.tagYear": {
+    "sourceHash": "89f6832"
+  },
+  "multiRename.mediaField.tagGenre": "Жанр",
+  "@multiRename.mediaField.tagGenre": {
+    "sourceHash": "6da795a"
+  },
+  "multiRename.mediaField.tagComment": "Коментар",
+  "@multiRename.mediaField.tagComment": {
+    "sourceHash": "44f5e3f"
+  },
+  "multiRename.mediaPicker.title": "Insert a field",
+  "@multiRename.mediaPicker.title": {
+    "sourceHash": "b722b94"
+  },
+  "multiRename.mediaPicker.filter": "Filter fields",
+  "@multiRename.mediaPicker.filter": {
+    "sourceHash": "184a51b"
+  },
+  "multiRename.mediaPicker.photos": "Photos and videos (EXIF)",
+  "@multiRename.mediaPicker.photos": {
+    "sourceHash": "b41c23d"
+  },
+  "multiRename.mediaPicker.music": "Music (ID3, MP4, FLAC…)",
+  "@multiRename.mediaPicker.music": {
+    "sourceHash": "357e580"
+  },
+  "multiRename.mediaPicker.none": "none in these files",
+  "@multiRename.mediaPicker.none": {
+    "sourceHash": "9d56c00"
+  },
+  "multiRename.mediaPicker.noneYet": "none so far",
+  "@multiRename.mediaPicker.noneYet": {
+    "sourceHash": "35c2dfa"
+  },
+  "multiRename.mediaPicker.noMatch": "No field matches “{filter}”",
+  "@multiRename.mediaPicker.noMatch": {
+    "sourceHash": "2003efb"
+  },
+  "multiRename.mediaPicker.inserted": "Inserted {field}",
+  "@multiRename.mediaPicker.inserted": {
+    "sourceHash": "d5f2afb"
+  },
+  "multiRename.mediaPicker.insertedMark": "inserted",
+  "@multiRename.mediaPicker.insertedMark": {
+    "sourceHash": "e8dd664"
+  },
+  "multiRename.mediaEditor.marker": "Edit field",
+  "@multiRename.mediaEditor.marker": {
+    "sourceHash": "652e08e"
+  },
+  "multiRename.mediaEditor.title": "Field",
+  "@multiRename.mediaEditor.title": {
+    "sourceHash": "f45fc1d"
+  },
+  "multiRename.mediaEditor.format": "Format",
+  "@multiRename.mediaEditor.format": {
+    "sourceHash": "2f34366"
+  },
+  "multiRename.mediaEditor.dateHint": "Y, M, and D for the date, h, m, and s for the time, with - . _ or spaces between. Leave empty for the date and time.",
+  "@multiRename.mediaEditor.dateHint": {
+    "sourceHash": "11b97ec"
+  },
+  "multiRename.mediaEditor.presets": "Common formats",
+  "@multiRename.mediaEditor.presets": {
+    "sourceHash": "0998319"
+  },
+  "multiRename.mediaEditor.preset.dateTime": "Date and time",
+  "@multiRename.mediaEditor.preset.dateTime": {
+    "sourceHash": "a079c3b"
+  },
+  "multiRename.mediaEditor.preset.date": "Date",
+  "@multiRename.mediaEditor.preset.date": {
+    "sourceHash": "99c40ab"
+  },
+  "multiRename.mediaEditor.preset.time": "Time",
+  "@multiRename.mediaEditor.preset.time": {
+    "sourceHash": "33b9347"
+  },
+  "multiRename.mediaEditor.preset.compact": "Compact",
+  "@multiRename.mediaEditor.preset.compact": {
+    "sourceHash": "9945264"
+  },
+  "multiRename.mediaEditor.digits": "Digits",
+  "@multiRename.mediaEditor.digits": {
+    "sourceHash": "9cd500d"
+  },
+  "multiRename.mediaEditor.digitsHint": "Pads with leading zeros, so 2 turns 3 into 03. Leave empty for the number as it is.",
+  "@multiRename.mediaEditor.digitsHint": {
+    "sourceHash": "d71b7d7"
+  },
+  "multiRename.mediaEditor.characters": "Characters",
+  "@multiRename.mediaEditor.characters": {
+    "sourceHash": "6fac39e"
+  },
+  "multiRename.mediaEditor.charactersHint": "Like 1-10 for the first ten, or -3- for the last three. Leave empty for all of it.",
+  "@multiRename.mediaEditor.charactersHint": {
+    "sourceHash": "ed8b2a6"
+  },
+  "multiRename.mediaEditor.fallback": "When a file has none: use the date it was last changed",
+  "@multiRename.mediaEditor.fallback": {
+    "sourceHash": "8978898"
+  },
+  "multiRename.mediaEditor.usesModified": "{count, plural, one {{countText} file uses the date it was last changed} other {{countText} files use the date they were last changed}}",
+  "@multiRename.mediaEditor.usesModified": {
+    "sourceHash": "588993a"
+  },
+  "multiRename.mediaEditor.missing": "{count, plural, one {{countText} file has none and keeps its name} other {{countText} files have none and keep their names}}",
+  "@multiRename.mediaEditor.missing": {
+    "sourceHash": "6356576"
+  },
+  "multiRename.mediaEditor.stillReading": "{count, plural, one {{countText} file is still being read} other {{countText} files are still being read}}",
+  "@multiRename.mediaEditor.stillReading": {
+    "sourceHash": "44bea1c"
+  },
+  "multiRename.mediaEditor.gap.reading": "reading…",
+  "@multiRename.mediaEditor.gap.reading": {
+    "sourceHash": "6ab8da1"
+  },
+  "multiRename.mediaEditor.gap.noValue": "none",
+  "@multiRename.mediaEditor.gap.noValue": {
+    "sourceHash": "140bedb"
+  },
+  "multiRename.mediaEditor.gap.unreadable": "can’t read",
+  "@multiRename.mediaEditor.gap.unreadable": {
+    "sourceHash": "f6daf78"
+  },
+  "multiRename.reason.empty": "Нова назва порожня.",
+  "@multiRename.reason.empty": {
+    "sourceHash": "1ba05d4"
+  },
+  "multiRename.reason.tooLong": "Нова назва задовга для назви файлу.",
+  "@multiRename.reason.tooLong": {
+    "sourceHash": "b709218"
+  },
+  "multiRename.reason.reserved": "«.» і «..» не можуть бути назвами файлів.",
+  "@multiRename.reason.reserved": {
+    "sourceHash": "dcca507"
+  },
+  "multiRename.reason.disallowedCharacter": "Назви файлів не можуть містити {character}.",
+  "@multiRename.reason.disallowedCharacter": {
+    "sourceHash": "66a09f6"
+  },
+  "multiRename.selectionChanged": "The folder changed while Multi-rename was opening. Check your selection, then try again.",
+  "@multiRename.selectionChanged": {
+    "sourceHash": "357470f"
+  },
+  "multiRename.swapsSkipped": "{count, plural, one {Skipped # rename that swaps names} other {Skipped # renames that swap names}}. Rename them one at a time.",
+  "@multiRename.swapsSkipped": {
+    "sourceHash": "49fb1cc"
+  },
+  "multiRename.archiveTitle": "Multi-rename doesn’t work inside archives",
+  "@multiRename.archiveTitle": {
+    "sourceHash": "709e0ec"
+  },
+  "multiRename.archiveMessage": "To rename files in this zip, rename them one at a time.",
+  "@multiRename.archiveMessage": {
+    "sourceHash": "2486bf3"
+  },
+  "multiRename.counterEditor.marker": "Edit counter",
+  "@multiRename.counterEditor.marker": {
+    "sourceHash": "8c3998f"
+  },
+  "multiRename.counterEditor.title": "Counter",
+  "@multiRename.counterEditor.title": {
+    "sourceHash": "a78cfdf"
+  },
+  "multiRename.counterEditor.start": "Start",
+  "@multiRename.counterEditor.start": {
+    "sourceHash": "e4bb9f1"
+  },
+  "multiRename.counterEditor.step": "Step",
+  "@multiRename.counterEditor.step": {
+    "sourceHash": "8e6a6cc"
+  },
+  "multiRename.counterEditor.digits": "Digits",
+  "@multiRename.counterEditor.digits": {
+    "sourceHash": "9cd500d"
+  },
+  "multiRename.counterEditor.counts": "Counts {first}, {second}, {third}…",
+  "@multiRename.counterEditor.counts": {
+    "sourceHash": "1e814e0"
+  },
+  "multiRename.placeholderHelp.name": "The file’s name, without its extension",
+  "@multiRename.placeholderHelp.name": {
+    "sourceHash": "64ccdbf"
+  },
+  "multiRename.placeholderHelp.extension": "The file’s current extension",
+  "@multiRename.placeholderHelp.extension": {
+    "sourceHash": "47411f5"
+  },
+  "multiRename.placeholderHelp.parent": "The name of the folder the file is in",
+  "@multiRename.placeholderHelp.parent": {
+    "sourceHash": "cd08701"
+  },
+  "multiRename.placeholderHelp.counter": "A number that goes up by one step per file, in the list’s order",
+  "@multiRename.placeholderHelp.counter": {
+    "sourceHash": "2d7fbf4"
+  },
+  "multiRename.placeholderHelp.date": "The date the file was last changed: year, month, and day",
+  "@multiRename.placeholderHelp.date": {
+    "sourceHash": "d4f6468"
+  },
+  "multiRename.placeholderHelp.time": "The time the file was last changed: hours, minutes, and seconds",
+  "@multiRename.placeholderHelp.time": {
+    "sourceHash": "69c80a0"
+  },
+  "multiRename.placeholderHelp.media": "A photo’s, video’s, or song’s own information: EXIF, ID3, MP4, FLAC, Ogg, and more",
+  "@multiRename.placeholderHelp.media": {
+    "sourceHash": "b7ba607"
+  },
+  "multiRename.placeholderHelp.mediaTaken": "The date a photo or video was taken",
+  "@multiRename.placeholderHelp.mediaTaken": {
+    "sourceHash": "b0eea95"
+  },
+  "multiRename.placeholderHelp.mediaFallback": "With the date the file was last changed for one without it",
+  "@multiRename.placeholderHelp.mediaFallback": {
+    "sourceHash": "292616f"
+  },
+  "multiRename.placeholderHelp.mediaCamera": "The camera’s maker and model",
+  "@multiRename.placeholderHelp.mediaCamera": {
+    "sourceHash": "9da2073"
+  },
+  "multiRename.placeholderHelp.mediaSong": "A song’s track number, artist, and title",
+  "@multiRename.placeholderHelp.mediaSong": {
+    "sourceHash": "f1a8bf1"
+  },
+  "multiRename.placeholderHelp.mediaHint": "Click to pick from every field, each with its value on your files.",
+  "@multiRename.placeholderHelp.mediaHint": {
+    "sourceHash": "8f7db2f"
+  },
+  "multiRename.placeholderHelp.oneChar": "Character {at} alone",
+  "@multiRename.placeholderHelp.oneChar": {
+    "sourceHash": "79e798e"
+  },
+  "multiRename.placeholderHelp.charRange": "Characters {from} to {to}",
+  "@multiRename.placeholderHelp.charRange": {
+    "sourceHash": "60bd1e5"
+  },
+  "multiRename.placeholderHelp.allButLast": "{count, plural, one {All but the last character} other {All but the last # characters}}",
+  "@multiRename.placeholderHelp.allButLast": {
+    "sourceHash": "1452dc2"
+  },
+  "multiRename.placeholderHelp.charsFrom": "{count, plural, one {# character} other {# characters}}, starting at character {from}",
+  "@multiRename.placeholderHelp.charsFrom": {
+    "sourceHash": "2308c77"
+  },
+  "multiRename.placeholderHelp.lastChars": "{count, plural, one {The last character} other {The last # characters}}",
+  "@multiRename.placeholderHelp.lastChars": {
+    "sourceHash": "9f073f8"
+  },
+  "multiRename.placeholderHelp.firstChar": "The first character alone",
+  "@multiRename.placeholderHelp.firstChar": {
+    "sourceHash": "99755d8"
+  },
+  "multiRename.placeholderHelp.firstChars": "{count, plural, one {The first character} other {The first # characters}}",
+  "@multiRename.placeholderHelp.firstChars": {
+    "sourceHash": "340917c"
+  },
+  "multiRename.placeholderHelp.grandparent": "The name of the folder above the file’s folder",
+  "@multiRename.placeholderHelp.grandparent": {
+    "sourceHash": "450e079"
+  },
+  "multiRename.placeholderHelp.counterStart": "Starts at {start}",
+  "@multiRename.placeholderHelp.counterStart": {
+    "sourceHash": "f581c27"
+  },
+  "multiRename.placeholderHelp.counterStep": "Goes up by {step} each time",
+  "@multiRename.placeholderHelp.counterStep": {
+    "sourceHash": "435eafd"
+  },
+  "multiRename.placeholderHelp.counterDigits": "{digits, plural, one {At least # digit} other {At least # digits}}, with leading zeros",
+  "@multiRename.placeholderHelp.counterDigits": {
+    "sourceHash": "cb37674"
+  },
+  "multiRename.placeholderHelp.counterAll": "All three at once; a minus step counts down",
+  "@multiRename.placeholderHelp.counterAll": {
+    "sourceHash": "60be18c"
+  },
+  "multiRename.placeholderHelp.isoDate": "The whole date, with dashes",
+  "@multiRename.placeholderHelp.isoDate": {
+    "sourceHash": "d5d3357"
+  },
+  "multiRename.placeholderHelp.dateSeparators": "Any parts, with dashes, dots, underscores, or spaces between them",
+  "@multiRename.placeholderHelp.dateSeparators": {
+    "sourceHash": "a8192a0"
+  },
+  "multiRename.placeholderHelp.shortYear": "With a two-digit year",
+  "@multiRename.placeholderHelp.shortYear": {
+    "sourceHash": "c042ccb"
+  },
+  "multiRename.placeholderHelp.datePart": "The day alone; [Y] and [M] work the same way",
+  "@multiRename.placeholderHelp.datePart": {
+    "sourceHash": "ce0ba83"
+  },
+  "multiRename.placeholderHelp.dottedTime": "The whole time, with dots",
+  "@multiRename.placeholderHelp.dottedTime": {
+    "sourceHash": "0edc240"
+  },
+  "multiRename.placeholderHelp.hoursMinutes": "Hours and minutes only",
+  "@multiRename.placeholderHelp.hoursMinutes": {
+    "sourceHash": "55998f6"
+  },
+  "multiRename.placeholderHelp.forFile": "For “{file}”:",
+  "@multiRename.placeholderHelp.forFile": {
+    "sourceHash": "44f23bc"
+  },
+  "multiRename.placeholderHelp.forSampleDate": "For a file last changed {date}:",
+  "@multiRename.placeholderHelp.forSampleDate": {
+    "sourceHash": "f2032cc"
+  },
+  "multiRename.placeholderHelp.forFirstFiles": "For the first three files:",
+  "@multiRename.placeholderHelp.forFirstFiles": {
+    "sourceHash": "012bd5a"
+  },
+  "multiRename.placeholderHelp.counterEditHint": "Put the caret in a counter or point at it to change its numbers.",
+  "@multiRename.placeholderHelp.counterEditHint": {
+    "sourceHash": "6ba268e"
+  },
+  "multiRename.rangeEditor.marker": "Choose characters",
+  "@multiRename.rangeEditor.marker": {
+    "sourceHash": "fdfe315"
+  },
+  "multiRename.rangeEditor.title": "Characters to take",
+  "@multiRename.rangeEditor.title": {
+    "sourceHash": "e1e72f0"
+  },
+  "multiRename.rangeEditor.selectCharacters": "Select the characters to take",
+  "@multiRename.rangeEditor.selectCharacters": {
+    "sourceHash": "8b07e2a"
+  },
+  "multiRename.rangeEditor.start": "Start",
+  "@multiRename.rangeEditor.start": {
+    "sourceHash": "e4bb9f1"
+  },
+  "multiRename.rangeEditor.end": "End",
+  "@multiRename.rangeEditor.end": {
+    "sourceHash": "f4db1e4"
+  },
+  "multiRename.rangeEditor.writeAs": "Write as",
+  "@multiRename.rangeEditor.writeAs": {
+    "sourceHash": "39dfb5b"
+  },
+  "multiRename.rangeEditor.form.span": "Start to end",
+  "@multiRename.rangeEditor.form.span": {
+    "sourceHash": "bb96ea7"
+  },
+  "multiRename.rangeEditor.form.length": "Start and length",
+  "@multiRename.rangeEditor.form.length": {
+    "sourceHash": "2830961"
+  },
+  "multiRename.rangeEditor.fromStart": "From the start",
+  "@multiRename.rangeEditor.fromStart": {
+    "sourceHash": "109d4ab"
+  },
+  "multiRename.rangeEditor.fromEnd": "From the end",
+  "@multiRename.rangeEditor.fromEnd": {
+    "sourceHash": "577185f"
+  },
+  "multiRename.rangeEditor.positionFromStart": "{at, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+  "@multiRename.rangeEditor.positionFromStart": {
+    "sourceHash": "a20af9d"
+  },
+  "multiRename.rangeEditor.positionFromEnd": "{at, selectordinal, =1 {Last} one {#st from the end} two {#nd from the end} few {#rd from the end} other {#th from the end}}",
+  "@multiRename.rangeEditor.positionFromEnd": {
+    "sourceHash": "4c9ee08"
+  },
+  "multiRename.rangeEditor.endFollowsStart": "With the start counted from the end, the end counts from the end too.",
+  "@multiRename.rangeEditor.endFollowsStart": {
+    "sourceHash": "379bd45"
+  },
+  "multiRename.rangeEditor.reading.whole": "All of it",
+  "@multiRename.rangeEditor.reading.whole": {
+    "sourceHash": "f5062de"
+  },
+  "multiRename.rangeEditor.reading.one": "Only the {at, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} character",
+  "@multiRename.rangeEditor.reading.one": {
+    "sourceHash": "815c40c"
+  },
+  "multiRename.rangeEditor.reading.oneFromEnd": "Only the {at, selectordinal, =1 {last} one {#st-to-last} two {#nd-to-last} few {#rd-to-last} other {#th-to-last}} character",
+  "@multiRename.rangeEditor.reading.oneFromEnd": {
+    "sourceHash": "e0b450d"
+  },
+  "multiRename.rangeEditor.reading.toEnd": "From the {at, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} character to the end",
+  "@multiRename.rangeEditor.reading.toEnd": {
+    "sourceHash": "f28d18b"
+  },
+  "multiRename.rangeEditor.reading.lastChars": "{count, plural, one {The last character} other {The last # characters}}",
+  "@multiRename.rangeEditor.reading.lastChars": {
+    "sourceHash": "9f073f8"
+  },
+  "multiRename.rangeEditor.reading.span": "From the {from, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} to the {to, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} character",
+  "@multiRename.rangeEditor.reading.span": {
+    "sourceHash": "d68204f"
+  },
+  "multiRename.rangeEditor.reading.spanToFromEnd": "From the {from, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} to the {to, selectordinal, =1 {last} one {#st-to-last} two {#nd-to-last} few {#rd-to-last} other {#th-to-last}} character",
+  "@multiRename.rangeEditor.reading.spanToFromEnd": {
+    "sourceHash": "b7714db"
+  },
+  "multiRename.rangeEditor.reading.spanFromEnd": "From the {from, selectordinal, =1 {last} one {#st-to-last} two {#nd-to-last} few {#rd-to-last} other {#th-to-last}} to the {to, selectordinal, =1 {last} one {#st-to-last} two {#nd-to-last} few {#rd-to-last} other {#th-to-last}} character",
+  "@multiRename.rangeEditor.reading.spanFromEnd": {
+    "sourceHash": "20f1163"
+  },
+  "multiRename.rangeEditor.reading.length": "{count, plural, one {# character} other {# characters}}, starting at the {at, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+  "@multiRename.rangeEditor.reading.length": {
+    "sourceHash": "9bb683a"
+  },
+  "multiRename.rangeEditor.reading.lengthFromEnd": "{count, plural, one {# character} other {# characters}}, starting at the {at, selectordinal, =1 {last} one {#st-to-last} two {#nd-to-last} few {#rd-to-last} other {#th-to-last}}",
+  "@multiRename.rangeEditor.reading.lengthFromEnd": {
+    "sourceHash": "8c3c882"
+  },
+  "multiRename.rangeEditor.takesNothing": "Takes nothing from this file",
+  "@multiRename.rangeEditor.takesNothing": {
+    "sourceHash": "be62d05"
+  },
+  "multiRename.rangeEditor.emptyField": "Empty for this file",
+  "@multiRename.rangeEditor.emptyField": {
+    "sourceHash": "ccb5be2"
+  },
+  "multiRename.rangeEditor.onYourFiles": "On your files",
+  "@multiRename.rangeEditor.onYourFiles": {
+    "sourceHash": "e8c0d5e"
+  },
+  "multiRename.rangeEditor.nothing": "nothing",
+  "@multiRename.rangeEditor.nothing": {
+    "sourceHash": "1785cfc"
+  },
+  "multiRename.rangeEditor.gives": "gives",
+  "@multiRename.rangeEditor.gives": {
+    "sourceHash": "64ea62d"
+  },
+  "multiRename.placeholderHelp.rangeEditHint": "Put the caret in a placeholder like [N] and press ↓ to choose its characters.",
+  "@multiRename.placeholderHelp.rangeEditHint": {
+    "sourceHash": "f1ef6fc"
+  }
+}

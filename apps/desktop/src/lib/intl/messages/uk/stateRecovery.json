@@ -1,0 +1,130 @@
+{
+  "stateRecovery.settings.title": "Cmdr couldn’t read your settings, so it started with the defaults",
+  "@stateRecovery.settings.title": {
+    "sourceHash": "b5b4b8e"
+  },
+  "stateRecovery.settings.body": "Usage stats and crash reports stay off until you turn them back on in Settings › Updates & privacy.",
+  "@stateRecovery.settings.body": {
+    "sourceHash": "20439e1"
+  },
+  "stateRecovery.settings.openSettings": "Open Settings",
+  "@stateRecovery.settings.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.shortcuts.title": "Cmdr couldn’t read your keyboard shortcuts, so they’re back to the defaults",
+  "@stateRecovery.shortcuts.title": {
+    "sourceHash": "35093bd"
+  },
+  "stateRecovery.license.title": "Cmdr couldn’t read its license file",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "If Cmdr shows as unlicensed now, enter your license key again in Settings › License.",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.license.openSettings": "Open Settings",
+  "@stateRecovery.license.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.appStatus.title": "Cmdr couldn’t read which folders your panes had open, so they start at your home folder",
+  "@stateRecovery.appStatus.title": {
+    "sourceHash": "521f5eb"
+  },
+  "stateRecovery.operationLog.title": "Cmdr couldn’t read your operation log, so it starts fresh",
+  "@stateRecovery.operationLog.title": {
+    "sourceHash": "0bfa904"
+  },
+  "stateRecovery.chatHistory.title": "Cmdr couldn’t read your Ask Cmdr chats, so the chat list starts empty",
+  "@stateRecovery.chatHistory.title": {
+    "sourceHash": "14d6612"
+  },
+  "stateRecovery.favorites.title": "Cmdr couldn’t read your favorites, so the list starts empty",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  },
+  "stateRecovery.goToPathHistory.title": "Cmdr couldn’t read your recent Go to folder entries, so the list starts fresh",
+  "@stateRecovery.goToPathHistory.title": {
+    "sourceHash": "c1c95a1"
+  },
+  "stateRecovery.searchHistory.title": "Cmdr couldn’t read your recent searches, so the list starts fresh",
+  "@stateRecovery.searchHistory.title": {
+    "sourceHash": "75fe9db"
+  },
+  "stateRecovery.selectionHistory.title": "Cmdr couldn’t read your recent selections, so the list starts fresh",
+  "@stateRecovery.selectionHistory.title": {
+    "sourceHash": "a93f574"
+  },
+  "stateRecovery.multiRenamePresets.title": "Cmdr couldn’t read your saved multi-rename presets, so the list starts empty",
+  "@stateRecovery.multiRenamePresets.title": {
+    "sourceHash": "b6f2a3b"
+  },
+  "stateRecovery.multiRenameLastSettings.title": "Cmdr couldn’t read your last multi-rename settings, so the tool opens with the defaults",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "sourceHash": "b830e12"
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "Cmdr couldn’t read your multi-rename field history, so it starts fresh",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "sourceHash": "7b31c57"
+  },
+  "stateRecovery.launchDays.title": "Cmdr couldn’t read its record of the days you opened it, so the count starts over",
+  "@stateRecovery.launchDays.title": {
+    "sourceHash": "00f947b"
+  },
+  "stateRecovery.s3Places.title": "Cmdr couldn’t read all your saved S3 places, so some may be missing",
+  "@stateRecovery.s3Places.title": {
+    "sourceHash": "6957175"
+  },
+  "stateRecovery.nfsPlaces.title": "Cmdr couldn’t read all your saved NFS places, so some may be missing",
+  "@stateRecovery.nfsPlaces.title": {
+    "sourceHash": "f045d38"
+  },
+  "stateRecovery.sftpServers.title": "Cmdr couldn’t read all your saved SFTP servers, so some may be missing",
+  "@stateRecovery.sftpServers.title": {
+    "sourceHash": "f4426dd"
+  },
+  "stateRecovery.webdavServers.title": "Cmdr couldn’t read all your saved WebDAV servers, so some may be missing",
+  "@stateRecovery.webdavServers.title": {
+    "sourceHash": "c37ebaf"
+  },
+  "stateRecovery.smbShares.title": "Cmdr couldn’t read all your saved SMB shares, so some may be missing",
+  "@stateRecovery.smbShares.title": {
+    "sourceHash": "90fa873"
+  },
+  "stateRecovery.smbServers.title": "Cmdr couldn’t read all the servers you added by address, so some may be missing",
+  "@stateRecovery.smbServers.title": {
+    "sourceHash": "2d6f960"
+  },
+  "stateRecovery.sftpHostKeys.title": "Cmdr couldn’t read all the SFTP servers you trusted, so it may ask about some of them again",
+  "@stateRecovery.sftpHostKeys.title": {
+    "sourceHash": "5f3d270"
+  },
+  "stateRecovery.webdavCertificates.title": "Cmdr couldn’t read all the server certificates you trusted, so it may ask about some of them again",
+  "@stateRecovery.webdavCertificates.title": {
+    "sourceHash": "ca138aa"
+  },
+  "stateRecovery.localAi.title": "Cmdr couldn’t read its local AI setup, so it may offer to set it up again",
+  "@stateRecovery.localAi.title": {
+    "sourceHash": "7d4a0cb"
+  },
+  "stateRecovery.credentials.title": "Cmdr couldn’t read your saved passwords and keys, so it starts fresh",
+  "@stateRecovery.credentials.title": {
+    "sourceHash": "e4821b8"
+  },
+  "stateRecovery.credentials.body": "This happens after a move to a new computer. Cmdr asks for each password again the next time it needs it.",
+  "@stateRecovery.credentials.body": {
+    "sourceHash": "afac266"
+  },
+  "stateRecovery.keptCopy": "Cmdr kept the old file at {path}.",
+  "@stateRecovery.keptCopy": {
+    "sourceHash": "634e87d"
+  },
+  "stateRecovery.showInFinder": "Show in Finder",
+  "@stateRecovery.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "stateRecovery.dismiss": "Dismiss",
+  "@stateRecovery.dismiss": {
+    "sourceHash": "48845bf"
+  }
+}

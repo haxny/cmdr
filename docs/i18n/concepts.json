@@ -4085,5 +4085,11 @@
     "match": ["=thinking level"],
     "sense": "The reasoning picker’s label for Google Gemini (thinking_level) and the fallback name for services with none of their own; also the setting’s name in Settings search.",
     "distinct": ["reasoning-effort", "reasoning-effort-anthropic", "thinking"]
+  },
+  "type-to-jump": {
+    "en": "Jump (typing mode)",
+    "match": ["type-to-jump", "switch to jump", "=jump"],
+    "sense": "Cmdr’s Jump typing mode: typing in a pane moves the cursor to the best-matching name without hiding anything. The other mode is the quick filter. Not navigating to a typed path, and not the plain verb “jump to”.",
+    "distinct": ["quick-filter", "go-to-path"]
   }
 }

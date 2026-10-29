@@ -1,0 +1,238 @@
+{
+  "errorReporter.dialog.title": "Send error report",
+  "@errorReporter.dialog.title": {
+    "sourceHash": "c327e68"
+  },
+  "errorReporter.dialog.description": "This sends the past five hours of Cmdr’s logs to the team so we can fix what went wrong. The logs are redacted client-side: file paths, hostnames, IPs, and emails are all scrubbed before sending.",
+  "@errorReporter.dialog.description": {
+    "sourceHash": "6b02a3f"
+  },
+  "errorReporter.dialog.referenceIdLabel": "Reference ID:",
+  "@errorReporter.dialog.referenceIdLabel": {
+    "sourceHash": "ef8c421"
+  },
+  "errorReporter.dialog.copy": "Copy",
+  "@errorReporter.dialog.copy": {
+    "sourceHash": "e21f935"
+  },
+  "errorReporter.dialog.copied": "Copied",
+  "@errorReporter.dialog.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "errorReporter.dialog.noteLabel": "Add a note (optional)",
+  "@errorReporter.dialog.noteLabel": {
+    "sourceHash": "6bb0c6b"
+  },
+  "errorReporter.dialog.counter": "{currentText} / {maxText}",
+  "@errorReporter.dialog.counter": {
+    "sourceHash": "36ca789"
+  },
+  "errorReporter.dialog.notePlaceholder": "What were you trying to do? What did you expect to happen?",
+  "@errorReporter.dialog.notePlaceholder": {
+    "sourceHash": "003300b"
+  },
+  "errorReporter.dialog.noteTooLong": "Note is too long. Maximum is {maxText} {max, plural, one {character} other {characters}}.",
+  "@errorReporter.dialog.noteTooLong": {
+    "sourceHash": "afcefac"
+  },
+  "errorReporter.dialog.detailsToggle": "What’s about to be sent",
+  "@errorReporter.dialog.detailsToggle": {
+    "sourceHash": "f57398b"
+  },
+  "errorReporter.dialog.manifestHeading": "Manifest",
+  "@errorReporter.dialog.manifestHeading": {
+    "sourceHash": "3c99f1f"
+  },
+  "errorReporter.dialog.sampleFirstHeading": "Sample of first {count, plural, one {# line} other {# lines}}",
+  "@errorReporter.dialog.sampleFirstHeading": {
+    "sourceHash": "7a2e538"
+  },
+  "errorReporter.dialog.sampleLastHeading": "Sample of last {count, plural, one {# line} other {# lines}}",
+  "@errorReporter.dialog.sampleLastHeading": {
+    "sourceHash": "a36f420"
+  },
+  "errorReporter.dialog.noLogLines": "(no log lines available)",
+  "@errorReporter.dialog.noLogLines": {
+    "sourceHash": "a2d54fd"
+  },
+  "errorReporter.dialog.totalLines": "Total log lines (after redaction): {countText}",
+  "@errorReporter.dialog.totalLines": {
+    "sourceHash": "9c5cab7"
+  },
+  "errorReporter.dialog.preparing": "Preparing preview…",
+  "@errorReporter.dialog.preparing": {
+    "sourceHash": "11e66e1"
+  },
+  "errorReporter.dialog.prepareFailed": "Couldn’t put the preview together.",
+  "@errorReporter.dialog.prepareFailed": {
+    "sourceHash": "24cd5ba"
+  },
+  "errorReporter.dialog.tryAgain": "Try again",
+  "@errorReporter.dialog.tryAgain": {
+    "sourceHash": "d8b8392"
+  },
+  "errorReporter.dialog.bundleUnavailable": "Cmdr couldn’t gather its logs for the report. Try again in a moment.",
+  "@errorReporter.dialog.bundleUnavailable": {
+    "sourceHash": "15bc5b8"
+  },
+  "errorReporter.dialog.saveToDisk": "Save bundle to disk (debug)",
+  "@errorReporter.dialog.saveToDisk": {
+    "sourceHash": "36d6589"
+  },
+  "errorReporter.dialog.managedOff": "Your organization turned off sending reports. You can still save one to disk and share it yourself.",
+  "@errorReporter.dialog.managedOff": {
+    "sourceHash": "9309a39"
+  },
+  "errorReporter.dialog.saveToDiskManaged": "Save to disk",
+  "@errorReporter.dialog.saveToDiskManaged": {
+    "sourceHash": "5a5d775"
+  },
+  "errorReporter.dialog.cancel": "Cancel",
+  "@errorReporter.dialog.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "errorReporter.dialog.send": "Send report",
+  "@errorReporter.dialog.send": {
+    "sourceHash": "a44d353"
+  },
+  "errorReporter.dialog.sending": "Sending…",
+  "@errorReporter.dialog.sending": {
+    "sourceHash": "b8ed527"
+  },
+  "errorReporter.dialog.sendFailedToast": "Couldn’t send the error report. {reason}",
+  "@errorReporter.dialog.sendFailedToast": {
+    "sourceHash": "1eedf49"
+  },
+  "errorReporter.dialog.saveFailedToast": "Couldn’t save bundle: {error}",
+  "@errorReporter.dialog.saveFailedToast": {
+    "sourceHash": "6405cca"
+  },
+  "errorReporter.amend.title": "Add to your error report",
+  "@errorReporter.amend.title": {
+    "sourceHash": "b19796b"
+  },
+  "errorReporter.amend.description": "Cmdr already sent this report. Write a note, or attach your email, and it’ll join what the team already has.",
+  "@errorReporter.amend.description": {
+    "sourceHash": "9e1a80f"
+  },
+  "errorReporter.amend.noteLabel": "Your note",
+  "@errorReporter.amend.noteLabel": {
+    "sourceHash": "5331e47"
+  },
+  "errorReporter.amend.detailsToggle": "What was sent",
+  "@errorReporter.amend.detailsToggle": {
+    "sourceHash": "cb2415e"
+  },
+  "errorReporter.amend.submit": "Add to report",
+  "@errorReporter.amend.submit": {
+    "sourceHash": "e05fdbe"
+  },
+  "errorReporter.amend.submitting": "Adding…",
+  "@errorReporter.amend.submitting": {
+    "sourceHash": "c6de6f4"
+  },
+  "errorReporter.amend.unavailable": "That report can’t take a note anymore. To get your notes to the team, send a new report from the Help menu.",
+  "@errorReporter.amend.unavailable": {
+    "sourceHash": "08ab034"
+  },
+  "errorReporter.amend.close": "Close",
+  "@errorReporter.amend.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "errorReporter.amend.addFailedToast": "Couldn’t add your note. {reason}",
+  "@errorReporter.amend.addFailedToast": {
+    "sourceHash": "02f82ce"
+  },
+  "errorReporter.sentToast.message": "Error report sent. Your reference ID is",
+  "@errorReporter.sentToast.message": {
+    "sourceHash": "75be6ba"
+  },
+  "errorReporter.sentToast.dismiss": "Dismiss",
+  "@errorReporter.sentToast.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "errorReporter.sentToast.copyId": "Copy ID",
+  "@errorReporter.sentToast.copyId": {
+    "sourceHash": "72ac0d5"
+  },
+  "errorReporter.sentToast.copied": "Copied",
+  "@errorReporter.sentToast.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "errorReporter.amendedToast.message": "Note added to your report. Your reference ID is",
+  "@errorReporter.amendedToast.message": {
+    "sourceHash": "5471d7f"
+  },
+  "errorReporter.bundleSavedToast.message": "Saved bundle to disk",
+  "@errorReporter.bundleSavedToast.message": {
+    "sourceHash": "7c1604d"
+  },
+  "errorReporter.bundleSavedToast.dismiss": "Dismiss",
+  "@errorReporter.bundleSavedToast.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "errorReporter.bundleSavedToast.reveal": "Reveal in Finder",
+  "@errorReporter.bundleSavedToast.reveal": {
+    "sourceHash": "cc84938"
+  },
+  "errorReporter.autoSentToast.title": "Error report sent",
+  "@errorReporter.autoSentToast.title": {
+    "sourceHash": "b69ee37"
+  },
+  "errorReporter.autoSentToast.referenceIdLabel": "Reference ID:",
+  "@errorReporter.autoSentToast.referenceIdLabel": {
+    "sourceHash": "ef8c421"
+  },
+  "errorReporter.autoSentToast.changeSettings": "Change settings",
+  "@errorReporter.autoSentToast.changeSettings": {
+    "sourceHash": "873512a"
+  },
+  "errorReporter.autoSentToast.viewOrAddNotes": "View or add notes to the report",
+  "@errorReporter.autoSentToast.viewOrAddNotes": {
+    "sourceHash": "81a00a0"
+  },
+  "errorReporter.offer.send": "Send error report…",
+  "@errorReporter.offer.send": {
+    "sourceHash": "063c94e"
+  },
+  "errorReporter.offer.slow": "Taking long? Send a report",
+  "@errorReporter.offer.slow": {
+    "sourceHash": "ceaf3b7"
+  },
+  "errorReporter.prefill.slow": "{operation}: taking long, no progress for {duration}.",
+  "@errorReporter.prefill.slow": {
+    "sourceHash": "42c0ee2"
+  },
+  "errorReporter.prefill.updateNotGenuine": "An update offered as version {version} didn’t carry Cmdr’s signature, so Cmdr didn’t install it.",
+  "@errorReporter.prefill.updateNotGenuine": {
+    "sourceHash": "0e007a7"
+  },
+  "errorReporter.prefill.pageCrash": "This Cmdr window stopped working.",
+  "@errorReporter.prefill.pageCrash": {
+    "sourceHash": "6337998"
+  },
+  "errorReporter.pageCrash.title": "Something went wrong in this window",
+  "@errorReporter.pageCrash.title": {
+    "sourceHash": "c77d29c"
+  },
+  "errorReporter.pageCrash.body": "Cmdr ran into a problem it didn’t expect. Reloading usually helps. If it keeps happening, send a report so it gets fixed.",
+  "@errorReporter.pageCrash.body": {
+    "sourceHash": "5cfe782"
+  },
+  "errorReporter.pageCrash.detailsLabel": "Technical details",
+  "@errorReporter.pageCrash.detailsLabel": {
+    "sourceHash": "890ab35"
+  },
+  "errorReporter.pageCrash.reload": "Reload",
+  "@errorReporter.pageCrash.reload": {
+    "sourceHash": "bdc090e"
+  },
+  "errorReporter.preview.unavailableToast": "Couldn’t open the preview. Try again in a moment.",
+  "@errorReporter.preview.unavailableToast": {
+    "sourceHash": "64eba04"
+  },
+  "errorReporter.prefill.reference": "Reference: {code}",
+  "@errorReporter.prefill.reference": {
+    "sourceHash": "c0b8ba2"
+  }
+}

@@ -1,0 +1,194 @@
+{
+  "queue.windowTitle": "Operation queue",
+  "@queue.windowTitle": {
+    "sourceHash": "fa91417"
+  },
+  "queue.heading": "Operations",
+  "@queue.heading": {
+    "sourceHash": "358cc20"
+  },
+  "queue.empty.title": "Nothing in the queue",
+  "@queue.empty.title": {
+    "sourceHash": "ef2b1ef"
+  },
+  "queue.empty.body": "Copies, moves, deletes, and other file operations show up here while they run, so you can pause, resume, or cancel them.",
+  "@queue.empty.body": {
+    "sourceHash": "89e6045"
+  },
+  "queue.row.label": "{type, select, copy {Copying} move {Moving} delete {Deleting} trash {Moving to trash} rename {Renaming} create_folder {Creating folder} create_file {Creating file} archive_edit {Editing archive} compress {Compressing} other {Working}}",
+  "@queue.row.label": {
+    "sourceHash": "3c8e776"
+  },
+  "queue.row.reversalMovingBack": "Putting files back",
+  "@queue.row.reversalMovingBack": {
+    "sourceHash": "19ac5eb"
+  },
+  "queue.row.reversalDeleting": "Deleting what it created",
+  "@queue.row.reversalDeleting": {
+    "sourceHash": "f88d220"
+  },
+  "queue.row.reversalRenamingBack": "Putting the old names back",
+  "@queue.row.reversalRenamingBack": {
+    "sourceHash": "3e00fd5"
+  },
+  "queue.row.reversalInFolder": "in {folder}",
+  "@queue.row.reversalInFolder": {
+    "sourceHash": "da9d7fa"
+  },
+  "queue.row.itemCount": "{countText} {count, plural, one {item} other {items}}",
+  "@queue.row.itemCount": {
+    "sourceHash": "66337df"
+  },
+  "queue.row.folderCount": "{countText} {count, plural, one {folder} other {folders}}",
+  "@queue.row.folderCount": {
+    "sourceHash": "9bd56b2"
+  },
+  "queue.row.fileCount": "{countText} {count, plural, one {file} other {files}}",
+  "@queue.row.fileCount": {
+    "sourceHash": "76ef0a6"
+  },
+  "queue.row.foldersAndFiles": "{folders} and {files}",
+  "@queue.row.foldersAndFiles": {
+    "sourceHash": "7eae0a3"
+  },
+  "queue.row.itemsMore": "{count, plural, other {… and {countText} more}}",
+  "@queue.row.itemsMore": {
+    "sourceHash": "4a4022c"
+  },
+  "queue.row.itemsInFolder": "in {folder}",
+  "@queue.row.itemsInFolder": {
+    "sourceHash": "da9d7fa"
+  },
+  "queue.row.status": "{status, select, queued {Waiting} running {Running} paused {Paused} done {Done} cancelled {Canceled} failed {Couldn’t finish} other {Running}}",
+  "@queue.row.status": {
+    "sourceHash": "d7a7517"
+  },
+  "queue.row.statusAwaitingAnswer": "Needs your answer",
+  "@queue.row.statusAwaitingAnswer": {
+    "sourceHash": "84ec74a"
+  },
+  "queue.row.awaitingAnswerTooltip": "Answer the prompt in the main window and this operation carries on.",
+  "@queue.row.awaitingAnswerTooltip": {
+    "sourceHash": "bf51776"
+  },
+  "queue.row.pause": "Pause",
+  "@queue.row.pause": {
+    "sourceHash": "858e4ba"
+  },
+  "queue.row.resume": "Resume",
+  "@queue.row.resume": {
+    "sourceHash": "d640c74"
+  },
+  "queue.row.foreground": "Show",
+  "@queue.row.foreground": {
+    "sourceHash": "0df6f1c"
+  },
+  "queue.row.foregroundTooltip": "Show this operation’s progress dialog in the main window, and bring that window forward. The operation keeps running either way.",
+  "@queue.row.foregroundTooltip": {
+    "sourceHash": "88c52de"
+  },
+  "queue.row.cancel": "Cancel",
+  "@queue.row.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "queue.row.dismiss": "Dismiss",
+  "@queue.row.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "queue.row.dismissAria": "Dismiss this operation",
+  "@queue.row.dismissAria": {
+    "sourceHash": "ff1b528"
+  },
+  "queue.row.treeToggleAria": "Files in this operation",
+  "@queue.row.treeToggleAria": {
+    "sourceHash": "6c35afe"
+  },
+  "queue.row.treeToggleTooltip": "{open, select, yes {Hide the files} other {Show the files}}",
+  "@queue.row.treeToggleTooltip": {
+    "sourceHash": "71ba668"
+  },
+  "queue.row.retry": "Retry",
+  "@queue.row.retry": {
+    "sourceHash": "942087c"
+  },
+  "queue.row.retryAria": "Retry this operation",
+  "@queue.row.retryAria": {
+    "sourceHash": "7694afb"
+  },
+  "queue.row.selectAria": "Select this operation",
+  "@queue.row.selectAria": {
+    "sourceHash": "6618ecc"
+  },
+  "queue.list.aria": "Operations",
+  "@queue.list.aria": {
+    "sourceHash": "358cc20"
+  },
+  "queue.reorder.moved": "{direction, select, earlier {Moved up.} other {Moved down.}} Now {position} of {waiting} in line.",
+  "@queue.reorder.moved": {
+    "sourceHash": "00e58dc"
+  },
+  "queue.reorder.atEdge": "{direction, select, earlier {Already first in line.} other {Already last in line.}}",
+  "@queue.reorder.atEdge": {
+    "sourceHash": "768e3f3"
+  },
+  "queue.reorder.notQueued": "Only waiting operations can move.",
+  "@queue.reorder.notQueued": {
+    "sourceHash": "8097038"
+  },
+  "queue.toolbar.pauseAll": "Pause all",
+  "@queue.toolbar.pauseAll": {
+    "sourceHash": "0b6258b"
+  },
+  "queue.toolbar.resumeAll": "Resume all",
+  "@queue.toolbar.resumeAll": {
+    "sourceHash": "43e673c"
+  },
+  "queue.toolbar.cancelSelected": "Cancel selected",
+  "@queue.toolbar.cancelSelected": {
+    "sourceHash": "34e18e5"
+  },
+  "queue.toolbar.dismissAll": "Dismiss all",
+  "@queue.toolbar.dismissAll": {
+    "sourceHash": "97fac9e"
+  },
+  "queue.toolbar.selectedCount": "{count, plural, one {# selected} other {# selected}}",
+  "@queue.toolbar.selectedCount": {
+    "sourceHash": "5f13640"
+  },
+  "queue.failureToast.title": "{type, select, copy {Couldn’t finish copying} move {Couldn’t finish moving} delete {Couldn’t finish deleting} trash {Couldn’t finish moving to trash} rename {Couldn’t finish renaming} create_folder {Couldn’t finish creating the folder} create_file {Couldn’t finish creating the file} archive_edit {Couldn’t finish editing the archive} other {Couldn’t finish}}",
+  "@queue.failureToast.title": {
+    "sourceHash": "b5f2b47"
+  },
+  "queue.failureToast.action": "Show in operation queue",
+  "@queue.failureToast.action": {
+    "sourceHash": "607fbb1"
+  },
+  "queue.handoffToast.action": "Show in operation queue",
+  "@queue.handoffToast.action": {
+    "sourceHash": "607fbb1"
+  },
+  "queue.failureToast.summary": "{count, plural, one {{countText} operation couldn’t finish} other {{countText} operations couldn’t finish}}",
+  "@queue.failureToast.summary": {
+    "sourceHash": "a55d85a"
+  },
+  "queue.chip.failed": "{count, plural, one {{countText} operation couldn’t finish} other {{countText} operations couldn’t finish}}. Open the operation queue to see why.",
+  "@queue.chip.failed": {
+    "sourceHash": "9c0036b"
+  },
+  "queue.chip.ariaLabel": "{label}, {percentText} percent. Open the operation queue.",
+  "@queue.chip.ariaLabel": {
+    "sourceHash": "3ff7a01"
+  },
+  "queue.chip.scanningAriaLabel": "{label}, scanning. Open the operation queue.",
+  "@queue.chip.scanningAriaLabel": {
+    "sourceHash": "791fc9f"
+  },
+  "queue.chip.indeterminateAriaLabel": "{label}. Open the operation queue.",
+  "@queue.chip.indeterminateAriaLabel": {
+    "sourceHash": "d35fc3f"
+  },
+  "queue.chip.tooltip": "{label}{count, plural, =0 {} one { · {countText} item} other { · {countText} items}}{hasDestination, select, yes { · to {destination}} other {}} · {percentText}%{hasDetail, select, yes { · {detail}} other {}}",
+  "@queue.chip.tooltip": {
+    "sourceHash": "6680100"
+  }
+}

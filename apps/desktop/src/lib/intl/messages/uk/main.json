@@ -1,0 +1,222 @@
+{
+  "main.instanceLock.alertTitle": "Cmdr is already running",
+  "@main.instanceLock.alertTitle": {
+    "sourceHash": "7c8f09d"
+  },
+  "main.instanceLock.alertBody": "Another copy of Cmdr is using this data folder. Switch to the running app, or quit it and try again.",
+  "@main.instanceLock.alertBody": {
+    "sourceHash": "140c57d"
+  },
+  "main.upgradeNudge.mac": "We’ve added new onboarding options. Open Cmdr > Onboarding… to review them.",
+  "@main.upgradeNudge.mac": {
+    "sourceHash": "439adfd"
+  },
+  "main.upgradeNudge.other": "We’ve added new onboarding options. Open the command palette and run Onboarding… to review them.",
+  "@main.upgradeNudge.other": {
+    "sourceHash": "5afe1d2"
+  },
+  "main.dockPinNudge.title": "Keep Cmdr in your Dock?",
+  "@main.dockPinNudge.title": {
+    "sourceHash": "3a6ce9f"
+  },
+  "main.dockPinNudge.body": "You’ve been using Cmdr for a few days now, so it seems to be working for you. Want it pinned next to Finder down there?",
+  "@main.dockPinNudge.body": {
+    "sourceHash": "7f4265e"
+  },
+  "main.dockPinNudge.unpinNote": "You can unpin it any time if you change your mind.",
+  "@main.dockPinNudge.unpinNote": {
+    "sourceHash": "28748d3"
+  },
+  "main.dockPinNudge.decline": "No, thanks",
+  "@main.dockPinNudge.decline": {
+    "sourceHash": "e1a0936"
+  },
+  "main.dockPinNudge.accept": "Yes, add it to my Dock",
+  "@main.dockPinNudge.accept": {
+    "sourceHash": "8fbdc76"
+  },
+  "main.dockPinNudge.added": "Cmdr is in your Dock now.",
+  "@main.dockPinNudge.added": {
+    "sourceHash": "61bec58"
+  },
+  "main.dockPinNudge.addedButDockDidNotRestart": "Cmdr’s icon is in place, but the Dock didn’t reload. It’ll appear the next time you log in.",
+  "@main.dockPinNudge.addedButDockDidNotRestart": {
+    "sourceHash": "7a4e3bb"
+  },
+  "main.dockPinNudge.managedDock": "Your Dock is managed by a configuration profile, so Cmdr can’t add itself. Whoever manages this Mac can change that.",
+  "@main.dockPinNudge.managedDock": {
+    "sourceHash": "4781787"
+  },
+  "main.dockPinNudge.notAdded": "Cmdr couldn’t get into the Dock this time. You can drag it in from your Applications folder whenever you like.",
+  "@main.dockPinNudge.notAdded": {
+    "sourceHash": "0b863ad"
+  },
+  "main.revealNudge.title": "Open “Show in Finder” in Cmdr?",
+  "@main.revealNudge.title": {
+    "sourceHash": "45a5b47"
+  },
+  "main.revealNudge.body": "You’ve been using Cmdr for a while now. When another app runs “Show in Finder”, Cmdr can open that folder instead, with the file already under the cursor.",
+  "@main.revealNudge.body": {
+    "sourceHash": "1934a04"
+  },
+  "main.revealNudge.switchBackNote": "You can switch this back any time in Settings.",
+  "@main.revealNudge.switchBackNote": {
+    "sourceHash": "48c2bca"
+  },
+  "main.revealNudge.decline": "No, thanks",
+  "@main.revealNudge.decline": {
+    "sourceHash": "e1a0936"
+  },
+  "main.revealNudge.accept": "Yes, open them in Cmdr",
+  "@main.revealNudge.accept": {
+    "sourceHash": "3291bb4"
+  },
+  "main.revealNudge.turnedOn": "Cmdr now opens “Show in Finder” from other apps.",
+  "@main.revealNudge.turnedOn": {
+    "sourceHash": "27c0ea2"
+  },
+  "main.revealNudge.heldByOtherApp": "{app} has “Show in Finder” right now. You can hand it to Cmdr in Settings whenever you like.",
+  "@main.revealNudge.heldByOtherApp": {
+    "sourceHash": "0893821"
+  },
+  "main.revealNudge.notTurnedOn": "Cmdr couldn’t take “Show in Finder” this time. The switch is in Settings whenever you want to try again.",
+  "@main.revealNudge.notTurnedOn": {
+    "sourceHash": "0f572c0"
+  },
+  "main.revealActivation.title": "“Show in Finder” opened here",
+  "@main.revealActivation.title": {
+    "sourceHash": "6bb18bb"
+  },
+  "main.revealActivation.body": "Cmdr is set to catch these, so the file landed in a pane instead of in Finder. Everything else still opens the way it did.",
+  "@main.revealActivation.body": {
+    "sourceHash": "19ea7d6"
+  },
+  "main.revealActivation.openSettings": "Change this in Settings",
+  "@main.revealActivation.openSettings": {
+    "sourceHash": "673f711"
+  },
+  "main.quit.title": "{count, plural, one {Quit while an operation is running?} other {Quit while {countText} operations are running?}}",
+  "@main.quit.title": {
+    "sourceHash": "2671a89"
+  },
+  "main.quit.body": "Whatever’s finished stays done. Anything still being written stops where it is, and Cmdr clears away what it leaves half-written.",
+  "@main.quit.body": {
+    "sourceHash": "79a69f9"
+  },
+  "main.quit.countdown": "{seconds, plural, one {Quitting in {secondsText} second, so a restart or logout never waits on Cmdr.} other {Quitting in {secondsText} seconds, so a restart or logout never waits on Cmdr.}}",
+  "@main.quit.countdown": {
+    "sourceHash": "a389e0c"
+  },
+  "main.quit.countdownAria": "Time until Cmdr quits on its own",
+  "@main.quit.countdownAria": {
+    "sourceHash": "6b0b5c2"
+  },
+  "main.quit.keepWorking": "Keep working",
+  "@main.quit.keepWorking": {
+    "sourceHash": "5ed03f2"
+  },
+  "main.quit.quitNow": "Quit now",
+  "@main.quit.quitNow": {
+    "sourceHash": "c96bcc8"
+  },
+  "main.quit.operationsHeading": "Still running",
+  "@main.quit.operationsHeading": {
+    "sourceHash": "89acce5"
+  },
+  "main.oldWebkit.title": "Cmdr needs a newer Safari",
+  "@main.oldWebkit.title": {
+    "sourceHash": "03e502b"
+  },
+  "main.oldWebkit.body": "Cmdr’s interface needs Safari 15.4 or newer, and this Mac has an older one. Open Software Update and install everything pending. That should sort it out.",
+  "@main.oldWebkit.body": {
+    "sourceHash": "a7112ec"
+  },
+  "main.oldMacos.title": "Cmdr on macOS {version}",
+  "@main.oldMacos.title": {
+    "sourceHash": "e75f925"
+  },
+  "main.oldMacos.body": "Cmdr officially supports macOS 12 and up, so here it’s best effort. Most of it works, but some colors and small layout details can look off, and fixes for older systems come last. If you hit something broken, I’d still like to hear about it.",
+  "@main.oldMacos.body": {
+    "sourceHash": "f9b4185"
+  },
+  "main.oldMacos.gotIt": "Got it",
+  "@main.oldMacos.gotIt": {
+    "sourceHash": "5ad3dbd"
+  },
+  "main.oldWebkit.quit": "Quit",
+  "@main.oldWebkit.quit": {
+    "sourceHash": "b3eb37a"
+  },
+  "main.escapeFullScreenHint.message": "Клавіша Escape вивела Cmdr з повноекранного режиму.",
+  "@main.escapeFullScreenHint.message": {
+    "sourceHash": "f7b4c55"
+  },
+  "main.escapeFullScreenHint.switchLabel": "Виходити з повноекранного режиму клавішею Escape",
+  "@main.escapeFullScreenHint.switchLabel": {
+    "sourceHash": "f98be5e"
+  },
+  "main.escapeFullScreenHint.settingsLine": "Змінити це можна й тут: <settingsLink>Параметри > Експертні</settingsLink>.",
+  "@main.escapeFullScreenHint.settingsLine": {
+    "sourceHash": "a7fc48a"
+  },
+  "main.escapeFullScreenHint.onceNote": "Це повідомлення зʼявиться лише раз.",
+  "@main.escapeFullScreenHint.onceNote": {
+    "sourceHash": "210b892"
+  },
+  "main.cliCommand.installed": "Команда «cmdr» готова. Щоб відкрити поточну папку, введіть у терміналі «cmdr .».",
+  "@main.cliCommand.installed": {
+    "sourceHash": "5b72efe"
+  },
+  "main.cliCommand.uninstalled": "Команду «cmdr» видалено.",
+  "@main.cliCommand.uninstalled": {
+    "sourceHash": "edac691"
+  },
+  "main.cliCommand.alreadyInstalled": "Команду «cmdr» уже інстальовано.",
+  "@main.cliCommand.alreadyInstalled": {
+    "sourceHash": "4a67949"
+  },
+  "main.cliCommand.alreadyUninstalled": "Команди «cmdr» уже немає.",
+  "@main.cliCommand.alreadyUninstalled": {
+    "sourceHash": "7d49c8f"
+  },
+  "main.cliCommand.canceled": "Нічого не змінено. Щоб інсталювати чи видалити команду «cmdr», потрібен пароль адміністратора.",
+  "@main.cliCommand.canceled": {
+    "sourceHash": "31fd0a0"
+  },
+  "main.cliCommand.installFailed": "Не вдалося інсталювати команду «cmdr». Перевірте, чи можна записувати в /usr/local/bin, і спробуйте ще раз.",
+  "@main.cliCommand.installFailed": {
+    "sourceHash": "de500b0"
+  },
+  "main.cliCommand.uninstallFailed": "Не вдалося видалити команду «cmdr». Перевірте, чи можна записувати в /usr/local/bin, і спробуйте ще раз.",
+  "@main.cliCommand.uninstallFailed": {
+    "sourceHash": "fe4f2fe"
+  },
+  "main.cliCommand.homebrew": "Команду «cmdr» інстальовано через Homebrew разом із Cmdr, тож вона вже є у вашому терміналі. Вона зникне, коли ви видалите Cmdr через Homebrew.",
+  "@main.cliCommand.homebrew": {
+    "sourceHash": "1525744"
+  },
+  "main.cliCommand.takenByOther": "У /usr/local/bin уже є інший «cmdr», тож Cmdr його не чіпає. Видаліть або перейменуйте його, а тоді спробуйте ще раз.",
+  "@main.cliCommand.takenByOther": {
+    "sourceHash": "bd4877c"
+  },
+  "main.cliCommand.notInApplications": "Спершу перемістіть Cmdr у папку «Програми». Якщо інсталювати команду «cmdr» з іншого місця, вона перестане працювати, щойно Cmdr переміститься.",
+  "@main.cliCommand.notInApplications": {
+    "sourceHash": "e011785"
+  },
+  "main.cliCommand.notProductionBuild": "Це збірка Cmdr для розробки, тому вона не чіпає команду «cmdr». Для цього скористайтеся Cmdr із папки «Програми».",
+  "@main.cliCommand.notProductionBuild": {
+    "sourceHash": "f3187b3"
+  },
+  "main.cliCommand.unavailable": "Зараз не вдалося перевірити команду «cmdr». Спробуйте ще раз за мить.",
+  "@main.cliCommand.unavailable": {
+    "sourceHash": "58814f2"
+  },
+  "main.cliCommand.adminPromptInstall": "Cmdr хоче додати команду «cmdr» до /usr/local/bin.",
+  "@main.cliCommand.adminPromptInstall": {
+    "sourceHash": "3c16e21"
+  },
+  "main.cliCommand.adminPromptUninstall": "Cmdr хоче видалити команду «cmdr» з /usr/local/bin.",
+  "@main.cliCommand.adminPromptUninstall": {
+    "sourceHash": "df420ea"
+  }
+}

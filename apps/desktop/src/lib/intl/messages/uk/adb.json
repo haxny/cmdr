@@ -1,0 +1,82 @@
+{
+  "adb.connect.adbNotInstalled": "Cmdr couldn’t find the Android platform tools.",
+  "@adb.connect.adbNotInstalled": {
+    "sourceHash": "a842454"
+  },
+  "adb.connect.openSettings": "Open Settings",
+  "@adb.connect.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "adb.connect.serverUnreachable": "The Android tools on this Mac didn’t answer.",
+  "@adb.connect.serverUnreachable": {
+    "sourceHash": "b53716b"
+  },
+  "adb.connect.deviceGone": "Your phone isn’t connected anymore.",
+  "@adb.connect.deviceGone": {
+    "sourceHash": "00d5254"
+  },
+  "adb.connect.unauthorized": "Check your phone and tap Allow.",
+  "@adb.connect.unauthorized": {
+    "sourceHash": "6c2cf77"
+  },
+  "adb.connect.deviceTooOld": "This phone’s Android version is too old for Cmdr to browse.",
+  "@adb.connect.deviceTooOld": {
+    "sourceHash": "9ce52c1"
+  },
+  "adb.connect.timedOut": "Your phone didn’t answer in time.",
+  "@adb.connect.timedOut": {
+    "sourceHash": "20ddfdc"
+  },
+  "adb.connect.transport": "Cmdr lost the connection to your phone.",
+  "@adb.connect.transport": {
+    "sourceHash": "d90c37c"
+  },
+  "adb.connect.cancelled": "You stopped opening your phone.",
+  "@adb.connect.cancelled": {
+    "sourceHash": "bc525aa"
+  },
+  "adb.connect.waitingHint": "Cmdr opens your phone as soon as you do.",
+  "@adb.connect.waitingHint": {
+    "sourceHash": "d1df048"
+  },
+  "adb.readiness.waitingForAuthorization": "Waiting for you to tap Allow on your phone",
+  "@adb.readiness.waitingForAuthorization": {
+    "sourceHash": "679558e"
+  },
+  "adb.readiness.offline": "Your phone isn’t responding. Wake its screen, or reseat the cable.",
+  "@adb.readiness.offline": {
+    "sourceHash": "6061885"
+  },
+  "adb.readiness.noPermissions": "This Mac can’t reach your phone over USB. Try another cable or port.",
+  "@adb.readiness.noPermissions": {
+    "sourceHash": "265d7ed"
+  },
+  "adb.hint.text": "Want the whole filesystem? Turn on USB debugging.",
+  "@adb.hint.text": {
+    "sourceHash": "51bd05a"
+  },
+  "adb.hint.how": "How",
+  "@adb.hint.how": {
+    "sourceHash": "7470bd3"
+  },
+  "adb.hint.dismiss": "Dismiss",
+  "@adb.hint.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "adb.disconnectDeviceAriaLabel": "Disconnect {name}",
+  "@adb.disconnectDeviceAriaLabel": {
+    "sourceHash": "8f755cb"
+  },
+  "adb.disconnectBusyTooltip": "Cmdr is still working with files on this device. Disconnect once that’s done.",
+  "@adb.disconnectBusyTooltip": {
+    "sourceHash": "73c355e"
+  },
+  "adb.disconnectingDeviceAriaLabel": "Disconnecting {name}…",
+  "@adb.disconnectingDeviceAriaLabel": {
+    "sourceHash": "50be3d4"
+  },
+  "adb.volumeLabelWithSuffix": "{deviceName} (ADB)",
+  "@adb.volumeLabelWithSuffix": {
+    "sourceHash": "98d6c20"
+  }
+}

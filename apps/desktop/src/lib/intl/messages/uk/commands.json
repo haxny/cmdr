@@ -1,0 +1,1282 @@
+{
+  "commands.appQuit.label": "Quit Cmdr",
+  "@commands.appQuit.label": {
+    "sourceHash": "b3455b4"
+  },
+  "commands.appHide.label": "Hide Cmdr",
+  "@commands.appHide.label": {
+    "sourceHash": "8f86f89"
+  },
+  "commands.appHideOthers.label": "Hide others",
+  "@commands.appHideOthers.label": {
+    "sourceHash": "74376e4"
+  },
+  "commands.appShowAll.label": "Show all",
+  "@commands.appShowAll.label": {
+    "sourceHash": "2150d8d"
+  },
+  "commands.appAbout.label": "About Cmdr",
+  "@commands.appAbout.label": {
+    "sourceHash": "efe010f"
+  },
+  "commands.appAcknowledgements.label": "Acknowledgements…",
+  "@commands.appAcknowledgements.label": {
+    "sourceHash": "7d0e506"
+  },
+  "commands.appLicenseKey.seeDetails.label": "See license details",
+  "@commands.appLicenseKey.seeDetails.label": {
+    "sourceHash": "0e660e8"
+  },
+  "commands.appLicenseKey.enterKey.label": "Enter license key",
+  "@commands.appLicenseKey.enterKey.label": {
+    "sourceHash": "357d05e"
+  },
+  "commands.appCommandPalette.label": "Open command palette",
+  "@commands.appCommandPalette.label": {
+    "sourceHash": "c022b19"
+  },
+  "commands.appSettings.label": "Open settings",
+  "@commands.appSettings.label": {
+    "sourceHash": "ca381c1"
+  },
+  "commands.appCheckForUpdates.label": "Check for updates…",
+  "@commands.appCheckForUpdates.label": {
+    "sourceHash": "52d6f7d"
+  },
+  "commands.appCheckForUpdates.description": "Check whether a newer version of Cmdr is available, and download it if so",
+  "@commands.appCheckForUpdates.description": {
+    "sourceHash": "c53dab0"
+  },
+  "commands.cmdrOpenOnboarding.label": "Onboarding…",
+  "@commands.cmdrOpenOnboarding.label": {
+    "sourceHash": "c4cc4aa"
+  },
+  "commands.cmdrOpenOnboarding.description": "Reopen the onboarding wizard to review or change first-launch setup options",
+  "@commands.cmdrOpenOnboarding.description": {
+    "sourceHash": "a45c542"
+  },
+  "commands.appToggleCliCommand.install.label": "Install “cmdr” command",
+  "@commands.appToggleCliCommand.install.label": {
+    "sourceHash": "b99e6c4"
+  },
+  "commands.appToggleCliCommand.uninstall.label": "Uninstall “cmdr” command",
+  "@commands.appToggleCliCommand.uninstall.label": {
+    "sourceHash": "ac1052e"
+  },
+  "commands.appToggleCliCommand.homebrew.label": "“cmdr” command installed by Homebrew",
+  "@commands.appToggleCliCommand.homebrew.label": {
+    "sourceHash": "cc4c0fd"
+  },
+  "commands.appToggleCliCommand.description": "Type cmdr and a path in a terminal to open that file or folder in Cmdr",
+  "@commands.appToggleCliCommand.description": {
+    "sourceHash": "ce7efbd"
+  },
+  "commands.helpOpenShortcuts.label": "Keyboard shortcuts",
+  "@commands.helpOpenShortcuts.label": {
+    "sourceHash": "e9bef0b"
+  },
+  "commands.helpOpenShortcuts.description": "Open a read-only window listing every keyboard shortcut, live-synced with your customizations",
+  "@commands.helpOpenShortcuts.description": {
+    "sourceHash": "a9a1e0d"
+  },
+  "commands.helpAccessibility.label": "Accessibility guide",
+  "@commands.helpAccessibility.label": {
+    "sourceHash": "eee67fa"
+  },
+  "commands.helpAccessibility.description": "Open the guide to Cmdr’s accessibility features on getcmdr.com",
+  "@commands.helpAccessibility.description": {
+    "sourceHash": "2ece797"
+  },
+  "commands.helpSendErrorReport.label": "Send error report…",
+  "@commands.helpSendErrorReport.label": {
+    "sourceHash": "063c94e"
+  },
+  "commands.helpSendErrorReport.description": "Send Cmdr logs to the team to help fix something that went wrong",
+  "@commands.helpSendErrorReport.description": {
+    "sourceHash": "021d333"
+  },
+  "commands.queueShow.label": "Operation queue",
+  "@commands.queueShow.label": {
+    "sourceHash": "fa91417"
+  },
+  "commands.queueShow.description": "Open a window listing every running and waiting operation, where you can pause, resume, or cancel them",
+  "@commands.queueShow.description": {
+    "sourceHash": "37b616a"
+  },
+  "commands.helpWhatsNew.label": "What’s new",
+  "@commands.helpWhatsNew.label": {
+    "sourceHash": "37e6112"
+  },
+  "commands.helpWhatsNew.description": "See what changed in the latest releases of Cmdr",
+  "@commands.helpWhatsNew.description": {
+    "sourceHash": "f8ad411"
+  },
+  "commands.logOperationLog.label": "Operation log",
+  "@commands.logOperationLog.label": {
+    "sourceHash": "2c97965"
+  },
+  "commands.logOperationLog.description": "See a history of your file operations, and roll them back",
+  "@commands.logOperationLog.description": {
+    "sourceHash": "ea2d082"
+  },
+  "commands.askCmdrToggle.label": "Ask Cmdr",
+  "@commands.askCmdrToggle.label": {
+    "sourceHash": "aafb1ce"
+  },
+  "commands.askCmdrToggle.description": "Chat with an AI about your files, drives, and history",
+  "@commands.askCmdrToggle.description": {
+    "sourceHash": "c520468"
+  },
+  "commands.askCmdrNewChat.label": "New Ask Cmdr chat",
+  "@commands.askCmdrNewChat.label": {
+    "sourceHash": "54ebf70"
+  },
+  "commands.askCmdrNewChat.description": "Start a fresh chat with Ask Cmdr, opening it if it’s closed",
+  "@commands.askCmdrNewChat.description": {
+    "sourceHash": "957741b"
+  },
+  "commands.feedbackSend.label": "Send feedback",
+  "@commands.feedbackSend.label": {
+    "sourceHash": "8235980"
+  },
+  "commands.feedbackSend.description": "Tell the maker of Cmdr what you think: ideas, wishes, anything",
+  "@commands.feedbackSend.description": {
+    "sourceHash": "89d08a8"
+  },
+  "commands.searchOpen.label": "Search files",
+  "@commands.searchOpen.label": {
+    "sourceHash": "179fed8"
+  },
+  "commands.navGoToPath.label": "Go to folder…",
+  "@commands.navGoToPath.label": {
+    "sourceHash": "33de610"
+  },
+  "commands.navGoToPath.description": "Jump the focused pane to a typed, pasted, or recent path.",
+  "@commands.navGoToPath.description": {
+    "sourceHash": "fc6a00c"
+  },
+  "commands.favoritesAdd.label": "Add to favorites",
+  "@commands.favoritesAdd.label": {
+    "sourceHash": "7f3c078"
+  },
+  "commands.favoritesAdd.description": "Add the focused pane’s current folder to your favorites, so the favorites menu can take you back to it.",
+  "@commands.favoritesAdd.description": {
+    "sourceHash": "999aa52"
+  },
+  "commands.favoritesOpen.label": "Show favorites",
+  "@commands.favoritesOpen.label": {
+    "sourceHash": "f4dfe9b"
+  },
+  "commands.favoritesOpen.description": "Open the favorites menu on the focused pane, and press a number to jump to that favorite.",
+  "@commands.favoritesOpen.description": {
+    "sourceHash": "d188872"
+  },
+  "commands.favoritesOpenByNumber.label": "Open the favorite with that number",
+  "@commands.favoritesOpenByNumber.label": {
+    "sourceHash": "e74b98f"
+  },
+  "commands.downloadsGoToLatest.label": "Go to latest download",
+  "@commands.downloadsGoToLatest.label": {
+    "sourceHash": "492d0b6"
+  },
+  "commands.downloadsGoToLatest.description": "Open ~/Downloads and select the most recent file.",
+  "@commands.downloadsGoToLatest.description": {
+    "sourceHash": "42a26a2"
+  },
+  "commands.viewShowHidden.label": "Toggle hidden files",
+  "@commands.viewShowHidden.label": {
+    "sourceHash": "6aa9b55"
+  },
+  "commands.viewCalculateFolderSizes.label": "Calculate folder sizes",
+  "@commands.viewCalculateFolderSizes.label": {
+    "sourceHash": "d2a83da"
+  },
+  "commands.viewCalculateFolderSizes.description": "Shows the size of every folder in this pane that doesn’t have one yet. Esc stops the calculation.",
+  "@commands.viewCalculateFolderSizes.description": {
+    "sourceHash": "2a7568d"
+  },
+  "commands.viewBriefMode.label": "Switch to Brief view",
+  "@commands.viewBriefMode.label": {
+    "sourceHash": "bcf6636"
+  },
+  "commands.viewFullMode.label": "Switch to Full view",
+  "@commands.viewFullMode.label": {
+    "sourceHash": "b44150e"
+  },
+  "commands.viewSetMode.label": "Set pane view mode",
+  "@commands.viewSetMode.label": {
+    "sourceHash": "1e050a6"
+  },
+  "commands.viewZoomSet75.label": "Zoom to 75%",
+  "@commands.viewZoomSet75.label": {
+    "sourceHash": "70ac915"
+  },
+  "commands.viewZoomSet100.label": "Zoom to 100%",
+  "@commands.viewZoomSet100.label": {
+    "sourceHash": "c23bdb4"
+  },
+  "commands.viewZoomSet125.label": "Zoom to 125%",
+  "@commands.viewZoomSet125.label": {
+    "sourceHash": "9191980"
+  },
+  "commands.viewZoomSet150.label": "Zoom to 150%",
+  "@commands.viewZoomSet150.label": {
+    "sourceHash": "2e247da"
+  },
+  "commands.viewZoomIn.label": "Zoom in",
+  "@commands.viewZoomIn.label": {
+    "sourceHash": "0e47f09"
+  },
+  "commands.viewZoomOut.label": "Zoom out",
+  "@commands.viewZoomOut.label": {
+    "sourceHash": "bc7b631"
+  },
+  "commands.sortByName.label": "Sort by name",
+  "@commands.sortByName.label": {
+    "sourceHash": "588a082"
+  },
+  "commands.sortByExtension.label": "Sort by extension",
+  "@commands.sortByExtension.label": {
+    "sourceHash": "bb899db"
+  },
+  "commands.sortByModified.label": "Sort by date modified",
+  "@commands.sortByModified.label": {
+    "sourceHash": "d9349cb"
+  },
+  "commands.sortBySize.label": "Sort by size",
+  "@commands.sortBySize.label": {
+    "sourceHash": "b5fa7af"
+  },
+  "commands.sortByCreated.label": "Sort by date created",
+  "@commands.sortByCreated.label": {
+    "sourceHash": "9bdaf4e"
+  },
+  "commands.sortByAdded.label": "Sort by date added",
+  "@commands.sortByAdded.label": {
+    "sourceHash": "d89aba6"
+  },
+  "commands.sortAscending.label": "Sort ascending",
+  "@commands.sortAscending.label": {
+    "sourceHash": "ec3c9c7"
+  },
+  "commands.sortDescending.label": "Sort descending",
+  "@commands.sortDescending.label": {
+    "sourceHash": "8993b78"
+  },
+  "commands.sortToggleOrder.label": "Toggle sort order",
+  "@commands.sortToggleOrder.label": {
+    "sourceHash": "e0eb85f"
+  },
+  "commands.sortSet.label": "Set pane sort",
+  "@commands.sortSet.label": {
+    "sourceHash": "64232ef"
+  },
+  "commands.paneSwitch.label": "Switch pane",
+  "@commands.paneSwitch.label": {
+    "sourceHash": "377471f"
+  },
+  "commands.paneSwap.label": "Swap panes",
+  "@commands.paneSwap.label": {
+    "sourceHash": "cc29396"
+  },
+  "commands.paneClone.label": "Clone pane",
+  "@commands.paneClone.label": {
+    "sourceHash": "74b2c7f"
+  },
+  "commands.paneClone.description": "Open this pane’s folder in the other pane too.",
+  "@commands.paneClone.description": {
+    "sourceHash": "8a13dc9"
+  },
+  "commands.paneFocusControls.label": "Move focus to the pane controls",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "Reach the focused pane’s tabs, location bar, and sort buttons from the keyboard. Arrow keys move between them, and Escape takes you back to the files.",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
+  "commands.appFocusNotifications.label": "Move focus to the notifications",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "Reach the notifications and their buttons, like Undo, from the keyboard. Arrow keys move between them, and Escape takes you back.",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "Undo move to trash",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.one": "Undo move to trash of “{name}”",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "Undo move to trash of {countText} {count, plural, one {item} other {items}}",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
+  },
+  "commands.editUndoTrash.description": "Put back the files you last moved to the trash",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
+  "commands.paneLeftVolumeChooser.label": "Open left volume switcher",
+  "@commands.paneLeftVolumeChooser.label": {
+    "sourceHash": "6210f8e"
+  },
+  "commands.paneRightVolumeChooser.label": "Open right volume switcher",
+  "@commands.paneRightVolumeChooser.label": {
+    "sourceHash": "6103296"
+  },
+  "commands.paneCopyPathLeftToRight.label": "Скопіювати шлях з лівої панелі на праву",
+  "@commands.paneCopyPathLeftToRight.label": {
+    "sourceHash": "d1376f6"
+  },
+  "commands.paneCopyPathLeftToRight.description": "Відкрити розташування лівої панелі праворуч. Якщо ліва панель у фокусі, а курсор стоїть на папці, праворуч відкривається саме ця папка.",
+  "@commands.paneCopyPathLeftToRight.description": {
+    "sourceHash": "07ac6a1"
+  },
+  "commands.paneCopyPathRightToLeft.label": "Скопіювати шлях з правої панелі на ліву",
+  "@commands.paneCopyPathRightToLeft.label": {
+    "sourceHash": "266a30d"
+  },
+  "commands.paneCopyPathRightToLeft.description": "Відкрити розташування правої панелі ліворуч. Якщо права панель у фокусі, а курсор стоїть на папці, ліворуч відкривається саме ця папка.",
+  "@commands.paneCopyPathRightToLeft.description": {
+    "sourceHash": "95c566f"
+  },
+  "commands.paneRefresh.label": "Оновити панель",
+  "@commands.paneRefresh.label": {
+    "sourceHash": "42ce075"
+  },
+  "commands.paneMoveDividerLeft.label": "Перемістити роздільник панелей ліворуч",
+  "@commands.paneMoveDividerLeft.label": {
+    "sourceHash": "863b17a"
+  },
+  "commands.paneMoveDividerRight.label": "Перемістити роздільник панелей праворуч",
+  "@commands.paneMoveDividerRight.label": {
+    "sourceHash": "d3e8092"
+  },
+  "commands.paneResetDivider.label": "Скинути роздільник панелей",
+  "@commands.paneResetDivider.label": {
+    "sourceHash": "eab918a"
+  },
+  "commands.tabNew.label": "Нова вкладка",
+  "@commands.tabNew.label": {
+    "sourceHash": "1e08fda"
+  },
+  "commands.tabClose.label": "Закрити вкладку",
+  "@commands.tabClose.label": {
+    "sourceHash": "50a3f95"
+  },
+  "commands.tabReopen.label": "Знову відкрити закриту вкладку",
+  "@commands.tabReopen.label": {
+    "sourceHash": "5ca5397"
+  },
+  "commands.tabNext.label": "Наступна вкладка",
+  "@commands.tabNext.label": {
+    "sourceHash": "1ef9522"
+  },
+  "commands.tabPrev.label": "Попередня вкладка",
+  "@commands.tabPrev.label": {
+    "sourceHash": "c88d5e7"
+  },
+  "commands.tabTogglePin.label": "Перемкнути закріплення вкладки",
+  "@commands.tabTogglePin.label": {
+    "sourceHash": "3fdfcd1"
+  },
+  "commands.tabCloseOthers.label": "Закрити решту вкладок",
+  "@commands.tabCloseOthers.label": {
+    "sourceHash": "0ddc2c5"
+  },
+  "commands.tabMoveLeft.label": "Перемістити вкладку ліворуч",
+  "@commands.tabMoveLeft.label": {
+    "sourceHash": "6a55f1c"
+  },
+  "commands.tabMoveRight.label": "Перемістити вкладку праворуч",
+  "@commands.tabMoveRight.label": {
+    "sourceHash": "a0f125f"
+  },
+  "commands.tabMoveToOtherPane.label": "Перемістити вкладку на іншу панель",
+  "@commands.tabMoveToOtherPane.label": {
+    "sourceHash": "c604acb"
+  },
+  "commands.tabMcpAction.label": "Дія з вкладкою панелі",
+  "@commands.tabMcpAction.label": {
+    "sourceHash": "405ed9c"
+  },
+  "commands.navUp.label": "Перейти до попереднього файлу",
+  "@commands.navUp.label": {
+    "sourceHash": "40dca00"
+  },
+  "commands.navDown.label": "Перейти до наступного файлу",
+  "@commands.navDown.label": {
+    "sourceHash": "61e81ee"
+  },
+  "commands.navOpen.label": "Відкрити файл або папку",
+  "@commands.navOpen.label": {
+    "sourceHash": "ef8d6a5"
+  },
+  "commands.navParent.label": "Перейти до батьківської папки",
+  "@commands.navParent.label": {
+    "sourceHash": "7d4c500"
+  },
+  "commands.navHome.label": "Перейти до першого файлу",
+  "@commands.navHome.label": {
+    "sourceHash": "5750de6"
+  },
+  "commands.navEnd.label": "Перейти до останнього файлу",
+  "@commands.navEnd.label": {
+    "sourceHash": "f39205a"
+  },
+  "commands.navPageUp.label": "Сторінка вгору",
+  "@commands.navPageUp.label": {
+    "sourceHash": "43f41b5"
+  },
+  "commands.navPageDown.label": "Сторінка вниз",
+  "@commands.navPageDown.label": {
+    "sourceHash": "72a825f"
+  },
+  "commands.navBack.label": "Назад",
+  "@commands.navBack.label": {
+    "sourceHash": "6aadac2"
+  },
+  "commands.navForward.label": "Вперед",
+  "@commands.navForward.label": {
+    "sourceHash": "8121136"
+  },
+  "commands.navGoToRoot.label": "Перейти до кореневої папки",
+  "@commands.navGoToRoot.label": {
+    "sourceHash": "3822d7b"
+  },
+  "commands.navGoHome.label": "Перейти до домашньої папки",
+  "@commands.navGoHome.label": {
+    "sourceHash": "74b2a8b"
+  },
+  "commands.errorPaneToggleTechnicalDetails.label": "Показати технічні деталі",
+  "@commands.errorPaneToggleTechnicalDetails.label": {
+    "sourceHash": "bde0de8"
+  },
+  "commands.navOpenUnderCursor.label": "Відкрити елемент під курсором",
+  "@commands.navOpenUnderCursor.label": {
+    "sourceHash": "6b54df9"
+  },
+  "commands.cursorMoveTo.label": "Перемістити курсор панелі",
+  "@commands.cursorMoveTo.label": {
+    "sourceHash": "4c196ef"
+  },
+  "commands.cursorScrollTo.label": "Прокрутити панель до рядка",
+  "@commands.cursorScrollTo.label": {
+    "sourceHash": "98ca70c"
+  },
+  "commands.navLeft.label": "Перейти до лівого стовпця",
+  "@commands.navLeft.label": {
+    "sourceHash": "db46f08"
+  },
+  "commands.navRight.label": "Перейти до правого стовпця",
+  "@commands.navRight.label": {
+    "sourceHash": "21b59f0"
+  },
+  "commands.navFirstInFull.label": "Перейти одразу до першого файлу",
+  "@commands.navFirstInFull.label": {
+    "sourceHash": "f0ea135"
+  },
+  "commands.navLastInFull.label": "Перейти одразу до останнього файлу",
+  "@commands.navLastInFull.label": {
+    "sourceHash": "e6d6a52"
+  },
+  "commands.fileRename.label": "Перейменувати",
+  "@commands.fileRename.label": {
+    "sourceHash": "3064d79"
+  },
+  "commands.fileMultiRename.label": "Групове перейменування",
+  "@commands.fileMultiRename.label": {
+    "sourceHash": "5ceb1a2"
+  },
+  "commands.fileMultiRename.description": "Перейменовує вибрані файли (або всю папку) за маскою імені, з лічильником і пошуком із заміною",
+  "@commands.fileMultiRename.description": {
+    "sourceHash": "d294fb1"
+  },
+  "commands.queueCursorUp.label": "Попередня операція",
+  "@commands.queueCursorUp.label": {
+    "sourceHash": "122b454"
+  },
+  "commands.queueCursorDown.label": "Наступна операція",
+  "@commands.queueCursorDown.label": {
+    "sourceHash": "d1cfd93"
+  },
+  "commands.queueCursorFirst.label": "Перша операція",
+  "@commands.queueCursorFirst.label": {
+    "sourceHash": "73ee5d6"
+  },
+  "commands.queueCursorLast.label": "Остання операція",
+  "@commands.queueCursorLast.label": {
+    "sourceHash": "1d9403f"
+  },
+  "commands.queueExtendUp.label": "Розширити вибір угору",
+  "@commands.queueExtendUp.label": {
+    "sourceHash": "973e25b"
+  },
+  "commands.queueExtendDown.label": "Розширити вибір униз",
+  "@commands.queueExtendDown.label": {
+    "sourceHash": "0a20670"
+  },
+  "commands.queueToggleSelected.label": "Додати операцію до вибору або вилучити з нього",
+  "@commands.queueToggleSelected.label": {
+    "sourceHash": "0e245e6"
+  },
+  "commands.queueSelectAll.label": "Вибрати всі операції",
+  "@commands.queueSelectAll.label": {
+    "sourceHash": "0661f6b"
+  },
+  "commands.queueShowInMainWindow.label": "Показати операцію в головному вікні",
+  "@commands.queueShowInMainWindow.label": {
+    "sourceHash": "9e15137"
+  },
+  "commands.queuePauseOrResume.label": "Призупинити або поновити операцію",
+  "@commands.queuePauseOrResume.label": {
+    "sourceHash": "3fa23cb"
+  },
+  "commands.queueCancel.label": "Скасувати операцію",
+  "@commands.queueCancel.label": {
+    "sourceHash": "5dcca55"
+  },
+  "commands.queueRollback.label": "Відкотити операцію",
+  "@commands.queueRollback.label": {
+    "sourceHash": "e88417c"
+  },
+  "commands.queueCancelOrDismiss.label": "Скасувати операцію або закрити ту, яку не вдалося завершити",
+  "@commands.queueCancelOrDismiss.label": {
+    "sourceHash": "eed155a"
+  },
+  "commands.queueMoveEarlier.label": "Перемістити операцію, що очікує, ближче до початку черги",
+  "@commands.queueMoveEarlier.label": {
+    "sourceHash": "d95d881"
+  },
+  "commands.queueMoveLater.label": "Перемістити операцію, що очікує, далі в черзі",
+  "@commands.queueMoveLater.label": {
+    "sourceHash": "b5a8d86"
+  },
+  "commands.queueNextControl.label": "Наступна кнопка в рядку",
+  "@commands.queueNextControl.label": {
+    "sourceHash": "2915ed9"
+  },
+  "commands.queuePreviousControl.label": "Попередня кнопка в рядку",
+  "@commands.queuePreviousControl.label": {
+    "sourceHash": "9c0113d"
+  },
+  "commands.queueClose.label": "Закрити чергу операцій",
+  "@commands.queueClose.label": {
+    "sourceHash": "d7b8c22"
+  },
+  "commands.viewerToggleWordWrap.label": "Увімкнути або вимкнути перенесення рядків",
+  "@commands.viewerToggleWordWrap.label": {
+    "sourceHash": "80a6fa2"
+  },
+  "commands.viewerToggleTail.label": "Увімкнути або вимкнути режим стеження",
+  "@commands.viewerToggleTail.label": {
+    "sourceHash": "b711266"
+  },
+  "commands.viewerViewAsMedia.label": "Переглянути як зображення або PDF",
+  "@commands.viewerViewAsMedia.label": {
+    "sourceHash": "5e713d3"
+  },
+  "commands.viewerViewAsText.label": "Переглянути як текст",
+  "@commands.viewerViewAsText.label": {
+    "sourceHash": "a0059b8"
+  },
+  "commands.viewerViewAsBinary.label": "Переглянути як двійкові дані",
+  "@commands.viewerViewAsBinary.label": {
+    "sourceHash": "6720507"
+  },
+  "commands.viewerViewAsHex.label": "Переглянути в шістнадцятковому вигляді",
+  "@commands.viewerViewAsHex.label": {
+    "sourceHash": "974e5dc"
+  },
+  "commands.viewerZoomIn.label": "Збільшити зображення",
+  "@commands.viewerZoomIn.label": {
+    "sourceHash": "bd95659"
+  },
+  "commands.viewerZoomOut.label": "Зменшити зображення",
+  "@commands.viewerZoomOut.label": {
+    "sourceHash": "f4b62c5"
+  },
+  "commands.viewerToggleImageZoom.label": "Перемкнути зображення між розміром вікна і фактичним розміром",
+  "@commands.viewerToggleImageZoom.label": {
+    "sourceHash": "1bd79eb"
+  },
+  "commands.viewerGoBack.label": "Назад до попереднього документа",
+  "@commands.viewerGoBack.label": {
+    "sourceHash": "a76f589"
+  },
+  "commands.viewerGoForward.label": "Вперед до наступного документа",
+  "@commands.viewerGoForward.label": {
+    "sourceHash": "a07317a"
+  },
+  "commands.multiRenameOpenPresets.label": "Відкрити меню наборів параметрів",
+  "@commands.multiRenameOpenPresets.label": {
+    "sourceHash": "ca9ede6"
+  },
+  "commands.multiRenameSavePreset.label": "Зберегти поточні значення як набір параметрів",
+  "@commands.multiRenameSavePreset.label": {
+    "sourceHash": "f8101a3"
+  },
+  "commands.multiRenameLetterCase.label": "Відкрити меню регістру літер",
+  "@commands.multiRenameLetterCase.label": {
+    "sourceHash": "da7409c"
+  },
+  "commands.multiRenameRemoveDiacritics.label": "Увімкнути або вимкнути «Вилучити діакритичні знаки»",
+  "@commands.multiRenameRemoveDiacritics.label": {
+    "sourceHash": "3f5cf53"
+  },
+  "commands.multiRenameGreekToLatin.label": "Увімкнути або вимкнути «Грецькі літери латиницею»",
+  "@commands.multiRenameGreekToLatin.label": {
+    "sourceHash": "1785eea"
+  },
+  "commands.multiRenameNormalizeUnicode.label": "Увімкнути або вимкнути «Нормалізувати Unicode»",
+  "@commands.multiRenameNormalizeUnicode.label": {
+    "sourceHash": "fc2b801"
+  },
+  "commands.multiRenameMatchCase.label": "Увімкнути або вимкнути «Враховувати регістр»",
+  "@commands.multiRenameMatchCase.label": {
+    "sourceHash": "25d478f"
+  },
+  "commands.multiRenameFirstMatchOnly.label": "Увімкнути або вимкнути «Лише перший збіг»",
+  "@commands.multiRenameFirstMatchOnly.label": {
+    "sourceHash": "7641a7b"
+  },
+  "commands.multiRenameIncludeExtension.label": "Увімкнути або вимкнути «Разом із розширенням»",
+  "@commands.multiRenameIncludeExtension.label": {
+    "sourceHash": "2d47826"
+  },
+  "commands.multiRenameRegex.label": "Увімкнути або вимкнути «Регулярний вираз»",
+  "@commands.multiRenameRegex.label": {
+    "sourceHash": "b41d110"
+  },
+  "commands.multiRenameReplaceWholeName.label": "Увімкнути або вимкнути «Замінити всю назву»",
+  "@commands.multiRenameReplaceWholeName.label": {
+    "sourceHash": "016c572"
+  },
+  "commands.multiRenameInsertField.label": "Вставити поле фото, відео або музики",
+  "@commands.multiRenameInsertField.label": {
+    "sourceHash": "4b9e9de"
+  },
+  "commands.multiRenameUndoRename.label": "Відмінити останнє групове перейменування",
+  "@commands.multiRenameUndoRename.label": {
+    "sourceHash": "e5a0975"
+  },
+  "commands.multiRenameResults.label": "Редагувати нові назви у вашому текстовому редакторі",
+  "@commands.multiRenameResults.label": {
+    "sourceHash": "0061b58"
+  },
+  "commands.multiRenameFieldHistory.label": "Показати попередні значення поля",
+  "@commands.multiRenameFieldHistory.label": {
+    "sourceHash": "75fb21f"
+  },
+  "commands.multiRenameMoveRowUp.label": "Перемістити файл вище в порядку перейменування",
+  "@commands.multiRenameMoveRowUp.label": {
+    "sourceHash": "d476ae3"
+  },
+  "commands.multiRenameMoveRowDown.label": "Перемістити файл нижче в порядку перейменування",
+  "@commands.multiRenameMoveRowDown.label": {
+    "sourceHash": "b4c44b3"
+  },
+  "commands.multiRenameRename.label": "Перейменувати файли",
+  "@commands.multiRenameRename.label": {
+    "sourceHash": "da881fb"
+  },
+  "commands.fileView.label": "Перегляд",
+  "@commands.fileView.label": {
+    "sourceHash": "dcc839a"
+  },
+  "commands.fileEdit.label": "Редагувати в типовому редакторі",
+  "@commands.fileEdit.label": {
+    "sourceHash": "badc768"
+  },
+  "commands.fileCopy.label": "Скопіювати",
+  "@commands.fileCopy.label": {
+    "sourceHash": "e21f935"
+  },
+  "commands.fileMove.label": "Перемістити",
+  "@commands.fileMove.label": {
+    "sourceHash": "6ecc3df"
+  },
+  "commands.fileDuplicate.label": "Дублювати",
+  "@commands.fileDuplicate.label": {
+    "sourceHash": "02cdaab"
+  },
+  "commands.fileDuplicate.description": "Створити копію вибраних файлів у тій самій папці",
+  "@commands.fileDuplicate.description": {
+    "sourceHash": "2c038a2"
+  },
+  "commands.fileCompress.label": "Створити архів",
+  "@commands.fileCompress.label": {
+    "sourceHash": "033fc04"
+  },
+  "commands.editCopy.label": "Скопіювати в буфер обміну",
+  "@commands.editCopy.label": {
+    "sourceHash": "b749e20"
+  },
+  "commands.editCopy.description": "Скопіювати вибрані файли в буфер обміну, щоб потім їх вставити",
+  "@commands.editCopy.description": {
+    "sourceHash": "5c769a7"
+  },
+  "commands.editCut.label": "Вирізати в буфер обміну",
+  "@commands.editCut.label": {
+    "sourceHash": "a954b4a"
+  },
+  "commands.editCut.description": "Вирізати вибрані файли (під час вставлення їх буде переміщено)",
+  "@commands.editCut.description": {
+    "sourceHash": "5bc3870"
+  },
+  "commands.editPaste.label": "Вставити",
+  "@commands.editPaste.label": {
+    "sourceHash": "f3380f7"
+  },
+  "commands.editPaste.description": "Вставити файли з буфера обміну в поточну папку",
+  "@commands.editPaste.description": {
+    "sourceHash": "32545d7"
+  },
+  "commands.editPasteAsMove.label": "Перемістити сюди",
+  "@commands.editPasteAsMove.label": {
+    "sourceHash": "56f1247"
+  },
+  "commands.editPasteAsMove.description": "Вставити файли з буфера обміну, перемістивши їх",
+  "@commands.editPasteAsMove.description": {
+    "sourceHash": "961316d"
+  },
+  "commands.fileNewFolder.label": "Нова папка",
+  "@commands.fileNewFolder.label": {
+    "sourceHash": "cf28f49"
+  },
+  "commands.fileNewFile.label": "Створити новий файл",
+  "@commands.fileNewFile.label": {
+    "sourceHash": "6e70b95"
+  },
+  "commands.fileDelete.label": "Видалити",
+  "@commands.fileDelete.label": {
+    "sourceHash": "e2d0a54"
+  },
+  "commands.fileDeletePermanently.label": "Видалити остаточно",
+  "@commands.fileDeletePermanently.label": {
+    "sourceHash": "280b10c"
+  },
+  "commands.fileGoToTrash.label": "Перейти до Смітника",
+  "@commands.fileGoToTrash.label": {
+    "sourceHash": "5332858"
+  },
+  "commands.fileGoToTrash.description": "Відкрити Смітник диска, який ви переглядаєте",
+  "@commands.fileGoToTrash.description": {
+    "sourceHash": "73eae92"
+  },
+  "commands.dialogConfirm.label": "Підтвердити діалогове вікно на екрані",
+  "@commands.dialogConfirm.label": {
+    "sourceHash": "fef0684"
+  },
+  "commands.fileShowInFinder.mac.label": "Показати у Finder",
+  "@commands.fileShowInFinder.mac.label": {
+    "sourceHash": "c2a9c77"
+  },
+  "commands.fileShowInFinder.other.label": "Показати у файловому менеджері",
+  "@commands.fileShowInFinder.other.label": {
+    "sourceHash": "3ca4dad"
+  },
+  "commands.fileOpenTerminalHere.label": "Відкрити термінал тут",
+  "@commands.fileOpenTerminalHere.label": {
+    "sourceHash": "b7eda27"
+  },
+  "commands.fileOpenTerminalHere.description": "Відкрити вашу програму-термінал у папці, яку ви зараз бачите",
+  "@commands.fileOpenTerminalHere.description": {
+    "sourceHash": "ac0ddb8"
+  },
+  "commands.fileCopyPath.label": "Скопіювати шлях у буфер обміну",
+  "@commands.fileCopyPath.label": {
+    "sourceHash": "333608a"
+  },
+  "commands.fileCopyCurrentDirectoryPath.label": "Скопіювати шлях поточної папки",
+  "@commands.fileCopyCurrentDirectoryPath.label": {
+    "sourceHash": "5ec6586"
+  },
+  "commands.fileCopyFilename.label": "Скопіювати назву файлу",
+  "@commands.fileCopyFilename.label": {
+    "sourceHash": "5cdf7f8"
+  },
+  "commands.fileGetInfo.mac.label": "Досьє",
+  "@commands.fileGetInfo.mac.label": {
+    "sourceHash": "91c64ca"
+  },
+  "commands.fileGetInfo.other.label": "Властивості файлу",
+  "@commands.fileGetInfo.other.label": {
+    "sourceHash": "5d9ebf2"
+  },
+  "commands.fileQuickLook.mac.label": "Швидкий перегляд",
+  "@commands.fileQuickLook.mac.label": {
+    "sourceHash": "f5616ce"
+  },
+  "commands.fileQuickLook.other.label": "Попередній перегляд",
+  "@commands.fileQuickLook.other.label": {
+    "sourceHash": "324b134"
+  },
+  "commands.fileContextMenu.label": "Відкрити контекстне меню",
+  "@commands.fileContextMenu.label": {
+    "sourceHash": "c07efaf"
+  },
+  "commands.fileContextMenu.description": "Відкриває контекстне меню для файлу під курсором",
+  "@commands.fileContextMenu.description": {
+    "sourceHash": "8fb1721"
+  },
+  "commands.cloudMakeOffline.label": "Зробити доступним офлайн",
+  "@commands.cloudMakeOffline.label": {
+    "sourceHash": "b75c09f"
+  },
+  "commands.cloudMakeOffline.description": "Викачує файл, що зберігається в хмарі, щоб він був доступний без зʼєднання з інтернетом",
+  "@commands.cloudMakeOffline.description": {
+    "sourceHash": "d5cd793"
+  },
+  "commands.cloudRemoveDownload.label": "Вилучити викачане",
+  "@commands.cloudRemoveDownload.label": {
+    "sourceHash": "5dfc369"
+  },
+  "commands.cloudRemoveDownload.description": "Вилучає локальну копію хмарного файлу, і він залишається доступним лише онлайн",
+  "@commands.cloudRemoveDownload.description": {
+    "sourceHash": "470afd2"
+  },
+  "commands.cloudOpenInGoogleDrive.label": "Відкрити в Google Drive",
+  "@commands.cloudOpenInGoogleDrive.label": {
+    "sourceHash": "98c7516"
+  },
+  "commands.cloudOpenInGoogleDrive.description": "Відкриває вибраний елемент на вебсайті Google Drive, де ним можна поділитися",
+  "@commands.cloudOpenInGoogleDrive.description": {
+    "sourceHash": "0328e04"
+  },
+  "commands.cloudCopyGoogleDriveLink.label": "Скопіювати посилання Google Drive",
+  "@commands.cloudCopyGoogleDriveLink.label": {
+    "sourceHash": "070b383"
+  },
+  "commands.cloudCopyGoogleDriveLink.description": "Копіює вебадресу вибраного елемента, щоб її можна було вставити в повідомлення",
+  "@commands.cloudCopyGoogleDriveLink.description": {
+    "sourceHash": "920f0d4"
+  },
+  "commands.cloudAskGemini.label": "Запитати Gemini",
+  "@commands.cloudAskGemini.label": {
+    "sourceHash": "7eec77f"
+  },
+  "commands.cloudAskGemini.description": "Відкриває помічника Gemini у Google Drive і передає йому вибраний файл",
+  "@commands.cloudAskGemini.description": {
+    "sourceHash": "37d4e7c"
+  },
+  "commands.resticForgetPassword.label": "Забути пароль резервної копії",
+  "@commands.resticForgetPassword.label": {
+    "sourceHash": "8065fcb"
+  },
+  "commands.resticForgetPassword.description": "Вилучає збережений пароль резервної копії restic, у якій ви зараз перебуваєте, із Вʼязки ключів, і резервна копія знову стає замкненою",
+  "@commands.resticForgetPassword.description": {
+    "sourceHash": "e51ac69"
+  },
+  "commands.fileCopyShareLink.label": "Скопіювати посилання для поширення (сім днів)",
+  "@commands.fileCopyShareLink.label": {
+    "sourceHash": "314bee8"
+  },
+  "commands.fileCopyShareLink.description": "Копіює посилання, яке будь-хто зможе відкрити, щоб викачати файл протягом семи днів",
+  "@commands.fileCopyShareLink.description": {
+    "sourceHash": "99e912e"
+  },
+  "commands.fileCopyShareLinkOneDay.label": "Скопіювати посилання для поширення (один день)",
+  "@commands.fileCopyShareLinkOneDay.label": {
+    "sourceHash": "468010c"
+  },
+  "commands.fileCopyShareLinkOneDay.description": "Копіює посилання, яке будь-хто зможе відкрити, щоб викачати файл протягом одного дня",
+  "@commands.fileCopyShareLinkOneDay.description": {
+    "sourceHash": "c2a30be"
+  },
+  "commands.fileCopyShareLinkOneHour.label": "Скопіювати посилання для поширення (одна година)",
+  "@commands.fileCopyShareLinkOneHour.label": {
+    "sourceHash": "ffea990"
+  },
+  "commands.fileCopyShareLinkOneHour.description": "Копіює посилання, яке будь-хто зможе відкрити, щоб викачати файл протягом однієї години",
+  "@commands.fileCopyShareLinkOneHour.description": {
+    "sourceHash": "c334535"
+  },
+  "commands.tagsToggleGrey.label": "Перемкнути тег «Сірий»",
+  "@commands.tagsToggleGrey.label": {
+    "sourceHash": "1309c09"
+  },
+  "commands.tagsToggleGrey.description": "Додає тег Finder «Сірий» до вибраних файлів або вилучає його",
+  "@commands.tagsToggleGrey.description": {
+    "sourceHash": "ca38860"
+  },
+  "commands.tagsToggleGreen.label": "Перемкнути тег «Зелений»",
+  "@commands.tagsToggleGreen.label": {
+    "sourceHash": "397b880"
+  },
+  "commands.tagsToggleGreen.description": "Додає тег Finder «Зелений» до вибраних файлів або вилучає його",
+  "@commands.tagsToggleGreen.description": {
+    "sourceHash": "fa8396b"
+  },
+  "commands.tagsTogglePurple.label": "Перемкнути тег «Бузковий»",
+  "@commands.tagsTogglePurple.label": {
+    "sourceHash": "ee137d2"
+  },
+  "commands.tagsTogglePurple.description": "Додає тег Finder «Бузковий» до вибраних файлів або вилучає його",
+  "@commands.tagsTogglePurple.description": {
+    "sourceHash": "c6872a8"
+  },
+  "commands.tagsToggleBlue.label": "Перемкнути тег «Синій»",
+  "@commands.tagsToggleBlue.label": {
+    "sourceHash": "11ba925"
+  },
+  "commands.tagsToggleBlue.description": "Додає тег Finder «Синій» до вибраних файлів або вилучає його",
+  "@commands.tagsToggleBlue.description": {
+    "sourceHash": "7a21c5f"
+  },
+  "commands.tagsToggleYellow.label": "Перемкнути тег «Жовтий»",
+  "@commands.tagsToggleYellow.label": {
+    "sourceHash": "2afc261"
+  },
+  "commands.tagsToggleYellow.description": "Додає тег Finder «Жовтий» до вибраних файлів або вилучає його",
+  "@commands.tagsToggleYellow.description": {
+    "sourceHash": "16a2608"
+  },
+  "commands.tagsToggleRed.label": "Перемкнути тег «Червоний»",
+  "@commands.tagsToggleRed.label": {
+    "sourceHash": "f2d314d"
+  },
+  "commands.tagsToggleRed.description": "Додає тег Finder «Червоний» до вибраних файлів або вилучає його",
+  "@commands.tagsToggleRed.description": {
+    "sourceHash": "c6e0bee"
+  },
+  "commands.tagsToggleOrange.label": "Перемкнути тег «Оранжевий»",
+  "@commands.tagsToggleOrange.label": {
+    "sourceHash": "d0c0702"
+  },
+  "commands.tagsToggleOrange.description": "Додає тег Finder «Оранжевий» до вибраних файлів або вилучає його",
+  "@commands.tagsToggleOrange.description": {
+    "sourceHash": "79e5c97"
+  },
+  "commands.selectionToggle.label": "Перемкнути вибір",
+  "@commands.selectionToggle.label": {
+    "sourceHash": "6cb5515"
+  },
+  "commands.selectionToggleAndDown.label": "Перемкнути вибір і перейти вниз",
+  "@commands.selectionToggleAndDown.label": {
+    "sourceHash": "72ccb36"
+  },
+  "commands.selectionToggleAndDown.description": "Вибирає файл під курсором або скасовує його вибір, потім переходить униз (як у Total Commander)",
+  "@commands.selectionToggleAndDown.description": {
+    "sourceHash": "378bb7a"
+  },
+  "commands.selectionSelectAll.label": "Вибрати все",
+  "@commands.selectionSelectAll.label": {
+    "sourceHash": "1fc9a38"
+  },
+  "commands.selectionDeselectAll.label": "Скасувати вибір усього",
+  "@commands.selectionDeselectAll.label": {
+    "sourceHash": "9675494"
+  },
+  "commands.selectionInvert.label": "Інвертувати вибір",
+  "@commands.selectionInvert.label": {
+    "sourceHash": "d2e128a"
+  },
+  "commands.selectionInvert.description": "Вибирає всі невибрані файли та скасовує вибір вибраних",
+  "@commands.selectionInvert.description": {
+    "sourceHash": "b63ce32"
+  },
+  "commands.selectionSelectSameKind.label": "Вибрати всі такого самого типу",
+  "@commands.selectionSelectSameKind.label": {
+    "sourceHash": "9933028"
+  },
+  "commands.selectionSelectSameKind.description": "Додає до вибору всі записи, схожі на той, що під курсором, не скасовуючи наявного вибору",
+  "@commands.selectionSelectSameKind.description": {
+    "sourceHash": "9a95212"
+  },
+  "commands.selectionCompareDirectories.label": "Порівняти папки",
+  "@commands.selectionCompareDirectories.label": {
+    "sourceHash": "5cf3985"
+  },
+  "commands.selectionCompareDirectories.description": "Вибирає на кожній панелі файли, яких немає на іншій, і новіші копії решти",
+  "@commands.selectionCompareDirectories.description": {
+    "sourceHash": "190d99f"
+  },
+  "commands.selectionCompareDirectoriesMissing.label": "Порівняти папки: лише відсутні файли",
+  "@commands.selectionCompareDirectoriesMissing.label": {
+    "sourceHash": "d03d3c1"
+  },
+  "commands.selectionCompareDirectoriesMissing.description": "Вибирає на кожній панелі лише файли, яких немає на іншій",
+  "@commands.selectionCompareDirectoriesMissing.description": {
+    "sourceHash": "e61c71b"
+  },
+  "commands.selectionCompareDirectoriesSize.label": "Порівняти папки: різний розмір",
+  "@commands.selectionCompareDirectoriesSize.label": {
+    "sourceHash": "6c8fd21"
+  },
+  "commands.selectionCompareDirectoriesSize.description": "Вибирає на кожній панелі файли, яких немає на іншій, і обидві копії файлів, розмір яких відрізняється",
+  "@commands.selectionCompareDirectoriesSize.description": {
+    "sourceHash": "ac31996"
+  },
+  "commands.selectionSelectSameKind.allFolders": "Вибрати всі папки",
+  "@commands.selectionSelectSameKind.allFolders": {
+    "sourceHash": "5351f8b"
+  },
+  "commands.selectionSelectSameKind.sameExtension": "Вибрати всі з розширенням *.{extension}",
+  "@commands.selectionSelectSameKind.sameExtension": {
+    "sourceHash": "7809a58"
+  },
+  "commands.selectionSelectSameKind.noExtension": "Вибрати всі файли без розширення",
+  "@commands.selectionSelectSameKind.noExtension": {
+    "sourceHash": "d04751e"
+  },
+  "commands.selectionSelectFiles.label": "Вибрати файли…",
+  "@commands.selectionSelectFiles.label": {
+    "sourceHash": "b7f202e"
+  },
+  "commands.selectionSelectFiles.description": "Відкриває діалогове вікно «Вибрати файли», щоб додати до вибору відповідні файли",
+  "@commands.selectionSelectFiles.description": {
+    "sourceHash": "7695f3e"
+  },
+  "commands.selectionDeselectFiles.label": "Скасувати вибір файлів…",
+  "@commands.selectionDeselectFiles.label": {
+    "sourceHash": "6fb10d5"
+  },
+  "commands.selectionDeselectFiles.description": "Відкриває діалогове вікно «Скасувати вибір файлів», щоб вилучити відповідні файли з вибору",
+  "@commands.selectionDeselectFiles.description": {
+    "sourceHash": "2a6f82f"
+  },
+  "commands.selectionMcpSelect.label": "Вибрати діапазон на панелі",
+  "@commands.selectionMcpSelect.label": {
+    "sourceHash": "d8bb646"
+  },
+  "commands.selectionMcpSelectByNames.label": "Вибрати файли на панелі за назвою",
+  "@commands.selectionMcpSelectByNames.label": {
+    "sourceHash": "8cfc75d"
+  },
+  "commands.networkSelectHost.label": "Вибрати мережевий хост",
+  "@commands.networkSelectHost.label": {
+    "sourceHash": "4a9ede5"
+  },
+  "commands.serversShow.label": "Показати сервери",
+  "@commands.serversShow.label": {
+    "sourceHash": "092283a"
+  },
+  "commands.serversTogglePin.label": "Закріпити / відкріпити сервер",
+  "@commands.serversTogglePin.label": {
+    "sourceHash": "7d800c8"
+  },
+  "commands.serversDisconnect.label": "Відʼєднати сервер",
+  "@commands.serversDisconnect.label": {
+    "sourceHash": "8656022"
+  },
+  "commands.serversForgetSecret.label": "Забути збережений пароль",
+  "@commands.serversForgetSecret.label": {
+    "sourceHash": "ed68566"
+  },
+  "commands.serversEdit.label": "Змінити сервер…",
+  "@commands.serversEdit.label": {
+    "sourceHash": "a3282a7"
+  },
+  "commands.serversConnect.label": "Підʼєднатися до сервера…",
+  "@commands.serversConnect.label": {
+    "sourceHash": "6188f47"
+  },
+  "commands.networkRefresh.label": "Оновити мережеві хости",
+  "@commands.networkRefresh.label": {
+    "sourceHash": "73966bd"
+  },
+  "commands.shareBack.label": "Назад до списку хостів",
+  "@commands.shareBack.label": {
+    "sourceHash": "42c44d5"
+  },
+  "commands.shareSelectShare.label": "Підʼєднатися до спільної папки",
+  "@commands.shareSelectShare.label": {
+    "sourceHash": "6c48c8c"
+  },
+  "commands.volumeSelect.label": "Вибрати том",
+  "@commands.volumeSelect.label": {
+    "sourceHash": "60f5ce1"
+  },
+  "commands.volumeClose.label": "Закрити перемикач томів",
+  "@commands.volumeClose.label": {
+    "sourceHash": "075481e"
+  },
+  "commands.volumeSelectByName.label": "Вибрати том панелі за назвою",
+  "@commands.volumeSelectByName.label": {
+    "sourceHash": "9f16865"
+  },
+  "commands.aboutOpenWebsite.label": "Відкрити вебсайт",
+  "@commands.aboutOpenWebsite.label": {
+    "sourceHash": "3451735"
+  },
+  "commands.aboutOpenUpgrade.label": "Відкрити сторінку платних ліцензій",
+  "@commands.aboutOpenUpgrade.label": {
+    "sourceHash": "9df3bf0"
+  },
+  "commands.aboutClose.label": "Закрити вікно «Про програму»",
+  "@commands.aboutClose.label": {
+    "sourceHash": "d0096c3"
+  },
+  "commands.paletteUp.label": "Попередній результат",
+  "@commands.paletteUp.label": {
+    "sourceHash": "965bc32"
+  },
+  "commands.paletteDown.label": "Наступний результат",
+  "@commands.paletteDown.label": {
+    "sourceHash": "bf56a19"
+  },
+  "commands.paletteExecute.label": "Виконати команду",
+  "@commands.paletteExecute.label": {
+    "sourceHash": "20f9b97"
+  },
+  "commands.paletteClose.label": "Закрити палітру",
+  "@commands.paletteClose.label": {
+    "sourceHash": "2e75050"
+  },
+  "commands.handler.favoriteAdded": "«{name}» додано до улюблених",
+  "@commands.handler.favoriteAdded": {
+    "sourceHash": "ee59953"
+  },
+  "commands.handler.favoriteAddFailed": "Не вдалося додати цю папку до улюблених. Спробувати ще раз?",
+  "@commands.handler.favoriteAddFailed": {
+    "sourceHash": "0792537"
+  },
+  "commands.handler.favoriteAddSlow": "Ця папка зараз повільно відповідає, тому її ще немає в улюблених. Спробувати ще раз за мить?",
+  "@commands.handler.favoriteAddSlow": {
+    "sourceHash": "50a9944"
+  },
+  "commands.handler.tabLimitReached": "Досягнуто ліміту вкладок",
+  "@commands.handler.tabLimitReached": {
+    "sourceHash": "2d4205a"
+  },
+  "commands.handler.noRecentlyClosedTabs": "На цій панелі немає недавно закритих вкладок.",
+  "@commands.handler.noRecentlyClosedTabs": {
+    "sourceHash": "e560789"
+  },
+  "commands.handler.cloudDownloadFailed": "Не вдалося викачати з хмари. {detail}",
+  "@commands.handler.cloudDownloadFailed": {
+    "sourceHash": "9efe237"
+  },
+  "commands.handler.cloudRemoveDownloadFailed": "Не вдалося вилучити викачане. {detail}",
+  "@commands.handler.cloudRemoveDownloadFailed": {
+    "sourceHash": "11189fb"
+  },
+  "commands.handler.googleDriveLinkMissing": "Цей елемент не має посилання Google Drive.",
+  "@commands.handler.googleDriveLinkMissing": {
+    "sourceHash": "7be9109"
+  },
+  "commands.handler.googleDriveOpenFailed": "Не вдалося відкрити це в Google Drive. {detail}",
+  "@commands.handler.googleDriveOpenFailed": {
+    "sourceHash": "e7fd439"
+  },
+  "commands.handler.googleDriveLinkCopied": "Посилання Google Drive скопійовано.",
+  "@commands.handler.googleDriveLinkCopied": {
+    "sourceHash": "0997eb8"
+  },
+  "commands.handler.googleDriveCopyFailed": "Не вдалося скопіювати посилання Google Drive. {detail}",
+  "@commands.handler.googleDriveCopyFailed": {
+    "sourceHash": "0af1fd3"
+  },
+  "commands.handler.shareLinkCopied.sevenDays": "Посилання для поширення скопійовано. Воно діятиме сім днів.",
+  "@commands.handler.shareLinkCopied.sevenDays": {
+    "sourceHash": "6f4055b"
+  },
+  "commands.handler.shareLinkCopied.oneDay": "Посилання для поширення скопійовано. Воно діятиме один день.",
+  "@commands.handler.shareLinkCopied.oneDay": {
+    "sourceHash": "ca08c52"
+  },
+  "commands.handler.shareLinkCopied.oneHour": "Посилання для поширення скопійовано. Воно діятиме одну годину.",
+  "@commands.handler.shareLinkCopied.oneHour": {
+    "sourceHash": "8b9f0cc"
+  },
+  "commands.handler.shareLinkUnavailable": "Щоб скопіювати посилання для поширення, наведіть курсор на файл у бакеті S3.",
+  "@commands.handler.shareLinkUnavailable": {
+    "sourceHash": "c4ea112"
+  },
+  "commands.handler.shareLinkFailed": "Не вдалося створити посилання для поширення. {detail}",
+  "@commands.handler.shareLinkFailed": {
+    "sourceHash": "5ff44b7"
+  },
+  "commands.handler.openTerminalHere.hint": "Цю папку відкрито у вашій програмі-терміналі. Хочете, щоб наступного разу Cmdr відкривав іншу програму? Виберіть її в Параметрах, у розділі «Навігація та операції з файлами».",
+  "@commands.handler.openTerminalHere.hint": {
+    "sourceHash": "b29b744"
+  },
+  "commands.handler.openTerminalHere.dismiss": "Закрити",
+  "@commands.handler.openTerminalHere.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "commands.handler.openTerminalHere.openSettings": "Відкрити параметри",
+  "@commands.handler.openTerminalHere.openSettings": {
+    "sourceHash": "ca381c1"
+  },
+  "commands.handler.openTerminalHere.appMissing": "Програму {app} більше не інстальовано, тому папку відкрито в Терміналі.",
+  "@commands.handler.openTerminalHere.appMissing": {
+    "sourceHash": "770ded9"
+  },
+  "commands.handler.openTerminalHere.appMissingUnnamed": "Вашу програму-термінал більше не інстальовано, тому папку відкрито в Терміналі.",
+  "@commands.handler.openTerminalHere.appMissingUnnamed": {
+    "sourceHash": "8e40ade"
+  },
+  "commands.handler.openTerminalHere.noPath": "У цієї папки немає шляху, який міг би відкрити термінал.",
+  "@commands.handler.openTerminalHere.noPath": {
+    "sourceHash": "7851182"
+  },
+  "commands.handler.openTerminalHere.launchRefused": "Cmdr не вдалося запустити вашу програму-термінал. Спробуйте один раз відкрити її самостійно, а потім поверніться.",
+  "@commands.handler.openTerminalHere.launchRefused": {
+    "sourceHash": "dd7296e"
+  },
+  "commands.handler.openTerminalHere.timedOut": "Ваша програма-термінал довго запускається. Можливо, вона ще відкриється.",
+  "@commands.handler.openTerminalHere.timedOut": {
+    "sourceHash": "ed36313"
+  },
+  "commands.handler.getInfo.automationOff": "Для «Досьє» потрібно, щоб Cmdr міг керувати Finder, а цей дозвіл вимкнено. Відкрийте {systemSettings} > {privacyAndSecurity} > {automation} і ввімкніть Finder під Cmdr.",
+  "@commands.handler.getInfo.automationOff": {
+    "sourceHash": "4973ae2"
+  },
+  "commands.handler.getInfo.openAutomationSettings": "Відкрити параметри «{automation}»",
+  "@commands.handler.getInfo.openAutomationSettings": {
+    "sourceHash": "f2708a0"
+  },
+  "commands.handler.getInfo.notReached": "Cmdr не вдалося звʼязатися з Finder, щоб відкрити «Досьє». Спробуйте ще раз.",
+  "@commands.handler.getInfo.notReached": {
+    "sourceHash": "9cbc272"
+  },
+  "commands.handler.zoomResetHintShortcut": "Скинути рівень масштабу до 100 % можна клавішами {shortcut}.",
+  "@commands.handler.zoomResetHintShortcut": {
+    "sourceHash": "efdd715"
+  },
+  "commands.handler.zoomResetHintMenu": "Скинути рівень масштабу до 100 % можна в меню Перегляд > Масштаб > 100 %.",
+  "@commands.handler.zoomResetHintMenu": {
+    "sourceHash": "f10315d"
+  },
+  "commands.handler.zoomReset": "Масштаб скинуто до 100 %.",
+  "@commands.handler.zoomReset": {
+    "sourceHash": "8c6bf82"
+  },
+  "commands.handler.zoomIncreased": "Масштаб збільшено до {size} %. {hint}",
+  "@commands.handler.zoomIncreased": {
+    "sourceHash": "39fea10"
+  },
+  "commands.handler.zoomDecreased": "Масштаб зменшено до {size} %. {hint}",
+  "@commands.handler.zoomDecreased": {
+    "sourceHash": "71404cb"
+  },
+  "commands.suggestedOpsShow.label": "Пропозиції ШІ",
+  "@commands.suggestedOpsShow.label": {
+    "sourceHash": "1a1f5b9"
+  },
+  "commands.suggestedOpsShow.description": "Перевірити операції з файлами, які запропонував ШІ, і вирішити, що виконати",
+  "@commands.suggestedOpsShow.description": {
+    "sourceHash": "7efe8c9"
+  },
+  "commands.helpViewDebugLog.label": "Переглянути журнал налагодження",
+  "@commands.helpViewDebugLog.label": {
+    "sourceHash": "007c98d"
+  },
+  "commands.helpViewDebugLog.description": "Стежити за журналом налагодження Cmdr наживо в переглядачі файлів",
+  "@commands.helpViewDebugLog.description": {
+    "sourceHash": "a937e6e"
+  },
+  "commands.handler.viewDebugLog.disabled": "Зберігання журналу вимкнено. Задайте ліміт місця на диску більший за 0 у Параметрах > Експертні, а потім перезапустіть Cmdr, щоб переглянути журнал налагодження.",
+  "@commands.handler.viewDebugLog.disabled": {
+    "sourceHash": "96f16fc"
+  },
+  "commands.handler.viewDebugLog.unavailable": "Не вдалося відкрити журнал налагодження. Спробуйте ще раз.",
+  "@commands.handler.viewDebugLog.unavailable": {
+    "sourceHash": "794a5b3"
+  }
+}

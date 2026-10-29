@@ -1,0 +1,772 @@
+{
+  "menu.bar.file": "Файл",
+  "@menu.bar.file": {
+    "sourceHash": "50009ce"
+  },
+  "menu.bar.edit": "Редагування",
+  "@menu.bar.edit": {
+    "sourceHash": "464c4ff"
+  },
+  "menu.bar.select": "Вибір",
+  "@menu.bar.select": {
+    "sourceHash": "2a78025"
+  },
+  "menu.bar.view": "Перегляд",
+  "@menu.bar.view": {
+    "sourceHash": "dcc839a"
+  },
+  "menu.bar.go": "Перейти",
+  "@menu.bar.go": {
+    "sourceHash": "6cc8519"
+  },
+  "menu.bar.tab": "Вкладка",
+  "@menu.bar.tab": {
+    "sourceHash": "90ddf19"
+  },
+  "menu.bar.window": "Вікно",
+  "@menu.bar.window": {
+    "sourceHash": "19734a1"
+  },
+  "menu.bar.help": "Довідка",
+  "@menu.bar.help": {
+    "sourceHash": "b79cac9"
+  },
+  "menu.app.about": "Про Cmdr",
+  "@menu.app.about": {
+    "sourceHash": "efe010f"
+  },
+  "menu.app.acknowledgements": "Подяки",
+  "@menu.app.acknowledgements": {
+    "sourceHash": "c9015d5"
+  },
+  "menu.app.licenseDetails": "Переглянути деталі ліцензії",
+  "@menu.app.licenseDetails": {
+    "sourceHash": "0e660e8"
+  },
+  "menu.app.licenseEnter": "Ввести ліцензійний ключ…",
+  "@menu.app.licenseEnter": {
+    "sourceHash": "24a8d77"
+  },
+  "menu.app.checkForUpdates": "Перевірити наявність оновлень…",
+  "@menu.app.checkForUpdates": {
+    "sourceHash": "52d6f7d"
+  },
+  "menu.app.changelog": "Журнал змін",
+  "@menu.app.changelog": {
+    "sourceHash": "ead07c8"
+  },
+  "menu.app.onboarding": "Початкове налаштування…",
+  "@menu.app.onboarding": {
+    "sourceHash": "c4cc4aa"
+  },
+  "menu.app.cliCommandInstall": "Інсталювати команду «cmdr»",
+  "@menu.app.cliCommandInstall": {
+    "sourceHash": "b99e6c4"
+  },
+  "menu.app.cliCommandUninstall": "Видалити команду «cmdr»",
+  "@menu.app.cliCommandUninstall": {
+    "sourceHash": "ac1052e"
+  },
+  "menu.app.cliCommandHomebrew": "Команду «cmdr» інстальовано через Homebrew",
+  "@menu.app.cliCommandHomebrew": {
+    "sourceHash": "cc4c0fd"
+  },
+  "menu.app.settings": "Параметри…",
+  "@menu.app.settings": {
+    "sourceHash": "7a04083"
+  },
+  "menu.app.services": "Сервіси",
+  "@menu.app.services": {
+    "sourceHash": "604dce4"
+  },
+  "menu.app.hide": "Сховати Cmdr",
+  "@menu.app.hide": {
+    "sourceHash": "8f86f89"
+  },
+  "menu.app.hideOthers": "Сховати решту",
+  "@menu.app.hideOthers": {
+    "sourceHash": "74376e4"
+  },
+  "menu.app.showAll": "Показати всі",
+  "@menu.app.showAll": {
+    "sourceHash": "2150d8d"
+  },
+  "menu.app.quit": "Завершити Cmdr",
+  "@menu.app.quit": {
+    "sourceHash": "b3455b4"
+  },
+  "menu.file.open": "Відкрити",
+  "@menu.file.open": {
+    "sourceHash": "ed077f3"
+  },
+  "menu.file.view": "Переглянути",
+  "@menu.file.view": {
+    "sourceHash": "dcc839a"
+  },
+  "menu.file.edit": "Редагувати в редакторі",
+  "@menu.file.edit": {
+    "sourceHash": "691ca0f"
+  },
+  "menu.file.copy": "Скопіювати…",
+  "@menu.file.copy": {
+    "sourceHash": "7f743d4"
+  },
+  "menu.file.move": "Перемістити…",
+  "@menu.file.move": {
+    "sourceHash": "cd799da"
+  },
+  "menu.file.duplicate": "Дублювати",
+  "@menu.file.duplicate": {
+    "sourceHash": "02cdaab"
+  },
+  "menu.file.compress": "Створити архів…",
+  "@menu.file.compress": {
+    "sourceHash": "66b9d2c"
+  },
+  "menu.file.newFolder": "Нова папка…",
+  "@menu.file.newFolder": {
+    "sourceHash": "6cca529"
+  },
+  "menu.file.newFile": "Новий файл…",
+  "@menu.file.newFile": {
+    "sourceHash": "6b2727f"
+  },
+  "menu.file.delete": "Видалити",
+  "@menu.file.delete": {
+    "sourceHash": "e2d0a54"
+  },
+  "menu.file.deletePermanently": "Видалити остаточно",
+  "@menu.file.deletePermanently": {
+    "sourceHash": "280b10c"
+  },
+  "menu.file.rename": "Перейменувати",
+  "@menu.file.rename": {
+    "sourceHash": "3064d79"
+  },
+  "menu.context.showInFolder": "Показати в папці",
+  "@menu.context.showInFolder": {
+    "sourceHash": "da47876"
+  },
+  "menu.file.showInFinder": "Показати у Finder",
+  "@menu.file.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "menu.file.showInFileManager": "Показати у файловому менеджері",
+  "@menu.file.showInFileManager": {
+    "sourceHash": "3ca4dad"
+  },
+  "menu.file.openTerminalHere": "Відкрити термінал тут",
+  "@menu.file.openTerminalHere": {
+    "sourceHash": "b7eda27"
+  },
+  "menu.file.getInfo": "Досьє",
+  "@menu.file.getInfo": {
+    "sourceHash": "91c64ca"
+  },
+  "menu.file.quickLook": "Швидкий перегляд",
+  "@menu.file.quickLook": {
+    "sourceHash": "f5616ce"
+  },
+  "menu.edit.undo": "Відмінити",
+  "@menu.edit.undo": {
+    "sourceHash": "a8283ad"
+  },
+  "menu.edit.redo": "Повторити",
+  "@menu.edit.redo": {
+    "sourceHash": "7427398"
+  },
+  "menu.edit.undoTrash": "Відмінити переміщення в Смітник",
+  "@menu.edit.undoTrash": {
+    "sourceHash": "c6fea33"
+  },
+  "menu.edit.undoTrashOne": "Відмінити переміщення «{name}» у Смітник",
+  "@menu.edit.undoTrashOne": {
+    "sourceHash": "45494c8"
+  },
+  "menu.edit.undoTrashMany": "Відмінити переміщення в Смітник (елементів: {countText})",
+  "@menu.edit.undoTrashMany": {
+    "sourceHash": "bb9192a"
+  },
+  "menu.edit.cut": "Вирізати",
+  "@menu.edit.cut": {
+    "sourceHash": "1f45f02"
+  },
+  "menu.edit.copy": "Скопіювати",
+  "@menu.edit.copy": {
+    "sourceHash": "e21f935"
+  },
+  "menu.edit.paste": "Вставити",
+  "@menu.edit.paste": {
+    "sourceHash": "f3380f7"
+  },
+  "menu.edit.moveHere": "Перемістити сюди",
+  "@menu.edit.moveHere": {
+    "sourceHash": "56f1247"
+  },
+  "menu.edit.copyPath": "Скопіювати шлях",
+  "@menu.edit.copyPath": {
+    "sourceHash": "720ff41"
+  },
+  "menu.edit.copyFilename": "Скопіювати назву файлу",
+  "@menu.edit.copyFilename": {
+    "sourceHash": "5cdf7f8"
+  },
+  "menu.edit.searchFiles": "Знайти файли…",
+  "@menu.edit.searchFiles": {
+    "sourceHash": "149a9d1"
+  },
+  "menu.select.all": "Вибрати все",
+  "@menu.select.all": {
+    "sourceHash": "1fc9a38"
+  },
+  "menu.select.deselectAll": "Скасувати вибір усього",
+  "@menu.select.deselectAll": {
+    "sourceHash": "9675494"
+  },
+  "menu.select.sameKind": "Вибрати все того самого типу",
+  "@menu.select.sameKind": {
+    "sourceHash": "9933028"
+  },
+  "menu.select.compareDirectories": "Порівняти папки",
+  "@menu.select.compareDirectories": {
+    "sourceHash": "5cf3985"
+  },
+  "menu.select.allFolders": "Вибрати всі папки",
+  "@menu.select.allFolders": {
+    "sourceHash": "5351f8b"
+  },
+  "menu.select.sameExtension": "Вибрати все з розширенням *.{extension}",
+  "@menu.select.sameExtension": {
+    "sourceHash": "7809a58"
+  },
+  "menu.select.noExtension": "Вибрати всі файли без розширення",
+  "@menu.select.noExtension": {
+    "sourceHash": "d04751e"
+  },
+  "menu.select.invert": "Інвертувати вибір",
+  "@menu.select.invert": {
+    "sourceHash": "d2e128a"
+  },
+  "menu.select.files": "Вибрати файли…",
+  "@menu.select.files": {
+    "sourceHash": "b7f202e"
+  },
+  "menu.select.deselectFiles": "Скасувати вибір файлів…",
+  "@menu.select.deselectFiles": {
+    "sourceHash": "6fb10d5"
+  },
+  "menu.view.leftPane": "Ліва панель",
+  "@menu.view.leftPane": {
+    "sourceHash": "1c5078a"
+  },
+  "menu.view.rightPane": "Права панель",
+  "@menu.view.rightPane": {
+    "sourceHash": "b2d98e6"
+  },
+  "menu.view.fullView": "Докладний вигляд",
+  "@menu.view.fullView": {
+    "sourceHash": "93f9dde"
+  },
+  "menu.view.briefView": "Короткий вигляд",
+  "@menu.view.briefView": {
+    "sourceHash": "7bfd572"
+  },
+  "menu.view.showHiddenFiles": "Показувати приховані файли",
+  "@menu.view.showHiddenFiles": {
+    "sourceHash": "b5ede7f"
+  },
+  "menu.view.sortBy": "Сортування",
+  "@menu.view.sortBy": {
+    "sourceHash": "c912902"
+  },
+  "menu.view.zoom": "Масштаб",
+  "@menu.view.zoom": {
+    "sourceHash": "509c517"
+  },
+  "menu.view.switchPane": "Перемкнути панель",
+  "@menu.view.switchPane": {
+    "sourceHash": "377471f"
+  },
+  "menu.view.swapPanes": "Поміняти панелі місцями",
+  "@menu.view.swapPanes": {
+    "sourceHash": "cc29396"
+  },
+  "menu.view.clonePane": "Клонувати панель",
+  "@menu.view.clonePane": {
+    "sourceHash": "74b2c7f"
+  },
+  "menu.view.calculateFolderSizes": "Обчислити розміри папок",
+  "@menu.view.calculateFolderSizes": {
+    "sourceHash": "d2a83da"
+  },
+  "menu.view.commandPalette": "Палітра команд…",
+  "@menu.view.commandPalette": {
+    "sourceHash": "6b1c93d"
+  },
+  "menu.view.operationQueue": "Черга операцій",
+  "@menu.view.operationQueue": {
+    "sourceHash": "fa91417"
+  },
+  "menu.view.operationLog": "Журнал операцій",
+  "@menu.view.operationLog": {
+    "sourceHash": "2c97965"
+  },
+  "menu.view.suggestedOps": "Пропозиції ШІ",
+  "@menu.view.suggestedOps": {
+    "sourceHash": "1a1f5b9"
+  },
+  "menu.view.askCmdr": "Ask Cmdr",
+  "@menu.view.askCmdr": {
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Ask Cmdr is the feature's brand name and stays verbatim in uk (terms.json ask-cmdr ruling)."
+  },
+  "menu.sort.name": "Назва",
+  "@menu.sort.name": {
+    "sourceHash": "dcd1d52"
+  },
+  "menu.sort.extension": "Розширення",
+  "@menu.sort.extension": {
+    "sourceHash": "395aeb9"
+  },
+  "menu.sort.dateModified": "Дата змінення",
+  "@menu.sort.dateModified": {
+    "sourceHash": "eb5e7a5"
+  },
+  "menu.sort.size": "Розмір",
+  "@menu.sort.size": {
+    "sourceHash": "1af8519"
+  },
+  "menu.sort.dateCreated": "Дата створення",
+  "@menu.sort.dateCreated": {
+    "sourceHash": "fa91f76"
+  },
+  "menu.sort.dateAdded": "Дата додавання",
+  "@menu.sort.dateAdded": {
+    "sourceHash": "3321b9f"
+  },
+  "menu.sort.ascending": "За зростанням",
+  "@menu.sort.ascending": {
+    "sourceHash": "7718459"
+  },
+  "menu.sort.descending": "За спаданням",
+  "@menu.sort.descending": {
+    "sourceHash": "79479a6"
+  },
+  "menu.zoom.percent75": "75 %",
+  "@menu.zoom.percent75": {
+    "sourceHash": "10963ac"
+  },
+  "menu.zoom.percent100": "100 %",
+  "@menu.zoom.percent100": {
+    "sourceHash": "32e4899"
+  },
+  "menu.zoom.percent125": "125 %",
+  "@menu.zoom.percent125": {
+    "sourceHash": "38cb31c"
+  },
+  "menu.zoom.percent150": "150 %",
+  "@menu.zoom.percent150": {
+    "sourceHash": "00a4e80"
+  },
+  "menu.zoom.in": "Збільшити",
+  "@menu.zoom.in": {
+    "sourceHash": "0e47f09"
+  },
+  "menu.zoom.out": "Зменшити",
+  "@menu.zoom.out": {
+    "sourceHash": "bc7b631"
+  },
+  "menu.go.back": "Назад",
+  "@menu.go.back": {
+    "sourceHash": "76900f1"
+  },
+  "menu.go.forward": "Вперед",
+  "@menu.go.forward": {
+    "sourceHash": "f1c65e1"
+  },
+  "menu.go.parentFolder": "Батьківська папка",
+  "@menu.go.parentFolder": {
+    "sourceHash": "158f5a0"
+  },
+  "menu.go.rootFolder": "Коренева папка",
+  "@menu.go.rootFolder": {
+    "sourceHash": "6d92528"
+  },
+  "menu.go.home": "Домівка",
+  "@menu.go.home": {
+    "sourceHash": "3a78695"
+  },
+  "menu.go.goToPath": "Перейти до папки…",
+  "@menu.go.goToPath": {
+    "sourceHash": "33de610"
+  },
+  "menu.go.goToLatestDownload": "Перейти до останнього викачаного файлу",
+  "@menu.go.goToLatestDownload": {
+    "sourceHash": "492d0b6"
+  },
+  "menu.go.showFavorites": "Показати улюблені",
+  "@menu.go.showFavorites": {
+    "sourceHash": "f4dfe9b"
+  },
+  "menu.go.addToFavorites": "Додати до улюблених",
+  "@menu.go.addToFavorites": {
+    "sourceHash": "7f3c078"
+  },
+  "menu.go.connectToServer": "Підʼєднатися до сервера…",
+  "@menu.go.connectToServer": {
+    "sourceHash": "6188f47"
+  },
+  "menu.go.showServers": "Показати сервери",
+  "@menu.go.showServers": {
+    "sourceHash": "092283a"
+  },
+  "menu.tab.newTab": "Нова вкладка",
+  "@menu.tab.newTab": {
+    "sourceHash": "1e08fda"
+  },
+  "menu.tab.closeTab": "Закрити вкладку",
+  "@menu.tab.closeTab": {
+    "sourceHash": "50a3f95"
+  },
+  "menu.tab.reopenClosedTab": "Знову відкрити закриту вкладку",
+  "@menu.tab.reopenClosedTab": {
+    "sourceHash": "5ca5397"
+  },
+  "menu.tab.nextTab": "Наступна вкладка",
+  "@menu.tab.nextTab": {
+    "sourceHash": "1ef9522"
+  },
+  "menu.tab.previousTab": "Попередня вкладка",
+  "@menu.tab.previousTab": {
+    "sourceHash": "c88d5e7"
+  },
+  "menu.tab.pinTab": "Закріпити вкладку",
+  "@menu.tab.pinTab": {
+    "sourceHash": "bf5083a"
+  },
+  "menu.tab.unpinTab": "Відкріпити вкладку",
+  "@menu.tab.unpinTab": {
+    "sourceHash": "20553dd"
+  },
+  "menu.tab.closeOtherTabs": "Закрити решту вкладок",
+  "@menu.tab.closeOtherTabs": {
+    "sourceHash": "0ddc2c5"
+  },
+  "menu.window.minimize": "Згорнути",
+  "@menu.window.minimize": {
+    "sourceHash": "d72e311"
+  },
+  "menu.window.zoom": "Оптимізувати",
+  "@menu.window.zoom": {
+    "sourceHash": "509c517"
+  },
+  "menu.help.keyboardShortcuts": "Клавіатурні скорочення",
+  "@menu.help.keyboardShortcuts": {
+    "sourceHash": "e9bef0b"
+  },
+  "menu.help.accessibility": "Посібник з доступності",
+  "@menu.help.accessibility": {
+    "sourceHash": "eee67fa"
+  },
+  "menu.help.whatsNew": "Що нового",
+  "@menu.help.whatsNew": {
+    "sourceHash": "37e6112"
+  },
+  "menu.help.sendFeedback": "Надіслати відгук…",
+  "@menu.help.sendFeedback": {
+    "sourceHash": "60e1072"
+  },
+  "menu.help.sendErrorReport": "Надіслати звіт про помилку…",
+  "@menu.help.sendErrorReport": {
+    "sourceHash": "063c94e"
+  },
+  "menu.context.edit": "Редагувати",
+  "@menu.context.edit": {
+    "sourceHash": "464c4ff"
+  },
+  "menu.context.selection": "Вибір",
+  "@menu.context.selection": {
+    "sourceHash": "ca40670"
+  },
+  "menu.context.toggleSelection": "Перемкнути вибір",
+  "@menu.context.toggleSelection": {
+    "sourceHash": "6cb5515"
+  },
+  "menu.context.copyNamed": "Скопіювати «{name}»",
+  "@menu.context.copyNamed": {
+    "sourceHash": "2131c34"
+  },
+  "menu.context.addToFavorites": "Додати до улюблених",
+  "@menu.context.addToFavorites": {
+    "sourceHash": "7f3c078"
+  },
+  "menu.context.hideFunctionKeyBar": "Сховати панель функціональних клавіш",
+  "@menu.context.hideFunctionKeyBar": {
+    "sourceHash": "343a561"
+  },
+  "menu.context.makeAvailableOffline": "Зробити доступним офлайн",
+  "@menu.context.makeAvailableOffline": {
+    "sourceHash": "b75c09f"
+  },
+  "menu.context.removeDownload": "Вилучити викачане",
+  "@menu.context.removeDownload": {
+    "sourceHash": "5dfc369"
+  },
+  "menu.context.openInGoogleDrive": "Відкрити в Google Drive",
+  "@menu.context.openInGoogleDrive": {
+    "sourceHash": "98c7516"
+  },
+  "menu.context.copyGoogleDriveLink": "Скопіювати посилання Google Drive",
+  "@menu.context.copyGoogleDriveLink": {
+    "sourceHash": "070b383"
+  },
+  "menu.context.copyShareLink": "Скопіювати посилання для поширення",
+  "@menu.context.copyShareLink": {
+    "sourceHash": "d31483e"
+  },
+  "menu.context.shareLinkSevenDays": "Спливає через сім днів",
+  "@menu.context.shareLinkSevenDays": {
+    "sourceHash": "06949d8"
+  },
+  "menu.context.shareLinkOneDay": "Спливає через один день",
+  "@menu.context.shareLinkOneDay": {
+    "sourceHash": "5ff3dbc"
+  },
+  "menu.context.shareLinkOneHour": "Спливає через одну годину",
+  "@menu.context.shareLinkOneHour": {
+    "sourceHash": "faf9c50"
+  },
+  "menu.context.askGemini": "Запитати Gemini",
+  "@menu.context.askGemini": {
+    "sourceHash": "7eec77f"
+  },
+  "menu.context.share": "Поширити",
+  "@menu.context.share": {
+    "sourceHash": "29887a5"
+  },
+  "menu.context.shareLoading": "Пошук варіантів поширення…",
+  "@menu.context.shareLoading": {
+    "sourceHash": "1db46ae"
+  },
+  "menu.context.shareNone": "Немає варіантів поширення",
+  "@menu.context.shareNone": {
+    "sourceHash": "cd12a10"
+  },
+  "menu.context.editExtensions": "Змінити розширення…",
+  "@menu.context.editExtensions": {
+    "sourceHash": "c1d99c8"
+  },
+  "menu.context.openWithLoading": "Пошук програм…",
+  "@menu.context.openWithLoading": {
+    "sourceHash": "5bcff61"
+  },
+  "menu.context.openWith": "Відкрити програмою",
+  "@menu.context.openWith": {
+    "sourceHash": "fe94d58"
+  },
+  "menu.context.openWithDefault": "{app} (типова)",
+  "@menu.context.openWithDefault": {
+    "sourceHash": "32a7cca"
+  },
+  "menu.context.openWithOther": "Іншою…",
+  "@menu.context.openWithOther": {
+    "sourceHash": "1e37529"
+  },
+  "menu.tag.red": "Червоний",
+  "@menu.tag.red": {
+    "sourceHash": "ba19e9c"
+  },
+  "menu.tag.orange": "Оранжевий",
+  "@menu.tag.orange": {
+    "sourceHash": "78e7771"
+  },
+  "menu.tag.yellow": "Жовтий",
+  "@menu.tag.yellow": {
+    "sourceHash": "19dd83f"
+  },
+  "menu.tag.green": "Зелений",
+  "@menu.tag.green": {
+    "sourceHash": "d486dfb"
+  },
+  "menu.tag.blue": "Синій",
+  "@menu.tag.blue": {
+    "sourceHash": "ec7d56a"
+  },
+  "menu.tag.purple": "Бузковий",
+  "@menu.tag.purple": {
+    "sourceHash": "7d465fb"
+  },
+  "menu.tag.gray": "Сірий",
+  "@menu.tag.gray": {
+    "sourceHash": "0d5adda"
+  },
+  "menu.tag.rowLabel": "Теги",
+  "@menu.tag.rowLabel": {
+    "sourceHash": "1331275"
+  },
+  "menu.tag.addNamed": "Додати «{color}»",
+  "@menu.tag.addNamed": {
+    "sourceHash": "3be3f57"
+  },
+  "menu.tag.removeNamed": "Вилучити «{color}»",
+  "@menu.tag.removeNamed": {
+    "sourceHash": "7a067fb"
+  },
+  "menu.mediaIndex.addFolder": "Додати до індексованих папок",
+  "@menu.mediaIndex.addFolder": {
+    "sourceHash": "c0a87cd"
+  },
+  "menu.mediaIndex.addFolderExcluded": "Додати до індексованих папок (виключено)",
+  "@menu.mediaIndex.addFolderExcluded": {
+    "sourceHash": "fc7c7ce"
+  },
+  "menu.mediaIndex.coveredByParent": "Індексується через батьківську папку",
+  "@menu.mediaIndex.coveredByParent": {
+    "sourceHash": "9dffdcd"
+  },
+  "menu.mediaIndex.removeFolder": "Вилучити з індексованих папок",
+  "@menu.mediaIndex.removeFolder": {
+    "sourceHash": "7079859"
+  },
+  "menu.mediaIndex.excludeFolder": "Не індексувати зображення в цій папці",
+  "@menu.mediaIndex.excludeFolder": {
+    "sourceHash": "9119500"
+  },
+  "menu.mediaIndex.includeFolder": "Знову індексувати зображення тут",
+  "@menu.mediaIndex.includeFolder": {
+    "sourceHash": "0a8a3a0"
+  },
+  "menu.breadcrumb.copyPath": "Скопіювати шлях",
+  "@menu.breadcrumb.copyPath": {
+    "sourceHash": "720ff41"
+  },
+  "menu.volume.eject": "Вийняти ({name})",
+  "@menu.volume.eject": {
+    "sourceHash": "913d6ea"
+  },
+  "menu.volume.ejectBusy": "Вийняти ({name}) (зайнято)",
+  "@menu.volume.ejectBusy": {
+    "sourceHash": "e2145a6"
+  },
+  "menu.volume.renameFavorite": "Перейменувати",
+  "@menu.volume.renameFavorite": {
+    "sourceHash": "3064d79"
+  },
+  "menu.volume.editFavoriteShortcut": "Призначити клавішу…",
+  "@menu.volume.editFavoriteShortcut": {
+    "sourceHash": "c61559e"
+  },
+  "menu.volume.removeFavorite": "Вилучити",
+  "@menu.volume.removeFavorite": {
+    "sourceHash": "c3812fc"
+  },
+  "menu.network.open": "Відкрити",
+  "@menu.network.open": {
+    "sourceHash": "ed077f3"
+  },
+  "menu.network.edit": "Змінити сервер…",
+  "@menu.network.edit": {
+    "sourceHash": "a3282a7"
+  },
+  "menu.network.disconnect": "Відʼєднати",
+  "@menu.network.disconnect": {
+    "sourceHash": "acfc5be"
+  },
+  "menu.network.pinToSwitcher": "Закріпити в перемикачі",
+  "@menu.network.pinToSwitcher": {
+    "sourceHash": "868b68d"
+  },
+  "menu.network.unpin": "Відкріпити з перемикача",
+  "@menu.network.unpin": {
+    "sourceHash": "82297d8"
+  },
+  "menu.network.forgetServer": "Забути сервер",
+  "@menu.network.forgetServer": {
+    "sourceHash": "e43c85d"
+  },
+  "menu.network.forgetSavedPassword": "Забути збережений пароль",
+  "@menu.network.forgetSavedPassword": {
+    "sourceHash": "ed68566"
+  },
+  "menu.volume.disconnectBusy": "Відʼєднати (зайнято)",
+  "@menu.volume.disconnectBusy": {
+    "sourceHash": "598ba81"
+  },
+  "menu.volume.forgetSavedPasswordBusy": "Забути збережений пароль (зайнято)",
+  "@menu.volume.forgetSavedPasswordBusy": {
+    "sourceHash": "2a05847"
+  },
+  "menu.volume.forgetServerBusy": "Забути сервер (зайнято)",
+  "@menu.volume.forgetServerBusy": {
+    "sourceHash": "53df26b"
+  },
+  "menu.viewer.close": "Закрити",
+  "@menu.viewer.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "menu.viewer.wordWrap": "Перенесення рядків",
+  "@menu.viewer.wordWrap": {
+    "sourceHash": "9e210f3"
+  },
+  "menu.dock.openCmdr": "Відкрити Cmdr",
+  "@menu.dock.openCmdr": {
+    "sourceHash": "f898c5b"
+  },
+  "menu.dock.searchFiles": "Знайти файли…",
+  "@menu.dock.searchFiles": {
+    "sourceHash": "149a9d1"
+  },
+  "menu.dock.connectToServer": "Підʼєднатися до сервера…",
+  "@menu.dock.connectToServer": {
+    "sourceHash": "6188f47"
+  },
+  "menu.dock.locationInParent": "{name} ({parent})",
+  "@menu.dock.locationInParent": {
+    "sourceHash": "0bf83e2",
+    "sameAsSourceJustification": "Two placeholders and parentheses only; Ukrainian reads the qualifier in parentheses after the name, as Finder shows duplicates."
+  },
+  "menu.help.viewDebugLog": "Переглянути журнал налагодження",
+  "@menu.help.viewDebugLog": {
+    "sourceHash": "007c98d"
+  },
+  "menu.file.multiRename": "Групове перейменування…",
+  "@menu.file.multiRename": {
+    "sourceHash": "36b1dc2"
+  },
+  "menu.queue.moveUp": "Перемістити вище",
+  "@menu.queue.moveUp": {
+    "sourceHash": "c66feb5"
+  },
+  "menu.queue.moveDown": "Перемістити нижче",
+  "@menu.queue.moveDown": {
+    "sourceHash": "40bb50d"
+  },
+  "menu.queue.select": "Вибрати",
+  "@menu.queue.select": {
+    "sourceHash": "2a78025"
+  },
+  "menu.queue.cancel": "Скасувати",
+  "@menu.queue.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "menu.queue.dismiss": "Закрити",
+  "@menu.queue.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "menu.queue.show": "Показати",
+  "@menu.queue.show": {
+    "sourceHash": "0df6f1c"
+  },
+  "menu.queue.pause": "Призупинити",
+  "@menu.queue.pause": {
+    "sourceHash": "858e4ba"
+  },
+  "menu.queue.resume": "Поновити",
+  "@menu.queue.resume": {
+    "sourceHash": "d640c74"
+  },
+  "menu.queue.rollback": "Відкотити…",
+  "@menu.queue.rollback": {
+    "sourceHash": "3a943f5"
+  }
+}

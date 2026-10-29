@@ -1,0 +1,94 @@
+{
+  "crashReporter.dialog.title.crash": "Надіслати звіт про аварію?",
+  "@crashReporter.dialog.title.crash": {
+    "sourceHash": "06ba6fb"
+  },
+  "crashReporter.dialog.title.report": "Надіслати звіт?",
+  "@crashReporter.dialog.title.report": {
+    "sourceHash": "d8b86d2"
+  },
+  "crashReporter.dialog.body.ended": "Минулого разу Cmdr несподівано завершив роботу. Ось звіт про аварію з деталями, які допоможуть це виправити.",
+  "@crashReporter.dialog.body.ended": {
+    "sourceHash": "d67f8cb"
+  },
+  "crashReporter.dialog.body.keptRunning": "Минулого разу під час фонової роботи в Cmdr виникла проблема, але програма продовжила працювати. Ось звіт із деталями, які допоможуть це виправити.",
+  "@crashReporter.dialog.body.keptRunning": {
+    "sourceHash": "a972339"
+  },
+  "crashReporter.dialog.body.unknown": "Минулого разу в Cmdr виникла проблема. Ось звіт із деталями, які допоможуть це виправити.",
+  "@crashReporter.dialog.body.unknown": {
+    "sourceHash": "bed6934"
+  },
+  "crashReporter.dialog.privacyNote": "Звіт містить версію програми, версію macOS і частину коду, у якій виникла проблема. Жодних назв файлів чи особистих даних.",
+  "@crashReporter.dialog.privacyNote": {
+    "sourceHash": "c6875a7"
+  },
+  "crashReporter.dialog.reportIdLabel": "ID звіту:",
+  "@crashReporter.dialog.reportIdLabel": {
+    "sourceHash": "df3d47e"
+  },
+  "crashReporter.dialog.reportIdHelp": "Назвіть його, якщо звертатиметеся щодо цієї проблеми.",
+  "@crashReporter.dialog.reportIdHelp": {
+    "sourceHash": "c63b08a"
+  },
+  "crashReporter.dialog.showDetails": "Показати деталі звіту",
+  "@crashReporter.dialog.showDetails": {
+    "sourceHash": "11756f2"
+  },
+  "crashReporter.dialog.copy": "Скопіювати",
+  "@crashReporter.dialog.copy": {
+    "sourceHash": "e21f935"
+  },
+  "crashReporter.dialog.copied": "Скопійовано",
+  "@crashReporter.dialog.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "crashReporter.dialog.alwaysSend": "Завжди надсилати звіти про аварії",
+  "@crashReporter.dialog.alwaysSend": {
+    "sourceHash": "8306c0e"
+  },
+  "crashReporter.dialog.dismiss": "Закрити",
+  "@crashReporter.dialog.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "crashReporter.dialog.send": "Надіслати звіт",
+  "@crashReporter.dialog.send": {
+    "sourceHash": "a44d353"
+  },
+  "crashReporter.dialog.sending": "Надсилання…",
+  "@crashReporter.dialog.sending": {
+    "sourceHash": "b8ed527"
+  },
+  "crashReporter.dialog.notSent": "Звіт не надіслано. {reason}",
+  "@crashReporter.dialog.notSent": {
+    "sourceHash": "56fe2bc"
+  },
+  "crashReporter.sentToast.message.crash": "Crash report sent. Thanks for helping improve Cmdr.",
+  "@crashReporter.sentToast.message.crash": {
+    "sourceHash": "734d62a"
+  },
+  "crashReporter.sentToast.message.report": "Report sent. Thanks for helping improve Cmdr.",
+  "@crashReporter.sentToast.message.report": {
+    "sourceHash": "a676ed5"
+  },
+  "crashReporter.sentToast.changeSettings": "Change in Settings",
+  "@crashReporter.sentToast.changeSettings": {
+    "sourceHash": "144d0bd"
+  },
+  "crashReporter.sentToast.sendLog": "Attach logs",
+  "@crashReporter.sentToast.sendLog": {
+    "sourceHash": "61a9b1a"
+  },
+  "crashReporter.sentToast.sendLogHint": "Would you like to help diagnose this by also attaching a snippet of your Cmdr log? The log has much more detail. Any private info like file and folder names is anonymized before sending.",
+  "@crashReporter.sentToast.sendLogHint": {
+    "sourceHash": "aec472c"
+  },
+  "crashReporter.sentToast.logSent": "Log sent as {id}. That makes this much easier to track down.",
+  "@crashReporter.sentToast.logSent": {
+    "sourceHash": "9a0dc9e"
+  },
+  "crashReporter.sentToast.logNotSent": "The log didn’t go out. {reason}",
+  "@crashReporter.sentToast.logNotSent": {
+    "sourceHash": "a9f5323"
+  }
+}
