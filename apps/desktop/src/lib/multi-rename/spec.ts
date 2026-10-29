@@ -94,7 +94,9 @@ export const PRESET_SEEDS: PresetSeedSource[] = [
   {
     version: 2,
     nameKey: 'multiRename.preset.foobarSftRadioShow',
-    spec: foobarSpec("SFT %date% '('[$num(%discnumber%,1)$num(%tracknumber%,2)]')' %title% '('%artist%')'"),
+    spec: foobarSpec(
+      "SFT $replace(%date%,-,) '('[$num(%discnumber%,1)$num(%tracknumber%,2)]')' %title% '('%artist%')'",
+    ),
   },
 ]
 

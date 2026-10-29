@@ -20,7 +20,7 @@ mod eval;
 mod fields;
 mod parse;
 
-use cmdr_media_meta::MediaField;
+use cmdr_media_meta::{MediaFacts, MediaField};
 use fields::Field;
 
 use super::mask::RowFacts;
@@ -143,6 +143,20 @@ impl Pattern {
     /// Whether any field comes from the file's tags (so the row waits for them).
     pub fn uses_media(&self) -> bool {
         self.media_field().is_some()
+    }
+
+    /// Whether `facts` hold a value for any tag field the pattern names. A file holding none of
+    /// them (a cover, an info file read as media, a track with no tags) isn't named by the pattern.
+    pub fn holds_a_field(&self, facts: &MediaFacts) -> bool {
+        fn any(nodes: &[Node], facts: &MediaFacts) -> bool {
+            nodes.iter().any(|node| match node {
+                Node::Literal(_) => false,
+                Node::Field(field) => field.held_by(facts),
+                Node::Optional(inner) => any(inner, facts),
+                Node::Call { args, .. } => args.iter().any(|arg| any(arg, facts)),
+            })
+        }
+        any(&self.0, facts)
     }
 
     /// The first tag field the pattern names, in reading order: what a row whose tags can't be

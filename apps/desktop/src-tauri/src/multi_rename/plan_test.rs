@@ -438,7 +438,7 @@ fn run_media(spec: &MultiRenameSpec, folder: &[FileEntry], media: &MediaByName<'
 #[test]
 fn a_row_a_media_field_has_no_text_for_keeps_its_name_and_says_why() {
     let song = MediaFacts {
-        artist: Some("Daft Punk".to_string()),
+        artist: vec!["Daft Punk".to_string()],
         ..MediaFacts::default()
     };
     let untitled = MediaFacts::default();

@@ -568,11 +568,14 @@ fn media_facts_carry_the_tag_fields_masks_can_name() {
 #[test]
 fn masks_and_the_tags_window_read_the_same_tag_fields_from_one_file() {
     use cmdr_media_meta::test_fixtures::{flac_stream, m4a_file, mp3_frames};
-    use cmdr_media_meta::{MediaField, read_media};
+    use cmdr_media_meta::{MediaField, MediaValue, read_media};
     use cmdr_tags::{FileTags, WriteOptions, read_tags, write_tags};
 
-    let fields: [(TagField, &[&str]); 12] = [
+    let fields: [(TagField, &[&str]); 15] = [
         (TagField::Title, &["Chapter one"]),
+        (TagField::Artist, &["Anne Frank", "Otto Frank"]),
+        (TagField::AlbumArtist, &["Anne Frank"]),
+        (TagField::Genre, &["audiokniha", "Fantasy"]),
         (TagField::Track, &["3"]),
         (TagField::TrackTotal, &["12"]),
         (TagField::Disc, &["1"]),
@@ -606,6 +609,15 @@ fn masks_and_the_tags_window_read_the_same_tag_fields_from_one_file() {
         // And the values are really there, not both empty.
         assert!(masks.get(MediaField::TagPerformer).is_some(), "{name}");
         assert!(masks.get(MediaField::TagTotalTracks).is_some(), "{name}");
+        // Every value, joined as a foobar pattern prints them (M4A's genre is the freeform `GENRE`).
+        let text = |value: &'static str| Some(MediaValue::Text(value.into()));
+        assert_eq!(masks.get(MediaField::TagGenre), text("audiokniha, Fantasy"), "{name}");
+        assert_eq!(
+            masks.get(MediaField::TagArtist),
+            text("Anne Frank, Otto Frank"),
+            "{name}"
+        );
+        assert_eq!(masks.get(MediaField::TagAlbumArtist), text("Anne Frank"), "{name}");
     }
 }
 

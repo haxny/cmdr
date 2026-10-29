@@ -52,10 +52,10 @@ impl From<Media> for MediaFacts {
     fn from(m: Media) -> Self {
         MediaFacts {
             title: m.title,
-            artist: m.artist,
-            album_artist: m.album_artist,
+            artist: m.artist.into_iter().collect(),
+            album_artist: m.album_artist.into_iter().collect(),
             album: m.album,
-            genre: m.genre,
+            genre: m.genre.into_iter().collect(),
             comment: m.comment,
             track: m.track,
             disc: m.disc,
@@ -203,7 +203,7 @@ fn nesting_up_to_the_limit_parses_and_one_more_is_too_deep() {
     let brackets = |n: usize| format!("{}%artist%{}", "[".repeat(n), "]".repeat(n));
     let at_limit = foobar::parse(&brackets(MAX_DEPTH)).expect("at the limit");
     let facts = MediaFacts {
-        artist: Some("A".into()),
+        artist: vec!["A".into()],
         ..MediaFacts::default()
     };
     assert_eq!(at_limit.render(&row("x.mp3", "p", RowMedia::Read(&facts))), "A");
@@ -297,7 +297,7 @@ fn ten_thousand_random_patterns_never_panic() {
     ];
     let mut rng = Rng(0x9E37_79B9_7F4A_7C15);
     let facts = MediaFacts {
-        artist: Some("Ärtist".into()),
+        artist: vec!["Ärtist".into()],
         track: Some(-3),
         date: Some("20".into()),
         ..MediaFacts::default()

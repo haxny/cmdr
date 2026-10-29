@@ -168,7 +168,7 @@ fn through_the_block_reader_a_big_cover_is_never_fetched() {
             fetched: Arc::clone(&fetched),
         };
         let facts = read_media_from(source, name).unwrap();
-        assert_eq!(facts.artist.as_deref(), Some("Daft Punk"), "{name}");
+        assert_eq!(facts.artist, vec!["Daft Punk"], "{name}");
         let total: u64 = fetched.lock().unwrap().iter().map(|r| r.end - r.start).sum();
         assert!(total <= 4 * 64 * 1024, "{name}: fetched bytes: {total}");
     }

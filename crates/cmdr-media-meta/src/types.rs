@@ -125,14 +125,14 @@ pub struct MediaFacts {
     pub orientation: Option<i64>,
     /// The title.
     pub title: Option<String>,
-    /// The artist.
-    pub artist: Option<String>,
-    /// The album's artist.
-    pub album_artist: Option<String>,
+    /// The artists, in the file's order.
+    pub artist: Vec<String>,
+    /// The album's artists.
+    pub album_artist: Vec<String>,
     /// The album.
     pub album: Option<String>,
-    /// The genre.
-    pub genre: Option<String>,
+    /// The genres.
+    pub genre: Vec<String>,
     /// The comment.
     pub comment: Option<String>,
     /// The track number.
@@ -335,13 +335,13 @@ impl MediaFacts {
             MediaField::ExifHeight => number(self.height),
             MediaField::ExifOrientation => number(self.orientation),
             MediaField::TagTitle => text(self.title.as_deref()),
-            MediaField::TagArtist => text(self.artist.as_deref()),
-            MediaField::TagAlbumArtist => text(self.album_artist.as_deref()),
+            MediaField::TagArtist => joined(&self.artist),
+            MediaField::TagAlbumArtist => joined(&self.album_artist),
             MediaField::TagAlbum => text(self.album.as_deref()),
             MediaField::TagTrack => number(self.track),
             MediaField::TagDisc => number(self.disc),
             MediaField::TagYear => number(self.year),
-            MediaField::TagGenre => text(self.genre.as_deref()),
+            MediaField::TagGenre => joined(&self.genre),
             MediaField::TagComment => text(self.comment.as_deref()),
             MediaField::TagPerformer => joined(&self.performer),
             MediaField::TagComposer => joined(&self.composer),

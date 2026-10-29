@@ -116,7 +116,19 @@ fn read_tags<R: Read + Seek>(reader: &mut R, file_name: &str) -> Result<MediaFac
     }
     let file_type = probe.file_type();
     let tagged = probe.read().map_err(|error| ReadError::from_error(&error))?;
-    let mut facts = MediaFacts::default();
+    // The performer, publisher, totals and the rest sit where only the format's own tag shows
+    // them, and it reads artist, album artist and genre as the Tags window does (every value, an
+    // M4A's freeform `GENRE`). So it goes first, and the generic fields fill what it lacks. A
+    // stopped read ends it, anything else leaves the native fields out.
+    let mut facts = match file_type.map(|file_type| native::read_native(reader, file_type)) {
+        Some(Ok(native)) => native,
+        Some(Err(stopped @ (ReadError::Cancelled | ReadError::TimedOut))) => return Err(stopped),
+        Some(Err(skipped)) => {
+            log::debug!(target: "cmdr_media_meta::read", "No native tag fields: {skipped:?}");
+            MediaFacts::default()
+        }
+        None => MediaFacts::default(),
+    };
     let primary = tagged.primary_tag();
     let others = tagged
         .tags()
@@ -124,16 +136,6 @@ fn read_tags<R: Read + Seek>(reader: &mut R, file_name: &str) -> Result<MediaFac
         .filter(|tag| !primary.is_some_and(|p| std::ptr::eq(p, *tag)));
     for tag in primary.into_iter().chain(others) {
         merge_tags(&mut facts, facts_from_tag(tag));
-    }
-    if let Some(file_type) = file_type {
-        // The performer, publisher, totals and the rest sit where only the format's own tag
-        // shows them. They're a bonus on top of the generic fields: a stopped read ends it,
-        // anything else leaves them out.
-        match native::read_native(reader, file_type) {
-            Ok(native) => merge_tags(&mut facts, native),
-            Err(stopped @ (ReadError::Cancelled | ReadError::TimedOut)) => return Err(stopped),
-            Err(skipped) => log::debug!(target: "cmdr_media_meta::read", "No native tag fields: {skipped:?}"),
-        }
     }
     Ok(facts)
 }
@@ -144,10 +146,14 @@ fn facts_from_tag(tag: &Tag) -> MediaFacts {
     let number = |value: Option<u32>| value.filter(|n| *n > 0).map(i64::from);
     MediaFacts {
         title: text(tag.title()),
-        artist: text(tag.artist()),
-        album_artist: tag.get_string(ItemKey::AlbumArtist).map(str::to_owned),
+        artist: text(tag.artist()).into_iter().collect(),
+        album_artist: tag
+            .get_string(ItemKey::AlbumArtist)
+            .map(str::to_owned)
+            .into_iter()
+            .collect(),
         album: text(tag.album()),
-        genre: text(tag.genre()),
+        genre: text(tag.genre()).into_iter().collect(),
         comment: text(tag.comment()),
         track: number(tag.track()),
         disc: number(tag.disk()),
@@ -180,10 +186,7 @@ fn merge_tags(facts: &mut MediaFacts, tags: MediaFacts) {
         ..
     } = tags;
     facts.title = facts.title.take().or(title);
-    facts.artist = facts.artist.take().or(artist);
-    facts.album_artist = facts.album_artist.take().or(album_artist);
     facts.album = facts.album.take().or(album);
-    facts.genre = facts.genre.take().or(genre);
     facts.comment = facts.comment.take().or(comment);
     facts.track = facts.track.or(track);
     facts.disc = facts.disc.or(disc);
@@ -194,6 +197,9 @@ fn merge_tags(facts: &mut MediaFacts, tags: MediaFacts) {
     facts.total_discs = facts.total_discs.or(total_discs);
     facts.description = facts.description.take().or(description);
     for (have, more) in [
+        (&mut facts.artist, artist),
+        (&mut facts.album_artist, album_artist),
+        (&mut facts.genre, genre),
         (&mut facts.performer, performer),
         (&mut facts.composer, composer),
         (&mut facts.translator, translator),

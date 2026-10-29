@@ -685,12 +685,12 @@ describe('createMultiRenameState', () => {
         'Remove diacritics',
         'Greek to Latin',
         'Normalize Unicode',
-        'Author – (year) Album – track',
-        'Artist – Album',
-        'Author – (year) Album – track title',
-        '… (read by) – disc track title',
-        '… (read by) – disc track',
-        '… (read by, publisher) – disc track',
+        'Author - (year) Album - track',
+        'Artist - Album',
+        'Author - (year) Album - track title',
+        '… (read by) - disc track title',
+        '… (read by) - disc track',
+        '… (read by, publisher) - disc track',
         'SFT radio show',
       ])
       expect(seeds.map((seed) => seed.version)).toEqual([1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2])

@@ -210,33 +210,33 @@
   "@multiRename.preset.normalizeUnicode": {
     "description": "Name of a preset Cmdr starts the Presets list with, saved in this language the first time the list loads; the user can rename or delete it like their own. It only stores accented letters in the single-character form Windows, Linux, and websites expect; the names look the same."
   },
-  "multiRename.preset.foobarAuthorYearAlbumTrack": "Author – (year) Album – track",
+  "multiRename.preset.foobarAuthorYearAlbumTrack": "Author - (year) Album - track",
   "@multiRename.preset.foobarAuthorYearAlbumTrack": {
     "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): author, year, album and track number, like Anne Frank - (1947) Denik - 03. The author part is left out when the album artist is empty. Keep the dashes and the parentheses."
   },
-  "multiRename.preset.foobarArtistAlbum": "Artist – Album",
+  "multiRename.preset.foobarArtistAlbum": "Artist - Album",
   "@multiRename.preset.foobarArtistAlbum": {
     "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): artist and album, like Anne Frank - Denik. Keep the dash."
   },
-  "multiRename.preset.foobarAuthorYearAlbumTrackTitle": "Author – (year) Album – track title",
+  "multiRename.preset.foobarAuthorYearAlbumTrackTitle": "Author - (year) Album - track title",
   "@multiRename.preset.foobarAuthorYearAlbumTrackTitle": {
     "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): author, year, album, track number and title, like Anne Frank - (1947) Denik - 03 Kapitola treti. Keep the dashes and the parentheses."
   },
-  "multiRename.preset.foobarReadByDiscTrackTitle": "… (read by) – disc track title",
+  "multiRename.preset.foobarReadByDiscTrackTitle": "… (read by) - disc track title",
   "@multiRename.preset.foobarReadByDiscTrackTitle": {
-    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator in parentheses, then disc, track number and title, like Anne Frank - (1947) Denik (cte Vera Slunecka) - 103 Kapitola treti. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator in parentheses, then disc, track number and title, like Anne Frank - (1947) Denik (cte Vera Sluneckova) - 103 Kapitola treti. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
   },
-  "multiRename.preset.foobarReadByDiscTrack": "… (read by) – disc track",
+  "multiRename.preset.foobarReadByDiscTrack": "… (read by) - disc track",
   "@multiRename.preset.foobarReadByDiscTrack": {
-    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator in parentheses, then disc and track number, like Anne Frank - (1947) Denik (cte Vera Slunecka) - 103. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator in parentheses, then disc and track number, like Anne Frank - (1947) Denik (cte Vera Sluneckova) - 103. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
   },
-  "multiRename.preset.foobarReadByPublisherDiscTrack": "… (read by, publisher) – disc track",
+  "multiRename.preset.foobarReadByPublisherDiscTrack": "… (read by, publisher) - disc track",
   "@multiRename.preset.foobarReadByPublisherDiscTrack": {
-    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator and the publisher in parentheses, then disc and track number, like Anne Frank - (1947) Denik (cte Vera Slunecka, audioteka 2011) - 103. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator and the publisher in parentheses, then disc and track number, like Anne Frank - (1947) Denik (cte Vera Sluneckova, audioteka 2011) - 103. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
   },
   "multiRename.preset.foobarSftRadioShow": "SFT radio show",
   "@multiRename.preset.foobarSftRadioShow": {
-    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): a radio show recording: SFT, date, disc and track number in parentheses, title and artist in parentheses, like SFT 1947 (103) Kapitola treti (Anne Frank). SFT is a fixed label; keep it."
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): a radio show recording: SFT, date, disc and track number in parentheses, title and artist in parentheses, like SFT 19470625 (103) Kapitola treti (Anne Frank): the date without dashes, as file names carry it. SFT is a fixed label; keep it."
   },
   "multiRename.presetName": "Preset name",
   "@multiRename.presetName": {

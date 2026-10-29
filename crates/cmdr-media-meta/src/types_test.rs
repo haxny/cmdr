@@ -128,10 +128,10 @@ fn get_answers_each_field_with_its_kind_of_value() {
         height: Some(3024),
         orientation: Some(6),
         title: Some("Digital Love".into()),
-        artist: Some("Daft Punk".into()),
-        album_artist: Some("Daft Punk".into()),
+        artist: vec!["Daft Punk".into()],
+        album_artist: vec!["Daft Punk".into()],
         album: Some("Discovery".into()),
-        genre: Some("House".into()),
+        genre: vec!["House".into()],
         comment: Some("great".into()),
         track: Some(3),
         disc: Some(1),
@@ -227,7 +227,7 @@ fn text_is_trimmed_and_blank_text_is_no_value() {
         make: Some("  Apple \0".into()),
         model: Some("   ".into()),
         title: Some(String::new()),
-        artist: Some(" Daft Punk ".into()),
+        artist: vec![" Daft Punk ".into()],
         ..MediaFacts::default()
     };
     assert_eq!(text(&facts, MediaField::ExifMake).as_deref(), Some("Apple"));
@@ -240,7 +240,7 @@ fn text_is_trimmed_and_blank_text_is_no_value() {
 #[test]
 fn text_borrows_from_the_facts_when_it_can() {
     let facts = MediaFacts {
-        artist: Some("Daft Punk".into()),
+        artist: vec!["Daft Punk".into()],
         ..MediaFacts::default()
     };
     assert!(matches!(

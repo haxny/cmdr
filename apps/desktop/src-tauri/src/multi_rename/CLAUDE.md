@@ -1,10 +1,11 @@
 # Multi-Rename Tool
 
-Total Commander's ⌃M renamer: masks, search & replace, the case and character steps, presets, and a live preview. The
-sheet is `src/lib/multi-rename/`.
+Total Commander's ⌃M renamer: masks, search & replace, case and character steps, presets, a live preview. Sheet:
+`src/lib/multi-rename/`.
 
 ## Module map
 
+- `foobar/` foobar2000 patterns for the name mask; pure. Fork-wide: `DETAILS.md` § Fork.
 - `mask.rs` the placeholders (`[N2-5]`, `[C10+5:3]`, `[YMD]`…), parsed once, rendered per row (or a `FieldGap`);
   `mask/media_token.rs` the `[=tag.track:2]` fields. Pure.
 - `transform.rs` search & replace, the case step, Greek to Latin, `remove_diacritics`. Pure.
@@ -18,8 +19,8 @@ sheet is `src/lib/multi-rename/`.
 - `media.rs` each file's EXIF and tags, cached per session and read in the background (`crates/cmdr-media-meta`).
 - `error.rs` `MultiRenameError`, shared by `session` and `run`.
 - `history.rs` the text fields' history on `crate::recents`.
-- `presets.rs` named presets in the user's order, as pure list ops (`save_in`, …).
-  `LAST_SPEC` keeps the last sheet's settings. `preset_store.rs` (their file, `PRESETS`) builds on it.
+- `presets.rs` named presets in the user's order, pure list ops; `LAST_SPEC` the last settings;
+  `preset_store.rs` their file (`PRESETS`).
 
 ## Must-knows
 
@@ -44,7 +45,7 @@ sheet is `src/lib/multi-rename/`.
 - **The counter's settings live in the mask** (`[C10+5:3]`); a bare `[C]` counts 1, 2, 3, unpadded. Old presets'
   counter fields fold into the masks on load. Its width is capped (`MAX_COUNTER_DIGITS`); its arithmetic saturates.
 - **A preset's number is its place**: a new one goes last; save-over, rename, and update keep it. ❌ Not on
-  `crate::recents`, whose `add` moves an entry to the top.
+  `crate::recents` (its `add` moves to the top).
 - **Statuses compare folded names** (`name_fold`, as the Mac does): a name a staying file holds is `TargetExists`,
   one a batch row leaves is free; a block cascades through a worklist, so a long chain stays linear.
 

@@ -251,10 +251,10 @@ pub(super) fn media_facts_of(tags: &FileTags) -> MediaFacts {
     };
     MediaFacts {
         title: first(TagField::Title),
-        artist: first(TagField::Artist),
-        album_artist: first(TagField::AlbumArtist),
+        artist: all(TagField::Artist),
+        album_artist: all(TagField::AlbumArtist),
         album: first(TagField::Album),
-        genre: first(TagField::Genre),
+        genre: all(TagField::Genre),
         comment: first(TagField::Comment),
         track: number(TagField::Track),
         disc: number(TagField::Disc),

@@ -89,6 +89,22 @@ impl Field {
         })
     }
 
+    /// Whether `facts` hold a value for this tag field (its tag fallback counts, `%title%`'s file
+    /// name doesn't). Always false for a field read from the file's name or folder.
+    pub(super) fn held_by(self, facts: &MediaFacts) -> bool {
+        match self {
+            Self::Year => year(facts).is_some(),
+            Self::FileName | Self::DirectoryName => false,
+            Self::AlbumArtist => [MediaField::TagAlbumArtist, MediaField::TagArtist]
+                .into_iter()
+                .any(|field| facts.get(field).is_some()),
+            Self::Date => [MediaField::TagDate, MediaField::TagYear]
+                .into_iter()
+                .any(|field| facts.get(field).is_some()),
+            field => field.media_field().is_some_and(|tag| facts.get(tag).is_some()),
+        }
+    }
+
     /// The field's text for `row`, or `None` when it has no value (never `Some("")`).
     pub(super) fn value(self, row: &RowFacts) -> Option<String> {
         let tags = match row.media {

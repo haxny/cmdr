@@ -19,10 +19,10 @@ fn read(bytes: Vec<u8>, name: &str) -> Result<MediaFacts, ReadError> {
 
 fn assert_music(facts: &MediaFacts) {
     assert_eq!(facts.title.as_deref(), Some("Digital Love"));
-    assert_eq!(facts.artist.as_deref(), Some("Daft Punk"));
+    assert_eq!(facts.artist, vec!["Daft Punk"]);
     assert_eq!(facts.album.as_deref(), Some("Discovery"));
-    assert_eq!(facts.album_artist.as_deref(), Some("Daft Punk"));
-    assert_eq!(facts.genre.as_deref(), Some("House"));
+    assert_eq!(facts.album_artist, vec!["Daft Punk"]);
+    assert_eq!(facts.genre, vec!["House"]);
     assert_eq!(facts.comment.as_deref(), Some("Remastered"));
     assert_eq!((facts.track, facts.disc, facts.year), (Some(3), Some(1), Some(2001)));
     assert_eq!(facts.taken, None);

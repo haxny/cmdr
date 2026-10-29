@@ -238,20 +238,28 @@ impl NameMask {
         }
     }
 
-    /// A foobar pattern never lacks a value (a missing one is no text, as in foobar), but while it
-    /// names a tag field, a row whose tags are still being read waits for them, and an audio file
-    /// whose tags can't be read is `Unreadable`, as with a Cmdr mask: never renamed with its fields
-    /// empty. A file that isn't media gets them empty.
+    /// A foobar pattern renders a missing field as no text, as in foobar, but while it names a tag
+    /// field, a row whose tags are still being read waits for them, and an audio file whose tags
+    /// can't be read is `Unreadable`, as with a Cmdr mask: never renamed with its fields empty. A
+    /// file that isn't media, or whose tags hold none of the pattern's fields, is `NoValue` and keeps
+    /// its name, so a tag preset over a book folder leaves `cover.jpg` and `info.txt` alone (foobar
+    /// only ever renames playlist items). A pattern of the file's name alone renames any file. The
+    /// name is trimmed: a dropped `[ ]` leaves its neighbour's space at the edge.
     fn render(&self, facts: &RowFacts<'_>) -> Result<String, FieldGap> {
         let pattern = match self {
             Self::Cmdr(mask) => return mask.render(facts),
             Self::Foobar(pattern) => pattern,
         };
-        match (facts.media, pattern.media_field()) {
-            (RowMedia::Reading, Some(_)) => Err(FieldGap::Reading),
-            (RowMedia::Unreadable, Some(field)) => Err(FieldGap::Unreadable { field }),
-            _ => Ok(pattern.render(facts)),
+        if let Some(field) = pattern.media_field() {
+            match facts.media {
+                RowMedia::Reading => return Err(FieldGap::Reading),
+                RowMedia::Unreadable => return Err(FieldGap::Unreadable { field }),
+                RowMedia::NotMedia => return Err(FieldGap::NoValue { field }),
+                RowMedia::Read(tags) if !pattern.holds_a_field(tags) => return Err(FieldGap::NoValue { field }),
+                RowMedia::Read(_) => {}
+            }
         }
+        Ok(pattern.render(facts).trim().to_string())
     }
 }
 
@@ -399,10 +407,10 @@ fn example_media(taken: Option<NaiveDateTime>) -> MediaFacts {
         height: Some(3024),
         orientation: Some(1),
         title: Some("Digital Love".to_string()),
-        artist: Some("Daft Punk".to_string()),
-        album_artist: Some("Daft Punk".to_string()),
+        artist: vec!["Daft Punk".to_string()],
+        album_artist: vec!["Daft Punk".to_string()],
         album: Some("Discovery".to_string()),
-        genre: Some("Electronic".to_string()),
+        genre: vec!["Electronic".to_string()],
         comment: None,
         track: Some(3),
         disc: Some(1),

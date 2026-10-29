@@ -31,7 +31,7 @@
   },
   {
     "nameKey": "multiRename.preset.foobarSftRadioShow",
-    "pattern": "SFT %date% '('[$num(%discnumber%,1)$num(%tracknumber%,2)]')' %title% '('%artist%')'",
-    "expected": "SFT 1947 (103) Kapitola treti (Anne Frank).mp3"
+    "pattern": "SFT $replace(%date%,-,) '('[$num(%discnumber%,1)$num(%tracknumber%,2)]')' %title% '('%artist%')'",
+    "expected": "SFT 19470625 (103) Kapitola treti (Anne Frank).mp3"
   }
 ]

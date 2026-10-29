@@ -1,6 +1,7 @@
 //! The tag fields the generic `lofty` tag can't answer the way the Tags window does:
 //! performer, composer, publisher, the stored date, totals, description, translator and
-//! web address. They live in format-specific places (`TXXX:PERFORMER`, a freeform
+//! web address, and every value of artist, album artist and genre (lofty gives the first, and
+//! no M4A freeform `GENRE`). They live in format-specific places (`TXXX:PERFORMER`, a freeform
 //! `PERFORMER` atom, a `PERFORMER` Vorbis comment), so this reads each format's own tag.
 //!
 //! The maps mirror `cmdr-tags`' reader (`frame_field`, `txxx_field`, `fourcc_field`,
@@ -30,6 +31,9 @@ const DISK: [u8; 4] = *b"disk";
 /// The fields this module fills, one value list each.
 #[derive(Clone, Copy)]
 enum Kind {
+    Artist,
+    AlbumArtist,
+    Genre,
     Performer,
     Composer,
     Publisher,
@@ -86,7 +90,7 @@ fn parsed(error: impl std::error::Error + 'static) -> ReadError {
 /// Puts `values` (trimmed, empties gone) in `kind`'s field of `facts`. A single-value field
 /// keeps the first value ever put; a multi-value one collects them, each once.
 fn put(facts: &mut MediaFacts, kind: Kind, values: impl IntoIterator<Item = String>) {
-    let is_multi = matches!(kind, Kind::Performer | Kind::Composer | Kind::Translator | Kind::Www);
+    let is_multi = !matches!(kind, Kind::Publisher | Kind::Date | Kind::Description);
     let values: Vec<String> = values
         .into_iter()
         // Only a multi-value field holds several values joined with `; `, as in cmdr-tags.
@@ -101,6 +105,9 @@ fn put(facts: &mut MediaFacts, kind: Kind, values: impl IntoIterator<Item = Stri
         .filter(|value| !value.is_empty())
         .collect();
     let multi = match kind {
+        Kind::Artist => &mut facts.artist,
+        Kind::AlbumArtist => &mut facts.album_artist,
+        Kind::Genre => &mut facts.genre,
         Kind::Performer => &mut facts.performer,
         Kind::Composer => &mut facts.composer,
         Kind::Translator => &mut facts.translator,
@@ -146,6 +153,9 @@ fn from_id3(facts: &mut MediaFacts, id3: &Id3v2Tag) {
         match frame {
             Frame::Text(f) => {
                 let kind = match f.id().as_str() {
+                    "TPE1" => Kind::Artist,
+                    "TPE2" => Kind::AlbumArtist,
+                    "TCON" => Kind::Genre,
                     "TCOM" => Kind::Composer,
                     "TPUB" => Kind::Publisher,
                     "TDRC" | "TYER" => Kind::Date,
@@ -199,8 +209,13 @@ fn from_ilst(facts: &mut MediaFacts, ilst: &Ilst) {
             })
             .collect()
     };
+    // `©gen` fills the genre only when no freeform `GENRE` does, so values never double.
+    let mut gen_fallback = Vec::new();
     for atom in ilst {
         match atom.ident() {
+            AtomIdent::Fourcc([0xA9, b'A', b'R', b'T']) => put(facts, Kind::Artist, texts(atom)),
+            AtomIdent::Fourcc([b'a', b'A', b'R', b'T']) => put(facts, Kind::AlbumArtist, texts(atom)),
+            AtomIdent::Fourcc([0xA9, b'g', b'e', b'n']) => gen_fallback.extend(texts(atom)),
             AtomIdent::Fourcc([0xA9, b'w', b'r', b't']) => put(facts, Kind::Composer, texts(atom)),
             AtomIdent::Fourcc([0xA9, b'd', b'a', b'y']) => put(facts, Kind::Date, texts(atom)),
             AtomIdent::Fourcc(fourcc @ (TRKN | DISK)) => {
@@ -221,6 +236,7 @@ fn from_ilst(facts: &mut MediaFacts, ilst: &Ilst) {
             AtomIdent::Freeform { mean, name } if mean == ITUNES_MEAN => {
                 let kind = [
                     ("PERFORMER", Kind::Performer),
+                    ("GENRE", Kind::Genre),
                     ("publisher", Kind::Publisher),
                     ("www", Kind::Www),
                     ("translator", Kind::Translator),
@@ -236,6 +252,9 @@ fn from_ilst(facts: &mut MediaFacts, ilst: &Ilst) {
             _ => {}
         }
     }
+    if facts.genre.is_empty() {
+        put(facts, Kind::Genre, gen_fallback);
+    }
 }
 
 fn from_vorbis(facts: &mut MediaFacts, comments: &VorbisComments) {
@@ -245,6 +264,9 @@ fn from_vorbis(facts: &mut MediaFacts, comments: &VorbisComments) {
     for (key, value) in comments.items() {
         let key = key.to_ascii_uppercase();
         let kind = match key.as_str() {
+            "ARTIST" => Kind::Artist,
+            "ALBUMARTIST" | "ALBUM ARTIST" => Kind::AlbumArtist,
+            "GENRE" => Kind::Genre,
             "PERFORMER" => Kind::Performer,
             "COMPOSER" => Kind::Composer,
             "PUBLISHER" => Kind::Publisher,

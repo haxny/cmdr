@@ -43,7 +43,7 @@ fn foobar(name_mask: &str) -> MultiRenameSpec {
 
 fn anne_frank() -> MediaFacts {
     MediaFacts {
-        album_artist: Some("Anne Frank".to_string()),
+        album_artist: vec!["Anne Frank".to_string()],
         album: Some("Deník".to_string()),
         date: Some("1947".to_string()),
         performer: vec!["Věra Slunéčková".to_string()],
@@ -121,9 +121,9 @@ fn the_pipeline_runs_after_a_foobar_pattern() {
 
 /// Still being read: the row waits. An audio file whose tags can't be read is the same
 /// `Unreadable` problem a Cmdr mask gives (never renamed with empty fields); a file that isn't
-/// media at all renders its fields empty, as foobar does.
+/// media is the `NoValue` problem a Cmdr mask gives, keeping its name.
 #[test]
-fn a_foobar_row_waits_for_its_tags_an_unreadable_one_is_a_problem_and_a_non_media_one_gets_empty_fields() {
+fn a_foobar_row_waits_for_its_tags_an_unreadable_one_is_a_problem_and_a_non_media_one_has_no_value() {
     let media = MediaByName(vec![("a.mp3", RowMedia::Reading), ("b.mp3", RowMedia::Unreadable)]);
     let out = run(
         &foobar("[%artist% - ]%filename%"),
@@ -140,7 +140,12 @@ fn a_foobar_row_waits_for_its_tags_an_unreadable_one_is_a_problem_and_a_non_medi
                     field: MediaField::TagArtist
                 }
             ),
-            ("c.txt".to_string(), RowStatus::Unchanged),
+            (
+                "c.txt".to_string(),
+                RowStatus::NoValue {
+                    field: MediaField::TagArtist
+                }
+            ),
         ]
     );
     // A pattern of the name alone doesn't need the tags: an unreadable file renames as any other.
@@ -158,12 +163,17 @@ fn an_empty_name_part_is_an_invalid_name_in_either_syntax() {
     let none = MediaByName(vec![]);
     // foobar's `[N]` is a section of literal text: always dropped.
     assert_eq!(run(&foobar("[N]"), &[file("a.mp3")], &none)[0].1, empty);
-    // A field a non-media file has no value for.
-    assert_eq!(run(&foobar("%album%"), &[file("c.pdf")], &none)[0].1, empty);
-    assert_eq!(run(&foobar("%album%  "), &[file("c.pdf")], &none)[0].1, empty);
+    // A tag field that renders to nothing (or spaces).
+    let facts = anne_frank();
+    let tagged = MediaByName(vec![("a.mp3", RowMedia::Read(&facts))]);
+    assert_eq!(run(&foobar("$left(%album%,0)"), &[file("a.mp3")], &tagged)[0].1, empty);
+    assert_eq!(
+        run(&foobar("$left(%album%,0)  "), &[file("a.mp3")], &tagged)[0].1,
+        empty
+    );
     // `%title%` falls back to the file name, so it's never empty.
     assert_eq!(
-        run(&foobar("%title%"), &[file("c.pdf")], &none)[0].1,
+        run(&foobar("$left(%album%,0)%title%"), &[file("a.mp3")], &tagged)[0].1,
         RowStatus::Unchanged
     );
     let cmdr = |mask: &str| MultiRenameSpec {
@@ -173,6 +183,83 @@ fn an_empty_name_part_is_an_invalid_name_in_either_syntax() {
     assert_eq!(run(&cmdr(""), &[file("a.mp3")], &none)[0].1, empty);
     assert_eq!(run(&cmdr("   "), &[file("a.mp3")], &none)[0].1, empty);
     assert_eq!(run(&cmdr("[N]"), &[file("a.mp3")], &none)[0].1, RowStatus::Unchanged);
+}
+
+/// A tag preset over a whole book folder renames the audio and leaves the cover and the notes
+/// alone, as a Cmdr mask does: a file that isn't media, or whose tags hold none of the
+/// pattern's fields, is `NoValue` and keeps its name. A pattern of the name alone renames any file.
+#[test]
+fn a_tag_pattern_never_renames_a_file_without_its_tags() {
+    let facts = anne_frank();
+    let photo = MediaFacts {
+        width: Some(600),
+        ..MediaFacts::default()
+    };
+    let media = MediaByName(vec![
+        ("03.mp3", RowMedia::Read(&facts)),
+        ("scan.jpg", RowMedia::Read(&photo)),
+    ]);
+    let folder = [file("03.mp3"), file("cover.jpg"), file("info.txt"), file("scan.jpg")];
+    let pattern = "[%album artist% - ]'('%year%')' %album% - %track%";
+    let out = run(&foobar(pattern), &folder, &media);
+    assert_eq!(
+        out[0],
+        ("Anne Frank - (1947) Deník - 03.mp3".to_string(), RowStatus::Ready)
+    );
+    let no_value = RowStatus::NoValue {
+        field: MediaField::TagAlbumArtist,
+    };
+    for (row, name) in out[1..].iter().zip(["cover.jpg", "info.txt", "scan.jpg"]) {
+        assert_eq!(row, &(name.to_string(), no_value.clone()), "{name}");
+    }
+    // One field the file holds is enough: the rest render empty, as in foobar.
+    let album_only = MediaFacts {
+        album: Some("Deník".to_string()),
+        ..MediaFacts::default()
+    };
+    let media = MediaByName(vec![("03.mp3", RowMedia::Read(&album_only))]);
+    assert_eq!(
+        run(&foobar("[%artist% - ]%album%"), &[file("03.mp3")], &media)[0],
+        ("Deník.mp3".to_string(), RowStatus::Ready)
+    );
+    // `%title%` holds no title in a cover: its file-name fallback doesn't make it a tag value.
+    assert_eq!(
+        run(&foobar("%title%"), &[file("cover.jpg")], &MediaByName(vec![]))[0].1,
+        RowStatus::NoValue {
+            field: MediaField::TagTitle
+        }
+    );
+    let out = run(
+        &foobar("$upper(%filename%)"),
+        &[file("cover.jpg"), file("info.txt")],
+        &MediaByName(vec![]),
+    );
+    assert_eq!(
+        out,
+        vec![
+            ("COVER.jpg".to_string(), RowStatus::Ready),
+            ("INFO.txt".to_string(), RowStatus::Ready)
+        ]
+    );
+}
+
+/// A section that drops leaves its neighbour's space at the edge: the name part is trimmed, so no
+/// name starts (or ends) with a space it can't show.
+#[test]
+fn a_foobar_name_part_is_trimmed_of_edge_spaces() {
+    let facts = MediaFacts {
+        album: Some("Deník".to_string()),
+        ..MediaFacts::default()
+    };
+    let media = MediaByName(vec![("03.mp3", RowMedia::Read(&facts))]);
+    assert_eq!(
+        run(&foobar("[%artist% -] %album%"), &[file("03.mp3")], &media)[0],
+        ("Deník.mp3".to_string(), RowStatus::Ready)
+    );
+    assert_eq!(
+        run(&foobar("%album% - [%title%] "), &[file("03.mp3")], &media)[0],
+        ("Deník - 03.mp3".to_string(), RowStatus::Ready)
+    );
 }
 
 #[test]
@@ -255,8 +342,10 @@ fn shipped_spec(pattern: &str) -> MultiRenameSpec {
 fn each_shipped_pattern_names_the_anne_frank_book_as_the_user_files_it() {
     let facts = MediaFacts {
         title: Some("Kapitola třetí".to_string()),
-        artist: Some("Anne Frank".to_string()),
+        artist: vec!["Anne Frank".to_string()],
         disc: Some(1),
+        // A full date, as tags store it: a file name gets it without dashes.
+        date: Some("1947-06-25".to_string()),
         ..anne_frank()
     };
     let media = MediaByName(vec![("03.mp3", RowMedia::Read(&facts))]);

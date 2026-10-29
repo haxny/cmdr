@@ -1,8 +1,8 @@
 # Tag editor (fork, opt-in): the Tags window
 
-Behind the `multiRename.tagEditor` setting, **off by default**: off, nothing here is reachable and the Multi-Rename
-sheet is upstream's (`TagsButton` unmounted, no tag IPC) but for `[=tag.track]` padding (`multi_rename/DETAILS.md`).
-Backend: `src-tauri/src/tag_editor/CLAUDE.md`.
+Behind the `multiRename.tagEditor` setting, **off by default**: off, nothing here is reachable (`TagsButton` unmounted,
+no tag IPC). The fork's Multi-Rename changes apply either way: `src-tauri/src/multi_rename/DETAILS.md` § Fork. Backend:
+`src-tauri/src/tag_editor/CLAUDE.md`.
 
 - **A window per session**, `tags-<sessionId>` on `/tags`, opened only by the main window (`open-tags.ts`): File > Edit
   tags… (`file.editTags`, ⌘⇧E) from the selection or cursor row, or the sheet's "Tags…". Each open makes a NEW
