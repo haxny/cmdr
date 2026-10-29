@@ -144,10 +144,11 @@ answered 403 after CI was green, and that land was lost. So:
 ## Decision: merge a green PR onto a moved `main`
 
 Decision: `land` rebases onto `origin/main` once, before the first push. When `main` moves while CI runs, it doesn't
-rebase and wait again: `nextLandPath` picks `gh pr merge <n> --admin --rebase --match-head-commit <green sha>`, GitHub
-rebases the PR onto the current `main`, and `main`'s push run recognizes the merge of a green head and skips the suite
-(`docs/tooling/ci.md` § Landing doesn't re-run the suite). It prints that it did, with a link to `main`'s CI runs, and
-doesn't wait for them.
+rebase and wait again: `nextLandPath` picks `gh pr merge <n> --admin --merge --match-head-commit <green sha>`, GitHub
+merges the PR into the current `main` with a merge commit, and `main`'s push run recognizes the merge of a green head
+and skips the suite (`docs/tooling/ci.md` § Landing doesn't re-run the suite). It prints that it did, with a link to
+`main`'s CI runs, and doesn't wait for them. Why a merge commit and never GitHub's rebase merge: § Decision: every
+commit on `main` is signed.
 
 Why: with many sessions landing at once, each land that saw `main` move rebased and re-ran CI (25–35 min), which moved
 nobody forward. On 2026-10-20 eight-plus PRs went green two or three times each and none landed. Big teams accept the
@@ -156,53 +157,76 @@ next PR's run (it tests the PR merged with the current `main`) and on the releas
 The guarantee that stays: `--admin` only bypasses the approval ruleset, the CI ruleset has no bypass and `strict` is
 off, so GitHub still demands `CI OK` green on the PR's head SHA, and `--match-head-commit` pins that head.
 
-- **A conflict falls back to the old path**: GitHub's `rebaseable` on `repos/{repo}/pulls/{n}` (null for a few seconds
-  while GitHub works it out, so `prRebaseable` waits up to 15 s, then tries anyway). False, or a refused merge that
-  reads false afterwards, returns `errRebaseConflict`; `land` rebases here and waits for CI again, up to `maxCIRuns` (8)
-  runs, so a `main` that keeps clashing can't spin a land all day. The decision reads that typed field, never gh's
-  stderr.
+- **A conflict falls back to a rebase here**: GitHub's `mergeable` on `repos/{repo}/pulls/{n}` (null for a few seconds
+  while GitHub works it out, so `prMergeable` waits up to 15 s, then tries anyway). False, or a refused merge that reads
+  false afterwards, returns `errGitHubConflict` (`conflictError`); `land` rebases here and waits for CI again, up to
+  `maxCIRuns` (8) runs, so a `main` that keeps clashing can't spin a land all day. The decision reads that typed field,
+  never gh's stderr.
 - **A refused merge re-reads the PR**: `gh` waits out a spent API budget and repeats the call, so a merge that went
   through the first time reads `merged` and counts as landed.
-- **A re-run after a GitHub rebase merge finishes**: the branch's SHAs aren't on `main`, but
-  `git cherry origin/main HEAD` lists only `-` lines (every patch is upstream), so `readState` reports it landed.
-  `remove-worktree.sh` asks the same question before tearing a worktree down.
-- **The fast-forward still wins when it can**: it keeps SHAs identical, so `main` gets exactly the commits CI tested.
+- **A re-run after a GitHub merge finishes**: the branch's head is an ancestor of `origin/main`, so `readState` reports
+  it landed (`TestLandedAfterAGitHubMergeCommit`). It also counts a branch whose every patch is on `main` under other
+  SHAs (`git cherry origin/main HEAD` lists only `-` lines): a cherry-pick, or an older land through GitHub's rebase
+  merge.
+- **The fast-forward still wins when it can**: it keeps `main` linear and exactly the commits CI tested.
+- **History isn't linear**: `main` carries GitHub's "Merge pull request #N" commits. Readers of `main`'s history skip
+  them (`git log --no-merges` for the CHANGELOG, `docs/guides/releasing.md` § Writing the CHANGELOG; `--first-parent`
+  for `main`'s own states, `scripts/loc-counter/`).
 
 Exception: a branch carrying a merge commit (a security-only patch merged back by hand, `docs/guides/releasing.md`) is
-never rebased, by `land` or by GitHub, since a plain rebase flattens the merge. When `main` moved, `land` stops and
-names the manual fix instead. A contributor PR's record never rides a branch (§ Decision: record a contributor PR in its
-own land). A tagged commit isn't rebased either (§ Decision: `-merge` keeps a release commit's SHA).
+never rebased, by `land` or by GitHub, since a plain rebase flattens the merge. GitHub's merge commit lands it like any
+branch; only a conflict, which would need a rebase here, makes `land` stop and name the manual fix. A contributor PR's
+record never rides a branch (§ Decision: record a contributor PR in its own land). A tagged commit isn't rebased either
+(§ Decision: `-merge` keeps a release commit's SHA).
+
+## Decision: every commit on `main` is signed
+
+Decision: everything `land` puts on `main` carries a verified signature, so `main` can require signed commits. David
+picked a merge commit on a moved `main` over a local rebase plus another CI run (2026-10-30): no extra 25–35 min, at the
+cost of a non-linear history.
+
+- **The fast-forward** pushes David's own commits, signed locally (`commit.gpgSign`, SSH key).
+- **A GitHub merge commit** is signed by GitHub's web-flow key, and the branch's commits keep their SHAs and David's
+  signatures (verified on cli/cli's merge commits, `committer: GitHub`, `verification.verified: true`, 2026-10-30).
+- ❌ **Never `--rebase` or `--squash`**: GitHub's rebase merge rewrites every commit unsigned (`04f1230654`, PR #792;
+  369 such commits on `main` between 2026-10-01 and 2026-10-30), and a required-signatures rule refuses it outright.
+- **The commits `land` makes itself**: the start rebase and the conflict rebase (`git rebase`), `-squash`
+  (`git commit`), and the pre-push hook's formatting commit all honor `commit.gpgSign`. `git commit-tree` doesn't
+  (verified on git 2.56.0, 2026-10-30), so `buildRecord` passes `-S` itself when it's on
+  (`TestBuildRecordSignsWhenCommitsAreSigned`).
+- **A contributor's record brings their commits onto `main`** as the `ours` merge's second parent, and GitHub checks
+  every commit a push adds to `main`, so an unsigned contributor commit blocks the record under a required-signatures
+  rule unless the ruleset lets the admin bypass it. Open: David's call (§ Open points).
 
 ## Decision: `-merge` keeps a release commit's SHA
 
-Decision: `pnpm land -merge` never rebases. The green head lands by fast-forward while it still descends from
-`origin/main`, else with `gh pr merge <n> --admin --merge --match-head-commit <sha>` (`nextMergePath`): GitHub makes a
-merge commit onto whatever `main` is by then. A plain land refuses to rebase a branch carrying a tagged commit
-(`stepRefuseTaggedRebase`, `runner.tagged`) and points at `-merge`.
+Decision: `pnpm land -merge` never rebases. It skips the start rebase, and lands like any green head (a fast-forward,
+else GitHub's merge commit onto whatever `main` is by then), but a conflict stops it (`landMergeConflict`) instead of
+rebasing here. A plain land refuses to rebase a branch carrying a tagged commit (`stepRefuseTaggedRebase`,
+`runner.tagged`) and points at `-merge`.
 
 Why: a release is tagged on its `chore(release)` commit before it reaches `main`, and that commit is the one its full CI
 run tested and the pipeline built (`docs/guides/releasing.md` § The CI gate). A rebase would give `main` a different
 SHA, leaving the tag off `main`'s history. A merge commit made locally can't land either: `main` takes about eight lands
 an hour against a 25–35 min CI, so it'd rebuild and re-run forever (the reason `-record` exists). GitHub's merge needs
-no rebuild, like the rebase path of § Decision: merge a green PR onto a moved `main`.
+no rebuild (§ Decision: merge a green PR onto a moved `main`).
 
 - **The CI wait reads only the PR's runs** (`ciRunsPath`): the release commit also has its release's full dispatch run,
   and the CI ruleset reads only the newest run on a commit, which is the PR's once it starts. Landing on the older green
   run would be refused while the PR run goes.
 - **A conflict stops it** (`mergeable` false, `errMergeConflict`): merge by hand in a worktree off `main`, then `land`
   that. Rare, since a release commit touches only version files, `Cargo.lock`, `LICENSE`, and release-prep files.
-- **Needs merge commits allowed on `main`**: the repo's `allow_merge_commit` and `merge` in `main-pr-required.json`'s
-  `allowed_merge_methods` (David chose this over a cherry-pick plus an `ours` record, which would put the release commit
-  on `main` twice, 2026-10-22). Without either, GitHub refuses the merge and land says so; the fast-forward works
-  regardless. The PR page's button offers merge commits too, which is one more reason land owns merging.
-- Unit-tested (`nextStartStep`, `nextMergePath`, `tagged` against a real repo); the GitHub side waits for the first real
-  release merge-back.
+- **Needs merge commits allowed on `main`**, like every land onto a moved `main`: the repo's `allow_merge_commit` and
+  `merge` in `main-pr-required.json`'s `allowed_merge_methods`. Without either, GitHub refuses the merge and land says
+  so; the fast-forward works regardless.
+- Unit-tested (`nextStartStep`, `nextLandPath`, `conflictError`, `tagged` against a real repo); the GitHub side waits
+  for the first real release merge-back.
 
 ## Decision: record a contributor PR in its own land
 
-Decision: `pnpm land -record N` lands the cherry-picked branch exactly like `pnpm land` (linear, no merge commit), then
-lands PR N's record separately: a `record-pr-N` branch holding the current `origin/main` plus an `ours` merge of
-`refs/pull/N/head`, fast-forwarded onto `main` once `CI OK` is green on it (`record.go`).
+Decision: `pnpm land -record N` lands the cherry-picked branch exactly like `pnpm land`, then lands PR N's record
+separately: a `record-pr-N` branch holding the current `origin/main` plus an `ours` merge of `refs/pull/N/head`,
+fast-forwarded onto `main` once `CI OK` is green on it (`record.go`).
 
 Why: a merge commit can't ride a rebase, and `main` gets about eight lands an hour against a 25–35 min CI, so a content
 branch carrying the record almost never found `main` still under it, and `land` refused it. PR #393 (2026-10-21) needed
@@ -214,8 +238,8 @@ one minute.
 - **Built, never rebased**: `git commit-tree <main>^{tree} -p <main> -p <PR head>`, which is what
   `git merge -s ours --no-ff` makes, with no checkout. Before the push, `verifyRecord` checks the tree equals `main`'s
   and that both `main` and the PR head are ancestors.
-- **`main` moved under its CI**: `landRecord` returns `errMainMoved` (no GitHub rebase: it'd flatten the merge), and
-  `record` rebuilds on the new `main`, up to `maxCIRuns` runs, like a phase-1 conflict.
+- **`main` moved under its CI**: `landRecord` returns `errMainMoved` (no GitHub merge: the record's tree must be
+  `main`'s), and `record` rebuilds on the new `main`, up to `maxCIRuns` runs, like a phase-1 conflict.
 - **Idempotent like the rest** (`nextRecordStep`): PR N `MERGED` says so and stops; `CLOSED` is refused (GitHub marks
   only an open PR merged); a PR head already on `main` skips to the wait for `MERGED` (up to a minute) and the tidy-up.
   A record origin already has for the exact current `main` (same parents, same tree) is reused, so a re-run doesn't push
@@ -239,4 +263,10 @@ So `finish` cancels every unfinished run on the branch (`leftoverRuns`: this rep
 
 - **Renovate automerge**: Renovate uses GitHub's native auto-merge (`platformAutomerge`). Whether GitHub honors an app's
   bypass for auto-merge is unverified; if Renovate PRs stall on the approval rule, set `platformAutomerge: false` so
-  Renovate merges through the API itself.
+  Renovate merges through the API itself. Its merges so far are GitHub squash commits, signed by GitHub (PR #485,
+  `3b903143a`, `committer: GitHub`, verified, 2026-10-30), so they pass a required-signatures rule; keep `squash` in
+  `allowed_merge_methods` for it.
+- **A contributor's unsigned commits under a required-signatures rule**: the `-record` merge adds them to `main`'s
+  history (§ Decision: every commit on `main` is signed). Either the signatures ruleset lets the admin bypass it (that
+  push then reads "Bypassed rule violations", like the approval rule's), or a contributor PR gets closed with a
+  thank-you instead of a Merged badge. Not chosen yet.

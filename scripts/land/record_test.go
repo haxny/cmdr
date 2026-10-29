@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -180,5 +182,43 @@ func TestVerifyRecordRefusesATreeChange(t *testing.T) {
 	good := mustGit(t, a, "commit-tree", main+"^{tree}", "-p", main, "-p", prHead, "-m", "chore: record PR #7 as merged")
 	if err := verifyRecord(a, good, main, prHead); err != nil {
 		t.Errorf("verifyRecord refused a proper record: %v", err)
+	}
+}
+
+// The record lands on a `main` that requires signed commits, so it's signed whenever the user's
+// commits are: `git commit-tree` ignores `commit.gpgSign` by itself.
+func TestBuildRecordSignsWhenCommitsAreSigned(t *testing.T) {
+	if _, err := exec.LookPath("ssh-keygen"); err != nil {
+		t.Skip("needs ssh-keygen")
+	}
+	origin := testOrigin(t)
+	contributorPR(t, origin, 7)
+	a := testClone(t, origin, "worktree-pr7")
+	main, prHead := originMain(t, a), mustPRHead(t, a, 7)
+
+	unsigned, err := buildRecord(a, 7, main, prHead)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(mustGit(t, a, "cat-file", "commit", unsigned), "gpgsig") {
+		t.Error("commit.gpgSign is off, so the record isn't signed")
+	}
+
+	key := filepath.Join(t.TempDir(), "key")
+	if out, err := exec.Command("ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", key).CombinedOutput(); err != nil {
+		t.Fatalf("ssh-keygen: %v\n%s", err, out)
+	}
+	mustGit(t, a, "config", "gpg.format", "ssh")
+	mustGit(t, a, "config", "user.signingKey", key)
+	mustGit(t, a, "config", "commit.gpgSign", "true")
+	signed, err := buildRecord(a, 7, main, prHead)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(mustGit(t, a, "cat-file", "commit", signed), "gpgsig") {
+		t.Error("commit.gpgSign is on, so the record is signed")
+	}
+	if err := verifyRecord(a, signed, main, prHead); err != nil {
+		t.Errorf("a signed record is still a record: %v", err)
 	}
 }

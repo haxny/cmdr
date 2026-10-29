@@ -54,10 +54,10 @@ jobs:
     permissions:
       contents: read # check out the code
       checks: read # look up this commit's `CI OK` from its PR run
-      pull-requests: read # find the PR a GitHub rebase merge came from
+      pull-requests: read # find the PR a GitHub merge commit came from
     # A landed commit already passed every lane on its PR. `pnpm land` either fast-forwards (same
-    # SHA, so its PR run's green `CI OK` is on it) or has GitHub rebase-merge a green PR onto a
-    # moved `main` (new SHAs; the PR's head carries the green `CI OK`). Either way the push sets
+    # SHA, so its PR run's green `CI OK` is on it) or has GitHub merge a green PR into a moved
+    # `main` (a new merge commit; the PR's head carries the green `CI OK`). Either way the push sets
     # `verified` and every lane output reads `false`: the lanes skip, `CI OK` reports green, and
     # the post-land jobs still run off the raw `*-changed` filter. A semantic clash between two
     # PRs that each passed alone surfaces on the next PR's run (it tests the PR merged with the
@@ -83,10 +83,10 @@ jobs:
       # Only a completed, successful `CI OK` from GitHub Actions counts; this run's own is still
       # pending. An API hiccup falls back to running the lanes, never to a skip.
       # - Push: verified means a green `CI OK` on this SHA itself (fast-forward), or this SHA is
-      #   the `merge_commit_sha` of a merged PR into `main` whose head has one (GitHub rebase or
-      #   squash merge). Keying on the push's head SHA is enough: a rebase merge pushes all the
-      #   PR's commits at once, `github.sha` is the last, and GitHub reports exactly that one as
-      #   the merge commit, so the earlier replayed commits never need a verdict of their own.
+      #   the `merge_commit_sha` of a merged PR into `main` whose head has one (a GitHub merge
+      #   commit, or a rebase or squash merge). Keying on the push's head SHA is enough: a merge
+      #   commit is `github.sha` itself, and a rebase merge's `merge_commit_sha` is the last
+      #   replayed commit, which is `github.sha` too.
       # - Pull request: verified means the tree this run tests (the merge ref's, checked out
       #   here) is byte-identical to the PR head's, and the head already has a green `CI OK`. The
       #   trees match exactly when the base hasn't moved past the head's parent, and since `main`

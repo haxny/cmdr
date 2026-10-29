@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -51,46 +52,44 @@ func TestNextStartStepKeepsATaggedCommit(t *testing.T) {
 	}
 }
 
-func TestNextMergePath(t *testing.T) {
+// When `main` moved, every land goes through a GitHub merge commit, never a GitHub rebase merge:
+// that rewrites the branch's commits unsigned, which the required-signatures rule refuses.
+func TestNextLandPath(t *testing.T) {
 	yes, no := true, false
 	cases := []struct {
 		name      string
 		based     bool
+		merge     bool
 		mergeable *bool
 		want      landPath
 	}{
-		{"main didn't move", true, nil, landFastForward},
-		{"main moved", false, &yes, landGitHubMerge},
-		{"main moved, GitHub still computing", false, nil, landGitHubMerge},
-		{"main moved into a conflict", false, &no, landMergeConflict},
+		{"main didn't move", true, false, nil, landFastForward},
+		{"main didn't move, -merge", true, true, &no, landFastForward},
+		{"main moved", false, false, &yes, landGitHubMerge},
+		{"main moved, GitHub still computing", false, false, nil, landGitHubMerge},
+		{"main moved into a conflict", false, false, &no, landRebaseAndRerun},
+		{"main moved, -merge", false, true, &yes, landGitHubMerge},
+		{"main moved, -merge, GitHub still computing", false, true, nil, landGitHubMerge},
+		{"main moved into a conflict, -merge", false, true, &no, landMergeConflict},
 	}
 	for _, c := range cases {
-		if got := nextMergePath(c.based, c.mergeable); got != c.want {
+		if got := nextLandPath(c.based, c.merge, c.mergeable); got != c.want {
 			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
 		}
 	}
 }
 
-func TestNextLandPath(t *testing.T) {
-	yes, no := true, false
-	cases := []struct {
-		name       string
-		based      bool
-		hasMerges  bool
-		rebaseable *bool
-		want       landPath
-	}{
-		{"main didn't move", true, false, nil, landFastForward},
-		{"main didn't move under a merge commit", true, true, nil, landFastForward},
-		{"main moved", false, false, &yes, landGitHubRebase},
-		{"main moved, GitHub still computing", false, false, nil, landGitHubRebase},
-		{"main moved into a conflict", false, false, &no, landRebaseAndRerun},
-		{"main moved under a merge commit", false, true, &yes, landRebaseAndRerun},
+// A conflict GitHub can't merge: a plain branch rebases here and runs CI again; a branch carrying
+// a merge commit goes back to the start, which refuses to flatten it; `-merge` stops for a hand merge.
+func TestConflictError(t *testing.T) {
+	if err := conflictError("0123456789abcdef", false, false); !errors.Is(err, errGitHubConflict) {
+		t.Errorf("plain branch: got %v, want errGitHubConflict", err)
 	}
-	for _, c := range cases {
-		if got := nextLandPath(c.based, c.hasMerges, c.rebaseable); got != c.want {
-			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
-		}
+	if err := conflictError("0123456789abcdef", true, false); !errors.Is(err, errMainMoved) || errors.Is(err, errGitHubConflict) {
+		t.Errorf("merge-carrying branch: got %v, want bare errMainMoved", err)
+	}
+	if err := conflictError("0123456789abcdef", false, true); errors.Is(err, errMainMoved) {
+		t.Errorf("-merge: got %v, want a stop, not another run", err)
 	}
 }
 
