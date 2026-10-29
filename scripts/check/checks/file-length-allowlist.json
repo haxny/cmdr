@@ -13,10 +13,6 @@
       "lines": 812,
       "reason": "TODO: the panic path is its own concern and already has `panic_courier.rs` and `panic_courier_tests.rs` as neighbors. Move `install_panic_hook`, `contained_panic_warning`, `PanicDisposition`, `handle_panic`, `write_first_crash_report`, `build_panic_report`, and the message/backtrace helpers (`extract_panic_message`, `sanitize_panic_message`, `sanitize_thread_name`, `cap_chars`, `cap_panic_message`, `parse_backtrace_frames`, `current_image_base_hex`) into `panic_hook.rs`, about 260 lines. `mod.rs` keeps the `CrashReport` shape, `init`, the pending-report read/write, and the active-settings snapshot."
     },
-    "apps/desktop/src-tauri/src/error_reporter/tests.rs": {
-      "lines": 1217,
-      "reason": "One test module for the error-report bundle (manifest shape, zip contents, redaction, note and email handling, ids, and capping), sharing one set of manifest and zip-reading fixtures; `privacy_tests` already splits off the privacy cases, and splitting further would scatter those fixtures across siblings without making any test easier to find."
-    },
     "apps/desktop/src-tauri/src/file_viewer/rows_test.rs": {
       "lines": 1212,
       "reason": "It is the proof corpus for ONE rule, and splitting it would separate the properties from the fixtures they run over. The file is a reference implementation of the row boundary set brute-forced over a whole file, a corpus of ~40 crafted cases across four encodings, and the property battery that probes every one of them at EVERY offset against that reference, including the cross-check that binds `rows.rs`'s backward reading to `row_walk.rs`'s forward walk. Every property reads most of the corpus and the corpus exists only for the properties, so any cut either duplicates the fixtures or puts them behind a `_test_support.rs` import that hides which case a red assertion came from. The rule itself did split (`rows.rs` / `row_walk.rs`); this file deliberately did not follow, because it is what proves the two halves still agree."

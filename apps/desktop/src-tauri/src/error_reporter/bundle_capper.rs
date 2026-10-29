@@ -1,12 +1,15 @@
-//! Post-hoc bundle-size cap. Trims log content from the head of the newest file (line
-//! by line) instead of dropping whole entries, so a tight cap still ships the most
-//! recent context.
+//! Post-hoc bundle-size cap, plus [`NewestFirstFit`], the measurement both pipelines use to
+//! decide how much of a log file fits. Trims log content from the head of each file (line
+//! by line) instead of dropping whole entries, so a tight cap still ships the most recent
+//! context.
 //!
 //! Used by Flow B (where the legacy builder doesn't enforce a cap inline) and as a
 //! defense-in-depth pass on Flow A in case a future manifest grows large enough to
 //! exceed the cap on its own.
 
-use std::io::{Read, Seek, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use zip::DateTime as ZipDateTime;
 use zip::ZipArchive;
 use zip::write::{SimpleFileOptions, ZipWriter};
@@ -14,7 +17,134 @@ use zip::write::{SimpleFileOptions, ZipWriter};
 /// Always preserve at least this many lines of the most recent file, even if the cap
 /// would otherwise force it down to nothing. [`cap_bundle_to_mb`] may exceed the cap by
 /// up to ~10% to honor this. Better to ship 1.1 MB of useful context than 0.
-const MIN_TAIL_LINES_OF_NEWEST_FILE: usize = 50;
+pub(super) const MIN_TAIL_LINES_OF_NEWEST_FILE: usize = 50;
+
+/// Room left per zip entry for its local header and central-directory record.
+pub(super) const ENTRY_OVERHEAD_BYTES: usize = 256;
+
+/// How much raw text [`NewestFirstFit`] deflates between measurements. Each measurement is a
+/// sync flush (a few bytes of output), and the answer is only as fine as this step: about
+/// 1 KB of compressed output on real logs.
+const MEASURE_STEP_BYTES: usize = 16 * 1024;
+
+/// `Cursor<Vec<u8>>` adapter that increments an `AtomicU64` by `buf.len()` on every
+/// `Write::write` call, so a caller can read how much a `ZipWriter` has emitted while the
+/// writer owns the cursor.
+///
+/// The count is bytes the `zip` crate emitted: compressed payload plus headers, up to the
+/// deflater's last flush. Flush the writer before reading it when the answer must be exact.
+pub(super) struct CountingCursor {
+    inner: std::io::Cursor<Vec<u8>>,
+    counter: Arc<AtomicU64>,
+}
+
+impl CountingCursor {
+    pub(super) fn new(counter: Arc<AtomicU64>) -> Self {
+        Self {
+            inner: std::io::Cursor::new(Vec::new()),
+            counter,
+        }
+    }
+
+    pub(super) fn into_inner(self) -> Vec<u8> {
+        self.inner.into_inner()
+    }
+}
+
+impl Write for CountingCursor {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let n = self.inner.write(buf)?;
+        self.counter.fetch_add(n as u64, Ordering::Relaxed);
+        Ok(n)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+impl Seek for CountingCursor {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        self.inner.seek(pos)
+    }
+}
+
+/// Measures how many of a file's NEWEST lines fit in a compressed-byte budget, by deflating
+/// them into a scratch entry newest-first, at the real entry's compression level.
+///
+/// ❗ The cap is on compressed bytes, so the fit must be measured in compressed bytes too.
+/// Budgeting raw text against it kept about a seventeenth of what fits on real log text (a
+/// 1 MB cap shipped 54 KB), and writing a file oldest-first until the cap tripped dropped its
+/// newest lines, the ones the report is about (cmdr-reports#84).
+///
+/// Offer lines newest-first and stop once [`offer`](Self::offer) says no; [`fitting`](Self::fitting)
+/// then says how many of the offered ones fit, measured at [`MEASURE_STEP_BYTES`] steps.
+/// Reverse order deflates within a sync flush or two of forward order, which the callers'
+/// headroom absorbs.
+pub(super) struct NewestFirstFit {
+    writer: ZipWriter<CountingCursor>,
+    counter: Arc<AtomicU64>,
+    budget: u64,
+    offered: usize,
+    fitting: usize,
+    unmeasured_bytes: usize,
+    over: bool,
+}
+
+impl NewestFirstFit {
+    pub(super) fn new(budget: usize, compression_level: Option<i64>) -> Self {
+        let counter = Arc::new(AtomicU64::new(0));
+        let mut writer = ZipWriter::new(CountingCursor::new(counter.clone()));
+        let opts = SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated)
+            .compression_level(compression_level);
+        let over = writer.start_file("measure", opts).is_err();
+        Self {
+            writer,
+            counter,
+            budget: budget as u64,
+            offered: 0,
+            fitting: 0,
+            unmeasured_bytes: 0,
+            over,
+        }
+    }
+
+    /// Offers the next-older line. Returns `false` once the budget is spent: stop offering.
+    pub(super) fn offer(&mut self, line: &[u8]) -> bool {
+        if self.over {
+            return false;
+        }
+        if self.writer.write_all(line).is_err() || self.writer.write_all(b"\n").is_err() {
+            self.over = true;
+            return false;
+        }
+        self.offered += 1;
+        self.unmeasured_bytes += line.len() + 1;
+        if self.unmeasured_bytes >= MEASURE_STEP_BYTES {
+            return self.measure();
+        }
+        true
+    }
+
+    fn measure(&mut self) -> bool {
+        self.unmeasured_bytes = 0;
+        if self.writer.flush().is_err() || self.counter.load(Ordering::Relaxed) > self.budget {
+            self.over = true;
+            return false;
+        }
+        self.fitting = self.offered;
+        true
+    }
+
+    /// How many of the offered lines (the newest ones) fit the budget.
+    pub(super) fn fitting(mut self) -> usize {
+        if !self.over && self.unmeasured_bytes > 0 {
+            self.measure();
+        }
+        self.fitting
+    }
+}
 
 /// Cap the bundle to `cap_mb` megabytes, **trimming log content from the head**, not
 /// dropping whole files.
@@ -23,9 +153,8 @@ const MIN_TAIL_LINES_OF_NEWEST_FILE: usize = 50;
 /// 1. `manifest.json` is always preserved in full (verbatim, with its original mtime).
 /// 2. `logs/*` entries are sorted newest-first by their stored mtime so the most recent context
 ///    wins the budget race.
-/// 3. Each log entry's content is line-split. Lines are packed into the output zip starting from
-///    the **end** of the file (the newest lines) until the compressed output approaches the cap.
-///    Older lines get dropped.
+/// 3. Each log entry keeps the newest tail of its lines whose COMPRESSED size fits what's left
+///    of 90% of the cap ([`NewestFirstFit`]). Older lines get dropped.
 /// 4. If a single entry won't fit even partially, we still preserve the last
 ///    [`MIN_TAIL_LINES_OF_NEWEST_FILE`] lines of the newest file, even if it pushes the output ~10%
 ///    over the cap. Shipping a 1.1 MB bundle with useful tail beats shipping a 542-byte bundle with
@@ -87,10 +216,9 @@ pub(crate) fn cap_bundle_to_bytes(zip_bytes: Vec<u8>, cap_bytes: usize) -> Vec<u
     // 30 MB → 1 MB regression test.
     let target = (cap_bytes * 9) / 10;
 
-    let mut out_buf: Vec<u8> = Vec::with_capacity(cap_bytes);
+    let counter = Arc::new(AtomicU64::new(0));
     let finish_result = {
-        let cursor = std::io::Cursor::new(&mut out_buf);
-        let mut writer = ZipWriter::new(cursor);
+        let mut writer = ZipWriter::new(CountingCursor::new(counter.clone()));
 
         // 1. Manifest, verbatim.
         if let Some((bytes, mtime)) = &manifest_bytes_and_mtime {
@@ -103,44 +231,35 @@ pub(crate) fn cap_bundle_to_bytes(zip_bytes: Vec<u8>, cap_bytes: usize) -> Vec<u
             }
         }
 
-        // 2. Logs, newest-first. Pack lines from the end inward.
-        //
-        // We can't read `out_buf.len()` while the writer mutably borrows it, so we
-        // budget against an *uncompressed* byte tally. Real log text deflates ~5–10×,
-        // pathological pseudo-random text only ~1.1×; we pick a budget that lands the
-        // compressed output near `target` in the worst case rather than the best.
-        // Concretely: uncompressed_budget = target * 1.0. On real logs we'll be far
-        // under the cap (acceptable: cap is a ceiling, not a quota). On worst-case
-        // input we'll be just under the cap. The minimum-tail floor below covers the
-        // pathological "every line still wouldn't fit" case.
-        let uncompressed_budget = target;
-        let mut uncompressed_used: usize = manifest_bytes_and_mtime.as_ref().map(|(b, _)| b.len()).unwrap_or(0);
-
+        // 2. Logs, newest-first. Each file keeps the newest tail that fits what's left of
+        // the budget, measured in COMPRESSED bytes (`NewestFirstFit`): the cap is on the
+        // compressed bundle, and a raw-byte tally kept a small fraction of what fits.
         for (i, entry) in log_entries.iter().enumerate() {
             let lines: Vec<&[u8]> = split_into_lines(&entry.content);
-            let remaining_budget = uncompressed_budget.saturating_sub(uncompressed_used);
-
-            // Pick how many lines from the tail of this entry to keep.
-            let kept_lines: Vec<&[u8]> = if remaining_budget == 0 {
-                // No budget at all. Honor the minimum-tail floor for the newest entry only.
-                if i == 0 {
-                    take_tail(&lines, MIN_TAIL_LINES_OF_NEWEST_FILE)
-                } else {
-                    Vec::new()
-                }
-            } else {
-                let mut kept = pick_tail_within_budget(&lines, remaining_budget);
-                // Floor: ensure the newest file ships at least N lines (even if we'd
-                // marginally exceed the cap (see the doc comment).
-                if i == 0 && kept.len() < MIN_TAIL_LINES_OF_NEWEST_FILE.min(lines.len()) {
-                    kept = take_tail(&lines, MIN_TAIL_LINES_OF_NEWEST_FILE);
-                }
-                kept
-            };
-
-            if kept_lines.is_empty() {
-                continue;
+            // Flushed, so the count covers everything written so far.
+            if writer.flush().is_err() {
+                break;
             }
+            let used = counter.load(Ordering::Relaxed) as usize;
+            let remaining_budget = target.saturating_sub(used + ENTRY_OVERHEAD_BYTES);
+
+            let mut fit = NewestFirstFit::new(remaining_budget, None);
+            for line in lines.iter().rev() {
+                if !fit.offer(line) {
+                    break;
+                }
+            }
+            let mut keep = fit.fitting();
+            // Floor: the newest file ships at least N lines, even if that marginally exceeds
+            // the cap (see the doc comment).
+            if i == 0 {
+                keep = keep.max(MIN_TAIL_LINES_OF_NEWEST_FILE.min(lines.len()));
+            }
+            if keep == 0 {
+                // Older files are older still, and the budget is spent.
+                break;
+            }
+            let kept_lines = take_tail(&lines, keep);
 
             let opts = SimpleFileOptions::default()
                 .compression_method(zip::CompressionMethod::Deflated)
@@ -149,26 +268,22 @@ pub(crate) fn cap_bundle_to_bytes(zip_bytes: Vec<u8>, cap_bytes: usize) -> Vec<u
                 continue;
             }
             for line in &kept_lines {
-                if writer.write_all(line).is_err() {
+                if writer.write_all(line).is_err() || writer.write_all(b"\n").is_err() {
                     break;
                 }
-                if writer.write_all(b"\n").is_err() {
-                    break;
-                }
-                uncompressed_used += line.len() + 1;
             }
         }
 
         writer.finish()
     };
 
-    if finish_result.is_err() {
-        return zip_bytes;
+    match finish_result {
+        Ok(cursor) => {
+            let out_buf = cursor.into_inner();
+            if out_buf.is_empty() { zip_bytes } else { out_buf }
+        }
+        Err(_) => zip_bytes,
     }
-    if out_buf.is_empty() {
-        return zip_bytes;
-    }
-    out_buf
 }
 
 /// Split a log file's content into lines (without trailing newlines) so we can pack
@@ -185,31 +300,6 @@ fn split_into_lines(content: &[u8]) -> Vec<&[u8]> {
 /// Take the last `n` lines (or all of them if there are fewer).
 fn take_tail<'a>(lines: &[&'a [u8]], n: usize) -> Vec<&'a [u8]> {
     let start = lines.len().saturating_sub(n);
-    lines[start..].to_vec()
-}
-
-/// Pick the newest tail of `lines` whose **uncompressed** byte total fits within
-/// `budget` bytes.
-///
-/// Uses a simple back-to-front scan rather than a binary search: cap-trimming runs once
-/// per dispatch and the line count is bounded by the rotation cap. Each iteration is a
-/// `len()` lookup. The result is the longest tail of `lines` whose summed lengths
-/// (plus per-line `\n`) stay under `budget`.
-///
-/// Heuristic: assume worst-case 1:1 deflate ratio on the line bytes (log text deflates
-/// to ~10–20% of source, so this is conservative). Headroom for the central directory
-/// is the caller's concern via `target = cap * 9 / 10`.
-fn pick_tail_within_budget<'a>(lines: &[&'a [u8]], budget: usize) -> Vec<&'a [u8]> {
-    let mut total: usize = 0;
-    let mut start = lines.len();
-    for (i, line) in lines.iter().enumerate().rev() {
-        let cost = line.len() + 1; // +1 for newline
-        if total + cost > budget {
-            break;
-        }
-        total += cost;
-        start = i;
-    }
     lines[start..].to_vec()
 }
 

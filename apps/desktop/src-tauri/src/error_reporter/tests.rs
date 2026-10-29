@@ -1,8 +1,7 @@
 use super::bundle_builder::{
-    PreparedFile, build_bundle_streaming, build_bundle_streaming_to_cap, build_zip, email_for_kind,
-    load_and_filter_log_file, prepare_user_note, resolve_bundle_id, zip_dt,
+    PreparedFile, build_bundle_streaming, build_zip, email_for_kind, load_and_filter_log_file, prepare_user_note,
+    resolve_bundle_id, zip_dt,
 };
-use super::bundle_capper::cap_bundle_to_bytes;
 use super::*;
 use crate::redact;
 use crate::test_support::TestDir;
@@ -13,6 +12,7 @@ use std::path::Path;
 use std::time::{Duration, SystemTime};
 use zip::{DateTime as ZipDateTime, ZipArchive};
 
+mod cap_tests;
 mod privacy_tests;
 mod provenance_tests;
 
@@ -495,165 +495,6 @@ fn zip_is_a_valid_zip_archive() {
     assert!(archive.len() >= 2, "expected at least manifest + one log entry");
 }
 
-#[test]
-fn cap_bundle_is_no_op_when_under_cap() {
-    let now = SystemTime::now();
-    let mut files = BTreeMap::new();
-    files.insert("cmdr.log".to_string(), prepared(vec!["short"], now));
-    let bytes = build_zip(&sample_manifest(), &files, now).unwrap();
-    let original_len = bytes.len();
-    let original = bytes.clone();
-
-    let capped = cap_bundle_to_mb(bytes, 10);
-    assert_eq!(capped.len(), original_len);
-    assert_eq!(capped, original);
-}
-
-/// Generates pseudo-random text that doesn't deflate well, so a 30 MB input stays
-/// 30 MB-ish in the zip too.
-fn splitmix64(mut x: u64) -> u64 {
-    x = x.wrapping_add(0x9E37_79B9_7F4A_7C15);
-    let mut z = x;
-    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-    z ^ (z >> 31)
-}
-
-fn synthetic_lines(file_idx: u32, count: u32) -> Vec<String> {
-    (0u32..count)
-        .map(|i| {
-            let token: String = (0u32..30)
-                .map(|k| {
-                    let n = splitmix64(((file_idx as u64) << 40) ^ ((i as u64) << 16) ^ k as u64);
-                    char::from(33u8 + ((n & 0xFF) as u8 % 90))
-                })
-                .collect();
-            format!("INFO file={file_idx} idx={i} body={token}")
-        })
-        .collect()
-}
-
-/// Headline test for fix #6: pre-fix, capping a 30 MB bundle to 1 MB produced a
-/// 542-byte zip with only the manifest. Post-fix: capping trims old content from the
-/// head of the newest file, ships the tail under (or just over) the cap, and proves
-/// the LAST input line survives.
-///
-/// Uses the bytes-precision [`cap_bundle_to_bytes`] entry point (the prod API
-/// [`cap_bundle_to_mb`] is a wrapper for the same logic at MB granularity). The
-/// behavior under test is scale-invariant — pre-fix, the bug reproduced at any input
-/// size as long as the cap engaged. A 100 KB cap with a ~250 KB input exercises the
-/// same trim-from-head-keep-tail logic in ~50 ms instead of the ~2 s warm / >8 s
-/// contended that 200 000 synthetic lines + 1 MB cap used to cost. See the test
-/// commit for the previous shape if a future regression seems to need the bigger
-/// fixture.
-#[test]
-fn cap_bundle_keeps_newest_lines_and_manifest() {
-    let now = SystemTime::now();
-    let mut files: BTreeMap<String, PreparedFile> = BTreeMap::new();
-    // 4 000 synthetic high-entropy lines (~60 bytes each = ~240 KB raw,
-    // deflates to ~130 KB at level 1 — comfortably over the 100 KB cap below).
-    let lines = synthetic_lines(0, 4_000);
-    let last_line = lines.last().cloned().expect("synthetic lines must exist");
-    let lines_owned: Vec<String> = lines;
-    files.insert(
-        "cmdr.log".to_string(),
-        PreparedFile {
-            lines: lines_owned,
-            mtime: now,
-        },
-    );
-
-    let bytes = build_zip(&sample_manifest(), &files, now).unwrap();
-    assert!(
-        bytes.len() > 110_000,
-        "test setup needs a bigger input zip than the cap (got {} bytes)",
-        bytes.len()
-    );
-
-    let cap_bytes_value = 100 * 1024;
-    let capped = cap_bundle_to_bytes(bytes.clone(), cap_bytes_value);
-
-    // Tolerance: cap may exceed by ~10% to honor the minimum-tail floor on the newest
-    // file. 1.1 × cap is the documented contract.
-    let upper = cap_bytes_value * 11 / 10;
-    assert!(
-        capped.len() <= upper,
-        "capped bundle is {} bytes, expected <= {} bytes (cap {} bytes + 10% headroom)",
-        capped.len(),
-        upper,
-        cap_bytes_value,
-    );
-    assert!(
-        capped.len() < bytes.len(),
-        "capping should have shrunk the bundle ({} -> {})",
-        bytes.len(),
-        capped.len()
-    );
-
-    // Manifest is preserved verbatim.
-    let entries = read_zip_entries(&capped);
-    let manifest_json = entries.get("manifest.json").expect("manifest must survive capping");
-    let parsed: BundleManifest = serde_json::from_str(manifest_json).unwrap();
-    assert_eq!(parsed.id, "ERR-AB23X");
-
-    // `logs/cmdr.log` is present and contains the LAST line of the input, proving we
-    // trimmed from the head, not the tail.
-    let cmdr_log = entries
-        .get("logs/cmdr.log")
-        .expect("the newest log entry must survive capping");
-    assert!(
-        cmdr_log.lines().any(|l| l == last_line),
-        "the LAST input line must survive (got first/last few: {:?} ... {:?})",
-        cmdr_log.lines().take(3).collect::<Vec<_>>(),
-        cmdr_log.lines().rev().take(3).collect::<Vec<_>>(),
-    );
-    // ...and we dropped the FIRST line (otherwise we kept everything, which would
-    // mean the cap didn't actually do anything).
-    assert!(
-        !cmdr_log.contains("idx=0 "),
-        "expected the head to be trimmed; idx=0 still present"
-    );
-}
-
-/// Newer files win the budget race over older files. Even with a tight cap, the
-/// newest file gets its tail in; older files may be dropped entirely.
-///
-/// Like the headline test, scale-invariant: pre-fix the newest-wins logic was
-/// broken at any size. Uses a 100 KB cap and ~3 000 lines per file to stay under
-/// the 8 s nextest cap with headroom (was 50 000 × 2 files = 5 s warm / >8 s
-/// contended).
-#[test]
-fn cap_bundle_prefers_newer_files() {
-    let now = SystemTime::now();
-    let older = now - Duration::from_secs(86_400);
-    let mut files: BTreeMap<String, PreparedFile> = BTreeMap::new();
-    files.insert(
-        "cmdr.log".to_string(),
-        PreparedFile {
-            lines: synthetic_lines(0, 3_000),
-            mtime: now,
-        },
-    );
-    files.insert(
-        "cmdr.log.1".to_string(),
-        PreparedFile {
-            lines: synthetic_lines(1, 3_000),
-            mtime: older,
-        },
-    );
-    let bytes = build_zip(&sample_manifest(), &files, now).unwrap();
-    let capped = cap_bundle_to_bytes(bytes, 100 * 1024);
-    let entries = read_zip_entries(&capped);
-
-    assert!(
-        entries.contains_key("logs/cmdr.log"),
-        "newest file must survive (got entries: {:?})",
-        entries.keys().collect::<Vec<_>>()
-    );
-    // Manifest always present.
-    assert!(entries.contains_key("manifest.json"));
-}
-
 /// Fix #1: each entry must carry a real mtime, not the DOS epoch (1980-01-01).
 #[test]
 fn zip_entries_carry_real_mtimes() {
@@ -1108,71 +949,6 @@ mod streaming_tests {
         assert!(log_body.contains("recovered"));
         assert!(!log_body.contains("old1"));
         assert!(!log_body.contains("old2"));
-    }
-
-    /// Cap stops streaming: a synthetic file forces the compressed cap before the
-    /// timestamp boundary; the bundle is well-formed and contains some content.
-    /// (The test asserts on byte ceiling and zip validity rather than line-by-line
-    /// content, since which lines survive depends on the deflate buffer's flush timing.)
-    #[test]
-    fn streaming_stops_at_cap() {
-        let dir = make_log_dir("cap");
-        let log = dir.join("cmdr.log");
-        let now = Utc::now();
-        let mut f = fs::File::create(&log).unwrap();
-        // 192 KiB of deterministic high-entropy text in realistically sized log lines.
-        // Poor compression crosses the test's 64 KiB compressed cap without making
-        // fixture size or unusually wide regex inputs dominate what this test exercises.
-        let line_count = 1_024u32;
-        let mut state = 0x4d59_5df4_d0f3_3173u64;
-        let alphabet = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-        let mut token = vec![0u8; 192];
-        for i in 0..line_count {
-            let ts = iso(now - chrono::Duration::seconds((line_count - i) as i64));
-            for byte in &mut token {
-                state ^= state >> 12;
-                state ^= state << 25;
-                state ^= state >> 27;
-                let random = state.wrapping_mul(0x2545_f491_4f6c_dd1d);
-                *byte = alphabet[(random >> 58) as usize];
-            }
-            write!(f, "{ts} INFO body=").unwrap();
-            f.write_all(&token).unwrap();
-            writeln!(f).unwrap();
-        }
-        drop(f);
-
-        let cutoff = now - chrono::Duration::hours(2);
-        let cap_bytes = 64 * 1024;
-        let bundle = build_bundle_streaming_to_cap(
-            "ERR-CAP".to_string(),
-            sample_manifest(),
-            vec![log.clone()],
-            cutoff,
-            SystemTime::now(),
-            &test_redaction(),
-            cap_bytes,
-        )
-        .unwrap();
-
-        // Allow one extra test-cap window for the deflater's ~64 KiB flush buffer plus
-        // the central directory. With enforcement removed, the whole ~144 KiB
-        // compressed fixture exceeds this ceiling.
-        assert!(
-            bundle.zip_bytes.len() <= cap_bytes * 2,
-            "expected zip <= 2x cap; got {}",
-            bundle.zip_bytes.len()
-        );
-        // And the bundle is a valid zip with manifest + at least one log entry.
-        let entries = read_zip_entries(&bundle.zip_bytes);
-        assert!(entries.contains_key("manifest.json"));
-        assert!(entries.keys().any(|k| k.starts_with("logs/")));
-        // Streaming must have terminated before consuming everything.
-        assert!(
-            (bundle.total_redacted_lines as u32) < line_count,
-            "expected early termination; consumed all {} lines",
-            bundle.total_redacted_lines,
-        );
     }
 
     /// Empty + nonexistent files are handled cleanly.
