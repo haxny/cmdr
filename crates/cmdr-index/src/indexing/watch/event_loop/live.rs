@@ -156,7 +156,7 @@ pub(in crate::indexing) struct LiveConfig {
     pub(in crate::indexing) scope: WatchScope,
     /// The stored id a resumed `sinceWhen` stream replays from, when its first
     /// event can tell whether that history survived (a stream that sees every
-    /// write: [`history_was_purged`](super::history_was_purged)). If it didn't,
+    /// write: [`history_was_purged`]). If it didn't,
     /// the loop bumps the epoch before writing anything, so the covered rows
     /// render stale instead of current. `None` checks nothing.
     pub(in crate::indexing) history_check: Option<u64>,
