@@ -388,6 +388,50 @@ describe('runAiSearch', () => {
     expect(config.state.getLastAiPrompt()).toBe('big photos')
   })
 
+  it('marks the agent trail ready only once this prompt’s answer lands (#762)', async () => {
+    let answer: (r: AiTranslateResult) => void = () => {}
+    const { runner, config } = makeRunner({
+      query: 'big photos',
+      translateAi: () =>
+        new Promise((resolve) => {
+          answer = resolve
+        }),
+    })
+    config.state.setAiTrailReady(true) // left over from an earlier AI run
+    const done = runner.runAiSearch('big photos')
+    expect(config.state.getAiTrailReady()).toBe(false)
+    answer(translated)
+    await done
+    expect(config.state.getAiTrailReady()).toBe(true)
+  })
+
+  it('keeps the trail unready after a failed translation', async () => {
+    const { runner, config } = makeRunner({ query: 'x', translateAi: () => Promise.reject(new Error('boom')) })
+    config.state.setAiTrailReady(true)
+    await runner.runAiSearch('big photos')
+    expect(config.state.getAiTrailReady()).toBe(false)
+  })
+
+  it('drops a translation that answers after a newer run started', async () => {
+    const answers: ((r: AiTranslateResult) => void)[] = []
+    const { runner, config, calls } = makeRunner({
+      query: 'big photos',
+      translateAi: () =>
+        new Promise((resolve) => {
+          answers.push(resolve)
+        }),
+    })
+    const first = runner.runAiSearch('old question')
+    const second = runner.runAiSearch('new question')
+    answers[1]({ caveat: 'new caveat' })
+    await second
+    answers[0]({ caveat: 'old caveat' })
+    await first
+    expect(config.state.getLastAiPrompt()).toBe('new question')
+    expect(config.state.getLastAiCaveat()).toBe('new caveat')
+    expect(calls.runQuery).toBe(1)
+  })
+
   it('treats a null translation as a benign no-op, spinner off', async () => {
     const { runner, config, calls } = makeRunner({ query: 'big photos', translateAi: () => Promise.resolve(null) })
     await runner.runAiSearch('big photos')

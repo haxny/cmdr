@@ -33,18 +33,23 @@
         aiPrompt: string
         /** Optional caveat returned by the AI translator. Empty string hides the caveat row. */
         caveat: string
-        /** Structured mirror of what the agent set (pattern + filters). Built by `buildAiSummary`. */
-        summary: AiSummary
+        /**
+         * Structured mirror of what the agent set (pattern + filters). Built by `buildAiSummary`.
+         * `null` while the prompt's translation hasn't landed (or didn't): the chips still hold
+         * the previous query then, so the whole "what the agent did" row stays out (#762).
+         */
+        summary: AiSummary | null
     }
 
     const { aiPrompt, caveat, summary }: Props = $props()
 
-    const hasSummary = $derived(summary.pattern !== null || summary.filters.length > 0)
+    const hasSummary = $derived(summary !== null && (summary.pattern !== null || summary.filters.length > 0))
 </script>
 
 <div class="ai-transparency-strip" aria-label={tString('queryUi.ai.stripAria')}>
     <div class="strip-text">
         <p class="ai-prompt" use:tooltip={{ text: aiPrompt, overflowOnly: true }}>{aiPrompt}</p>
+        {#if summary !== null}
         <div class="ai-summary">
             <span class="ai-summary-lead">{tString('queryUi.ai.lead')}</span>
             {#if hasSummary}
@@ -71,6 +76,7 @@
                 <span class="ai-summary-empty">{tString('queryUi.ai.empty')}</span>
             {/if}
         </div>
+        {/if}
         {#if caveat}
             <p class="ai-caveat" use:tooltip={{ text: caveat, overflowOnly: true }}>{caveat}</p>
         {/if}
