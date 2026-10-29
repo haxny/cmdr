@@ -13,6 +13,9 @@ import {
   type LastTagApply,
   type NamePattern,
   type NamePreviewRow,
+  type ReplacePreset,
+  type ReplacePresetRefusal,
+  type ReplaceStep,
   type RestoreReport,
   type SideFileChange,
   type SideFileSeen,
@@ -40,6 +43,9 @@ export type {
   FileChangeView,
   NamePattern,
   NamePreviewRow,
+  ReplacePreset,
+  ReplacePresetRefusal,
+  ReplaceStep,
   RestoreReport,
   SideFileChange,
   SideFileSeen,
@@ -136,6 +142,31 @@ export async function runTagTextTool(
   scope: string[] | null = null,
 ): Promise<TagEditorResult<TagEditorView>> {
   return result(await commands.runTagTextTool(sessionId, tool, scope))
+}
+
+/** A save the lists refused: `refusal` says why (`listFull`, or `empty` for no name or no step). */
+export class ReplacePresetRefused extends Error {
+  constructor(readonly refusal: ReplacePresetRefusal) {
+    super(`The Replace list wasn't saved: ${refusal.type}`)
+    this.name = 'ReplacePresetRefused'
+  }
+}
+
+/** The saved F4 Replace lists, top to bottom. The first call on a new install also brings in the built-ins. */
+export async function getTagReplacePresets(): Promise<ReplacePreset[]> {
+  return commands.getTagReplacePresets()
+}
+
+/** Saves a list at the end; one with the same name is replaced in place. Answers the lists after, or throws {@link ReplacePresetRefused}. */
+export async function saveTagReplacePreset(preset: ReplacePreset): Promise<ReplacePreset[]> {
+  const res = await commands.saveTagReplacePreset(preset)
+  if (res.status === 'error') throw new ReplacePresetRefused(res.error)
+  return res.data
+}
+
+/** Deletes a list by id (a built-in stays gone). Answers the lists after. */
+export async function deleteTagReplacePreset(id: string): Promise<ReplacePreset[]> {
+  return commands.deleteTagReplacePreset(id)
 }
 
 /**

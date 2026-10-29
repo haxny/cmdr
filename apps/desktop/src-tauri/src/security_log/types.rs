@@ -170,6 +170,8 @@ pub enum StateFile {
     SelectionHistory,
     /// Saved multi-rename presets.
     MultiRenamePresets,
+    /// Saved Tags window F4 Replace lists.
+    TagReplacePresets,
     /// The multi-rename dialog's last settings.
     MultiRenameLastSettings,
     /// The multi-rename dialog's per-field history.

@@ -24,6 +24,10 @@ use crate::tag_editor::cover_choices::{
 use crate::tag_editor::history::{redo_edit, undo_edit};
 use crate::tag_editor::last_apply::{LastTagApply, last_of};
 use crate::tag_editor::playback::{audio_url, open_in_player, player_targets, release};
+use crate::tag_editor::replace_presets::{
+    MAX_PRESETS, REPLACE_PRESETS, ReplacePreset, ReplacePresetRefusal, delete_in as delete_replace_preset_in,
+    save_in as save_replace_preset_in, seed_in as seed_replace_presets_in,
+};
 use crate::tag_editor::session::{
     FileChangeView, LOCAL_VOLUME_ID, NamePreviewRow, TagEdit, TagEditorError, changes, close, edit, open_counting,
     preview_names, set_view_scope, tool as run_tool,
@@ -205,6 +209,43 @@ pub async fn run_tag_text_tool(
         result
     })
     .await
+}
+
+/// The saved F4 Replace lists, top to bottom. Built-ins this install hasn't taken yet go in first, once.
+#[tauri::command]
+#[specta::specta]
+pub fn get_tag_replace_presets(app: tauri::AppHandle) -> Vec<ReplacePreset> {
+    REPLACE_PRESETS.edit(&app, "seeding", |list| seed_replace_presets_in(list, MAX_PRESETS))
+}
+
+/// Saves a Replace list at the end; one with the same name is replaced where it stands. Answers the
+/// lists after, or why not.
+#[tauri::command]
+#[specta::specta]
+pub fn save_tag_replace_preset(
+    app: tauri::AppHandle,
+    preset: ReplacePreset,
+) -> Result<Vec<ReplacePreset>, ReplacePresetRefusal> {
+    let mut refused = None;
+    let presets = REPLACE_PRESETS.edit(&app, "a save", |list| {
+        match save_replace_preset_in(&mut list.entries, preset, MAX_PRESETS) {
+            Ok(()) => true,
+            Err(refusal) => {
+                refused = Some(refusal);
+                false
+            }
+        }
+    });
+    refused.map_or(Ok(presets), Err)
+}
+
+/// Deletes a Replace list by id (a built-in stays gone). Answers the lists after.
+#[tauri::command]
+#[specta::specta]
+pub fn delete_tag_replace_preset(app: tauri::AppHandle, id: String) -> Vec<ReplacePreset> {
+    REPLACE_PRESETS.edit(&app, "a delete", |list| {
+        delete_replace_preset_in(&mut list.entries, &id)
+    })
 }
 
 /// What a file-name pattern reads from each track's name at `scope` (or every track), changing nothing.

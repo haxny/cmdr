@@ -1945,6 +1945,78 @@
   "@multiRename.tags.tools.name.mode": {
     "description": "Accessible name of the switch between a simple pattern and a regular expression in the From file name panel of the tag editor window."
   },
+  "multiRename.tags.tools.replace.lists.heading": "Saved lists",
+  "@multiRename.tags.tools.replace.lists.heading": {
+    "description": "Heading of the saved lists of replacements in the Find and replace panel of the tag editor window. A list is several find/replace steps kept under a name and run together."
+  },
+  "multiRename.tags.tools.replace.lists.empty": "No saved lists yet.",
+  "@multiRename.tags.tools.replace.lists.empty": {
+    "description": "Shown in the Find and replace panel of the tag editor window when there are no saved lists of replacements."
+  },
+  "multiRename.tags.tools.replace.lists.loadFailed": "Couldn’t load the saved lists.",
+  "@multiRename.tags.tools.replace.lists.loadFailed": {
+    "description": "Shown in the Find and replace panel of the tag editor window when the saved lists of replacements could not be read."
+  },
+  "multiRename.tags.tools.replace.lists.stepsLabel": "Steps in the list being built",
+  "@multiRename.tags.tools.replace.lists.stepsLabel": {
+    "description": "Accessible name of the list of replacement steps collected so far in the Find and replace panel of the tag editor window."
+  },
+  "multiRename.tags.tools.replace.lists.addStep": "Add as step",
+  "@multiRename.tags.tools.replace.lists.addStep": {
+    "description": "Button in the Find and replace panel of the tag editor window: adds the current Find, Replace with, options and fields to the list being built, without running it."
+  },
+  "multiRename.tags.tools.replace.lists.removeStep": "Remove step",
+  "@multiRename.tags.tools.replace.lists.removeStep": {
+    "description": "Button in the Find and replace panel of the tag editor window: removes one step from the list being built."
+  },
+  "multiRename.tags.tools.replace.lists.stepSummary": "{search} → {replace}",
+  "@multiRename.tags.tools.replace.lists.stepSummary": {
+    "description": "One step of a list in the Find and replace panel of the tag editor window: the text it finds, an arrow, the text it replaces it with. {search} and {replace} are the typed texts."
+  },
+  "multiRename.tags.tools.replace.lists.name": "List name",
+  "@multiRename.tags.tools.replace.lists.name": {
+    "description": "Label of the text box with the name to save the list of replacements under in the Find and replace panel of the tag editor window."
+  },
+  "multiRename.tags.tools.replace.lists.save": "Save list",
+  "@multiRename.tags.tools.replace.lists.save": {
+    "description": "Button in the Find and replace panel of the tag editor window: saves the steps collected so far (and the current Find box, if filled) as a named list."
+  },
+  "multiRename.tags.tools.replace.lists.run": "Run",
+  "@multiRename.tags.tools.replace.lists.run": {
+    "description": "Button next to a saved list in the Find and replace panel of the tag editor window: runs all its steps, in order, on the tracks the tools work on, as one change that one Undo takes back."
+  },
+  "multiRename.tags.tools.replace.lists.runNamed": "Run {name}",
+  "@multiRename.tags.tools.replace.lists.runNamed": {
+    "description": "Accessible name of the Run button of one saved list. {name} is the list name."
+  },
+  "multiRename.tags.tools.replace.lists.edit": "Edit",
+  "@multiRename.tags.tools.replace.lists.edit": {
+    "description": "Button next to a saved list in the Find and replace panel of the tag editor window: puts its steps into the list being built, to change and save again."
+  },
+  "multiRename.tags.tools.replace.lists.editNamed": "Edit {name}",
+  "@multiRename.tags.tools.replace.lists.editNamed": {
+    "description": "Accessible name of the Edit button of one saved list. {name} is the list name."
+  },
+  "multiRename.tags.tools.replace.lists.delete": "Delete",
+  "@multiRename.tags.tools.replace.lists.delete": {
+    "description": "Button next to a saved list in the Find and replace panel of the tag editor window: deletes the list."
+  },
+  "multiRename.tags.tools.replace.lists.deleteNamed": "Delete {name}",
+  "@multiRename.tags.tools.replace.lists.deleteNamed": {
+    "description": "Accessible name of the Delete button of one saved list. {name} is the list name."
+  },
+  "multiRename.tags.tools.replace.lists.full": "There are too many saved lists. Delete one first.",
+  "@multiRename.tags.tools.replace.lists.full": {
+    "description": "Shown when saving a list of replacements in the tag editor window is refused because the maximum number of saved lists is reached."
+  },
+  "multiRename.tags.tools.replace.lists.needsSteps": "A list needs a name and at least one step.",
+  "@multiRename.tags.tools.replace.lists.needsSteps": {
+    "description": "Shown when saving a list of replacements in the tag editor window is refused because the name or the steps are missing."
+  },
+  "multiRename.tags.tools.replace.lists.saveFailed": "Couldn’t save the list.",
+  "@multiRename.tags.tools.replace.lists.saveFailed": {
+    "description": "Shown when saving a list of replacements in the tag editor window failed for a reason other than a full list."
+  },
   "multiRename.tags.tools.name.modePattern": "Pattern",
   "@multiRename.tags.tools.name.modePattern": {
     "description": "Option in the From file name panel of the tag editor window: read file names with a simple pattern such as %track% - %title%."

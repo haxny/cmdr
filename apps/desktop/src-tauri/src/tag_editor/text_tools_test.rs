@@ -374,6 +374,155 @@ fn text_is_one_undo_step() {
     close_rename(&id);
 }
 
+// A saved list of steps (F4's presets) runs as one edit.
+
+fn czech_part_words() -> TagTextTool {
+    let mut list = super::replace_presets::PresetList::default();
+    super::replace_presets::seed_in(&mut list, 200);
+    TagTextTool::Steps {
+        steps: list.entries.remove(0).steps,
+    }
+}
+
+fn step(search: &str, with: &str) -> super::text_tools::ReplaceStep {
+    super::text_tools::ReplaceStep {
+        fields: Some(vec![TagField::Title]),
+        search: search.to_string(),
+        replace: with.to_string(),
+        case_sensitive: false,
+        first_only: false,
+        regex: false,
+    }
+}
+
+#[test]
+fn czech_part_words_become_numbers() {
+    let (dir, _listing, id) = album("tag-steps-czech");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "03-1 Rohanští jezdci, část první"),
+            set_title(&dir, "b.mp3", "03-2 Rohanští jezdci, Část DEVÁTÁ"),
+            set_title(&dir, "c.mp3", "Kniha, díl třetí"),
+        ],
+    )
+    .expect("edits");
+    let view = run(&id, czech_part_words(), None).expect("runs");
+    assert_eq!(
+        titles(&view),
+        vec![
+            Some("03-1 Rohanští jezdci 01"),
+            Some("03-2 Rohanští jezdci 09"),
+            Some("Kniha 03")
+        ]
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn czech_part_words_without_diacritics_and_masculine_forms() {
+    let (dir, _listing, id) = album("tag-steps-ascii");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Dve veze, cast prvni"),
+            set_title(&dir, "b.mp3", "Kniha, díl čtvrtý"),
+            set_title(&dir, "c.mp3", "Kniha, dil dvacata"),
+        ],
+    )
+    .expect("edits");
+    let view = run(&id, czech_part_words(), None).expect("runs");
+    assert_eq!(
+        titles(&view),
+        vec![Some("Dve veze 01"), Some("Kniha 04"), Some("Kniha 20")]
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn czech_part_words_leave_other_titles_alone() {
+    let (dir, _listing, id) = album("tag-steps-leave");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Část prvního dne"),
+            set_title(&dir, "b.mp3", "Druhá část"),
+        ],
+    )
+    .expect("edits");
+    let view = run(&id, czech_part_words(), None).expect("runs");
+    assert_eq!(
+        titles(&view),
+        vec![Some("Část prvního dne"), Some("Druhá část"), Some("Gamma")]
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn steps_run_in_order_in_one_undo_step() {
+    let (_dir, _listing, id) = album("tag-steps-undo");
+    open(&id, false).expect("opens");
+    let tool = TagTextTool::Steps {
+        steps: vec![step("Alpha", "Omega"), step("Omega", "Zeta")],
+    };
+    let ran = run(&id, tool, None).expect("runs");
+    assert_eq!(titles(&ran)[0], Some("Zeta"), "the second step sees the first's result");
+    let undone = super::history::undo_edit(&id).expect("undoes the run");
+    assert_eq!(titles(&undone)[0], Some("Alpha"), "one undo reverts every step");
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn steps_respect_the_scope() {
+    let (dir, _listing, id) = album("tag-steps-scope");
+    open(&id, false).expect("opens");
+    let tool = TagTextTool::Steps {
+        steps: vec![step("e", "E")],
+    };
+    let view = run(&id, tool, Some(vec![path_of(&dir, "b.mp3")])).expect("runs");
+    assert_eq!(titles(&view), vec![Some("Alpha"), Some("BEta"), Some("Gamma")]);
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn a_bad_step_changes_nothing() {
+    let (_dir, _listing, id) = album("tag-steps-bad");
+    open(&id, false).expect("opens");
+    let mut bad = step("(", "x");
+    bad.regex = true;
+    let tool = TagTextTool::Steps {
+        steps: vec![step("Alpha", "Omega"), bad],
+    };
+    assert!(matches!(run(&id, tool, None), Err(TagEditorError::BadRegex)));
+    let view = run(&id, TagTextTool::Steps { steps: vec![] }, None).expect("an empty list is a no-op");
+    assert_eq!(titles(&view)[0], Some("Alpha"));
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn a_step_without_fields_covers_every_field() {
+    let (_dir, _listing, id) = album("tag-steps-all");
+    open(&id, false).expect("opens");
+    let mut all = step("Other", "Book");
+    all.fields = None;
+    let view = run(&id, TagTextTool::Steps { steps: vec![all] }, None).expect("runs");
+    assert_eq!(
+        shared(&view, TagField::Album),
+        &SharedValue::Same(vec!["Book".to_string()])
+    );
+    close(&id);
+    close_rename(&id);
+}
+
 // What a mask's `[=tag.*]` placeholders read from a track's tags.
 
 #[test]
@@ -393,7 +542,8 @@ fn media_facts_carry_the_tag_fields_masks_can_name() {
         (TagField::Translator, vec!["Pavel Eisner"]),
         (TagField::Www, vec!["https://a.cz", "https://b.cz"]),
     ] {
-        tags.fields.insert(field, values.into_iter().map(String::from).collect());
+        tags.fields
+            .insert(field, values.into_iter().map(String::from).collect());
     }
     let facts = super::text_tools::media_facts_of(&tags);
     let text = |field| match facts.get(field) {
@@ -437,7 +587,8 @@ fn masks_and_the_tags_window_read_the_same_tag_fields_from_one_file() {
     ];
     let mut tags = FileTags::default();
     for (field, values) in fields {
-        tags.fields.insert(field, values.iter().map(ToString::to_string).collect());
+        tags.fields
+            .insert(field, values.iter().map(ToString::to_string).collect());
     }
     let flac = [flac_stream(), (0..2000u32).map(|i| (i % 251) as u8).collect()].concat();
     let dir = tempfile::tempdir().expect("a temp dir");

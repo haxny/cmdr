@@ -1666,6 +1666,16 @@ export const commands = {
    */
   runTagTextTool: (sessionId: string, tool: TagTextTool, scope: string[] | null) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_text_tool', { sessionId, tool, scope })),
+  // The saved F4 Replace lists, top to bottom. Built-ins this install hasn't taken yet go in first, once.
+  getTagReplacePresets: () => __TAURI_INVOKE<ReplacePreset[]>('get_tag_replace_presets'),
+  /**
+   *  Saves a Replace list at the end; one with the same name is replaced where it stands. Answers the
+   *  lists after, or why not.
+   */
+  saveTagReplacePreset: (preset: ReplacePreset) =>
+    typedError<ReplacePreset[], ReplacePresetRefusal>(__TAURI_INVOKE('save_tag_replace_preset', { preset })),
+  // Deletes a Replace list by id (a built-in stays gone). Answers the lists after.
+  deleteTagReplacePreset: (id: string) => __TAURI_INVOKE<ReplacePreset[]>('delete_tag_replace_preset', { id }),
   // What a file-name pattern reads from each track's name at `scope` (or every track), changing nothing.
   previewTagsFromNames: (sessionId: string, pattern: NamePattern, scope: string[] | null) =>
     typedError<NamePreviewRow[], TagEditorError>(
@@ -15164,6 +15174,33 @@ export type RenameValidityResult = {
  *
  *  Computed at portal entry and re-emitted by the watcher on every relevant
  *  `.git/*` change. The frontend never polls.
+// One saved list.
+export type ReplacePreset = {
+  id: string
+  name: string
+  steps: ReplaceStep[]
+}
+
+// Why a save didn't change the list.
+export type ReplacePresetRefusal =
+  // The list holds `max` lists already, and this name is a new one.
+  | { type: 'listFull'; max: number }
+  // A list needs a name and at least one step.
+  | { type: 'empty' }
+
+/**
+ *  One find/replace of a saved list: `Replace`'s settings. `fields: None` is every field the
+ *  track has a value in, so a list saved that way keeps working when a field is added.
+ */
+export type ReplaceStep = {
+  fields: TagField[] | null
+  search: string
+  replace: string
+  caseSensitive: boolean
+  firstOnly: boolean
+  regex: boolean
+}
+
  */
 export type RepoInfo = {
   // Canonical repo root (the working tree dir, not `.git`).
@@ -18206,6 +18243,8 @@ export type StateFile =
   // The multi-rename dialog's per-field history.
   | 'multi_rename_field_history'
   // `usage.json`, the days Cmdr was opened on.
+  // Saved Tags window F4 Replace lists.
+  | 'tag_replace_presets'
   | 'launch_days'
   // `s3_known_places.json`: saved S3 accounts and bucket places.
   | 's3_places'
@@ -18857,6 +18896,11 @@ export type TagTextTool =
    *  multi-value field loses its other values: the whole field becomes the one rendered value),
    *  `[=tag.album]` and the like read the file's other fields. A file whose mask has no value
    *  for it (a `FieldGap`) is left unchanged; the result is trimmed, and an empty one removes the field.
+  /**
+   *  Runs `steps` one after another over every track, as ONE edit (one undo step). Each step is
+   *  `Replace`; all of them compile first, and one that doesn't is `BadRegex` with nothing changed.
+   */
+  | { kind: 'steps'; steps: ReplaceStep[] }
    */
   | { kind: 'format'; field: TagField; mask: string }
   /**

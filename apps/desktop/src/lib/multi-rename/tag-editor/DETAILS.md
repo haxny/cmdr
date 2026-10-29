@@ -251,6 +251,9 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
 - **Text tools live in the app**: find/replace and format a field run in `src-tauri/src/tag_editor/text_tools.rs`,
   reusing Multi-Rename's `Transform`/`Replace`/`Mask`, so the wildcard, case and regex rules match Multi-Rename's; the
   pure tag tools (file name → tags, `cmdr_tags::TagTool::FromFileName`, among them) stay in `cmdr-tags`.
+- **F4 saved lists**: `ReplacePanel` collects steps ("Add as step"), saves them by name (`tag-replace-presets.json`,
+  backend-seeded built-in "Czech part words → numbers"), and runs a list as `TagTextTool` `steps`: one edit, one ⌘Z.
+  Steps saved with all fields store `fields: null`, so a later new field is covered.
 - **Strings**: `multiRename.tags.*` in `messages/en/multiRename.json`; other locales hold untranslated skeletons (Czech
   comes with the Czech locale port). `sync-locale-keys.ts` copies a plural message's English branches only, so the extra
   CLDR categories i18n-plural asks for (`many` in es, fr, pt; `few` and `many` in ru, for

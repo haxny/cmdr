@@ -14,6 +14,7 @@ pub(crate) mod last_apply;
 pub(crate) mod menu_route;
 pub(crate) mod playback;
 mod removals;
+pub(crate) mod replace_presets;
 pub(crate) mod session;
 pub(crate) mod side_files;
 pub(crate) mod sort;
@@ -44,6 +45,8 @@ mod last_apply_test;
 mod playback_test;
 #[cfg(test)]
 mod session_test;
+#[cfg(test)]
+mod replace_presets_test;
 #[cfg(test)]
 mod side_files_book_test;
 #[cfg(test)]
