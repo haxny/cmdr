@@ -279,10 +279,6 @@
   "@ai.cloud.effort.recommendedWithLevel": {
     "sourceHash": "e9e8984"
   },
-  "ai.cloud.effort.off": "Aus",
-  "@ai.cloud.effort.off": {
-    "sourceHash": "ca7981b"
-  },
   "ai.cloud.effort.low": "Niedrig",
   "@ai.cloud.effort.low": {
     "sourceHash": "f793de2"

@@ -124,10 +124,11 @@ sections compose).
   the fallback for a provider with no name of its own). Decision/Why: users already know the term from their provider's
   docs and console. The term is data on each preset (`CloudProviderPreset.effortTerm`, sources listed on `EffortTerm`),
   resolved by `effortLabelKey`; the registry label (search, MCP) is the fallback. It offers what
-  `getAiModelLimits().effort` lists: Recommended (naming its level when anything knows it), Off where the model can stop
-  thinking, then its levels. Hidden for a model known not to reason; Recommended alone, with a note, when nothing knows
-  the levels. A stored pick the model can't take shows as the nearest it can (`effectiveEffortChoice`, mirroring
-  `agent::chat::effort::resolve_effort`, which is the actual guard).
+  `getAiModelLimits().effort` lists: Recommended (naming its level when anything knows it), then its levels. No Off:
+  thinking stays on for users, and a stored `off` from an older build reads as Recommended (`readEffortChoice`, as the
+  backend's `EffortChoice::parse` does). Hidden for a model known not to reason; Recommended alone, with a note, when
+  nothing knows the levels. A stored pick the model can't take shows as the nearest it can (`effectiveEffortChoice`,
+  mirroring `agent::chat::effort::resolve_effort`, which is the actual guard).
 - **`AiLocalSection.svelte`**: Local llama-server lifecycle, model install with multi-step tracking, context window
   "Apply" (server restart), RAM gauge, delete confirmation. Only the context-window registry-row cluster (`SettingRow`
   - the RAM gauge) is wrapped in an unlabeled `SectionCard`, and that wrapper sits INSIDE the

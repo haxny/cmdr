@@ -6017,8 +6017,9 @@ export type AiEffortLevel = 'low' | 'medium' | 'high' | 'max'
 
 /**
  *  The Effort picker's menu for one model. The UI stores the pick in `ai.reasoningEfforts` as
- *  `"recommended"`, `"off"`, or a level's camelCase name; the backend maps a pick the model
- *  can't take to the nearest one it can, so this menu is a courtesy, never the guard.
+ *  `"recommended"` or a level's camelCase name; the backend maps a pick the model can't take to
+ *  the nearest one it can, so this menu is a courtesy, never the guard. There's no Off: thinking
+ *  stays on for users, and a stored `"off"` from an older build reads as Recommended.
  */
 export type AiEffortOptions = {
   /**
@@ -6027,7 +6028,6 @@ export type AiEffortOptions = {
    */
   reasons: boolean | null
   levels: AiEffortLevel[]
-  canTurnOff: boolean
   /**
    *  What Recommended amounts to, when anything knows; `None` while the provider decides
    *  per request.

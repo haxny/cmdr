@@ -210,7 +210,6 @@
     }
 
     function effortLabel(choice: EffortChoice): string {
-        if (choice === 'off') return tString('ai.cloud.effort.off')
         if (choice !== 'recommended') return levelLabel(choice)
         const recommended = effortOptions?.recommended
         return recommended

@@ -14,7 +14,6 @@ const { NO_EFFORT } = vi.hoisted(() => ({
   NO_EFFORT: {
     reasons: false,
     levels: [],
-    canTurnOff: false,
     recommended: null,
     source: null,
   } satisfies AiEffortOptions,
@@ -355,7 +354,6 @@ describe('the Effort picker in Settings > AI > Provider', () => {
   const reasoning: AiEffortOptions = {
     reasons: true,
     levels: ['low', 'medium', 'high'],
-    canTurnOff: false,
     recommended: 'medium',
     source: 'builtInTable',
   }
@@ -398,7 +396,7 @@ describe('the Effort picker in Settings > AI > Provider', () => {
       contextWindowTokens: null,
       maxOutputTokens: null,
       source: null,
-      effort: { reasons: null, levels: [], canTurnOff: false, recommended: null, source: null },
+      effort: { reasons: null, levels: [], recommended: null, source: null },
     }
     const target = await mountSection()
 

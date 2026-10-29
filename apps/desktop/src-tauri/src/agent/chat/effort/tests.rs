@@ -148,11 +148,6 @@ fn an_offered_level_goes_out_as_chosen_with_room_to_think() {
         let resolved = resolve_effort(&options, EffortChoice::Level(level), Some(128_000));
         assert_eq!((resolved.effort, resolved.max_output_tokens), (effort, room));
     }
-    let off = resolve_effort(&options, EffortChoice::Off, Some(128_000));
-    assert_eq!(
-        (off.effort, off.max_output_tokens),
-        (ReasoningEffort::Off, AGENT_MAX_OUTPUT_TOKENS)
-    );
 }
 
 #[test]
@@ -182,9 +177,6 @@ fn a_level_the_model_cannot_take_is_mapped_to_the_nearest_it_can() {
     assert_eq!(medium.adjusted_to, Some(EffortChoice::Level(EffortLevel::Low)));
     let max = resolve_effort(&gemini, EffortChoice::Level(EffortLevel::Max), None);
     assert_eq!(max.effort, ReasoningEffort::High);
-    // Off on a model that can't stop thinking: the least it can do.
-    let off = resolve_effort(&gemini, EffortChoice::Off, None);
-    assert_eq!(off.effort, ReasoningEffort::Low);
 }
 
 #[test]
@@ -196,10 +188,6 @@ fn a_level_chosen_for_a_model_with_no_levels_falls_back_to_recommended() {
     assert_eq!(resolved.effort, ReasoningEffort::ProviderDefault);
     assert_eq!(resolved.adjusted_to, Some(EffortChoice::Recommended));
     assert_eq!(resolved.max_output_tokens, AGENT_MAX_OUTPUT_TOKENS);
-
-    let plain = effort_options(ProviderTag::OpenAi, "gpt-4.1", None);
-    let resolved = resolve_effort(&plain, EffortChoice::Off, None);
-    assert_eq!(resolved.effort, ReasoningEffort::ProviderDefault);
 }
 
 #[test]
@@ -219,7 +207,9 @@ fn recommended_on_a_reasoning_model_with_no_known_default_gets_medium_room() {
 #[test]
 fn a_stored_choice_parses_and_anything_else_reads_as_recommended() {
     assert_eq!(EffortChoice::parse("high"), EffortChoice::Level(EffortLevel::High));
-    assert_eq!(EffortChoice::parse("off"), EffortChoice::Off);
+    // The picker offers no Off (#770): a pick stored before that reads as Recommended, so
+    // nobody keeps a choice they can no longer see.
+    assert_eq!(EffortChoice::parse("off"), EffortChoice::Recommended);
     assert_eq!(EffortChoice::parse("recommended"), EffortChoice::Recommended);
     assert_eq!(EffortChoice::parse("xhigh"), EffortChoice::Recommended);
 }

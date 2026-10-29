@@ -23,8 +23,8 @@ use crate::agent::llm::ReasoningEffort;
 use crate::agent::llm::types::ProviderTag;
 use crate::ai::model_capabilities::ReasoningCapabilities;
 
-/// One level of thinking the user can pick, cheapest first. `Off` and "Recommended" sit
-/// outside it ([`EffortChoice`]) because neither is a point on this scale.
+/// One level of thinking the user can pick, cheapest first. "Recommended" sits outside it
+/// ([`EffortChoice`]) because it isn't a point on this scale.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum EffortLevel {
     Low,
@@ -62,23 +62,22 @@ impl EffortLevel {
     }
 }
 
-/// What the user picked for one model.
+/// What the user picked for one model. Thinking stays on: users get no Off (David's call,
+/// #770), though Cmdr may still send [`ReasoningEffort::Off`] itself for an internal call, where
+/// the model can stop ([`EffortOptions::can_turn_off`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffortChoice {
     /// Send nothing and let the provider decide: the default, and safe on every model.
     Recommended,
-    Off,
     Level(EffortLevel),
 }
 
 impl EffortChoice {
     /// A stored token. Anything this build doesn't know reads as Recommended, so a value from a
-    /// newer build or a hand-edited file can never become a level the model can't take.
+    /// newer build or a hand-edited file can never become a level the model can't take. That
+    /// includes `"off"`, which older builds offered: nobody keeps a pick they can't see.
     pub fn parse(token: &str) -> Self {
-        match token {
-            "off" => Self::Off,
-            other => EffortLevel::from_provider_word(other).map_or(Self::Recommended, Self::Level),
-        }
+        EffortLevel::from_provider_word(token).map_or(Self::Recommended, Self::Level)
     }
 }
 
@@ -118,7 +117,8 @@ pub struct EffortOptions {
     pub reasons: Option<bool>,
     /// The levels it takes, cheapest first. Empty when none are known.
     pub levels: Vec<EffortLevel>,
-    /// Whether it can be asked not to think at all.
+    /// Whether it can be asked not to think at all. For Cmdr's own calls only: the picker
+    /// offers no Off, so this never reaches the UI.
     pub can_turn_off: bool,
     /// What Recommended amounts to, where anything knows: the provider's reported default, or
     /// its documented one. `None` means the provider decides per request (Gemini's dynamic
@@ -360,18 +360,11 @@ pub fn resolve_effort(
 
     let ((effort, room), adjusted_to) = match choice {
         EffortChoice::Recommended => (recommended, None),
-        EffortChoice::Off if options.can_turn_off => ((ReasoningEffort::Off, None), None),
         EffortChoice::Level(level) if options.levels.contains(&level) => ((level.effort(), Some(level)), None),
-        EffortChoice::Off | EffortChoice::Level(_) => {
-            let wanted = match choice {
-                EffortChoice::Level(level) => Some(level),
-                _ => None,
-            };
-            match nearest(&options.levels, wanted) {
-                Some(level) => ((level.effort(), Some(level)), Some(EffortChoice::Level(level))),
-                None => (recommended, Some(EffortChoice::Recommended)),
-            }
-        }
+        EffortChoice::Level(wanted) => match nearest(&options.levels, wanted) {
+            Some(level) => ((level.effort(), Some(level)), Some(EffortChoice::Level(level))),
+            None => (recommended, Some(EffortChoice::Recommended)),
+        },
     };
     let ceiling = reply_room(room);
     ResolvedEffort {
@@ -409,12 +402,8 @@ pub fn fit_reply_to_window(reply: u32, window_tokens: Option<usize>) -> u32 {
     reply.min(room.max(MIN_REPLY_TOKENS))
 }
 
-/// The offered level closest to `wanted` (ties go to the cheaper one); `None` for `wanted`
-/// means Off, whose nearest is the cheapest level.
-fn nearest(levels: &[EffortLevel], wanted: Option<EffortLevel>) -> Option<EffortLevel> {
-    let Some(wanted) = wanted else {
-        return levels.first().copied();
-    };
+/// The offered level closest to `wanted` (ties go to the cheaper one).
+fn nearest(levels: &[EffortLevel], wanted: EffortLevel) -> Option<EffortLevel> {
     levels
         .iter()
         .copied()

@@ -38,7 +38,6 @@ export type MessageKey =
   | 'ai.cloud.effort.low'
   | 'ai.cloud.effort.max'
   | 'ai.cloud.effort.medium'
-  | 'ai.cloud.effort.off'
   | 'ai.cloud.effort.recommended'
   | 'ai.cloud.effort.recommendedWithLevel'
   | 'ai.cloud.genericError'

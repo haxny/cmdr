@@ -347,10 +347,13 @@ which rides `TurnParams.call` into every `respond` of the turn.
   documented one (Anthropic high, OpenAI Responses medium), else none (Gemini thinks dynamically). A local model, and
   a model nothing knows, offer Recommended only; a model known not to reason gets no picker.
 - **`resolve_effort`**: Recommended sends `ProviderDefault`, the one value safe everywhere. A pick the model can't take
-  maps to the nearest level it can (ties to the cheaper; Off without an off switch to the cheapest; no known levels to
-  Recommended), and `session.rs` logs the mapping. ❌ Never send an explicit level the options don't list: it's a 400.
+  maps to the nearest level it can (ties to the cheaper; no known levels to Recommended), and `session.rs` logs the
+  mapping. ❌ Never send an explicit level the options don't list: it's a 400.
+- **No Off for users** (David, 2026-10-28, #770): thinking stays on, so `EffortChoice` has no Off and a stored `"off"`
+  from an older build parses as Recommended. `ReasoningEffort::Off` and its genai mapping stay for Cmdr's own internal
+  calls, sent only where `EffortOptions::can_turn_off` says the model can stop (no such call exists yet).
 - **`reply_room`**: thinking spends the reply's `max_tokens`, so the ceiling grows with the level: 12,000
-  (`AGENT_MAX_OUTPUT_TOKENS`, Off / Low / unknown), 16,000 Medium, 32,000 High, 64,000 Max, capped at the model's
+  (`AGENT_MAX_OUTPUT_TOKENS`, Low / unknown), 16,000 Medium, 32,000 High, 64,000 Max, capped at the model's
   reported `max_output_tokens`. Recommended sizes for what the provider will do (Claude's default is high, so 32,000).
   Decision/Why: at a flat 12,000, a High or Max think could hit `MaxTokens` before the tool call and end the turn
   unfinished; a ceiling is not a charge, the provider bills what the model writes.
