@@ -14500,6 +14500,11 @@ export type PresetSaveRefusal =
  */
 export type PresetSeed = {
   name: string
+  /**
+   *  The Cmdr version that introduced this seed (1: the first four). A list takes
+   *  each seed once: those whose version is above the list's.
+   */
+  version: number
   spec: MultiRenameSpec
 }
 
