@@ -47,6 +47,14 @@ Error" and a log with no trace of why. So:
   `logPageCrash` and both `window` listeners emit through `whenLoggerReady`, which queues until `initLogger` has
   configured LogTape, then drains. `logger-ready.test.ts` pins it.
 
+## An `error` event with no thrown value logs at warn
+
+WebKit fires a `window` `error` event carrying only a message for its "ResizeObserver loop completed with undelivered
+notifications" notice: harmless (a layout change waited a frame), but at error level it auto-sent reports
+(cmdr-reports#86). A real throw always carries its value, so `uncaught-errors.ts` branches on the TYPED
+`event.error == null` (❌ never the message text) and logs that case at warn: still in the log file and in any bundle,
+under the auto-report threshold. A resource-load `error` (no value and no message) still logs nothing.
+
 ## Marking values for error reports
 
 `log-markers.ts` (GitHub #491). A report used to guess where a name ends in prose and shipped what it guessed wrong, so
