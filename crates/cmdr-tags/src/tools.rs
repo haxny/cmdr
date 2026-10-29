@@ -6,6 +6,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
+use crate::disc::{disc_from_folder, disc_number_only};
 use crate::model::{FileTags, TagField};
 use crate::name_pattern::{NamePattern, compile_pattern};
 use crate::numbering::{NumberOptions, auto_number};
@@ -68,6 +69,10 @@ pub enum TagTool {
         /// How to read the file names.
         pattern: NamePattern,
     },
+    /// [`disc_from_folder`].
+    DiscFromFolder,
+    /// [`disc_number_only`].
+    DiscNumberOnly,
 }
 
 /// What the file-name tools know about the session's files, each list parallel to `files`.
@@ -105,6 +110,8 @@ pub fn apply_tool_in(files: &[FileTags], ctx: &ToolContext, tool: &TagTool) -> V
     match tool {
         TagTool::AutoNumber(options) => auto_number(files, ctx, options),
         TagTool::FromFileName { pattern } => from_file_name(files, ctx, pattern),
+        TagTool::DiscFromFolder => disc_from_folder(files, ctx),
+        TagTool::DiscNumberOnly => disc_number_only(files),
         TagTool::Case { fields, case } => change_case(files, fields, *case),
         TagTool::StripDiacritics { fields } => strip_diacritics(files, fields),
         TagTool::StripTrackPrefix => strip_track_prefix(files),

@@ -6,6 +6,9 @@
 /** Keys that stay selection keys in the Tracks pane, so they never open an editor. */
 const SELECTION_CHARS = new Set([' ', '*'])
 
+/** The Tracks pane cells typing, Delete and the clipboard act on: ← / → move between them. */
+export type TrackCell = 'track' | 'disc' | 'title'
+
 /** A dialog is up: it owns the keys. */
 export function dialogIsOpen(): boolean {
   return document.querySelector('[role="dialog"], [role="alertdialog"]') !== null

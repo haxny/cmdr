@@ -34,6 +34,7 @@ function track(n: string, over: Partial<TrackRow> = {}): TrackRow {
     path: `/b/${n}.mp3`,
     fileName: `${n}.mp3`,
     track: n,
+    disc: null,
     title: `T${n}`,
     durationMs: 61_000,
     changed: false,
@@ -98,13 +99,13 @@ describe('TracksPane look', () => {
     expect(rows[2].classList.contains('is-under-cursor')).toBe(true)
   })
 
-  it('the columns are ☐ ▶ # Title Length File; only Title flexes, the file name is cut with …', async () => {
+  it('the columns are ☐ ▶ # Disc Title Length File; only Title flexes, the file name is cut with …', async () => {
     const { root } = await mountPane()
     const template = rowsOf(root)[0].style.gridTemplateColumns
     expect(template.match(/minmax\(0, 1fr\)/g)).toHaveLength(1)
     expect(template).not.toMatch(/max-content|auto/)
     const cells = [...rowsOf(root)[0].children].map((cell) => cell.getAttribute('data-col'))
-    expect(cells).toEqual(['mark', 'play', 'number', 'title', 'length', 'file'])
+    expect(cells).toEqual(['mark', 'play', 'number', 'disc', 'title', 'length', 'file'])
     expect(rowsOf(root)[0].querySelector('[data-col="file"]')?.classList.contains('cut')).toBe(true)
   })
 
@@ -376,10 +377,16 @@ describe('TracksPane sorting', () => {
 
   it('☐ and ▶ are not sortable, and a single-file book has no # header', async () => {
     const { root } = await mountPane()
-    expect(root.querySelectorAll('.tag-pane-header button.sortable-header')).toHaveLength(4)
+    expect(root.querySelectorAll('.tag-pane-header button.sortable-header')).toHaveLength(5)
     cleanup?.()
     const single = await mountPane({ tracks: [track('01')] })
-    expect(single.root.querySelectorAll('.tag-pane-header button.sortable-header')).toHaveLength(3)
+    expect(single.root.querySelectorAll('.tag-pane-header button.sortable-header')).toHaveLength(4)
+  })
+
+  it('the Disc header sorts like #: disc, then track', async () => {
+    const { root, onSort } = await mountPane({ sort: { key: 'title', descending: false } })
+    headerButton(root, 'Disc').click()
+    expect(onSort).toHaveBeenCalledWith({ key: 'discTrack', descending: false })
   })
 
   it('a header click does not move the cursor or the selection', async () => {
@@ -510,11 +517,13 @@ describe('TracksPane type-to-edit and Delete', () => {
 })
 
 describe('TracksPane active cell and composition', () => {
-  it('←/→ move the active cell between # and Title; typing, F2 and Delete act on it, ⇧F2 still edits #', async () => {
+  it('←/→ move the active cell between #, Disc and Title; typing, F2 and Delete act on it, ⇧F2 still edits #', async () => {
     const { root, list, onClear, onEdit } = await mountPane({ cursor: 1 })
     expect(root.querySelector('[role="status"]')?.textContent).toBe('Title column')
-    const left = await press(list, 'ArrowLeft')
-    expect(left.defaultPrevented).toBe(true)
+    const disc = await press(list, 'ArrowLeft')
+    expect(disc.defaultPrevented).toBe(true)
+    expect(root.querySelector('[role="status"]')?.textContent).toBe('Disc column')
+    await press(list, 'ArrowLeft')
     expect(root.querySelector('[role="status"]')?.textContent).toBe('Track number column')
     expect(rowsOf(root)[1].querySelector('[data-col="number"]')?.classList.contains('is-active-cell')).toBe(true)
     await press(list, '9')
@@ -531,16 +540,46 @@ describe('TracksPane active cell and composition', () => {
     await press(list, 'F2', { shiftKey: true })
     expect(editorOf(root)?.value).toBe('02')
     await press(editorOf(root) as HTMLElement, 'Escape')
+    await press(list, 'ArrowRight')
     await press(list, 'F2')
     expect(editorOf(root)?.value).toBe('T02')
   })
 
-  it('a single-file book has no choice: ← keeps Title and says nothing', async () => {
+  it('a single-file book has no # to go to: ← stops at Disc', async () => {
     const { root, list } = await mountPane({ tracks: [track('01')] })
     await press(list, 'ArrowLeft')
+    await press(list, 'ArrowLeft')
+    expect(root.querySelector('[role="status"]')?.textContent).toBe('Disc column')
+    expect(root.querySelector('[data-col="number"]')).toBeNull()
     await press(list, 'x')
     expect(editorOf(root)?.value).toBe('x')
-    expect(root.querySelector('[role="status"]')).toBeNull()
+  })
+
+  it('the Disc cell shows the tag; typing, Delete and a double-click act on it, and → comes back to Title', async () => {
+    const { root, list, onClear, onEdit } = await mountPane({
+      tracks: [track('01', { disc: 'CD1' }), track('02', { disc: 'CD2' })],
+      cursor: 1,
+    })
+    expect(rowsOf(root).map((row) => row.querySelector('[data-col="disc"]')?.textContent)).toEqual(['CD1', 'CD2'])
+    await press(list, 'ArrowLeft')
+    expect(rowsOf(root)[1].querySelector('[data-col="disc"]')?.classList.contains('is-active-cell')).toBe(true)
+    await press(list, 'F2')
+    expect(editorOf(root)?.value).toBe('CD2')
+    await press(editorOf(root) as HTMLElement, 'Escape')
+    await press(list, '2')
+    const box = editorOf(root)
+    expect(box?.value).toBe('2')
+    if (box) await press(box, 'Enter')
+    expect(onEdit).toHaveBeenLastCalledWith([{ kind: 'setOne', path: '/b/02.mp3', field: 'disc', values: ['2'] }])
+    await press(list, 'Delete')
+    expect(onClear).toHaveBeenLastCalledWith({ field: 'disc', path: '/b/02.mp3' })
+    await press(list, 'ArrowRight')
+    expect(root.querySelector('[role="status"]')?.textContent).toBe('Title column')
+    rowsOf(root)[0]
+      .querySelector('[data-col="disc"]')
+      ?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+    await tick()
+    expect(editorOf(root)?.value).toBe('CD1')
   })
 
   it('a dead key opens an empty editor and is not claimed, so the OS composes into it; closing it untouched sends nothing', async () => {

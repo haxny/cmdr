@@ -51,7 +51,7 @@
         type TagsKeyRoad,
     } from './tags-function-keys'
     import { createTagsPanes, type TagsPaneId } from './tags-panes.svelte'
-    import { dialogIsOpen } from './typed-key'
+    import { dialogIsOpen, type TrackCell } from './typed-key'
     import { createTrackSelection, type ToolScope } from './track-selection.svelte'
     import { createTrackPlayer } from './track-player.svelte'
     import { createTagPlayer } from './tag-player.svelte'
@@ -92,9 +92,9 @@
     let albumPane = $state<{ focus: () => void; editAtCursor: () => void; settleEditor: () => boolean }>()
     let tracksPane = $state<{
         focus: () => void
-        editAtCursor: (field?: 'title' | 'track') => void
+        editAtCursor: (field?: TrackCell) => void
         playAtCursor: () => void
-        activeField: () => 'title' | 'track'
+        activeField: () => TrackCell
         settleEditor: () => boolean
     }>()
     /** One key press by both roads (keydown and the native menu's accelerator) acts once. */
@@ -219,7 +219,7 @@
 
     /**
      * The field the user is on: the Album pane's cursor row while that pane is active, the Tracks pane's active cell
-     * (# or Title) while that one is, none otherwise (focus on the cover, or out of the window). A tool takes it when it opens (Case, Replace,
+     * (#, Disc or Title) while that one is, none otherwise (focus on the cover, or out of the window). A tool takes it when it opens (Case, Replace,
      * Clear); the bar never takes focus, so a press on it keeps the pane.
      */
     const focusedField = $derived.by((): TagField | null => {

@@ -1324,6 +1324,10 @@
   },
   "multiRename.tags.cover.detailsPixels": "{mime}, {width}×{height} px, {sizeText}",
   "@multiRename.tags.cover.detailsPixels": {
+  "multiRename.tags.col.disc": "Disc",
+  "@multiRename.tags.col.disc": {
+    "description": "Column heading in the track list of the tag editor window: the disc number of each file. Narrow; sorts by disc, then track."
+  },
     "description": "In the cover panel of the tag editor window: the image type, size in pixels and file size of the cover all files share.",
     "placeholders": {
       "mime": "the image type, like image/jpeg",
@@ -1347,6 +1351,17 @@
   "multiRename.tags.cover.candidate": "{fileName} ({sizeText})",
   "@multiRename.tags.cover.candidate": {
     "description": "One picture offered as a cover in the tag editor window: its file name and size.",
+  "multiRename.tags.track.cellDisc": "Disc column",
+  "@multiRename.tags.track.cellDisc": {
+    "description": "Read aloud by screen readers in the track list of the tag editor window when the arrow keys move the active cell to the disc column; typing and Delete then act on the disc."
+  },
+  "multiRename.tags.track.discLabel": "Disc of {fileName}",
+  "@multiRename.tags.track.discLabel": {
+    "description": "Accessible name of the box that edits one file's disc number in the track list of the tag editor window. Only read aloud by screen readers.",
+    "placeholders": {
+      "fileName": "the name of the audio file the disc belongs to"
+    }
+  },
     "placeholders": {
       "fileName": "the name of the picture file",
       "sizeText": "the size of the picture, like 245 KB"
@@ -1677,6 +1692,14 @@
     "description": "Shown in the tag editor window: one row of the list of changes: a file and what changes in it.",
     "placeholders": {
       "fileName": "the audio file’s name",
+  "multiRename.tags.tools.discFromFolder": "Disc from folder",
+  "@multiRename.tags.tools.discFromFolder": {
+    "description": "Shown in the tag editor window: a clean-up tool button. Sets Disc from the folder each file is in: a folder named CD 1, Disc 2 or Disk 3 gives that number, other folders are numbered in their order. Files that all sit in one folder are left alone."
+  },
+  "multiRename.tags.tools.discNumberOnly": "Keep only the disc number",
+  "@multiRename.tags.tools.discNumberOnly": {
+    "description": "Shown in the tag editor window: a clean-up tool button. Cuts the text off a Disc value so only the number stays: CD2 becomes 2, Disk 10/12 becomes 10/12."
+  },
       "fields": "a list of tag field names, maybe with the words for cover and extra tags"
     }
   },

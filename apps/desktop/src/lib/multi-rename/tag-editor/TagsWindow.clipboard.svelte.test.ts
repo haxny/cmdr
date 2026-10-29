@@ -163,6 +163,7 @@ describe('⌘C on a field', () => {
     await key('ArrowDown')
     await fromMenu('copy')
     await key('ArrowLeft')
+    await key('ArrowLeft')
     await fromMenu('copy')
     expect(ipc.copyToClipboard.mock.calls).toEqual([['Druha'], ['02']])
   })
@@ -301,6 +302,7 @@ describe('⌘V on a field', () => {
     ipc.readClipboardText.mockResolvedValue('7\n')
     await mountWindow()
     await key('Tab')
+    await key('ArrowLeft')
     await key('ArrowLeft')
     await fromMenu('paste')
     expect(ipc.editTags).toHaveBeenCalledWith('S', [

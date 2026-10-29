@@ -19023,6 +19023,10 @@ export type TagsDeselectAll = null
 
 /**
  *  `tags-menu-key`: a File / Select menu item's key (F2–F8, ⇧F2, ⇧F4, ⇧F8) pressed while a Tags
+  // [`disc_from_folder`].
+  | { kind: 'discFromFolder' }
+  // [`disc_number_only`].
+  | { kind: 'discNumberOnly' }
  *  window is focused. Those accelerators fire before the page's keydown, so this is how the
  *  window learns of the key (`tag_editor::window::menu_key_command_of`). Emitted to that window only.
  */
@@ -19226,6 +19230,8 @@ export type TrackSortKey =
  *  stillness that isn't the answerer's.
  */
 export type TransferActivity = {
+  // The Disc tag as written (`1`, `CD2`, `1/2`).
+  disc: string | null
   /**
    *  Files open in the concurrency window right now. These have bytes on the
    *  destination but aren't counted in `files_done` yet, which is why the

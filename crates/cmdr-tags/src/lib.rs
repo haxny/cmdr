@@ -7,6 +7,7 @@
 //!
 //! Module map and must-knows: `CLAUDE.md`; field map and decisions: `DETAILS.md`.
 
+mod disc;
 mod fingerprint;
 mod format;
 mod model;
@@ -23,6 +24,8 @@ mod undo;
 mod write;
 mod write_extras;
 
+#[cfg(test)]
+mod disc_test;
 #[cfg(test)]
 mod format_test;
 #[cfg(test)]

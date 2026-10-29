@@ -22,6 +22,7 @@ import type { TagEditorState } from './tag-editor-state.svelte'
 import { textBoxOf } from './tags-function-keys'
 import type { TagsPaneId } from './tags-panes.svelte'
 import type { ToolScope } from './track-selection.svelte'
+import type { TrackCell } from './typed-key'
 
 const log = getAppLogger('tagEditor')
 
@@ -37,8 +38,8 @@ export interface TagsClipboardDeps {
   tags: TagEditorState
   /** The active pane and both cursors. */
   panes: { readonly active: TagsPaneId | null; readonly albumCursor: number; readonly tracksCursor: number }
-  /** The Tracks pane's active cell (# or Title). */
-  activeTrackField: () => 'title' | 'track'
+  /** The Tracks pane's active cell (#, Disc or Title). */
+  activeTrackField: () => TrackCell
   selection: {
     readonly count: number
     has: (index: number) => boolean
@@ -93,7 +94,12 @@ export function createTagsClipboard(deps: TagsClipboardDeps): (action: TagsClipb
     const track = view.tracks.at(index)
     if (track === undefined) return null
     const field = deps.activeTrackField()
-    return { field, text: (field === 'title' ? track.title : track.track) ?? '', path: track.path, index }
+    return {
+      field,
+      text: (field === 'title' ? track.title : field === 'disc' ? track.disc : track.track) ?? '',
+      path: track.path,
+      index,
+    }
   }
 
   async function copyText(text: string): Promise<boolean> {

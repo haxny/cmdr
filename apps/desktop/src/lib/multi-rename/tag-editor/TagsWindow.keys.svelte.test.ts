@@ -266,6 +266,7 @@ describe('the Tags window’s function keys', () => {
     const root = await mountWindow()
     await key('Tab')
     await key('ArrowLeft')
+    await key('ArrowLeft')
     await toggleTrack(root, '/b/02.mp3')
     await key('F8')
     buttonNamed(dialog() as HTMLElement, 'Clear').click()

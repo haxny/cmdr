@@ -81,6 +81,8 @@
         { label: 'multiRename.tags.tools.albumArtistFromArtist', tool: { kind: 'albumArtistFromArtist' } },
         { label: 'multiRename.tags.tools.narratorFromText', tool: { kind: 'narratorFromText' } },
         { label: 'multiRename.tags.tools.clearRedundantTitles', tool: { kind: 'clearRedundantTitles' } },
+        { label: 'multiRename.tags.tools.discFromFolder', tool: { kind: 'discFromFolder' } },
+        { label: 'multiRename.tags.tools.discNumberOnly', tool: { kind: 'discNumberOnly' } },
     ]
 
     /** The text tools keep their panel open to run again; the rest close once run. */

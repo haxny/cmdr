@@ -1,15 +1,16 @@
 <script lang="ts">
     /**
-     * The Tags window's right pane: the session's audio files in its order, ☐ ▶ # Title Length File, drawn with the
+     * The Tags window's right pane: the session's audio files in its order, ☐ ▶ # Disc Title Length File, drawn with the
      * file panes' row classes, row height and font. Selection works as it does on files (`classifySelectionKey` over
      * `track-selection.svelte.ts`, which is `createSelectionState`): Space toggles, Insert toggles and moves down,
      * ⇧ + a cursor key extends, ⌘A selects all; the ☐ column shows it, and the tag tools work on it. F2
-     * (`tags.edit`) edits the cursor row's Title in place, ⇧F2 (`tags.editNumber`) its #, F3 or ⌥Space
+     * (`tags.edit`) edits the cursor row's active cell in place (← / → move it between #, Disc and Title), ⇧F2 (`tags.editNumber`) its #, F3 or ⌥Space
      * (`tags.play`) plays it, and Tab (`tags.switchPane`) goes to the Album pane. A single-file book has
-     * no # column: it has no track number.
+     * no # column: it has no track number. The Disc column is always drawn, narrow; its header sorts like # (disc, then track).
      */
     import type { Snippet } from 'svelte'
     import { classifySelectionKey } from '#lib/file-explorer/pane/selection-keys.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
     import type { TagField, TrackRow, TrackSort, TrackSortKey } from '#lib/ipc/bindings.js'
@@ -25,7 +26,7 @@
     import { formatTrackLength, parseFieldText } from './shared-field-input'
     import TagValueEditor from './TagValueEditor.svelte'
     import TrackSortHeader from './TrackSortHeader.svelte'
-    import { dialogIsOpen, isClearKey, startsComposition, typedSeed } from './typed-key'
+    import { dialogIsOpen, isClearKey, startsComposition, typedSeed, type TrackCell } from './typed-key'
     import type { TagsCommandId } from './tags-function-keys'
     import type { TrackSelection } from './track-selection.svelte'
 
@@ -72,7 +73,20 @@
         isEcho,
     }: Props = $props()
 
-    type EditedField = 'title' | 'track'
+    type EditedField = TrackCell
+    /** The cell columns, left to right. */
+    const CELL_COLUMN: Record<EditedField, string> = { track: 'number', disc: 'disc', title: 'title' }
+
+    const CELL_NAMES: Record<EditedField, MessageKey> = {
+        track: 'multiRename.tags.track.cellNumber',
+        disc: 'multiRename.tags.track.cellDisc',
+        title: 'multiRename.tags.track.cellTitle',
+    }
+    const EDITOR_LABELS: Record<EditedField, MessageKey> = {
+        track: 'multiRename.tags.track.numberLabel',
+        disc: 'multiRename.tags.track.discLabel',
+        title: 'multiRename.tags.track.titleLabel',
+    }
 
     const rowHeight = $derived(getRowHeight())
     const striped = $derived(getStripedRows())
@@ -84,6 +98,7 @@
             '16px',
             'calc(14px * var(--font-scale))',
             ...(showNumber ? ['calc(32px * var(--font-scale))'] : []),
+            'calc(36px * var(--font-scale))',
             'minmax(0, 1fr)',
             'calc(52px * var(--font-scale))',
             'calc(170px * var(--font-scale))',
@@ -101,7 +116,9 @@
     }
     /** The cell the cursor is on, for typing, Delete and F2: ←/→ move it between # and Title. */
     let cell = $state<EditedField>('title')
-    const activeCell = $derived<EditedField>(showNumber ? cell : 'title')
+    /** The cells ← / → step through: # (not in a single-file book), Disc, Title. */
+    const cells = $derived<EditedField[]>(showNumber ? ['track', 'disc', 'title'] : ['disc', 'title'])
+    const activeCell = $derived<EditedField>(cells.includes(cell) ? cell : 'title')
     let editing = $state<{ path: string; field: EditedField; place: EditorPlace; seed?: string } | null>(null)
     const edited = $derived(editing === null ? undefined : tracks.find((track) => track.path === editing?.path))
 
@@ -127,7 +144,7 @@
         openEditor(at, target)
     }
 
-    /** The cursor row's cell that typing, Delete, F2 and ⌘C / ⌘X / ⌘V act on: # or Title. */
+    /** The cursor row's cell that typing, Delete, F2 and ⌘C / ⌘X / ⌘V act on: #, Disc or Title. */
     export function activeField(): EditedField {
         return activeCell
     }
@@ -142,13 +159,18 @@
         onSort({ key, descending: sort?.key === key && !sort.descending })
     }
 
+    /** What a cell of `track` shows. */
+    function valueOf(track: TrackRow, field: EditedField): string {
+        return (field === 'title' ? track.title : field === 'disc' ? track.disc : track.track) ?? ''
+    }
+
     function canEdit(track: TrackRow | undefined): track is TrackRow {
         return editable && track !== undefined && track.readError === null
     }
 
     /** Where the editor goes over row `index`'s Title or #, or `null` when that cell isn't drawn. */
     function placeAt(index: number, field: EditedField): EditorPlace | null {
-        const column = field === 'title' ? 'title' : 'number'
+        const column = CELL_COLUMN[field]
         const cell = list?.querySelector<HTMLElement>(`[data-index="${String(index)}"] [data-col="${column}"]`)
         if (!cell || !scroller) return null
         return editorBox(scroller, cell, rowHeight)
@@ -233,12 +255,13 @@
         return true
     }
 
-    /** ← / → move the active cell between # and Title (only while the # column is drawn). */
+    /** ← / → move the active cell between #, Disc and Title (# only while it is drawn). */
     function answerCellKey(e: KeyboardEvent): boolean {
         if (e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return false
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return false
         claimKey(e)
-        if (showNumber) cell = e.key === 'ArrowLeft' ? 'track' : 'title'
+        const step = e.key === 'ArrowLeft' ? -1 : 1
+        cell = cells[Math.max(0, Math.min(cells.length - 1, cells.indexOf(activeCell) + step))]
         return true
     }
 
@@ -261,7 +284,7 @@
         }
         claimKey(e)
         if (seed !== null) openEditor(at, activeCell, seed)
-        else if (((activeCell === 'title' ? track.title : track.track) ?? '') !== '') {
+        else if (valueOf(track, activeCell) !== '') {
             onClear({ field: activeCell, path: track.path })
         }
         return true
@@ -277,11 +300,11 @@
         moveTo(move.to)
     }
 
-    /** A double-click edits the number on #, else the Title (also from Length and File). ☐ and ▶ open nothing. */
+    /** A double-click edits the number on #, the disc on Disc, else the Title (also from Length and File). ☐ and ▶ open nothing. */
     function onRowDoubleClick(e: MouseEvent, index: number): void {
         const column = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-col]')?.dataset.col : undefined
         if (column === 'mark' || column === 'play') return
-        openEditor(index, column === 'number' ? 'track' : 'title')
+        openEditor(index, column === 'number' ? 'track' : column === 'disc' ? 'disc' : 'title')
     }
 
     /**
@@ -321,14 +344,13 @@
         {#if showNumber}
             <TrackSortHeader col="number" sortKey="discTrack" label={tString('multiRename.tags.col.number')} current={sort} onClick={sortBy} align="right" />
         {/if}
+        <TrackSortHeader col="disc" sortKey="discTrack" label={tString('multiRename.tags.col.disc')} current={sort} onClick={sortBy} align="right" />
         <TrackSortHeader col="title" sortKey="title" label={tString('multiRename.tags.col.title')} current={sort} onClick={sortBy} />
         <TrackSortHeader col="length" sortKey="length" label={tString('multiRename.tags.col.length')} current={sort} onClick={sortBy} align="right" />
         <TrackSortHeader col="file" sortKey="fileName" label={tString('multiRename.tags.col.fileName')} current={sort} onClick={sortBy} />
     </div>
     <!-- Says which cell typing, Delete and F2 act on, when ← / → move it. -->
-    {#if showNumber}
-        <span class="sr-only" role="status">{tString(activeCell === 'track' ? 'multiRename.tags.track.cellNumber' : 'multiRename.tags.track.cellTitle')}</span>
-    {/if}
+    <span class="sr-only" role="status">{tString(CELL_NAMES[activeCell])}</span>
     <div class="full-list" bind:this={scroller} use:useScrollBoxSize={{ onResize: measureScroller }}>
         <div
             bind:this={list}
@@ -369,7 +391,8 @@
                         >{track.readError !== null ? '' : playing === track.path ? '■' : '▶'}</span
                     >
                     {#if showNumber}<span class="cut end" class:is-active-cell={index === at && activeCell === 'track'} data-col="number">{track.track ?? ''}</span>{/if}
-                    <span class="cut" class:is-active-cell={index === at && showNumber && activeCell === 'title'} data-col="title" use:tooltip={{ text: track.title ?? '', overflowOnly: true }}>{track.title ?? ''}</span>
+                    <span class="cut end" class:is-active-cell={index === at && activeCell === 'disc'} data-col="disc" use:tooltip={{ text: track.disc ?? '', overflowOnly: true }}>{track.disc ?? ''}</span>
+                    <span class="cut" class:is-active-cell={index === at && activeCell === 'title'} data-col="title" use:tooltip={{ text: track.title ?? '', overflowOnly: true }}>{track.title ?? ''}</span>
                     <span class="cut end length" data-col="length">{formatTrackLength(track.durationMs)}</span>
                     <span class="cut file" data-col="file" use:tooltip={{ text: track.fileName, overflowOnly: true }}
                         >{track.fileName}{#if track.readError !== null}<span class="sr-only">, {tString('multiRename.tags.track.unreadable')}</span>{/if}{#if playing === track.path}<span class="sr-only">, {tString('multiRename.tags.track.playing')}</span>{/if}</span
@@ -382,9 +405,9 @@
             {@const field = editing.field}
             <TagValueEditor
                 bind:this={editor}
-                value={(field === 'title' ? track.title : track.track) ?? ''}
+                value={valueOf(track, field)}
                 seed={editing.seed}
-                ariaLabel={tString(field === 'title' ? 'multiRename.tags.track.titleLabel' : 'multiRename.tags.track.numberLabel', { fileName: track.fileName })}
+                ariaLabel={tString(EDITOR_LABELS[field], { fileName: track.fileName })}
                 place={editing.place}
                 onCommit={(text: string) => commit(track.path, field, text)}
                 onClose={closeEditor}
@@ -415,7 +438,7 @@
         font-variant-numeric: tabular-nums;
     }
 
-    /* The cell typing, Delete and F2 act on, in the cursor row (only drawn while the # column gives a choice). */
+    /* The cell typing, Delete and F2 act on, in the cursor row. */
     .is-focused .file-entry.is-under-cursor .is-active-cell {
         outline: 1px solid var(--color-accent);
         outline-offset: -1px;
