@@ -236,3 +236,9 @@ All (uk) unless noted.
 - `settings.mediaIndex.networkVolumes.alwaysAria` doesn't contain its visible label (WCAG 2.5.3) in English either.
 - `viewer.copyDialog.refuseBody`, `viewer.statusBar.hint.image`: "keep 100 MB / 100% literal" clashes with locale
   typography (uk «100 МБ», «100 %»); say "keep the number, write units your way".
+- `settings.fileOperations.showAlreadyGoneToast.description`: calls the toast a "note" ("a short note", "in the note",
+  "skip the note"), which collides with the `note` concept (text the user writes) and the `skip` concept (leaving an
+  item out of an operation). Every locale needed exceptions. Say "notice" in the English, or add `notMatch` for these
+  phrases. (de, fr, hu, nl, ru, sv, uk, vi, zh, zh-Hant)
+- `settings.fileOperations.showAlreadyGoneToast.label`: "Say when a deleted item was already gone" is hard to phrase as
+  a toggle; "Show a notice when a deleted item was already gone" translates more cleanly. (uk, zh)

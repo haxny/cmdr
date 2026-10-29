@@ -585,6 +585,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Namnet är för långt för målet",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Namnet är inte tillåtet på målet",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "Målet kan inte lagra ett så långt namn. Hoppa över det här objektet för att fortsätta med resten, byt namn på det efteråt och försök igen.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "Målet kan inte lagra det här namnet. Det kan vara för långt, vara ett reserverat namn eller innehålla ett tecken som målet inte tillåter. Hoppa över det här objektet för att fortsätta med resten, byt namn på det efteråt och försök igen.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "Om en fil redan finns: {policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -800,6 +816,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Inget kvar att kopiera: {total, plural, one {objektet som skulle kopieras} other {alla {totalText} objekt som skulle kopieras}} har flyttats eller raderats medan åtgärden väntade på sin tur.} move {Inget kvar att flytta: {total, plural, one {objektet som skulle flyttas} other {alla {totalText} objekt som skulle flyttas}} har flyttats eller raderats medan åtgärden väntade på sin tur.} delete {Inget kvar att radera: {total, plural, one {objektet som skulle raderas} other {alla {totalText} objekt som skulle raderas}} har flyttats eller raderats medan åtgärden väntade på sin tur.} trash {Inget kvar att flytta till papperskorgen: {total, plural, one {objektet som skulle flyttas till papperskorgen} other {alla {totalText} objekt som skulle flyttas till papperskorgen}} har flyttats eller raderats medan åtgärden väntade på sin tur.} other {Inget kvar att göra: {total, plural, one {objektet som åtgärden skulle hantera} other {alla {totalText} objekt som åtgärden skulle hantera}} har flyttats eller raderats medan den väntade på sin tur.}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "”{name}” var redan borta. En annan app har troligen flyttat eller raderat objektet.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} objekt var redan borta. En annan app har troligen flyttat eller raderat det.} other {{countText} objekt var redan borta. En annan app har troligen flyttat eller raderat dem.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Visa aldrig igen",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "Flytta låsta objekt?",
   "@fileOperations.lockedSources.title": {

@@ -2605,7 +2605,8 @@
     "confidence": "high",
     "exceptions": {
       "feedback.sentToast": "We read every note → 我們每一則都會讀: the classifier 則 carries the note, and 留言 is named in feedback.dialog.description.",
-      "feedback.sentWithoutLogsToast": "Opens with feedback.sentToast verbatim (我們每一則都會讀), as its English does."
+      "feedback.sentWithoutLogsToast": "Opens with feedback.sentToast verbatim (我們每一則都會讀), as its English does.",
+      "settings.fileOperations.showAlreadyGoneToast.description": "This “note” is the short toast Cmdr shows, not text the user writes: 提示."
     },
     "forms": "a note on an error report → 備註; Ask Cmdr’s saved notes → 筆記; the feedback message → 留言",
     "sources": "MS (note → 備註, user-entered text); catalog errorReporter.dialog.noteLabel"
@@ -3194,6 +3195,12 @@
     "forms": "a network or API request → 請求; what the user asked for (as you requested, a refused tool request) → 要求",
     "sources": "catalog (請求 in 9 values); MS (request → 要求)"
   },
+  "reserved": {
+    "chosen": "保留",
+    "confidence": "high",
+    "forms": "reserved names (CON, NUL) → 保留名稱; reserved word → 保留字",
+    "sources": "MS 103481 reserved word → 保留字; catalog errors.listing.invalidName.suggestion and errors.write.invalidName.suggestion (保留名稱)"
+  },
   "reset": {
     "avoid": [
       {
@@ -3659,6 +3666,9 @@
     ],
     "chosen": "略過",
     "confidence": "confirmed",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "“Skip the note” means not seeing a toast, not leaving an item out of an operation: 就不會再看到這則提示."
+    },
     "sources": "AP-TW = AP-HK, NAU, THU, DC"
   },
   "slideshow": {

@@ -586,6 +586,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Nom trop long pour la destination",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Nom non autorisé à destination",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "La destination ne peut pas stocker un nom aussi long. Ignorez cet élément pour continuer avec le reste, puis renommez-le et réessayez.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "La destination ne peut pas stocker ce nom. Il est peut-être trop long ou réservé, ou bien il contient un caractère que la destination n’autorise pas. Ignorez cet élément pour continuer avec le reste, puis renommez-le et réessayez.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "Si un fichier existe déjà : {policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -801,6 +817,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Plus rien à copier : {total, plural, one {l’élément que cette copie devait traiter a été déplacé ou supprimé} many {les {totalText} éléments que cette copie devait traiter ont tous été déplacés ou supprimés} other {les {totalText} éléments que cette copie devait traiter ont tous été déplacés ou supprimés}} pendant qu’elle attendait son tour.} move {Plus rien à déplacer : {total, plural, one {l’élément que ce déplacement devait traiter a été déplacé ou supprimé} many {les {totalText} éléments que ce déplacement devait traiter ont tous été déplacés ou supprimés} other {les {totalText} éléments que ce déplacement devait traiter ont tous été déplacés ou supprimés}} pendant qu’il attendait son tour.} delete {Plus rien à supprimer : {total, plural, one {l’élément que cette suppression devait traiter a été déplacé ou supprimé} many {les {totalText} éléments que cette suppression devait traiter ont tous été déplacés ou supprimés} other {les {totalText} éléments que cette suppression devait traiter ont tous été déplacés ou supprimés}} pendant qu’elle attendait son tour.} trash {Plus rien à placer dans la corbeille : {total, plural, one {l’élément que ce placement dans la corbeille devait traiter a été déplacé ou supprimé} many {les {totalText} éléments que ce placement dans la corbeille devait traiter ont tous été déplacés ou supprimés} other {les {totalText} éléments que ce placement dans la corbeille devait traiter ont tous été déplacés ou supprimés}} pendant qu’il attendait son tour.} other {Plus rien à faire : {total, plural, one {l’élément que cette opération devait traiter a été déplacé ou supprimé} many {les {totalText} éléments que cette opération devait traiter ont tous été déplacés ou supprimés} other {les {totalText} éléments que cette opération devait traiter ont tous été déplacés ou supprimés}} pendant qu’elle attendait son tour.}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "« {name} » avait déjà disparu. Une autre app a probablement déplacé ou supprimé cet élément.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} élément avait déjà disparu. Une autre app l’a probablement déplacé ou supprimé.} many {{countText} éléments avaient déjà disparu. Une autre app les a probablement déplacés ou supprimés.} other {{countText} éléments avaient déjà disparu. Une autre app les a probablement déplacés ou supprimés.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Ne plus afficher",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "Déplacer les éléments verrouillés ?",
   "@fileOperations.lockedSources.title": {

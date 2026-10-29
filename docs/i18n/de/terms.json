@@ -2235,7 +2235,8 @@
       "feedback.dialog.description": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
       "feedback.dialog.invalid": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
       "feedback.sentToast": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
-      "feedback.sentWithoutLogsToast": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface"
+      "feedback.sentWithoutLogsToast": "the feedback dialog calls the user’s text a Nachricht, consistently across its surface",
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: the “note” is Cmdr’s own short toast, not text the user writes, so it takes the notification ruling’s Hinweis (as settings.suggestedOps.suppressApprovalNotice.description does)"
     },
     "sources": "MS terminology (note → Notiz); catalog (errorReporter.dialog.noteLabel)"
   },
@@ -2833,6 +2834,13 @@
     "forms": "network request → Netzwerkanfrage; at your request (the user asked) → auf deinen Wunsch",
     "sources": "macOS de (Anfrage abgelehnt); MS terminology (request → Anforderung); catalog (onboarding.stepOptional.*)"
   },
+  "reserved": {
+    "accept": ["reservierte", "reservierten"],
+    "chosen": "reserviert",
+    "confidence": "high",
+    "forms": "a reserved name → ein reservierter Name, plural reservierte Namen; the system keeps it → vom System reserviert",
+    "sources": "macOS de Finder (Der Name „^0“ kann nicht verwendet werden, da er vom System reserviert ist.); MS terminology (reserviertes Schlüsselwort); catalog (errors.listing.invalidName.suggestion reservierte Namen)"
+  },
   "reset": {
     "accept": ["zurückgesetzt", "Zurücksetz", "setzen"],
     "chosen": "zurücksetzen",
@@ -3139,10 +3147,13 @@
     "sources": "macOS, catalog"
   },
   "skip": {
-    "accept": ["übersprungen", "überspringt"],
+    "accept": ["übersprungen", "überspringt", "überspring"],
     "chosen": "überspringen",
     "confidence": "high",
-    "forms": "Skip all → Alle überspringen; outcome Übersprungen",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: “skip the note” means not seeing a toast again, not leaving an item out of an operation (damit der Hinweis wegbleibt)"
+    },
+    "forms": "Skip all → Alle überspringen; outcome Übersprungen; du-imperative Überspringe dieses Objekt",
     "sources": "macOS Finder copy dialog (Überspringen), Double Commander, Nautilus"
   },
   "slow": {

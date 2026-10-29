@@ -2072,6 +2072,9 @@
     "accept": ["lời nhắn", "ghi-chu"],
     "chosen": "ghi chú",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "This “note” is the short toast Cmdr shows, not text the user writes: thông báo."
+    },
     "forms": "a feedback message → lời nhắn; sample filename ghi-chu.txt (ASCII-folded)",
     "sources": "MS terminology"
   },

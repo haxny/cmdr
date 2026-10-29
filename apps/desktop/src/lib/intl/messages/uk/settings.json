@@ -1714,6 +1714,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Повідомляти, якщо видаленого елемента вже не було",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Коли ви видаляєте щось, що інша програма вже перемістила або видалила, Cmdr вважає, що все виконано, і показує коротке сповіщення про це. Вимкніть цей параметр (або клацніть «Більше не показувати» у сповіщенні), щоб не бачити цього сповіщення.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "зник, зниклий, відсутній, пропав, немає, сповіщення, повідомлення, спливне",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Скільки закритих вкладок памʼятати для кожної панелі",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"

@@ -2141,6 +2141,9 @@
     "chosen": "notering",
     "confidence": "high",
     "decision": "Amending a sent error report",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: the “note” is Cmdr’s own short toast, not text the user writes; meddelande, since the notification ruling avoids notis and avisering is macOS’s system-notification word"
+    },
     "forms": "a note on a report → notering; Ask Cmdr's notes about you → anteckningar",
     "sources": "catalog (Lägg till en notering)"
   },
@@ -2714,6 +2717,7 @@
     "sources": "MS terminology"
   },
   "reserved": {
+    "accept": ["reserverat", "reserverade"],
     "chosen": "reserverad",
     "confidence": "high",
     "sources": "standard Swedish"
@@ -3063,6 +3067,9 @@
     "accept": ["hoppar över", "hoppade över", "hoppas över", "överhoppad", "hoppas", "hoppades över"],
     "chosen": "hoppa över",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: “skip the note” means not seeing a toast again, not leaving an item out of an operation (för att slippa meddelandet)"
+    },
     "forms": "outcome chip Överhoppad (tentative)",
     "sources": "Nautilus (_Hoppa över)"
   },

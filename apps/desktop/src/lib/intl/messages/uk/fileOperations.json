@@ -584,6 +584,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Назва задовга для місця призначення",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Назва не дозволена в місці призначення",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "Місце призначення не може зберегти таку довгу назву. Пропустіть цей елемент, щоб продовжити з рештою, а потім перейменуйте його й спробуйте ще раз.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "Місце призначення не може зберегти цю назву. Можливо, вона задовга, зарезервована або містить символ, який місце призначення не дозволяє. Пропустіть цей елемент, щоб продовжити з рештою, а потім перейменуйте його й спробуйте ще раз.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "Якщо файл уже існує: {policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -799,6 +815,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Копіювати вже нічого: відколи ви поставили це копіювання в чергу, {total, plural, =1 {елемент, на який воно чекало,} one {усі {totalText} елемент, на які воно чекало,} few {усі {totalText} елементи, на які воно чекало,} many {усі {totalText} елементів, на які воно чекало,} other {усі {totalText} елемента, на які воно чекало,}} перемістили або видалили.} move {Переміщувати вже нічого: відколи ви поставили це переміщення в чергу, {total, plural, =1 {елемент, на який воно чекало,} one {усі {totalText} елемент, на які воно чекало,} few {усі {totalText} елементи, на які воно чекало,} many {усі {totalText} елементів, на які воно чекало,} other {усі {totalText} елемента, на які воно чекало,}} перемістили або видалили.} delete {Видаляти вже нічого: відколи ви поставили це видалення в чергу, {total, plural, =1 {елемент, на який воно чекало,} one {усі {totalText} елемент, на які воно чекало,} few {усі {totalText} елементи, на які воно чекало,} many {усі {totalText} елементів, на які воно чекало,} other {усі {totalText} елемента, на які воно чекало,}} перемістили або видалили.} trash {Переміщувати в Смітник уже нічого: відколи ви поставили це переміщення в Смітник у чергу, {total, plural, =1 {елемент, на який воно чекало,} one {усі {totalText} елемент, на які воно чекало,} few {усі {totalText} елементи, на які воно чекало,} many {усі {totalText} елементів, на які воно чекало,} other {усі {totalText} елемента, на які воно чекало,}} перемістили або видалили.} other {Робити вже нічого: відколи ви поставили цю операцію в чергу, {total, plural, =1 {елемент, на який вона чекала,} one {усі {totalText} елемент, на які вона чекала,} few {усі {totalText} елементи, на які вона чекала,} many {усі {totalText} елементів, на які вона чекала,} other {усі {totalText} елемента, на які вона чекала,}} перемістили або видалили.}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "Елемента «{name}» уже немає. Мабуть, його перемістила або видалила інша програма.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, =1 {Уже немає {countText} елемента. Мабуть, його перемістила або видалила інша програма.} one {Уже немає {countText} елемента. Мабуть, їх перемістила або видалила інша програма.} few {Уже немає {countText} елементів. Мабуть, їх перемістила або видалила інша програма.} many {Уже немає {countText} елементів. Мабуть, їх перемістила або видалила інша програма.} other {Уже немає {countText} елемента. Мабуть, їх перемістила або видалила інша програма.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Більше не показувати",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "Перемістити замкнені елементи?",
   "@fileOperations.lockedSources.title": {

@@ -187,3 +187,6 @@ record the outcome in `terms.json` or `decisions.md`).
   доступ до диска» vs the button «Налаштувати повний доступ до диска».
 - **Git portal** (`fileExplorer.readOnly.gitPortalTitle`, `settings.fileExplorer.git.showVirtualGitPortal.label`):
   «Git-портал» vs «віртуальний портал git»; no portal ruling yet.
+- **Already-gone toast** (`settings.fileOperations.showAlreadyGoneToast.label`, `fileOperations.alreadyGone.many`):
+  «Повідомляти, якщо видаленого елемента вже не було» and the «Уже немає {countText} елемента» frame for 21, 31… need a
+  native check; confirm, or suggest a «зник» frame.

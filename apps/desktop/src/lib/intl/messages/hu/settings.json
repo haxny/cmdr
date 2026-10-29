@@ -1717,6 +1717,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Jelzés, ha egy törölt elem már nem volt meg",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Ha olyasmit törölsz, amit egy másik app már áthelyezett vagy törölt, a Cmdr késznek tekinti, és egy rövid üzenetben jelzi ezt. Kapcsold ki (vagy kattints az üzenet „Soha ne jelenjen meg újra” gombjára), és a Cmdr ezután kihagyja ezt az üzenetet.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "hiányzik, eltűnt, nincs meg, értesítés, buborék, figyelmeztetés, áthelyezve, törölve",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Megjegyzendő bezárt lapok száma panelenként",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"

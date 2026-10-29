@@ -2802,6 +2802,9 @@
     "chosen": "нотатка",
     "accept": ["нотат", "примітк"],
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "This “note” is the short toast Cmdr shows, not text the user writes: «сповіщення»."
+    },
     "sources": "macOS live Preview (Note → Нотатка), Resources Schema (note → нотатка); MS (note → нотатка)"
   },
   "notification": {
@@ -4071,6 +4074,9 @@
     "accept": ["пропус", "пропущ"],
     "forms": "result «Пропущено»; «Пропустити всі»",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "“Skip the note” means not seeing a toast, not leaving an item out of an operation: «щоб не бачити цього сповіщення»."
+    },
     "sources": "macOS Finder Skip → «Пропустити»; Finder some items had to be skipped → «довелося пропустити деякі елементи»"
   },
   "slideshow": {

@@ -2206,6 +2206,9 @@
     "accept": ["notities", "bericht"],
     "chosen": "notitie",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: the “note” is Cmdr’s own short toast, not text the user writes, so it takes the notification ruling’s melding (as settings.suggestedOps.suppressApprovalNotice.description does)"
+    },
     "forms": "error-report notes and the free-text field → notitie; the feedback dialog's Your note → je bericht (that surface only; never mix the two in one dialog)",
     "sources": "MS (note → notitie)"
   },
@@ -3167,6 +3170,9 @@
     "accept": ["overslaan", "overgeslagen", "slaat", "sla", "sloeg"],
     "chosen": "Sla over",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: “skip the note” means not seeing a toast again, not leaving an item out of an operation (om geen melding meer te krijgen)"
+    },
     "forms": "button Sla over / Sla alles over; outcome Overgeslagen; Cmdr skips anything it isn't sure about → Cmdr slaat alles over waar het niet zeker van is",
     "sources": "Nautilus (Overslaan), bare-stem imperative per the button rule"
   },

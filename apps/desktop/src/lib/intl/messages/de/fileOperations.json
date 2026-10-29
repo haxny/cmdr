@@ -585,6 +585,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Name für das Ziel zu lang",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Name am Ziel nicht erlaubt",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "Das Ziel kann einen so langen Namen nicht speichern. Überspringe dieses Objekt, um mit dem Rest weiterzumachen, benenne es danach um und versuche es noch einmal.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "Das Ziel kann diesen Namen nicht speichern. Er ist vielleicht zu lang, reserviert oder enthält ein Zeichen, das das Ziel nicht erlaubt. Überspringe dieses Objekt, um mit dem Rest weiterzumachen, benenne es danach um und versuche es noch einmal.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "Wenn eine Datei bereits vorhanden ist: {policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -801,6 +817,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Nichts mehr zu kopieren: {total, plural, one {Das Objekt, das kopiert werden sollte, wurde} other {Alle {totalText} Objekte, die kopiert werden sollten, wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} move {Nichts mehr zu bewegen: {total, plural, one {Das Objekt, das bewegt werden sollte, wurde} other {Alle {totalText} Objekte, die bewegt werden sollten, wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} delete {Nichts mehr zu löschen: {total, plural, one {Das Objekt, das gelöscht werden sollte, wurde} other {Alle {totalText} Objekte, die gelöscht werden sollten, wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} trash {Nichts mehr in den Papierkorb zu bewegen: {total, plural, one {Das Objekt, das in den Papierkorb bewegt werden sollte, wurde} other {Alle {totalText} Objekte, die in den Papierkorb bewegt werden sollten, wurden}} bewegt oder gelöscht, während der Vorgang gewartet hat.} other {Nichts mehr zu tun: {total, plural, one {Das Objekt dieses Vorgangs wurde} other {Alle {totalText} Objekte dieses Vorgangs wurden}} bewegt oder gelöscht, während er gewartet hat.}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "„{name}“ war bereits weg. Wahrscheinlich hat eine andere App das Objekt bewegt oder gelöscht.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} Objekt war bereits weg. Wahrscheinlich hat eine andere App es bewegt oder gelöscht.} other {{countText} Objekte waren bereits weg. Wahrscheinlich hat eine andere App sie bewegt oder gelöscht.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Nicht mehr anzeigen",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "Geschützte Objekte bewegen?",
   "@fileOperations.lockedSources.title": {

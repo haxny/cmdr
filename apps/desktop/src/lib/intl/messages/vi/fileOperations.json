@@ -584,6 +584,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Tên quá dài đối với đích",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Tên không được phép tại đích",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "Đích không thể lưu tên dài như vậy. Hãy bỏ qua mục này để tiếp tục với các mục còn lại, rồi đổi tên mục đó và thử lại.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "Đích không thể lưu tên này. Có thể tên quá dài, là tên dành riêng hoặc chứa ký tự mà đích không cho phép. Hãy bỏ qua mục này để tiếp tục với các mục còn lại, rồi đổi tên mục đó và thử lại.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "Nếu tệp đã tồn tại: {policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -799,6 +815,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Không còn gì để sao chép: {total, plural, other {{totalText} mục cần sao chép}} đã bị chuyển đi hoặc xóa trong lúc chờ đến lượt.} move {Không còn gì để di chuyển: {total, plural, other {{totalText} mục cần di chuyển}} đã bị chuyển đi hoặc xóa trong lúc chờ đến lượt.} delete {Không còn gì để xóa: {total, plural, other {{totalText} mục cần xóa}} đã bị chuyển đi hoặc xóa trong lúc chờ đến lượt.} trash {Không còn gì để chuyển vào thùng rác: {total, plural, other {{totalText} mục cần chuyển vào thùng rác}} đã bị chuyển đi hoặc xóa trong lúc chờ đến lượt.} other {Không còn gì để làm: {total, plural, other {{totalText} mục của thao tác này}} đã bị chuyển đi hoặc xóa trong lúc chờ đến lượt.}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "“{name}” vốn đã không còn nữa. Có lẽ một ứng dụng khác đã di chuyển hoặc xóa trước rồi.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, other {{countText} mục vốn đã không còn nữa. Có lẽ một ứng dụng khác đã di chuyển hoặc xóa trước rồi.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Không hiển thị lại nữa",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "Di chuyển các mục bị khóa?",
   "@fileOperations.lockedSources.title": {

@@ -1720,6 +1720,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Hinweis anzeigen, wenn ein gelöschtes Objekt bereits weg war",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Wenn du etwas löschst, das eine andere App schon bewegt oder gelöscht hat, wertet Cmdr das als erledigt und zeigt einen kurzen Hinweis dazu an. Schalte das aus (oder klicke im Hinweis auf „Nicht mehr anzeigen“), damit der Hinweis wegbleibt.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "fehlend, verschwunden, nicht mehr da, verschoben, entfernt, Benachrichtigung, Meldung, Mitteilung, Toast",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Anzahl der pro Bereich gemerkten geschlossenen Tabs",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"

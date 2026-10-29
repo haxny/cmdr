@@ -3184,6 +3184,9 @@
     "accept": ["ignoré", "laisse de côté", "ignore"],
     "chosen": "Ignorer",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: “skip the note” means not seeing a toast again, not leaving an item out of an operation (pour ne plus voir cette note)"
+    },
     "forms": "skip all → Tout ignorer; outcome Ignoré",
     "sources": "macOS Finder/AppKit (Ignorer); Nautilus"
   },

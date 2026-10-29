@@ -2189,6 +2189,9 @@
     "accept": ["笔记", "留言", "记下"],
     "chosen": "备注",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "This “note” is the short toast Cmdr shows, not text the user writes: 提示."
+    },
     "forms": "a note on an error report 备注 (添加备注（可选）); the feedback message 留言; Ask Cmdr's saved notes 笔记; saving one 记下",
     "sources": "macOS"
   },
@@ -3171,6 +3174,9 @@
   "skip": {
     "chosen": "跳过",
     "confidence": "confirmed",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "“Skip the note” means not seeing a toast, not leaving an item out of an operation: 就不会再看到这条提示."
+    },
     "forms": "Skip all 全部跳过 (Chinese collapses one/other, so the single case reads 全部 too); skipped 已跳过",
     "sources": "Double Commander; Nautilus"
   },

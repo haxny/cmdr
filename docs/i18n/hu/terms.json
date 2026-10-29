@@ -3518,8 +3518,8 @@
   },
   "skip": {
     "chosen": "Átugrás",
-    "accept": ["átugr", "kihagy", "hagyott ki"],
-    "forms": "the conflict-policy button → Átugrás; Skip all → Összes átugrása; a past outcome → kihagyva",
+    "accept": ["átugr", "kihagy", "hagyott ki", "ugord át"],
+    "forms": "the conflict-policy button → Átugrás; Skip all → Összes átugrása; a past outcome → kihagyva; telling the user to skip one item → Ugord át ezt az elemet (the imperative splits the prefix off)",
     "confidence": "high",
     "sources": "macOS Finder (PE112/AL6 Átugrás; Kihagyás/Kihagyva)",
     "note": "kihagy is taken by skipped; a folder the user took out of image indexing is kizárva."

@@ -1714,6 +1714,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Báo khi mục cần xóa đã không còn từ trước",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Khi bạn xóa thứ gì đó mà một ứng dụng khác đã di chuyển hoặc xóa trước, Cmdr coi như đã xong và hiển thị một thông báo ngắn cho bạn biết. Hãy tắt tùy chọn này (hoặc bấm “Không hiển thị lại nữa” trong thông báo) để bỏ qua thông báo đó.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "biến mất, không còn, mất tích, đã chuyển, thông báo, nhắc, cảnh báo",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Số tab đã đóng cần nhớ cho mỗi khung",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"

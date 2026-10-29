@@ -1720,6 +1720,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Melden wanneer een verwijderd onderdeel al weg was",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Als je iets verwijdert dat een andere app al heeft verplaatst of verwijderd, beschouwt Cmdr dat als klaar en toont het daar een korte melding over. Zet dit uit (of klik in de melding op ‘Toon dit nooit meer’) om geen melding meer te krijgen.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "ontbreekt, verdwenen, kwijt, weg, verschoven, gewist, melding, notificatie, pop-up, waarschuwing",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Aantal gesloten tabbladen om per paneel te onthouden",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
