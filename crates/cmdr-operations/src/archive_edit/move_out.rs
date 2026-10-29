@@ -244,6 +244,7 @@ impl crate::Operations {
                             metadata_left_behind: state.metadata_losses.left_behind(op_id.as_str()),
                             durability_unconfirmed: None,
                             locked_kept: None,
+                            already_gone: None,
                         }),
                         Some(err) => {
                             events.emit_error(WriteErrorEvent::new(op_id.to_string(), WriteOperationType::Move, err))
@@ -302,6 +303,7 @@ impl crate::Operations {
                             metadata_left_behind: state.metadata_losses.left_behind(op_id.as_str()),
                             durability_unconfirmed: None,
                             locked_kept: None,
+                            already_gone: None,
                         }),
                         // The durable prefix moved out, but a later source failed to
                         // extract — surface the failure. A retry moves the rest (it

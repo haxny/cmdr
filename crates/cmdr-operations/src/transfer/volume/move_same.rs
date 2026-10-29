@@ -880,6 +880,7 @@ pub async fn move_within_same_volume_with_progress(
                 metadata_left_behind: None,
                 durability_unconfirmed: None,
                 locked_kept: None,
+                already_gone: None,
             });
             Ok(())
         }

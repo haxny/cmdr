@@ -176,6 +176,34 @@ rename-merge's source cleanup, `remove_tree`) and every reversal removing a fold
 the journal rollback's `RemoveDir`, both through `unblocked_removal.rs` with `NodeKind::Directory`), pinned by
 `crates/cmdr-operations/src/transfer/volume/folder_delete_kind_tests.rs`.
 
+## An item that's already gone is done (`already_gone.rs`)
+
+A delete or trash whose top-level item is already gone (another app, a sync client, or a script moved or deleted it,
+often while a pane still showed it) completes instead of failing. **Why**: ERR-X84HN (2026-10-28): a file moved out by
+another app stayed in the pane, the person deleted it, and `validate_sources` stopped the delete with `SourceNotFound`,
+which the FE logged at ERROR twice and auto-sent as an error report. The file was gone, which is what the person asked
+for.
+
+- **Where**: the first step of each starter's body (local delete and trash in `../local_start.rs`, the volume delete in
+  `volume_start.rs::run_volume_delete`), BEFORE the source binding and the queue check. A queued delete whose items left
+  meanwhile therefore completes, and ❌ never asks "delete the rest?" about items whose absence is the goal.
+- **The probe**: one per top-level source, the queue check's own (`queued_sources::local_source_is_gone` /
+  `volume_source_is_gone`). Only a POSITIVE `NotFound` counts; "we couldn't look" stays in the batch, so the engine's
+  typed error says what happened (a dead mount must never read as "already gone").
+- **What it reports**: each gone source gets a `Skipped` `write-source-item-done` with `source_removed: true` (so search
+  snapshots drop it, and an approved suggestion's op isn't recorded as deleted: a moved-away file still exists), and the
+  completion carries `already_gone: Some(AlreadyGone { item_count, total_count, name })`, `name` only for a single one.
+  All gone: a completion with nothing done (`complete_all_gone`). Some gone: `AlreadyGoneSink` wraps the sink and stamps
+  the note on the walk's own completion, so the walkers know nothing of it.
+- **Logged at info**: an expected outcome, and warn reaches error-report bundles.
+- **The race inside a walk**: the LOCAL walker treats a `NotFound` from `remove_file` (a file the scan listed, gone
+  before its unlink) as done, with no journal row. The volume walker's outage re-check already does the same after a
+  wait (`outage.rs`).
+- Frontend counterpart (the "already gone" toast and its setting):
+  `apps/desktop/src/lib/file-operations/delete/DETAILS.md`.
+
+Pinned by `already_gone_tests.rs`.
+
 ## Key decisions
 
 **Decision**: Volume delete reuses the scan preview and is oracle-aware on the no-preview path. **Why**: Before this,

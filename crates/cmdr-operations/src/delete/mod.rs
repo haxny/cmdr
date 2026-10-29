@@ -8,6 +8,7 @@
 //! See `CLAUDE.md` in this directory for delete walker semantics, the
 //! oracle-aware fast path, trash, and the volume-delete preview-reuse path.
 
+pub(crate) mod already_gone;
 pub(crate) mod cloud_trash;
 mod outage;
 pub(crate) mod trash;
@@ -39,6 +40,9 @@ pub async fn delete_volume_files_for_test(
     delete_volume_files_with_progress_inner(volume, volume_id, events, operation_id, state, sources, config).await
 }
 
+/// A delete or trash of an item that's already gone completes (ERR-X84HN).
+#[cfg(test)]
+mod already_gone_tests;
 /// What a cancel does to a delete, and what the cancelled event admits.
 #[cfg(test)]
 mod delete_cancel_tests;

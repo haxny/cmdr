@@ -698,6 +698,7 @@ pub(crate) fn copy_files_with_progress_inner(
                 metadata_left_behind: None,
                 durability_unconfirmed,
                 locked_kept: None,
+                already_gone: None,
             });
             Ok(())
         }

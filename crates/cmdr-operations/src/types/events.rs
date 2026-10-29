@@ -162,6 +162,10 @@ pub struct WriteCompleteEvent {
     /// the FE says nothing. See [`LockedKept`].
     #[serde(default)]
     pub locked_kept: Option<LockedKept>,
+    /// What a delete or trash found already gone and counted as done. `None`,
+    /// the ordinary case, means every item was there. See [`AlreadyGone`].
+    #[serde(default)]
+    pub already_gone: Option<AlreadyGone>,
 }
 
 impl WriteCompleteEvent {
@@ -181,6 +185,7 @@ impl WriteCompleteEvent {
             metadata_left_behind: None,
             durability_unconfirmed: None,
             locked_kept: None,
+            already_gone: None,
         }
     }
 }
@@ -261,6 +266,27 @@ pub struct TrashRefusedItems {
     /// The reason that opens the most doors for the user, picked by the same
     /// `strongest_refusal` the all-refused error reports.
     pub reason: TrashRefusalKind,
+}
+
+/// The top-level items a delete or trash found already gone when it started:
+/// something else moved or deleted them first (ERR-X84HN: another app moved a
+/// file out of a folder a pane still showed). Their absence is what the person
+/// asked for, so the operation counts them as done and completes, ❌ never a
+/// `SourceNotFound` failure. `delete/already_gone.rs`.
+///
+/// ❗ Only a POSITIVE absence (`NotFound`) lands here. "We couldn't look" stays
+/// with the engine, whose own typed error says what really happened.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AlreadyGone {
+    /// How many of the top-level items were already gone.
+    pub item_count: usize,
+    /// How many top-level items the operation was asked to handle, so the FE
+    /// can tell "all of it was gone" from "some of it was".
+    pub total_count: usize,
+    /// The gone item's own name when exactly one was gone, so the note can
+    /// name it. `None` for several.
+    pub name: Option<String>,
 }
 
 /// The top-level items an operation landed nothing for, split the way the

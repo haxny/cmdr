@@ -16,12 +16,14 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume walker (every backen
   DETAILS § "Waiting out a dropped share".
 - **`trash.rs`**: `move_to_trash_sync()` (macOS `trashItemAtURL`; Linux `trash` crate; reused by
   `trash_single_journaled`), `trash_files_with_progress()` (batch, per-item progress, cancel), and
-  `trash_dir_for_path()` (❌ keep its ancestor walk, DETAILS § Where a trash is). Every item it can't take emits its own
-  `Failed` source-item event. Existence checks use `symlink_metadata()`.
+  `trash_dir_for_path()` (❌ keep its ancestor walk, DETAILS § Where a trash is). Each item it can't take emits a
+  `Failed` source-item event.
 - **`cloud_trash.rs`**: `routing_for_selection()` behind the `trash_routing_for_paths` command, plus `is_online_only`
   (the one `SF_DATALESS` read). DETAILS § "A trash of online-only cloud content becomes a delete".
-- **`volume_start.rs`**: a volume delete's managed lifecycle (here, not `../local_start.rs`, because its body is
-  `async`). DETAILS § "The volume delete's own lifecycle".
+- **`volume_start.rs`**: a volume delete's managed lifecycle (its body is `async`). DETAILS § "The volume delete's own
+  lifecycle".
+- **`already_gone.rs`**: an item already gone counts as done, ❌ never `SourceNotFound`. DETAILS § "An item that's
+  already gone is done".
 
 ## Must-knows
 
@@ -43,16 +45,16 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume walker (every backen
   reads as a clean success.
 - **ONLINE-ONLY content (`SF_DATALESS`) in `~/Library/CloudStorage/<domain>/` trashes as a permanent delete**: trashing
   an evicted file DOWNLOADS it first. ❌ Never route on the folder alone (an ordinary Dropbox file trashes fine; routing
-  it is data loss), ❌ never on the refusal (two `NSError` codes, non-deterministic), ❌ never on "no trash here", ❌
-  not a volume question; only a provider we know by name, all-or-nothing. A FOLDER is answered by the scan preview's
-  walk (`OnlineOnlyWatch`), ❌ no second walk. DETAILS.
+  it is data loss), ❌ never on the refusal (two `NSError` codes, non-deterministic) or "no trash here"; only a provider
+  we know by name, all-or-nothing. A FOLDER is answered by the scan preview's walk (`OnlineOnlyWatch`), ❌ no second
+  walk. DETAILS.
 - **A refusal carries a typed `TrashRefusalKind`, read from the `NSError` DOMAIN + CODE**, ❌ never its localized words
-  (`error-string-match` forbids it). A failed batch is `WriteOperationError::TrashRefused`, ❌ not an `IoError` (one
-  flattened sentence leaves the dialog only "try again"), reporting `strongest_refusal`, ❌ not the most common one.
+  (`error-string-match` forbids it). A failed batch is `WriteOperationError::TrashRefused`, ❌ not an `IoError` (that
+  leaves the dialog only "try again"), reporting `strongest_refusal`, ❌ not the most common one.
 - **A test that really trashes holds `testing::TrashCleanup`** (`docs/testing.md`).
 - **Delete and trash don't `fsync`, and ❌ never a global `sync(2)`** (it stalled every other app; `clippy.toml`
   disallows `libc::sync`).
-- **A recursive scan that bails with `Err(Cancelled)` must NOT emit `write-cancelled`; its top-level caller does**
-  (`emit_cancelled_if_aborted`), or it fires once per stacked frame.
+- **A scan bailing with `Err(Cancelled)` emits no `write-cancelled`; its top-level caller does**
+  (`emit_cancelled_if_aborted`), or it fires once per frame.
 
 Depth: `DETAILS.md`.

@@ -701,6 +701,7 @@ pub async fn move_volumes_with_progress(
                 metadata_left_behind: state.metadata_losses.left_behind(operation_id),
                 durability_unconfirmed: None,
                 locked_kept: locked.kept(),
+                already_gone: None,
             });
             Ok(())
         }

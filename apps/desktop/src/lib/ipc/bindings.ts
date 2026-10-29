@@ -6179,6 +6179,31 @@ export type AiTranslateErrorKind =
 
 export type AiVerifying = null
 
+/**
+ *  The top-level items a delete or trash found already gone when it started:
+ *  something else moved or deleted them first (ERR-X84HN: another app moved a
+ *  file out of a folder a pane still showed). Their absence is what the person
+ *  asked for, so the operation counts them as done and completes, ❌ never a
+ *  `SourceNotFound` failure. `delete/already_gone.rs`.
+ *
+ *  ❗ Only a POSITIVE absence (`NotFound`) lands here. "We couldn't look" stays
+ *  with the engine, whose own typed error says what really happened.
+ */
+export type AlreadyGone = {
+  // How many of the top-level items were already gone.
+  itemCount: number
+  /**
+   *  How many top-level items the operation was asked to handle, so the FE
+   *  can tell "all of it was gone" from "some of it was".
+   */
+  totalCount: number
+  /**
+   *  The gone item's own name when exactly one was gone, so the note can
+   *  name it. `None` for several.
+   */
+  name: string | null
+}
+
 export type AmendResult = {
   id: string
 }
@@ -21088,6 +21113,11 @@ export type WriteCompleteEvent = {
    *  the FE says nothing. See [`LockedKept`].
    */
   lockedKept?: LockedKept | null
+  /**
+   *  What a delete or trash found already gone and counted as done. `None`,
+   *  the ordinary case, means every item was there. See [`AlreadyGone`].
+   */
+  alreadyGone?: AlreadyGone | null
 }
 
 // Conflict event payload (emitted when Stop mode encounters a conflict).

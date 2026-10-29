@@ -1132,6 +1132,7 @@ pub async fn copy_volumes_with_progress(
             metadata_left_behind: state.metadata_losses.left_behind(operation_id),
             durability_unconfirmed: None,
             locked_kept: None,
+            already_gone: None,
         });
 
         return Ok(());
