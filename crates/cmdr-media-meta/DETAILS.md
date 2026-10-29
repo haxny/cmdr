@@ -17,7 +17,9 @@ compiles and tests alone, `index-crate-isolation` keeps `tauri` out of it, and t
   (Number). Performer, composer, translator and www can hold several values; `get` joins them with `, `. The new fields
   come from `native.rs`, which reads each format's own tag (`TXXX:PERFORMER`, a freeform `PERFORMER` atom, a `PERFORMER`
   Vorbis comment) with the same maps as `cmdr-tags`' reader, so a mask and the Tags window agree on one file. An MP3's
-  `TPE3` is the conductor there, so it is no performer here either.
+  `TPE3` is the conductor there, so it is no performer here either. Only the multi-value fields split on `; `, as there.
+  The file is parsed a second time for these (blocks the reader's cache dropped are fetched again, against the same byte
+  budget).
 - `FieldKind` decides the formats a placeholder takes: dates the mask's date grammar, numbers a digit count, text the
   range grammar.
 - `MediaField::parse` takes the exact name only (case matters, as in every placeholder).

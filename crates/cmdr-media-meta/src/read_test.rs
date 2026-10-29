@@ -379,6 +379,75 @@ mod native_fields {
     }
 
     #[test]
+    fn single_value_fields_keep_a_semicolon_inside() {
+        let mut tag = Id3v2Tag::new();
+        txxx(&mut tag, "Description", "Part one; part two");
+        text_frame(&mut tag, "TPUB", "Odeon; Supraphon");
+        let facts = read(mp3(&tag, false), "a.mp3").unwrap();
+        assert_eq!(facts.description.as_deref(), Some("Part one; part two"));
+        assert_eq!(facts.publisher.as_deref(), Some("Odeon; Supraphon"));
+
+        let mut ilst = Ilst::new();
+        freeform(&mut ilst, "description", &["Part one; part two"]);
+        freeform(&mut ilst, "publisher", &["Odeon; Supraphon"]);
+        freeform(&mut ilst, "PERFORMER", &["A; B"]);
+        let mut cursor = Cursor::new(m4a_file());
+        ilst.save_to(&mut cursor, WriteOptions::default()).unwrap();
+        let facts = read(cursor.into_inner(), "a.m4a").unwrap();
+        assert_eq!(facts.description.as_deref(), Some("Part one; part two"));
+        assert_eq!(facts.publisher.as_deref(), Some("Odeon; Supraphon"));
+        assert_eq!(facts.performer, ["A", "B"]);
+
+        let mut comments = VorbisComments::new();
+        comments.push("DESCRIPTION".to_owned(), "Part one; part two".to_owned());
+        comments.push("PUBLISHER".to_owned(), "Odeon; Supraphon".to_owned());
+        let facts = read(flac(&comments), "a.flac").unwrap();
+        assert_eq!(facts.description.as_deref(), Some("Part one; part two"));
+        assert_eq!(facts.publisher.as_deref(), Some("Odeon; Supraphon"));
+    }
+
+    #[test]
+    fn multi_value_fields_split_on_a_semicolon_in_every_format() {
+        let mut tag = Id3v2Tag::new();
+        txxx(&mut tag, "Performer", "A; B");
+        txxx(&mut tag, "www", "https://a.cz; https://b.cz");
+        let facts = read(mp3(&tag, false), "a.mp3").unwrap();
+        assert_eq!(facts.performer, ["A", "B"]);
+        assert_eq!(facts.www, ["https://a.cz", "https://b.cz"]);
+
+        let mut comments = VorbisComments::new();
+        comments.push("PERFORMER".to_owned(), "A; B".to_owned());
+        comments.push("COMPOSER".to_owned(), "C; D".to_owned());
+        comments.push("TRANSLATOR".to_owned(), "E; F".to_owned());
+        let facts = read(flac(&comments), "a.flac").unwrap();
+        assert_eq!(facts.performer, ["A", "B"]);
+        assert_eq!(facts.composer, ["C", "D"]);
+        assert_eq!(facts.translator, ["E", "F"]);
+    }
+
+    #[test]
+    fn an_m4a_total_needs_its_number() {
+        let mut ilst = Ilst::new();
+        ilst.insert(Atom::new(
+            AtomIdent::Fourcc(*b"trkn"),
+            AtomData::Unknown {
+                code: DataType::Reserved,
+                data: vec![0, 0, 0, 0, 0, 12],
+            },
+        ));
+        let mut cursor = Cursor::new(m4a_file());
+        ilst.save_to(&mut cursor, WriteOptions::default()).unwrap();
+        assert_eq!(read(cursor.into_inner(), "a.m4a").unwrap().total_tracks, None);
+    }
+
+    #[test]
+    fn a_vorbis_total_needs_its_track_number() {
+        let mut comments = VorbisComments::new();
+        comments.push("TRACKTOTAL".to_owned(), "12".to_owned());
+        assert_eq!(read(flac(&comments), "a.flac").unwrap().total_tracks, None);
+    }
+
+    #[test]
     fn a_file_without_these_tags_has_none() {
         let facts = read(mp3_frames(), "a.mp3").unwrap();
         assert!(facts.performer.is_empty() && facts.publisher.is_none() && facts.total_tracks.is_none());

@@ -411,3 +411,49 @@ fn media_facts_carry_the_tag_fields_masks_can_name() {
     assert_eq!(facts.get(MediaField::TagTotalDiscs), Some(MediaValue::Number(2)));
     assert_eq!(facts.get(MediaField::TagYear), Some(MediaValue::Number(2010)));
 }
+
+// Multi-Rename's file reader (cmdr-media-meta) and the Tags window's (cmdr-tags) must read the same
+// values from the same file: this pins the mirrored field maps.
+
+#[test]
+fn masks_and_the_tags_window_read_the_same_tag_fields_from_one_file() {
+    use cmdr_media_meta::test_fixtures::{flac_stream, m4a_file, mp3_frames};
+    use cmdr_media_meta::{MediaField, read_media};
+    use cmdr_tags::{FileTags, WriteOptions, read_tags, write_tags};
+
+    let fields: [(TagField, &[&str]); 12] = [
+        (TagField::Title, &["Chapter one"]),
+        (TagField::Track, &["3"]),
+        (TagField::TrackTotal, &["12"]),
+        (TagField::Disc, &["1"]),
+        (TagField::DiscTotal, &["2"]),
+        (TagField::Date, &["2010-09-20"]),
+        (TagField::Performer, &["Jan Hartl", "Eva Novak"]),
+        (TagField::Composer, &["Dvorak", "Smetana"]),
+        (TagField::Publisher, &["Odeon; Supraphon"]),
+        (TagField::Description, &["Part one; part two"]),
+        (TagField::Translator, &["Pavel Eisner"]),
+        (TagField::Www, &["https://a.cz", "https://b.cz"]),
+    ];
+    let mut tags = FileTags::default();
+    for (field, values) in fields {
+        tags.fields.insert(field, values.iter().map(ToString::to_string).collect());
+    }
+    let flac = [flac_stream(), (0..2000u32).map(|i| (i % 251) as u8).collect()].concat();
+    let dir = tempfile::tempdir().expect("a temp dir");
+    for (name, bytes) in [("a.mp3", mp3_frames()), ("a.m4a", m4a_file()), ("a.flac", flac)] {
+        let path = dir.path().join(name);
+        std::fs::write(&path, bytes).expect("writes the fixture");
+        write_tags(&path, &tags, &WriteOptions::default()).expect("writes the tags");
+        let window = super::text_tools::media_facts_of(&read_tags(&path).expect("reads the tags"));
+        let masks = read_media(&mut std::fs::File::open(&path).expect("opens"), name).expect("reads the media");
+        for field in MediaField::ALL {
+            if field.name().starts_with("tag.") && field != MediaField::TagYear {
+                assert_eq!(masks.get(field), window.get(field), "{name} {}", field.name());
+            }
+        }
+        // And the values are really there, not both empty.
+        assert!(masks.get(MediaField::TagPerformer).is_some(), "{name}");
+        assert!(masks.get(MediaField::TagTotalTracks).is_some(), "{name}");
+    }
+}

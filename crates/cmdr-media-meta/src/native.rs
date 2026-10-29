@@ -86,9 +86,18 @@ fn parsed(error: impl std::error::Error + 'static) -> ReadError {
 /// Puts `values` (trimmed, empties gone) in `kind`'s field of `facts`. A single-value field
 /// keeps the first value ever put; a multi-value one collects them, each once.
 fn put(facts: &mut MediaFacts, kind: Kind, values: impl IntoIterator<Item = String>) {
+    let is_multi = matches!(kind, Kind::Performer | Kind::Composer | Kind::Translator | Kind::Www);
     let values: Vec<String> = values
         .into_iter()
-        .map(|value| value.trim().to_owned())
+        // Only a multi-value field holds several values joined with `; `, as in cmdr-tags.
+        .flat_map(|value| {
+            if is_multi {
+                value.split(JOIN).map(str::to_owned).collect()
+            } else {
+                vec![value]
+            }
+        })
+        .map(|value: String| value.trim().to_owned())
         .filter(|value| !value.is_empty())
         .collect();
     let multi = match kind {
@@ -115,12 +124,9 @@ fn put(facts: &mut MediaFacts, kind: Kind, values: impl IntoIterator<Item = Stri
     }
 }
 
-/// `text` split on NULs (ID3's value separator) and on [`JOIN`].
-fn split_values(text: &str) -> Vec<String> {
-    text.split('\0')
-        .flat_map(|part| part.split(JOIN))
-        .map(str::to_owned)
-        .collect()
+/// `text` split on NULs, ID3's value separator.
+fn split_nulls(text: &str) -> Vec<String> {
+    text.split('\0').map(str::to_owned).collect()
 }
 
 /// The total in a positive whole number's text, `None` for zero, blank or not a number.
@@ -153,7 +159,7 @@ fn from_id3(facts: &mut MediaFacts, id3: &Id3v2Tag) {
                     }
                     _ => continue,
                 };
-                put(facts, kind, split_values(&f.value));
+                put(facts, kind, split_nulls(&f.value));
             }
             Frame::Timestamp(f) => {
                 if matches!(f.id().as_str(), "TDRC" | "TYER") {
@@ -172,7 +178,7 @@ fn from_id3(facts: &mut MediaFacts, id3: &Id3v2Tag) {
                 .find(|(name, _)| name.eq_ignore_ascii_case(description))
                 .map(|(_, kind)| kind);
                 if let Some(kind) = kind {
-                    put(facts, kind, split_values(&f.content));
+                    put(facts, kind, split_nulls(&f.content));
                 } else if description.eq_ignore_ascii_case("DiscNumber") {
                     legacy_disc_total = legacy_disc_total.or_else(|| slash_total(&f.content));
                 }
@@ -195,9 +201,7 @@ fn from_ilst(facts: &mut MediaFacts, ilst: &Ilst) {
     };
     for atom in ilst {
         match atom.ident() {
-            AtomIdent::Fourcc([0xA9, b'w', b'r', b't']) => {
-                put(facts, Kind::Composer, texts(atom).iter().flat_map(|t| split_values(t)))
-            }
+            AtomIdent::Fourcc([0xA9, b'w', b'r', b't']) => put(facts, Kind::Composer, texts(atom)),
             AtomIdent::Fourcc([0xA9, b'd', b'a', b'y']) => put(facts, Kind::Date, texts(atom)),
             AtomIdent::Fourcc(fourcc @ (TRKN | DISK)) => {
                 // Bytes 2-3 are the number, 4-5 the total; zero means none.
@@ -226,7 +230,7 @@ fn from_ilst(facts: &mut MediaFacts, ilst: &Ilst) {
                 .find(|(managed, _)| managed.eq_ignore_ascii_case(name))
                 .map(|(_, kind)| kind);
                 if let Some(kind) = kind {
-                    put(facts, kind, texts(atom).iter().flat_map(|t| split_values(t)));
+                    put(facts, kind, texts(atom));
                 }
             }
             _ => {}
