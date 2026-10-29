@@ -376,8 +376,8 @@ async fn a_source_replaced_mid_copy_fails_as_changed_and_publishes_nothing(servi
 
     assert!(matches!(outcome, Err(VolumeError::SourceChanged(_))), "got {outcome:?}");
     assert!(!volume.exists(&at(&volume, &to)).await, "nothing was published");
-    assert!(unfinished_uploads(service, FIXTURE_BUCKET, &prefix).await.is_empty());
     wait_for_the_ledger_to_settle(&volume, &prefix).await;
+    assert!(unfinished_uploads(service, FIXTURE_BUCKET, &prefix).await.is_empty());
     assert!(
         read_back(&volume, &at(&volume, &from)).await == replacement,
         "the new source stays whole"
@@ -452,6 +452,7 @@ async fn a_source_replaced_after_its_last_part_fails_as_changed(service: Fixture
 
     assert!(matches!(outcome, Err(VolumeError::SourceChanged(_))), "got {outcome:?}");
     assert!(!volume.exists(&at(&volume, &to)).await, "nothing was published");
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert!(unfinished_uploads(service, FIXTURE_BUCKET, &prefix).await.is_empty());
     assert!(
         read_back(&volume, &at(&volume, &from)).await == replacement,

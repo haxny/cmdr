@@ -256,11 +256,11 @@ async fn a_cancelled_overwrite_keeps_the_original(service: FixtureService) {
         .map(|entry| entry.name)
         .collect();
     assert_eq!(names, vec!["kept.txt".to_string()], "nothing stays beside it");
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert!(
         unfinished_uploads(service, FIXTURE_BUCKET, &prefix).await.is_empty(),
         "the cancelled upload must be aborted on the server"
     );
-    wait_for_the_ledger_to_settle(&volume, &prefix).await;
 }
 
 /// An overwrite that finishes lands the new bytes and the source's date at
@@ -395,6 +395,7 @@ async fn create_new_is_refused_by_the_conditional_header_on_versitygw() {
         theirs,
         "their file must survive byte for byte"
     );
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert!(
         unfinished_uploads(VERSITYGW, FIXTURE_BUCKET, &prefix).await.is_empty(),
         "the refused multipart upload must be aborted"
