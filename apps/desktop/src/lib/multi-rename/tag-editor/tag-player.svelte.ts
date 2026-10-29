@@ -14,6 +14,7 @@ const log = getAppLogger('multiRename')
 
 const DEFAULT_VALUE = 'default'
 const CHOOSE_VALUE = 'choose'
+const NO_OTHER_VALUE = 'none'
 
 type Answer<T> = { ok: true; value: T } | { ok: false; error: unknown }
 
@@ -88,9 +89,14 @@ export function createTagPlayer(deps: TagPlayerDeps): TagPlayer {
       defaultApp === undefined
         ? tString('multiRename.tags.play.defaultAppUnknown')
         : tString('multiRename.tags.play.defaultApp', { app: defaultApp.name })
+    const others = apps.filter((app) => !app.isDefault)
     return [
       row(DEFAULT_VALUE, defaultLabel, defaultApp),
-      ...apps.filter((app) => !app.isDefault).map((app) => row(app.bundleId, app.name, app)),
+      ...others.map((app) => row(app.bundleId, app.name, app)),
+      // Nothing else opens every type of the tracks: say so rather than show a menu that looks unfinished.
+      ...(others.length === 0
+        ? [{ value: NO_OTHER_VALUE, label: tString('multiRename.tags.play.noOtherApp'), disabled: true }]
+        : []),
     ]
   }
 

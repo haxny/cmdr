@@ -2237,9 +2237,13 @@
       "app": "the name of the player app, as Finder shows it (for example Music)"
     }
   },
-  "multiRename.tags.play.defaultAppUnknown": "Default app",
+  "multiRename.tags.play.defaultAppUnknown": "Each in its default app",
   "@multiRename.tags.play.defaultAppUnknown": {
-    "description": "A row in the menu of apps the tracks can be opened in, used when the system's default app for them can't be named: opens each track in the app macOS has set for it."
+    "description": "A row in the menu of apps the tracks can be opened in, used when the tracks are of different types or the default app can't be named: opens each track in the app macOS has set for it."
+  },
+  "multiRename.tags.play.noOtherApp": "No other app opens all these tracks",
+  "@multiRename.tags.play.noOtherApp": {
+    "description": "A greyed-out row in the menu of apps the tracks can be opened in: no app other than the default can open every type of file among the tracks, so only Choose… remains."
   },
   "multiRename.tags.play.chooseOther": "Choose…",
   "@multiRename.tags.play.chooseOther": {

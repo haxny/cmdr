@@ -96,7 +96,7 @@ const VIEW: TagEditorView = {
   sort: null,
 }
 
-async function mountTab() {
+async function mountTab(over: { view?: TagEditorView | null } = {}) {
   tagTrackAudioUrl.mockImplementation(() =>
     Promise.resolve(
       urlCalls.fail
@@ -105,18 +105,22 @@ async function mountTab() {
     ),
   )
   openTagsInPlayer.mockImplementation(() => Promise.resolve({ ok: true, value: { fellBack: false } }))
+  // As the backend answers: no tracks are loaded (so no apps) until the tags are read.
   tagPlayerChoices.mockImplementation(() =>
     Promise.resolve({
       ok: true,
-      value: [
-        { bundleId: 'com.apple.Music', name: 'Music', isDefault: true },
-        { bundleId: 'org.videolan.vlc', name: 'VLC', isDefault: false },
-      ],
+      value:
+        state.view === null
+          ? []
+          : [
+              { bundleId: 'com.apple.Music', name: 'Music', isDefault: true },
+              { bundleId: 'org.videolan.vlc', name: 'VLC', isDefault: false },
+            ],
     }),
   )
-  const state = {
+  const state = $state({
     sessionId: 's1',
-    view: VIEW,
+    view: over.view === undefined ? VIEW : over.view,
     error: null,
     busy: false,
     open: vi.fn(() => Promise.resolve()),
@@ -133,7 +137,7 @@ async function mountTab() {
       options?.onWriting?.()
       return Promise.resolve({ kind: 'done', written: 1, failed: 0, changedOnDisk: 0 })
     }),
-  }
+  })
   const mounted = await mountInto(TagsContent, { state: asTagState(state) })
   cleanup = mounted.cleanup
   return { root: mounted.root, state, unmount: mounted.cleanup }
@@ -305,6 +309,22 @@ describe('Open in player', () => {
     openButton(root)?.click()
     await settle()
     expect(root.textContent).toContain('Couldn’t open the tracks in a player.')
+  })
+
+  it('names the app once the tags are read: asked then, not at mount, when no track is loaded yet', async () => {
+    const { root, state } = await mountTab({ view: null })
+    await settle()
+    expect([...root.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Open in Music')).toBe(false)
+    state.view = VIEW
+    await settle()
+    expect(openButton(root)).toBeDefined()
+  })
+
+  it('the arrow says it opens a menu', async () => {
+    const { root } = await mountTab()
+    const arrow = root.querySelector('button[aria-label="Choose the app to open the tracks in"]')
+    expect(arrow?.getAttribute('aria-haspopup')).toBe('menu')
+    expect(arrow?.getAttribute('aria-expanded')).toBe('false')
   })
 
   it('uses the remembered app and names it on the button', async () => {

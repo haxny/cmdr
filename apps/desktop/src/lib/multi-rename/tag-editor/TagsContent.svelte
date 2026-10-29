@@ -22,11 +22,12 @@
         type TagEdit,
         type TagsClipboardAction,
     } from '#lib/tauri-commands/index.js'
+    import { getSetting, setSetting } from '#lib/settings/index.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Button from '#lib/ui/Button.svelte'
-    import ModalDialog from '#lib/ui/ModalDialog.svelte'
     import Icon from '#lib/ui/Icon.svelte'
     import Menu from '#lib/ui/Menu.svelte'
+    import ModalDialog from '#lib/ui/ModalDialog.svelte'
     import { joinSentences } from '#lib/intl/sentence-join.js'
     import AlbumPane from './AlbumPane.svelte'
     import { followViewScope, scopedAlbumEdits } from './album-scope.svelte'
@@ -53,8 +54,8 @@
     import { dialogIsOpen } from './typed-key'
     import { createTrackSelection, type ToolScope } from './track-selection.svelte'
     import { createTrackPlayer } from './track-player.svelte'
-    import { SETTLE_LIMIT_MS, type TagEditorState, type TagStateError } from './tag-editor-state.svelte'
     import { createTagPlayer } from './tag-player.svelte'
+    import { SETTLE_LIMIT_MS, type TagEditorState, type TagStateError } from './tag-editor-state.svelte'
 
     interface Props {
         state: TagEditorState
@@ -159,8 +160,10 @@
         setPlayer: (player) => { setSetting('multiRename.tagEditor.player', player) },
         open: openInPlayer,
     })
-    onMount(() => {
-        void tagPlayer.load()
+    // The apps are listed from the session's tracks, which exist once the tags are read: ask then, not at mount.
+    const hasView = $derived(tags.view !== null)
+    $effect(() => {
+        if (hasView) untrack(() => void tagPlayer.load())
     })
     onDestroy(() => {
         tagPlayer.menu.destroy()
@@ -680,6 +683,8 @@
             <Button
                 size="mini"
                 aria-label={tString('multiRename.tags.play.chooseApp')}
+                aria-haspopup="menu"
+                aria-expanded={tagPlayer.menu.isOpen}
                 tooltipContent={tString('multiRename.tags.play.chooseApp')}
                 onclick={() => { if (playerMenuButton) void tagPlayer.openMenu(playerMenuButton) }}
             >
@@ -691,12 +696,12 @@
 {/snippet}
 
 <style>
-    /* Panes, status line, function-key bar: edge to edge, as in the main window. Only the panes flex. */
     .open-in {
         display: inline-flex;
         gap: 1px;
     }
 
+    /* Panes, status line, function-key bar: edge to edge, as in the main window. Only the panes flex. */
     .tags-content {
         display: flex;
         flex-direction: column;

@@ -3154,6 +3154,7 @@ export type MessageKey =
   | 'multiRename.tags.play.defaultAppUnknown'
   | 'multiRename.tags.play.failed'
   | 'multiRename.tags.play.menu'
+  | 'multiRename.tags.play.noOtherApp'
   | 'multiRename.tags.play.nothingReadable'
   | 'multiRename.tags.play.openFailed'
   | 'multiRename.tags.play.openInApp'

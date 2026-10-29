@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
 
 use cmdr_tags::format_of;
+use serde::Serialize;
 use tauri::{AppHandle, Runtime};
 
 use super::session::{TagEditorError, is_open, loaded_tracks};
@@ -157,11 +158,22 @@ pub fn plan_launch(player: &str, installed: impl Fn(&str) -> Option<PathBuf>) ->
     }
 }
 
-/// The menu's apps: the candidates in order (the first is the system default), then `chosen` when
-/// it isn't among them (an app picked with "Choose…" that doesn't open these tracks by itself).
+/// Whether one app is the system default of every sampled type: only then can the button name it.
+/// `firsts` is each type's default app (`None`: the type has none).
+pub fn defaults_agree(firsts: &[Option<String>]) -> bool {
+    match firsts.split_first() {
+        Some((Some(first), rest)) => rest.iter().all(|other| other.as_ref() == Some(first)),
+        _ => false,
+    }
+}
+
+/// The menu's apps: the candidates in order (opening every type), then `chosen` when it isn't among
+/// them (an app picked with "Choose…" that doesn't open these tracks by itself). The first candidate
+/// is marked the system default only when `default_agrees` (every type has the same default app).
 pub fn choices_of(
     candidates: &[crate::file_system::open_with::AppCandidate],
     chosen: Option<AppChoice>,
+    default_agrees: bool,
 ) -> Vec<AppChoice> {
     let mut choices: Vec<AppChoice> = candidates
         .iter()
@@ -169,7 +181,7 @@ pub fn choices_of(
         .map(|(i, c)| AppChoice {
             bundle_id: c.bundle_id.clone(),
             name: c.display_name.clone(),
-            is_default: i == 0,
+            is_default: default_agrees && i == 0,
         })
         .collect();
     if let Some(chosen) = chosen
@@ -202,7 +214,6 @@ pub fn open_in_player<R: Runtime>(
                 }
             })
             .map_err(|_| TagEditorError::PlayerUnavailable)?;
-    }
             Ok(PlayerOpened { fell_back: false })
         }
         LaunchPlan::Default { fell_back } => {
@@ -213,9 +224,10 @@ pub fn open_in_player<R: Runtime>(
             }
             Ok(PlayerOpened { fell_back })
         }
+    }
 }
 
-/// The apps that can open the session's tracks, default first, plus `chosen` (a bundle id) when it
+/// The apps that can open every type of the session's tracks, default first when all agree on it, plus `chosen` (a bundle id) when it
 /// is installed. One representative file per extension: LaunchServices answers per type. Blocking.
 pub fn player_choices(session_id: &str, chosen: &str) -> Result<Vec<AppChoice>, TagEditorError> {
     let mut seen = std::collections::HashSet::new();
@@ -223,9 +235,19 @@ pub fn player_choices(session_id: &str, chosen: &str) -> Result<Vec<AppChoice>, 
         .into_iter()
         .filter(|track| seen.insert(track.extension().map(|e| e.to_ascii_lowercase())))
         .collect();
+    // Each type's own default app, to know whether one app is everyone's default.
+    let firsts: Vec<Option<String>> = sample
+        .iter()
+        .map(|file| {
+            candidates_of(vec![file.clone()])
+                .into_iter()
+                .next()
+                .map(|candidate| candidate.bundle_id)
+        })
+        .collect();
     let candidates = candidates_of(sample);
     let chosen = (chosen != DEFAULT_PLAYER).then(|| choice_of_bundle(chosen)).flatten();
-    Ok(choices_of(&candidates, chosen))
+    Ok(choices_of(&candidates, chosen, defaults_agree(&firsts)))
 }
 
 /// Asks the user for an app with the system's open panel. `None` when they cancel (and always in the

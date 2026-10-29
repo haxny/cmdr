@@ -92,4 +92,14 @@ describe('createTagPlayer', () => {
     expect(setPlayer).not.toHaveBeenCalled()
     expect(open).not.toHaveBeenCalled()
   })
+
+  it('names no default when the types disagree, and the menu says no other app opens them all', async () => {
+    const { tagPlayer } = setup({ apps: [] })
+    await tagPlayer.load()
+    expect(tagPlayer.appName).toBeNull()
+    const rows = items(tagPlayer)
+    expect(rows.map((i) => i.value)).toEqual(['default', 'none', 'choose'])
+    expect(rows[0].label).toBe('Each in its default app')
+    expect(rows[1].disabled).toBe(true)
+  })
 })

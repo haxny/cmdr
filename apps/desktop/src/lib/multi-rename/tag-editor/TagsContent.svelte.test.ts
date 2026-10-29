@@ -556,7 +556,10 @@ describe('TagsContent', () => {
     // headers stay available.
     const readers = new Set(['Open in player', 'F3Play'])
     const writers = [...root.querySelectorAll('button')].filter(
-      (b) => !readers.has(b.textContent.trim()) && !b.classList.contains('sortable-header'),
+      (b) =>
+        !readers.has(b.textContent.trim()) &&
+        !b.classList.contains('sortable-header') &&
+        b.getAttribute('aria-label') !== 'Choose the app to open the tracks in',
     )
     for (const button of writers) expect(button.disabled).toBe(true)
   })
