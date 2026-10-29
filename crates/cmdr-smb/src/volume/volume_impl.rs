@@ -288,9 +288,8 @@ impl Volume for SmbVolume {
     }
 
     fn listing_watch_coverage(&self, path: &Path) -> WatchCoverage {
-        // Behind a DFS link no CHANGE_NOTIFY reaches us (`dfs_links.rs`).
         if self.to_smb_path(path).is_ok_and(|p| self.inner.link_paths.covers(&p)) {
-            return WatchCoverage::None;
+            return WatchCoverage::None; // A DFS link's target never reports to our watch.
         }
         // SMB watching is volume-level: the smb_watcher monitors the whole share
         // via CHANGE_NOTIFY, which the SERVER raises, so it reports every client's
