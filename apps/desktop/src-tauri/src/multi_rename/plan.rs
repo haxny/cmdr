@@ -18,6 +18,7 @@ use cmdr_fs::validation::{ValidationError, validate_filename};
 
 use cmdr_media_meta::{MediaFacts, MediaField};
 
+use super::foobar::{self, FoobarError, Pattern};
 use super::mask::{FieldGap, Mask, MaskError, NumberWidth, RowFacts, RowMedia};
 use super::transform::{CaseChange, CompiledTransform, Replace, ReplaceError, Transform};
 
@@ -45,15 +46,41 @@ pub struct MultiRenameSpec {
     /// over decomposed names. Off, such a name counts as unchanged.
     #[serde(default)]
     pub normalize_unicode: bool,
+    /// How the name mask reads: Cmdr's placeholders, or a foobar2000 pattern as
+    /// foobar writes it. Cmdr in a preset, a last spec, or an MCP call from
+    /// before it existed. The extension mask is always Cmdr's.
+    #[serde(default)]
+    pub mask_syntax: MaskSyntax,
+}
+
+/// The name mask's language.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum MaskSyntax {
+    /// Total Commander's placeholders: `[N]`, `[C]`, `[=tag.title]`.
+    #[default]
+    Cmdr,
+    /// foobar2000 title formatting: `%title%`, `[ … ]`, `$num(…)` (`foobar.rs`).
+    Foobar,
 }
 
 /// Why the spec itself can't run (the sheet shows it under the field).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum SpecError {
-    NameMask { error: MaskError },
-    ExtensionMask { error: MaskError },
-    BadRegex { detail: String },
+    NameMask {
+        error: MaskError,
+    },
+    /// The name mask is a foobar pattern that doesn't parse.
+    Pattern {
+        error: FoobarError,
+    },
+    ExtensionMask {
+        error: MaskError,
+    },
+    BadRegex {
+        detail: String,
+    },
 }
 
 /// One row of the preview.
@@ -186,9 +213,67 @@ impl NameEdits {
     }
 }
 
+/// The name mask, parsed in its syntax.
+enum NameMask {
+    Cmdr(Mask),
+    Foobar(Pattern),
+}
+
+impl NameMask {
+    fn parse(spec: &MultiRenameSpec) -> Result<Self, SpecError> {
+        match spec.mask_syntax {
+            MaskSyntax::Cmdr => Mask::parse(&spec.name_mask)
+                .map(Self::Cmdr)
+                .map_err(|error| SpecError::NameMask { error }),
+            MaskSyntax::Foobar => foobar::parse(&spec.name_mask)
+                .map(Self::Foobar)
+                .map_err(|error| SpecError::Pattern { error }),
+        }
+    }
+
+    fn uses_media(&self) -> bool {
+        match self {
+            Self::Cmdr(mask) => mask.uses_media(),
+            Self::Foobar(pattern) => pattern.uses_media(),
+        }
+    }
+
+    /// A foobar pattern renders a missing field as no text, as in foobar, but while it names a tag
+    /// field, a row whose tags are still being read waits for them, and an audio file whose tags
+    /// can't be read is `Unreadable`, as with a Cmdr mask: never renamed with its fields empty. A
+    /// file that isn't media, or whose tags hold none of the pattern's fields, is `NoValue` and keeps
+    /// its name, so a tag preset over a book folder leaves `cover.jpg` and `info.txt` alone (foobar
+    /// only ever renames playlist items). A pattern of the file's name alone renames any file. The
+    /// name is trimmed: a dropped `[ ]` leaves its neighbour's space at the edge.
+    fn render(&self, facts: &RowFacts<'_>) -> Result<String, FieldGap> {
+        let pattern = match self {
+            Self::Cmdr(mask) => return mask.render(facts),
+            Self::Foobar(pattern) => pattern,
+        };
+        if let Some(field) = pattern.media_field() {
+            match facts.media {
+                RowMedia::Reading => return Err(FieldGap::Reading),
+                RowMedia::Unreadable => return Err(FieldGap::Unreadable { field }),
+                RowMedia::NotMedia => return Err(FieldGap::NoValue { field }),
+                RowMedia::Read(tags) if !pattern.holds_a_field(tags) => return Err(FieldGap::NoValue { field }),
+                RowMedia::Read(_) => {}
+            }
+        }
+        Ok(pattern.render(facts).trim().to_string())
+    }
+}
+
+/// A new name as the spec renders it.
+struct Rendered {
+    full: String,
+    /// The name part (before the extension) is empty or spaces only. The full name would be a
+    /// hidden `.mp3`, which `validate_filename` takes, so the preview calls it an empty name.
+    blank_name: bool,
+}
+
 /// The parsed spec, built once per preview.
 pub(crate) struct Compiled {
-    name_mask: Mask,
+    name_mask: NameMask,
     extension_mask: Mask,
     transform: CompiledTransform,
     normalize_unicode: bool,
@@ -196,7 +281,7 @@ pub(crate) struct Compiled {
 
 impl Compiled {
     pub(crate) fn new(spec: &MultiRenameSpec) -> Result<Self, SpecError> {
-        let name_mask = Mask::parse(&spec.name_mask).map_err(|error| SpecError::NameMask { error })?;
+        let name_mask = NameMask::parse(spec)?;
         let extension_mask = Mask::parse(&spec.extension_mask).map_err(|error| SpecError::ExtensionMask { error })?;
         let replace = (!spec.search.is_empty()).then(|| Replace {
             search: spec.search.clone(),
@@ -237,7 +322,7 @@ impl Compiled {
         position: usize,
         media: RowMedia<'_>,
         number_width: NumberWidth,
-    ) -> Result<String, FieldGap> {
+    ) -> Result<Rendered, FieldGap> {
         // Composed, so a range never splits a letter from its accent in a name an
         // SMB share or HFS stores decomposed.
         let file_name: String = entry.name.nfc().collect();
@@ -256,18 +341,20 @@ impl Compiled {
 
     /// The new full name for a file with these facts, or the media field it has
     /// no text for. Still reading wins over any other gap, in either mask.
-    fn render(&self, facts: &RowFacts<'_>) -> Result<String, FieldGap> {
+    fn render(&self, facts: &RowFacts<'_>) -> Result<Rendered, FieldGap> {
         let (name, extension) = match (self.name_mask.render(facts), self.extension_mask.render(facts)) {
             (Ok(name), Ok(extension)) => (name, extension),
             (Err(FieldGap::Reading), _) | (_, Err(FieldGap::Reading)) => return Err(FieldGap::Reading),
             (Err(gap), _) | (_, Err(gap)) => return Err(gap),
         };
         let (name, extension) = self.transform.apply(&name, &extension);
-        Ok(self.finish(if extension.is_empty() {
+        let blank_name = name.trim().is_empty();
+        let full = self.finish(if extension.is_empty() {
             name
         } else {
             format!("{name}.{extension}")
-        }))
+        });
+        Ok(Rendered { full, blank_name })
     }
 
     /// The last step every new name takes, a typed one too: composed when the spec normalizes.
@@ -320,14 +407,23 @@ fn example_media(taken: Option<NaiveDateTime>) -> MediaFacts {
         height: Some(3024),
         orientation: Some(1),
         title: Some("Digital Love".to_string()),
-        artist: Some("Daft Punk".to_string()),
-        album_artist: Some("Daft Punk".to_string()),
+        artist: vec!["Daft Punk".to_string()],
+        album_artist: vec!["Daft Punk".to_string()],
         album: Some("Discovery".to_string()),
-        genre: Some("Electronic".to_string()),
+        genre: vec!["Electronic".to_string()],
         comment: None,
         track: Some(3),
         disc: Some(1),
         year: Some(2001),
+        performer: vec!["Thomas Bangalter".to_string()],
+        composer: vec!["Guy-Manuel de Homem-Christo".to_string()],
+        publisher: Some("Virgin".to_string()),
+        date: Some("2001-03-12".to_string()),
+        total_tracks: Some(14),
+        total_discs: Some(1),
+        description: Some("The second studio album".to_string()),
+        translator: vec!["Anna Novak".to_string()],
+        www: vec!["https://example.com".to_string()],
     }
 }
 
@@ -357,6 +453,7 @@ pub(crate) fn render_examples(examples: &[RenameExample]) -> Vec<Option<String>>
                     number_width: NumberWidth::of([&media]),
                 })
                 .ok()
+                .map(|rendered| rendered.full)
         })
         .collect()
 }
@@ -400,14 +497,26 @@ pub(crate) fn preview(
         .map(|(position, (row, entry))| {
             let typed = edits.get(&entry.name);
             let new_name = match typed {
-                Some(typed) => Ok(compiled.finish(typed.to_string())),
+                // A typed name is the user's own, a hidden one too.
+                Some(typed) => Ok(Rendered {
+                    full: compiled.finish(typed.to_string()),
+                    blank_name: false,
+                }),
                 None => compiled.new_name(entry, dir, position, media.media(entry), number_width),
             };
             // A row a media field has no text for keeps its name until it does.
             let (new_name, status) = match new_name {
                 Err(gap) => (entry.name.clone(), gap_status(gap)),
-                Ok(new_name) => {
-                    let status = match invalid(&new_name) {
+                Ok(Rendered {
+                    full: new_name,
+                    blank_name,
+                }) => {
+                    let reason = if blank_name {
+                        Some(InvalidNameReason::Empty)
+                    } else {
+                        invalid(&new_name)
+                    };
+                    let status = match reason {
                         Some(reason) => RowStatus::InvalidName { reason },
                         None if compiled.same_name(&new_name, &entry.name) => RowStatus::Unchanged,
                         None => RowStatus::Ready,

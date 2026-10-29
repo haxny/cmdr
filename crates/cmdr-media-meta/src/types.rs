@@ -58,6 +58,24 @@ pub enum MediaField {
     TagGenre,
     /// The comment.
     TagComment,
+    /// The performer; an audiobook's narrator.
+    TagPerformer,
+    /// The composer.
+    TagComposer,
+    /// The publisher.
+    TagPublisher,
+    /// The date as stored (`2010-09-20`, or just `2010`).
+    TagDate,
+    /// The number of tracks on the album.
+    TagTotalTracks,
+    /// The number of discs.
+    TagTotalDiscs,
+    /// The long description.
+    TagDescription,
+    /// The translator.
+    TagTranslator,
+    /// The web address.
+    TagWww,
 }
 
 /// What kind of value a field holds, which decides the formats it takes.
@@ -107,14 +125,14 @@ pub struct MediaFacts {
     pub orientation: Option<i64>,
     /// The title.
     pub title: Option<String>,
-    /// The artist.
-    pub artist: Option<String>,
-    /// The album's artist.
-    pub album_artist: Option<String>,
+    /// The artists, in the file's order.
+    pub artist: Vec<String>,
+    /// The album's artists.
+    pub album_artist: Vec<String>,
     /// The album.
     pub album: Option<String>,
-    /// The genre.
-    pub genre: Option<String>,
+    /// The genres.
+    pub genre: Vec<String>,
     /// The comment.
     pub comment: Option<String>,
     /// The track number.
@@ -123,6 +141,24 @@ pub struct MediaFacts {
     pub disc: Option<i64>,
     /// The release year.
     pub year: Option<i64>,
+    /// The performers, in the file's order.
+    pub performer: Vec<String>,
+    /// The composers.
+    pub composer: Vec<String>,
+    /// The publisher.
+    pub publisher: Option<String>,
+    /// The date as the file stores it (`2010-09-20`).
+    pub date: Option<String>,
+    /// The number of tracks, from `3/12` or a total key.
+    pub total_tracks: Option<i64>,
+    /// The number of discs.
+    pub total_discs: Option<i64>,
+    /// The long description.
+    pub description: Option<String>,
+    /// The translators.
+    pub translator: Vec<String>,
+    /// The web addresses.
+    pub www: Vec<String>,
 }
 
 /// Why a file's facts couldn't be read.
@@ -142,7 +178,7 @@ pub enum ReadError {
 
 impl MediaField {
     /// Every field, in the picker's order.
-    pub const ALL: [Self; 19] = [
+    pub const ALL: [Self; 28] = [
         Self::ExifTaken,
         Self::ExifCamera,
         Self::ExifMake,
@@ -162,6 +198,15 @@ impl MediaField {
         Self::TagYear,
         Self::TagGenre,
         Self::TagComment,
+        Self::TagPerformer,
+        Self::TagComposer,
+        Self::TagPublisher,
+        Self::TagDate,
+        Self::TagTotalTracks,
+        Self::TagTotalDiscs,
+        Self::TagDescription,
+        Self::TagTranslator,
+        Self::TagWww,
     ];
 
     /// The name a mask writes (`exif.taken`).
@@ -186,6 +231,15 @@ impl MediaField {
             Self::TagYear => "tag.year",
             Self::TagGenre => "tag.genre",
             Self::TagComment => "tag.comment",
+            Self::TagPerformer => "tag.performer",
+            Self::TagComposer => "tag.composer",
+            Self::TagPublisher => "tag.publisher",
+            Self::TagDate => "tag.date",
+            Self::TagTotalTracks => "tag.totaltracks",
+            Self::TagTotalDiscs => "tag.totaldiscs",
+            Self::TagDescription => "tag.description",
+            Self::TagTranslator => "tag.translator",
+            Self::TagWww => "tag.www",
         }
     }
 
@@ -216,7 +270,16 @@ impl MediaField {
             | Self::TagDisc
             | Self::TagYear
             | Self::TagGenre
-            | Self::TagComment => MediaSource::Tag,
+            | Self::TagComment
+            | Self::TagPerformer
+            | Self::TagComposer
+            | Self::TagPublisher
+            | Self::TagDate
+            | Self::TagTotalTracks
+            | Self::TagTotalDiscs
+            | Self::TagDescription
+            | Self::TagTranslator
+            | Self::TagWww => MediaSource::Tag,
         }
     }
 
@@ -231,7 +294,9 @@ impl MediaField {
             | Self::ExifOrientation
             | Self::TagTrack
             | Self::TagDisc
-            | Self::TagYear => FieldKind::Number,
+            | Self::TagYear
+            | Self::TagTotalTracks
+            | Self::TagTotalDiscs => FieldKind::Number,
             Self::ExifCamera
             | Self::ExifMake
             | Self::ExifModel
@@ -241,7 +306,14 @@ impl MediaField {
             | Self::TagAlbumArtist
             | Self::TagAlbum
             | Self::TagGenre
-            | Self::TagComment => FieldKind::Text,
+            | Self::TagComment
+            | Self::TagPerformer
+            | Self::TagComposer
+            | Self::TagPublisher
+            | Self::TagDate
+            | Self::TagDescription
+            | Self::TagTranslator
+            | Self::TagWww => FieldKind::Text,
         }
     }
 }
@@ -263,14 +335,23 @@ impl MediaFacts {
             MediaField::ExifHeight => number(self.height),
             MediaField::ExifOrientation => number(self.orientation),
             MediaField::TagTitle => text(self.title.as_deref()),
-            MediaField::TagArtist => text(self.artist.as_deref()),
-            MediaField::TagAlbumArtist => text(self.album_artist.as_deref()),
+            MediaField::TagArtist => joined(&self.artist),
+            MediaField::TagAlbumArtist => joined(&self.album_artist),
             MediaField::TagAlbum => text(self.album.as_deref()),
             MediaField::TagTrack => number(self.track),
             MediaField::TagDisc => number(self.disc),
             MediaField::TagYear => number(self.year),
-            MediaField::TagGenre => text(self.genre.as_deref()),
+            MediaField::TagGenre => joined(&self.genre),
             MediaField::TagComment => text(self.comment.as_deref()),
+            MediaField::TagPerformer => joined(&self.performer),
+            MediaField::TagComposer => joined(&self.composer),
+            MediaField::TagPublisher => text(self.publisher.as_deref()),
+            MediaField::TagDate => text(self.date.as_deref()),
+            MediaField::TagTotalTracks => number(self.total_tracks),
+            MediaField::TagTotalDiscs => number(self.total_discs),
+            MediaField::TagDescription => text(self.description.as_deref()),
+            MediaField::TagTranslator => joined(&self.translator),
+            MediaField::TagWww => joined(&self.www),
         }
     }
 
@@ -299,6 +380,24 @@ impl MediaFacts {
 /// `text`, cleaned, as a value.
 fn text(text: Option<&str>) -> Option<MediaValue<'_>> {
     clean(text).map(|t| MediaValue::Text(Cow::Borrowed(t)))
+}
+
+/// The non-blank `values`, cleaned and joined with `, `, as one value. A single
+/// value is borrowed.
+fn joined(values: &[String]) -> Option<MediaValue<'_>> {
+    let mut parts = values.iter().filter_map(|value| clean(Some(value)));
+    let first = parts.next()?;
+    match parts.next() {
+        None => Some(MediaValue::Text(Cow::Borrowed(first))),
+        Some(second) => {
+            let mut all = format!("{first}, {second}");
+            for part in parts {
+                all.push_str(", ");
+                all.push_str(part);
+            }
+            Some(MediaValue::Text(Cow::Owned(all)))
+        }
+    }
 }
 
 /// `text` without the spaces and NULs around it, or `None` when nothing's left.

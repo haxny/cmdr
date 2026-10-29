@@ -1,6 +1,7 @@
 //! Multi-Rename Tool (⌃M): Total Commander's mask renamer. See `DETAILS.md`.
 
 pub(crate) mod error;
+pub(crate) mod foobar;
 pub(crate) mod history;
 pub(crate) mod mask;
 pub(crate) mod media;
@@ -13,6 +14,10 @@ pub(crate) mod session;
 pub(crate) mod transform;
 pub(crate) mod transliterate;
 
+#[cfg(test)]
+mod foobar_spec_test;
+#[cfg(test)]
+mod foobar_test;
 #[cfg(test)]
 mod history_test;
 #[cfg(test)]

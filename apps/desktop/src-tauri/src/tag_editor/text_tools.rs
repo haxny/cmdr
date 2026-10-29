@@ -9,13 +9,45 @@ use std::path::{Path, PathBuf};
 
 use cmdr_media_meta::MediaFacts;
 use cmdr_tags::{FileTags, TagField};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 
 use super::session::{TagEditorError, edit_scoped};
 use super::view::TagEditorView;
 use crate::multi_rename::mask::{Mask, NumberWidth, RowFacts, RowMedia};
 use crate::multi_rename::transform::{CompiledTransform, Replace, Transform};
+
+/// One find/replace of a saved list: `Replace`'s settings. `fields: None` is every field the
+/// track has a value in, so a list saved that way keeps working when a field is added.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplaceStep {
+    pub fields: Option<Vec<TagField>>,
+    pub search: String,
+    pub replace: String,
+    pub case_sensitive: bool,
+    pub first_only: bool,
+    pub regex: bool,
+}
+
+impl ReplaceStep {
+    fn compile(&self) -> Result<CompiledTransform, TagEditorError> {
+        Transform {
+            replace: Some(Replace {
+                search: self.search.clone(),
+                replace: self.replace.clone(),
+                case_sensitive: self.case_sensitive,
+                first_only: self.first_only,
+                include_extension: false,
+                regex: self.regex,
+                substitute: false,
+            }),
+            ..Transform::default()
+        }
+        .compile()
+        .map_err(|_| TagEditorError::BadRegex)
+    }
+}
 
 /// A text tool over tag fields.
 #[derive(Debug, Clone, Deserialize, specta::Type)]
@@ -33,6 +65,9 @@ pub enum TagTextTool {
         first_only: bool,
         regex: bool,
     },
+    /// Runs `steps` one after another over every track, as ONE edit (one undo step). Each step is
+    /// `Replace`; all of them compile first, and one that doesn't is `BadRegex` with nothing changed.
+    Steps { steps: Vec<ReplaceStep> },
     /// Rebuilds `field` from a Multi-Rename `mask`. `[N]` is the field's current FIRST value (a
     /// multi-value field loses its other values: the whole field becomes the one rendered value),
     /// `[=tag.album]` and the like read the file's other fields. A file whose mask has no value
@@ -61,22 +96,29 @@ pub fn run(session_id: &str, tool: TagTextTool, scope: Option<Vec<String>>) -> R
             first_only,
             regex,
         } => {
-            let compiled = Transform {
-                replace: Some(Replace {
-                    search,
-                    replace,
-                    case_sensitive,
-                    first_only,
-                    include_extension: false,
-                    regex,
-                    substitute: false,
-                }),
-                ..Transform::default()
-            }
-            .compile()
-            .map_err(|_| TagEditorError::BadRegex)?;
+            let step = ReplaceStep {
+                fields: Some(fields),
+                search,
+                replace,
+                case_sensitive,
+                first_only,
+                regex,
+            };
+            let compiled = step.compile()?;
+            let fields = step.fields;
             edit_scoped(session_id, scope, move |_, before, _| {
-                Ok(replace_in(before, &fields, &compiled))
+                Ok(replace_in(before, fields.as_deref(), &compiled))
+            })
+        }
+        TagTextTool::Steps { steps } => {
+            let compiled = steps
+                .iter()
+                .map(|step| step.compile().map(|compiled| (step.fields.clone(), compiled)))
+                .collect::<Result<Vec<_>, _>>()?;
+            edit_scoped(session_id, scope, move |_, before, _| {
+                Ok(compiled.iter().fold(before.to_vec(), |files, (fields, compiled)| {
+                    replace_in(&files, fields.as_deref(), compiled)
+                }))
             })
         }
         TagTextTool::Format { field, mask } => {
@@ -126,12 +168,13 @@ fn map_values(files: &[FileTags], fields: &[TagField], clean: impl Fn(&str) -> S
 }
 
 /// `files` with the search run over each value of `fields`, dropping values that end up empty.
-fn replace_in(files: &[FileTags], fields: &[TagField], compiled: &CompiledTransform) -> Vec<FileTags> {
+fn replace_in(files: &[FileTags], fields: Option<&[TagField]>, compiled: &CompiledTransform) -> Vec<FileTags> {
     files
         .iter()
         .map(|file| {
             let mut out = file.clone();
-            for field in fields {
+            let listed: Vec<TagField> = fields.map_or_else(|| file.fields.keys().copied().collect(), <[_]>::to_vec);
+            for field in &listed {
                 if let Some(values) = out.fields.get_mut(field) {
                     *values = values
                         .iter()
@@ -195,20 +238,23 @@ fn folder_name(folder: Option<&Path>) -> String {
         .unwrap_or_default()
 }
 
-/// What the `[=tag.*]` placeholders read from `tags`: the text fields' first value, the track and
-/// disc as integers, and the year from the first four digits of Date.
-fn media_facts_of(tags: &FileTags) -> MediaFacts {
+/// What the `[=tag.*]` placeholders read from `tags`: the text fields' first value (the
+/// multi-value fields, performer, composer, translator and web address, all of them), the track
+/// and disc and their totals as integers, the year from the first four digits of Date, and Date
+/// as stored.
+pub(super) fn media_facts_of(tags: &FileTags) -> MediaFacts {
     let first = |field: TagField| tags.fields.get(&field).and_then(|values| values.first()).cloned();
+    let all = |field: TagField| tags.fields.get(&field).cloned().unwrap_or_default();
     // `3/12` is track 3 of 12: the N, as the mask side reads it.
     let number = |field: TagField| {
         first(field).and_then(|text| text.split('/').next().and_then(|n| n.trim().parse::<i64>().ok()))
     };
     MediaFacts {
         title: first(TagField::Title),
-        artist: first(TagField::Artist),
-        album_artist: first(TagField::AlbumArtist),
+        artist: all(TagField::Artist),
+        album_artist: all(TagField::AlbumArtist),
         album: first(TagField::Album),
-        genre: first(TagField::Genre),
+        genre: all(TagField::Genre),
         comment: first(TagField::Comment),
         track: number(TagField::Track),
         disc: number(TagField::Disc),
@@ -216,6 +262,15 @@ fn media_facts_of(tags: &FileTags) -> MediaFacts {
             let digits: String = date.chars().take(4).collect();
             digits.parse::<i64>().ok().filter(|_| digits.len() == 4)
         }),
+        performer: all(TagField::Performer),
+        composer: all(TagField::Composer),
+        publisher: first(TagField::Publisher),
+        date: first(TagField::Date),
+        total_tracks: number(TagField::TrackTotal),
+        total_discs: number(TagField::DiscTotal),
+        description: first(TagField::Description),
+        translator: all(TagField::Translator),
+        www: all(TagField::Www),
         ..MediaFacts::default()
     }
 }

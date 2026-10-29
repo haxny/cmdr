@@ -28,6 +28,8 @@ vi.mock('#lib/ipc/bindings.js', () => ({
     tagTrackAudioUrl: vi.fn(),
     releaseTagTrackAudio: vi.fn(),
     openTagsInPlayer: vi.fn(),
+    tagPlayerChoices: vi.fn(),
+    chooseTagPlayer: vi.fn(),
   },
 }))
 
@@ -42,6 +44,7 @@ import {
   listCoverCandidates,
   listTagCovers,
   openTagEditor,
+  chooseTagPlayer,
   openTagsInPlayer,
   previewTagsFromNames,
   releaseTagTrackAudio,
@@ -50,6 +53,7 @@ import {
   setCoverFromBytes,
   setCoverFromFile,
   setCoverFromPath,
+  tagPlayerChoices,
   tagTrackAudioUrl,
   undoTagApply,
   lastTagApply,
@@ -346,15 +350,40 @@ describe('releaseTagTrackAudio', () => {
 })
 
 describe('openTagsInPlayer', () => {
-  it('passes the session and the paths through', async () => {
-    vi.mocked(commands.openTagsInPlayer).mockResolvedValue({ status: 'ok', data: null })
-    expect(await openTagsInPlayer('s1', ['/books/a.mp3', '/books/b.mp3'])).toEqual({ ok: true, value: null })
-    expect(commands.openTagsInPlayer).toHaveBeenCalledWith('s1', ['/books/a.mp3', '/books/b.mp3'])
+  it('passes the session, the paths and the player through', async () => {
+    vi.mocked(commands.openTagsInPlayer).mockResolvedValue({ status: 'ok', data: { fellBack: false } })
+    expect(await openTagsInPlayer('s1', ['/books/a.mp3', '/books/b.mp3'], 'org.videolan.vlc')).toEqual({
+      ok: true,
+      value: { fellBack: false },
+    })
+    expect(commands.openTagsInPlayer).toHaveBeenCalledWith('s1', ['/books/a.mp3', '/books/b.mp3'], 'org.videolan.vlc')
+  })
+
+  it('says when the chosen app was missing', async () => {
+    vi.mocked(commands.openTagsInPlayer).mockResolvedValue({ status: 'ok', data: { fellBack: true } })
+    expect(await openTagsInPlayer('s1', ['/books/a.mp3'], 'gone.app')).toEqual({ ok: true, value: { fellBack: true } })
   })
 
   it('returns a launch that could not start as the typed error', async () => {
     const unavailable: TagEditorError = { kind: 'playerUnavailable' }
     vi.mocked(commands.openTagsInPlayer).mockResolvedValue({ status: 'error', error: unavailable })
-    expect(await openTagsInPlayer('s1', ['/books/a.mp3'])).toEqual({ ok: false, error: unavailable })
+    expect(await openTagsInPlayer('s1', ['/books/a.mp3'], 'default')).toEqual({ ok: false, error: unavailable })
+  })
+})
+
+describe('tagPlayerChoices and chooseTagPlayer', () => {
+  it('lists the apps for the session, keeping the chosen one in', async () => {
+    const apps = [{ bundleId: 'com.apple.Music', name: 'Music', isDefault: true }]
+    vi.mocked(commands.tagPlayerChoices).mockResolvedValue({ status: 'ok', data: apps })
+    expect(await tagPlayerChoices('s1', 'org.videolan.vlc')).toEqual({ ok: true, value: apps })
+    expect(commands.tagPlayerChoices).toHaveBeenCalledWith('s1', 'org.videolan.vlc')
+  })
+
+  it('answers the picked app, or null when the user cancels', async () => {
+    const picked = { bundleId: 'org.videolan.vlc', name: 'VLC', isDefault: false }
+    vi.mocked(commands.chooseTagPlayer).mockResolvedValueOnce({ status: 'ok', data: picked })
+    expect(await chooseTagPlayer()).toEqual({ ok: true, value: picked })
+    vi.mocked(commands.chooseTagPlayer).mockResolvedValueOnce({ status: 'ok', data: null })
+    expect(await chooseTagPlayer()).toEqual({ ok: true, value: null })
   })
 })

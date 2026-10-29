@@ -29,6 +29,15 @@ export const MEDIA_FIELD_LABELS: Readonly<Record<MediaField, MessageKey>> = {
   tagYear: 'multiRename.mediaField.tagYear',
   tagGenre: 'multiRename.mediaField.tagGenre',
   tagComment: 'multiRename.mediaField.tagComment',
+  tagPerformer: 'multiRename.mediaField.tagPerformer',
+  tagComposer: 'multiRename.mediaField.tagComposer',
+  tagPublisher: 'multiRename.mediaField.tagPublisher',
+  tagDate: 'multiRename.mediaField.tagDate',
+  tagTotalTracks: 'multiRename.mediaField.tagTotalTracks',
+  tagTotalDiscs: 'multiRename.mediaField.tagTotalDiscs',
+  tagDescription: 'multiRename.mediaField.tagDescription',
+  tagTranslator: 'multiRename.mediaField.tagTranslator',
+  tagWww: 'multiRename.mediaField.tagWww',
 }
 
 /** Where a field comes from: the mask name's part before the dot. */

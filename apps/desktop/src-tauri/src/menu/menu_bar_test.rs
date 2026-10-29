@@ -452,6 +452,7 @@ fn every_main_menu_key_a_tags_window_command_holds_reaches_the_tags_window() {
         ("Shift+F8", "tags.removeExtras"),
         ("Cmd+S", "tags.write"),
         ("Cmd+Z", "tags.undo"),
+        ("Cmd+F", "tags.filter"),
         ("Escape", "tags.close"),
         ("Cmd+W", "tags.close"),
         ("Tab", "tags.switchPane"),
@@ -474,7 +475,7 @@ fn every_main_menu_key_a_tags_window_command_holds_reaches_the_tags_window() {
         assert_eq!(menu_key_command_of(id), Some(*command), "`{id}` holds `{accelerator}`");
         routed += 1;
     }
-    assert_eq!(routed, 10, "F2–F8, ⇧F2, ⇧F4, ⇧F8");
+    assert_eq!(routed, 11, "F2–F8, ⇧F2, ⇧F4, ⇧F8, ⌘F");
 }
 
 /// `MenuState.items` is keyed by ID, so a second item with an ID already taken would silently

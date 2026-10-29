@@ -349,6 +349,7 @@ export const COMMAND_IDS = [
   'tags.review',
   'tags.undo',
   'tags.redo',
+  'tags.filter',
 ] as const
 
 /** Closed union of every command id (invariant A3). */

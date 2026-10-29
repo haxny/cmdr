@@ -827,11 +827,36 @@ fn book(tag: &str) -> (TestDir, TestListingGuard, String) {
 }
 
 #[test]
-fn a_books_tracks_show_their_path_below_the_listing_folder_and_its_cover_comes_from_the_book() {
+fn one_folder_opened_from_its_parent_shows_bare_file_names() {
+    let tag = "tag-editor-flat-book";
+    let dir = TestDir::new(tag);
+    for name in ["Book/01.mp3", "Book/02.mp3"] {
+        std::fs::create_dir_all(dir.join(name).parent().expect("a parent")).expect("dirs are made");
+        std::fs::write(dir.join(name), mp3_frames()).expect("writes");
+    }
+    let listing = TestListing::new()
+        .volume("root")
+        .path(dir.to_path_buf())
+        .entries(list_directory_core(&dir, &crate::listing_host::backends::AppListings).expect("the dir lists"))
+        .insert(crate::listing_host::listings(), tag);
+    let opened = crate::multi_rename::session::open_for_tags(listing.id(), true, Some(&[0]), 0).expect("opens");
+    let id = opened.session_id;
+    let view = open(&id, false).expect("the tag session opens");
+    let names: Vec<&str> = view.tracks.iter().map(|row| row.file_name.as_str()).collect();
+    assert_eq!(names, vec!["01.mp3", "02.mp3"]);
+    // The session keeps naming the files by their path below its folder.
+    let files = crate::multi_rename::session::files_of(&id).expect("files");
+    assert_eq!(files.names.to_vec(), vec!["Book/01.mp3", "Book/02.mp3"]);
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn a_books_tracks_show_their_path_below_the_folder_they_share_and_its_cover_comes_from_the_book() {
     let (dir, _listing, id) = book("tag-editor-book");
     let view = open(&id, false).expect("the tag session opens");
     let names: Vec<&str> = view.tracks.iter().map(|row| row.file_name.as_str()).collect();
-    assert_eq!(names, vec!["Book/Disc 1/01.mp3", "Book/Disc 2/01.mp3"]);
+    assert_eq!(names, vec!["Disc 1/01.mp3", "Disc 2/01.mp3"]);
     assert!(view.tracks[0].path.ends_with("Book/Disc 1/01.mp3"));
 
     let files = crate::multi_rename::session::files_of(&id).expect("files");

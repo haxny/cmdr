@@ -3,7 +3,8 @@
      * The placeholder buttons beside the masks: `[N]` `[E]` `[P]` `[C]` `[YMD]` insert at the name
      * mask's caret, and `media ▾` (⌘⌥X) opens the field picker (`MediaFieldPicker`), whose picks go
      * in at the caret one after another, a space between them. Each button's tooltip is a
-     * `PlaceholderTip`, its examples rendered by the engine.
+     * `PlaceholderTip`, its examples rendered by the engine. With a foobar2000 name mask they'd be
+     * wrong, so a few foobar fields (`FOOBAR_INSERTS`) take their place, and ⌘⌥X opens nothing.
      */
     import { tick } from 'svelte'
     import Chip from '#lib/ui/Chip.svelte'
@@ -11,6 +12,7 @@
     import type { MediaField } from '#lib/tauri-commands/index.js'
     import type { MultiRenameState } from './multi-rename-state.svelte'
     import { insertAtCaret } from './spec'
+    import { FOOBAR_INSERTS } from './mask-syntax'
     import { MEDIA_HELP, PLACEHOLDER_HELP } from './placeholder-help'
     import PlaceholderTip from './PlaceholderTip.svelte'
     import MediaFieldPicker from './MediaFieldPicker.svelte'
@@ -27,6 +29,8 @@
     }
 
     const { tool, maskInput, examples, announce }: Props = $props()
+
+    const foobar = $derived(tool.spec.maskSyntax === 'foobar')
 
     /** Each button's tooltip body, which the tooltip adopts on show. */
     const tipContent = $state<Partial<Record<string, HTMLDivElement>>>({})
@@ -52,6 +56,7 @@
 
     /** ⌘⌥X and the button: opens the picker, or closes it when it's open. */
     export function togglePicker(): void {
+        if (foobar && !pickerOpen) return
         if (pickerOpen) {
             closePicker('mask')
             return
@@ -97,6 +102,13 @@
     }
 </script>
 
+{#if foobar}
+    <div class="placeholders" role="group" aria-label={tString('multiRename.foobarFields')}>
+        {#each FOOBAR_INSERTS as field (field)}
+            <Chip variant="insert" size="field" mono label={field} onActivate={() => { insertPlaceholder(field) }} />
+        {/each}
+    </div>
+{:else}
 <div class="placeholders" role="group" aria-label={tString('multiRename.insertPlaceholder')}>
     {#each PLACEHOLDER_HELP as help (help.placeholder)}
         <Chip
@@ -127,7 +139,8 @@
         bind:contentEl={tipContent[MEDIA_HELP.placeholder]}
     />
 </div>
-{#if mediaChip}
+{/if}
+{#if mediaChip && !foobar}
     <MediaFieldPicker
         anchor={mediaChip}
         open={pickerOpen}

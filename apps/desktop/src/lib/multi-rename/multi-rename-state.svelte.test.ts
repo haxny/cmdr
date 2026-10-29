@@ -675,13 +675,25 @@ describe('createMultiRenameState', () => {
     it('hands the backend the seeds, named in the UI language, every time it reads the list', async () => {
       const tool = createMultiRenameState('S')
       await tool.loadPresets()
-      const seeds = ipc.getMultiRenamePresets.mock.calls[0][0] as { name: string; spec: { nameMask: string } }[]
+      const seeds = ipc.getMultiRenamePresets.mock.calls[0][0] as {
+        name: string
+        version: number
+        spec: { nameMask: string }
+      }[]
       expect(seeds.map((seed) => seed.name)).toEqual([
         'Date and time',
         'Remove diacritics',
         'Greek to Latin',
         'Normalize Unicode',
+        'Author - (year) Album - track',
+        'Artist - Album',
+        'Author - (year) Album - track title',
+        '… (read by) - disc track title',
+        '… (read by) - disc track',
+        '… (read by, publisher) - disc track',
+        'SFT radio show',
       ])
+      expect(seeds.map((seed) => seed.version)).toEqual([1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2])
       expect(seeds[0].spec.nameMask).toBe('[Y-M-D h.m.s]')
       tool.dispose()
     })

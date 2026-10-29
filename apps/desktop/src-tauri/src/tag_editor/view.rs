@@ -60,6 +60,8 @@ pub struct TrackRow {
     pub path: String,
     pub file_name: String,
     pub track: Option<String>,
+    /// The Disc tag as written (`1`, `CD2`, `1/2`).
+    pub disc: Option<String>,
     pub title: Option<String>,
     pub duration_ms: Option<u64>,
     /// Edited tags differ from the ones on disk.
@@ -254,6 +256,7 @@ fn track_row(path: &Path, entry: &Entry) -> TrackRow {
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_default(),
         track: None,
+        disc: None,
         title: None,
         duration_ms: None,
         changed: false,
@@ -266,6 +269,7 @@ fn track_row(path: &Path, entry: &Entry) -> TrackRow {
         },
         Entry::Loaded(loaded) => TrackRow {
             track: first_value(&loaded.edited, TagField::Track),
+            disc: first_value(&loaded.edited, TagField::Disc),
             title: first_value(&loaded.edited, TagField::Title),
             duration_ms: loaded.duration_ms,
             changed: loaded.changed(),

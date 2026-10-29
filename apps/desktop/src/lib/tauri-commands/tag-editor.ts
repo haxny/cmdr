@@ -5,6 +5,7 @@ import type { UnlistenFn } from '@tauri-apps/api/event'
 import {
   commands,
   events,
+  type AppChoice,
   type ApplyRequest,
   type ContentKind,
   type CoverCandidate,
@@ -13,6 +14,10 @@ import {
   type LastTagApply,
   type NamePattern,
   type NamePreviewRow,
+  type PlayerOpened,
+  type ReplacePreset,
+  type ReplacePresetRefusal,
+  type ReplaceStep,
   type RestoreReport,
   type SideFileChange,
   type SideFileSeen,
@@ -33,6 +38,7 @@ import {
 } from '#lib/ipc/bindings.js'
 
 export type {
+  AppChoice,
   ApplyRequest,
   LastTagApply,
   CoverCandidate,
@@ -40,6 +46,10 @@ export type {
   FileChangeView,
   NamePattern,
   NamePreviewRow,
+  PlayerOpened,
+  ReplacePreset,
+  ReplacePresetRefusal,
+  ReplaceStep,
   RestoreReport,
   SideFileChange,
   SideFileSeen,
@@ -136,6 +146,31 @@ export async function runTagTextTool(
   scope: string[] | null = null,
 ): Promise<TagEditorResult<TagEditorView>> {
   return result(await commands.runTagTextTool(sessionId, tool, scope))
+}
+
+/** A save the lists refused: `refusal` says why (`listFull`, or `empty` for no name or no step). */
+export class ReplacePresetRefused extends Error {
+  constructor(readonly refusal: ReplacePresetRefusal) {
+    super(`The Replace list wasn't saved: ${refusal.type}`)
+    this.name = 'ReplacePresetRefused'
+  }
+}
+
+/** The saved F4 Replace lists, top to bottom. The first call on a new install also brings in the built-ins. */
+export async function getTagReplacePresets(): Promise<ReplacePreset[]> {
+  return commands.getTagReplacePresets()
+}
+
+/** Saves a list at the end; one with the same name is replaced in place. Answers the lists after, or throws {@link ReplacePresetRefused}. */
+export async function saveTagReplacePreset(preset: ReplacePreset): Promise<ReplacePreset[]> {
+  const res = await commands.saveTagReplacePreset(preset)
+  if (res.status === 'error') throw new ReplacePresetRefused(res.error)
+  return res.data
+}
+
+/** Deletes a list by id (a built-in stays gone). Answers the lists after. */
+export async function deleteTagReplacePreset(id: string): Promise<ReplacePreset[]> {
+  return commands.deleteTagReplacePreset(id)
 }
 
 /**
@@ -266,12 +301,26 @@ export async function releaseTagTrackAudio(url: string): Promise<void> {
 }
 
 /**
- * Opens tracks of the session in foobar2000 when it's installed, otherwise each in its default app. Resolves once
- * the launch is asked for; `unknownTrack` for a path outside the session, `playerUnavailable` when nothing could
- * start.
+ * Opens tracks of the session in the app `player` names (`'default'`: each in its default app; else a bundle id).
+ * Resolves once the launch is asked for; `fellBack` says the chosen app wasn't installed, so the default was used.
+ * `unknownTrack` for a path outside the session, `playerUnavailable` when nothing could start.
  */
-export async function openTagsInPlayer(sessionId: string, paths: string[]): Promise<TagEditorResult<null>> {
-  return result(await commands.openTagsInPlayer(sessionId, paths))
+export async function openTagsInPlayer(
+  sessionId: string,
+  paths: string[],
+  player: string,
+): Promise<TagEditorResult<PlayerOpened>> {
+  return result(await commands.openTagsInPlayer(sessionId, paths, player))
+}
+
+/** The apps that can open the session's tracks (the system default first), plus `player`'s app when it is installed. */
+export async function tagPlayerChoices(sessionId: string, player: string): Promise<TagEditorResult<AppChoice[]>> {
+  return result(await commands.tagPlayerChoices(sessionId, player))
+}
+
+/** Asks the user for a player app with the system's open panel; `null` when they cancel. */
+export async function chooseTagPlayer(): Promise<TagEditorResult<AppChoice | null>> {
+  return result(await commands.chooseTagPlayer())
 }
 
 /** A Multi-Rename answer for the Tags window's session calls. */

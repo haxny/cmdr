@@ -1,0 +1,37 @@
+[
+  {
+    "nameKey": "multiRename.preset.foobarAuthorYearAlbumTrack",
+    "pattern": "[%album artist% - ]'('%year%')' %album% - %track%",
+    "expected": "Anne Frank - (1947) Denik - 03.mp3"
+  },
+  {
+    "nameKey": "multiRename.preset.foobarArtistAlbum",
+    "pattern": "[%artist% -] %album%",
+    "expected": "Anne Frank - Denik.mp3"
+  },
+  {
+    "nameKey": "multiRename.preset.foobarAuthorYearAlbumTrackTitle",
+    "pattern": "[%album artist% - ]'('%year%')' %album% - %track% %title%",
+    "expected": "Anne Frank - (1947) Denik - 03 Kapitola treti.mp3"
+  },
+  {
+    "nameKey": "multiRename.preset.foobarReadByDiscTrackTitle",
+    "pattern": "[%album artist% - ]'('%year%')' %album% '('cte %performer%')' - %disc%$num(%tracknumber%,2) %title%",
+    "expected": "Anne Frank - (1947) Denik (cte Vera Sluneckova) - 103 Kapitola treti.mp3"
+  },
+  {
+    "nameKey": "multiRename.preset.foobarReadByDiscTrack",
+    "pattern": "[%album artist% - ]'('%year%')' %album% '('cte %performer%')' - %disc%$num(%tracknumber%,2)",
+    "expected": "Anne Frank - (1947) Denik (cte Vera Sluneckova) - 103.mp3"
+  },
+  {
+    "nameKey": "multiRename.preset.foobarReadByPublisherDiscTrack",
+    "pattern": "[%album artist% - ]'('%year%')' %album% '('cte %performer%, %publisher%')' - %disc%$num(%tracknumber%,2)",
+    "expected": "Anne Frank - (1947) Denik (cte Vera Sluneckova, audioteka 2011) - 103.mp3"
+  },
+  {
+    "nameKey": "multiRename.preset.foobarSftRadioShow",
+    "pattern": "SFT $replace(%date%,-,) '('[$num(%discnumber%,1)$num(%tracknumber%,2)]')' %title% '('%artist%')'",
+    "expected": "SFT 19470625 (103) Kapitola treti (Anne Frank).mp3"
+  }
+]

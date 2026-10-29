@@ -57,26 +57,26 @@ export function visibleRowCount(list: HTMLElement | undefined, rowHeight: number
   return Math.max(1, Math.floor(list.clientHeight / rowHeight))
 }
 
-/** Where the in-place editor sits, in the scroller's coordinates; `height` `null` lets a multiline box size itself. */
+/** Where the in-place editor sits, in the scroller's coordinates: exactly the cell's box (a multiline box may grow). */
 export interface EditorPlace {
   top: number
   left: number
   width: number
-  height: number | null
+  height: number
 }
 
 /** The narrowest the editor gets, so a squeezed column still leaves room to type. */
 const EDITOR_MIN_WIDTH = 40
 
-/** Where the in-place editor sits: over `cell`, in the coordinates of the scrolling `container`. */
-export function editorBox(container: HTMLElement, cell: HTMLElement, height: number | null): EditorPlace {
+/** Where the in-place editor sits: exactly over `cell`, in the coordinates of the scrolling `container`. */
+export function editorBox(container: HTMLElement, cell: HTMLElement): EditorPlace {
   const outer = container.getBoundingClientRect()
   const inner = cell.getBoundingClientRect()
   return {
     top: inner.top - outer.top + container.scrollTop,
     left: inner.left - outer.left + container.scrollLeft,
     width: Math.max(inner.width, EDITOR_MIN_WIDTH),
-    height,
+    height: inner.height,
   }
 }
 

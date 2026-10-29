@@ -64,8 +64,8 @@ fn simple_tags_fill_the_text_fields() {
         "the track's title, not the album's"
     );
     assert_eq!(facts.album.as_deref(), Some("Discovery"));
-    assert_eq!(facts.artist.as_deref(), Some("Daft Punk"));
-    assert_eq!(facts.genre.as_deref(), Some("House"));
+    assert_eq!(facts.artist, vec!["Daft Punk"]);
+    assert_eq!(facts.genre, vec!["House"]);
     assert_eq!(facts.comment.as_deref(), Some("Remastered"));
     assert_eq!(facts.track, Some(3));
     assert_eq!(facts.year, Some(2001));

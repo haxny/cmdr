@@ -210,6 +210,34 @@
   "@multiRename.preset.normalizeUnicode": {
     "description": "Name of a preset Cmdr starts the Presets list with, saved in this language the first time the list loads; the user can rename or delete it like their own. It only stores accented letters in the single-character form Windows, Linux, and websites expect; the names look the same."
   },
+  "multiRename.preset.foobarAuthorYearAlbumTrack": "Author - (year) Album - track",
+  "@multiRename.preset.foobarAuthorYearAlbumTrack": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): author, year, album and track number, like Anne Frank - (1947) Denik - 03. The author part is left out when the album artist is empty. Keep the dashes and the parentheses."
+  },
+  "multiRename.preset.foobarArtistAlbum": "Artist - Album",
+  "@multiRename.preset.foobarArtistAlbum": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): artist and album, like Anne Frank - Denik. Keep the dash."
+  },
+  "multiRename.preset.foobarAuthorYearAlbumTrackTitle": "Author - (year) Album - track title",
+  "@multiRename.preset.foobarAuthorYearAlbumTrackTitle": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): author, year, album, track number and title, like Anne Frank - (1947) Denik - 03 Kapitola treti. Keep the dashes and the parentheses."
+  },
+  "multiRename.preset.foobarReadByDiscTrackTitle": "… (read by) - disc track title",
+  "@multiRename.preset.foobarReadByDiscTrackTitle": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator in parentheses, then disc, track number and title, like Anne Frank - (1947) Denik (cte Vera Sluneckova) - 103 Kapitola treti. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
+  },
+  "multiRename.preset.foobarReadByDiscTrack": "… (read by) - disc track",
+  "@multiRename.preset.foobarReadByDiscTrack": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator in parentheses, then disc and track number, like Anne Frank - (1947) Denik (cte Vera Sluneckova) - 103. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
+  },
+  "multiRename.preset.foobarReadByPublisherDiscTrack": "… (read by, publisher) - disc track",
+  "@multiRename.preset.foobarReadByPublisherDiscTrack": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): the author, year and album, then the narrator and the publisher in parentheses, then disc and track number, like Anne Frank - (1947) Denik (cte Vera Sluneckova, audioteka 2011) - 103. The ellipsis stands for the author, year and album. \"read by\" is the narrator of an audiobook."
+  },
+  "multiRename.preset.foobarSftRadioShow": "SFT radio show",
+  "@multiRename.preset.foobarSftRadioShow": {
+    "description": "Name of a preset Cmdr adds to the Presets list once, saved in this language; the user can rename or delete it like their own. It names audio files from their tags with a foobar2000 pattern (diacritics removed): a radio show recording: SFT, date, disc and track number in parentheses, title and artist in parentheses, like SFT 19470625 (103) Kapitola treti (Anne Frank): the date without dashes, as file names carry it. SFT is a fixed label; keep it."
+  },
   "multiRename.presetName": "Preset name",
   "@multiRename.presetName": {
     "description": "Label of the name field in the small popup that saves the current fields as a preset (Cmd+S) or renames a saved one."
@@ -269,6 +297,66 @@
   "multiRename.error.badRegex": "The regular expression isn’t valid",
   "@multiRename.error.badRegex": {
     "description": "Shown when the search is a regular expression that can't be parsed."
+  },
+  "multiRename.error.foobar.unknownField": "Cmdr doesn’t know the field %{name}% (character {position})",
+  "@multiRename.error.foobar.unknownField": {
+    "description": "Shown under the name mask when a foobar2000 pattern names a field Cmdr can’t fill. {name} is the field name as typed between the percent signs; {position} is where it starts in the mask, counting characters from 1. Keep %{name}% as is: it’s foobar2000 syntax."
+  },
+  "multiRename.error.foobar.unknownFunction": "Cmdr doesn’t know the function ${name} (character {position})",
+  "@multiRename.error.foobar.unknownFunction": {
+    "description": "Shown when a foobar2000 pattern calls a function Cmdr doesn’t have. {name} is the function name as typed after the dollar sign; {position} is where it starts, counting characters from 1. Keep ${name} as is: it’s foobar2000 syntax."
+  },
+  "multiRename.error.foobar.badArguments": "${function} got the wrong number of values (character {position})",
+  "@multiRename.error.foobar.badArguments": {
+    "description": "Shown when a foobar2000 function in the pattern has too many or too few comma-separated values in its parentheses. {function} is its name; {position} is where it starts, counting characters from 1."
+  },
+  "multiRename.error.foobar.unclosed": "{what, select, field {A field is missing its closing “%”} bracket {A “[” is missing its closing “]”} quote {A quote is missing its closing apostrophe} function {A function is missing its closing “)”} other {A “(” is missing its closing “)”}} (character {position})",
+  "@multiRename.error.foobar.unclosed": {
+    "description": "Shown when a foobar2000 pattern opens something it never closes. {what} picks the sentence: a %field%, a [section], a 'quoted text', a $function( call, or a plain parenthesis inside a function. {position} is where it opens, counting characters from 1."
+  },
+  "multiRename.error.foobar.tooDeep": "The pattern nests too many sections and functions inside each other (character {position})",
+  "@multiRename.error.foobar.tooDeep": {
+    "description": "Shown when a foobar2000 pattern nests [sections] and $functions( ) more than 32 levels deep. {position} is where the level too many opens, counting characters from 1."
+  },
+  "multiRename.syntax.label": "Name mask syntax",
+  "@multiRename.syntax.label": {
+    "description": "Accessible name of the two-option switch beside the Multi-rename name mask that picks how the mask is read: Cmdr’s own [N]-style placeholders, or a foobar2000 title-formatting pattern."
+  },
+  "multiRename.syntax.cmdr": "Cmdr",
+  "@multiRename.syntax.cmdr": {
+    "description": "Option of the name mask syntax switch: the mask uses Cmdr’s placeholders like [N] and [C]. The app’s name; not translated."
+  },
+  "multiRename.syntax.foobar": "foobar2000",
+  "@multiRename.syntax.foobar": {
+    "description": "Option of the name mask syntax switch: the mask is a pattern written as in the foobar2000 music player (%artist%, $num(…)). A product name, lowercase as its makers write it; not translated."
+  },
+  "multiRename.syntax.cmdrTooltip": "Placeholders like [N], [C], and [=tag.title]",
+  "@multiRename.syntax.cmdrTooltip": {
+    "description": "Tooltip of the Cmdr option of the name mask syntax switch. Keep the placeholders as they are."
+  },
+  "multiRename.syntax.foobarTooltip": "A foobar2000 pattern as written in foobar: %artist%, [ … ], $num(…)",
+  "@multiRename.syntax.foobarTooltip": {
+    "description": "Tooltip of the foobar2000 option of the name mask syntax switch. Keep the pattern pieces as they are."
+  },
+  "multiRename.syntax.switched": "The name mask looks like a foobar2000 pattern, so Cmdr reads it as one.",
+  "@multiRename.syntax.switched": {
+    "description": "Shown above the preview right after the user typed or pasted a name mask containing %field% or $function(, which made Cmdr switch the mask to foobar2000 syntax on its own. A link to switch back follows (multiRename.syntax.useCmdr)."
+  },
+  "multiRename.syntax.useCmdr": "Use Cmdr syntax",
+  "@multiRename.syntax.useCmdr": {
+    "description": "Link after multiRename.syntax.switched: switches the name mask back to Cmdr’s placeholders, keeping the text the user typed."
+  },
+  "multiRename.waitingForMask": "Fix the mask to see the new names",
+  "@multiRename.waitingForMask": {
+    "description": "Shown in the Multi-rename footer instead of the counts while a mask or the search can’t be read: every file keeps its current name in the list until the mask is fixed."
+  },
+  "multiRename.status.waitingForMask": "Waiting for a valid mask",
+  "@multiRename.status.waitingForMask": {
+    "description": "Screen-reader label of a preview row while the mask can’t be read: the row shows the file’s current name, not a new one."
+  },
+  "multiRename.foobarFields": "Insert foobar2000 field",
+  "@multiRename.foobarFields": {
+    "description": "Accessible name of the row of buttons beside the name mask in foobar2000 mode; each inserts one foobar2000 field like %album% at the caret."
   },
   "multiRename.error.gone": "This folder isn’t open any more. Close Multi-rename and open it again.",
   "@multiRename.error.gone": {
@@ -540,6 +628,42 @@
   "multiRename.mediaField.tagComment": "Comment",
   "@multiRename.mediaField.tagComment": {
     "description": "Name of a music field Multi-rename can put in a file name: the free-text comment in the file's tags."
+  },
+  "multiRename.mediaField.tagPerformer": "Performer",
+  "@multiRename.mediaField.tagPerformer": {
+    "description": "Name of a music field Multi-rename can put in a file name: the performer (for an audiobook, the narrator)."
+  },
+  "multiRename.mediaField.tagComposer": "Composer",
+  "@multiRename.mediaField.tagComposer": {
+    "description": "Name of a music field Multi-rename can put in a file name: the composer."
+  },
+  "multiRename.mediaField.tagPublisher": "Publisher",
+  "@multiRename.mediaField.tagPublisher": {
+    "description": "Name of a music field Multi-rename can put in a file name: the publisher or label."
+  },
+  "multiRename.mediaField.tagDate": "Date",
+  "@multiRename.mediaField.tagDate": {
+    "description": "Name of a music field Multi-rename can put in a file name: the full release date as the file stores it, like “2010-09-20” (the year alone is “Year”)."
+  },
+  "multiRename.mediaField.tagTotalTracks": "Total tracks",
+  "@multiRename.mediaField.tagTotalTracks": {
+    "description": "Name of a music field Multi-rename can put in a file name: how many tracks the album has, the 12 in “3/12”."
+  },
+  "multiRename.mediaField.tagTotalDiscs": "Total discs",
+  "@multiRename.mediaField.tagTotalDiscs": {
+    "description": "Name of a music field Multi-rename can put in a file name: how many discs the album has, the 2 in “1/2”."
+  },
+  "multiRename.mediaField.tagDescription": "Description",
+  "@multiRename.mediaField.tagDescription": {
+    "description": "Name of a music field Multi-rename can put in a file name: the long description in the file's tags."
+  },
+  "multiRename.mediaField.tagTranslator": "Translator",
+  "@multiRename.mediaField.tagTranslator": {
+    "description": "Name of a music field Multi-rename can put in a file name: the translator, for a translated audiobook or book."
+  },
+  "multiRename.mediaField.tagWww": "Web address",
+  "@multiRename.mediaField.tagWww": {
+    "description": "Name of a music field Multi-rename can put in a file name: the web address in the file's tags."
   },
   "multiRename.mediaPicker.title": "Insert a field",
   "@multiRename.mediaPicker.title": {
@@ -1194,6 +1318,69 @@
   "@multiRename.tags.album.colValue": {
     "description": "Column header in the album pane of the tag editor window, above the tag values the files share."
   },
+  "multiRename.tags.album.scopeFiltered": "{total, plural, one {{countText} of {totalText} track (filtered)} other {{countText} of {totalText} tracks (filtered)}}",
+  "@multiRename.tags.album.scopeFiltered": {
+    "description": "Shown at the right of the album pane’s header in the tag editor window while a filter narrows the tracks pane and no track is selected: the album pane then shows and edits the tags of the tracks the filter shows only. Screen readers read it as the pane’s description.",
+    "placeholders": {
+      "countText": "how many tracks the filter shows, formatted (for example 12)",
+      "total": "how many tracks the window lists, for the plural",
+      "totalText": "the same number, formatted (for example 98)"
+    }
+  },
+  "multiRename.tags.filter.label": "Filter the tracks",
+  "@multiRename.tags.filter.label": {
+    "description": "Accessible name of the filter field that Command+F opens above the list of audio files (tracks) in the tag editor window. Typing narrows the list to the tracks whose number, disc, title, length, or file name holds the text."
+  },
+  "multiRename.tags.filter.placeholder": "Filter, or title: text",
+  "@multiRename.tags.filter.placeholder": {
+    "description": "Placeholder inside the tracks filter field of the tag editor window. Hints that plain text matches any column and that a column name with a colon (title:, disc:, #:, file:) matches one column. Keep `title:` as is: it is the syntax the user types."
+  },
+  "multiRename.tags.filter.count": "{total, plural, one {{shownText} of {totalText} track} other {{shownText} of {totalText} tracks}}",
+  "@multiRename.tags.filter.count": {
+    "description": "Beside the tracks filter field of the tag editor window, announced to screen readers as it changes: how many tracks the filter shows of all the tracks listed.",
+    "placeholders": {
+      "shownText": "how many tracks match the filter, formatted (for example 12)",
+      "total": "how many tracks the window lists, for the plural",
+      "totalText": "the same number, formatted (for example 98)"
+    }
+  },
+  "multiRename.tags.filter.hiddenSelected": "{count, plural, one {{countText} selected track hidden} other {{countText} selected tracks hidden}}",
+  "@multiRename.tags.filter.hiddenSelected": {
+    "description": "After the count beside the tracks filter field of the tag editor window: selected tracks that the filter hides. They stay selected, and the tag tools still work on them.",
+    "placeholders": {
+      "countText": "how many selected tracks the filter hides, formatted (for example 3)"
+    }
+  },
+  "multiRename.tags.filter.countWithHidden": "{count}, {hidden}",
+  "@multiRename.tags.filter.countWithHidden": {
+    "description": "Beside the tracks filter field of the tag editor window, when the filter hides some selected tracks: the count of shown tracks, then how many selected ones are hidden. Change the punctuation if your language joins two phrases differently.",
+    "placeholders": {
+      "count": "the shown count, like “12 of 98 tracks” (multiRename.tags.filter.count)",
+      "hidden": "the hidden selection, like “3 selected tracks hidden” (multiRename.tags.filter.hiddenSelected)"
+    }
+  },
+  "multiRename.tags.cover.useForAllHidden": "{count, plural, one {Use for the {countText} file, hidden one too} other {Use for all {countText} files, hidden ones too}}",
+  "@multiRename.tags.cover.useForAllHidden": {
+    "description": "Button in the dialog showing one cover large, in the tag editor window, while a filter hides some tracks: the picture still becomes the cover of every file, including the ones the filter hides. Nothing is written into the files until Write.",
+    "placeholders": {
+      "countText": "how many files get the cover, formatted (for example 22)"
+    }
+  },
+  "multiRename.tags.cover.allFilesFiltered": "{count, plural, one {A cover goes to every file, including the {countText} the filter hides.} other {A cover goes to every file, including the {countText} the filter hides.}}",
+  "@multiRename.tags.cover.allFilesFiltered": {
+    "description": "Hint in the cover section of the tag editor window while a filter in the tracks pane hides some tracks: picking, pasting, or dropping a cover still changes every file, not only the shown ones.",
+    "placeholders": {
+      "countText": "how many tracks the filter hides, formatted (for example 4)"
+    }
+  },
+  "multiRename.tags.filter.noneShown": "No track matches the filter, so nothing was changed. Change the filter, or press Esc in it to show every track.",
+  "@multiRename.tags.filter.noneShown": {
+    "description": "Status line in the tag editor window: a tag tool or an edit was pressed while the tracks filter matched no track and no track was selected, so it did nothing rather than change every track."
+  },
+  "multiRename.tags.clearField.shown": "{count, plural, one {Empties {field} on the track the filter shows.} other {Empties {field} on the {countText} tracks the filter shows.}}",
+  "@multiRename.tags.clearField.shown": {
+    "description": "What the Clear a field dialog will do when no track is selected and a filter narrows the tracks pane. {field} is a tag field’s name, like Title; {countText} is the formatted number of tracks the filter shows."
+  },
   "multiRename.tags.album.scope": "{total, plural, one {{countText} of {totalText} track} other {{countText} of {totalText} tracks}}",
   "@multiRename.tags.album.scope": {
     "description": "Shown at the right of the album pane’s header in the tag editor window while some tracks are selected in the tracks pane: the album pane then shows and edits the tags of the selected tracks only. Screen readers read it as the pane’s description.",
@@ -1228,6 +1415,10 @@
   "@multiRename.tags.col.number": {
     "description": "Column heading in the track list of the tag editor window: the track number."
   },
+  "multiRename.tags.col.disc": "Disc",
+  "@multiRename.tags.col.disc": {
+    "description": "Column heading in the track list of the tag editor window: the disc number of each file. Narrow; sorts by disc, then track."
+  },
   "multiRename.tags.col.title": "Title",
   "@multiRename.tags.col.title": {
     "description": "Column heading in the track list of the tag editor window: the title tag of each file."
@@ -1250,6 +1441,17 @@
   "multiRename.tags.track.cellNumber": "Track number column",
   "@multiRename.tags.track.cellNumber": {
     "description": "Read aloud by screen readers in the track list of the tag editor window when the left arrow moves the active cell to the track number column; typing and Delete then act on the track number."
+  },
+  "multiRename.tags.track.cellDisc": "Disc column",
+  "@multiRename.tags.track.cellDisc": {
+    "description": "Read aloud by screen readers in the track list of the tag editor window when the arrow keys move the active cell to the disc column; typing and Delete then act on the disc."
+  },
+  "multiRename.tags.track.discLabel": "Disc of {fileName}",
+  "@multiRename.tags.track.discLabel": {
+    "description": "Accessible name of the box that edits one file's disc number in the track list of the tag editor window. Only read aloud by screen readers.",
+    "placeholders": {
+      "fileName": "the name of the audio file the disc belongs to"
+    }
   },
   "multiRename.tags.track.cellTitle": "Title column",
   "@multiRename.tags.track.cellTitle": {
@@ -1415,6 +1617,44 @@
   "@multiRename.tags.cover.cantShow": {
     "description": "Shown in the dialog showing one cover large, in the tag editor window, when the picture's data can't be displayed."
   },
+  "multiRename.tags.cover.lookAlike": "{count, plural, one {{countText} covers look almost the same} other {{countText} covers look almost the same}}",
+  "@multiRename.tags.cover.lookAlike": {
+    "description": "In the cover section of the tag editor window, above a single cover tile: every file carries a cover, and they are the same picture saved with different bytes (re-encoded or resized), so they show as one. Always two or more.",
+    "placeholders": {
+      "count": "how many files carry one of these covers, which picks the plural form",
+      "countText": "the formatted number of covers, like 50"
+    }
+  },
+  "multiRename.tags.cover.lookAlikeSomeNone": "{count, plural, one {{countText} covers look almost the same} other {{countText} covers look almost the same}}; {none, plural, one {{noneText} file has none} other {{noneText} files have none}}",
+  "@multiRename.tags.cover.lookAlikeSomeNone": {
+    "description": "In the cover section of the tag editor window, above a single cover tile: the files that have a cover carry the same picture saved with different bytes (re-encoded or resized), so they show as one, and the other files have no cover at all.",
+    "placeholders": {
+      "count": "how many files carry one of these covers (two or more), which picks the plural form",
+      "countText": "the formatted number of covers, like 24",
+      "none": "how many files have no cover, which picks the plural form",
+      "noneText": "the formatted number of files without a cover, like 26"
+    }
+  },
+  "multiRename.tags.cover.useLargest": "{count, plural, one {Use it for the {countText} file} other {Use it for all {countText} files}}",
+  "@multiRename.tags.cover.useLargest": {
+    "description": "Button beside \"N covers look almost the same\" in the tag editor window: gives every file (also those without a cover) the copy of that picture with the most pixels, so all files carry one identical cover. Nothing is written into the files until Write.",
+    "placeholders": {
+      "count": "how many files get the cover, which picks the plural form",
+      "countText": "the formatted number of files, like 50"
+    }
+  },
+  "multiRename.tags.cover.more": "{count, plural, one {{countText} more} other {{countText} more}}",
+  "@multiRename.tags.cover.more": {
+    "description": "Toggle button under the cover tiles in the tag editor window when the files carry more than eight different covers: shows the rest.",
+    "placeholders": {
+      "count": "how many covers are not shown yet, which picks the plural form",
+      "countText": "the formatted number, like 3"
+    }
+  },
+  "multiRename.tags.cover.fewer": "Show fewer",
+  "@multiRename.tags.cover.fewer": {
+    "description": "The same toggle button under the cover tiles in the tag editor window once the rest are shown: shows only the first eight covers again."
+  },
   "multiRename.tags.cover.useForAll": "Use for all files",
   "@multiRename.tags.cover.useForAll": {
     "description": "Button in the dialog showing one cover large, in the tag editor window: makes this picture the cover of every file. Nothing is written into the files until Write."
@@ -1542,6 +1782,18 @@
   "multiRename.tags.tools.albumArtistFromArtist": "Album artist = Artist",
   "@multiRename.tags.tools.albumArtistFromArtist": {
     "description": "Shown in the tag editor window: a clean-up tool button. Copies each file’s Artist into its Album artist. Keep the equals sign."
+  },
+  "multiRename.tags.tools.discFromFolder": "Disc from folder",
+  "@multiRename.tags.tools.discFromFolder": {
+    "description": "Shown in the tag editor window: a clean-up tool button. Sets Disc from the folder each file is in: a folder named CD 1, Disc 2 or Disk 3 gives that number, other folders are numbered in their order. Files that all sit in one folder are left alone."
+  },
+  "multiRename.tags.tools.discNumberOnly": "Keep only the disc number",
+  "@multiRename.tags.tools.discNumberOnly": {
+    "description": "Shown in the tag editor window: a clean-up tool button. Cuts the text off a Disc value so only the number stays: CD2 becomes 2, Disk 10/12 becomes 10/12."
+  },
+  "multiRename.tags.tools.discUnchanged": "No disc changed.",
+  "@multiRename.tags.tools.discUnchanged": {
+    "description": "Status line in the tag editor window after Disc from folder or Keep only the disc number ran and changed no file's disc: for example all files are in one folder, or every disc already is a plain number."
   },
   "multiRename.tags.tools.narratorFromText": "Narrator from text",
   "@multiRename.tags.tools.narratorFromText": {
@@ -1889,6 +2141,82 @@
   "@multiRename.tags.tools.replace.run": {
     "description": "Button that runs Find and replace on the tag values of the files in the tag editor window. Disabled while the Find box is empty."
   },
+  "multiRename.tags.tools.replace.lists.heading": "Saved lists",
+  "@multiRename.tags.tools.replace.lists.heading": {
+    "description": "Heading of the saved lists of replacements in the Find and replace panel of the tag editor window. A list is several find/replace steps kept under a name and run together."
+  },
+  "multiRename.tags.tools.replace.lists.empty": "No saved lists yet.",
+  "@multiRename.tags.tools.replace.lists.empty": {
+    "description": "Shown in the Find and replace panel of the tag editor window when there are no saved lists of replacements."
+  },
+  "multiRename.tags.tools.replace.lists.loadFailed": "Couldn’t load the saved lists.",
+  "@multiRename.tags.tools.replace.lists.loadFailed": {
+    "description": "Shown in the Find and replace panel of the tag editor window when the saved lists of replacements could not be read."
+  },
+  "multiRename.tags.tools.replace.lists.stepsLabel": "Steps in the list being built",
+  "@multiRename.tags.tools.replace.lists.stepsLabel": {
+    "description": "Accessible name of the list of replacement steps collected so far in the Find and replace panel of the tag editor window."
+  },
+  "multiRename.tags.tools.replace.lists.addStep": "Add as step",
+  "@multiRename.tags.tools.replace.lists.addStep": {
+    "description": "Button in the Find and replace panel of the tag editor window: adds the current Find, Replace with, options and fields to the list being built, without running it."
+  },
+  "multiRename.tags.tools.replace.lists.removeStep": "Remove step",
+  "@multiRename.tags.tools.replace.lists.removeStep": {
+    "description": "Button in the Find and replace panel of the tag editor window: removes one step from the list being built."
+  },
+  "multiRename.tags.tools.replace.lists.stepSummary": "{search} → {replace}",
+  "@multiRename.tags.tools.replace.lists.stepSummary": {
+    "description": "One step of a list in the Find and replace panel of the tag editor window: the text it finds, an arrow, the text it replaces it with. {search} and {replace} are the typed texts."
+  },
+  "multiRename.tags.tools.replace.lists.name": "List name",
+  "@multiRename.tags.tools.replace.lists.name": {
+    "description": "Label of the text box with the name to save the list of replacements under in the Find and replace panel of the tag editor window."
+  },
+  "multiRename.tags.tools.replace.lists.save": "Save list",
+  "@multiRename.tags.tools.replace.lists.save": {
+    "description": "Button in the Find and replace panel of the tag editor window: saves the steps collected so far (and the current Find box, if filled) as a named list."
+  },
+  "multiRename.tags.tools.replace.lists.run": "Run",
+  "@multiRename.tags.tools.replace.lists.run": {
+    "description": "Button next to a saved list in the Find and replace panel of the tag editor window: runs all its steps, in order, on the tracks the tools work on, as one change that one Undo takes back."
+  },
+  "multiRename.tags.tools.replace.lists.runNamed": "Run {name}",
+  "@multiRename.tags.tools.replace.lists.runNamed": {
+    "description": "Accessible name of the Run button of one saved list. {name} is the list name."
+  },
+  "multiRename.tags.tools.replace.lists.edit": "Edit",
+  "@multiRename.tags.tools.replace.lists.edit": {
+    "description": "Button next to a saved list in the Find and replace panel of the tag editor window: puts its steps into the list being built, to change and save again."
+  },
+  "multiRename.tags.tools.replace.lists.editNamed": "Edit {name}",
+  "@multiRename.tags.tools.replace.lists.editNamed": {
+    "description": "Accessible name of the Edit button of one saved list. {name} is the list name."
+  },
+  "multiRename.tags.tools.replace.lists.delete": "Delete",
+  "@multiRename.tags.tools.replace.lists.delete": {
+    "description": "Button next to a saved list in the Find and replace panel of the tag editor window: deletes the list."
+  },
+  "multiRename.tags.tools.replace.lists.deleteNamed": "Delete {name}",
+  "@multiRename.tags.tools.replace.lists.deleteNamed": {
+    "description": "Accessible name of the Delete button of one saved list. {name} is the list name."
+  },
+  "multiRename.tags.tools.replace.lists.deleteFailed": "Couldn’t delete the list.",
+  "@multiRename.tags.tools.replace.lists.deleteFailed": {
+    "description": "Shown when deleting a saved list of replacements in the tag editor window failed."
+  },
+  "multiRename.tags.tools.replace.lists.full": "There are too many saved lists. Delete one first.",
+  "@multiRename.tags.tools.replace.lists.full": {
+    "description": "Shown when saving a list of replacements in the tag editor window is refused because the maximum number of saved lists is reached."
+  },
+  "multiRename.tags.tools.replace.lists.needsSteps": "A list needs a name and at least one step.",
+  "@multiRename.tags.tools.replace.lists.needsSteps": {
+    "description": "Shown when saving a list of replacements in the tag editor window is refused because the name or the steps are missing."
+  },
+  "multiRename.tags.tools.replace.lists.saveFailed": "Couldn’t save the list.",
+  "@multiRename.tags.tools.replace.lists.saveFailed": {
+    "description": "Shown when saving a list of replacements in the tag editor window failed for a reason other than a full list."
+  },
   "multiRename.tags.tools.format.field": "Field",
   "@multiRename.tags.tools.format.field": {
     "description": "Label of the tag field picker in the Format a field panel of the tag editor window."
@@ -2061,17 +2389,55 @@
   "@multiRename.tags.play.failed": {
     "description": "Notice in the tag editor window when a track could not be played: the file is gone, unreadable, or its format can't be played here."
   },
-  "multiRename.tags.play.openInPlayer": "Open in foobar2000",
+  "multiRename.tags.play.openInPlayer": "Open in player",
   "@multiRename.tags.play.openInPlayer": {
-    "description": "Button in the tag editor window. It opens the checked tracks (or all of them when none is checked) in the foobar2000 music player when it is installed, otherwise in each file's default app."
+    "description": "Button in the tag editor window. It opens the checked tracks (or all of them when none is checked) in the music player the user picked, or in each file's default app. Shown when the default app's name isn't known; otherwise multiRename.tags.play.openInApp is shown."
+  },
+  "multiRename.tags.play.openInApp": "Open in {app}",
+  "@multiRename.tags.play.openInApp": {
+    "description": "Button in the tag editor window. It opens the checked tracks (or all of them when none is checked) in the named music player, which is the user's default app for them or the one they picked.",
+    "placeholders": {
+      "app": "the name of the player app, as Finder shows it (for example Music, VLC)"
+    }
+  },
+  "multiRename.tags.play.chooseApp": "Choose the app to open the tracks in",
+  "@multiRename.tags.play.chooseApp": {
+    "description": "Accessible name and tooltip of the small arrow button beside Open in <app> in the tag editor window. It opens a menu of the apps that can play the tracks."
+  },
+  "multiRename.tags.play.menu": "Open the tracks with",
+  "@multiRename.tags.play.menu": {
+    "description": "Accessible name of the menu of apps the tag editor window offers for opening the tracks in."
+  },
+  "multiRename.tags.play.defaultApp": "{app} (default)",
+  "@multiRename.tags.play.defaultApp": {
+    "description": "A row in the menu of apps the tracks can be opened in: the system's default app for them. The row's checkmark shows it's the one in use.",
+    "placeholders": {
+      "app": "the name of the player app, as Finder shows it (for example Music)"
+    }
+  },
+  "multiRename.tags.play.defaultAppUnknown": "Each in its default app",
+  "@multiRename.tags.play.defaultAppUnknown": {
+    "description": "A row in the menu of apps the tracks can be opened in, used when the tracks are of different types or the default app can't be named: opens each track in the app macOS has set for it."
+  },
+  "multiRename.tags.play.noOtherApp": "No other app opens all these tracks",
+  "@multiRename.tags.play.noOtherApp": {
+    "description": "A greyed-out row in the menu of apps the tracks can be opened in: no app other than the default can open every type of file among the tracks, so only Choose… remains."
+  },
+  "multiRename.tags.play.chooseOther": "Choose…",
+  "@multiRename.tags.play.chooseOther": {
+    "description": "Last row in the menu of apps the tracks can be opened in: shows a file picker to choose any app. The ellipsis says a picker follows."
+  },
+  "multiRename.tags.play.playerMissing": "The app you chose isn’t installed any more, so the tracks opened in the default app.",
+  "@multiRename.tags.play.playerMissing": {
+    "description": "Notice in the tag editor window when the music player the user had chosen can't be found (deleted or moved), so the tracks were opened in each file's default app instead."
   },
   "multiRename.tags.play.playerUnavailable": "Couldn’t open the tracks in a player.",
   "@multiRename.tags.play.playerUnavailable": {
-    "description": "Notice in the tag editor window when Open in foobar2000 found neither foobar2000 nor any other app that could open the tracks."
+    "description": "Notice in the tag editor window when Open in player found neither the chosen app nor any other app that could open the tracks."
   },
   "multiRename.tags.play.nothingReadable": "None of those tracks can be read, so none was opened.",
   "@multiRename.tags.play.nothingReadable": {
-    "description": "Notice in the tag editor window when Open in foobar2000 was pressed with only unreadable tracks checked; nothing was opened."
+    "description": "Notice in the tag editor window when Open in player was pressed with only unreadable tracks checked; nothing was opened."
   },
   "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
   "@multiRename.tags.play.openFailed": {
@@ -2167,7 +2533,14 @@
   },
   "multiRename.tags.keys.openInPlayer": "Open in player",
   "@multiRename.tags.keys.openInPlayer": {
-    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Shown while Shift is held. Opens the tracks in the foobar2000 music player."
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, one or two words, so ten buttons fit side by side. Shown while Shift is held. Opens the tracks in the music player. Shown when the default app can't be named; otherwise multiRename.tags.keys.openInApp."
+  },
+  "multiRename.tags.keys.openInApp": "Open in {app}",
+  "@multiRename.tags.keys.openInApp": {
+    "description": "A button in the function-key bar at the foot of the tag editor window (the separate window that edits audio files’ tags). Shown next to its key (like F4); keep it short, so ten buttons fit side by side. Shown while Shift is held. Opens the tracks in the named music player.",
+    "placeholders": {
+      "app": "the name of the player app, as Finder shows it (for example Music, VLC)"
+    }
   },
   "multiRename.tags.keys.case": "Case",
   "@multiRename.tags.keys.case": {

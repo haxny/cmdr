@@ -4108,6 +4108,14 @@
   "@settings.license.getLicense.keywords": {
     "description": "Search keywords for the “Get a license” row (licensing.section.getLicense) in Settings > License. What it does: a button that opens the page where you can buy a license. Never shown. Search already matches its label, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
   },
+  "settings.multiRename.tagEditor.player.label": "Player for Open in player",
+  "@settings.multiRename.tagEditor.player.label": {
+    "description": "Internal label for a hidden setting (never shown in the UI) that stores which app the Tags window's Open in player button uses: the system default, or one the user picked."
+  },
+  "settings.multiRename.tagEditor.player.description": "Internal: the app that opens the tracks from the Tags window.",
+  "@settings.multiRename.tagEditor.player.description": {
+    "description": "Internal description for a hidden, non-user-facing setting that stores the player app of the Tags window."
+  },
   "settings.advanced.card.multiRename": "Multi-Rename",
   "@settings.advanced.card.multiRename": {
     "description": "Heading of the Multi-Rename card (the tag editor switch) in Settings > Advanced."

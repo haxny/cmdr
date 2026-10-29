@@ -13,9 +13,11 @@
         /** A key that reached the "sheet": one the field or its editor didn't keep. */
         onOuterKey: (key: string) => void
         source?: RangeSampleSource
+        tokenEditors?: boolean
+        errorAt?: number | null
     }
 
-    const { initial, onValue, onOuterKey, source }: Props = $props()
+    const { initial, onValue, onOuterKey, source, tokenEditors = true, errorAt = null }: Props = $props()
 
     // The fixture only seeds from `initial` and `source`.
     // svelte-ignore state_referenced_locally
@@ -37,4 +39,6 @@
         onValue(next)
     }}
     ariaLabel="Name"
+    {tokenEditors}
+    {errorAt}
 />

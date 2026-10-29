@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import presetVectors from '../../../src-tauri/src/multi_rename/foobar_preset_vectors.json'
 import { DEFAULT_SPEC, PRESET_SEEDS, insertAtCaret, specsEqual } from './spec'
 
 describe('multi-rename spec helpers', () => {
@@ -11,18 +12,38 @@ describe('multi-rename spec helpers', () => {
   })
 
   it('seeds Date and time, then one preset per whole-name option, each changing that alone', () => {
-    expect(PRESET_SEEDS.map((seed) => seed.nameKey)).toEqual([
+    const first = PRESET_SEEDS.slice(0, 4)
+    expect(first.map((seed) => seed.nameKey)).toEqual([
       'multiRename.preset.dateAndTime',
       'multiRename.preset.removeDiacritics',
       'multiRename.preset.greekToLatin',
       'multiRename.preset.normalizeUnicode',
     ])
-    expect(PRESET_SEEDS.map((seed) => seed.spec)).toEqual([
+    expect(first.map((seed) => seed.spec)).toEqual([
       { ...DEFAULT_SPEC, nameMask: '[Y-M-D h.m.s]' },
       { ...DEFAULT_SPEC, removeDiacritics: true },
       { ...DEFAULT_SPEC, greekToLatin: true },
       { ...DEFAULT_SPEC, normalizeUnicode: true },
     ])
+  })
+
+  it('ships the seven foobar2000 patterns as version 2 seeds, after the first four', () => {
+    const foobar = PRESET_SEEDS.slice(4)
+    expect(PRESET_SEEDS.slice(0, 4).every((seed) => seed.version === 1)).toBe(true)
+    expect(foobar.map((seed) => seed.version)).toEqual([2, 2, 2, 2, 2, 2, 2])
+    // The one source `foobar_spec_test.rs` renders through the real pipeline.
+    expect(foobar.map((seed) => ({ nameKey: seed.nameKey, pattern: seed.spec.nameMask }))).toEqual(
+      presetVectors.map(({ nameKey, pattern }) => ({ nameKey, pattern })),
+    )
+    for (const seed of foobar) {
+      expect(seed.spec).toEqual({
+        ...DEFAULT_SPEC,
+        nameMask: seed.spec.nameMask,
+        maskSyntax: 'foobar',
+        removeDiacritics: true,
+      })
+      expect(seed.spec.extensionMask).toBe('[E]')
+    }
   })
 
   it('compares two specs field by field, whatever order the fields came in', () => {

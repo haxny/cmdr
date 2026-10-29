@@ -580,6 +580,7 @@ pub fn run() {
             // Same for recent selections (Selection dialog history).
             selection::history::RECENT_SELECTIONS.load(app.handle());
             multi_rename::preset_store::PRESETS.load(app.handle());
+            tag_editor::replace_presets::REPLACE_PRESETS.load(app.handle());
             multi_rename::presets::LAST_SPEC.load(app.handle());
             multi_rename::history::FIELD_HISTORY.load_seeded(app.handle(), multi_rename::history::history_seed);
 

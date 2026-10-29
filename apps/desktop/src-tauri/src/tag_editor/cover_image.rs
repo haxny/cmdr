@@ -1,18 +1,20 @@
-//! Decoding cover pictures, for the two places a cover's pixels matter: a pasted TIFF (a macOS image copy can carry
+//! Decoding cover pictures, for the three places a cover's pixels matter: a pasted TIFF (a macOS image copy can carry
 //! only TIFF) becomes a PNG, or a JPEG when the PNG is over the cap; and a tile's thumbnail, a small PNG cached by the
-//! cover's key so the section never ships every full-size cover to draw 88 px tiles.
+//! cover's key so the section never ships every full-size cover to draw 88 px tiles; and a cover's likeness
+//! (`cover_likeness`), cached the same way, to tell copies of one picture.
 //!
 //! Every decode runs under `contain_panics` with `image::Limits`, so a hostile picture costs its thumbnail or its
 //! paste, not the app or its memory. Pure CPU: no file is read here.
 
 use std::collections::HashMap;
 use std::io::Cursor;
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use cmdr_tags::Cover;
 use image::{DynamicImage, ImageFormat, ImageReader, Limits};
 
 use super::cover::MAX_COVER_BYTES;
+use super::cover_likeness::{Likeness, likeness};
 use super::session::TagEditorError;
 use crate::crash_reporter::contain_panics;
 use crate::ignore_poison::IgnorePoison;
@@ -137,4 +139,43 @@ thread_local! {
 #[cfg(test)]
 pub(super) fn thumbnail_encodes() -> usize {
     ENCODES.with(std::cell::Cell::get)
+}
+
+/// How many likenesses stay cached; past it the cache starts over. A book whose every file carries its own re-encoded
+/// copy of the cover has one per file, so this is well above a big book's file count (each is about 4 KiB, 8 MiB at most).
+const LIKENESS_CACHE_LIMIT: usize = 2048;
+
+/// Likenesses by cover key and length, as [`THUMBNAILS`]; `None` for a cover that doesn't decode.
+static LIKENESSES: LazyLock<Mutex<HashMap<String, Option<Arc<Likeness>>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// What `cover` looks like, small (`cover_likeness`), cached by `key` and the byte length; `None` when it doesn't
+/// decode. Decoding happens outside the cache's lock, and never under the session's (the caller copied the cover out).
+pub(super) fn likeness_of(cover: &Cover, key: &str) -> Option<Arc<Likeness>> {
+    let key = format!("{key}:{}", cover.data.len());
+    if let Some(cached) = LIKENESSES.lock_ignore_poison().get(&key) {
+        return cached.clone();
+    }
+    #[cfg(test)]
+    LIKENESS_DECODES.with(|count| count.set(count.get() + 1));
+    let made = decode(&cover.data, None)
+        .and_then(|picture| contain_panics(|| likeness(&picture)))
+        .map(Arc::new);
+    let mut cache = LIKENESSES.lock_ignore_poison();
+    if cache.len() >= LIKENESS_CACHE_LIMIT {
+        cache.clear();
+    }
+    cache.insert(key, made.clone());
+    made
+}
+
+// How many likenesses this thread decoded: per thread, as `ENCODES`.
+#[cfg(test)]
+thread_local! {
+    static LIKENESS_DECODES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(super) fn likeness_decodes() -> usize {
+    LIKENESS_DECODES.with(std::cell::Cell::get)
 }

@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::ignore_poison::IgnorePoison;
 use crate::state_recovery::{StateFile, StateRead};
 
-use super::presets::{MultiRenamePreset, PresetList, PresetSeed, seed_in};
+use super::presets::{MultiRenamePreset, PresetList, PresetSeed, SEEDS_NEVER_AGAIN, seed_in};
 
 const FILENAME: &str = "multi-rename-presets.json";
 const LOG_TARGET: &str = "multi_rename::presets";
@@ -32,6 +32,10 @@ struct Envelope<C> {
     /// Absent in a file from before the seeds existed, which takes them once.
     #[serde(default)]
     seeded: bool,
+    /// The newest seed version the list took; absent (0) in a file from before the
+    /// seeds were versioned. The schema stays 1: an older build reads the file as is.
+    #[serde(default)]
+    seed_version: u32,
     #[serde(default)]
     entries: C,
 }
@@ -60,6 +64,7 @@ impl PresetStore {
             cached: Mutex::new(PresetList {
                 entries: Vec::new(),
                 seeded: false,
+                seed_version: 0,
             }),
             disk: Mutex::new(()),
         }
@@ -178,11 +183,13 @@ fn read(path: &Path) -> PresetList {
         StateRead::Read(envelope) => PresetList {
             entries: envelope.entries,
             seeded: envelope.seeded,
+            seed_version: envelope.seed_version,
         },
         StateRead::Missing => PresetList::default(),
         StateRead::SetAside | StateRead::Held => PresetList {
             entries: Vec::new(),
             seeded: true,
+            seed_version: SEEDS_NEVER_AGAIN,
         },
     }
 }
@@ -191,6 +198,7 @@ fn write(path: &Path, list: &PresetList) -> Result<(), crate::state_recovery::St
     let envelope = Envelope {
         schema_version: SCHEMA_VERSION,
         seeded: list.seeded,
+        seed_version: list.seed_version,
         entries: &list.entries,
     };
     let json = serde_json::to_string_pretty(&envelope).map_err(std::io::Error::other)?;

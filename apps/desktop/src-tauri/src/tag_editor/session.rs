@@ -21,17 +21,17 @@ use std::sync::{LazyLock, Mutex};
 use serde::{Deserialize, Serialize};
 
 pub use super::error::TagEditorError;
+pub use super::file_changes::changes;
 pub(super) use cmdr_tags::Fingerprint;
-use cmdr_tags::shared::{CoverEdit, Edit, apply_edits, changes as engine_changes};
+use cmdr_tags::shared::{CoverEdit, Edit, apply_edits};
 use cmdr_tags::tools::{TagTool, ToolContext, apply_tool_in};
 use cmdr_tags::{
-    ContentKind, FileTags, KindRemoval, NamePattern, TagError, TagField, compile_pattern, format_of, normalize_for,
-    read_duration, read_tags,
+    FileTags, KindRemoval, NamePattern, TagError, TagField, compile_pattern, format_of, normalize_for, read_duration,
+    read_tags,
 };
 
 use super::follow::follow_disk;
 use super::history::{EditHistory, capture, clear, record};
-use super::removals::{Removals, removals_of};
 use super::sort::{TrackSort, reorder};
 use super::view::{
     Access, CoverKeys, ReadErrorCode, ReadOnlyReason, TagEditorView, build, cover_key, file_name_of, scoped_tracks,
@@ -317,8 +317,14 @@ pub(super) fn view_of(layout: &Layout, session: &TagSession) -> TagEditorView {
         .collect();
     let scoped = scoped_tracks(&tracks, session.view_scope.as_ref());
     let mut view = build(layout.access, &tracks, scoped.as_deref());
-    for (row, path) in view.tracks.iter_mut().zip(tracks.iter().map(|(path, _)| path)) {
-        row.file_name = file_name_of(&layout.dir, path);
+    // The File column drops the folder every track shares; the session's own names stay relative to its folder.
+    let names: Vec<String> = tracks.iter().map(|(path, _)| file_name_of(&layout.dir, path)).collect();
+    let shared = super::cover::tracks_folder(&layout.dir, names.iter());
+    for (row, (path, _)) in view.tracks.iter_mut().zip(&tracks) {
+        row.file_name = path.strip_prefix(&shared).map_or_else(
+            |_| file_name_of(&layout.dir, path),
+            |name| name.to_string_lossy().into_owned(),
+        );
     }
     TagEditorView {
         sort: session.sort,
@@ -393,19 +399,20 @@ fn scoped(
         .unzip())
 }
 
+/// The folder a file is in, as text.
+fn folder_text(path: &Path) -> String {
+    path.parent()
+        .map(|folder| folder.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
 /// What the tools know about `paths`, a selection of a book of `session_files` listed tracks (readable or not):
 /// each one's folder and stem, and the book's size (for the one-file-book rule).
-fn context_of(paths: &[PathBuf], session_files: usize) -> ToolContext {
+fn context_of(paths: &[PathBuf], session_files: usize, book_folders: Vec<String>) -> ToolContext {
     ToolContext {
         session_files,
-        folders: paths
-            .iter()
-            .map(|path| {
-                path.parent()
-                    .map(|folder| folder.to_string_lossy().into_owned())
-                    .unwrap_or_default()
-            })
-            .collect(),
+        book_folders,
+        folders: paths.iter().map(|path| folder_text(path)).collect(),
         stems: paths.iter().map(|path| stem_of(path)).collect(),
     }
 }
@@ -502,8 +509,12 @@ pub fn tool(session_id: &str, tool: TagTool, scope: Option<Vec<String>>) -> Resu
     if let TagTool::FromFileName { pattern } = &tool {
         compile_pattern(pattern).map_err(|error| TagEditorError::BadPattern { error })?;
     }
+    // The folders of the whole book, so a selection numbers folders as the whole run would.
+    let book_folders = with_session(session_id, |layout, _| {
+        Ok(layout.tracks.iter().map(|path| folder_text(path)).collect())
+    })?;
     edit_scoped(session_id, scope, |paths, before, book| {
-        Ok(apply_tool_in(before, &context_of(paths, book), &tool))
+        Ok(apply_tool_in(before, &context_of(paths, book, book_folders), &tool))
     })
 }
 
@@ -555,44 +566,6 @@ pub fn preview_names(
                     .map(|(field, value)| NameValue { field, value })
                     .collect()
             }),
-        })
-        .collect())
-}
-
-/// What a write as `kind` would change, per file, in current order: the fields, cover, and
-/// extras the edits change, and what the kind removes beyond them (an MP3's conductor under
-/// an audiobook write), read from each file after the lock, so the list matches the write.
-pub fn changes(session_id: &str, kind: ContentKind) -> Result<Vec<FileChangeView>, TagEditorError> {
-    let listed: Vec<(PathBuf, FileChangeView)> = with_session(session_id, |layout, session| {
-        Ok(layout
-            .tracks
-            .iter()
-            .filter_map(|path| {
-                let loaded = session.by_path.get(path)?.loaded()?;
-                let change = engine_changes(std::slice::from_ref(&loaded.disk), std::slice::from_ref(&loaded.edited))
-                    .into_iter()
-                    .next()?;
-                let view = FileChangeView {
-                    path: path.to_string_lossy().into_owned(),
-                    file_name: file_name_of(&layout.dir, path),
-                    fields: change.fields,
-                    cover: change.cover,
-                    extras: change.extras,
-                    removes: Vec::new(),
-                    removes_unknown: false,
-                };
-                Some((path.clone(), view))
-            })
-            .collect())
-    })?;
-    Ok(listed
-        .into_iter()
-        .map(|(path, view)| match removals_of(&path, kind) {
-            Removals::Known(removes) => FileChangeView { removes, ..view },
-            Removals::Unknown => FileChangeView {
-                removes_unknown: true,
-                ..view
-            },
         })
         .collect())
 }

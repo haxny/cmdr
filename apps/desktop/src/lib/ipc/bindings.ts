@@ -1666,6 +1666,16 @@ export const commands = {
    */
   runTagTextTool: (sessionId: string, tool: TagTextTool, scope: string[] | null) =>
     typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_text_tool', { sessionId, tool, scope })),
+  // The saved F4 Replace lists, top to bottom. Built-ins this install hasn't taken yet go in first, once.
+  getTagReplacePresets: () => __TAURI_INVOKE<ReplacePreset[]>('get_tag_replace_presets'),
+  /**
+   *  Saves a Replace list at the end; one with the same name is replaced where it stands. Answers the
+   *  lists after, or why not.
+   */
+  saveTagReplacePreset: (preset: ReplacePreset) =>
+    typedError<ReplacePreset[], ReplacePresetRefusal>(__TAURI_INVOKE('save_tag_replace_preset', { preset })),
+  // Deletes a Replace list by id (a built-in stays gone). Answers the lists after.
+  deleteTagReplacePreset: (id: string) => __TAURI_INVOKE<ReplacePreset[]>('delete_tag_replace_preset', { id }),
   // What a file-name pattern reads from each track's name at `scope` (or every track), changing nothing.
   previewTagsFromNames: (sessionId: string, pattern: NamePattern, scope: string[] | null) =>
     typedError<NamePreviewRow[], TagEditorError>(
@@ -1768,11 +1778,29 @@ export const commands = {
   // Ends a URL `tag_track_audio_url` gave. Closing the tag session ends all of them.
   releaseTagTrackAudio: (url: string) => __TAURI_INVOKE<void>('release_tag_track_audio', { url }),
   /**
-   *  Opens tracks of the session in foobar2000 when it's installed, else each in its default app.
+   *  Opens tracks of the session in the app `player` names (`"default"`: each in its default app;
+   *  else a bundle id). A chosen app that isn't installed falls back to the default and says so.
    *  Returns once the launch is asked for, not when the player is up.
    */
-  openTagsInPlayer: (sessionId: string, paths: string[]) =>
-    typedError<null, TagEditorError>(__TAURI_INVOKE('open_tags_in_player', { sessionId, paths })),
+  openTagsInPlayer: (sessionId: string, paths: string[], player: string) =>
+    typedError<PlayerOpened, TagEditorError>(__TAURI_INVOKE('open_tags_in_player', { sessionId, paths, player })),
+  /**
+   *  The apps that can open the session's tracks (the system default first), plus `player`'s app when
+   *  it is a bundle id that's installed.
+   */
+  tagPlayerChoices: (sessionId: string, player: string) =>
+    typedError<AppChoice[], TagEditorError>(__TAURI_INVOKE('tag_player_choices', { sessionId, player })),
+  // Asks the user for a player app with the system's open panel; `None` when they cancel.
+  chooseTagPlayer: () =>
+    typedError<
+      {
+        bundleId: string
+        name: string
+        // The system's default app for the tracks (the first candidate).
+        isDefault: boolean
+      } | null,
+      TagEditorError
+    >(__TAURI_INVOKE('choose_tag_player')),
   /**
    *  Holds the Multi-Rename session a Tags window will own, so no eviction takes it, and says how
    *  many of its files are tracks and what its folder is called. The main window calls it right
@@ -6215,6 +6243,14 @@ export type AmendResult = {
   id: string
 }
 
+// An app the "Open in" menu offers.
+export type AppChoice = {
+  bundleId: string
+  name: string
+  // The system's default app for the tracks (the first candidate).
+  isDefault: boolean
+}
+
 /**
  *  What we know about the app's fate AFTER this report hit disk.
  *
@@ -7739,8 +7775,13 @@ export type CoverChoice = {
   // Pixel size, when the image header could be read.
   width: number | null
   height: number | null
-  // How many readable files carry it.
+  // How many readable files carry it, or one that looks the same.
   files: number
+  /**
+   *  How many other distinct covers look the same as this one and are counted in it (0 when
+   *  none): this one is the largest of them in pixels.
+   */
+  nearDuplicates: number
 }
 
 // What to do with the front cover of every file.
@@ -9545,6 +9586,22 @@ export type FolderSizes = {
   // The reading, or `None` when the index doesn't cover the folder (sizes stay, hourglass clears).
   stats: DirStats | null
 }
+
+/**
+ *  Why a foobar pattern doesn't parse. Typed, so the sheet words it; `at` is a byte offset into
+ *  the pattern.
+ */
+export type FoobarError =
+  // `%name%` names no field Cmdr knows; `name` as typed.
+  | { type: 'unknownField'; name: string; at: number }
+  // `$name(` names no function Cmdr knows; `name` as typed (empty for a bare `$`).
+  | { type: 'unknownFunction'; name: string; at: number }
+  // A known function with the wrong number of arguments, or none at all (`$upper`).
+  | { type: 'badArguments'; function: string; at: number }
+  // An opening `%`, `[`, `'`, `$f(`, or a `(` in an argument's text with no end.
+  | { type: 'unclosed'; what: Unclosed; at: number }
+  // Nested deeper than [`MAX_DEPTH`]; `at` is the first opening past it.
+  | { type: 'tooDeep'; at: number }
 
 /**
  *  `foreground-operation`: the operation queue asks the main window to show one
@@ -11972,6 +12029,13 @@ export type MaskError =
   // A placeholder Cmdr doesn't know, as typed between the brackets.
   | { type: 'unknown'; placeholder: string }
 
+// The name mask's language.
+export type MaskSyntax =
+  // Total Commander's placeholders: `[N]`, `[C]`, `[=tag.title]`.
+  | 'cmdr'
+  // foobar2000 title formatting: `%title%`, `[ … ]`, `$num(…)` (`foobar.rs`).
+  | 'foobar'
+
 /**
  *  `mcp-settings-close`: ask the settings window to close itself. Emitted via a
  *  distinct static `emit_to("settings", …)` (NOT through the generic `mcp-*`
@@ -12086,6 +12150,24 @@ export type MediaField =
   | 'tagGenre'
   // The comment.
   | 'tagComment'
+  // The performer; an audiobook's narrator.
+  | 'tagPerformer'
+  // The composer.
+  | 'tagComposer'
+  // The publisher.
+  | 'tagPublisher'
+  // The date as stored (`2010-09-20`, or just `2010`).
+  | 'tagDate'
+  // The number of tracks on the album.
+  | 'tagTotalTracks'
+  // The number of discs.
+  | 'tagTotalDiscs'
+  // The long description.
+  | 'tagDescription'
+  // The translator.
+  | 'tagTranslator'
+  // The web address.
+  | 'tagWww'
 
 // One field in the picker.
 export type MediaFieldOverview = {
@@ -13118,6 +13200,12 @@ export type MultiRenameSpec = {
    *  over decomposed names. Off, such a name counts as unchanged.
    */
   normalizeUnicode?: boolean
+  /**
+   *  How the name mask reads: Cmdr's placeholders, or a foobar2000 pattern as
+   *  foobar writes it. Cmdr in a preset, a last spec, or an MCP call from
+   *  before it existed. The extension mask is always Cmdr's.
+   */
+  maskSyntax?: MaskSyntax
 }
 
 // A started rename.
@@ -14379,6 +14467,12 @@ export type PhaseRecord = {
   stats: [string, string][]
 }
 
+// What `open_tags_in_player` answers: the launch was asked for, and whether the chosen app was missing.
+export type PlayerOpened = {
+  // The chosen app isn't installed, so the default app was used.
+  fellBack: boolean
+}
+
 export type PrepareResult = {
   ready: boolean
   entryCount: number
@@ -14406,6 +14500,11 @@ export type PresetSaveRefusal =
  */
 export type PresetSeed = {
   name: string
+  /**
+   *  The Cmdr version that introduced this seed (1: the first four). A list takes
+   *  each seed once: those whose version is above the list's.
+   */
+  version: number
   spec: MultiRenameSpec
 }
 
@@ -15139,6 +15238,33 @@ export type RenameValidityResult = {
    *  and whether to confirm it first.
    */
   byMove: RenameByMove | null
+}
+
+// One saved list.
+export type ReplacePreset = {
+  id: string
+  name: string
+  steps: ReplaceStep[]
+}
+
+// Why a save didn't change the list.
+export type ReplacePresetRefusal =
+  // The list holds `max` lists already, and this name is a new one.
+  | { type: 'listFull'; max: number }
+  // A list needs a name and at least one step.
+  | { type: 'empty' }
+
+/**
+ *  One find/replace of a saved list: `Replace`'s settings. `fields: None` is every field the
+ *  track has a value in, so a list saved that way keeps working when a field is added.
+ */
+export type ReplaceStep = {
+  fields: TagField[] | null
+  search: string
+  replace: string
+  caseSensitive: boolean
+  firstOnly: boolean
+  regex: boolean
 }
 
 /**
@@ -18039,6 +18165,8 @@ export type SpaceShortfall =
 // Why the spec itself can't run (the sheet shows it under the field).
 export type SpecError =
   | { type: 'nameMask'; error: MaskError }
+  // The name mask is a foobar pattern that doesn't parse.
+  | { type: 'pattern'; error: FoobarError }
   | { type: 'extensionMask'; error: MaskError }
   | { type: 'badRegex'; detail: string }
 
@@ -18183,6 +18311,8 @@ export type StateFile =
   | 'selection_history'
   // Saved multi-rename presets.
   | 'multi_rename_presets'
+  // Saved Tags window F4 Replace lists.
+  | 'tag_replace_presets'
   // The multi-rename dialog's last settings.
   | 'multi_rename_last_settings'
   // The multi-rename dialog's per-field history.
@@ -18675,7 +18805,7 @@ export type TagEditorError =
   | { kind: 'badRegex' }
   // A Format mask that doesn't parse. Nothing was changed.
   | { kind: 'badMask'; error: MaskError }
-  // Neither foobar2000 nor the files' default app could be launched.
+  // Neither the chosen player nor the files' default app could be launched.
   | { kind: 'playerUnavailable' }
 
 // The whole tab.
@@ -18835,6 +18965,11 @@ export type TagTextTool =
       regex: boolean
     }
   /**
+   *  Runs `steps` one after another over every track, as ONE edit (one undo step). Each step is
+   *  `Replace`; all of them compile first, and one that doesn't is `BadRegex` with nothing changed.
+   */
+  | { kind: 'steps'; steps: ReplaceStep[] }
+  /**
    *  Rebuilds `field` from a Multi-Rename `mask`. `[N]` is the field's current FIRST value (a
    *  multi-value field loses its other values: the whole field becomes the one rendered value),
    *  `[=tag.album]` and the like read the file's other fields. A file whose mask has no value
@@ -18893,6 +19028,10 @@ export type TagTool =
       // How to read the file names.
       pattern: NamePattern
     }
+  // [`disc_from_folder`].
+  | { kind: 'discFromFolder' }
+  // [`disc_number_only`].
+  | { kind: 'discNumberOnly' }
 
 // The Tags windows' share of a quit.
 export type TagsAtQuit = {
@@ -19096,6 +19235,8 @@ export type TrackRow = {
   path: string
   fileName: string
   track: string | null
+  // The Disc tag as written (`1`, `CD2`, `1/2`).
+  disc: string | null
   title: string | null
   durationMs: number | null
   // Edited tags differ from the ones on disk.
@@ -19569,6 +19710,15 @@ export type TypeToJumpInfo = {
    */
   lastMatchedName?: string | null
 }
+
+// What a [`FoobarError::Unclosed`] left open.
+export type Unclosed =
+  | 'field'
+  | 'bracket'
+  | 'quote'
+  | 'function'
+  // A `(` in a function argument's text (`$upper(a (b`).
+  | 'parenthesis'
 
 /**
  *  The whole job's undo result: a per-operation breakdown plus the totals the UI

@@ -50,6 +50,7 @@ const VIEW: TagEditorView = {
       path: '/b/01.mp3',
       fileName: '01.mp3',
       track: '1',
+      disc: null,
       title: 'Prvni',
       durationMs: 1000,
       changed: false,
@@ -59,6 +60,7 @@ const VIEW: TagEditorView = {
       path: '/b/02.mp3',
       fileName: '02.mp3',
       track: '2',
+      disc: null,
       title: 'Druha',
       durationMs: 1000,
       changed: false,
@@ -243,8 +245,24 @@ describe('TagsContent', () => {
   })
 
   describe('the cover section', () => {
-    const FRONT: CoverChoice = { key: 'k1', mime: 'image/png', bytes: 40, width: null, height: null, files: 1 }
-    const NONE: CoverChoice = { key: 'none', mime: '', bytes: 0, width: null, height: null, files: 1 }
+    const FRONT: CoverChoice = {
+      key: 'k1',
+      mime: 'image/png',
+      bytes: 40,
+      width: null,
+      height: null,
+      files: 1,
+      nearDuplicates: 0,
+    }
+    const NONE: CoverChoice = {
+      key: 'none',
+      mime: '',
+      bytes: 0,
+      width: null,
+      height: null,
+      files: 1,
+      nearDuplicates: 0,
+    }
 
     it('sits in the Album pane’s scroll, after the rows', async () => {
       const { root } = await mountTab({ choices: [FRONT, NONE] })
@@ -352,6 +370,25 @@ describe('TagsContent', () => {
     await settle()
     expect(state.settled).toHaveBeenCalled()
     expect(state.tool).toHaveBeenCalledWith({ kind: 'stripTrackPrefix' }, null)
+  })
+
+  it('a Disc tool that changes no disc says so in the status line; one that changes a disc stays quiet', async () => {
+    const { root, state } = await mountTab()
+    await bar(root, 'Clean up', true)
+    inDialog('Disc from folder').click()
+    await settle()
+    expect(state.tool).toHaveBeenCalledWith({ kind: 'discFromFolder' }, null)
+    expect(root.textContent).toContain('No disc changed.')
+    cleanup?.()
+    const changing = await mountTab()
+    changing.state.tool.mockImplementation(() => {
+      changing.state.view = { ...VIEW, tracks: VIEW.tracks.map((t) => ({ ...t, disc: '1' })) }
+      return Promise.resolve()
+    })
+    await bar(changing.root, 'Clean up', true)
+    inDialog('Keep only the disc number').click()
+    await settle()
+    expect(changing.root.textContent).not.toContain('No disc changed.')
   })
 
   it('with 2 of 4 tracks selected, Renumber works on those two only', async () => {
@@ -536,11 +573,14 @@ describe('TagsContent', () => {
     await press(paneList(root, 'Album tags'), 'F2')
     await press(paneList(root, 'Tracks'), 'F2')
     expect(root.querySelector('.tag-value-editor')).toBeNull()
-    // Playing, selecting and sorting write nothing, so Play, Open in foobar2000, the select-all box and the column
+    // Playing, selecting and sorting write nothing, so Play, Open in player (and its app menu), the select-all box and the column
     // headers stay available.
-    const readers = new Set(['Open in foobar2000', 'F3Play'])
+    const readers = new Set(['Open in player', 'F3Play'])
     const writers = [...root.querySelectorAll('button')].filter(
-      (b) => !readers.has(b.textContent.trim()) && !b.classList.contains('sortable-header'),
+      (b) =>
+        !readers.has(b.textContent.trim()) &&
+        !b.classList.contains('sortable-header') &&
+        b.getAttribute('aria-label') !== 'Choose the app to open the tracks in',
     )
     for (const button of writers) expect(button.disabled).toBe(true)
   })

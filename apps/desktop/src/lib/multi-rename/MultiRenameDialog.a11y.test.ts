@@ -142,6 +142,22 @@ describe('MultiRenameDialog a11y', () => {
     await expectNoA11yViolations(await mountSheet())
   })
 
+  it('with a pasted foobar2000 pattern (switch, notice, field inserts) and its error has no violations', async () => {
+    previewMultiRename.mockResolvedValue({
+      ok: false,
+      error: { type: 'spec', error: { type: 'pattern', error: { type: 'unknownField', name: 'nope', at: 4 } } },
+    })
+    const root = await mountSheet()
+    const mask = root.querySelector<HTMLInputElement>('input')
+    if (!mask) throw new Error('no name mask')
+    mask.value = '%album% %nope%'
+    mask.dispatchEvent(new Event('input', { bubbles: true }))
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await tick()
+    expect(root.querySelector('[aria-label="Name mask syntax"]')).not.toBeNull()
+    await expectNoA11yViolations(root)
+  })
+
   it('with every whole-name option on and Undo rename offered has no violations', async () => {
     previewMultiRename.mockResolvedValue({
       ok: true,

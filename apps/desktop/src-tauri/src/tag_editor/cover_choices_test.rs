@@ -86,6 +86,7 @@ fn none_is_counted_and_no_files_give_no_choices() {
             width: None,
             height: None,
             files: 2,
+            near_duplicates: 0,
         }]
     );
     assert!(choices_of(&[]).is_empty());

@@ -7,7 +7,8 @@
      * command, from the bar or from the window's keydown (`TagsWindow.svelte`). Tab switches the panes
      * (`tags-panes.svelte.ts`). ⌘X / ⌘C / ⌘V from the native menu act on the field under the cursor (`clipboard`).
      * ⌘⏎ and ⌘S write at once and say in the status line how many files (`writeAtOnce`); ⇧⌘S opens the Write dialog,
-     * the change list first.
+     * the change list first. ⌘F filters the Tracks pane: with nothing selected, the tools and the Album pane then work
+     * on the tracks it shows, named by path (`ToolScope` `shown`), never on hidden ones.
      * It opens the tag session when it mounts.
      */
     import { onDestroy, onMount, untrack } from 'svelte'
@@ -15,13 +16,18 @@
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import type { TagField, TagTool, TrackSort } from '#lib/ipc/bindings.js'
     import {
+        chooseTagPlayer,
         openTagsInPlayer,
+        tagPlayerChoices,
         type TagApplyReport,
         type TagEdit,
         type TagsClipboardAction,
     } from '#lib/tauri-commands/index.js'
+    import { getSetting, setSetting } from '#lib/settings/index.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Button from '#lib/ui/Button.svelte'
+    import Icon from '#lib/ui/Icon.svelte'
+    import Menu from '#lib/ui/Menu.svelte'
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
     import { joinSentences } from '#lib/intl/sentence-join.js'
     import AlbumPane from './AlbumPane.svelte'
@@ -46,10 +52,13 @@
         type TagsKeyRoad,
     } from './tags-function-keys'
     import { createTagsPanes, type TagsPaneId } from './tags-panes.svelte'
-    import { dialogIsOpen } from './typed-key'
+    import { dialogIsOpen, type TrackCell } from './typed-key'
     import { createTrackSelection, type ToolScope } from './track-selection.svelte'
+    import { shownTrackIndices } from './track-filter'
     import { createTrackPlayer } from './track-player.svelte'
-    import { SETTLE_LIMIT_MS, type TagEditorState, type TagStateError } from './tag-editor-state.svelte'
+    import { createTagPlayer } from './tag-player.svelte'
+    import type { TagEditorState, TagStateError } from './tag-editor-state.svelte'
+    import { createEditsComing } from './edits-coming'
 
     interface Props {
         state: TagEditorState
@@ -60,19 +69,34 @@
     /** The selected tracks; the tools work on these alone. Created once per mount, synced on every view change. */
     const selection = createTrackSelection()
     const allPaths = $derived(tags.view?.tracks.map((track) => track.path) ?? [])
-    /** Changes with the selected tracks and the track list: a file-name preview is only good for the tracks it listed. */
-    const scopeKey = $derived(JSON.stringify([[...selection.selected].sort(), allPaths]))
+    /** The Tracks filter's text (⌘F; `null` while closed) and the rows it shows (view indices; `null`: no filter). */
+    let filter = $state<string | null>(null)
+    const shown = $derived(shownTrackIndices(tags.view?.tracks ?? [], filter))
+    /** Changes with the scoped tracks and the track list: a file-name preview is only good for the tracks it listed. */
+    const scopeKey = $derived(JSON.stringify([[...selection.scoped].sort(), allPaths]))
+    /** Tracks the filter hides (a cover still goes to them). */
+    const hiddenByFilter = $derived(shown === null ? 0 : allPaths.length - shown.length)
+    /** No track selected and the filter on: the tools and the Album pane work on the shown tracks. */
+    const filtering = $derived(shown !== null && selection.count === 0)
 
     let selectionGone = $state(false)
-
     // Converges: `sync` writes only when the list of paths changed.
     $effect(() => {
         selection.sync(allPaths)
     })
+    // The shown paths reach the selection per view, and at once on a filter change (no tick where the scope lags).
+    const shownPathsOf = (rows: number[] | null): string[] | null => (rows === null ? null : rows.map((index) => allPaths[index]))
+    $effect(() => {
+        selection.setShown(shownPathsOf(shown))
+    })
+    const changeFilter = (text: string | null): void => {
+        filter = text
+        selection.setShown(shownPathsOf(shown))
+    }
 
-    // The Album pane sums up the selected tracks (every track while none is).
+    // The Album pane sums up the selected tracks, else the shown ones (every track while neither narrows it).
     const viewScope = followViewScope({
-        selected: () => selection.selected,
+        selected: () => selection.scoped,
         shownCount: () => tags.view?.scopeCount,
         settled: () => tags.settled(),
         setViewScope: (paths) => tags.setViewScope(paths),
@@ -86,10 +110,11 @@
     let albumPane = $state<{ focus: () => void; editAtCursor: () => void; settleEditor: () => boolean }>()
     let tracksPane = $state<{
         focus: () => void
-        editAtCursor: (field?: 'title' | 'track') => void
+        editAtCursor: (field?: TrackCell) => void
         playAtCursor: () => void
-        activeField: () => 'title' | 'track'
+        activeField: () => TrackCell
         settleEditor: () => boolean
+        openFilter: () => Promise<void>
     }>()
     /** One key press by both roads (keydown and the native menu's accelerator) acts once. */
     const isEcho = createTagsKeyEcho()
@@ -109,6 +134,14 @@
         if (moved >= 0 && moved !== untrack(() => panes.tracksCursor)) panes.tracksCursor = moved
     })
 
+    // A filter that hides the cursor row moves the cursor to the next shown row (the last one when none follows).
+    $effect(() => {
+        const rows = shown
+        const cursor = untrack(() => panes.tracksCursor)
+        if (rows === null || rows.length === 0 || rows.includes(cursor)) return
+        panes.tracksCursor = rows.find((index) => index > cursor) ?? rows[rows.length - 1]
+    })
+
     // The window opens with the Album pane focused, as the main window opens with a file pane focused.
     let focusedOnce = false
     $effect(() => {
@@ -117,7 +150,7 @@
         albumPane.focus()
     })
 
-    /** ⌘A from the native menu (`TagsWindow`): every track, as in a file pane. */
+    /** ⌘A from the native menu (`TagsWindow`): every track, as in a file pane; the shown ones under a filter. */
     export function selectAllTracks(): void {
         selection.selectAll()
     }
@@ -143,10 +176,36 @@
         player.stop()
     })
 
-    /** Why the last Open in foobar2000 failed, when it did. */
+    /** Why the last Open in player failed (or fell back to the default app), when it did. */
     let playerError = $state<MessageKey | null>(null)
 
-    /** Opens the selected tracks (every track when none is selected) in foobar2000, else each in its default app. */
+    /** The "Open in <app>" menu: the default app, the others, Choose…; a pick is remembered and opens. */
+    const tagPlayer = createTagPlayer({
+        choices: (chosen) => tagPlayerChoices(tags.sessionId, chosen),
+        choose: () => chooseTagPlayer(),
+        getPlayer: () => getSetting('multiRename.tagEditor.player'),
+        setPlayer: (player) => { setSetting('multiRename.tagEditor.player', player) },
+        open: openInPlayer,
+    })
+    // The apps are listed from the session's tracks, which exist once the tags are read: ask then, not at mount.
+    const hasView = $derived(tags.view !== null)
+    $effect(() => {
+        if (hasView) untrack(() => void tagPlayer.load())
+    })
+    onDestroy(() => {
+        tagPlayer.menu.destroy()
+    })
+    let playerMenuButton = $state<HTMLElement | undefined>()
+    const openInLabel = $derived(
+        tagPlayer.appName === null
+            ? tString('multiRename.tags.play.openInPlayer')
+            : tString('multiRename.tags.play.openInApp', { app: tagPlayer.appName }),
+    )
+
+    /**
+     * Opens the selected tracks (every track when none is selected) in the remembered player: the app the user chose,
+     * else each file in its default app. A chosen app that's gone opens the default and says so.
+     */
     async function openInPlayer(): Promise<void> {
         playerError = null
         // Unreadable tracks are not the session's tracks for the backend (it refuses the call for one), so they never go.
@@ -154,14 +213,17 @@
         const res = await runScoped(async (scope) => {
             const paths = (scope ?? allPaths).filter((path) => readable.has(path))
             if (paths.length === 0) return 'nothingReadable' as const
-            return await openTagsInPlayer(tags.sessionId, paths)
+            return await openTagsInPlayer(tags.sessionId, paths, getSetting('multiRename.tagEditor.player'))
         })
         if (res === undefined) return
         if (res === 'nothingReadable') {
             playerError = 'multiRename.tags.play.nothingReadable'
             return
         }
-        if (res.ok) return
+        if (res.ok) {
+            if (res.value.fellBack) playerError = 'multiRename.tags.play.playerMissing'
+            return
+        }
         playerError =
             res.error.kind === 'playerUnavailable' ? 'multiRename.tags.play.playerUnavailable' : 'multiRename.tags.play.openFailed'
     }
@@ -184,7 +246,7 @@
 
     /**
      * The field the user is on: the Album pane's cursor row while that pane is active, the Tracks pane's active cell
-     * (# or Title) while that one is, none otherwise (focus on the cover, or out of the window). A tool takes it when it opens (Case, Replace,
+     * (#, Disc or Title) while that one is, none otherwise (focus on the cover, or out of the window). A tool takes it when it opens (Case, Replace,
      * Clear); the bar never takes focus, so a press on it keeps the pane.
      */
     const focusedField = $derived.by((): TagField | null => {
@@ -226,12 +288,26 @@
             return undefined
         }
         selectionGone = false
-        return await call(scope.kind === 'some' ? scope.paths : null)
+        if (scope.kind === 'shown' && scope.paths.length === 0) {
+            // The filter shows nothing: never widen to every track.
+            notice = 'multiRename.tags.filter.noneShown'
+            return undefined
+        }
+        return await call(scope.kind === 'all' ? null : scope.paths)
     }
 
     async function runTool(tool: TagTool): Promise<void> {
-        await runScoped((scope) => tags.tool(tool, scope))
+        const discsBefore = discsOf()
+        const ran = await runScoped((scope) => tags.tool(tool, scope).then(() => true))
+        // A Disc tool that left every disc as it was (a flat book has no folders to tell discs apart) says so.
+        const isDiscTool = tool.kind === 'discFromFolder' || tool.kind === 'discNumberOnly'
+        if (ran === true && isDiscTool && tags.error === null && discsOf() === discsBefore) {
+            notice = 'multiRename.tags.tools.discUnchanged'
+        }
     }
+
+    /** Every track's Disc as one string, to tell whether a tool changed any. */
+    const discsOf = (): string => JSON.stringify(tags.view?.tracks.map((track) => track.disc) ?? [])
 
     /** The paths of the tracks whose tags were read: an edit can name only these. */
     const readablePaths = (): Set<string> => readablePathsOf(tags.view)
@@ -278,6 +354,7 @@
         tags,
         panes,
         activeTrackField: () => tracksPane?.activeField() ?? 'title',
+        cursorShown: () => shown === null || shown.includes(panes.tracksCursor),
         selection,
         setFieldScoped,
         clearTarget,
@@ -303,37 +380,12 @@
     /** A key's answer that has nowhere else to go ("There's no tag write to undo."); the next command clears it. */
     let notice = $state<MessageKey | null>(null)
 
-    /**
-     * Album and clipboard edits started but not yet handed to the state (a paste reading the clipboard, a commit
-     * waiting for the pane's scope): ⌘⏎ and ⌘Z wait for them (`editsSent`), so the edit just made is the one they see.
-     */
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping of pending promises, nothing renders from it
-    const coming = new Set<Promise<unknown>>()
+    /** Album and clipboard edits on their way: ⌘⏎ and ⌘Z wait for them (`edits-coming.ts`). */
+    const coming = createEditsComing()
     function editComing<T>(run: Promise<T>): Promise<T> {
-        coming.add(run)
-        void run.then(
-            () => coming.delete(run),
-            () => coming.delete(run),
-        )
-        return run
+        return coming.track(run)
     }
-    async function editsSent(): Promise<boolean> {
-        let timer: ReturnType<typeof setTimeout> | undefined
-        const gaveUp = new Promise<false>((resolve) => {
-            timer = setTimeout(() => {
-                resolve(false)
-            }, SETTLE_LIMIT_MS)
-        })
-        const sent = (async () => {
-            while (coming.size > 0) await Promise.allSettled([...coming])
-            return true as const
-        })()
-        try {
-            return await Promise.race([sent, gaveUp])
-        } finally {
-            clearTimeout(timer)
-        }
-    }
+    const editsSent = (): Promise<boolean> => coming.sent()
 
     /** ⌘⏎ / ⌘S: the write at once and what the status line says of it (`write-now-status.svelte.ts`). */
     const writeNow = createWriteNowStatus({
@@ -410,12 +462,14 @@
         'tags.review': () => { openReview() },
         'tags.undo': () => void undoLast(),
         'tags.redo': () => void redoLast(),
+        'tags.filter': () => void tracksPane?.openFilter(),
     }
 
     /** Whether `id` can act on the tags as they are now. */
     function canRun(id: TagsCommandId): boolean {
         // A write on its way (seconds on a share): its answer may open a dialog, so nothing else opens one meanwhile.
-        if (writeNow.writingNow || tags.writing) return id === 'tags.play'
+        if (writeNow.writingNow || tags.writing) return id === 'tags.play' || id === 'tags.filter'
+        if (id === 'tags.filter') return tags.view !== null
         if (id === 'tags.undo' || id === 'tags.redo') return tags.view?.editable === true
         return enabledCommands.has(id)
     }
@@ -438,12 +492,9 @@
         return true
     }
 
-    /**
-     * A tool, the Write dialog, or any popover (the Values… list) is open: it owns the keys, and Escape closes it, never
-     * the window. One check for every road (keys, menu keys, ⌘A, ⌘X/⌘C/⌘V), the one the panes use too (`dialogIsOpen`).
-     */
+    /** A tool, Write, a popover, or the "Open in" menu is open: it owns the keys (every road), and Esc closes it. */
     export function hasDialog(): boolean {
-        return dialogOpen || dialogIsOpen()
+        return dialogOpen || dialogIsOpen() || tagPlayer.menu.isOpen
     }
 
     /**
@@ -464,6 +515,12 @@
     export function waitForWrite(): void {
         closeWaits = true
         if (writeMode === null) notice = 'multiRename.tags.window.closeWaits'
+    }
+
+    /** The Album heading's scope: the view's narrowed count, "(filtered)" when the filter narrows it; `null` for all. */
+    function albumScope(scopeCount: number | null, total: number): { count: number; total: number; filtered: boolean } | null {
+        if (filtering && shown?.length === 0) return { count: 0, total, filtered: true }
+        return scopeCount === null ? null : { count: scopeCount, total, filtered: filtering }
     }
 
     async function listCandidates() {
@@ -491,10 +548,10 @@
             <div class="pane-slot album" data-pane="album">
                 <AlbumPane
                     bind:this={albumPane}
-                    rows={view.shared}
+                    rows={filtering && shown?.length === 0 ? [] : view.shared}
                     editable={view.editable}
                     badDates={view.badDates}
-                    scope={view.scopeCount === null ? null : { count: view.scopeCount, total: view.tracks.length }}
+                    scope={albumScope(view.scopeCount, view.tracks.length)}
                     focused={inPanes && panes.active === 'album'}
                     cursor={panes.albumCursor}
                     onCursorChange={(index: number) => { panes.albumCursor = index }}
@@ -524,6 +581,9 @@
                     onSort={(sort: TrackSort) => void tags.sortTracks(sort)}
                     isEcho={(id: TagsCommandId) => isEcho(id, 'keyboard')}
                     footer={tracksFooter}
+                    {filter}
+                    {shown}
+                    onFilterChange={changeFilter}
                 />
             </div>
         </div>
@@ -558,7 +618,7 @@
             <!-- eslint-enable @typescript-eslint/no-confusing-void-expression -->
         </div>
     {/if}
-    <TagsFunctionKeyBar enabled={enabledCommands} onCommand={(id: TagsBarCommandId) => { runCommand(id) }} />
+    <TagsFunctionKeyBar enabled={enabledCommands} playerName={tagPlayer.appName} onCommand={(id: TagsBarCommandId) => { runCommand(id) }} />
 </div>
 
 {#if tool !== null && tags.view !== null}
@@ -567,6 +627,7 @@
         field={tool.field}
         trackCount={tags.view.tracks.length}
         selectedCount={selection.count}
+        shownCount={filtering ? (shown?.length ?? 0) : null}
         extras={tags.view.extras}
         state={tags}
         {runScoped}
@@ -583,6 +644,7 @@
         total={shown.total}
         loadImage={() => tags.coverImage(shown.choice.key)}
         editable={tags.view.editable}
+        hidden={hiddenByFilter}
         onUseForAll={(key: string) => {
             viewing = null
             void tags.useCoverForAll(key)
@@ -631,20 +693,42 @@
             listChoices={() => tags.coverChoices()}
             loadThumbnail={(key: string) => tags.coverThumbnail(key)}
             {listCandidates}
+            {hiddenByFilter}
             onView={(shown: CoverShown) => { viewing = shown }}
             onPick={(fileName: string) => void tags.coverFromFile(fileName)}
             onEdit={(edits: TagEdit[]) => tags.edit(edits)}
             onPaste={(data: Uint8Array) => void tags.coverFromBytes(data)}
             onDrop={(path: string) => void tags.coverFromPath(path)}
+            onUseForAll={(key: string) => void tags.useCoverForAll(key)}
         />
     {/if}
 {/snippet}
 
 {#snippet tracksFooter()}
-    <Button size="mini" onclick={() => void openInPlayer()}>{tString('multiRename.tags.play.openInPlayer')}</Button>
+    <span class="open-in">
+        <Button size="mini" onclick={() => void openInPlayer()}>{openInLabel}</Button>
+        <span bind:this={playerMenuButton}>
+            <Button
+                size="mini"
+                aria-label={tString('multiRename.tags.play.chooseApp')}
+                aria-haspopup="menu"
+                aria-expanded={tagPlayer.menu.isOpen}
+                tooltipContent={tString('multiRename.tags.play.chooseApp')}
+                onclick={() => { if (playerMenuButton) void tagPlayer.openMenu(playerMenuButton) }}
+            >
+                <Icon name="chevron-down" size={12} />
+            </Button>
+        </span>
+    </span>
+    <Menu menu={tagPlayer.menu} ariaLabel={tString('multiRename.tags.play.menu')} minWidth={200} />
 {/snippet}
 
 <style>
+    .open-in {
+        display: inline-flex;
+        gap: 1px;
+    }
+
     /* Panes, status line, function-key bar: edge to edge, as in the main window. Only the panes flex. */
     .tags-content {
         display: flex;

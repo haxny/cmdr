@@ -44,7 +44,7 @@
     import type { CaseChange, HistoryField } from '#lib/ipc/bindings.js'
     import { errorText } from './error-text'
     import { createMultiRenameState } from './multi-rename-state.svelte'
-    import MaskInput from './MaskInput.svelte'
+    import MaskFields from './MaskFields.svelte'
     import { provideRangeSampleSource } from './range-sample-source'
     import { TOGGLE_COMMANDS, WHOLE_NAME_TOGGLES, optionKeyOf, type ToggleField, type WholeNameField } from './option-keys'
     import { presetKeyOf, type PresetsControlApi } from './preset-keys'
@@ -183,11 +183,16 @@
     const canResults = $derived(tool.error === null && !tool.pending && !tool.applying)
     const shownError = $derived(tool.error ?? tool.applyError ?? results.error)
     /** The error line's words: the preview's, Start's, or Results' error, else why Undo rename didn't go. */
-    const shownMessage = $derived(shownError ? errorText(shownError) : undoNotice ? tString(undoNotice) : '')
-    /** A spec error keeps the last good preview on screen; it and its summary dim as stale. */
-    const previewStale = $derived(tool.error?.type === 'spec')
-    /** Results says what it's doing in the list's heading slot, unless an error has it. */
-    const showResultsNotice = $derived(!shownMessage && (results.open || tool.editedCount > 0))
+    const shownMessage = $derived(
+        shownError ? errorText(shownError, tool.spec.nameMask) : undoNotice ? tString(undoNotice) : '',
+    )
+    /**
+     * The name mask switched to foobar on its own: the heading slot says so, with the way back, beside
+     * an error too (a pasted pattern that doesn't parse is when the way back matters most).
+     */
+    const showSyntaxNotice = $derived(tool.syntaxSwitched)
+    /** Results says what it's doing in the list's heading slot, unless an error or the syntax notice has it. */
+    const showResultsNotice = $derived(!shownMessage && !showSyntaxNotice && (results.open || tool.editedCount > 0))
 
     onMount(() => {
         void tool.loadPresets()
@@ -344,44 +349,7 @@
                  options. The chip groups share the last column, right edges level; the masks span
                  the two field columns, so the Extension field ends where Replace with does. -->
             <div class="field-grid">
-                <div class="masks">
-                    <label class="field grow">
-                        <span class="label">{tString('multiRename.nameMask')}</span>
-                        <MaskInput
-                            bind:inputElement={nameMaskInput}
-                            value={tool.spec.nameMask}
-                            onValueChange={(nameMask: string) => { tool.update({ nameMask }) }}
-                            ariaLabel={tString('multiRename.nameMask')}
-                            invalid={tool.error?.type === 'spec' && tool.error.error.type === 'nameMask'}
-                        >
-                            {#snippet trailing()}
-                                <FieldHistoryChevron
-                                    disabled={fieldHistory.historyOf('nameMask').length === 0}
-                                    expanded={fieldHistory.openField === 'nameMask'}
-                                    onOpen={() => { fieldHistory.open('nameMask') }}
-                                />
-                            {/snippet}
-                        </MaskInput>
-                    </label>
-                    <label class="field extension">
-                        <span class="label">{tString('multiRename.extensionMask')}</span>
-                        <MaskInput
-                            bind:inputElement={extensionMaskInput}
-                            value={tool.spec.extensionMask}
-                            onValueChange={(extensionMask: string) => { tool.update({ extensionMask }) }}
-                            ariaLabel={tString('multiRename.extensionMask')}
-                            invalid={tool.error?.type === 'spec' && tool.error.error.type === 'extensionMask'}
-                        >
-                            {#snippet trailing()}
-                                <FieldHistoryChevron
-                                    disabled={fieldHistory.historyOf('extensionMask').length === 0}
-                                    expanded={fieldHistory.openField === 'extensionMask'}
-                                    onOpen={() => { fieldHistory.open('extensionMask') }}
-                                />
-                            {/snippet}
-                        </MaskInput>
-                    </label>
-                </div>
+                <MaskFields {tool} {fieldHistory} bind:nameMaskInput bind:extensionMaskInput />
                 <PlaceholderChips
                     bind:this={placeholderChips}
                     {tool}
@@ -479,8 +447,13 @@
             >
                 {shownMessage}
             </p>
-            <p class="results-notice" role="status">
-                {#if showResultsNotice}
+            <p class="results-notice" class:after-error={shownMessage !== ''} role="status">
+                {#if showSyntaxNotice}
+                    <span class="results-words">{tString('multiRename.syntax.switched')}</span>
+                    <LinkButton onclick={() => { tool.undoSyntaxSwitch() }}>
+                        {tString('multiRename.syntax.useCmdr')}
+                    </LinkButton>
+                {:else if showResultsNotice}
                     <span class="results-words">
                         {tool.editedCount > 0
                             ? tString('multiRename.results.edited', { count: tool.editedCount })
@@ -498,7 +471,7 @@
                     {/if}
                 {/if}
             </p>
-            {#if !shownMessage && !showResultsNotice}
+            {#if !shownMessage && !showSyntaxNotice && !showResultsNotice}
                 {#if readingTags}
                     <!-- Plain text, not a live region: it ticks several times a second. -->
                     <span class="label preview-label">
@@ -515,7 +488,7 @@
 
         <PreviewList
             rows={tool.source}
-            stale={previewStale}
+            waiting={tool.maskInvalid}
             cursorIndex={tool.cursorIndex}
             onCursorChange={tool.setCursor}
             onMoveRow={tool.moveCursorRow}
@@ -530,17 +503,21 @@
     {#snippet footerLeading()}
         <div class="footer-leading">
             <PresetsControl bind:this={presetsControl} {tool} />
-            <span class="counts" class:is-unavailable={previewStale} role="status">
-                <Trans
-                    key={tool.counts.reading > 0 ? 'multiRename.summaryReading' : 'multiRename.summary'}
-                    params={{
-                        ready: tool.counts.ready,
-                        unchanged: tool.counts.unchanged,
-                        problems: tool.counts.problems,
-                        reading: tool.counts.reading,
-                    }}
-                    snippets={{ problemsToggle }}
-                />
+            <span class="counts" role="status">
+                {#if tool.maskInvalid}
+                    {tString('multiRename.waitingForMask')}
+                {:else}
+                    <Trans
+                        key={tool.counts.reading > 0 ? 'multiRename.summaryReading' : 'multiRename.summary'}
+                        params={{
+                            ready: tool.counts.ready,
+                            unchanged: tool.counts.unchanged,
+                            problems: tool.counts.problems,
+                            reading: tool.counts.reading,
+                        }}
+                        snippets={{ problemsToggle }}
+                    />
+                {/if}
             </span>
         </div>
     {/snippet}
@@ -625,14 +602,6 @@
         align-items: end;
     }
 
-    .masks {
-        grid-column: span 2;
-        display: flex;
-        gap: var(--spacing-md);
-        align-items: flex-end;
-        min-width: 0;
-    }
-
     /* Each chip group spans the whole chip column like a segmented bar: the same small gap
        between chips, and each chip grows from its own label's width by an equal share of the
        spare room. Not equal widths: `Chip`'s field size sets a `min-width`, so a basis-0 chip
@@ -659,15 +628,6 @@
         flex-direction: column;
         gap: var(--spacing-xxs);
         min-width: 0;
-    }
-
-    .grow {
-        flex: 1 1 0;
-    }
-
-    /* An extension mask is short: `[E]`, or a counter at most. */
-    .extension {
-        flex: 0 0 140px;
     }
 
     .label {
@@ -748,6 +708,11 @@
         white-space: nowrap;
     }
 
+    /* Beside the error: a gap between them. Alone, it starts on the field labels' edge. */
+    .results-notice.after-error:not(:empty) {
+        margin-left: var(--spacing-sm);
+    }
+
     .results-words {
         overflow: hidden;
         text-overflow: ellipsis;
@@ -766,17 +731,6 @@
         align-items: center;
         gap: var(--spacing-md);
         min-width: 0;
-    }
-
-    /* Dims with the stale preview it summarizes (`PreviewList`'s `.is-unavailable`). */
-    .counts.is-unavailable {
-        opacity: 0.5;
-    }
-
-    @media (prefers-reduced-motion: no-preference) {
-        .counts {
-            transition: opacity var(--transition-base);
-        }
     }
 
     .counts {

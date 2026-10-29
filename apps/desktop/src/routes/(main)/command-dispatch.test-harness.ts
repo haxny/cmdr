@@ -103,6 +103,7 @@ export const EXEMPT_IDS = [
   'tags.review',
   'tags.undo',
   'tags.redo',
+  'tags.filter',
   'errorPane.toggleTechnicalDetails',
   'viewer.toggleWordWrap',
   'viewer.toggleTail',

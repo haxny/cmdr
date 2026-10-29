@@ -35,6 +35,15 @@ export const MEDIA_FIELDS: Record<MediaField, { name: string; kind: MediaFieldKi
   tagYear: { name: 'tag.year', kind: 'number' },
   tagGenre: { name: 'tag.genre', kind: 'text' },
   tagComment: { name: 'tag.comment', kind: 'text' },
+  tagPerformer: { name: 'tag.performer', kind: 'text' },
+  tagComposer: { name: 'tag.composer', kind: 'text' },
+  tagPublisher: { name: 'tag.publisher', kind: 'text' },
+  tagDate: { name: 'tag.date', kind: 'text' },
+  tagTotalTracks: { name: 'tag.totaltracks', kind: 'number' },
+  tagTotalDiscs: { name: 'tag.totaldiscs', kind: 'number' },
+  tagDescription: { name: 'tag.description', kind: 'text' },
+  tagTranslator: { name: 'tag.translator', kind: 'text' },
+  tagWww: { name: 'tag.www', kind: 'text' },
 }
 
 const FIELD_OF_NAME = new Map<string, MediaField>(

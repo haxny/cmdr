@@ -177,7 +177,7 @@ describe('multi-rename wrappers', () => {
   it('passes presets through', async () => {
     const preset = { id: 'p', name: 'Plain', spec }
     vi.mocked(commands.getMultiRenamePresets).mockResolvedValueOnce([preset] as never)
-    const seeds = [{ name: 'Plain', spec }]
+    const seeds = [{ name: 'Plain', spec, version: 1 }]
     expect(await getMultiRenamePresets(seeds)).toEqual([preset])
     expect(commands.getMultiRenamePresets).toHaveBeenCalledWith(seeds)
     vi.mocked(commands.saveMultiRenamePreset).mockResolvedValueOnce({ status: 'ok', data: [preset] } as never)

@@ -44,7 +44,24 @@ describe('pickerGroups', () => {
     ])
     const byHeading = pickerGroups(overview({}), 'music', word)
     expect(byHeading.map((g) => g.source)).toEqual(['tag'])
-    expect(byHeading[0].fields).toHaveLength(9)
+    expect(byHeading[0].fields).toHaveLength(18)
+  })
+
+  it('lists the performer, publisher, date, totals and the rest in the music group', () => {
+    const music = pickerGroups(overview({}), '', word).find((g) => g.source === 'tag')
+    expect(music?.fields.map((f) => f.name)).toEqual(
+      expect.arrayContaining([
+        'tag.performer',
+        'tag.composer',
+        'tag.publisher',
+        'tag.date',
+        'tag.totaltracks',
+        'tag.totaldiscs',
+        'tag.description',
+        'tag.translator',
+        'tag.www',
+      ]),
+    )
   })
 
   it('leaves out a group nothing in it matches', () => {

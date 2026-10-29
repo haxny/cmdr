@@ -91,6 +91,8 @@ describe('TagToolDialogs', () => {
     ['Album artist = Artist', { kind: 'albumArtistFromArtist' }],
     ['Narrator from text', { kind: 'narratorFromText' }],
     ['Clear title = album', { kind: 'clearRedundantTitles' }],
+    ['Disc from folder', { kind: 'discFromFolder' }],
+    ['Keep only the disc number', { kind: 'discNumberOnly' }],
   ])('Clean up’s %s sends %j and closes', async (text, tool) => {
     const { onTool, onClose } = await mountTool('cleanUp')
     await click(text)

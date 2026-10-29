@@ -69,6 +69,7 @@ const track = (n: string, title: string, readError: TagEditorView['tracks'][numb
   path: `/b/${n}.mp3`,
   fileName: `${n}.mp3`,
   track: n,
+  disc: null,
   title,
   durationMs: 1000,
   changed: false,
@@ -162,6 +163,7 @@ describe('⌘C on a field', () => {
     await key('Tab')
     await key('ArrowDown')
     await fromMenu('copy')
+    await key('ArrowLeft')
     await key('ArrowLeft')
     await fromMenu('copy')
     expect(ipc.copyToClipboard.mock.calls).toEqual([['Druha'], ['02']])
@@ -302,9 +304,23 @@ describe('⌘V on a field', () => {
     await mountWindow()
     await key('Tab')
     await key('ArrowLeft')
+    await key('ArrowLeft')
     await fromMenu('paste')
     expect(ipc.editTags).toHaveBeenCalledWith('S', [
       { kind: 'setOne', path: '/b/01.mp3', field: 'track', values: ['7'] },
+    ])
+  })
+
+  it('copies and pastes the Disc cell: ← from Title reaches it', async () => {
+    ipc.readClipboardText.mockResolvedValue('2\n')
+    await mountWindow()
+    await key('Tab')
+    await key('ArrowLeft')
+    await fromMenu('copy')
+    expect(ipc.copyToClipboard.mock.calls).toEqual([['']])
+    await fromMenu('paste')
+    expect(ipc.editTags).toHaveBeenCalledWith('S', [
+      { kind: 'setOne', path: '/b/01.mp3', field: 'disc', values: ['2'] },
     ])
   })
 

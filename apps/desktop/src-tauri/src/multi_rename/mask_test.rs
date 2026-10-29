@@ -356,7 +356,7 @@ fn media() -> MediaFacts {
         model: Some("iPhone 15 Pro".to_string()),
         iso: Some(64),
         width: Some(4032),
-        artist: Some("Daft Punk".to_string()),
+        artist: vec!["Daft Punk".to_string()],
         title: Some("Digital Love".to_string()),
         track: Some(3),
         ..MediaFacts::default()

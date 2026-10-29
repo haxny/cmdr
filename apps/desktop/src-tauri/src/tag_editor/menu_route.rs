@@ -1,6 +1,6 @@
 //! The main-menu events a focused Tags window takes (`menu/menu_handlers.rs` asks first): Edit >
 //! Select all (⌘A), Edit > Cut / Copy / Paste (⌘X, ⌘C, ⌘V), Select > Deselect all (⌘⇧A), and the
-//! File / Select F-keys. Each one's
+//! File / Select F-keys, and Edit > Search files' ⌘F (the Tracks filter). Each one's
 //! accelerator fires before the page sees the key, and the file-scoped focus guard after this
 //! would drop it, so this is the keys' only road there. What each item means is `window.rs`'s.
 

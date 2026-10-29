@@ -36,7 +36,7 @@ const ipc = vi.hoisted(() => ({
   closeMultiRename: vi.fn(() => Promise.resolve()),
   tagTrackAudioUrl: vi.fn(() => Promise.resolve({ ok: false, error: { kind: 'unknownTrack' } })),
   releaseTagTrackAudio: vi.fn(() => Promise.resolve()),
-  openTagsInPlayer: vi.fn(() => Promise.resolve({ ok: true, value: null })),
+  openTagsInPlayer: vi.fn(() => Promise.resolve({ ok: true, value: { fellBack: false } })),
   onTagsSelectAll: vi.fn((callback: () => void) => {
     menuSelect.all = callback
     return Promise.resolve(() => {})
@@ -89,6 +89,7 @@ const track = (n: string, title: string) => ({
   path: `/b/${n}.mp3`,
   fileName: `${n}.mp3`,
   track: n,
+  disc: null,
   title,
   durationMs: 1000,
   changed: false,
@@ -266,6 +267,7 @@ describe('the Tags window’s function keys', () => {
     const root = await mountWindow()
     await key('Tab')
     await key('ArrowLeft')
+    await key('ArrowLeft')
     await toggleTrack(root, '/b/02.mp3')
     await key('F8')
     buttonNamed(dialog() as HTMLElement, 'Clear').click()
@@ -359,7 +361,7 @@ describe('the Tags window’s function keys', () => {
     await key('F3')
     expect(ipc.tagTrackAudioUrl).toHaveBeenCalledWith('S', '/b/01.mp3')
     await key('F3', { shiftKey: true })
-    expect(ipc.openTagsInPlayer).toHaveBeenCalledWith('S', ['/b/01.mp3', '/b/02.mp3', '/b/03.mp3'])
+    expect(ipc.openTagsInPlayer).toHaveBeenCalledWith('S', ['/b/01.mp3', '/b/02.mp3', '/b/03.mp3'], 'default')
   })
 
   it('no F-key fires while a value is being typed', async () => {

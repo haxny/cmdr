@@ -12,6 +12,9 @@ answering every field (`MediaFacts`). Pure parsing over `Read + Seek`, plus a by
 - `read.rs`: `read_media` (any `Read + Seek`) and `read_media_from` (a `ByteSource`, cover art holed), dispatching by
   extension to `photo.rs` (EXIF), `lofty` (tags), `isobmff.rs` (MP4/MOV dates), and `ebml.rs` (MKV/WebM). `holes.rs`
   maps cover art a tag parser would read only to skip; `clock.rs` turns container UTC into local time; `bytes.rs` reads.
+- `native.rs`: the tag fields lofty's generic tag can't give (performer, composer, publisher, date, totals, description,
+  translator, www), read from each format's own tag. ❌ Its maps mirror `cmdr-tags/src/read.rs`; change one, change the
+  other.
 - `source.rs`: `ByteSource`, `VolumeByteSource` (the async bridge), `BlockReader` (64 KiB blocks, byte budget, holes).
 
 ## Must-knows

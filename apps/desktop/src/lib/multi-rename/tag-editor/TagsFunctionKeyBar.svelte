@@ -6,6 +6,7 @@
      * never takes focus: every key path is the key itself, and a press keeps focus where it was.
      */
     import { tString } from '#lib/intl/messages.svelte.js'
+    import type { MessageKey } from '#lib/intl/keys.gen.js'
     import {
         getFirstShiftShortcutReactive,
         getFirstShortcutReactive,
@@ -23,9 +24,11 @@
         /** The commands that can act now; a slot whose command isn't here is disabled. */
         enabled: ReadonlySet<TagsBarCommandId>
         onCommand: (id: TagsBarCommandId) => void
+        /** The player app's name for the ⇧F3 button ("Open in <name>"); `null` while unknown ("Open in player"). */
+        playerName?: string | null
     }
 
-    const { enabled, onCommand }: Props = $props()
+    const { enabled, onCommand, playerName = null }: Props = $props()
 
     /** Slot 0 is F2, so an empty Shift slot `i` shows `⇧F${i + FIRST_FN_KEY}`. */
     const FIRST_FN_KEY = 2
@@ -46,6 +49,14 @@
         shortcut,
     })
 
+    /** The slot's label; the player slot names the app when it's known. */
+    function labelOf(slot: { id: TagsBarCommandId; label: MessageKey }): string {
+        if (slot.id === 'tags.openInPlayer' && playerName !== null) {
+            return tString('multiRename.tags.keys.openInApp', { app: playerName })
+        }
+        return tString(slot.label)
+    }
+
     const writeSlot = $derived(
         toSlot(TAGS_WRITE_SLOT.id, tString(TAGS_WRITE_SLOT.label), getFirstShortcutReactive(TAGS_WRITE_SLOT.id)),
     )
@@ -58,7 +69,7 @@
     ])
     const shiftRow = $derived<(Slot | null)[]>([
         ...TAGS_SHIFT_ROW.map((slot) =>
-            slot === null ? null : toSlot(slot.id, tString(slot.label), getFirstShiftShortcutReactive(slot.id)),
+            slot === null ? null : toSlot(slot.id, labelOf(slot), getFirstShiftShortcutReactive(slot.id)),
         ),
         reviewSlot,
     ])

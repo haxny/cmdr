@@ -373,3 +373,299 @@ fn text_is_one_undo_step() {
     close(&id);
     close_rename(&id);
 }
+
+// A saved list of steps (F4's presets) runs as one edit.
+
+fn czech_part_words() -> TagTextTool {
+    let mut list = super::replace_presets::PresetList::default();
+    super::replace_presets::seed_in(&mut list, 200);
+    TagTextTool::Steps {
+        steps: list.entries.remove(0).steps,
+    }
+}
+
+fn step(search: &str, with: &str) -> super::text_tools::ReplaceStep {
+    super::text_tools::ReplaceStep {
+        fields: Some(vec![TagField::Title]),
+        search: search.to_string(),
+        replace: with.to_string(),
+        case_sensitive: false,
+        first_only: false,
+        regex: false,
+    }
+}
+
+#[test]
+fn czech_part_words_become_numbers() {
+    let (dir, _listing, id) = album("tag-steps-czech");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "03-1 Rohanští jezdci, část první"),
+            set_title(&dir, "b.mp3", "03-2 Rohanští jezdci, Část DEVÁTÁ"),
+            set_title(&dir, "c.mp3", "Kniha, díl třetí"),
+        ],
+    )
+    .expect("edits");
+    let view = run(&id, czech_part_words(), None).expect("runs");
+    assert_eq!(
+        titles(&view),
+        vec![
+            Some("03-1 Rohanští jezdci 01"),
+            Some("03-2 Rohanští jezdci 09"),
+            Some("Kniha 03")
+        ]
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn czech_part_words_without_diacritics_and_masculine_forms() {
+    let (dir, _listing, id) = album("tag-steps-ascii");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Dve veze, cast prvni"),
+            set_title(&dir, "b.mp3", "Kniha, díl čtvrtý"),
+            set_title(&dir, "c.mp3", "Kniha, dil dvacata"),
+        ],
+    )
+    .expect("edits");
+    let view = run(&id, czech_part_words(), None).expect("runs");
+    assert_eq!(
+        titles(&view),
+        vec![Some("Dve veze 01"), Some("Kniha 04"), Some("Kniha 20")]
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn czech_part_words_leave_other_titles_alone() {
+    let (dir, _listing, id) = album("tag-steps-leave");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Část prvního dne"),
+            set_title(&dir, "b.mp3", "Druhá část"),
+        ],
+    )
+    .expect("edits");
+    let view = run(&id, czech_part_words(), None).expect("runs");
+    assert_eq!(
+        titles(&view),
+        vec![Some("Část prvního dne"), Some("Druhá část"), Some("Gamma")]
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn steps_run_in_order_in_one_undo_step() {
+    let (_dir, _listing, id) = album("tag-steps-undo");
+    open(&id, false).expect("opens");
+    let tool = TagTextTool::Steps {
+        steps: vec![step("Alpha", "Omega"), step("Omega", "Zeta")],
+    };
+    let ran = run(&id, tool, None).expect("runs");
+    assert_eq!(titles(&ran)[0], Some("Zeta"), "the second step sees the first's result");
+    let undone = super::history::undo_edit(&id).expect("undoes the run");
+    assert_eq!(titles(&undone)[0], Some("Alpha"), "one undo reverts every step");
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn steps_respect_the_scope() {
+    let (dir, _listing, id) = album("tag-steps-scope");
+    open(&id, false).expect("opens");
+    let tool = TagTextTool::Steps {
+        steps: vec![step("e", "E")],
+    };
+    let view = run(&id, tool, Some(vec![path_of(&dir, "b.mp3")])).expect("runs");
+    assert_eq!(titles(&view), vec![Some("Alpha"), Some("BEta"), Some("Gamma")]);
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn a_bad_step_changes_nothing() {
+    let (_dir, _listing, id) = album("tag-steps-bad");
+    open(&id, false).expect("opens");
+    let mut bad = step("(", "x");
+    bad.regex = true;
+    let tool = TagTextTool::Steps {
+        steps: vec![step("Alpha", "Omega"), bad],
+    };
+    assert!(matches!(run(&id, tool, None), Err(TagEditorError::BadRegex)));
+    let view = run(&id, TagTextTool::Steps { steps: vec![] }, None).expect("an empty list is a no-op");
+    assert_eq!(titles(&view)[0], Some("Alpha"));
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn a_step_without_fields_covers_every_field() {
+    let (_dir, _listing, id) = album("tag-steps-all");
+    open(&id, false).expect("opens");
+    let mut all = step("Other", "Book");
+    all.fields = None;
+    let view = run(&id, TagTextTool::Steps { steps: vec![all] }, None).expect("runs");
+    assert_eq!(
+        shared(&view, TagField::Album),
+        &SharedValue::Same(vec!["Book".to_string()])
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+// What a mask's `[=tag.*]` placeholders read from a track's tags.
+
+#[test]
+fn media_facts_carry_the_tag_fields_masks_can_name() {
+    use cmdr_media_meta::{MediaField, MediaValue};
+    let mut tags = cmdr_tags::FileTags::default();
+    for (field, values) in [
+        (TagField::Performer, vec!["Jan Hartl", "Eva Novak"]),
+        (TagField::Composer, vec!["Dvorak"]),
+        (TagField::Publisher, vec!["CRo3"]),
+        (TagField::Date, vec!["2010-09-20"]),
+        (TagField::Track, vec!["3"]),
+        (TagField::TrackTotal, vec!["12"]),
+        (TagField::Disc, vec!["1"]),
+        (TagField::DiscTotal, vec!["2"]),
+        (TagField::Description, vec!["About it"]),
+        (TagField::Translator, vec!["Pavel Eisner"]),
+        (TagField::Www, vec!["https://a.cz", "https://b.cz"]),
+    ] {
+        tags.fields
+            .insert(field, values.into_iter().map(String::from).collect());
+    }
+    let facts = super::text_tools::media_facts_of(&tags);
+    let text = |field| match facts.get(field) {
+        Some(MediaValue::Text(text)) => Some(text.into_owned()),
+        _ => None,
+    };
+    assert_eq!(text(MediaField::TagPerformer).as_deref(), Some("Jan Hartl, Eva Novak"));
+    assert_eq!(text(MediaField::TagComposer).as_deref(), Some("Dvorak"));
+    assert_eq!(text(MediaField::TagPublisher).as_deref(), Some("CRo3"));
+    assert_eq!(text(MediaField::TagDate).as_deref(), Some("2010-09-20"));
+    assert_eq!(text(MediaField::TagDescription).as_deref(), Some("About it"));
+    assert_eq!(text(MediaField::TagTranslator).as_deref(), Some("Pavel Eisner"));
+    assert_eq!(text(MediaField::TagWww).as_deref(), Some("https://a.cz, https://b.cz"));
+    assert_eq!(facts.get(MediaField::TagTotalTracks), Some(MediaValue::Number(12)));
+    assert_eq!(facts.get(MediaField::TagTotalDiscs), Some(MediaValue::Number(2)));
+    assert_eq!(facts.get(MediaField::TagYear), Some(MediaValue::Number(2010)));
+}
+
+// Multi-Rename's file reader (cmdr-media-meta) and the Tags window's (cmdr-tags) must read the same
+// values from the same file: this pins the mirrored field maps.
+
+#[test]
+fn masks_and_the_tags_window_read_the_same_tag_fields_from_one_file() {
+    use cmdr_media_meta::test_fixtures::{flac_stream, m4a_file, mp3_frames};
+    use cmdr_media_meta::{MediaField, MediaValue, read_media};
+    use cmdr_tags::{FileTags, WriteOptions, read_tags, write_tags};
+
+    let fields: [(TagField, &[&str]); 15] = [
+        (TagField::Title, &["Chapter one"]),
+        (TagField::Artist, &["Anne Frank", "Otto Frank"]),
+        (TagField::AlbumArtist, &["Anne Frank"]),
+        (TagField::Genre, &["audiokniha", "Fantasy"]),
+        (TagField::Track, &["3"]),
+        (TagField::TrackTotal, &["12"]),
+        (TagField::Disc, &["1"]),
+        (TagField::DiscTotal, &["2"]),
+        (TagField::Date, &["2010-09-20"]),
+        (TagField::Performer, &["Jan Hartl", "Eva Novak"]),
+        (TagField::Composer, &["Dvorak", "Smetana"]),
+        (TagField::Publisher, &["Odeon; Supraphon"]),
+        (TagField::Description, &["Part one; part two"]),
+        (TagField::Translator, &["Pavel Eisner"]),
+        (TagField::Www, &["https://a.cz", "https://b.cz"]),
+    ];
+    let mut tags = FileTags::default();
+    for (field, values) in fields {
+        tags.fields
+            .insert(field, values.iter().map(ToString::to_string).collect());
+    }
+    let flac = [flac_stream(), (0..2000u32).map(|i| (i % 251) as u8).collect()].concat();
+    let dir = tempfile::tempdir().expect("a temp dir");
+    for (name, bytes) in [("a.mp3", mp3_frames()), ("a.m4a", m4a_file()), ("a.flac", flac)] {
+        let path = dir.path().join(name);
+        std::fs::write(&path, bytes).expect("writes the fixture");
+        write_tags(&path, &tags, &WriteOptions::default()).expect("writes the tags");
+        let window = super::text_tools::media_facts_of(&read_tags(&path).expect("reads the tags"));
+        let masks = read_media(&mut std::fs::File::open(&path).expect("opens"), name).expect("reads the media");
+        for field in MediaField::ALL {
+            if field.name().starts_with("tag.") && field != MediaField::TagYear {
+                assert_eq!(masks.get(field), window.get(field), "{name} {}", field.name());
+            }
+        }
+        // And the values are really there, not both empty.
+        assert!(masks.get(MediaField::TagPerformer).is_some(), "{name}");
+        assert!(masks.get(MediaField::TagTotalTracks).is_some(), "{name}");
+        // Every value, joined as a foobar pattern prints them (M4A's genre is the freeform `GENRE`).
+        let text = |value: &'static str| Some(MediaValue::Text(value.into()));
+        assert_eq!(masks.get(MediaField::TagGenre), text("audiokniha, Fantasy"), "{name}");
+        assert_eq!(
+            masks.get(MediaField::TagArtist),
+            text("Anne Frank, Otto Frank"),
+            "{name}"
+        );
+        assert_eq!(masks.get(MediaField::TagAlbumArtist), text("Anne Frank"), "{name}");
+    }
+}
+
+#[test]
+fn czech_part_words_only_as_whole_words() {
+    let (dir, _listing, id) = album("tag-steps-whole");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Podíl první"),
+            set_title(&dir, "b.mp3", "Rozdíl druhý"),
+            set_title(&dir, "c.mp3", "Kniha, část dvacátá první"),
+        ],
+    )
+    .expect("edits");
+    let view = run(&id, czech_part_words(), None).expect("runs");
+    assert_eq!(
+        titles(&view),
+        vec![
+            Some("Podíl první"),
+            Some("Rozdíl druhý"),
+            Some("Kniha, část dvacátá první")
+        ],
+        "a compound ordinal (21+) is left alone, not half-converted"
+    );
+    close(&id);
+    close_rename(&id);
+}
+
+#[test]
+fn czech_part_words_tidy_the_separator() {
+    let (dir, _listing, id) = album("tag-steps-sep");
+    open(&id, false).expect("opens");
+    edit(
+        &id,
+        vec![
+            set_title(&dir, "a.mp3", "Část první"),
+            set_title(&dir, "b.mp3", "Kniha,  část první"),
+            set_title(&dir, "c.mp3", "Kniha, část druhá (živě)"),
+        ],
+    )
+    .expect("edits");
+    let view = run(&id, czech_part_words(), None).expect("runs");
+    assert_eq!(
+        titles(&view),
+        vec![Some("01"), Some("Kniha 01"), Some("Kniha 02 (živě)")]
+    );
+    close(&id);
+    close_rename(&id);
+}

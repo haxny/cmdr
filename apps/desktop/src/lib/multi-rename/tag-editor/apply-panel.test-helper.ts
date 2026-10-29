@@ -13,6 +13,7 @@ export const PANEL_VIEW: TagEditorView = {
     path: `/b/${fileName}`,
     fileName,
     track: String(i + 1),
+    disc: null,
     title: null,
     durationMs: null,
     changed: true,

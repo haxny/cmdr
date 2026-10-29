@@ -1,9 +1,24 @@
 /** Tier 3 a11y tests for `ReplacePanel.svelte`: empty, filled, with an error showing, and locked. */
-import { afterEach, describe, it } from 'vitest'
+import { afterEach, describe, it, vi } from 'vitest'
 import ReplacePanel from './ReplacePanel.svelte'
 import { byId, mountInto, typeInto } from './tag-cell.test-helper'
 import { asTags, fakeRunScoped, fakeTags } from './tag-tools-panel.test-helper'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
+
+vi.mock('#lib/tauri-commands/index.js', async (original) => ({
+  ...(await original<object>()),
+  getTagReplacePresets: vi.fn(() =>
+    Promise.resolve([
+      {
+        id: 'czech',
+        name: 'Czech part words → numbers',
+        steps: [
+          { fields: ['title'], search: 'x', replace: ' 01', caseSensitive: false, firstOnly: false, regex: true },
+        ],
+      },
+    ]),
+  ),
+}))
 
 let cleanup: (() => void) | undefined
 afterEach(() => {
@@ -45,5 +60,14 @@ describe('ReplacePanel a11y', () => {
 
   it('locked has no violations', async () => {
     await expectNoA11yViolations((await mountPanel(true)).root)
+  })
+
+  it('with saved lists and a step in the making has no violations', async () => {
+    const { root } = await mountPanel()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await typeInto(byId<HTMLInputElement>(root, 'tag-replace-search'), ', part one')
+    ;[...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Add as step')?.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await expectNoA11yViolations(root)
   })
 })

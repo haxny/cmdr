@@ -1,8 +1,9 @@
 /**
- * The Album pane over the Tracks pane's selection: the backend sums up only the selected tracks in the view's `shared`
- * rows (`setViewScope`, `scopeCount`), and an Album edit sets only those tracks. Every track while none is selected.
- * The pane never shows one scope while an edit goes to another: every Album edit first `flush`es a selection change
- * still waiting out its delay, so the view shows the new scope before the edit is sent.
+ * The Album pane over the Tracks pane's scope (`TrackSelection.scoped`): the selected tracks, else, with none selected,
+ * the ones the Tracks filter shows. The backend sums up only those tracks in the view's `shared` rows (`setViewScope`,
+ * `scopeCount`), and an Album edit sets only those tracks. Every track while neither narrows it. The pane never shows
+ * one scope while an edit goes to another: every Album edit first `flush`es a scope change still waiting out its
+ * delay, so the view shows the new scope before the edit is sent.
  */
 
 import type { TagEdit } from '#lib/tauri-commands/index.js'
@@ -25,7 +26,7 @@ export function scopedAlbumEdits(edits: TagEdit[], scope: string[] | null, reada
 }
 
 export interface ViewScopeDeps {
-  /** The selected tracks' paths. */
+  /** The scoped tracks' paths: the selected ones, else the filter's shown ones, else none (every track). */
   selected: () => ReadonlySet<string>
   /** How many tracks the view shown covers (`view.scopeCount`, `null` for all); `undefined` while there is no view. */
   shownCount: () => number | null | undefined

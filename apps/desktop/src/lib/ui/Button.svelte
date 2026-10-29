@@ -49,6 +49,8 @@
          * reader the button opens something, which one, and whether it's open now.
          */
         'aria-expanded'?: boolean
+        /** The kind of popup this button opens (a menu button). */
+        'aria-haspopup'?: 'menu'
         'aria-controls'?: string
         /**
          * `-1` takes the button out of the Tab order while it stays clickable and focusable from
@@ -77,6 +79,7 @@
         keyHint,
         'aria-keyshortcuts': ariaKeyshortcuts,
         'aria-expanded': ariaExpanded,
+        'aria-haspopup': ariaHaspopup,
         'aria-controls': ariaControls,
         tabindex,
         autoFocus = false,
@@ -105,6 +108,7 @@
     aria-describedby={ariaDescribedby}
     aria-keyshortcuts={ariaKeyshortcuts}
     aria-expanded={ariaExpanded}
+    aria-haspopup={ariaHaspopup}
     aria-controls={ariaControls}
     {tabindex}
     use:tooltip={tooltipContent}

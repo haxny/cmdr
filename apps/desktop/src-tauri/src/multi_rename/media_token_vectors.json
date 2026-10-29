@@ -20,7 +20,16 @@
     { "name": "tag.disc", "wire": "tagDisc", "kind": "number" },
     { "name": "tag.year", "wire": "tagYear", "kind": "number" },
     { "name": "tag.genre", "wire": "tagGenre", "kind": "text" },
-    { "name": "tag.comment", "wire": "tagComment", "kind": "text" }
+    { "name": "tag.comment", "wire": "tagComment", "kind": "text" },
+    { "name": "tag.performer", "wire": "tagPerformer", "kind": "text" },
+    { "name": "tag.composer", "wire": "tagComposer", "kind": "text" },
+    { "name": "tag.publisher", "wire": "tagPublisher", "kind": "text" },
+    { "name": "tag.date", "wire": "tagDate", "kind": "text" },
+    { "name": "tag.totaltracks", "wire": "tagTotalTracks", "kind": "number" },
+    { "name": "tag.totaldiscs", "wire": "tagTotalDiscs", "kind": "number" },
+    { "name": "tag.description", "wire": "tagDescription", "kind": "text" },
+    { "name": "tag.translator", "wire": "tagTranslator", "kind": "text" },
+    { "name": "tag.www", "wire": "tagWww", "kind": "text" }
   ],
   "valid": [
     { "token": "[=exif.taken]", "field": "exif.taken", "fallback": false, "format": null, "minimal": "[=exif.taken]" },
@@ -51,7 +60,10 @@
     { "token": "[=tag.title:+2-5]", "field": "tag.title", "fallback": false, "format": { "kind": "range", "range": { "kind": "span", "at": 2, "to": 5 } }, "minimal": "[=tag.title:2-5]" },
     { "token": "[=exif.camera:1--2]", "field": "exif.camera", "fallback": false, "format": { "kind": "range", "range": { "kind": "span", "at": 1, "to": -2 } }, "minimal": "[=exif.camera:1--2]" },
     { "token": "[=tag.albumartist]", "field": "tag.albumartist", "fallback": false, "format": null, "minimal": "[=tag.albumartist]" },
-    { "token": "[=tag.comment:-8,5]", "field": "tag.comment", "fallback": false, "format": { "kind": "range", "range": { "kind": "length", "at": -8, "length": 5 } }, "minimal": "[=tag.comment:-8,5]" }
+    { "token": "[=tag.comment:-8,5]", "field": "tag.comment", "fallback": false, "format": { "kind": "range", "range": { "kind": "length", "at": -8, "length": 5 } }, "minimal": "[=tag.comment:-8,5]" },
+    { "token": "[=tag.performer]", "field": "tag.performer", "fallback": false, "format": null, "minimal": "[=tag.performer]" },
+    { "token": "[=tag.date:1-4]", "field": "tag.date", "fallback": false, "format": { "kind": "range", "range": { "kind": "span", "at": 1, "to": 4 } }, "minimal": "[=tag.date:1-4]" },
+    { "token": "[=tag.totaltracks:2]", "field": "tag.totaltracks", "fallback": false, "format": { "kind": "digits", "digits": 2 }, "minimal": "[=tag.totaltracks:2]" }
   ],
   "invalid": [
     "[=]",

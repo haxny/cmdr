@@ -3,6 +3,26 @@
 Total Commander's Multi-Rename Tool, the semantics taken from its help (TOTALCMD.CHM, TC 11.58) and wiki. Proposed
 upstream in vdavid/cmdr#372.
 
+## Fork
+
+What differs from upstream for every user. The fork's Multi-Rename changes apply with `multiRename.tagEditor` off too (that setting only gates the Tags window).
+This is the one list; each item's section has the detail:
+
+- **foobar2000 patterns**: the name mask's Cmdr / foobar2000 syntax switch, and the auto-switch when a foobar pattern
+  is pasted or picked from the history (§ foobar2000 patterns; the sheet: `src/lib/multi-rename/DETAILS.md`).
+- **Seven foobar presets**, added once to every preset list (`seedVersion: 2`, § Presets). An older build drops a
+  preset's `maskSyntax` on its next rewrite, so after a downgrade the seeds and any user foobar preset load as Cmdr
+  masks holding foobar text (an `Unknown placeholder` error), as `seedVersion` itself is lost (§ Presets, Known limit).
+- **Nine new `[=tag.*]` fields** (`performer`, `composer`, `publisher`, `date`, `totaltracks`, `totaldiscs`,
+  `description`, `translator`, `www`), every value of artist, album artist and genre, and so a second parse of every
+  audio file (`crates/cmdr-media-meta/DETAILS.md` § The fields).
+- **`[=tag.track]` / `[=tag.disc]` pad to the run's width** (§ Placeholders).
+- **An empty name part is an empty name** in either syntax: `""` or `[N10-]` on a short name was a ready rename into a
+  dotfile, and is `InvalidName { Empty }` now (§ foobar2000 patterns).
+- **A broken mask shows no new names**, only the old ones (the sheet's `DETAILS.md`).
+- **Not built:** names don't follow the Tags window's unwritten edits; the sheet reads the tags on disk, so a rename
+  follows them after Write.
+
 ## Pipeline
 
 Per row, in rename order (`position` counts from 0 and is what `[C]` counts):
@@ -86,6 +106,57 @@ from PR #386 (Jiri Slovacek): a plain table reads `ευ` as `eu`, which no Greek
 
 Not in v1, all planned in #372: alphabetic counters, `\` to move into subfolders (the executor's one-parent rule refuses
 it today), "next step" chaining, and editing names in an editor.
+
+## foobar2000 patterns (`foobar/`)
+
+Fork (§ Fork). A second mask syntax: foobar2000 title formatting as the user writes it in foobar, so a pasted pattern renders as
+foobar's File Operations would. `foobar::parse` once, `Pattern::render(&RowFacts)` per row; pure. The grammar and its limits are in `foobar/mod.rs`, the fields in `foobar/fields.rs`, the functions and
+truth rules in `foobar/eval.rs`; `foobar_vectors.json` holds the user's own patterns with their exact names and every
+error with its byte offset.
+
+- **Chosen per spec**: `MultiRenameSpec.mask_syntax` (`MaskSyntax::{Cmdr, Foobar}`, `#[serde(default)]` Cmdr, so old
+  presets, the last spec, and MCP calls read as before). Foobar parses the NAME mask only (`plan.rs` `NameMask`); the
+  extension mask stays Cmdr's. The name then takes the same pipeline (search & replace, case, Greek, diacritics, NFC)
+  and the same statuses. A pattern that doesn't parse is `SpecError::Pattern { error: FoobarError }`. While the
+  pattern names a tag field (`Pattern::media_field`, the first in reading order), a row whose tags are still read is
+  `Reading` and an audio file whose tags can't be read is `Unreadable`, as with a Cmdr mask (never renamed with its
+  fields empty). A file that isn't media, or whose tags hold none of the pattern's tag fields
+  (`Pattern::holds_a_field`; `%title%`'s file-name fallback doesn't count), is `NoValue` and keeps its name.
+  **Decision/Why:** foobar's File Operations only ever sees playlist items, so it never meets `cover.jpg`; in Cmdr a
+  tag preset over a whole book folder renamed the cover and the notes to `() - .jpg` (2026-10-29 ruling). One field
+  the file holds is enough: the others render empty, as in foobar. A pattern of `%filename%` / `%directoryname%` alone
+  renames any file.
+- **The name part is trimmed of leading and trailing spaces** in foobar syntax (`NameMask::render`): `[%artist% -]
+  %album%` without an artist gave ` Denik.mp3`, which sorts first and hides its space.
+- **An empty name part is an empty name, in either syntax** (`Rendered::blank_name`): a name part that renders empty or
+  spaces only (foobar's `[N]`, a function that cuts everything) would make `a.mp3` a hidden `.mp3`, which
+  `validate_filename` takes, so the row is `InvalidName { Empty }`, never ready. A name typed in Results is the user's own and exempt.
+  A stored preset's legacy counter fields never fold into a foobar name mask: its `[C]` is a section, not a counter.
+
+- **Truth decides `[ ]`.** A field with a value is true, literal text false, a sequence true when any part is.
+  `$if`/`$if2`/`$if3` return the branch they pick; every other function carries its first argument's truth, so
+  `[$num(%discnumber%,1)$num(%tracknumber%,2)]` drops when both are missing.
+  Decision/Why: foobar documents truth only for fields and the control functions; carrying the subject's truth is
+  what makes the user's SFT pattern drop its numbers, which a literal-true `$num` would turn into `000`.
+- **A missing field outside `[ ]` is no text**, not foobar's `?`: File Operations, which renames, shows `()` for a
+  missing `%year%` (the user's screenshot), rather than a `?` in the new name.
+- **`%album artist%` falls back to the artist only**, a deliberate departure from foobar's documented chain (album
+  artist → artist → composer → performer): the user's canon never puts the reader in the author slot. `%artist%` has
+  no fallback. The user may revisit this (`foobar/fields.rs`).
+- **Cmdr conveniences, not foobar built-ins:** `%year%` is the date's first four characters when they're digits, else
+  the reader's year (foobar reads a raw YEAR tag; its users write `$year(%date%)`, which works too); `%track%` and
+  `%disc%` alias `%tracknumber%` and `%discnumber%`, which render the tag's number, not its text: a disc stored `01`
+  is `1`, a track `001` is `01`. `%title%` falls back to the name without extension and
+  `%tracknumber%` pads to two digits, as in foobar. A blank tag (spaces only) is missing, so `[ ]` drops it.
+- **Parentheses in an argument:** `,` and `)` end an argument, except inside a balanced `( )` of its own text, so
+  `$if(%date%,x (y),z)` is `x (y)` as a pattern pasted from the web means; an unbalanced `(` there is
+  `Unclosed { what: parenthesis }`. foobar wants such text quoted; Cmdr accepts both.
+- **`$caps` starts a word after whitespace or `( [ { " /`** and lower-cases the rest (`o'neil` → `O'neil`,
+  `jean-paul` → `Jean-paul`). foobar doesn't document its set; this is Cmdr's choice.
+- **Error offsets are bytes** into the pattern; a UI highlighting in a JS string converts them.
+- **No input panics or runs away:** nesting stops at `MAX_DEPTH` (32) before recursing, every value is cut at
+  `MAX_TEXT_BYTES`, `$num`/`$pad` widths at `MAX_WIDTH`, numbers saturate. A 10,000-pattern random loop and a
+  200,000-deep bomb guard it.
 
 ## Search & replace (`transform.rs`)
 
@@ -285,7 +356,14 @@ the frontend (`spec.ts`).
   every later call is a no-op for them. The names are message keys the backend can't read, and from then on they're
   plain user data, so nothing re-translates them. A preset saved before the first read keeps its place: the seeds go
   after it.
-- **The file** keeps the `crate::recents` envelope (`_schemaVersion: 1`, `entries`) plus `seeded`, so an older build's
+  **Seed versions** (fork, § Fork): each `PresetSeed` carries the Cmdr `version` that introduced it (the first four are 1; the user's
+  seven foobar2000 patterns, `MaskSyntax::Foobar` with Remove diacritics on, are 2). The file's `seedVersion`
+  (`#[serde(default)]`, schema stays 1) is the newest version the list took; a `seeded` file without it counts as 1. A
+  seed goes in when its version is above that, by the same rules (after the user's presets, name taken: skipped, cap),
+  and `seedVersion` is stored after, so deleting a version-2 seed never brings it back. A set-aside file stores
+  `u32::MAX`: no seeds, ever. The seven patterns live in `foobar_preset_vectors.json` (nameKey, pattern, expected name on the Anne Frank fixture): `foobar_spec_test.rs` renders them through the real pipeline and `spec.test.ts` pins `PRESET_SEEDS` to them.
+  **Known limit:** an older build rewrites the file without `seedVersion`, so after a downgrade-then-upgrade the list reads as version 1 and the seven are offered again once (a deleted one returns; a renamed one comes back beside the renamed copy).
+- **The file** keeps the `crate::recents` envelope (`_schemaVersion: 1`, `entries`) plus `seeded` and `seedVersion`, so an older build's
   file reads as stored (newest first) and an older build reads ours. A file that won't read goes through
   `state_recovery::read_state_file` (set aside, the person told once), like every state file; the lock discipline is
   `recents`' (two locks, never held at once).

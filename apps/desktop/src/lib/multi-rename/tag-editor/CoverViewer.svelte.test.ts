@@ -19,13 +19,22 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-const FRONT: CoverChoice = { key: 'k1', mime: 'image/jpeg', bytes: 2048, width: 600, height: 400, files: 12 }
+const FRONT: CoverChoice = {
+  key: 'k1',
+  mime: 'image/jpeg',
+  bytes: 2048,
+  width: 600,
+  height: 400,
+  files: 12,
+  nearDuplicates: 0,
+}
 const URL = 'data:image/jpeg;base64,/9j/'
 
 async function mountViewer(
-  over: { choice?: CoverChoice; total?: number; editable?: boolean; image?: string | null } = {},
+  over: { choice?: CoverChoice; total?: number; editable?: boolean; image?: string | null; hidden?: number } = {},
 ) {
   const props = {
+    hidden: over.hidden ?? 0,
     choice: over.choice ?? FRONT,
     total: over.total ?? 22,
     loadImage: vi.fn(() => (over.image === undefined ? Promise.resolve(URL) : Promise.resolve(over.image))),
@@ -73,6 +82,14 @@ describe('CoverViewer', () => {
     expect(inDialog('Use for all files').disabled).toBe(true)
   })
 
+  it('"Use for all files" stays on for covers that only look the same: their bytes still differ', async () => {
+    const { onUseForAll } = await mountViewer({ choice: { ...FRONT, nearDuplicates: 11 }, total: 12 })
+    const use = inDialog('Use for all files')
+    expect(use.disabled).toBe(false)
+    use.click()
+    expect(onUseForAll).toHaveBeenCalledWith('k1')
+  })
+
   it('says so when the picture can’t be shown', async () => {
     await mountViewer({ image: null })
     expect(document.querySelector('[role="dialog"] img')).toBeNull()
@@ -98,5 +115,12 @@ describe('CoverViewer', () => {
     const { onClose } = await mountViewer()
     inDialog('Close').click()
     expect(onClose).toHaveBeenCalled()
+  })
+})
+
+describe('CoverViewer under the Tracks filter', () => {
+  it('says the cover goes to every file, the hidden ones too', async () => {
+    await mountViewer({ hidden: 5 })
+    expect(inDialog('Use for all 22 files, hidden ones too').disabled).toBe(false)
   })
 })

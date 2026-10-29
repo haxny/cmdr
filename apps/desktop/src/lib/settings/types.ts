@@ -747,6 +747,12 @@ export interface SettingsValues {
    * into the book folder. Off by default: off, a write touches only the audio files.
    */
   'multiRename.tagEditor.absSideFiles': boolean
+  /**
+   * The app the Tags window's "Open in <app>" uses: `'default'` (each file in the app macOS has set for it) or the
+   * bundle id of one the user picked from the button's menu. An app that is gone falls back to `'default'` at launch.
+   * Set by the menu, never a settings row (`hidden`).
+   */
+  'multiRename.tagEditor.player': string
 
   // Search
   'search.autoApply': boolean

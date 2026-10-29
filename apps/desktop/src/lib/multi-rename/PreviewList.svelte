@@ -33,8 +33,11 @@
 
     interface Props {
         rows: ColumnListWindowedSource<PreviewRow>
-        /** The rows are the last good preview under a spec error: dimmed, as the house dims what's unavailable. */
-        stale?: boolean
+        /**
+         * A mask doesn't parse: every row shows its old name (the state's `shownRow`), dimmed as the
+         * house dims what's unavailable, and tells screen readers it waits for a valid mask.
+         */
+        waiting?: boolean
         /** The cursor row, or -1. */
         cursorIndex: number
         onCursorChange: (index: number) => void
@@ -42,7 +45,7 @@
         onMoveRow: (direction: RowMove) => Promise<number | null>
     }
 
-    const { rows, stale = false, cursorIndex, onCursorChange, onMoveRow }: Props = $props()
+    const { rows, waiting = false, cursorIndex, onCursorChange, onMoveRow }: Props = $props()
 
     let list = $state<ColumnListApi>()
     let announcer: { announce: (message: string) => void } | undefined = $state()
@@ -126,7 +129,7 @@
     }
 </script>
 
-<div class="preview" class:is-unavailable={stale}>
+<div class="preview" class:is-unavailable={waiting}>
     <ColumnList
         bind:this={list}
         {...columnListProps({
@@ -191,7 +194,9 @@
      unchanged row stays quiet and says what it is to screen readers alone. -->
 {#snippet statusCell({ row }: ColumnListCellContext<PreviewRow>)}
     {@const view = rowStatusView(row.status)}
-    {#if view.glyph}
+    {#if waiting}
+        <span class="sr-only">{tString('multiRename.status.waitingForMask')}</span>
+    {:else if view.glyph}
         <span class="problem-glyph">
             <StatusGlyph
                 name={view.glyph}
@@ -217,7 +222,7 @@
         border-radius: var(--radius-sm);
     }
 
-    /* A stale preview reads as unavailable: the house disabled opacity, faded in unless the
+    /* A preview waiting for a valid mask reads as unavailable: the house disabled opacity, faded in unless the
        user asked for less motion. `is-unavailable` names it as inactive content (it can't be
        applied), which is also the shape the contrast checker exempts. */
     .is-unavailable {

@@ -36,6 +36,7 @@ const VIEW: TagEditorView = {
       path: '/b/01.mp3',
       fileName: '01.mp3',
       track: '1',
+      disc: null,
       title: 'Prvni',
       durationMs: 1000,
       changed: true,

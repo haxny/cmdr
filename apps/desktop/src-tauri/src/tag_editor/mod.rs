@@ -7,13 +7,16 @@ pub(crate) mod at_quit;
 pub(crate) mod cover;
 pub(crate) mod cover_choices;
 pub(crate) mod cover_image;
+pub(crate) mod cover_likeness;
 pub(crate) mod error;
+pub(crate) mod file_changes;
 pub(crate) mod follow;
 pub(crate) mod history;
 pub(crate) mod last_apply;
 pub(crate) mod menu_route;
 pub(crate) mod playback;
 mod removals;
+pub(crate) mod replace_presets;
 pub(crate) mod session;
 pub(crate) mod side_files;
 pub(crate) mod sort;
@@ -33,6 +36,8 @@ mod big_book_test;
 #[cfg(test)]
 mod cover_choices_test;
 #[cfg(test)]
+mod cover_near_test;
+#[cfg(test)]
 mod cover_test;
 #[cfg(test)]
 mod history_test;
@@ -42,6 +47,10 @@ mod kind_test;
 mod last_apply_test;
 #[cfg(test)]
 mod playback_test;
+#[cfg(test)]
+mod replace_presets_test;
+#[cfg(test)]
+mod session_disc_test;
 #[cfg(test)]
 mod session_test;
 #[cfg(test)]

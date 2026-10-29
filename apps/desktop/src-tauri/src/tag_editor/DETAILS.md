@@ -39,7 +39,14 @@ re-reads or follows a file that something else renamed.
 - **Every cover of the book** (`cover_choices.rs`): `list_tag_covers` groups the readable files' edited covers by MIME,
   size, and the cached `Loaded::cover_key` (no hashing), most carried first (ties in file order), the files without a
   cover last as `key: "none"`. The covers are copied out under the lock (shared buffers) and their pixel sizes read
-  after it. `use_cover_for_all(key)` gives every readable file that cover (`"none"` removes them), a key no file
+  after it. Then covers that look the same are one choice (`cover_likeness.rs`, the evidence in its header): with two or
+  more distinct covers, each gets a likeness (`cover_image::likeness_of`, cached by key:len, decoded off every lock):
+  a horizontal and a vertical dHash (each within `NEAR_DUPLICATE_BITS = 5`), a 64×64 grey grid and a 4×4 colour grid
+  (per cell within `GREY_TOLERANCE` / `COLOUR_TOLERANCE`); all four must agree, because dHash alone merges solid colours,
+  one template with another title, and one artwork with another small disc label ("CD 1" / "CD 2"). A flat picture (both hashes nearly all 0 or all 1) and one that doesn't decode
+  never merge. Each cover joins the NEAREST earlier seed (`seeds_of`, never chaining); the largest in pixels stands
+  (its key, MIME, size), the files are summed, and `nearDuplicates` counts the others. The panel's "Use it for all N
+  files" passes that key to `use_cover_for_all(key)` (one edit, one ⌘Z), which gives every readable file that cover (`"none"` removes them), a key no file
   carries any more is `UnknownCover`. `set_cover_from_bytes` (a paste) takes at most 10 MiB sniffed by the magic bytes;
   `set_cover_from_path` (a drop) reads only a regular file at an absolute path: `symlink_metadata` refuses a folder,
   FIFO, or symlink (`CoverNotAFile`), the open is `O_NOFOLLOW | O_NONBLOCK`, and the open file is checked again, then
@@ -85,7 +92,7 @@ re-reads or follows a file that something else renamed.
   `TrackRow::path` gives them), in session order, or over every readable track when `scope` is `None`; the rest keep
   their tags. A path the session doesn't have refuses the run (`UnknownTrack`); an unreadable track in the scope is left
   out (it is never written anyway); `Some([])` changes nothing. Each tool sees a `ToolContext` (each file's parent
-  folder and stem), so `autoNumber` can start a disc per folder and `fromFileName` reads the names. The context also
+  folder and stem), so `autoNumber` can start a disc per folder and `fromFileName` reads the names. It also carries every folder of the book (`book_folders`), so `discFromFolder` numbers folders that name no disc (after the highest named one, among all the book's folders) the same for a selection as for the whole run; a book in one unnamed folder is left alone. `TrackRow::disc` is the Disc tag as written. The context also
   carries the session's listed track count (readable or not) (`session_files`): the numbering tools drop the track
   number only for a one-file BOOK, so a one-track scope of a bigger book is numbered; with a partial scope TrackTotal
   counts the files numbered (as Mp3tag does). A bad file-name pattern is `BadPattern` before anything is touched;
@@ -99,8 +106,10 @@ re-reads or follows a file that something else renamed.
 - **Audio tokens are per tag session.** `playback::audio_url` mints a `cmdr-media://` token only for a readable track
   of the session (canonical-path match, never a path the frontend made up) and keeps it under the session id;
   `release` drops one, and `session::close` drops all that remain. The viewer's `session::close_session` is not
-  the only place a media token is freed (`file_viewer/media.rs`). `open_in_player` opens foobar2000
-  (`com.foobar2000.mac`) when installed, else each file in its default app; `UnknownTrack` for a path outside the
+  the only place a media token is freed (`file_viewer/media.rs`). `open_in_player` follows the
+  `multiRename.tagEditor.player` setting the frontend passes (`"default"`: each file in its default app; else a bundle
+  id, all files in one launch of that app on the main thread; an app that is gone falls back to the default and the
+  answer's `fellBack` says so; the E2E build looks no app up and launches nothing); `UnknownTrack` for a path outside the
   session, `PlayerUnavailable` when nothing could start.
 - **Text tools run in the app.** `text_tools.rs` builds on `multi_rename::{mask, transform}` (`Mask`, `Transform`,
   `Replace`), which `cmdr-tags` can't depend on; they validate first, change nothing on a bad pattern, never strip
@@ -237,8 +246,9 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
 - `view.rs` the pure `TagEditorView`: shared rows, track rows, cover, extras, dirty, diacritics.
 - `cover.rs` reading a cover (a folder picture by plain name, a dropped file, pasted bytes: regular file, 10 MiB, type
   from the magic bytes, never the name) and the `data:` URL; `cover_choices.rs` every distinct cover with its count,
-  the in-memory "use for all", and a drop read under a deadline; `cover_image.rs` decodes (pasted TIFF → PNG/JPEG,
-  cached tile thumbnails) under `contain_panics` + `image::Limits`. IPC in `commands/tag_editor.rs`.
+  covers that look the same merged, the in-memory "use for all", and a drop read under a deadline; `cover_image.rs`
+  decodes (pasted TIFF → PNG/JPEG, cached tile thumbnails and likenesses) under `contain_panics` + `image::Limits`;
+  `cover_likeness.rs` whether two decoded covers look the same. IPC in `commands/tag_editor.rs`.
 - `apply.rs` the write (`apply`, `TagApplyReport`); `side_files.rs` Audiobookshelf's `reader.txt` / `desc.txt` beside
   the book, written and undone with the tags; `undo.rs` the app's `UndoStore` and `undo`; `last_apply.rs` each
   folder's last write (⌘Z), kept for the app's lifetime; `at_quit.rs` what a quit would cut short, for `quit/`;
@@ -253,11 +263,12 @@ lossy form, so a skip may cover two files whose names differ only in invalid byt
   error boundary whether closing would lose anything: unwritten edits in the session (`session::has_unwritten`) or a
   tag write running (`at_quit::is_writing`). It also
   names what a main-menu key means in a focused Tags window (`menu_selection_of` for ⌘A / ⌘⇧A and ⌘X / ⌘C / ⌘V, `menu_key_command_of`
-  for F2–F8, ⇧F2, ⇧F4, ⇧F8; never Tab), which `menu_route.rs` emits there instead of dropping. `native_edit_id_of` names the Edit item whose native action
+  for F2–F8, ⇧F2, ⇧F4, ⇧F8 and Edit > Search files' ⌘F; never Tab), which `menu_route.rs` emits there instead of dropping. `native_edit_id_of` names the Edit item whose native action
   `tags_native_edit` hands back for a text box or the cover section.
 - `playback.rs` `cmdr-media://` audio tokens per session (dropped on release and in `session::close`, not only at the
-  viewer's choke point) and "open in foobar2000" (`com.foobar2000.mac`, else the default app; launch on the main thread,
-  never awaited).
+  viewer's choke point) and "open in <app>" (`plan_launch`, `choices_of` pure; `player_choices` lists the apps that open the tracks, one
+  sample file per extension; `choose_player` shows the open panel on the main thread; launch on the main thread, never
+  awaited).
 
 ## Must-knows (full)
 

@@ -30,11 +30,11 @@ afterEach(() => {
   cleanup = undefined
 })
 
-function mountBar(enabled: ReadonlySet<TagsBarCommandId> = new Set(TAGS_BAR_COMMANDS)) {
+function mountBar(enabled: ReadonlySet<TagsBarCommandId> = new Set(TAGS_BAR_COMMANDS), playerName?: string) {
   const onCommand = vi.fn<(id: TagsBarCommandId) => void>()
   const target = document.createElement('div')
   document.body.appendChild(target)
-  const bar = mount(TagsFunctionKeyBar, { target, props: { enabled, onCommand } })
+  const bar = mount(TagsFunctionKeyBar, { target, props: { enabled, onCommand, playerName } })
   flushSync()
   cleanup = () => {
     void unmount(bar)
@@ -52,6 +52,14 @@ async function shift(down: boolean): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0))
   flushSync()
 }
+
+it('names the player app on ⇧F3 once it is known', async () => {
+  const { buttons } = mountBar(undefined, 'VLC')
+  await shift(true)
+  expect(buttons().map(labelOf)).toContain('Open in VLC')
+  expect(buttons().map(labelOf)).not.toContain('Open in player')
+  await shift(false)
+})
 
 describe('TagsFunctionKeyBar', () => {
   it('shows F2…F8 and ⌘⏎ Write with their tag commands, each key read from the shortcuts store', () => {

@@ -268,10 +268,13 @@ fn facts_from(found: Found, to_local: ToLocal<'_>) -> MediaFacts {
     MediaFacts {
         taken: recorded.or_else(|| found.date_utc.map(to_local)),
         title: value("TITLE"),
-        artist: value("ARTIST"),
-        album_artist: any("ALBUM_ARTIST").or_else(|| album_level("ARTIST")),
+        artist: value("ARTIST").into_iter().collect(),
+        album_artist: any("ALBUM_ARTIST")
+            .or_else(|| album_level("ARTIST"))
+            .into_iter()
+            .collect(),
         album: any("ALBUM").or_else(|| album_level("TITLE")),
-        genre: value("GENRE"),
+        genre: value("GENRE").into_iter().collect(),
         comment: value("COMMENT"),
         track,
         year,

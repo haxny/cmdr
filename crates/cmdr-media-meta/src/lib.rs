@@ -22,6 +22,7 @@ mod clock;
 mod ebml;
 mod holes;
 mod isobmff;
+mod native;
 mod photo;
 mod read;
 mod source;
