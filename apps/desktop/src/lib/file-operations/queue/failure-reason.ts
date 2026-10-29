@@ -15,7 +15,7 @@
  */
 
 import type { OperationSnapshot } from '#lib/tauri-commands/index.js'
-import type { OperationFailedIncident } from '#lib/error-reporter/report-incident.js'
+import { operationFailureKinds, type OperationFailedIncident } from '#lib/error-reporter/report-incident.js'
 import type { TransferOperationType } from '#lib/file-explorer/types.js'
 import { getUserFriendlyMessage, type FriendlyErrorMessage } from '../transfer/transfer-error-messages'
 
@@ -68,7 +68,7 @@ export function failureIncidentFor(
     kind: 'operationFailed',
     from,
     operation: snapshot.operationType,
-    error: snapshot.error.type,
+    ...operationFailureKinds(snapshot.error),
     title: reason.title,
   }
 }

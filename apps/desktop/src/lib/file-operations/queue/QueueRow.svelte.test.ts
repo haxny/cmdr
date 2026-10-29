@@ -813,6 +813,7 @@ describe('QueueRow reporting', () => {
       from: 'queueFailure',
       operation: 'move',
       error: 'source_not_found',
+      cause: null,
       title: expect.any(String) as string,
     })
   })

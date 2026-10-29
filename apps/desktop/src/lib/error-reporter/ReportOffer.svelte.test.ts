@@ -45,6 +45,7 @@ describe('ReportOffer', () => {
       from: 'transferError',
       operation: 'copy',
       error: 'insufficient_space',
+      cause: null,
       title: 'Not enough space',
     }
     const onOpen = vi.fn()

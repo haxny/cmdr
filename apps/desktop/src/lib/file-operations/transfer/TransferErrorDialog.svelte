@@ -10,7 +10,7 @@
     import TextArea from '#lib/ui/TextArea.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
-    import type { ReportIncident } from '#lib/error-reporter/report-incident.js'
+    import { operationFailureKinds, type ReportIncident } from '#lib/error-reporter/report-incident.js'
     import { answerDecisionKey, DECISION_KEYS_ARM_MS, ERROR_KEYS, type DecisionChoice } from '../decision-keys'
 
     interface Props {
@@ -63,7 +63,7 @@
         kind: 'operationFailed',
         from: 'transferError',
         operation: operationType,
-        error: error.type,
+        ...operationFailureKinds(error),
         title: titleText,
     })
 
