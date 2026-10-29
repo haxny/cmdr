@@ -10,7 +10,8 @@
  * Screen-reader evidence: David ran his VoiceOver guide (vault, `projects/Cmdr/2026-10-14 Cmdr
  * VoiceOver test guide.md`, checks V1–V12) by ear and heard every check pass on 2026-10-15. The
  * audit doc's § VoiceOver checks maps each check to the rows it confirms. Remarks that say what
- * VoiceOver reads rest on that run.
+ * VoiceOver reads rest on that run. The audit doc's § Re-hear lists the checks whose code has
+ * changed since, and § How to re-evaluate is the procedure for the next pass.
  *
  * Write straight quotes; `smart-quotes.ts` curls them in the built HTML. Remarks are plain text.
  */
@@ -46,9 +47,9 @@ export const conformanceTerms: { term: Conformance; meaning: string }[] = [
 
 export const report = {
   product: 'Cmdr for macOS',
-  version: '0.53.0',
+  version: '0.57.0',
   /** The evaluation date, also the page's "Last updated". */
-  date: '2026-10-15',
+  date: '2026-10-30',
   edition: 'VPAT® 2.5Rev INT (April 2025)',
 }
 
@@ -88,14 +89,14 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'supports',
     remark:
-      'Icon buttons have names, the image viewer uses the file name as the image\'s text alternative, and the sync-status and symlink badges on file icons are named. Each file\'s name for assistive technology also says its kind (folder, symlink, package, or archive), so the file-type icon needs no text of its own: VoiceOver reads "Photos (folder)" and "backup.zip (archive)".',
+      'Icon buttons have names, the image viewer uses the file name as the image\'s text alternative, and the sync-status and symlink badges on file icons are named. Each file\'s name for assistive technology also says its kind (folder, symlink, package, or archive), so the file-type icon needs no text of its own: VoiceOver reads "Photos (folder)" and "backup.zip (archive)". Pictures in a Markdown file keep the text alternative the document gives them.',
   },
   {
     id: '1.2.1',
     name: 'Audio-only and video-only (prerecorded)',
     level: 'A',
     conformance: 'not-applicable',
-    remark: 'Cmdr has no audio or video content. Its viewer shows text, images, and PDFs.',
+    remark: 'Cmdr has no audio or video content. Its viewer shows text, images, PDFs, and formatted Markdown.',
   },
   {
     id: '1.2.2',
@@ -150,9 +151,10 @@ const wcagA: CriterionRow[] = [
     id: '2.1.1',
     name: 'Keyboard',
     level: 'A',
-    conformance: 'supports',
+    conformance: 'partially-supports',
     remark:
-      'Every core action has a keyboard shortcut and a command palette entry: switching panes, navigating, marking, opening, every file operation, tabs (including reordering them and moving one to the other pane), sorting, view modes, and Settings. "Move focus to the notifications" reaches the buttons in notifications, and Undo after moving files to the trash is also in the Edit menu.',
+      'Every core action has a keyboard shortcut and a command palette entry: switching panes, navigating, marking, opening, every file operation, tabs (including reordering them and moving one to the other pane), sorting, view modes, and Settings. "Move focus to the notifications" reaches the buttons in notifications, and Undo after moving files to the trash is also in the Edit menu. One gap: in Settings > Keyboard shortcuts, a shortcut can be changed or reset from the keyboard, but removing one takes the mouse.',
+    issues: [824],
   },
   {
     id: '2.1.2',
@@ -167,7 +169,7 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'supports',
     remark:
-      'Single-key shortcuts in the file list (like * and +) can be remapped and work only while the file list has focus. In the file viewer, single-key shortcuts (W, F, 0–3, + and -) work anywhere in the window, and each one can be remapped or turned off in Settings.',
+      'Single-key shortcuts in the file list (like * and +) can be remapped and work only while the file list has focus. In the file viewer, single-key shortcuts (W, F, 0–3, + and -) work anywhere in the window, and each one can be remapped or turned off in Settings. Letter keys in dialogs and the queue window (like S for Skip) work only while that dialog or window has focus.',
   },
   {
     id: '2.2.1',
@@ -242,10 +244,9 @@ const wcagA: CriterionRow[] = [
     id: '2.5.3',
     name: 'Label in name',
     level: 'A',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      "File list rows and most buttons have an accessible name that contains their visible text, in order, and an automated check now tests this on every change. Seven controls don't yet, among them the queue window's row buttons and two option chips in the multi-rename dialog.",
-    issues: [450],
+      'File list rows, buttons, and other controls have an accessible name that contains their visible text, in order, so speech control can use the words on screen. An automated check tests this on every change, with no exceptions.',
   },
   {
     id: '2.5.4',
@@ -290,7 +291,7 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'supports',
     remark:
-      "Rename, new folder, server, and license key forms mark the field in error and tie the message to it. VoiceOver reads an invalid file name's message as soon as it appears, and a failed license activation is also announced as an alert.",
+      "Rename, new folder, server, license key, and archive and backup password forms mark the field in error and tie the message to it. VoiceOver reads an invalid file name's message as soon as it appears, and a failed license activation is also announced as an alert.",
   },
   {
     id: '3.3.2',
@@ -321,8 +322,8 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      "Dialogs, Settings controls, tabs, the command palette, the queue, and in-app menus (submenus included) expose their name, role, and state, and the file list, Search results, and the Settings sidebar convey the highlighted item as you arrow. The file list also conveys which files are marked, and the volume switcher is a menu button. While a file is being renamed in place, the name field sits inside the file's row, which hides its role from some assistive technology.",
-    issues: [449],
+      "Dialogs, Settings controls, tabs, the command palette, the queue, and in-app menus (submenus included) expose their name, role, and state, and the file list, Search results, and the Settings sidebar convey the highlighted item as you arrow. The file list also conveys which files are marked, the volume switcher is a menu button, and the name field for renaming a file in place is a real text field. A few controls still sit inside another control, which hides their role from some assistive technology: the custom size and date fields in Search's filters, and the button that removes a keyboard shortcut in Settings.",
+    issues: [824],
   },
 ]
 
@@ -450,7 +451,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'supports',
     remark:
-      'Resizing the panes, reordering tabs, moving a tab to the other pane, and copying or moving files by drag and drop all have keyboard and command palette alternatives.',
+      'Resizing the panes, reordering tabs, moving a tab to the other pane, and copying or moving files by drag and drop all have keyboard and command palette alternatives. Reordering the queue by dragging has keyboard shortcuts and a right-click menu too.',
   },
   {
     id: '2.5.8',
@@ -458,7 +459,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'partially-supports',
     remark:
-      'Column headers, the function key bar, the new-tab button, and the tab close button are at least 24 by 24 pixels. Path segments above the file list take the full height of their bar, but a folder with a one-letter name is still a narrow target, and the divider between the panes is 8 pixels wide.',
+      'Column headers, the function key bar, the new-tab button, and the tab close button are at least 24 by 24 pixels. The small arrow beside the date column header opens a menu that a right-click anywhere on the header also opens. Path segments above the file list take the full height of their bar, but a folder with a one-letter name is still a narrow target, and the divider between the panes is 8 pixels wide.',
     issues: [817],
   },
   {
@@ -496,7 +497,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'supports',
     remark:
-      'Deleting always asks first, and deleting permanently asks even when confirmations are turned off. Overwrites and name clashes open a dialog, moving to the trash can be undone (from its notification or the Edit menu, which names what it puts back), and copies and moves can be rolled back.',
+      'Deleting always asks first, and deleting permanently asks even when confirmations are turned off. Overwrites and name clashes open a dialog, moving to the trash can be undone (from its notification or the Edit menu, which names what it puts back), and copies and moves can be rolled back. Undo and rollback rest on the operation log, which is on by default; while a user turns it off, Cmdr says so wherever it would offer an undo.',
   },
   {
     id: '3.3.8',
@@ -522,8 +523,8 @@ const section508Ch3: CriterionRow[] = [
     name: 'Without vision',
     conformance: 'partially-supports',
     remark:
-      "Cmdr works with VoiceOver. The file list reads the file under the cursor with its kind and position, and says which files are marked and which pane and folder you're in. In-app menus read every row, submenus included, and dialogs, Settings, Search, file operation progress, notifications, and the file viewer read in full. A name field being renamed in place sits inside its file's row, and the Full view's columns aren't a table.",
-    issues: [449],
+      "Cmdr works with VoiceOver. The file list reads the file under the cursor with its kind and position, and says which files are marked and which pane and folder you're in. In-app menus read every row, submenus included, and dialogs, Settings, Search, file operation progress, notifications, and the file viewer read in full. The Full view's columns aren't a table, and a few controls sit inside another control: the custom size and date fields in Search's filters, and the button that removes a keyboard shortcut.",
+    issues: [451, 824],
   },
   {
     id: '302.2',
@@ -593,8 +594,8 @@ const section508Ch5: CriterionRow[] = [
     name: 'Object information',
     conformance: 'partially-supports',
     remark:
-      'Standard controls expose their name, role, and state to VoiceOver. VoiceOver reads each file row\'s name, kind, and position, like "notes.txt, 3 of 8", and says "selected" on marked files. While a file is being renamed in place, the name field sits inside its row, which hides the field\'s role from some assistive technology.',
-    issues: [449],
+      'Standard controls expose their name, role, and state to VoiceOver. VoiceOver reads each file row\'s name, kind, and position, like "notes.txt, 3 of 8", and says "selected" on marked files. The name field for renaming a file in place is a real text field. A few controls sit inside another control, which hides their role from some assistive technology: the custom size and date fields in Search\'s filters, and the button that removes a keyboard shortcut.',
+    issues: [824],
   },
   {
     id: '502.3.2',
@@ -737,7 +738,7 @@ const section508Ch6: CriterionRow[] = [
     name: 'Electronic support documentation',
     conformance: 'supports',
     remark:
-      "Every page of getcmdr.com is tested automatically for WCAG 2 AA issues in light and dark mode, and scored 100 on Lighthouse's accessibility audit.",
+      "Every main page of getcmdr.com, this report and the accessibility guide included, is tested automatically for WCAG 2 AA issues in light and dark mode on every change, and the home page passes Lighthouse's accessibility audit on every change too.",
   },
   {
     id: '602.4',
@@ -766,7 +767,7 @@ const enClause4: CriterionRow[] = [
     name: 'Usage without vision',
     conformance: 'partially-supports',
     remark: 'See Section 508 302.1.',
-    issues: [449],
+    issues: [451, 824],
   },
   {
     id: '4.2.2',
@@ -903,7 +904,7 @@ const enClause11: CriterionRow[] = [
     name: 'Object information',
     conformance: 'partially-supports',
     remark: 'See Section 508 502.3.1.',
-    issues: [449],
+    issues: [824],
   },
   {
     id: '11.5.2.6',
@@ -1100,6 +1101,10 @@ export const gapIssues: { number: number; title: string }[] = [
     number: 454,
     title:
       'By default, the focused-pane cues, some focus rings, and the optional App date and size colors are under 3:1 contrast',
+  },
+  {
+    number: 824,
+    title: 'A few controls sit inside another control, and removing a keyboard shortcut needs the mouse',
   },
   { number: 452, title: 'Hidden files differ from other files only by a dimmer color' },
   {

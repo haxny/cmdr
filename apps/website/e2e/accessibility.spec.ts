@@ -26,6 +26,7 @@ const pages: { name: string; path: string; slow?: boolean }[] = [
   { name: 'Trust and security', path: '/trust' },
   { name: 'How Cmdr is built', path: '/trust/development' },
   { name: 'Accessibility conformance report', path: '/trust/accessibility' },
+  { name: 'Accessibility guide', path: '/trust/accessibility-guide' },
   { name: 'Renew', path: '/renew' },
 ]
 

@@ -29,6 +29,9 @@ downloaded INT `.docx` (itic.org, `VPAT2.5RevINT`).
   WebKit or VoiceOver. Live UI wasn't judged from screenshots.
 - **Levels**: Supports, Partially supports, Does not support, Not applicable (the VPAT's own terms). "Partially
   supports" means some functionality doesn't meet the criterion.
+- **Re-evaluations**: the report is re-checked against each released version, every two months or so (§ How to
+  re-evaluate). Latest: 0.57.0 on 2026-10-30 (§ Re-evaluation 2026-10-30). Rows below describe 0.57.0; evidence paths
+  are relative to `apps/desktop/src/lib/` unless they say otherwise.
 
 ## Summary
 
@@ -53,15 +56,16 @@ Counts per table (rows marked "see WCAG section" aren't counted):
 
 **Risk of downgrade**: low. V1–V12 passed by ear on `main` (the silent-list failure the first agent run found is fixed
 and re-heard). What's unheard is outside the guide: C3 (the VoiceOver cursor moving Cmdr's cursor), already counted as a
-gap in 502.3.13.
+gap in 502.3.13. Since 0.53.0 the code under V1–V6, V9, and V11 changed (§ Re-hear, 2026-10-30); none of those changes
+contradicts a row, but they're unheard.
 
 Top gaps, each with its issue:
 
 1. **The file list was silent to VoiceOver** (#437, fixed and heard 2026-10-15): focus sits on the focused pane's
    listbox, whose `aria-activedescendant` names the cursor row by a document-unique id; rows carry kind, position,
    marked state, and in Full view size and date; a per-pane live region says the pane and folder; ⌃F5 reaches the pane
-   chrome. Left: the inline rename field nests inside its option (#449), Full view isn't a table (#451), and the
-   VoiceOver cursor moving onto a row (C3) is unheard (#453).
+   chrome. The inline rename field moved out of its option (#449, `a7b318620e`, released in 0.57.0). Left: Full view
+   isn't a table (#451), and the VoiceOver cursor moving onto a row (C3) is unheard (#453).
 2. **Cursors and status changes aren't announced** (#438, fixed 2026-10-15, heard in V4–V7): the Search result cursor,
    the Settings sidebar, empty folders, selection counts, the license key error, progress text.
 3. **Toasts are mouse-first** (#439, fixed 2026-10-15, heard in V9): focus didn't pause them, no key reached them, no
@@ -85,8 +89,13 @@ Top gaps, each with its issue:
 8. **In-app menus under VoiceOver** (#267, fixed and heard 2026-10-15): submenu rows have ids, the entered submenu takes
    focus with its own `aria-activedescendant`, and the volume chooser is a menu button. All four house menus and the
    native viewer right-click menu read their rows.
-9. **Label in name** (#450): seven controls' accessible names don't contain their visible text (found once the rule ran
-   for real, 2026-10-15).
+9. **Label in name** (#450, fixed in `d565214b8a`, released in 0.57.0): seven controls' accessible names didn't contain
+   their visible text (found once the rule ran for real, 2026-10-15). No `skipLabelInName` opt-out is left.
+10. **Controls nested in controls** (#824, found 2026-10-30): the Settings shortcut pill's remove × (a `role="button"`
+    span inside the pill's `<button>`, hover-only, with no keyboard path to remove one binding), and Search's `Custom…`
+    size and date fields (an `<input>` inside the cell's button). Search result path pills sit in their `option` too,
+    mouse-only with a keyboard route elsewhere. All were known to the tests (skips and `nested-interactive` opt-outs) at
+    0.53.0 already; the first audit missed them.
 
 Strengths a buyer can rely on: everything core runs from the keyboard (every action is a command with a rebindable
 shortcut and a command palette entry); all dialogs share one primitive with correct roles, focus trap, Escape, and focus
@@ -102,9 +111,11 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   Evidence: `lib/file-explorer/selection/FileIcon.svelte`, `views/file-row-a11y.ts` (`fileRowName`),
   `lib/ui/Icon.svelte`, `routes/viewer/MediaImageView.svelte` (`alt={fileName}`); spot checks of `ModalDialog.svelte`,
   `TabBar.svelte`, `SettingRow.svelte` aria-labels. V1 heard: "c.zip (archive) (5 of 8)", "d-link (symlink) (6 of 8)".
+  The Markdown view (0.57.0) keeps each `<img>`'s own `alt`, and a held-back or missing picture's placeholder names it
+  by that `alt` (`routes/viewer/markdown-view.ts` `wireImages`).
 - **1.2.1 Audio-only and video-only (prerecorded)**: Not applicable. Cmdr has no audio or video content; the viewer
-  shows text, images, and PDFs only. Evidence: no `<audio>`/`<video>` in `apps/desktop/src`;
-  `routes/viewer/media-view.ts`.
+  shows text, images, PDFs, and formatted Markdown only. Evidence: no `<audio>`/`<video>` in `apps/desktop/src`
+  (0.57.0); `routes/viewer/media-view.ts` (`isMediaKind`).
 - **1.2.2 Captions (prerecorded)**: Not applicable. Same as 1.2.1.
 - **1.2.3 Audio description or media alternative (prerecorded)**: Not applicable. Same as 1.2.1.
 - **1.3.1 Info and relationships**: Partially supports. Dialogs, settings, and server forms use real headings, labels,
@@ -130,13 +141,19 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   `--color-cursor-outline-unfocused`, `--color-tab-band*`; `app-file-list.css` marked-row and cursor rules;
   `views/mark-run.ts`; `tabs/TabBar.svelte`; `--color-text-quiet`; `git/status-column.ts`. #452, #454.
 - **1.4.2 Audio control**: Not applicable. Cmdr plays no audio.
-- **2.1.1 Keyboard**: Supports. Every core action is a command with a shortcut and a command palette entry: pane switch,
-  navigation, marking, open, go up, go to path, volume chooser, tabs, sort, divider, view mode, all file operations,
-  settings. "Move focus to the notifications" (⌃F6) reaches every toast's buttons, and Undo trash is also Edit > Undo
-  move to trash (#439, 2026-10-15). Tabs reorder with `tab.moveLeft` / `tab.moveRight` (⌘⌃⇧← / →) and cross with
-  `tab.moveToOtherPane` (palette), the drag's rules through `moveTabToPane` (#441, 2026-10-15). Evidence:
-  `lib/commands/sources/*.ts`, `pane/tab-operations.ts` (`moveActiveTab`), `ui/toast/toast-focus.ts`,
-  `delete/trash-undo.ts` (`undoLastTrash`).
+- **2.1.1 Keyboard**: Partially supports (Supports until 2026-10-30, when #824's gap was counted). Removing one binding
+  in Settings > Keyboard shortcuts is mouse-only: the pill's × is a `tabindex="-1"` span shown on hover
+  (`settings/sections/ShortcutPill.svelte`); Enter on the pill records a replacement and the row's reset button restores
+  the default, but nothing removes a binding from the keyboard. Every core action is a command with a shortcut and a
+  command palette entry: pane switch, navigation, marking, open, go up, go to path, volume chooser, tabs, sort, divider,
+  view mode, all file operations, settings. "Move focus to the notifications" (⌃F6) reaches every toast's buttons, and
+  Undo trash is also Edit > Undo move to trash (#439, 2026-10-15). Tabs reorder with `tab.moveLeft` / `tab.moveRight`
+  (⌘⌃⇧← / →) and cross with `tab.moveToOtherPane` (palette), the drag's rules through `moveTabToPane` (#441,
+  2026-10-15). Evidence: `lib/commands/sources/*.ts`, `pane/tab-operations.ts` (`moveActiveTab`),
+  `ui/toast/toast-focus.ts`, `delete/trash-undo.ts` (`undoLastTrash`). Since 0.53.0: Tab and ⇧Tab walk the notifications
+  after ⌃F6 and wrap until Escape (`16d818a36f`), Escape cancels a running transfer and focus opens on Pause
+  (`bf6a0f3bcd`), the queue reorders with ⌥↑ / ⌥↓ beside its new drag (`67edbd06ac`), and every date sort is in the
+  header's Sort by menu (`98ab349179`). #824.
 - **2.1.2 No keyboard trap**: Supports. Dialog focus traps always release on Escape or their buttons; nested traps
   stack. Evidence: `lib/ui/focus-trap.ts`, `ModalDialog.svelte`, lint `cmdr/dialog-needs-focus-trap`.
 - **2.1.4 Character key shortcuts**: Supports. File-list single keys (`*`, `+`, `-`) are rebindable and active only with
@@ -145,7 +162,10 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   `Viewer window`) the user can remap or turn off in Settings; the viewer reads rebinds through the read-only
   `get_restricted_window_shortcuts`. Evidence: `shortcuts/shortcuts-store.ts`, `pane/type-to-jump-keys.ts`,
   `commands/sources/viewer-window.ts`, `routes/viewer/viewer-keyboard.ts`, `viewer-view-mode.ts`,
-  `MediaImageView.svelte`, `viewer-keys.remap.test.ts`.
+  `MediaImageView.svelte`, `viewer-keys.remap.test.ts`. Decision prompts' letter keys (S Skip, O Overwrite, and so on)
+  act only while their dialog holds focus, after an arming delay, and the queue window's row letters are registry
+  commands (`file-operations/decision-keys.ts`, `commands/sources/queue-window.ts`). 0.57.0 adds no bare-key default
+  (the new defaults are ⌘N, ⌘[ / ⌘], ⌘⌥X, ⇧↑ / ⇧↓, ⌥↑ / ⌥↓).
 - **2.2.1 Timing adjustable**: Supports. The only time limits are toasts (4 s default, 7–10 s for some). Hover and
   keyboard focus hold them, and "Keep notifications until I close them" turns the timers off (#439, 2026-10-15). The
   quit-while-busy 15 s countdown falls under the essential exception (macOS logout deadline). Evidence:
@@ -175,13 +195,16 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **2.5.2 Pointer cancellation**: Supports. Row `mousedown` only moves the cursor, selects, or arms a drag; opening is
   on double-click and buttons act on click. Evidence: `FullList.svelte`, `BriefList.svelte` row handlers,
   `FunctionKeyBar.svelte`.
-- **2.5.3 Label in name**: Partially supports. axe's `label-content-name-mismatch` never ran in the unit audits (its
-  icon-ligature check needs canvas pixels, so it fell into `incomplete`); the E2E audit ran it for real on 2026-10-15
-  and caught every Full view row (fixed: the visible words run through the name in order, the rest parenthesized), and
-  `test-a11y.ts` now runs the rule. Seven controls still fail and opt out with `skipLabelInName`: the Servers hub
-  refresh, `QueueRow` buttons, two `MultiRenameDialog` chips (`1×`, `.ext`), `SuggestedOpsIndicator`, and two `lib/ui`
-  controls. Evidence: `lib/test-a11y.ts`, `views/file-row-a11y.ts`, `views/DETAILS.md` (row names),
-  `test/e2e-playwright/accessibility.spec.ts`. #450.
+- **2.5.3 Label in name**: Supports (Partially supports until 0.57.0). axe's `label-content-name-mismatch` never ran in
+  the unit audits (its icon-ligature check needs canvas pixels, so it fell into `incomplete`); the E2E audit ran it for
+  real on 2026-10-15 and caught every Full view row (fixed: the visible words run through the name in order, the rest
+  parenthesized), and `test-a11y.ts` now runs the rule. The seven controls that opted out with `skipLabelInName` (the
+  Servers hub refresh, `QueueRow` buttons, two `MultiRenameDialog` chips, `SuggestedOpsIndicator`, two `lib/ui`
+  controls) were fixed in `d565214b8a` (#450, closed); at `v0.57.0` no audit opts out (`git grep "skipLabelInName:"`
+  finds none). New strings since keep to it, for example the AI suggestions' "Why, according to the AI:" (`00e6f1b9ab`)
+  and the date header's fallback note, which follows the visible label (`SortableHeader.svelte`). Evidence:
+  `lib/test-a11y.ts`, `views/file-row-a11y.ts`, `views/DETAILS.md` (row names),
+  `test/e2e-playwright/accessibility.spec.ts`.
 - **2.5.4 Motion actuation**: Not applicable. No device-motion input.
 - **3.1.1 Language of page**: Supports. Every window sets `<html lang>` from the chosen UI language (11 languages).
   Evidence: `intl/messages.svelte.ts` `setLocale()`, `intl/document-language.ts`, `initWindowLanguageSync()` in each
@@ -191,10 +214,12 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   its content pane on arrow keys, like tabs. Evidence: `SettingsSidebar.svelte`.
 - **3.2.6 Consistent help**: Supports. The native Help menu sits in the same place in every window (Keyboard shortcuts,
   What's new, Send feedback, debug log, error report). Evidence: `src-tauri/src/menu/menu_bar.rs`.
-- **3.3.1 Error identification**: Supports. Rename, new folder, server, and license key forms mark errors with
-  `aria-invalid` and tie the message to the field; the license key's activation error also lands in an always-mounted
-  `role="alert"` region (#438, 2026-10-15). Evidence: `InlineRenameEditor.svelte`, `NewEntryNameField.svelte`,
-  `ServerFormFields.svelte`, `licensing/LicenseKeyDialog.svelte` (`showError`, `licensing.a11y.test.ts`). V5 heard.
+- **3.3.1 Error identification**: Supports. Rename, new folder, server, license key, and (since 0.57.0) the archive and
+  restic password prompt (`file-operations/transfer/UnlockDialog.svelte`: `invalid`, `aria-describedby`, a re-keyed
+  `role="alert"` note per wrong try) mark errors with `aria-invalid` and tie the message to the field; the license key's
+  activation error also lands in an always-mounted `role="alert"` region (#438, 2026-10-15). Evidence:
+  `InlineRenameEditor.svelte`, `NewEntryNameField.svelte`, `ServerFormFields.svelte`,
+  `licensing/LicenseKeyDialog.svelte` (`showError`, `licensing.a11y.test.ts`). V5 heard.
 - **3.3.2 Labels or instructions**: Supports. Settings and server forms use visible `<label for>`; the license key,
   rename, and new folder fields have a visible prompt plus an accessible name. Evidence: `SettingRow.svelte`,
   `ServerFormFields.svelte`, `SignInCredentialFields.svelte`, `LicenseKeyDialog.svelte`.
@@ -208,13 +233,19 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   `aria-activedescendant` names the cursor row by a per-list id (`$props.id()`) a frame after focus and after every
   navigation commit; `aria-selected` = marked; the container is `role="group"`; submenu rows have ids, an entered
   submenu takes focus with its own `aria-activedescendant` and its parent row's name, and the parent row gets
-  `aria-controls`; the volume chooser is a `<button aria-haspopup="menu" aria-expanded>`. Left: the inline rename
-  `<input>` sits inside its option, whose children ARIA makes presentational (axe `nested-interactive` while a rename is
-  up, #449). Evidence: `pane/active-pane-focus.ts` (`focusActivePane`), `pane/key-dispatch.ts` `handleFocusGuard`,
-  `views/list-focus.svelte.ts`, `views/file-row-a11y.ts`, `ui/Menu.svelte`, `ui/deferred-active-descendant.svelte.ts`,
-  `navigation/VolumeBreadcrumb.svelte`, `query-ui/QueryBar.svelte`, `SettingsSidebar.svelte`; virtual-screen-reader
-  tests `file-list.vsr.svelte.test.ts`, `Menu.vsr.test.ts`, `QueryBar.vsr.svelte.test.ts`,
-  `SettingsSidebar.vsr.svelte.test.ts`. V1, V3, V6, V7, and V10 heard. #449.
+  `aria-controls`; the volume chooser is a `<button aria-haspopup="menu" aria-expanded>`. Since 0.57.0 the inline rename
+  `<input>` is the listbox's sibling, laid over the row's empty name slot (`rename/RenameOverlay.svelte`, #449 closed,
+  `a7b318620e`), and Brief view's `role="listbox"` moved to an inner `.listbox-region` to make room; axe is clean with
+  rename open in both views. Left (#824): the Settings shortcut pill's remove × is a `role="button"` span inside the
+  pill's `<button>` (`settings/sections/ShortcutPill.svelte`, both `sections.a11y.test.ts` audits skipped), Search's
+  `Custom…` size and date fields render inside their cell's button (`query-ui/filter-chips/`, `nested-interactive` off
+  in `filter-chips.a11y.test.ts`), and Search result path pills are buttons inside the row's option (mouse-only by
+  decision, `query-ui/DETAILS.md`). Evidence: `pane/active-pane-focus.ts` (`focusActivePane`), `pane/key-dispatch.ts`
+  `handleFocusGuard`, `views/list-focus.svelte.ts`, `views/file-row-a11y.ts`, `ui/Menu.svelte`,
+  `ui/deferred-active-descendant.svelte.ts`, `navigation/VolumeBreadcrumb.svelte`, `query-ui/QueryBar.svelte`,
+  `SettingsSidebar.svelte`; virtual-screen-reader tests `file-list.vsr.svelte.test.ts`, `Menu.vsr.test.ts`,
+  `QueryBar.vsr.svelte.test.ts`, `SettingsSidebar.vsr.svelte.test.ts`, `rename/rename.a11y.test.ts` (overlay block). V1,
+  V3, V6, V7, and V10 heard on 0.53.0-era `main`; the rename overlay is unheard (V5, § Re-hear). #824.
 
 ## WCAG 2.2 Level AA
 
@@ -284,12 +315,19 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   focused element (#439, 2026-10-15). Evidence: `ui/toast/toast-placement.ts` (+ test), `ToastContainer.svelte`.
 - **2.5.7 Dragging movements**: Supports. The pane divider (double-click reset, ⌃⌥←/→), drag-and-drop copy and move
   (F5/F6, context menu, copy and paste), and tab reordering and moving (`tab.move*`, #441, 2026-10-15) have
-  alternatives. Evidence: `PaneResizer.svelte`, `commands/sources/main-window.ts`, `pane/tab-operations.ts`.
+  alternatives. The queue window's drag-to-reorder (0.57.0, `67edbd06ac`) has ⌥↑ / ⌥↓ and the row's right-click menu
+  (Move up, Move down). Moving a dialog by its title bar has no alternative, and needs none: its position does nothing.
+  Evidence: `PaneResizer.svelte`, `commands/sources/main-window.ts`, `pane/tab-operations.ts`,
+  `file-operations/queue/DETAILS.md` § Dragging to reorder.
 - **2.5.8 Target size (minimum)**: Partially supports. Sort headers, function-key bar, the new-tab button, and since
   #441 (2026-10-15) the tab close button (an unpainted 24×24 `::before`) meet 24×24 px. Breadcrumb segments now span the
   header's full height (about 29 px at 100%) and 3 px into each `/`, but a one-letter segment is about 13 px wide next
-  to its neighbors; the pane divider's grab strip is 8 px. Evidence: `TabBar.svelte`, `FilePane.svelte` `.path-segment`,
-  `PaneResizer.svelte`. #441.
+  to its neighbors; the pane divider's grab strip is 8 px. New in 0.57.0, both under 24 px wide but meeting the
+  "equivalent" exception: the Full date header's Sort by chevron (`views/DateSortChevron.svelte`, 20 px wide, the
+  header's 26 px tall), whose menu a right-click anywhere on the header row also opens; and the queue row's drag grip
+  (14 px, `aria-hidden`), whose moves the full-row right-click menu also makes. Evidence: `TabBar.svelte`,
+  `FilePane.svelte` `.path-segment`, `PaneResizer.svelte`, `FullListHeader.svelte` (header height),
+  `file-operations/queue/QueueRow.svelte` `.grip`. #817.
 - **3.1.2 Language of parts**: Supports. The language picker lists each language in its own name, with a per-option
   `lang` on the row and on the trigger while selected (#442, 2026-10-15). Evidence: `intl/locale-display-names.ts`,
   `settings/definitions/appearance.ts` `languageOptions()`, `ui/Select.svelte`.
@@ -304,7 +342,10 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   with "skip confirmation" on, overwrites and rename collisions get conflict dialogs, trash is undoable, and copy and
   move can be rolled back. Undo trash is on its toast and in the Edit menu (#439, 2026-10-15); the menu item greys out
   with nothing to undo and names what it puts back, and an undo over an emptied trash says so (`d5706b6d8`). The
-  operation log rolls back any journaled trash. Evidence: `settings/definitions/behavior.ts`, `DeleteDialog.svelte`,
+  operation log rolls back any journaled trash. Since 0.57.0 the operation log can be turned off (`b63b2d76e2`, a CRA
+  opt-out, on by default): new operations then journal nothing, and every undo surface says so instead of offering an
+  undo it can't keep. An opt-in setting keeps the progress dialog up when an operation finishes, with Undo
+  (`df79bfc981`). Evidence: `settings/definitions/behavior.ts`, `operation-log/recording.ts`, `DeleteDialog.svelte`,
   `TransferConflictDialog`, `RenameConflictDialog.svelte`, `operation-log/RollbackControls.svelte`,
   `delete/trash-undo.ts`.
 - **3.3.8 Accessible authentication (minimum)**: Supports. License key, API keys, and passwords accept paste; no
@@ -325,7 +366,9 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 
 - **302.1 Without vision**: Partially supports. Dialogs, settings, menus, and forms are built for screen readers; since
   #437 (2026-10-15) the file list exposes its cursor row with kind and position, marked files, and the pane and folder
-  (see 4.1.2). Left: the nested rename field (#449) and Full view's columns not being a table. V1–V12 heard. #449.
+  (see 4.1.2), and since 0.57.0 the rename field is a real text field (#449 closed). Left: Full view's columns not being
+  a table (#451), and the controls nested in controls (#824, see 4.1.2). V1–V12 heard on 0.53.0-era `main`; § Re-hear
+  lists what changed since. #451, #824.
 - **302.2 With limited vision**: Partially supports. App zoom alone to 200%, past it with macOS text size, dark mode, AA
   text contrast in CI. Weak focused-pane and focus-ring contrast with some accents unless Increase contrast or
   Differentiate without color is on. #454.
@@ -339,7 +382,8 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **302.7 With limited manipulation**: Partially supports. Full keyboard operation with rebindable shortcuts and no
   simultaneous-key requirement beyond modifiers (Sticky Keys works). Toast actions are reachable with "Move focus to the
   notifications" (#439, 2026-10-15), and tabs reorder and move from the keyboard (#441, 2026-10-15). A one-letter
-  breadcrumb segment and the pane divider are still under 24 px. #441.
+  breadcrumb segment and the pane divider are still under 24 px. Removing one keyboard-shortcut binding in Settings is
+  mouse-only (#824); it's not a core action, so the remark still says everything core works from the keyboard. #817.
 - **302.8 With limited reach and strength**: Supports. Software only; no physical reach.
 - **302.9 With limited language, cognitive, and learning abilities**: Supports. Plain, conversational copy
   (`docs/style-guide.md`), confirmations, undo and rollback, consistent menus, and a setting that keeps toasts until
@@ -359,8 +403,9 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   the arrows walk it (#437, 2026-10-15). Evidence: `pane/type-to-jump-keys.ts`, `commands/sources/main-window.ts`,
   `pane/pane-chrome.ts`.
 - **502.3.1 Object information**: Partially supports. Standard controls expose name, role, and state through WebKit;
-  file rows expose name, kind, position, and marked state (#437, 2026-10-15). Left: the inline rename field nests in its
-  option (#449). V1 and V3 heard. #449.
+  file rows expose name, kind, position, and marked state (#437, 2026-10-15), and since 0.57.0 the inline rename field
+  sits beside the listbox as a real text field (#449 closed). Left: the controls nested in controls (#824, see 4.1.2).
+  V1 and V3 heard on 0.53.0-era `main` (re-hear, § Re-hear). #824.
 - **502.3.2 Modification of object information**: Supports. States set by the user (checkboxes, switches, selects) are
   standard ARIA controls that assistive tech can change. V7 heard.
 - **502.3.3 Row, column, and headers**: Partially supports. The queue window is a `role="grid"`; the Full view file list
@@ -413,9 +458,12 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **602.2 Accessibility and compatibility features**: Supports. The accessibility guide (`/trust/accessibility-guide`,
   opened by Help > Accessibility guide, `help.accessibility`) documents the features, how to turn each on, and the known
   gaps (from `gapIssues`); the Keyboard shortcuts window (Help menu) documents every keyboard command. #443.
-- **602.3 Electronic support documentation**: Supports. getcmdr.com passes axe on all 13 pages in light and dark mode
-  (the `website-e2e` check), and Lighthouse accessibility scored 100 (2026-09-08). Evidence:
-  `apps/website/e2e/accessibility.spec.ts`, `apps/website/.lighthouseci/`.
+- **602.3 Electronic support documentation**: Supports. getcmdr.com's 15 main pages pass axe in light and dark mode on
+  every change (the `website-e2e` check). The accessibility guide joined the list on 2026-10-30; before that the guide
+  itself was untested. Blog posts and the 404 page aren't in it (`/feature-status` is a redirect stub). CI's Lighthouse
+  run audits the home page and fails below 90 for accessibility (`lighthouserc.cjs`); the 100 recorded on 2026-09-08 is
+  the last measured score, so the report says "passes". Evidence: `apps/website/e2e/accessibility.spec.ts`,
+  `apps/website/lighthouserc.cjs`.
 - **602.4 Alternate formats for non-electronic support documentation**: Not applicable. No non-electronic docs.
 - **603.2 Information on accessibility and compatibility features**: Supports. Support answers by email
   (hello@getcmdr.com) and in-app feedback, and points to the accessibility guide. #443.
@@ -426,13 +474,13 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 
 ### Clause 4: functional performance statements
 
-- **4.2.1 Usage without vision**: Partially supports. See 508 302.1. #449.
+- **4.2.1 Usage without vision**: Partially supports. See 508 302.1. #451, #824.
 - **4.2.2 Usage with limited vision**: Partially supports. See 508 302.2. #454.
 - **4.2.3 Usage without perception of colour**: Partially supports. See 508 302.3. #452, #454.
 - **4.2.4 Usage without hearing**: Supports. No audio.
 - **4.2.5 Usage with limited hearing**: Supports. No audio.
 - **4.2.6 Usage with no or limited vocal capability**: Supports. No speech input.
-- **4.2.7 Usage with limited manipulation or strength**: Partially supports. See 508 302.7. #441.
+- **4.2.7 Usage with limited manipulation or strength**: Partially supports. See 508 302.7. #817.
 - **4.2.8 Usage with limited reach**: Supports. Software only.
 - **4.2.9 Minimize photosensitive seizure triggers**: Supports. See WCAG 2.3.1.
 - **4.2.10 Usage with limited cognition, language or learning**: Supports. See 508 302.9.
@@ -467,7 +515,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **11.5.2.1–11.5.2.3 Platform accessibility service support and use**: See 11.5.2.5–11.5.2.17. Cmdr uses the platform
   service through WebKit's NSAccessibility bridge.
 - **11.5.2.4 Assistive technology**: Not applicable. Cmdr isn't assistive technology.
-- **11.5.2.5 Object information**: Partially supports. See 508 502.3.1. #449.
+- **11.5.2.5 Object information**: Partially supports. See 508 502.3.1. #824.
 - **11.5.2.6 Row, column, and headers**: Partially supports. See 508 502.3.3. #451.
 - **11.5.2.7 Values**: Supports. See 508 502.3.4.
 - **11.5.2.8 Label relationships**: Supports. See 508 502.3.6.
@@ -574,3 +622,83 @@ segment with "keyboard focus follows VoiceOver cursor"); Enter on a path segment
 scroll check in Brief and Full view; launch with focus in the left pane; the Full view's localized git status words
 (`2e8e38025`); and run 2's three fixes (the empty-space click, clearing the filter, the toast-text click). Raw logs of
 runs 1 and 2 stayed in the session scratchpad.
+
+## Re-evaluation 2026-10-30 (0.57.0)
+
+Every row re-checked against tag `v0.57.0` (the report's claims must be true of the released app), from 0.53.0's
+2026-10-15 evaluation. Method: `git log v0.53.0..v0.57.0` filtered to ARIA, focus, motion, and announcer changes (`-G`
+over `apps/desktop/src`), a diff of every file the rows above cite as evidence, and `git grep v0.57.0` for opt-outs
+(`skipLabelInName`, `nested-interactive`, `it.skip` in `*.a11y.test.ts`). Rows whose code didn't move were spot-checked:
+window minimum size, zoom range, notification timeouts (4–10 s, plus persistent ones), Help menu items, the shipped
+languages, the ⌃F5 / ⌃F6 / tab-move commands, the queue grid, and the absence of `tabpanel` and audio or video.
+`pnpm check a11y-contrast` is green (the global CSS gained only the inactive text-selection tokens and a gated
+ToggleGroup focus-ring pair). Counts per table are unchanged.
+
+Level changes:
+
+- **2.5.3 Label in name**: Partially supports → Supports (#450 closed, `d565214b8a`).
+- **2.1.1 Keyboard**: Supports → Partially supports. Not a regression: the Settings shortcut pill's mouse-only × was
+  there at 0.53.0 and the first audit missed it. #824.
+
+Same level, new reason: 4.1.2, 302.1, 502.3.1, 4.2.1, and 11.5.2.5 lose #449 (the rename field is fixed) and stay
+"Partially supports" for #451 and #824. New remark facts: Markdown view (1.1.1, 1.2.1), dialog letter keys (2.1.4),
+queue drag-to-reorder (2.5.7), the date-sort chevron (2.5.8), the unlock prompt (3.3.1), the operation log off switch
+(3.3.4), and the website's axe list (602.3).
+
+### Re-hear (2026-10-30)
+
+The code under these VoiceOver checks changed between 0.53.0 and 0.57.0. Nothing read contradicts the rows, so their
+wording stays, but David's 2026-10-15 run didn't hear it. Re-hear on 0.57.0 or later:
+
+- **V5 Rename** (rows 3.3.1, 4.1.2, 502.3.1, 502.3.6): most important. The field now lives beside the listbox
+  (`a7b318620e`). Listen for it announced as a text field with its name, the selected name, and the invalid-name
+  message; then Escape and the cursor row read again.
+- **V1 Browse a folder, V2 Switch panes, V3 Mark files** (1.1.1, 1.3.1, 2.4.6, 4.1.2, 502.3.1, 502.3.12, 11.5.2.13):
+  Brief view's `role="listbox"` moved onto an inner region for the rename overlay. In Full view, the date phrase now
+  says whichever date the column shows ("(created)", "(added)"), and a fallback date header says why. Run V1–V3 in Brief
+  view too, not only Full.
+- **V4 Copy with the progress dialog** (4.1.3, 502.3.4, 502.3.14): the dialog opens with focus on Pause, its from → to
+  row is its description, a conflict-policy caption sits under it, Escape cancels with a "Copy canceled" alert, and an
+  opt-in done state replaces the dialog's buttons. Listen for the title plus description on open, the progress value,
+  and the cancel alert.
+- **V6 Search** (4.1.2, 4.1.3, 502.3.12): the result list's arrow keys moved to `ColumnList`'s shared cursor model
+  (`e84a7dcfec`). Listen that ↓ still reads each result.
+- **V9 Toast** (4.1.3, 11.5.2.15): the close button moved first in each toast's DOM, and frames stopped being focus
+  stops. Listen to the trash toast, then ⌃F6 and Tab through its buttons, and Escape back.
+- **V11 Read text** (502.3.8, 11.5.2.10): the viewer gained Back / Forward and a formatted Markdown view. Re-read a
+  `.txt`, then open a `.md` and read it with VO-A (the guide has no Markdown step yet; add one).
+
+Not changed, no re-hear needed: V7, V8, V10, and V12.
+
+## How to re-evaluate
+
+Every two months or so, and before handing the report to a buyer whose evaluation is due. A per-release trust review
+(`docs/guides/trust-page-review.md`) only flags claims the code clearly contradicts; this is the full pass. One agent
+does it in a session; David's part is the re-hear.
+
+1. **Pick the released tags**: `OLD` is `report.version` in `apps/website/src/lib/accessibility-report.ts`, `NEW` the
+   latest release tag. Every claim describes `NEW`, never `main`.
+2. **Close the gap list**: `gh issue view` each `gapIssues` entry and each row's `issues`. A closed issue counts only if
+   its fix is in `NEW` (`git merge-base --is-ancestor <fix> NEW`). Lift the rows it held, unless another issue holds
+   them.
+3. **Find what moved**:
+   `git log --oneline OLD..NEW -G'aria-|role=|tabindex|prefers-reduced-motion|focus-visible|announce' -- 'apps/desktop/src/**'`,
+   plus `git diff --stat OLD NEW` over every evidence path this doc cites. Read each hit against the rows it touches.
+   Watch for new surfaces (a new dialog, view, or window), new drags, new small click targets, new single-key shortcuts,
+   new time limits, and new animations.
+4. **Sweep the opt-outs** at `NEW`: `git grep` for `skipLabelInName:`, `nested-interactive`, `it.skip` in
+   `*.a11y.test.ts`, and `eslint-disable` lines naming an a11y rule. Each is a known gap; make sure a row and an issue
+   count it.
+5. **Spot-check the steady rows**: window minimum size (`tauri.conf.json`), zoom range (`TEXT_SIZE_RANGE`), notification
+   timeouts (`git grep -E "timeoutMs: *[0-9]+"`), Help menu (`menu_bar.rs`), shipped languages, and the website's axe
+   page list against `apps/website/src/pages/`. Run `pnpm check a11y-contrast`.
+6. **File what's new**: a real gap gets an issue (`docs/tooling/backlog-board.md`, `claude-created`, board fields) and
+   goes into the row's `issues` and `gapIssues`.
+7. **Update the report and this doc together**: remarks stay plain, for buyers, no file paths; evidence and commits go
+   here. Bump `report.version` to `NEW` and `report.date` to today. Add a dated "Re-evaluation" section above, with the
+   level changes, and a dated "Re-hear" list naming the V-checks whose code changed (David's VoiceOver guide, vault
+   `projects/Cmdr/2026-10-14 Cmdr VoiceOver test guide.md`). Keep a VoiceOver-backed remark's wording unless the code
+   clearly contradicts it. Once David re-hears, record the result in § VoiceOver listening runs and drop the list.
+8. **Check and commit**: `pnpm check --fast`, the website checks (`website-typecheck`, `website-eslint`,
+   `website-build website-e2e`), then commit. The page goes live when it lands, so land it only for claims true of
+   `NEW`.

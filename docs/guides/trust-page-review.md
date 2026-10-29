@@ -60,6 +60,7 @@ first full review (2026-10-29) used five.
   times) carry their own `measuredOn` window and refresh commands. Refresh them together, about once a quarter, not per
   release.
 - **The accessibility conformance report** (`/trust/accessibility`) is a formal evaluation. The review flags claims the
-  code clearly contradicts; a re-evaluation is its own task.
+  code clearly contradicts; a re-evaluation is its own task, about every two months:
+  `docs/notes/accessibility-audit-2026-10.md` § How to re-evaluate.
 - **External facts** (a subprocessor's certifications, DPF status) don't show up in a diff. The yearly security review
   rechecks them (vault `projects/Cmdr/business/Cmdr yearly security review.md`).
