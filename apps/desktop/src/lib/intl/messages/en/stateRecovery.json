@@ -55,6 +55,10 @@
   "@stateRecovery.selectionHistory.title": {
     "description": "Headline of a notice shown once: the list of recent selection patterns in the Selection dialog (the one that selects files by name or pattern) was damaged, so it's empty now. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
   },
+  "stateRecovery.tagReplacePresets.title": "Cmdr couldn’t read your saved tag replace lists, so the list starts with the built-in one",
+  "@stateRecovery.tagReplacePresets.title": {
+    "description": "Headline of a notice shown when the file holding the user's saved F4 replace lists in the Tags window (tag editor) was unreadable and was set aside. The list starts again with only the built-in list. Friendly, no blame."
+  },
   "stateRecovery.multiRenamePresets.title": "Cmdr couldn’t read your saved multi-rename presets, so the list starts empty",
   "@stateRecovery.multiRenamePresets.title": {
     "description": "Headline of a notice shown once: the file holding the person's saved presets for the multi-rename tool (renames many files at once by rules) was damaged, so no presets are saved now. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."

@@ -71,6 +71,7 @@ function track(n: string, over: Partial<TagEditorView['tracks'][number]> = {}): 
     path: `/b/${n}.mp3`,
     fileName: `${n}.mp3`,
     track: n,
+    disc: null,
     title: `T${n}`,
     durationMs: 1000,
     changed: false,

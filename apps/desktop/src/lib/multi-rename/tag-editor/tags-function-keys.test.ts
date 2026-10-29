@@ -11,6 +11,7 @@ const track = (path: string, readError: TagEditorView['tracks'][number]['readErr
   path,
   fileName: path,
   track: null,
+  disc: null,
   title: null,
   durationMs: null,
   changed: false,

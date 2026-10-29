@@ -89,6 +89,7 @@ const track = (n: string, title: string) => ({
   path: `/b/${n}.mp3`,
   fileName: `${n}.mp3`,
   track: n,
+  disc: null,
   title,
   durationMs: 1000,
   changed: false,

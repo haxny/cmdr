@@ -40,6 +40,7 @@
         search_history: () => tString('stateRecovery.searchHistory.title'),
         selection_history: () => tString('stateRecovery.selectionHistory.title'),
         multi_rename_presets: () => tString('stateRecovery.multiRenamePresets.title'),
+        tag_replace_presets: () => tString('stateRecovery.tagReplacePresets.title'),
         multi_rename_last_settings: () => tString('stateRecovery.multiRenameLastSettings.title'),
         multi_rename_field_history: () => tString('stateRecovery.multiRenameFieldHistory.title'),
         launch_days: () => tString('stateRecovery.launchDays.title'),

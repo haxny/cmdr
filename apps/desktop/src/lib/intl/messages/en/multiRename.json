@@ -1324,6 +1324,10 @@
   "@multiRename.tags.col.number": {
     "description": "Column heading in the track list of the tag editor window: the track number."
   },
+  "multiRename.tags.col.disc": "Disc",
+  "@multiRename.tags.col.disc": {
+    "description": "Column heading in the track list of the tag editor window: the disc number of each file. Narrow; sorts by disc, then track."
+  },
   "multiRename.tags.col.title": "Title",
   "@multiRename.tags.col.title": {
     "description": "Column heading in the track list of the tag editor window: the title tag of each file."
@@ -1346,6 +1350,17 @@
   "multiRename.tags.track.cellNumber": "Track number column",
   "@multiRename.tags.track.cellNumber": {
     "description": "Read aloud by screen readers in the track list of the tag editor window when the left arrow moves the active cell to the track number column; typing and Delete then act on the track number."
+  },
+  "multiRename.tags.track.cellDisc": "Disc column",
+  "@multiRename.tags.track.cellDisc": {
+    "description": "Read aloud by screen readers in the track list of the tag editor window when the arrow keys move the active cell to the disc column; typing and Delete then act on the disc."
+  },
+  "multiRename.tags.track.discLabel": "Disc of {fileName}",
+  "@multiRename.tags.track.discLabel": {
+    "description": "Accessible name of the box that edits one file's disc number in the track list of the tag editor window. Only read aloud by screen readers.",
+    "placeholders": {
+      "fileName": "the name of the audio file the disc belongs to"
+    }
   },
   "multiRename.tags.track.cellTitle": "Title column",
   "@multiRename.tags.track.cellTitle": {
@@ -1384,10 +1399,6 @@
   },
   "multiRename.tags.cover.detailsPixels": "{mime}, {width}×{height} px, {sizeText}",
   "@multiRename.tags.cover.detailsPixels": {
-  "multiRename.tags.col.disc": "Disc",
-  "@multiRename.tags.col.disc": {
-    "description": "Column heading in the track list of the tag editor window: the disc number of each file. Narrow; sorts by disc, then track."
-  },
     "description": "In the cover panel of the tag editor window: the image type, size in pixels and file size of the cover all files share.",
     "placeholders": {
       "mime": "the image type, like image/jpeg",
@@ -1411,17 +1422,6 @@
   "multiRename.tags.cover.candidate": "{fileName} ({sizeText})",
   "@multiRename.tags.cover.candidate": {
     "description": "One picture offered as a cover in the tag editor window: its file name and size.",
-  "multiRename.tags.track.cellDisc": "Disc column",
-  "@multiRename.tags.track.cellDisc": {
-    "description": "Read aloud by screen readers in the track list of the tag editor window when the arrow keys move the active cell to the disc column; typing and Delete then act on the disc."
-  },
-  "multiRename.tags.track.discLabel": "Disc of {fileName}",
-  "@multiRename.tags.track.discLabel": {
-    "description": "Accessible name of the box that edits one file's disc number in the track list of the tag editor window. Only read aloud by screen readers.",
-    "placeholders": {
-      "fileName": "the name of the audio file the disc belongs to"
-    }
-  },
     "placeholders": {
       "fileName": "the name of the picture file",
       "sizeText": "the size of the picture, like 245 KB"
@@ -1692,6 +1692,14 @@
   "@multiRename.tags.tools.albumArtistFromArtist": {
     "description": "Shown in the tag editor window: a clean-up tool button. Copies each file’s Artist into its Album artist. Keep the equals sign."
   },
+  "multiRename.tags.tools.discFromFolder": "Disc from folder",
+  "@multiRename.tags.tools.discFromFolder": {
+    "description": "Shown in the tag editor window: a clean-up tool button. Sets Disc from the folder each file is in: a folder named CD 1, Disc 2 or Disk 3 gives that number, other folders are numbered in their order. Files that all sit in one folder are left alone."
+  },
+  "multiRename.tags.tools.discNumberOnly": "Keep only the disc number",
+  "@multiRename.tags.tools.discNumberOnly": {
+    "description": "Shown in the tag editor window: a clean-up tool button. Cuts the text off a Disc value so only the number stays: CD2 becomes 2, Disk 10/12 becomes 10/12."
+  },
   "multiRename.tags.tools.narratorFromText": "Narrator from text",
   "@multiRename.tags.tools.narratorFromText": {
     "description": "Shown in the tag editor window: a clean-up tool button. Finds the narrator’s name in the description or comment and puts it in Performer."
@@ -1752,14 +1760,6 @@
     "description": "Shown in the tag editor window: one row of the list of changes: a file and what changes in it.",
     "placeholders": {
       "fileName": "the audio file’s name",
-  "multiRename.tags.tools.discFromFolder": "Disc from folder",
-  "@multiRename.tags.tools.discFromFolder": {
-    "description": "Shown in the tag editor window: a clean-up tool button. Sets Disc from the folder each file is in: a folder named CD 1, Disc 2 or Disk 3 gives that number, other folders are numbered in their order. Files that all sit in one folder are left alone."
-  },
-  "multiRename.tags.tools.discNumberOnly": "Keep only the disc number",
-  "@multiRename.tags.tools.discNumberOnly": {
-    "description": "Shown in the tag editor window: a clean-up tool button. Cuts the text off a Disc value so only the number stays: CD2 becomes 2, Disk 10/12 becomes 10/12."
-  },
       "fields": "a list of tag field names, maybe with the words for cover and extra tags"
     }
   },
@@ -2106,6 +2106,10 @@
   "@multiRename.tags.tools.replace.lists.deleteNamed": {
     "description": "Accessible name of the Delete button of one saved list. {name} is the list name."
   },
+  "multiRename.tags.tools.replace.lists.deleteFailed": "Couldn’t delete the list.",
+  "@multiRename.tags.tools.replace.lists.deleteFailed": {
+    "description": "Shown when deleting a saved list of replacements in the tag editor window failed."
+  },
   "multiRename.tags.tools.replace.lists.full": "There are too many saved lists. Delete one first.",
   "@multiRename.tags.tools.replace.lists.full": {
     "description": "Shown when saving a list of replacements in the tag editor window is refused because the maximum number of saved lists is reached."
@@ -2118,30 +2122,6 @@
   "@multiRename.tags.tools.replace.lists.saveFailed": {
     "description": "Shown when saving a list of replacements in the tag editor window failed for a reason other than a full list."
   },
-  "multiRename.tags.tools.name.modePattern": "Pattern",
-  "@multiRename.tags.tools.name.modePattern": {
-    "description": "Option in the From file name panel of the tag editor window: read file names with a simple pattern such as %track% - %title%."
-  },
-  "multiRename.tags.tools.name.modeRegex": "Regular expression",
-  "@multiRename.tags.tools.name.modeRegex": {
-    "description": "Option in the From file name panel of the tag editor window: read file names with a regular expression whose named groups are tag fields."
-  },
-  "multiRename.tags.tools.replace.lists.deleteFailed": "Couldn’t delete the list.",
-  "@multiRename.tags.tools.replace.lists.deleteFailed": {
-    "description": "Shown when deleting a saved list of replacements in the tag editor window failed."
-  },
-  "multiRename.tags.tools.name.patternPattern": "Pattern, like %track% - %title%",
-  "@multiRename.tags.tools.name.patternPattern": {
-    "description": "Label of the pattern text box in the From file name panel of the tag editor window while the Pattern mode is on. The percent signs wrap tag field names and must stay as they are."
-  },
-  "multiRename.tags.tools.name.patternRegex": "Regular expression, like {example}",
-  "@multiRename.tags.tools.name.patternRegex": {
-    "description": "Label of the pattern text box in the From file name panel of the tag editor window while the Regular expression mode is on. Named groups are tag field names.",
-    "placeholders": {
-      "example": "a sample regular expression with named groups, like (?<track>\\d+)_(?<title>.+); never translate it"
-    }
-  },
-  "multiRename.tags.tools.name.recent": "Recent patterns",
   "multiRename.tags.tools.format.field": "Field",
   "@multiRename.tags.tools.format.field": {
     "description": "Label of the tag field picker in the Format a field panel of the tag editor window."
@@ -2162,6 +2142,26 @@
   "@multiRename.tags.tools.name.mode": {
     "description": "Accessible name of the switch between a simple pattern and a regular expression in the From file name panel of the tag editor window."
   },
+  "multiRename.tags.tools.name.modePattern": "Pattern",
+  "@multiRename.tags.tools.name.modePattern": {
+    "description": "Option in the From file name panel of the tag editor window: read file names with a simple pattern such as %track% - %title%."
+  },
+  "multiRename.tags.tools.name.modeRegex": "Regular expression",
+  "@multiRename.tags.tools.name.modeRegex": {
+    "description": "Option in the From file name panel of the tag editor window: read file names with a regular expression whose named groups are tag fields."
+  },
+  "multiRename.tags.tools.name.patternPattern": "Pattern, like %track% - %title%",
+  "@multiRename.tags.tools.name.patternPattern": {
+    "description": "Label of the pattern text box in the From file name panel of the tag editor window while the Pattern mode is on. The percent signs wrap tag field names and must stay as they are."
+  },
+  "multiRename.tags.tools.name.patternRegex": "Regular expression, like {example}",
+  "@multiRename.tags.tools.name.patternRegex": {
+    "description": "Label of the pattern text box in the From file name panel of the tag editor window while the Regular expression mode is on. Named groups are tag field names.",
+    "placeholders": {
+      "example": "a sample regular expression with named groups, like (?<track>\\d+)_(?<title>.+); never translate it"
+    }
+  },
+  "multiRename.tags.tools.name.recent": "Recent patterns",
   "@multiRename.tags.tools.name.recent": {
     "description": "Accessible name of the list of the patterns used last in the From file name panel of the tag editor window. Picking one fills the pattern box."
   },

@@ -15262,16 +15262,16 @@ export type ReplaceStep = {
   regex: boolean
 }
 
- */
-export type RepoInfo = {
-  // Canonical repo root (the working tree dir, not `.git`).
-  repoRoot: string
-  // Short branch name (`main`), or `None` if detached or unborn.
 /**
  *  Snapshot of mutable repo state for the breadcrumb chip.
  *
  *  Computed at portal entry and re-emitted by the watcher on every relevant
  *  `.git/*` change. The frontend never polls.
+ */
+export type RepoInfo = {
+  // Canonical repo root (the working tree dir, not `.git`).
+  repoRoot: string
+  // Short branch name (`main`), or `None` if detached or unborn.
   branch: string | null
   // Short SHA when detached (`a1b2c3d`). `None` otherwise.
   detachedSha: string | null
@@ -18306,13 +18306,13 @@ export type StateFile =
   | 'selection_history'
   // Saved multi-rename presets.
   | 'multi_rename_presets'
+  // Saved Tags window F4 Replace lists.
+  | 'tag_replace_presets'
   // The multi-rename dialog's last settings.
   | 'multi_rename_last_settings'
   // The multi-rename dialog's per-field history.
   | 'multi_rename_field_history'
   // `usage.json`, the days Cmdr was opened on.
-  // Saved Tags window F4 Replace lists.
-  | 'tag_replace_presets'
   | 'launch_days'
   // `s3_known_places.json`: saved S3 accounts and bucket places.
   | 's3_places'
@@ -18964,16 +18964,16 @@ export type TagTextTool =
    *  `Replace`; all of them compile first, and one that doesn't is `BadRegex` with nothing changed.
    */
   | { kind: 'steps'; steps: ReplaceStep[] }
-   */
-  | { kind: 'format'; field: TagField; mask: string }
-  /**
-   *  Runs the ticked Multi-Rename text options over every value of each listed field, in
-   *  Multi-Rename's order: Greek to Latin, Remove diacritics, Normalize Unicode (NFC), so the
   /**
    *  Rebuilds `field` from a Multi-Rename `mask`. `[N]` is the field's current FIRST value (a
    *  multi-value field loses its other values: the whole field becomes the one rendered value),
    *  `[=tag.album]` and the like read the file's other fields. A file whose mask has no value
    *  for it (a `FieldGap`) is left unchanged; the result is trimmed, and an empty one removes the field.
+   */
+  | { kind: 'format'; field: TagField; mask: string }
+  /**
+   *  Runs the ticked Multi-Rename text options over every value of each listed field, in
+   *  Multi-Rename's order: Greek to Latin, Remove diacritics, Normalize Unicode (NFC), so the
    *  results match file renames. Fields not listed (Comment and Description by default in the
    *  UI) are untouched.
    */
@@ -19023,6 +19023,10 @@ export type TagTool =
       // How to read the file names.
       pattern: NamePattern
     }
+  // [`disc_from_folder`].
+  | { kind: 'discFromFolder' }
+  // [`disc_number_only`].
+  | { kind: 'discNumberOnly' }
 
 // The Tags windows' share of a quit.
 export type TagsAtQuit = {
@@ -19054,10 +19058,6 @@ export type TagsDeselectAll = null
 
 /**
  *  `tags-menu-key`: a File / Select menu item's key (F2–F8, ⇧F2, ⇧F4, ⇧F8) pressed while a Tags
-  // [`disc_from_folder`].
-  | { kind: 'discFromFolder' }
-  // [`disc_number_only`].
-  | { kind: 'discNumberOnly' }
  *  window is focused. Those accelerators fire before the page's keydown, so this is how the
  *  window learns of the key (`tag_editor::window::menu_key_command_of`). Emitted to that window only.
  */
@@ -19230,6 +19230,8 @@ export type TrackRow = {
   path: string
   fileName: string
   track: string | null
+  // The Disc tag as written (`1`, `CD2`, `1/2`).
+  disc: string | null
   title: string | null
   durationMs: number | null
   // Edited tags differ from the ones on disk.
@@ -19261,8 +19263,6 @@ export type TrackSortKey =
  *  stillness that isn't the answerer's.
  */
 export type TransferActivity = {
-  // The Disc tag as written (`1`, `CD2`, `1/2`).
-  disc: string | null
   /**
    *  Files open in the concurrency window right now. These have bytes on the
    *  destination but aren't counted in `files_done` yet, which is why the
