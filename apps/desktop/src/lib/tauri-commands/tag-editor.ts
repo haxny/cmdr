@@ -38,6 +38,7 @@ import {
 } from '#lib/ipc/bindings.js'
 
 export type {
+  AppChoice,
   ApplyRequest,
   LastTagApply,
   CoverCandidate,
@@ -45,6 +46,7 @@ export type {
   FileChangeView,
   NamePattern,
   NamePreviewRow,
+  PlayerOpened,
   ReplacePreset,
   ReplacePresetRefusal,
   ReplaceStep,
