@@ -61,13 +61,30 @@ fn natural_cmp(a: &str, b: &str) -> Ordering {
 }
 
 /// Sets Disc from the folder each file is in (`ctx.folders`): a folder named `CD 1` / `Disc 2` / `Disk 3`
-/// gives that number; any other folder gets its place (1, 2, ...) among the distinct folders of the run in
-/// natural order. Files all in one folder that names no disc are left alone: a flat book has no discs to
+/// gives that number; the other folders are numbered among themselves in natural order, after the highest
+/// named disc (`CD 1`, `CD 2`, `Bonus` give 1, 2, 3). The folders of the whole book count
+/// (`ctx.book_folders`, else `ctx.folders`), so a selection keeps the numbers the whole run would give.
+/// A book whose folders are all one folder that names no disc is left alone: a flat book has no discs to
 /// tell apart. A file with no folder in `ctx` is left alone.
 pub fn disc_from_folder(files: &[FileTags], ctx: &ToolContext) -> Vec<FileTags> {
-    let mut folders: Vec<&str> = ctx.folders.iter().map(String::as_str).collect();
-    folders.sort_by(|a, b| natural_cmp(folder_name(a), folder_name(b)));
-    folders.dedup();
+    let book = if ctx.book_folders.is_empty() {
+        &ctx.folders
+    } else {
+        &ctx.book_folders
+    };
+    let highest_named = book
+        .iter()
+        .filter_map(|f| disc_in_name(folder_name(f)))
+        .max()
+        .unwrap_or(0);
+    let mut unnamed: Vec<&str> = book
+        .iter()
+        .map(String::as_str)
+        .filter(|f| disc_in_name(folder_name(f)).is_none())
+        .collect();
+    unnamed.sort_by(|a, b| natural_cmp(folder_name(a), folder_name(b)));
+    unnamed.dedup();
+    let flat = highest_named == 0 && unnamed.len() == 1;
     files
         .iter()
         .enumerate()
@@ -75,8 +92,12 @@ pub fn disc_from_folder(files: &[FileTags], ctx: &ToolContext) -> Vec<FileTags> 
             let mut out = file.clone();
             let Some(folder) = ctx.folders.get(i) else { return out };
             let number = disc_in_name(folder_name(folder)).or_else(|| {
-                let place = folders.iter().position(|f| f == folder)?;
-                (folders.len() > 1).then(|| u32::try_from(place + 1).unwrap_or(u32::MAX))
+                let place = unnamed.iter().position(|f| f == folder)?;
+                (!flat).then(|| {
+                    u32::try_from(place + 1)
+                        .unwrap_or(u32::MAX)
+                        .saturating_add(highest_named)
+                })
             });
             if let Some(number) = number {
                 out.fields.insert(TagField::Disc, vec![number.to_string()]);
@@ -87,7 +108,7 @@ pub fn disc_from_folder(files: &[FileTags], ctx: &ToolContext) -> Vec<FileTags> 
 }
 
 /// Cuts every Disc value down to its number: `CD2` is `2`, `Disk 10/12` is `10/12`. A value with no digits
-/// stays as it is.
+/// stays as it is. The first run of digits counts, so `2024 reissue CD2` gives `2024`.
 pub fn disc_number_only(files: &[FileTags]) -> Vec<FileTags> {
     files
         .iter()

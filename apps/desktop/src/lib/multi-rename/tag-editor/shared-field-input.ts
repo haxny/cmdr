@@ -8,8 +8,9 @@
 
 import { tString } from '#lib/intl/messages.svelte.js'
 import { formatInteger } from '#lib/intl/number-format.js'
-import type { SharedValue, TagField, ValueCount } from '#lib/ipc/bindings.js'
+import type { SharedValue, TagField, TrackRow, ValueCount } from '#lib/ipc/bindings.js'
 import type { TagEdit } from '#lib/tauri-commands/index.js'
+import type { TrackCell } from './typed-key'
 
 /** What joins the values of a multi-value field in its text. */
 export const MULTI_SEPARATOR = '; '
@@ -39,6 +40,11 @@ export function isMultiLineField(field: TagField): boolean {
  * The values `text` stands for. A multi-value field splits on "; " and trims each value; any other field keeps its
  * text as one value (trimmed, except the prose fields Comment and Description, which are kept as typed). Nothing left (blank text) is `[]`, which removes the field.
  */
+/** What a Tracks pane cell shows for `track`: its Title, Disc or # as written. */
+export function trackCellValue(track: TrackRow, cell: TrackCell): string {
+  return (cell === 'title' ? track.title : cell === 'disc' ? track.disc : track.track) ?? ''
+}
+
 export function parseFieldText(field: TagField, text: string): string[] {
   if (text.trim() === '') return []
   if (isMultiLineField(field)) return [text]

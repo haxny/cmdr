@@ -265,8 +265,17 @@
     }
 
     async function runTool(tool: TagTool): Promise<void> {
-        await runScoped((scope) => tags.tool(tool, scope))
+        const discsBefore = discsOf()
+        const ran = await runScoped((scope) => tags.tool(tool, scope).then(() => true))
+        // A Disc tool that left every disc as it was (a flat book has no folders to tell discs apart) says so.
+        const isDiscTool = tool.kind === 'discFromFolder' || tool.kind === 'discNumberOnly'
+        if (ran === true && isDiscTool && tags.error === null && discsOf() === discsBefore) {
+            notice = 'multiRename.tags.tools.discUnchanged'
+        }
     }
+
+    /** Every track's Disc as one string, to tell whether a tool changed any. */
+    const discsOf = (): string => JSON.stringify(tags.view?.tracks.map((track) => track.disc) ?? [])
 
     /** The paths of the tracks whose tags were read: an edit can name only these. */
     const readablePaths = (): Set<string> => readablePathsOf(tags.view)

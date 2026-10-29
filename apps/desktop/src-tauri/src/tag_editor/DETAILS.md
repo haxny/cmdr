@@ -93,7 +93,7 @@ re-reads or follows a file that something else renamed.
   `TrackRow::path` gives them), in session order, or over every readable track when `scope` is `None`; the rest keep
   their tags. A path the session doesn't have refuses the run (`UnknownTrack`); an unreadable track in the scope is left
   out (it is never written anyway); `Some([])` changes nothing. Each tool sees a `ToolContext` (each file's parent
-  folder and stem), so `autoNumber` can start a disc per folder and `fromFileName` reads the names. The context also
+  folder and stem), so `autoNumber` can start a disc per folder and `fromFileName` reads the names. It also carries every folder of the book (`book_folders`), so `discFromFolder` numbers folders that name no disc (after the highest named one, among all the book's folders) the same for a selection as for the whole run; a book in one unnamed folder is left alone. `TrackRow::disc` is the Disc tag as written. The context also
   carries the session's listed track count (readable or not) (`session_files`): the numbering tools drop the track
   number only for a one-file BOOK, so a one-track scope of a bigger book is numbered; with a partial scope TrackTotal
   counts the files numbered (as Mp3tag does). A bad file-name pattern is `BadPattern` before anything is touched;

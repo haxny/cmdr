@@ -17,6 +17,7 @@ import {
   type TagEditorView,
   type TagsClipboardAction,
 } from '#lib/tauri-commands/index.js'
+import { trackCellValue } from './shared-field-input'
 import { pastedValues, pasteRefusal, sharedCopyText } from './field-clipboard'
 import type { TagEditorState } from './tag-editor-state.svelte'
 import { textBoxOf } from './tags-function-keys'
@@ -96,7 +97,7 @@ export function createTagsClipboard(deps: TagsClipboardDeps): (action: TagsClipb
     const field = deps.activeTrackField()
     return {
       field,
-      text: (field === 'title' ? track.title : field === 'disc' ? track.disc : track.track) ?? '',
+      text: trackCellValue(track, field),
       path: track.path,
       index,
     }

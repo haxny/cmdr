@@ -23,7 +23,7 @@
     import { useScrollBoxSize, type ScrollBoxSize } from '#lib/utils/scroll-box-size-action.js'
     import { editorBox, onResize, paneCursorMove, revealRow, visibleRowCount, type EditorPlace } from './pane-cursor'
     import './tag-pane.css'
-    import { formatTrackLength, parseFieldText } from './shared-field-input'
+    import { formatTrackLength, parseFieldText, trackCellValue } from './shared-field-input'
     import TagValueEditor from './TagValueEditor.svelte'
     import TrackSortHeader from './TrackSortHeader.svelte'
     import { dialogIsOpen, isClearKey, startsComposition, typedSeed, type TrackCell } from './typed-key'
@@ -159,11 +159,6 @@
         onSort({ key, descending: sort?.key === key && !sort.descending })
     }
 
-    /** What a cell of `track` shows. */
-    function valueOf(track: TrackRow, field: EditedField): string {
-        return (field === 'title' ? track.title : field === 'disc' ? track.disc : track.track) ?? ''
-    }
-
     function canEdit(track: TrackRow | undefined): track is TrackRow {
         return editable && track !== undefined && track.readError === null
     }
@@ -284,7 +279,7 @@
         }
         claimKey(e)
         if (seed !== null) openEditor(at, activeCell, seed)
-        else if (valueOf(track, activeCell) !== '') {
+        else if (trackCellValue(track, activeCell) !== '') {
             onClear({ field: activeCell, path: track.path })
         }
         return true
@@ -344,7 +339,8 @@
         {#if showNumber}
             <TrackSortHeader col="number" sortKey="discTrack" label={tString('multiRename.tags.col.number')} current={sort} onClick={sortBy} align="right" />
         {/if}
-        <TrackSortHeader col="disc" sortKey="discTrack" label={tString('multiRename.tags.col.disc')} current={sort} onClick={sortBy} align="right" />
+        <!-- Disc sorts like # (one order: disc, then track) but only # shows it, so a screen reader hears one sorted header. -->
+        <TrackSortHeader col="disc" sortKey="discTrack" label={tString('multiRename.tags.col.disc')} current={null} onClick={sortBy} align="right" />
         <TrackSortHeader col="title" sortKey="title" label={tString('multiRename.tags.col.title')} current={sort} onClick={sortBy} />
         <TrackSortHeader col="length" sortKey="length" label={tString('multiRename.tags.col.length')} current={sort} onClick={sortBy} align="right" />
         <TrackSortHeader col="file" sortKey="fileName" label={tString('multiRename.tags.col.fileName')} current={sort} onClick={sortBy} />
@@ -405,7 +401,7 @@
             {@const field = editing.field}
             <TagValueEditor
                 bind:this={editor}
-                value={valueOf(track, field)}
+                value={trackCellValue(track, field)}
                 seed={editing.seed}
                 ariaLabel={tString(EDITOR_LABELS[field], { fileName: track.fileName })}
                 place={editing.place}

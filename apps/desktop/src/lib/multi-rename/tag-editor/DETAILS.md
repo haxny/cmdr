@@ -50,14 +50,17 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   question.
 - **Parts**: `AlbumPane` (one row per shared field, Name | Value; a "multiple values" row is untouched until changed;
   the cursor row's Values… and Clear under the list; `CoverPanel` as the last group, inside the list's scroll),
-  `TracksPane` (☐ ▶ # Title Length File; the # column is hidden for a one-file book; # Title Length File are
-  `TrackSortHeader` buttons that call `onSort`, the active one flipping direction and any other starting ascending, from
-  `view.sort`; the header pads by the scroller's scroll bar width, and a double-click edits # or Title). Every header
-  cell is one grid cell with its column's `data-col` and alignment: the ▶ header's `.sr-only` label sits inside a span,
-  since an `.sr-only` grid child is `position: absolute`, takes no column, and moved every label after it one column
-  left (the labels didn't sit over their cells), `TagValueEditor` (the box F2 lays over a row), `TagsFunctionKeyBar`
-  (the foot), `TagToolDialogs` (each tool's dialog), `WriteDialog` (`ApplyPanel` + `ApplyOutcome`: what will change, the
-  per-file result, Undo; `WouldDropDialog`: items a format would lose, Write anyway or Skip).
+  `TracksPane` (☐ ▶ # Disc Title Length File; the # column is hidden for a one-file book, Disc (narrow,
+  `data-col="disc"`) is always drawn; ←/→ move the active cell # → Disc → Title and typing, Delete, F2, a double-click
+  and ⌘C/⌘V act on it; # Disc Title Length File are `TrackSortHeader` buttons that call `onSort`, the active one
+  flipping direction and any other starting ascending, from `view.sort` (Disc sorts `discTrack` like #, but only # shows
+  the state, so a screen reader hears one sorted header); the header pads by the scroller's scroll bar width, and a
+  double-click edits # or Title). Every header cell is one grid cell with its column's `data-col` and alignment: the ▶
+  header's `.sr-only` label sits inside a span, since an `.sr-only` grid child is `position: absolute`, takes no column,
+  and moved every label after it one column left (the labels didn't sit over their cells), `TagValueEditor` (the box F2
+  lays over a row), `TagsFunctionKeyBar` (the foot), `TagToolDialogs` (each tool's dialog), `WriteDialog`
+  (`ApplyPanel` + `ApplyOutcome`: what will change, the per-file result, Undo; `WouldDropDialog`: items a format would
+  lose, Write anyway or Skip).
 - **Covers** (`CoverPanel`, `CoverViewer`, `cover-choices.ts`, `cover-drop.ts`): every distinct cover as a tile with how
   many files carry it and its size, the files without one counted (`listTagCovers`, asked again on each new view; a new
   view also clears the section's notice). Tiles show `getCoverThumbnail` (asked once more when none came, then "No
@@ -105,8 +108,9 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   use too), so the Values… popover holds them all back; in its list only a plain Enter or Space picks. While a write at
   once runs, only `tags.play` runs: its answer may open a dialog, and two must never be up at once. Clean up (⇧F5,
   `tags.cleanUp`) is not in the plan's key list: it holds the one-press tools the old bar had (Remove diacritics,
-  Renumber, Strip track prefix, Album artist = Artist, Narrator from text, Clear title = album). Clear (F8) empties one
-  field, starting on the cursor's, on the selection (`setOne` per readable selected track) or every file (`setAll`).
+  Renumber, Strip track prefix, Album artist = Artist, Narrator from text, Clear title = album, Disc from folder, Keep
+  only the disc number; a Disc tool that changes no disc says "No disc changed." in the status line). Clear (F8) empties
+  one field, starting on the cursor's, on the selection (`setOne` per readable selected track) or every file (`setAll`).
   Each tool takes the field the user was on when it opened, since focus then moves into the dialog. The text tools stay
   open to run again; Case, Clean up, Remove extras and Clear close once run. ⌘⏎ and ⌘S (`tags.write`) write at once
   (`write-now-status.svelte.ts`): `TagEditorState.writeNow` is the Write dialog's own write without its list. It first

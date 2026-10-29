@@ -22,6 +22,7 @@ fn ctx(folders: &[&str]) -> ToolContext {
         folders: folders.iter().map(|f| (*f).to_string()).collect(),
         stems: Vec::new(),
         session_files: 0,
+        book_folders: Vec::new(),
     }
 }
 

@@ -311,6 +311,19 @@ describe('⌘V on a field', () => {
     ])
   })
 
+  it('copies and pastes the Disc cell: ← from Title reaches it', async () => {
+    ipc.readClipboardText.mockResolvedValue('2\n')
+    await mountWindow()
+    await key('Tab')
+    await key('ArrowLeft')
+    await fromMenu('copy')
+    expect(ipc.copyToClipboard.mock.calls).toEqual([['']])
+    await fromMenu('paste')
+    expect(ipc.editTags).toHaveBeenCalledWith('S', [
+      { kind: 'setOne', path: '/b/01.mp3', field: 'disc', values: ['2'] },
+    ])
+  })
+
   it('says so when the clipboard can’t be read or holds no text, and changes nothing', async () => {
     const root = await mountWindow()
     ipc.readClipboardText.mockRejectedValueOnce(new Error('pasteboard'))

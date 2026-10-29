@@ -1700,6 +1700,10 @@
   "@multiRename.tags.tools.discNumberOnly": {
     "description": "Shown in the tag editor window: a clean-up tool button. Cuts the text off a Disc value so only the number stays: CD2 becomes 2, Disk 10/12 becomes 10/12."
   },
+  "multiRename.tags.tools.discUnchanged": "No disc changed.",
+  "@multiRename.tags.tools.discUnchanged": {
+    "description": "Status line in the tag editor window after Disc from folder or Keep only the disc number ran and changed no file's disc: for example all files are in one folder, or every disc already is a plain number."
+  },
   "multiRename.tags.tools.narratorFromText": "Narrator from text",
   "@multiRename.tags.tools.narratorFromText": {
     "description": "Shown in the tag editor window: a clean-up tool button. Finds the narrator’s name in the description or comment and puts it in Performer."

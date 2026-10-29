@@ -399,19 +399,20 @@ fn scoped(
         .unzip())
 }
 
+/// The folder a file is in, as text.
+fn folder_text(path: &Path) -> String {
+    path.parent()
+        .map(|folder| folder.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
 /// What the tools know about `paths`, a selection of a book of `session_files` listed tracks (readable or not):
 /// each one's folder and stem, and the book's size (for the one-file-book rule).
-fn context_of(paths: &[PathBuf], session_files: usize) -> ToolContext {
+fn context_of(paths: &[PathBuf], session_files: usize, book_folders: Vec<String>) -> ToolContext {
     ToolContext {
         session_files,
-        folders: paths
-            .iter()
-            .map(|path| {
-                path.parent()
-                    .map(|folder| folder.to_string_lossy().into_owned())
-                    .unwrap_or_default()
-            })
-            .collect(),
+        book_folders,
+        folders: paths.iter().map(|path| folder_text(path)).collect(),
         stems: paths.iter().map(|path| stem_of(path)).collect(),
     }
 }
@@ -508,8 +509,12 @@ pub fn tool(session_id: &str, tool: TagTool, scope: Option<Vec<String>>) -> Resu
     if let TagTool::FromFileName { pattern } = &tool {
         compile_pattern(pattern).map_err(|error| TagEditorError::BadPattern { error })?;
     }
+    // The folders of the whole book, so a selection numbers folders as the whole run would.
+    let book_folders = with_session(session_id, |layout, _| {
+        Ok(layout.tracks.iter().map(|path| folder_text(path)).collect())
+    })?;
     edit_scoped(session_id, scope, |paths, before, book| {
-        Ok(apply_tool_in(before, &context_of(paths, book), &tool))
+        Ok(apply_tool_in(before, &context_of(paths, book, book_folders), &tool))
     })
 }
 

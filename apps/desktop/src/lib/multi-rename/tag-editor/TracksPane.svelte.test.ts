@@ -389,6 +389,14 @@ describe('TracksPane sorting', () => {
     expect(onSort).toHaveBeenCalledWith({ key: 'discTrack', descending: false })
   })
 
+  it('sorted by disc and track, only # says so; Disc stays clickable and toggles that order', async () => {
+    const { root, onSort } = await mountPane({ sort: { key: 'discTrack', descending: false } })
+    expect(headerButton(root, '#').getAttribute('aria-label')).toBe('#, sorted ascending')
+    expect(headerButton(root, 'Disc').getAttribute('aria-label')).toBe('Disc, not sorted')
+    headerButton(root, 'Disc').click()
+    expect(onSort).toHaveBeenCalledWith({ key: 'discTrack', descending: true })
+  })
+
   it('a header click does not move the cursor or the selection', async () => {
     const { root, onCursorChange, selection } = await mountPane()
     headerButton(root, 'Title').click()

@@ -80,6 +80,9 @@ pub enum TagTool {
 pub struct ToolContext {
     /// The parent folder of each file, as text.
     pub folders: Vec<String>,
+    /// The parent folder of every file of the whole book (a selection's tools number folders among these);
+    /// empty means `folders` is the book.
+    pub book_folders: Vec<String>,
     /// Each file's name without the extension.
     pub stems: Vec<String>,
     /// How many files the whole book has, when `files` is only a selection of it; 0 means

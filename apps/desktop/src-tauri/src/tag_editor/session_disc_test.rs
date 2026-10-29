@@ -56,3 +56,17 @@ fn the_row_shows_the_disc_and_number_only_is_one_scoped_undo_step() {
     close(&id);
     close_rename(&id);
 }
+
+#[test]
+fn disc_from_folder_leaves_a_flat_book_alone_and_is_no_edit() {
+    let mp3s: Vec<(&str, Vec<u8>)> = ["a.mp3", "b.mp3"].into_iter().map(|n| (n, mp3_frames())).collect();
+    let (dir, listing) = folder("tag-editor-disc-flat", "root", &mp3s);
+    tag_file(&dir, "a.mp3", &[(TagField::Disc, "CD1")]);
+    let id = open_rename(listing.id(), true, None, 0).expect("opens").session_id;
+    open(&id, false).expect("opens");
+    let view = tool(&id, TagTool::DiscFromFolder, None).expect("runs");
+    assert_eq!(discs(&view), vec![("a.mp3", Some("CD1")), ("b.mp3", None)]);
+    assert!(view.tracks.iter().all(|row| !row.changed));
+    close(&id);
+    close_rename(&id);
+}

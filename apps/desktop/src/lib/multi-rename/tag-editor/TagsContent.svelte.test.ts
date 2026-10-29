@@ -372,6 +372,25 @@ describe('TagsContent', () => {
     expect(state.tool).toHaveBeenCalledWith({ kind: 'stripTrackPrefix' }, null)
   })
 
+  it('a Disc tool that changes no disc says so in the status line; one that changes a disc stays quiet', async () => {
+    const { root, state } = await mountTab()
+    await bar(root, 'Clean up', true)
+    inDialog('Disc from folder').click()
+    await settle()
+    expect(state.tool).toHaveBeenCalledWith({ kind: 'discFromFolder' }, null)
+    expect(root.textContent).toContain('No disc changed.')
+    cleanup?.()
+    const changing = await mountTab()
+    changing.state.tool.mockImplementation(() => {
+      changing.state.view = { ...VIEW, tracks: VIEW.tracks.map((t) => ({ ...t, disc: '1' })) }
+      return Promise.resolve()
+    })
+    await bar(changing.root, 'Clean up', true)
+    inDialog('Keep only the disc number').click()
+    await settle()
+    expect(changing.root.textContent).not.toContain('No disc changed.')
+  })
+
   it('with 2 of 4 tracks selected, Renumber works on those two only', async () => {
     const tracks = ['01', '02', '03', '04'].map((n) => ({
       ...VIEW.tracks[0],

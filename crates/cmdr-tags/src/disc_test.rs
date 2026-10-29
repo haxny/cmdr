@@ -100,3 +100,33 @@ fn the_tools_run_through_the_tool_enum() {
     let out = apply_tool_in(&[with_disc(None)], &ctx(&["/b/Disc 7"]), &TagTool::DiscFromFolder);
     assert_eq!(discs(&out), some(&["7"]));
 }
+
+#[test]
+fn unnamed_folders_follow_the_highest_named_disc() {
+    let folders = ["/b/Bonus", "/b/CD 1", "/b/CD 2", "/b/Extra"];
+    let out = disc_from_folder(&vec![with_disc(None); 4], &ctx(&folders));
+    assert_eq!(discs(&out), some(&["3", "1", "2", "4"]));
+}
+
+#[test]
+fn a_selection_keeps_the_book_wide_number_of_an_unnamed_folder() {
+    let book = ["/b/Part A", "/b/Part B", "/b/Part C"];
+    let selected = ToolContext {
+        folders: vec!["/b/Part B".to_string()],
+        book_folders: book.iter().map(|f| (*f).to_string()).collect(),
+        ..ToolContext::default()
+    };
+    let out = disc_from_folder(&[with_disc(None)], &selected);
+    assert_eq!(discs(&out), some(&["2"]));
+}
+
+#[test]
+fn a_selection_of_a_flat_book_stays_alone() {
+    let selected = ToolContext {
+        folders: vec!["/b/Kniha".to_string()],
+        book_folders: vec!["/b/Kniha".to_string(), "/b/Kniha".to_string()],
+        ..ToolContext::default()
+    };
+    let out = disc_from_folder(&[with_disc(None)], &selected);
+    assert_eq!(discs(&out), vec![None]);
+}
