@@ -1,0 +1,35 @@
+{
+  "$comment": "Ukrainian typography as macOS uk writes it (the reference pile's Finder/AppKit/System Settings strings, counted 2026-10-29): «…» primary (763 vs 16 curly), „…“ nested, the apostrophe is the LETTER ʼ (U+02BC, 212 hits, zero ASCII ' or ’ inside a word), so no ' or ’ is declared and either one is a finding; the single … hugging its word (262 vs 10 three-dot); a no-break space before % («100 %», «^0 % завершено») and before the dash — (14 no-break, 2 plain) with a space after. Hedges: every bracketed or slashed number, case, or gender ending, and a guessed ending on an insert. Rationale: docs/i18n/uk/style.md § Typography. Schema: docs/i18n/termbase.md § <tag>/mechanics.json schema.",
+  "quotes": { "primary": ["«", "»"], "nested": ["„", "“"] },
+  "ellipsis": { "glyph": "…" },
+  "spacing": [
+    {
+      "pattern": "[\\d\\uFFFC] ?%",
+      "why": "a no-break space (U+00A0) goes before % (42 %), as macOS uk writes it"
+    },
+    {
+      "pattern": "[^\\u00a0\\n]—",
+      "why": "the dash — takes a no-break space (U+00A0) before it (Cmdr — файловий менеджер), as macOS uk writes it"
+    },
+    { "pattern": "—[\\p{L}\\d\\uFFFC]", "why": "the dash — takes a space after it" },
+    { "pattern": "«\\s|\\s»", "why": "Ukrainian quotes hug their text: no space inside «…»" }
+  ],
+  "hedges": [
+    {
+      "pattern": "\\p{L}\\((?:а|я|и|і|ї|е|є|у|ю|о|ь|ів|їв|ей|ам|ям|ах|ях|ла|ло|ли|ий|ій|ою|ої)\\)",
+      "why": "a bracketed number, case, or gender ending (файл(и), видалив(ла)); use ICU plural/select, or restructure"
+    },
+    {
+      "pattern": "\\p{L}/(?:а|я|и|і|е|ів|ей|ла|ло|ли|ий|ій)(?!\\p{L})",
+      "why": "a slashed ending (елемент/и, готовий/а); use ICU plural/select, or restructure"
+    },
+    {
+      "pattern": "(?<!\\p{L})(?:він|вона|воно|його|її|йому|їй)/(?:він|вона|воно|його|її|йому|їй)(?!\\p{L})",
+      "why": "a slashed pronoun hedging an unknown gender; repeat the type noun (сервер, папка) or rephrase"
+    },
+    {
+      "pattern": "{@name}-?[а-яіїєґ]",
+      "why": "a case ending glued to a name Cmdr can't know ({name}а); put a type noun before it, quote it, or use a colon slot"
+    }
+  ]
+}
