@@ -339,7 +339,7 @@ pub(super) async fn run_smb_watcher(
         domain: String::new(),
         auto_reconnect: false,
         compression: true,
-        // Matches `session::build_session`: the watcher opens the same share,
+        // Matches `session_build::build_session`: the watcher opens the same share,
         // so it has to be able to reach a DFS namespace root too, or a
         // namespace-backed volume would index but never notice a change.
         dfs_enabled: true,
@@ -567,7 +567,7 @@ pub(super) async fn run_smb_watcher(
                 let _ = watcher.close().await;
                 // Before the reconnect below, whose new watcher names this session
                 // to the server so it frees the watch handle at once.
-                if let Some(id) = super::session::retired_session_id(&client)
+                if let Some(id) = super::session_build::retired_session_id(&client)
                     && let Some(inner) = share.live()
                 {
                     *inner.retired_watcher_session.lock_ignore_poison() = Some(id);

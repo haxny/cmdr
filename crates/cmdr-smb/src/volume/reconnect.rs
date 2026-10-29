@@ -3,9 +3,8 @@
 //! start/stop, and the backend-autonomous watcher-death reconnect loop.
 
 use super::mapping::map_smb_error;
-use super::session::{
-    MainSession, build_session, refresh_credentials_from_store, refresh_remembered_credentials, retired_session_id,
-};
+use super::session::{MainSession, refresh_credentials_from_store, refresh_remembered_credentials};
+use super::session_build::{build_session, retired_session_id};
 use super::state::{ConnectionState, SessionGeneration};
 use super::{SmbConnectionParams, SmbVolumeInner};
 use cmdr_fs::ignore_poison::{IgnorePoison, RwLockIgnorePoison};

@@ -155,15 +155,15 @@ on", not by watching a number.
 - **The concerns are named modules, and each one answers a single sentence.** `paths` translates between the app's
   volume-relative paths and the share-relative ones smb2 speaks; `query` reads the share without changing it (listings,
   metadata, existence, space); `mutation` changes it and patches the listings that showed it; then `session`,
-  `reconnect`, `state`, `read_stream` (a file read as chunks), `write_stream` (a stream written into a file),
-  `random_reader` (one held-open `FileReader` read by offset, which the file viewer keeps for a whole session, #303),
-  `scan`, `scan_pool`, `transfer_session` (the extra session byte-moving calls ride), `dfs_links` (a transfer through a
-  DFS link inside the share), `watcher`, `foreground_yield`, `links` (what a stat reads as through a link), `slow_calls`
-  (the rolled-up `warn` for a metadata call the server held over a second), `attributes` (Hidden and Locked by path),
-  and the stateless `mapping`. Splitting further needs a responsibility you can name the same way; a line count is not
-  one. `e5ea10d02` reverted four splits invented to satisfy the counter, and every one of them had widened a visibility
-  or torn a struct from its trait impl to do it. These carry the same `pub(super)` the crate already used and leave no
-  module reaching into another's internals.
+  `session_build` (opens a fresh smb2 session, for every owner of one), `reconnect`, `state`, `read_stream` (a file read
+  as chunks), `write_stream` (a stream written into a file), `random_reader` (one held-open `FileReader` read by offset,
+  which the file viewer keeps for a whole session, #303), `scan`, `scan_pool`, `transfer_session` (the extra session
+  byte-moving calls ride), `dfs_links` (a transfer through a DFS link inside the share), `watcher`, `foreground_yield`,
+  `links` (what a stat reads as through a link), `slow_calls` (the rolled-up `warn` for a metadata call the server held
+  over a second), `attributes` (Hidden and Locked by path), and the stateless `mapping`. Splitting further needs a
+  responsibility you can name the same way; a line count is not one. `e5ea10d02` reverted four splits invented to
+  satisfy the counter, and every one of them had widened a visibility or torn a struct from its trait impl to do it.
+  These carry the same `pub(super)` the crate already used and leave no module reaching into another's internals.
 - **`volume/foreground_yield.rs` answers "should a background transfer stand aside?" from the WORK, not the transport.**
   MTP has an explicit holder for its single scarce USB pipe; SMB frames just interleave over a connection, so there is
   nothing on the transport to count. It survives the transfer session because the copy and the pane still share the link

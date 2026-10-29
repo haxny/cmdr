@@ -59,7 +59,7 @@ use smb2::types::SessionId;
 
 use super::SmbConnectionParams;
 use super::liveness::LiveConnection;
-use super::session::{build_session, retired_session_id};
+use super::session_build::{build_session, retired_session_id};
 use super::state::TransferGeneration;
 
 /// How long the transfer session stays open after its last lease drops.
@@ -144,7 +144,7 @@ pub(super) struct TransferSession {
     /// Wakes a reconnect sleeping out its backoff when the main session comes back.
     share_back: tokio::sync::Notify,
     /// The lost member's session id, for the reconnect that replaces it to name
-    /// (`session::retired_session_id`). ❌ Never the main session's.
+    /// (`session_build::retired_session_id`). ❌ Never the main session's.
     retired: Mutex<Option<SessionId>>,
     /// The installed member's connection, readable without any lock, so the
     /// transfer watchdog asks THIS connection whether the server is still

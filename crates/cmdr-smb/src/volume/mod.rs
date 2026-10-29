@@ -39,6 +39,7 @@ mod reconnect;
 mod scan;
 mod scan_pool;
 mod session;
+mod session_build;
 mod slow_calls;
 mod spelling;
 mod stamping;
@@ -57,7 +58,7 @@ pub use state::ConnectionState;
 use state::{SessionCell, SessionGeneration};
 
 use reconnect::spawn_watcher_death_reconnect;
-use session::build_session;
+use session_build::build_session;
 
 /// The request size `max_concurrent_ops` asks the credit window about.
 ///
@@ -255,7 +256,7 @@ struct SmbVolumeInner {
     watcher_cancel: std::sync::Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
     /// The id of the watcher session that died, set on its way out and taken by
     /// the next `spawn_watcher`, whose session names it to the server
-    /// (`session::retired_session_id`). The watcher's own predecessor only.
+    /// (`session_build::retired_session_id`). The watcher's own predecessor only.
     retired_watcher_session: std::sync::Mutex<Option<smb2::types::SessionId>>,
     /// Single-flight guard for `attempt_reconnect`. Concurrent callers (FE
     /// backoff cycle + lazy nav-time retry) wait on the same in-flight attempt

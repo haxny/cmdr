@@ -160,7 +160,7 @@ pub async fn try_open_share(params: &SmbConnectionParams, timeout: Duration) -> 
         compression: false,
         // This probe exists to report what the server really says about the
         // share, so it has to reach a DFS namespace root the same way
-        // `session::build_session` does. Without it a namespace answers
+        // `session_build::build_session` does. Without it a namespace answers
         // `STATUS_BAD_NETWORK_NAME` and the probe reports "no such share"
         // about a share the caller can actually open.
         dfs_enabled: true,

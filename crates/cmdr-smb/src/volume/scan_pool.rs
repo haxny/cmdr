@@ -51,7 +51,7 @@ use futures_util::stream::FuturesUnordered;
 use super::mapping::map_smb_error;
 use super::query::{ListingStop, read_listing};
 use super::read_stream::{ASSUMED_MAX_READ, InlineReadStream};
-use super::session::{build_session, retired_session_id};
+use super::session_build::{build_session, retired_session_id};
 use super::state::{ConnectionState, ends_the_session};
 use super::{SmbConnectionParams, SmbVolume};
 use cmdr_fs::entry::FileEntry;
@@ -96,7 +96,7 @@ struct PoolMember {
     session: tokio::sync::Mutex<Option<MemberSession>>,
     /// The id of THIS member's session that died, set when it's cleared out of
     /// `session` and taken by the reconnect that replaces it, which names it to
-    /// the server (`session::retired_session_id`). ❌ Never a sibling's.
+    /// the server (`session_build::retired_session_id`). ❌ Never a sibling's.
     retired: std::sync::Mutex<Option<SessionId>>,
 }
 

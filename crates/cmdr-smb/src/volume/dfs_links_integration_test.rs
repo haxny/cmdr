@@ -14,7 +14,7 @@
 //! stack, which has no DFS containers. Without the variable each cell says
 //! "skipped" and passes ([`dfs_fixture_not_requested`]).
 
-use super::session::TEST_DFS_TARGET_OVERRIDES;
+use super::session_build::TEST_DFS_TARGET_OVERRIDES;
 use super::test_support::*;
 use super::*;
 use cmdr_fs::ignore_poison::IgnorePoison;
