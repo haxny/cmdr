@@ -47,7 +47,7 @@
   "@multiRename.firstOnly": {
     "sourceHash": "1ddb563"
   },
-  "multiRename.includeExtension": "Включати розширення",
+  "multiRename.includeExtension": "Враховувати розширення",
   "@multiRename.includeExtension": {
     "sourceHash": "10c3dc5"
   },
@@ -500,119 +500,119 @@
   "@multiRename.mediaField.tagComment": {
     "sourceHash": "44f5e3f"
   },
-  "multiRename.mediaPicker.title": "Insert a field",
+  "multiRename.mediaPicker.title": "Вставити поле",
   "@multiRename.mediaPicker.title": {
     "sourceHash": "b722b94"
   },
-  "multiRename.mediaPicker.filter": "Filter fields",
+  "multiRename.mediaPicker.filter": "Фільтрувати поля",
   "@multiRename.mediaPicker.filter": {
     "sourceHash": "184a51b"
   },
-  "multiRename.mediaPicker.photos": "Photos and videos (EXIF)",
+  "multiRename.mediaPicker.photos": "Фото й відео (EXIF)",
   "@multiRename.mediaPicker.photos": {
     "sourceHash": "b41c23d"
   },
-  "multiRename.mediaPicker.music": "Music (ID3, MP4, FLAC…)",
+  "multiRename.mediaPicker.music": "Музика (ID3, MP4, FLAC…)",
   "@multiRename.mediaPicker.music": {
     "sourceHash": "357e580"
   },
-  "multiRename.mediaPicker.none": "none in these files",
+  "multiRename.mediaPicker.none": "немає в цих файлах",
   "@multiRename.mediaPicker.none": {
     "sourceHash": "9d56c00"
   },
-  "multiRename.mediaPicker.noneYet": "none so far",
+  "multiRename.mediaPicker.noneYet": "поки немає",
   "@multiRename.mediaPicker.noneYet": {
     "sourceHash": "35c2dfa"
   },
-  "multiRename.mediaPicker.noMatch": "No field matches “{filter}”",
+  "multiRename.mediaPicker.noMatch": "Немає полів за запитом «{filter}»",
   "@multiRename.mediaPicker.noMatch": {
     "sourceHash": "2003efb"
   },
-  "multiRename.mediaPicker.inserted": "Inserted {field}",
+  "multiRename.mediaPicker.inserted": "Вставлено: {field}",
   "@multiRename.mediaPicker.inserted": {
     "sourceHash": "d5f2afb"
   },
-  "multiRename.mediaPicker.insertedMark": "inserted",
+  "multiRename.mediaPicker.insertedMark": "вставлено",
   "@multiRename.mediaPicker.insertedMark": {
     "sourceHash": "e8dd664"
   },
-  "multiRename.mediaEditor.marker": "Edit field",
+  "multiRename.mediaEditor.marker": "Редагувати поле",
   "@multiRename.mediaEditor.marker": {
     "sourceHash": "652e08e"
   },
-  "multiRename.mediaEditor.title": "Field",
+  "multiRename.mediaEditor.title": "Поле",
   "@multiRename.mediaEditor.title": {
     "sourceHash": "f45fc1d"
   },
-  "multiRename.mediaEditor.format": "Format",
+  "multiRename.mediaEditor.format": "Формат",
   "@multiRename.mediaEditor.format": {
     "sourceHash": "2f34366"
   },
-  "multiRename.mediaEditor.dateHint": "Y, M, and D for the date, h, m, and s for the time, with - . _ or spaces between. Leave empty for the date and time.",
+  "multiRename.mediaEditor.dateHint": "Y, M і D позначають дату, h, m і s позначають час, а між ними можна ставити - . _ або пробіли. Залиште порожнім, щоб отримати дату й час.",
   "@multiRename.mediaEditor.dateHint": {
     "sourceHash": "11b97ec"
   },
-  "multiRename.mediaEditor.presets": "Common formats",
+  "multiRename.mediaEditor.presets": "Поширені формати",
   "@multiRename.mediaEditor.presets": {
     "sourceHash": "0998319"
   },
-  "multiRename.mediaEditor.preset.dateTime": "Date and time",
+  "multiRename.mediaEditor.preset.dateTime": "Дата й час",
   "@multiRename.mediaEditor.preset.dateTime": {
     "sourceHash": "a079c3b"
   },
-  "multiRename.mediaEditor.preset.date": "Date",
+  "multiRename.mediaEditor.preset.date": "Дата",
   "@multiRename.mediaEditor.preset.date": {
     "sourceHash": "99c40ab"
   },
-  "multiRename.mediaEditor.preset.time": "Time",
+  "multiRename.mediaEditor.preset.time": "Час",
   "@multiRename.mediaEditor.preset.time": {
     "sourceHash": "33b9347"
   },
-  "multiRename.mediaEditor.preset.compact": "Compact",
+  "multiRename.mediaEditor.preset.compact": "Компактний",
   "@multiRename.mediaEditor.preset.compact": {
     "sourceHash": "9945264"
   },
-  "multiRename.mediaEditor.digits": "Digits",
+  "multiRename.mediaEditor.digits": "Кількість цифр",
   "@multiRename.mediaEditor.digits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.mediaEditor.digitsHint": "Pads with leading zeros, so 2 turns 3 into 03. Leave empty for the number as it is.",
+  "multiRename.mediaEditor.digitsHint": "Доповнює число нулями на початку: якщо вказати 2, то 3 стане 03. Залиште порожнім, щоб число лишилося як є.",
   "@multiRename.mediaEditor.digitsHint": {
     "sourceHash": "d71b7d7"
   },
-  "multiRename.mediaEditor.characters": "Characters",
+  "multiRename.mediaEditor.characters": "Символи",
   "@multiRename.mediaEditor.characters": {
     "sourceHash": "6fac39e"
   },
-  "multiRename.mediaEditor.charactersHint": "Like 1-10 for the first ten, or -3- for the last three. Leave empty for all of it.",
+  "multiRename.mediaEditor.charactersHint": "Наприклад, 1-10 бере перші десять, а -3- бере останні три. Залиште порожнім, щоб узяти все.",
   "@multiRename.mediaEditor.charactersHint": {
     "sourceHash": "ed8b2a6"
   },
-  "multiRename.mediaEditor.fallback": "When a file has none: use the date it was last changed",
+  "multiRename.mediaEditor.fallback": "Якщо дати немає: використовувати дату останньої зміни файлу",
   "@multiRename.mediaEditor.fallback": {
     "sourceHash": "8978898"
   },
-  "multiRename.mediaEditor.usesModified": "{count, plural, one {{countText} file uses the date it was last changed} other {{countText} files use the date they were last changed}}",
+  "multiRename.mediaEditor.usesModified": "{count, plural, one {{countText} файл використовує дату останньої зміни} few {{countText} файли використовують дату останньої зміни} many {{countText} файлів використовують дату останньої зміни} other {{countText} файлу використовують дату останньої зміни}}",
   "@multiRename.mediaEditor.usesModified": {
     "sourceHash": "588993a"
   },
-  "multiRename.mediaEditor.missing": "{count, plural, one {{countText} file has none and keeps its name} other {{countText} files have none and keep their names}}",
+  "multiRename.mediaEditor.missing": "{count, plural, one {{countText} файл не має цього поля й зберігає свою назву} few {{countText} файли не мають цього поля й зберігають свої назви} many {{countText} файлів не мають цього поля й зберігають свої назви} other {{countText} файлу не мають цього поля й зберігають свої назви}}",
   "@multiRename.mediaEditor.missing": {
     "sourceHash": "6356576"
   },
-  "multiRename.mediaEditor.stillReading": "{count, plural, one {{countText} file is still being read} other {{countText} files are still being read}}",
+  "multiRename.mediaEditor.stillReading": "{count, plural, one {{countText} файл ще читається} few {{countText} файли ще читаються} many {{countText} файлів ще читаються} other {{countText} файлу ще читаються}}",
   "@multiRename.mediaEditor.stillReading": {
     "sourceHash": "44bea1c"
   },
-  "multiRename.mediaEditor.gap.reading": "reading…",
+  "multiRename.mediaEditor.gap.reading": "читання…",
   "@multiRename.mediaEditor.gap.reading": {
     "sourceHash": "6ab8da1"
   },
-  "multiRename.mediaEditor.gap.noValue": "none",
+  "multiRename.mediaEditor.gap.noValue": "немає",
   "@multiRename.mediaEditor.gap.noValue": {
     "sourceHash": "140bedb"
   },
-  "multiRename.mediaEditor.gap.unreadable": "can’t read",
+  "multiRename.mediaEditor.gap.unreadable": "не вдається прочитати",
   "@multiRename.mediaEditor.gap.unreadable": {
     "sourceHash": "f6daf78"
   },
@@ -632,295 +632,295 @@
   "@multiRename.reason.disallowedCharacter": {
     "sourceHash": "66a09f6"
   },
-  "multiRename.selectionChanged": "The folder changed while Multi-rename was opening. Check your selection, then try again.",
+  "multiRename.selectionChanged": "Папка змінилася, поки відкривалося вікно «Групове перейменування». Перевірте вибір і спробуйте ще раз.",
   "@multiRename.selectionChanged": {
     "sourceHash": "357470f"
   },
-  "multiRename.swapsSkipped": "{count, plural, one {Skipped # rename that swaps names} other {Skipped # renames that swap names}}. Rename them one at a time.",
+  "multiRename.swapsSkipped": "{count, plural, one {Пропущено # перейменування, яке міняє назви місцями} few {Пропущено # перейменування, які міняють назви місцями} many {Пропущено # перейменувань, які міняють назви місцями} other {Пропущено # перейменування, які міняють назви місцями}}. Перейменуйте їх по одному.",
   "@multiRename.swapsSkipped": {
     "sourceHash": "49fb1cc"
   },
-  "multiRename.archiveTitle": "Multi-rename doesn’t work inside archives",
+  "multiRename.archiveTitle": "«Групове перейменування» не працює всередині архівів",
   "@multiRename.archiveTitle": {
     "sourceHash": "709e0ec"
   },
-  "multiRename.archiveMessage": "To rename files in this zip, rename them one at a time.",
+  "multiRename.archiveMessage": "Щоб перейменувати файли в цьому zip-архіві, перейменовуйте їх по одному.",
   "@multiRename.archiveMessage": {
     "sourceHash": "2486bf3"
   },
-  "multiRename.counterEditor.marker": "Edit counter",
+  "multiRename.counterEditor.marker": "Редагувати лічильник",
   "@multiRename.counterEditor.marker": {
     "sourceHash": "8c3998f"
   },
-  "multiRename.counterEditor.title": "Counter",
+  "multiRename.counterEditor.title": "Лічильник",
   "@multiRename.counterEditor.title": {
     "sourceHash": "a78cfdf"
   },
-  "multiRename.counterEditor.start": "Start",
+  "multiRename.counterEditor.start": "Початок",
   "@multiRename.counterEditor.start": {
     "sourceHash": "e4bb9f1"
   },
-  "multiRename.counterEditor.step": "Step",
+  "multiRename.counterEditor.step": "Крок",
   "@multiRename.counterEditor.step": {
     "sourceHash": "8e6a6cc"
   },
-  "multiRename.counterEditor.digits": "Digits",
+  "multiRename.counterEditor.digits": "Кількість цифр",
   "@multiRename.counterEditor.digits": {
     "sourceHash": "9cd500d"
   },
-  "multiRename.counterEditor.counts": "Counts {first}, {second}, {third}…",
+  "multiRename.counterEditor.counts": "Рахує: {first}, {second}, {third}…",
   "@multiRename.counterEditor.counts": {
     "sourceHash": "1e814e0"
   },
-  "multiRename.placeholderHelp.name": "The file’s name, without its extension",
+  "multiRename.placeholderHelp.name": "Назва файлу без розширення",
   "@multiRename.placeholderHelp.name": {
     "sourceHash": "64ccdbf"
   },
-  "multiRename.placeholderHelp.extension": "The file’s current extension",
+  "multiRename.placeholderHelp.extension": "Поточне розширення файлу",
   "@multiRename.placeholderHelp.extension": {
     "sourceHash": "47411f5"
   },
-  "multiRename.placeholderHelp.parent": "The name of the folder the file is in",
+  "multiRename.placeholderHelp.parent": "Назва папки, у якій лежить файл",
   "@multiRename.placeholderHelp.parent": {
     "sourceHash": "cd08701"
   },
-  "multiRename.placeholderHelp.counter": "A number that goes up by one step per file, in the list’s order",
+  "multiRename.placeholderHelp.counter": "Число, що зростає на один крок із кожним файлом, у порядку списку",
   "@multiRename.placeholderHelp.counter": {
     "sourceHash": "2d7fbf4"
   },
-  "multiRename.placeholderHelp.date": "The date the file was last changed: year, month, and day",
+  "multiRename.placeholderHelp.date": "Дата останньої зміни файлу: рік, місяць і день",
   "@multiRename.placeholderHelp.date": {
     "sourceHash": "d4f6468"
   },
-  "multiRename.placeholderHelp.time": "The time the file was last changed: hours, minutes, and seconds",
+  "multiRename.placeholderHelp.time": "Час останньої зміни файлу: години, хвилини й секунди",
   "@multiRename.placeholderHelp.time": {
     "sourceHash": "69c80a0"
   },
-  "multiRename.placeholderHelp.media": "A photo’s, video’s, or song’s own information: EXIF, ID3, MP4, FLAC, Ogg, and more",
+  "multiRename.placeholderHelp.media": "Інформація, збережена в самому фото, відео чи пісні: EXIF, ID3, MP4, FLAC, Ogg тощо",
   "@multiRename.placeholderHelp.media": {
     "sourceHash": "b7ba607"
   },
-  "multiRename.placeholderHelp.mediaTaken": "The date a photo or video was taken",
+  "multiRename.placeholderHelp.mediaTaken": "Дата знімання фото чи відео",
   "@multiRename.placeholderHelp.mediaTaken": {
     "sourceHash": "b0eea95"
   },
-  "multiRename.placeholderHelp.mediaFallback": "With the date the file was last changed for one without it",
+  "multiRename.placeholderHelp.mediaFallback": "З датою останньої зміни для файлу без дати знімання",
   "@multiRename.placeholderHelp.mediaFallback": {
     "sourceHash": "292616f"
   },
-  "multiRename.placeholderHelp.mediaCamera": "The camera’s maker and model",
+  "multiRename.placeholderHelp.mediaCamera": "Виробник і модель камери",
   "@multiRename.placeholderHelp.mediaCamera": {
     "sourceHash": "9da2073"
   },
-  "multiRename.placeholderHelp.mediaSong": "A song’s track number, artist, and title",
+  "multiRename.placeholderHelp.mediaSong": "Номер доріжки, виконавець і назва пісні",
   "@multiRename.placeholderHelp.mediaSong": {
     "sourceHash": "f1a8bf1"
   },
-  "multiRename.placeholderHelp.mediaHint": "Click to pick from every field, each with its value on your files.",
+  "multiRename.placeholderHelp.mediaHint": "Клацніть, щоб вибрати з усіх полів, кожне зі своїм значенням у ваших файлах.",
   "@multiRename.placeholderHelp.mediaHint": {
     "sourceHash": "8f7db2f"
   },
-  "multiRename.placeholderHelp.oneChar": "Character {at} alone",
+  "multiRename.placeholderHelp.oneChar": "Лише символ {at}",
   "@multiRename.placeholderHelp.oneChar": {
     "sourceHash": "79e798e"
   },
-  "multiRename.placeholderHelp.charRange": "Characters {from} to {to}",
+  "multiRename.placeholderHelp.charRange": "Символи від {from} до {to}",
   "@multiRename.placeholderHelp.charRange": {
     "sourceHash": "60bd1e5"
   },
-  "multiRename.placeholderHelp.allButLast": "{count, plural, one {All but the last character} other {All but the last # characters}}",
+  "multiRename.placeholderHelp.allButLast": "{count, plural, =1 {Усе, крім останнього символу} one {Усе, крім останнього # символу} few {Усе, крім останніх # символів} many {Усе, крім останніх # символів} other {Усе, крім останніх # символу}}",
   "@multiRename.placeholderHelp.allButLast": {
     "sourceHash": "1452dc2"
   },
-  "multiRename.placeholderHelp.charsFrom": "{count, plural, one {# character} other {# characters}}, starting at character {from}",
+  "multiRename.placeholderHelp.charsFrom": "{count, plural, one {# символ} few {# символи} many {# символів} other {# символу}}, починаючи із символу {from}",
   "@multiRename.placeholderHelp.charsFrom": {
     "sourceHash": "2308c77"
   },
-  "multiRename.placeholderHelp.lastChars": "{count, plural, one {The last character} other {The last # characters}}",
+  "multiRename.placeholderHelp.lastChars": "{count, plural, =1 {Останній символ} one {Останній # символ} few {Останні # символи} many {Останні # символів} other {Останні # символу}}",
   "@multiRename.placeholderHelp.lastChars": {
     "sourceHash": "9f073f8"
   },
-  "multiRename.placeholderHelp.firstChar": "The first character alone",
+  "multiRename.placeholderHelp.firstChar": "Лише перший символ",
   "@multiRename.placeholderHelp.firstChar": {
     "sourceHash": "99755d8"
   },
-  "multiRename.placeholderHelp.firstChars": "{count, plural, one {The first character} other {The first # characters}}",
+  "multiRename.placeholderHelp.firstChars": "{count, plural, =1 {Перший символ} one {Перший # символ} few {Перші # символи} many {Перші # символів} other {Перші # символу}}",
   "@multiRename.placeholderHelp.firstChars": {
     "sourceHash": "340917c"
   },
-  "multiRename.placeholderHelp.grandparent": "The name of the folder above the file’s folder",
+  "multiRename.placeholderHelp.grandparent": "Назва папки, у якій лежить папка файлу",
   "@multiRename.placeholderHelp.grandparent": {
     "sourceHash": "450e079"
   },
-  "multiRename.placeholderHelp.counterStart": "Starts at {start}",
+  "multiRename.placeholderHelp.counterStart": "Починається з {start}",
   "@multiRename.placeholderHelp.counterStart": {
     "sourceHash": "f581c27"
   },
-  "multiRename.placeholderHelp.counterStep": "Goes up by {step} each time",
+  "multiRename.placeholderHelp.counterStep": "Щоразу зростає на {step}",
   "@multiRename.placeholderHelp.counterStep": {
     "sourceHash": "435eafd"
   },
-  "multiRename.placeholderHelp.counterDigits": "{digits, plural, one {At least # digit} other {At least # digits}}, with leading zeros",
+  "multiRename.placeholderHelp.counterDigits": "{digits, plural, one {Щонайменше # цифра} few {Щонайменше # цифри} many {Щонайменше # цифр} other {Щонайменше # цифри}}, з нулями на початку",
   "@multiRename.placeholderHelp.counterDigits": {
     "sourceHash": "cb37674"
   },
-  "multiRename.placeholderHelp.counterAll": "All three at once; a minus step counts down",
+  "multiRename.placeholderHelp.counterAll": "Усі три разом; крок із мінусом рахує у зворотному порядку",
   "@multiRename.placeholderHelp.counterAll": {
     "sourceHash": "60be18c"
   },
-  "multiRename.placeholderHelp.isoDate": "The whole date, with dashes",
+  "multiRename.placeholderHelp.isoDate": "Уся дата, через дефіси",
   "@multiRename.placeholderHelp.isoDate": {
     "sourceHash": "d5d3357"
   },
-  "multiRename.placeholderHelp.dateSeparators": "Any parts, with dashes, dots, underscores, or spaces between them",
+  "multiRename.placeholderHelp.dateSeparators": "Будь-які частини, з дефісами, крапками, підкресленнями чи пробілами між ними",
   "@multiRename.placeholderHelp.dateSeparators": {
     "sourceHash": "a8192a0"
   },
-  "multiRename.placeholderHelp.shortYear": "With a two-digit year",
+  "multiRename.placeholderHelp.shortYear": "З двоцифровим роком",
   "@multiRename.placeholderHelp.shortYear": {
     "sourceHash": "c042ccb"
   },
-  "multiRename.placeholderHelp.datePart": "The day alone; [Y] and [M] work the same way",
+  "multiRename.placeholderHelp.datePart": "Лише день; [Y] і [M] працюють так само",
   "@multiRename.placeholderHelp.datePart": {
     "sourceHash": "ce0ba83"
   },
-  "multiRename.placeholderHelp.dottedTime": "The whole time, with dots",
+  "multiRename.placeholderHelp.dottedTime": "Увесь час, через крапки",
   "@multiRename.placeholderHelp.dottedTime": {
     "sourceHash": "0edc240"
   },
-  "multiRename.placeholderHelp.hoursMinutes": "Hours and minutes only",
+  "multiRename.placeholderHelp.hoursMinutes": "Лише години й хвилини",
   "@multiRename.placeholderHelp.hoursMinutes": {
     "sourceHash": "55998f6"
   },
-  "multiRename.placeholderHelp.forFile": "For “{file}”:",
+  "multiRename.placeholderHelp.forFile": "Для файлу «{file}»:",
   "@multiRename.placeholderHelp.forFile": {
     "sourceHash": "44f23bc"
   },
-  "multiRename.placeholderHelp.forSampleDate": "For a file last changed {date}:",
+  "multiRename.placeholderHelp.forSampleDate": "Для файлу, востаннє зміненого {date}:",
   "@multiRename.placeholderHelp.forSampleDate": {
     "sourceHash": "f2032cc"
   },
-  "multiRename.placeholderHelp.forFirstFiles": "For the first three files:",
+  "multiRename.placeholderHelp.forFirstFiles": "Для перших трьох файлів:",
   "@multiRename.placeholderHelp.forFirstFiles": {
     "sourceHash": "012bd5a"
   },
-  "multiRename.placeholderHelp.counterEditHint": "Put the caret in a counter or point at it to change its numbers.",
+  "multiRename.placeholderHelp.counterEditHint": "Поставте курсор у лічильник або наведіть на нього вказівник, щоб змінити його числа.",
   "@multiRename.placeholderHelp.counterEditHint": {
     "sourceHash": "6ba268e"
   },
-  "multiRename.rangeEditor.marker": "Choose characters",
+  "multiRename.rangeEditor.marker": "Вибрати символи",
   "@multiRename.rangeEditor.marker": {
     "sourceHash": "fdfe315"
   },
-  "multiRename.rangeEditor.title": "Characters to take",
+  "multiRename.rangeEditor.title": "Символи, які взяти",
   "@multiRename.rangeEditor.title": {
     "sourceHash": "e1e72f0"
   },
-  "multiRename.rangeEditor.selectCharacters": "Select the characters to take",
+  "multiRename.rangeEditor.selectCharacters": "Виберіть символи, які взяти",
   "@multiRename.rangeEditor.selectCharacters": {
     "sourceHash": "8b07e2a"
   },
-  "multiRename.rangeEditor.start": "Start",
+  "multiRename.rangeEditor.start": "Початок",
   "@multiRename.rangeEditor.start": {
     "sourceHash": "e4bb9f1"
   },
-  "multiRename.rangeEditor.end": "End",
+  "multiRename.rangeEditor.end": "Кінець",
   "@multiRename.rangeEditor.end": {
     "sourceHash": "f4db1e4"
   },
-  "multiRename.rangeEditor.writeAs": "Write as",
+  "multiRename.rangeEditor.writeAs": "Форма запису",
   "@multiRename.rangeEditor.writeAs": {
     "sourceHash": "39dfb5b"
   },
-  "multiRename.rangeEditor.form.span": "Start to end",
+  "multiRename.rangeEditor.form.span": "Початок і кінець",
   "@multiRename.rangeEditor.form.span": {
     "sourceHash": "bb96ea7"
   },
-  "multiRename.rangeEditor.form.length": "Start and length",
+  "multiRename.rangeEditor.form.length": "Початок і довжина",
   "@multiRename.rangeEditor.form.length": {
     "sourceHash": "2830961"
   },
-  "multiRename.rangeEditor.fromStart": "From the start",
+  "multiRename.rangeEditor.fromStart": "Від початку",
   "@multiRename.rangeEditor.fromStart": {
     "sourceHash": "109d4ab"
   },
-  "multiRename.rangeEditor.fromEnd": "From the end",
+  "multiRename.rangeEditor.fromEnd": "Від кінця",
   "@multiRename.rangeEditor.fromEnd": {
     "sourceHash": "577185f"
   },
-  "multiRename.rangeEditor.positionFromStart": "{at, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+  "multiRename.rangeEditor.positionFromStart": "{at, selectordinal, few {#-й} other {#-й}}",
   "@multiRename.rangeEditor.positionFromStart": {
     "sourceHash": "a20af9d"
   },
-  "multiRename.rangeEditor.positionFromEnd": "{at, selectordinal, =1 {Last} one {#st from the end} two {#nd from the end} few {#rd from the end} other {#th from the end}}",
+  "multiRename.rangeEditor.positionFromEnd": "{at, selectordinal, =1 {Останній} few {#-й з кінця} other {#-й з кінця}}",
   "@multiRename.rangeEditor.positionFromEnd": {
     "sourceHash": "4c9ee08"
   },
-  "multiRename.rangeEditor.endFollowsStart": "With the start counted from the end, the end counts from the end too.",
+  "multiRename.rangeEditor.endFollowsStart": "Коли початок рахується від кінця, кінець теж рахується від кінця.",
   "@multiRename.rangeEditor.endFollowsStart": {
     "sourceHash": "379bd45"
   },
-  "multiRename.rangeEditor.reading.whole": "All of it",
+  "multiRename.rangeEditor.reading.whole": "Усе цілком",
   "@multiRename.rangeEditor.reading.whole": {
     "sourceHash": "f5062de"
   },
-  "multiRename.rangeEditor.reading.one": "Only the {at, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} character",
+  "multiRename.rangeEditor.reading.one": "Лише {at, selectordinal, few {#-й} other {#-й}} символ",
   "@multiRename.rangeEditor.reading.one": {
     "sourceHash": "815c40c"
   },
-  "multiRename.rangeEditor.reading.oneFromEnd": "Only the {at, selectordinal, =1 {last} one {#st-to-last} two {#nd-to-last} few {#rd-to-last} other {#th-to-last}} character",
+  "multiRename.rangeEditor.reading.oneFromEnd": "Лише {at, selectordinal, =1 {останній} few {#-й з кінця} other {#-й з кінця}} символ",
   "@multiRename.rangeEditor.reading.oneFromEnd": {
     "sourceHash": "e0b450d"
   },
-  "multiRename.rangeEditor.reading.toEnd": "From the {at, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} character to the end",
+  "multiRename.rangeEditor.reading.toEnd": "Від {at, selectordinal, few {#-го} other {#-го}} символу до кінця",
   "@multiRename.rangeEditor.reading.toEnd": {
     "sourceHash": "f28d18b"
   },
-  "multiRename.rangeEditor.reading.lastChars": "{count, plural, one {The last character} other {The last # characters}}",
+  "multiRename.rangeEditor.reading.lastChars": "{count, plural, =1 {Останній символ} one {Останній # символ} few {Останні # символи} many {Останні # символів} other {Останні # символу}}",
   "@multiRename.rangeEditor.reading.lastChars": {
     "sourceHash": "9f073f8"
   },
-  "multiRename.rangeEditor.reading.span": "From the {from, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} to the {to, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} character",
+  "multiRename.rangeEditor.reading.span": "Від {from, selectordinal, few {#-го} other {#-го}} до {to, selectordinal, few {#-го} other {#-го}} символу",
   "@multiRename.rangeEditor.reading.span": {
     "sourceHash": "d68204f"
   },
-  "multiRename.rangeEditor.reading.spanToFromEnd": "From the {from, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} to the {to, selectordinal, =1 {last} one {#st-to-last} two {#nd-to-last} few {#rd-to-last} other {#th-to-last}} character",
+  "multiRename.rangeEditor.reading.spanToFromEnd": "Від {from, selectordinal, few {#-го} other {#-го}} символу до {to, selectordinal, =1 {останнього} few {#-го з кінця} other {#-го з кінця}}",
   "@multiRename.rangeEditor.reading.spanToFromEnd": {
     "sourceHash": "b7714db"
   },
-  "multiRename.rangeEditor.reading.spanFromEnd": "From the {from, selectordinal, =1 {last} one {#st-to-last} two {#nd-to-last} few {#rd-to-last} other {#th-to-last}} to the {to, selectordinal, =1 {last} one {#st-to-last} two {#nd-to-last} few {#rd-to-last} other {#th-to-last}} character",
+  "multiRename.rangeEditor.reading.spanFromEnd": "Від {from, selectordinal, =1 {останнього} few {#-го з кінця} other {#-го з кінця}} символу до {to, selectordinal, =1 {останнього} few {#-го з кінця} other {#-го з кінця}}",
   "@multiRename.rangeEditor.reading.spanFromEnd": {
     "sourceHash": "20f1163"
   },
-  "multiRename.rangeEditor.reading.length": "{count, plural, one {# character} other {# characters}}, starting at the {at, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+  "multiRename.rangeEditor.reading.length": "{count, plural, one {# символ} few {# символи} many {# символів} other {# символу}}, починаючи з {at, selectordinal, few {#-го} other {#-го}}",
   "@multiRename.rangeEditor.reading.length": {
     "sourceHash": "9bb683a"
   },
-  "multiRename.rangeEditor.reading.lengthFromEnd": "{count, plural, one {# character} other {# characters}}, starting at the {at, selectordinal, =1 {last} one {#st-to-last} two {#nd-to-last} few {#rd-to-last} other {#th-to-last}}",
+  "multiRename.rangeEditor.reading.lengthFromEnd": "{count, plural, one {# символ} few {# символи} many {# символів} other {# символу}}, починаючи з {at, selectordinal, =1 {останнього} few {#-го з кінця} other {#-го з кінця}}",
   "@multiRename.rangeEditor.reading.lengthFromEnd": {
     "sourceHash": "8c3c882"
   },
-  "multiRename.rangeEditor.takesNothing": "Takes nothing from this file",
+  "multiRename.rangeEditor.takesNothing": "З цього файлу нічого не береться",
   "@multiRename.rangeEditor.takesNothing": {
     "sourceHash": "be62d05"
   },
-  "multiRename.rangeEditor.emptyField": "Empty for this file",
+  "multiRename.rangeEditor.emptyField": "Для цього файлу порожньо",
   "@multiRename.rangeEditor.emptyField": {
     "sourceHash": "ccb5be2"
   },
-  "multiRename.rangeEditor.onYourFiles": "On your files",
+  "multiRename.rangeEditor.onYourFiles": "У ваших файлах",
   "@multiRename.rangeEditor.onYourFiles": {
     "sourceHash": "e8c0d5e"
   },
-  "multiRename.rangeEditor.nothing": "nothing",
+  "multiRename.rangeEditor.nothing": "нічого",
   "@multiRename.rangeEditor.nothing": {
     "sourceHash": "1785cfc"
   },
-  "multiRename.rangeEditor.gives": "gives",
+  "multiRename.rangeEditor.gives": "дає",
   "@multiRename.rangeEditor.gives": {
     "sourceHash": "64ea62d"
   },
-  "multiRename.placeholderHelp.rangeEditHint": "Put the caret in a placeholder like [N] and press ↓ to choose its characters.",
+  "multiRename.placeholderHelp.rangeEditHint": "Поставте курсор у заповнювач на зразок [N] і натисніть ↓, щоб вибрати його символи.",
   "@multiRename.placeholderHelp.rangeEditHint": {
     "sourceHash": "f1ef6fc"
   }

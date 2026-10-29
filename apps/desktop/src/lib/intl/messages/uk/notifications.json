@@ -1,5 +1,5 @@
 {
-  "notifications.permissionDenied": "macOS notifications are off. Open System Settings to allow them.",
+  "notifications.permissionDenied": "Сповіщення macOS вимкнено. Відкрийте Системні параметри, щоб дозволити їх.",
   "@notifications.permissionDenied": {
     "sourceHash": "4fef9ce"
   }

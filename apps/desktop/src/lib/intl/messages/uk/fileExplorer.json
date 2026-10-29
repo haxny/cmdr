@@ -1,41 +1,41 @@
 {
-  "fileExplorer.archiveEnterMenu.ariaLabel": "Open archive or bundle",
+  "fileExplorer.archiveEnterMenu.ariaLabel": "Відкрити архів або пакет",
   "@fileExplorer.archiveEnterMenu.ariaLabel": {
     "sourceHash": "df385c5"
   },
-  "fileExplorer.archiveEnterMenu.browse": "Browse like a folder",
+  "fileExplorer.archiveEnterMenu.browse": "Переглянути як папку",
   "@fileExplorer.archiveEnterMenu.browse": {
     "sourceHash": "8da5c95"
   },
-  "fileExplorer.archiveEnterMenu.open": "Open with default app",
+  "fileExplorer.archiveEnterMenu.open": "Відкрити типовою програмою",
   "@fileExplorer.archiveEnterMenu.open": {
     "sourceHash": "d3d5d6e"
   },
-  "fileExplorer.archiveEnterMenu.configure": "Configure…",
+  "fileExplorer.archiveEnterMenu.configure": "Налаштувати…",
   "@fileExplorer.archiveEnterMenu.configure": {
     "sourceHash": "37d7822"
   },
-  "fileExplorer.breadcrumb.navigateTooltip": "Click to navigate to {path}",
+  "fileExplorer.breadcrumb.navigateTooltip": "Клацніть, щоб перейти в папку {path}",
   "@fileExplorer.breadcrumb.navigateTooltip": {
     "sourceHash": "9d08428"
   },
-  "fileExplorer.doubleClickHint.title": "What just happened?",
+  "fileExplorer.doubleClickHint.title": "Що це було?",
   "@fileExplorer.doubleClickHint.title": {
     "sourceHash": "865b71e"
   },
-  "fileExplorer.doubleClickHint.body": "You double-clicked the pane background. This navigates to the parent folder.",
+  "fileExplorer.doubleClickHint.body": "Ви двічі клацнули тло панелі. Так Cmdr переходить у батьківську папку.",
   "@fileExplorer.doubleClickHint.body": {
     "sourceHash": "cfbc7d3"
   },
-  "fileExplorer.doubleClickHint.dontLikeIt": "Don’t like it?",
+  "fileExplorer.doubleClickHint.dontLikeIt": "Не подобається?",
   "@fileExplorer.doubleClickHint.dontLikeIt": {
     "sourceHash": "4801954"
   },
-  "fileExplorer.doubleClickHint.neverAgain": "Never do this again",
+  "fileExplorer.doubleClickHint.neverAgain": "Більше так не робити",
   "@fileExplorer.doubleClickHint.neverAgain": {
     "sourceHash": "5026f4a"
   },
-  "fileExplorer.doubleClickHint.iLikeIt": "I like it",
+  "fileExplorer.doubleClickHint.iLikeIt": "Мені подобається",
   "@fileExplorer.doubleClickHint.iLikeIt": {
     "sourceHash": "6859406"
   },
@@ -1707,7 +1707,7 @@
   "@fileExplorer.navigation.favoriteUnreachable.notFound": {
     "sourceHash": "0fd2e21"
   },
-  "fileExplorer.navigation.favoriteUnreachable.openSettings": "Відкрити Параметри",
+  "fileExplorer.navigation.favoriteUnreachable.openSettings": "Відкрити параметри",
   "@fileExplorer.navigation.favoriteUnreachable.openSettings": {
     "sourceHash": "ca381c1"
   },

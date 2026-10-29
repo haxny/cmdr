@@ -1,437 +1,442 @@
 {
-  "licensing.windowTitle.personalUse": "Cmdr – Personal use only",
+  "licensing.windowTitle.personalUse": "Cmdr – лише для особистого користування",
   "@licensing.windowTitle.personalUse": {
     "sourceHash": "2b855d7"
   },
-  "licensing.acknowledgements.srTitle": "Acknowledgements",
+  "licensing.acknowledgements.srTitle": "Подяки",
   "@licensing.acknowledgements.srTitle": {
     "sourceHash": "c9015d5"
   },
-  "licensing.acknowledgements.note": "Look at how long this list is! I deeply appreciate the work of the creators and maintainers of all these libs that Cmdr builds on.",
+  "licensing.acknowledgements.note": "Погляньте, який довгий цей список! Я щиро ціную працю авторів і супровідників усіх цих бібліотек, на яких побудовано Cmdr.",
   "@licensing.acknowledgements.note": {
     "sourceHash": "7d0542d"
   },
-  "licensing.acknowledgements.thanks": "Thank you all for your contributions to the OSS world! ❤️",
+  "licensing.acknowledgements.thanks": "Дякую всім за ваш внесок у світ відкритого ПЗ! ❤️",
   "@licensing.acknowledgements.thanks": {
     "sourceHash": "302273d"
   },
   "licensing.acknowledgements.signature": "David",
   "@licensing.acknowledgements.signature": {
-    "sourceHash": "a6b54c2"
+    "sourceHash": "a6b54c2",
+    "sameAsSourceJustification": "A personal name; the description keeps David untranslated in every locale, as ru and hu do."
   },
-  "licensing.acknowledgements.rustHeading": "Rust crates ({count, number})",
+  "licensing.acknowledgements.rustHeading": "Крейти Rust ({count, number})",
   "@licensing.acknowledgements.rustHeading": {
     "sourceHash": "b2f91ff"
   },
-  "licensing.acknowledgements.npmHeading": "npm packages ({count, number})",
+  "licensing.acknowledgements.npmHeading": "Пакети npm ({count, number})",
   "@licensing.acknowledgements.npmHeading": {
     "sourceHash": "44bdf59"
   },
-  "licensing.acknowledgements.vendoredHeading": "Icons and other files ({count, number})",
+  "licensing.acknowledgements.vendoredHeading": "Іконки та інші файли ({count, number})",
   "@licensing.acknowledgements.vendoredHeading": {
     "sourceHash": "f5bcd78"
   },
-  "licensing.acknowledgements.jumpToRust": "Jump to Rust crates",
+  "licensing.acknowledgements.jumpToRust": "Перейти до крейтів Rust",
   "@licensing.acknowledgements.jumpToRust": {
     "sourceHash": "60d4a21"
   },
-  "licensing.acknowledgements.jumpToNpm": "Jump to npm packages",
+  "licensing.acknowledgements.jumpToNpm": "Перейти до пакетів npm",
   "@licensing.acknowledgements.jumpToNpm": {
     "sourceHash": "9f55ebb"
   },
-  "licensing.acknowledgements.fullTexts": "The full license texts ship with Cmdr in <notices>THIRD-PARTY-NOTICES.md</notices>.",
+  "licensing.acknowledgements.fullTexts": "Повні тексти ліцензій постачаються разом із Cmdr у файлі <notices>THIRD-PARTY-NOTICES.md</notices>.",
   "@licensing.acknowledgements.fullTexts": {
     "sourceHash": "1760aeb"
   },
-  "licensing.acknowledgements.loading": "Loading the list…",
+  "licensing.acknowledgements.loading": "Завантаження списку…",
   "@licensing.acknowledgements.loading": {
     "sourceHash": "0b6efaa"
   },
-  "licensing.about.srTitle": "About Cmdr",
+  "licensing.about.srTitle": "Про Cmdr",
   "@licensing.about.srTitle": {
     "sourceHash": "efe010f"
   },
   "licensing.about.appName": "Cmdr",
   "@licensing.about.appName": {
-    "sourceHash": "40c6a1b"
+    "sourceHash": "40c6a1b",
+    "sameAsSourceJustification": "The product name; a brand word kept verbatim in every locale (BRAND_WORDS)."
   },
-  "licensing.about.tagline": "Keyboard-driven file manager",
+  "licensing.about.tagline": "Файловий менеджер, створений для клавіатури",
   "@licensing.about.tagline": {
     "sourceHash": "e399865"
   },
-  "licensing.about.version": "Version {version} (open beta)",
+  "licensing.about.version": "Версія {version} (відкрите бета-тестування)",
   "@licensing.about.version": {
     "sourceHash": "1496c81"
   },
-  "licensing.about.betaNote": "Found something bad? Tell me on <github>GitHub</github>. I read every report!",
+  "licensing.about.betaNote": "Помітили щось не те? Розкажіть мені на <github>GitHub</github>. Я читаю кожен звіт!",
   "@licensing.about.betaNote": {
     "sourceHash": "49a09cb"
   },
-  "licensing.about.noLicense": "No license – only personal use allowed",
+  "licensing.about.noLicense": "Без ліцензії – дозволено лише особисте використання",
   "@licensing.about.noLicense": {
     "sourceHash": "e2ce8da"
   },
-  "licensing.about.perpetual": "Perpetual commercial license for {org}",
+  "licensing.about.perpetual": "Безстрокова комерційна ліцензія для {org}",
   "@licensing.about.perpetual": {
     "sourceHash": "591d7a8"
   },
-  "licensing.about.commercial": "Commercial license for {org}",
+  "licensing.about.commercial": "Комерційна ліцензія для {org}",
   "@licensing.about.commercial": {
     "sourceHash": "577f55b"
   },
-  "licensing.about.commercialUntil": "Commercial license for {org}, valid until {date}",
+  "licensing.about.commercialUntil": "Комерційна ліцензія для {org}, дійсна до {date}",
   "@licensing.about.commercialUntil": {
     "sourceHash": "eb44f8d"
   },
-  "licensing.about.fallbackOrg": "your organization",
+  "licensing.about.fallbackOrg": "вашої організації",
   "@licensing.about.fallbackOrg": {
     "sourceHash": "bb0bdf0"
   },
-  "licensing.about.aiAttribution": "AI powered by Falcon-H1R-7B by Technology Innovation Institute (TII)",
+  "licensing.about.aiAttribution": "ШІ на основі Falcon-H1R-7B від Technology Innovation Institute (TII)",
   "@licensing.about.aiAttribution": {
     "sourceHash": "54d9ac4"
   },
-  "licensing.about.linkWebsite": "Website",
+  "licensing.about.linkWebsite": "Вебсайт",
   "@licensing.about.linkWebsite": {
     "sourceHash": "b5a229a"
   },
-  "licensing.about.linkGetLicense": "Get a license",
+  "licensing.about.linkGetLicense": "Придбати ліцензію",
   "@licensing.about.linkGetLicense": {
     "sourceHash": "fab19d3"
   },
   "licensing.about.linkGithub": "GitHub",
   "@licensing.about.linkGithub": {
-    "sourceHash": "f911e41"
+    "sourceHash": "f911e41",
+    "sameAsSourceJustification": "Brand name kept verbatim (BRAND_WORDS)."
   },
   "licensing.about.linkDiscord": "Discord",
   "@licensing.about.linkDiscord": {
-    "sourceHash": "053bc65"
+    "sourceHash": "053bc65",
+    "sameAsSourceJustification": "Brand name; Ukrainian writes Discord in Latin, and the @key says not to translate it."
   },
   "licensing.about.copyright": "© 2024-2026 David Veszelovszki",
   "@licensing.about.copyright": {
-    "sourceHash": "e6ab7e3"
+    "sourceHash": "e6ab7e3",
+    "sameAsSourceJustification": "Legal copyright line: the holder's legal name stays in its Latin form and the year range stays literal, as the @key asks."
   },
-  "licensing.commercialReminder.title": "Thanks for using Cmdr!",
+  "licensing.commercialReminder.title": "Дякуємо, що користуєтеся Cmdr!",
   "@licensing.commercialReminder.title": {
     "sourceHash": "6898650"
   },
-  "licensing.commercialReminder.usingPersonal": "You’re using a Personal license.",
+  "licensing.commercialReminder.usingPersonal": "Ви користуєтеся особистою ліцензією.",
   "@licensing.commercialReminder.usingPersonal": {
     "sourceHash": "3aa6518"
   },
-  "licensing.commercialReminder.askCommercial": "If you’re using Cmdr at work, please get a Commercial license to stay compliant.",
+  "licensing.commercialReminder.askCommercial": "Якщо ви користуєтеся Cmdr на роботі, придбайте, будь ласка, комерційну ліцензію, щоб усе було за правилами.",
   "@licensing.commercialReminder.askCommercial": {
     "sourceHash": "84b372c"
   },
-  "licensing.commercialReminder.priceInfo": "A commercial license is $59, paid once, and supports continued development.",
+  "licensing.commercialReminder.priceInfo": "Комерційна ліцензія коштує $59, оплачується один раз і підтримує подальшу розробку.",
   "@licensing.commercialReminder.priceInfo": {
     "sourceHash": "55bd2ed"
   },
-  "licensing.commercialReminder.declinePersonal": "I only use Cmdr<break></break>for personal purposes",
+  "licensing.commercialReminder.declinePersonal": "Я використовую Cmdr<break></break>лише для особистих потреб",
   "@licensing.commercialReminder.declinePersonal": {
     "sourceHash": "49641ff"
   },
-  "licensing.commercialReminder.getCommercial": "Get commercial license",
+  "licensing.commercialReminder.getCommercial": "Придбати комерційну ліцензію",
   "@licensing.commercialReminder.getCommercial": {
     "sourceHash": "07f081b"
   },
-  "licensing.expiration.title": "Your commercial license has expired",
+  "licensing.expiration.title": "Термін дії вашої комерційної ліцензії сплив",
   "@licensing.expiration.title": {
     "sourceHash": "7067c40"
   },
-  "licensing.expiration.orgName": "License for: <strong>{org}</strong>",
+  "licensing.expiration.orgName": "Власник ліцензії: <strong>{org}</strong>",
   "@licensing.expiration.orgName": {
     "sourceHash": "a5f0bab"
   },
-  "licensing.expiration.message": "Your commercial subscription expired on <strong>{date}</strong>.",
+  "licensing.expiration.message": "Термін дії вашої комерційної підписки сплив <strong>{date}</strong>.",
   "@licensing.expiration.message": {
     "sourceHash": "92b6b97"
   },
-  "licensing.expiration.info": "Cmdr is now running in personal use mode. If you’re still using it for work, please renew your license.",
+  "licensing.expiration.info": "Тепер Cmdr працює в режимі особистого використання. Якщо ви й далі користуєтеся ним для роботи, поновіть, будь ласка, ліцензію.",
   "@licensing.expiration.info": {
     "sourceHash": "274de6c"
   },
-  "licensing.expiration.renew": "Renew license",
+  "licensing.expiration.renew": "Поновити ліцензію",
   "@licensing.expiration.renew": {
     "sourceHash": "1ee8746"
   },
-  "licensing.expiration.continue": "Continue in personal mode",
+  "licensing.expiration.continue": "Продовжити в особистому режимі",
   "@licensing.expiration.continue": {
     "sourceHash": "b5c90b4"
   },
-  "licensing.dialog.loading": "Loading…",
+  "licensing.dialog.loading": "Завантаження…",
   "@licensing.dialog.loading": {
     "sourceHash": "ba3bbbe"
   },
-  "licensing.dialog.detailsTitle": "License details",
+  "licensing.dialog.detailsTitle": "Деталі ліцензії",
   "@licensing.dialog.detailsTitle": {
     "sourceHash": "57327bb"
   },
-  "licensing.dialog.enterTitle": "Enter license key",
+  "licensing.dialog.enterTitle": "Ввести ліцензійний ключ",
   "@licensing.dialog.enterTitle": {
     "sourceHash": "357d05e"
   },
-  "licensing.dialog.serverInvalidBanner": "This key couldn’t be verified with the server. Please try a different key or email us at <supportEmail>{email}</supportEmail>.",
+  "licensing.dialog.serverInvalidBanner": "Не вдалося перевірити цей ключ на сервері. Спробуйте інший ключ або напишіть нам на е‑пошту <supportEmail>{email}</supportEmail>.",
   "@licensing.dialog.serverInvalidBanner": {
     "sourceHash": "fa68511"
   },
-  "licensing.dialog.labelType": "License type",
+  "licensing.dialog.labelType": "Тип ліцензії",
   "@licensing.dialog.labelType": {
     "sourceHash": "72f256a"
   },
-  "licensing.dialog.labelOrganization": "Organization",
+  "licensing.dialog.labelOrganization": "Організація",
   "@licensing.dialog.labelOrganization": {
     "sourceHash": "d764d42"
   },
-  "licensing.dialog.labelValidity": "Validity",
+  "licensing.dialog.labelValidity": "Термін дії",
   "@licensing.dialog.labelValidity": {
     "sourceHash": "9c3050e"
   },
-  "licensing.dialog.labelKey": "License key",
+  "licensing.dialog.labelKey": "Ліцензійний ключ",
   "@licensing.dialog.labelKey": {
     "sourceHash": "f73a795"
   },
-  "licensing.dialog.typeCommercialPerpetual": "Commercial perpetual",
+  "licensing.dialog.typeCommercialPerpetual": "Комерційна безстрокова",
   "@licensing.dialog.typeCommercialPerpetual": {
     "sourceHash": "2c6933c"
   },
-  "licensing.dialog.typeCommercialSubscription": "Commercial subscription",
+  "licensing.dialog.typeCommercialSubscription": "Комерційна підписка",
   "@licensing.dialog.typeCommercialSubscription": {
     "sourceHash": "e521480"
   },
-  "licensing.dialog.validityNotYetVerified": "Not yet verified",
+  "licensing.dialog.validityNotYetVerified": "Ще не перевірено",
   "@licensing.dialog.validityNotYetVerified": {
     "sourceHash": "5b2f7a6"
   },
-  "licensing.dialog.validityPerpetualUntil": "Perpetual: updates until {date}",
+  "licensing.dialog.validityPerpetualUntil": "Безстрокова: оновлення до {date}",
   "@licensing.dialog.validityPerpetualUntil": {
     "sourceHash": "cde0711"
   },
-  "licensing.dialog.validityPerpetual": "Perpetual",
+  "licensing.dialog.validityPerpetual": "Безстрокова",
   "@licensing.dialog.validityPerpetual": {
     "sourceHash": "2d34320"
   },
-  "licensing.dialog.validityValidUntil": "Valid until {date}",
+  "licensing.dialog.validityValidUntil": "Дійсна до {date}",
   "@licensing.dialog.validityValidUntil": {
     "sourceHash": "d658db0"
   },
-  "licensing.dialog.validityActive": "Active",
+  "licensing.dialog.validityActive": "Активна",
   "@licensing.dialog.validityActive": {
     "sourceHash": "9234069"
   },
-  "licensing.dialog.validityExpiredOn": "Expired on {date}",
+  "licensing.dialog.validityExpiredOn": "Термін дії сплив {date}",
   "@licensing.dialog.validityExpiredOn": {
     "sourceHash": "f8383a3"
   },
-  "licensing.dialog.pendingHint": "We’ll verify with the server automatically within {days} days.",
+  "licensing.dialog.pendingHint": "Ми автоматично перевіримо ліцензію на сервері протягом {days, plural, one {# дня} few {# днів} many {# днів} other {# дня}}.",
   "@licensing.dialog.pendingHint": {
     "sourceHash": "b4bbb38"
   },
-  "licensing.dialog.useDifferentKey": "Use a different key",
+  "licensing.dialog.useDifferentKey": "Використати інший ключ",
   "@licensing.dialog.useDifferentKey": {
     "sourceHash": "b0a5362"
   },
-  "licensing.dialog.close": "Close",
+  "licensing.dialog.close": "Закрити",
   "@licensing.dialog.close": {
     "sourceHash": "7d9eb7a"
   },
-  "licensing.dialog.resetConfirm": "This will deactivate your current license on this device. You can reactivate anytime with a valid key.",
+  "licensing.dialog.resetConfirm": "Це деактивує вашу поточну ліцензію на цьому пристрої. Активувати її знову можна будь-коли за допомогою дійсного ключа.",
   "@licensing.dialog.resetConfirm": {
     "sourceHash": "2d77d69"
   },
-  "licensing.dialog.cancel": "Cancel",
+  "licensing.dialog.cancel": "Скасувати",
   "@licensing.dialog.cancel": {
     "sourceHash": "19766ed"
   },
-  "licensing.dialog.continue": "Continue",
+  "licensing.dialog.continue": "Продовжити",
   "@licensing.dialog.continue": {
     "sourceHash": "31fbef1"
   },
-  "licensing.dialog.enterPrompt": "Paste your license key from the email you received after purchase. Don’t have one yet? <getLicense>Get a license</getLicense>.",
+  "licensing.dialog.enterPrompt": "Вставте ліцензійний ключ із листа, який надійшов на вашу е‑пошту після покупки. Ще не маєте ключа? <getLicense>Придбайте ліцензію</getLicense>.",
   "@licensing.dialog.enterPrompt": {
     "sourceHash": "4e3a096"
   },
-  "licensing.dialog.inputPlaceholder": "Example: CMDR-ABCD-EFGH-1234",
+  "licensing.dialog.inputPlaceholder": "Приклад: CMDR-ABCD-EFGH-1234",
   "@licensing.dialog.inputPlaceholder": {
     "sourceHash": "3fb5cf9"
   },
-  "licensing.dialog.retryExhausted": "We’ve tried {count} times and it didn’t work. We’re sorry for the trouble. Please drop us a message at <supportEmail>{email}</supportEmail> and we’ll sort it out.",
+  "licensing.dialog.retryExhausted": "Ми спробували {count, plural, one {# раз} few {# рази} many {# разів} other {# раза}}, але нічого не вийшло. Вибачте за незручності. Напишіть нам на е‑пошту <supportEmail>{email}</supportEmail>, і ми все владнаємо.",
   "@licensing.dialog.retryExhausted": {
     "sourceHash": "d2aa21a"
   },
-  "licensing.dialog.serverInvalidHelp": "If you believe this is a mistake, email us at <supportEmail>{email}</supportEmail> and we’ll sort it out.",
+  "licensing.dialog.serverInvalidHelp": "Якщо вважаєте, що це непорозуміння, напишіть нам на е‑пошту <supportEmail>{email}</supportEmail>, і ми все владнаємо.",
   "@licensing.dialog.serverInvalidHelp": {
     "sourceHash": "743cbed"
   },
-  "licensing.dialog.genericHelp": "If you need help, contact us at <supportEmail>{email}</supportEmail>.",
+  "licensing.dialog.genericHelp": "Якщо потрібна допомога, напишіть нам на е‑пошту <supportEmail>{email}</supportEmail>.",
   "@licensing.dialog.genericHelp": {
     "sourceHash": "145df34"
   },
-  "licensing.dialog.cancelButton": "Cancel",
+  "licensing.dialog.cancelButton": "Скасувати",
   "@licensing.dialog.cancelButton": {
     "sourceHash": "19766ed"
   },
-  "licensing.dialog.checking": "Checking…",
+  "licensing.dialog.checking": "Перевірка…",
   "@licensing.dialog.checking": {
     "sourceHash": "ec963ff"
   },
-  "licensing.dialog.tryAgain": "Try again",
+  "licensing.dialog.tryAgain": "Спробувати ще раз",
   "@licensing.dialog.tryAgain": {
     "sourceHash": "d8b8392"
   },
-  "licensing.dialog.activating": "Activating…",
+  "licensing.dialog.activating": "Активація…",
   "@licensing.dialog.activating": {
     "sourceHash": "230f6d1"
   },
-  "licensing.dialog.activate": "Activate",
+  "licensing.dialog.activate": "Активувати",
   "@licensing.dialog.activate": {
     "sourceHash": "24433c7"
   },
-  "licensing.dialog.activatedToast": "License activated. Thanks for your support! ❤️",
+  "licensing.dialog.activatedToast": "Ліцензію активовано. Дякуємо за підтримку! ❤️",
   "@licensing.dialog.activatedToast": {
     "sourceHash": "af76e26"
   },
-  "licensing.dialog.activatedToastNamed": "Welcome aboard, {org}! Thanks for your support. ❤️",
+  "licensing.dialog.activatedToastNamed": "Ласкаво просимо, {org}! Дякуємо за підтримку. ❤️",
   "@licensing.dialog.activatedToastNamed": {
     "sourceHash": "d0c136a"
   },
-  "licensing.dialog.networkFallbackError": "Couldn’t verify your license with the server. Please try again later.",
+  "licensing.dialog.networkFallbackError": "Не вдалося перевірити вашу ліцензію на сервері. Спробуйте ще раз пізніше.",
   "@licensing.dialog.networkFallbackError": {
     "sourceHash": "fc7e124"
   },
-  "licensing.dialog.expiredOnError": "This license expired on {date}.",
+  "licensing.dialog.expiredOnError": "Термін дії цієї ліцензії сплив {date}.",
   "@licensing.dialog.expiredOnError": {
     "sourceHash": "130a045"
   },
-  "licensing.dialog.expiredOnHelp": "You can renew your subscription or purchase a new license at getcmdr.com.",
+  "licensing.dialog.expiredOnHelp": "Можна поновити підписку або придбати нову ліцензію на getcmdr.com.",
   "@licensing.dialog.expiredOnHelp": {
     "sourceHash": "036bb88"
   },
-  "licensing.dialog.serverInvalidError": "We know this key but when we checked it with our payment provider, it didn’t recognize it. This can happen if the purchase was refunded or not cleared.",
+  "licensing.dialog.serverInvalidError": "Ми знаємо цей ключ, але під час перевірки наш платіжний сервіс його не впізнав. Таке буває, якщо за покупку повернули кошти або оплата ще не пройшла.",
   "@licensing.dialog.serverInvalidError": {
     "sourceHash": "58f1457"
   },
-  "licensing.dialog.emptyKeyError": "Please enter a license key",
+  "licensing.dialog.emptyKeyError": "Введіть ліцензійний ключ",
   "@licensing.dialog.emptyKeyError": {
     "sourceHash": "2b36779"
   },
-  "licensing.dialog.mailtoSubject": "License key issue",
+  "licensing.dialog.mailtoSubject": "Проблема з ліцензійним ключем",
   "@licensing.dialog.mailtoSubject": {
     "sourceHash": "685a80d"
   },
-  "licensing.dialog.mailtoBody": "Hi,\n\nI’m having trouble activating my license key:\n{key}\n\n",
+  "licensing.dialog.mailtoBody": "Вітаю!\n\nУ мене проблема з активацією ліцензійного ключа:\n{key}\n\n",
   "@licensing.dialog.mailtoBody": {
     "sourceHash": "c076655"
   },
-  "licensing.error.badSignature": "This license key failed our signature verification, meaning that it doesn’t look like a valid key.",
+  "licensing.error.badSignature": "Цей ліцензійний ключ не пройшов перевірку підпису, тобто він не схожий на дійсний ключ.",
   "@licensing.error.badSignature": {
     "sourceHash": "3bcac8e"
   },
-  "licensing.error.badSignatureHint": "Please double-check for typos and try pasting it again from your purchase email.",
+  "licensing.error.badSignatureHint": "Перевірте, чи немає друкарських помилок, і спробуйте ще раз вставити ключ із листа про покупку.",
   "@licensing.error.badSignatureHint": {
     "sourceHash": "8734aa5"
   },
-  "licensing.error.badFormat": "Our license key format is different from this.",
+  "licensing.error.badFormat": "Наш ліцензійний ключ має інший формат.",
   "@licensing.error.badFormat": {
     "sourceHash": "6012f8b"
   },
-  "licensing.error.badFormatHint": "License keys are either a short code (CMDR-XXXX-XXXX-XXXX) or a longer cryptographic key from your purchase email.",
+  "licensing.error.badFormatHint": "Ліцензійний ключ буває двох видів: короткий код (CMDR-XXXX-XXXX-XXXX) або довший криптографічний ключ із листа про покупку.",
   "@licensing.error.badFormatHint": {
     "sourceHash": "a62b901"
   },
-  "licensing.error.shortCodeNotFound": "This license looks good, but we looked hard and couldn’t find it in our database.",
+  "licensing.error.shortCodeNotFound": "Ця ліцензія виглядає правильно, але ми добре пошукали й не знайшли її в нашій базі даних.",
   "@licensing.error.shortCodeNotFound": {
     "sourceHash": "0f9ccbf"
   },
-  "licensing.error.shortCodeNotFoundHint": "Please verify that you pasted the correct key from your purchase email.",
+  "licensing.error.shortCodeNotFoundHint": "Перевірте, чи ви вставили правильний ключ із листа про покупку.",
   "@licensing.error.shortCodeNotFoundHint": {
     "sourceHash": "a2f07d2"
   },
-  "licensing.error.network": "Ouch, we couldn’t reach the license server this time.",
+  "licensing.error.network": "Ой, цього разу не вдалося звʼязатися із сервером ліцензій.",
   "@licensing.error.network": {
     "sourceHash": "d03567c"
   },
-  "licensing.error.networkHint": "Please check your internet connection and try again.",
+  "licensing.error.networkHint": "Перевірте підʼєднання до інтернету й спробуйте ще раз.",
   "@licensing.error.networkHint": {
     "sourceHash": "67cba62"
   },
-  "licensing.error.server": "Hmm, the license server responded with something weird. We’re sorry about that.",
+  "licensing.error.server": "Хм, сервер ліцензій відповів чимось дивним. Вибачте за це.",
   "@licensing.error.server": {
     "sourceHash": "89870f9"
   },
-  "licensing.error.serverHint": "Please try again later.",
+  "licensing.error.serverHint": "Спробуйте ще раз пізніше.",
   "@licensing.error.serverHint": {
     "sourceHash": "386b914"
   },
-  "licensing.error.generic": "Something went wrong when activating this key.",
+  "licensing.error.generic": "Щось пішло не так під час активації цього ключа.",
   "@licensing.error.generic": {
     "sourceHash": "436e264"
   },
-  "licensing.error.genericHint": "Please try again. If the problem persists, email us and we’ll help.",
+  "licensing.error.genericHint": "Спробуйте ще раз. Якщо проблема не зникне, напишіть нам на е‑пошту, і ми допоможемо.",
   "@licensing.error.genericHint": {
     "sourceHash": "be0771c"
   },
-  "licensing.section.title": "License",
+  "licensing.section.title": "Ліцензія",
   "@licensing.section.title": {
     "sourceHash": "c011d60"
   },
-  "licensing.section.loading": "Loading…",
+  "licensing.section.loading": "Завантаження…",
   "@licensing.section.loading": {
     "sourceHash": "ba3bbbe"
   },
-  "licensing.section.labelType": "License type",
+  "licensing.section.labelType": "Тип ліцензії",
   "@licensing.section.labelType": {
     "sourceHash": "72f256a"
   },
-  "licensing.section.labelOrganization": "Organization",
+  "licensing.section.labelOrganization": "Організація",
   "@licensing.section.labelOrganization": {
     "sourceHash": "d764d42"
   },
-  "licensing.section.labelStatus": "Status",
+  "licensing.section.labelStatus": "Стан",
   "@licensing.section.labelStatus": {
     "sourceHash": "920e413"
   },
-  "licensing.section.labelKey": "License key",
+  "licensing.section.labelKey": "Ліцензійний ключ",
   "@licensing.section.labelKey": {
     "sourceHash": "f73a795"
   },
-  "licensing.section.manageKey": "Manage license key",
+  "licensing.section.manageKey": "Керувати ліцензійним ключем",
   "@licensing.section.manageKey": {
     "sourceHash": "501cc54"
   },
-  "licensing.section.enterKey": "Enter license key",
+  "licensing.section.enterKey": "Ввести ліцензійний ключ",
   "@licensing.section.enterKey": {
     "sourceHash": "357d05e"
   },
-  "licensing.section.getLicense": "Get a license",
+  "licensing.section.getLicense": "Придбати ліцензію",
   "@licensing.section.getLicense": {
     "sourceHash": "fab19d3"
   },
-  "licensing.section.typePersonal": "Personal (free)",
+  "licensing.section.typePersonal": "Особиста (безкоштовна)",
   "@licensing.section.typePersonal": {
     "sourceHash": "4af5ca9"
   },
-  "licensing.section.typeCommercialPerpetual": "Commercial perpetual",
+  "licensing.section.typeCommercialPerpetual": "Комерційна безстрокова",
   "@licensing.section.typeCommercialPerpetual": {
     "sourceHash": "2c6933c"
   },
-  "licensing.section.typeCommercialSubscription": "Commercial subscription",
+  "licensing.section.typeCommercialSubscription": "Комерційна підписка",
   "@licensing.section.typeCommercialSubscription": {
     "sourceHash": "e521480"
   },
-  "licensing.section.statusExpiredOn": "Expired on {date}",
+  "licensing.section.statusExpiredOn": "Термін дії сплив {date}",
   "@licensing.section.statusExpiredOn": {
     "sourceHash": "f8383a3"
   },
-  "licensing.section.statusUpdatesUntil": "Updates until {date}",
+  "licensing.section.statusUpdatesUntil": "Оновлення до {date}",
   "@licensing.section.statusUpdatesUntil": {
     "sourceHash": "7b84d1c"
   },
-  "licensing.section.statusValidUntil": "Valid until {date}",
+  "licensing.section.statusValidUntil": "Дійсна до {date}",
   "@licensing.section.statusValidUntil": {
     "sourceHash": "d658db0"
   },
-  "licensing.section.statusActive": "Active",
+  "licensing.section.statusActive": "Активна",
   "@licensing.section.statusActive": {
     "sourceHash": "9234069"
   }

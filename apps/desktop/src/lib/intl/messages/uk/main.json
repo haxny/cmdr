@@ -1,149 +1,149 @@
 {
-  "main.instanceLock.alertTitle": "Cmdr is already running",
+  "main.instanceLock.alertTitle": "Cmdr уже працює",
   "@main.instanceLock.alertTitle": {
     "sourceHash": "7c8f09d"
   },
-  "main.instanceLock.alertBody": "Another copy of Cmdr is using this data folder. Switch to the running app, or quit it and try again.",
+  "main.instanceLock.alertBody": "Інша копія Cmdr використовує цю папку даних. Перейдіть до програми, яка вже працює, або завершіть її та спробуйте ще раз.",
   "@main.instanceLock.alertBody": {
     "sourceHash": "140c57d"
   },
-  "main.upgradeNudge.mac": "We’ve added new onboarding options. Open Cmdr > Onboarding… to review them.",
+  "main.upgradeNudge.mac": "Ми додали нові параметри до початкового налаштування. Відкрийте «Cmdr > Початкове налаштування…», щоб переглянути їх.",
   "@main.upgradeNudge.mac": {
     "sourceHash": "439adfd"
   },
-  "main.upgradeNudge.other": "We’ve added new onboarding options. Open the command palette and run Onboarding… to review them.",
+  "main.upgradeNudge.other": "Ми додали нові параметри до початкового налаштування. Відкрийте палітру команд і виконайте «Початкове налаштування…», щоб переглянути їх.",
   "@main.upgradeNudge.other": {
     "sourceHash": "5afe1d2"
   },
-  "main.dockPinNudge.title": "Keep Cmdr in your Dock?",
+  "main.dockPinNudge.title": "Закріпити Cmdr у Dock?",
   "@main.dockPinNudge.title": {
     "sourceHash": "3a6ce9f"
   },
-  "main.dockPinNudge.body": "You’ve been using Cmdr for a few days now, so it seems to be working for you. Want it pinned next to Finder down there?",
+  "main.dockPinNudge.body": "Ви користуєтеся Cmdr уже кілька днів, тож, схоже, він вам підходить. Закріпити його в Dock поруч із Finder, отам унизу?",
   "@main.dockPinNudge.body": {
     "sourceHash": "7f4265e"
   },
-  "main.dockPinNudge.unpinNote": "You can unpin it any time if you change your mind.",
+  "main.dockPinNudge.unpinNote": "Якщо передумаєте, Cmdr можна будь-коли відкріпити.",
   "@main.dockPinNudge.unpinNote": {
     "sourceHash": "28748d3"
   },
-  "main.dockPinNudge.decline": "No, thanks",
+  "main.dockPinNudge.decline": "Ні, дякую",
   "@main.dockPinNudge.decline": {
     "sourceHash": "e1a0936"
   },
-  "main.dockPinNudge.accept": "Yes, add it to my Dock",
+  "main.dockPinNudge.accept": "Так, додати в Dock",
   "@main.dockPinNudge.accept": {
     "sourceHash": "8fbdc76"
   },
-  "main.dockPinNudge.added": "Cmdr is in your Dock now.",
+  "main.dockPinNudge.added": "Cmdr тепер у Dock.",
   "@main.dockPinNudge.added": {
     "sourceHash": "61bec58"
   },
-  "main.dockPinNudge.addedButDockDidNotRestart": "Cmdr’s icon is in place, but the Dock didn’t reload. It’ll appear the next time you log in.",
+  "main.dockPinNudge.addedButDockDidNotRestart": "Іконку Cmdr додано, але Dock не перезавантажився. Іконка зʼявиться під час наступного входу в систему.",
   "@main.dockPinNudge.addedButDockDidNotRestart": {
     "sourceHash": "7a4e3bb"
   },
-  "main.dockPinNudge.managedDock": "Your Dock is managed by a configuration profile, so Cmdr can’t add itself. Whoever manages this Mac can change that.",
+  "main.dockPinNudge.managedDock": "Вашим Dock керує профіль конфігурації, тож Cmdr не може сам себе додати. Це може змінити той, хто керує цим Mac.",
   "@main.dockPinNudge.managedDock": {
     "sourceHash": "4781787"
   },
-  "main.dockPinNudge.notAdded": "Cmdr couldn’t get into the Dock this time. You can drag it in from your Applications folder whenever you like.",
+  "main.dockPinNudge.notAdded": "Цього разу Cmdr не вдалося потрапити в Dock. Його можна будь-коли перетягнути в Dock із папки «Програми».",
   "@main.dockPinNudge.notAdded": {
     "sourceHash": "0b863ad"
   },
-  "main.revealNudge.title": "Open “Show in Finder” in Cmdr?",
+  "main.revealNudge.title": "Відкривати «Показати у Finder» у Cmdr?",
   "@main.revealNudge.title": {
     "sourceHash": "45a5b47"
   },
-  "main.revealNudge.body": "You’ve been using Cmdr for a while now. When another app runs “Show in Finder”, Cmdr can open that folder instead, with the file already under the cursor.",
+  "main.revealNudge.body": "Ви вже деякий час користуєтеся Cmdr. Коли інша програма виконує «Показати у Finder», Cmdr може відкрити цю папку замість Finder, і потрібний файл уже буде під курсором.",
   "@main.revealNudge.body": {
     "sourceHash": "1934a04"
   },
-  "main.revealNudge.switchBackNote": "You can switch this back any time in Settings.",
+  "main.revealNudge.switchBackNote": "Повернути все як було можна будь-коли в Параметрах.",
   "@main.revealNudge.switchBackNote": {
     "sourceHash": "48c2bca"
   },
-  "main.revealNudge.decline": "No, thanks",
+  "main.revealNudge.decline": "Ні, дякую",
   "@main.revealNudge.decline": {
     "sourceHash": "e1a0936"
   },
-  "main.revealNudge.accept": "Yes, open them in Cmdr",
+  "main.revealNudge.accept": "Так, відкривати в Cmdr",
   "@main.revealNudge.accept": {
     "sourceHash": "3291bb4"
   },
-  "main.revealNudge.turnedOn": "Cmdr now opens “Show in Finder” from other apps.",
+  "main.revealNudge.turnedOn": "Тепер Cmdr відкриває «Показати у Finder» з інших програм.",
   "@main.revealNudge.turnedOn": {
     "sourceHash": "27c0ea2"
   },
-  "main.revealNudge.heldByOtherApp": "{app} has “Show in Finder” right now. You can hand it to Cmdr in Settings whenever you like.",
+  "main.revealNudge.heldByOtherApp": "Зараз «Показати у Finder» обробляє програма {app}. Передати це Cmdr можна будь-коли в Параметрах.",
   "@main.revealNudge.heldByOtherApp": {
     "sourceHash": "0893821"
   },
-  "main.revealNudge.notTurnedOn": "Cmdr couldn’t take “Show in Finder” this time. The switch is in Settings whenever you want to try again.",
+  "main.revealNudge.notTurnedOn": "Цього разу Cmdr не вдалося перехопити «Показати у Finder». Перемикач є в Параметрах, коли захочете спробувати ще раз.",
   "@main.revealNudge.notTurnedOn": {
     "sourceHash": "0f572c0"
   },
-  "main.revealActivation.title": "“Show in Finder” opened here",
+  "main.revealActivation.title": "Команда «Показати у Finder» відкрила папку тут",
   "@main.revealActivation.title": {
     "sourceHash": "6bb18bb"
   },
-  "main.revealActivation.body": "Cmdr is set to catch these, so the file landed in a pane instead of in Finder. Everything else still opens the way it did.",
+  "main.revealActivation.body": "Cmdr налаштовано перехоплювати такі команди, тож файл зʼявився в панелі Cmdr, а не у Finder. Усе інше відкривається так само, як і раніше.",
   "@main.revealActivation.body": {
     "sourceHash": "19ea7d6"
   },
-  "main.revealActivation.openSettings": "Change this in Settings",
+  "main.revealActivation.openSettings": "Змінити в Параметрах",
   "@main.revealActivation.openSettings": {
     "sourceHash": "673f711"
   },
-  "main.quit.title": "{count, plural, one {Quit while an operation is running?} other {Quit while {countText} operations are running?}}",
+  "main.quit.title": "{count, plural, =1 {Завершити, поки виконується операція?} one {Завершити, поки виконується {countText} операція?} few {Завершити, поки виконуються {countText} операції?} many {Завершити, поки виконується {countText} операцій?} other {Завершити, поки виконується {countText} операції?}}",
   "@main.quit.title": {
     "sourceHash": "2671a89"
   },
-  "main.quit.body": "Whatever’s finished stays done. Anything still being written stops where it is, and Cmdr clears away what it leaves half-written.",
+  "main.quit.body": "Усе, що вже завершено, так і залишиться. Те, що ще записується, зупиниться там, де є, а все недописане Cmdr прибере.",
   "@main.quit.body": {
     "sourceHash": "79a69f9"
   },
-  "main.quit.countdown": "{seconds, plural, one {Quitting in {secondsText} second, so a restart or logout never waits on Cmdr.} other {Quitting in {secondsText} seconds, so a restart or logout never waits on Cmdr.}}",
+  "main.quit.countdown": "{seconds, plural, one {Завершення через {secondsText} секунду, щоб перезапуск або вихід із системи ніколи не чекали на Cmdr.} few {Завершення через {secondsText} секунди, щоб перезапуск або вихід із системи ніколи не чекали на Cmdr.} many {Завершення через {secondsText} секунд, щоб перезапуск або вихід із системи ніколи не чекали на Cmdr.} other {Завершення через {secondsText} секунди, щоб перезапуск або вихід із системи ніколи не чекали на Cmdr.}}",
   "@main.quit.countdown": {
     "sourceHash": "a389e0c"
   },
-  "main.quit.countdownAria": "Time until Cmdr quits on its own",
+  "main.quit.countdownAria": "Час до автоматичного завершення Cmdr",
   "@main.quit.countdownAria": {
     "sourceHash": "6b0b5c2"
   },
-  "main.quit.keepWorking": "Keep working",
+  "main.quit.keepWorking": "Продовжити роботу",
   "@main.quit.keepWorking": {
     "sourceHash": "5ed03f2"
   },
-  "main.quit.quitNow": "Quit now",
+  "main.quit.quitNow": "Завершити зараз",
   "@main.quit.quitNow": {
     "sourceHash": "c96bcc8"
   },
-  "main.quit.operationsHeading": "Still running",
+  "main.quit.operationsHeading": "Ще виконуються",
   "@main.quit.operationsHeading": {
     "sourceHash": "89acce5"
   },
-  "main.oldWebkit.title": "Cmdr needs a newer Safari",
+  "main.oldWebkit.title": "Cmdr потрібна новіша версія Safari",
   "@main.oldWebkit.title": {
     "sourceHash": "03e502b"
   },
-  "main.oldWebkit.body": "Cmdr’s interface needs Safari 15.4 or newer, and this Mac has an older one. Open Software Update and install everything pending. That should sort it out.",
+  "main.oldWebkit.body": "Інтерфейсу Cmdr потрібен Safari 15.4 або новіший, а на цьому Mac стоїть старіша версія. Відкрийте «Оновлення ПЗ» й інсталюйте всі доступні оновлення. Це має допомогти.",
   "@main.oldWebkit.body": {
     "sourceHash": "a7112ec"
   },
-  "main.oldMacos.title": "Cmdr on macOS {version}",
+  "main.oldMacos.title": "Cmdr на macOS {version}",
   "@main.oldMacos.title": {
     "sourceHash": "e75f925"
   },
-  "main.oldMacos.body": "Cmdr officially supports macOS 12 and up, so here it’s best effort. Most of it works, but some colors and small layout details can look off, and fixes for older systems come last. If you hit something broken, I’d still like to hear about it.",
+  "main.oldMacos.body": "Cmdr офіційно підтримує macOS 12 і новіші, тож тут усе працює без гарантій. Більшість речей працює, але деякі кольори й дрібні деталі макета можуть виглядати не так, а виправлення для старіших систем робляться в останню чергу. Якщо натрапите на щось зламане, напишіть мені: я все одно радо про це дізнаюся.",
   "@main.oldMacos.body": {
     "sourceHash": "f9b4185"
   },
-  "main.oldMacos.gotIt": "Got it",
+  "main.oldMacos.gotIt": "Зрозуміло",
   "@main.oldMacos.gotIt": {
     "sourceHash": "5ad3dbd"
   },
-  "main.oldWebkit.quit": "Quit",
+  "main.oldWebkit.quit": "Завершити",
   "@main.oldWebkit.quit": {
     "sourceHash": "b3eb37a"
   },

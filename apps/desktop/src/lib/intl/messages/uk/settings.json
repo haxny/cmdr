@@ -1,161 +1,162 @@
 {
-  "settings.appearance.language.label": "Language",
+  "settings.appearance.language.label": "Мова",
   "@settings.appearance.language.label": {
     "sourceHash": "a4fe652"
   },
-  "settings.appearance.language.description": "Choose the language Cmdr uses. “System default” follows your Mac’s language.",
+  "settings.appearance.language.description": "Виберіть мову інтерфейсу Cmdr. «Типова мова системи» відповідає мові вашого Mac.",
   "@settings.appearance.language.description": {
     "sourceHash": "2dd7f63"
   },
-  "settings.appearance.language.opt.system": "System default",
+  "settings.appearance.language.opt.system": "Типова мова системи",
   "@settings.appearance.language.opt.system": {
     "sourceHash": "b045921"
   },
-  "settings.appearance.language.opt.systemWithLanguage": "System default ({language})",
+  "settings.appearance.language.opt.systemWithLanguage": "Типова мова системи ({language})",
   "@settings.appearance.language.opt.systemWithLanguage": {
     "sourceHash": "ab10534"
   },
-  "settings.appearance.language.keywords": "language, locale, translation, region, english",
+  "settings.appearance.language.keywords": "локалізація, переклад, інтерфейс, українська, англійська, регіон",
   "@settings.appearance.language.keywords": {
     "sourceHash": "c1b9ab9"
   },
-  "settings.theme.mode.label": "Theme mode",
+  "settings.theme.mode.label": "Режим теми",
   "@settings.theme.mode.label": {
     "sourceHash": "0f79f19"
   },
-  "settings.theme.mode.description": "Choose between light, dark, or system-based theme.",
+  "settings.theme.mode.description": "Виберіть світлий, темний або системний режим теми.",
   "@settings.theme.mode.description": {
     "sourceHash": "42b18b9"
   },
-  "settings.theme.mode.opt.light": "Light",
+  "settings.theme.mode.opt.light": "Світлий",
   "@settings.theme.mode.opt.light": {
     "sourceHash": "dbcd5e7"
   },
-  "settings.theme.mode.opt.dark": "Dark",
+  "settings.theme.mode.opt.dark": "Темний",
   "@settings.theme.mode.opt.dark": {
     "sourceHash": "60acc53"
   },
-  "settings.theme.mode.opt.system": "System",
+  "settings.theme.mode.opt.system": "Системний",
   "@settings.theme.mode.opt.system": {
     "sourceHash": "6725e7b"
   },
-  "settings.theme.mode.keywords": "theme, dark, light, mode, appearance, color",
+  "settings.theme.mode.keywords": "оформлення, вигляд, темна тема, світла тема, нічний режим, кольори, колірна схема",
   "@settings.theme.mode.keywords": {
     "sourceHash": "8a95116"
   },
-  "settings.appearance.appColor.label": "App color",
+  "settings.appearance.appColor.label": "Колір програми",
   "@settings.appearance.appColor.label": {
     "sourceHash": "b1107c8"
   },
-  "settings.appearance.appColor.description": "To change your system theme color, go to System Settings > Appearance.",
+  "settings.appearance.appColor.description": "Щоб змінити колір теми системи, перейдіть у Системні параметри > Вигляд.",
   "@settings.appearance.appColor.description": {
     "sourceHash": "7dc4ab7"
   },
-  "settings.appearance.appColor.opt.system": "System theme color",
+  "settings.appearance.appColor.opt.system": "Колір теми системи",
   "@settings.appearance.appColor.opt.system": {
     "sourceHash": "5a7bc86"
   },
-  "settings.appearance.appColor.opt.cmdrGold": "Cmdr gold",
+  "settings.appearance.appColor.opt.cmdrGold": "Золотий Cmdr",
   "@settings.appearance.appColor.opt.cmdrGold": {
     "sourceHash": "3ae5711"
   },
-  "settings.appearance.appColor.keywords": "color, accent, theme, gold, system, brand",
+  "settings.appearance.appColor.keywords": "акцент, акцентний колір, колірний акцент, золотий, фірмовий колір, колір виділення, оформлення",
   "@settings.appearance.appColor.keywords": {
     "sourceHash": "dd5ef83"
   },
-  "settings.appearance.sizeColors.label": "Size colors",
+  "settings.appearance.sizeColors.label": "Кольори розмірів",
   "@settings.appearance.sizeColors.label": {
     "sourceHash": "7598e9a"
   },
-  "settings.appearance.sizeColors.description": "Color file sizes in the file list by tier. Rainbow uses green/yellow/orange/red/purple. App uses shades of the app color.",
+  "settings.appearance.sizeColors.description": "Розфарбовує розміри файлів у списку файлів за діапазонами розміру. «Веселка» використовує зелений, жовтий, оранжевий, червоний і бузковий. «Програма» використовує відтінки кольору програми.",
   "@settings.appearance.sizeColors.description": {
     "sourceHash": "ecb064a"
   },
-  "settings.appearance.sizeColors.opt.none": "None",
+  "settings.appearance.sizeColors.opt.none": "Немає",
   "@settings.appearance.sizeColors.opt.none": {
     "sourceHash": "dc937b5"
   },
-  "settings.appearance.sizeColors.opt.app": "App",
+  "settings.appearance.sizeColors.opt.app": "Програма",
   "@settings.appearance.sizeColors.opt.app": {
     "sourceHash": "0d04bfe"
   },
-  "settings.appearance.sizeColors.opt.rainbow": "Rainbow",
+  "settings.appearance.sizeColors.opt.rainbow": "Веселка",
   "@settings.appearance.sizeColors.opt.rainbow": {
     "sourceHash": "b1f7b2e"
   },
-  "settings.appearance.sizeColors.keywords": "size, color, tier, rainbow, app color, accent, shades, highlight",
+  "settings.appearance.sizeColors.keywords": "великі файли, обсяг, веселка, різнокольорові, підсвічування, відтінки, акцент",
   "@settings.appearance.sizeColors.keywords": {
     "sourceHash": "f1249f0"
   },
-  "settings.appearance.dateColors.label": "Date colors",
+  "settings.appearance.dateColors.label": "Кольори дат",
   "@settings.appearance.dateColors.label": {
     "sourceHash": "25e5672"
   },
-  "settings.appearance.dateColors.description": "Color modified dates in the file list by age. App fades older dates toward the default text color. Wilting goes green for fresh files, yellow for aging, and brown for old.",
+  "settings.appearance.dateColors.description": "Розфарбовує дати змінення у списку файлів залежно від віку файлів. «Програма» поступово переводить старіші дати в типовий колір тексту. «Вʼянення» фарбує дати свіжих файлів у зелений, старіших у жовтий, а старих у коричневий.",
   "@settings.appearance.dateColors.description": {
     "sourceHash": "382ce25"
   },
-  "settings.appearance.dateColors.opt.none": "None",
+  "settings.appearance.dateColors.opt.none": "Немає",
   "@settings.appearance.dateColors.opt.none": {
     "sourceHash": "dc937b5"
   },
-  "settings.appearance.dateColors.opt.app": "App",
+  "settings.appearance.dateColors.opt.app": "Програма",
   "@settings.appearance.dateColors.opt.app": {
     "sourceHash": "0d04bfe"
   },
-  "settings.appearance.dateColors.opt.wilting": "Wilting",
+  "settings.appearance.dateColors.opt.wilting": "Вʼянення",
   "@settings.appearance.dateColors.opt.wilting": {
     "sourceHash": "2aa30f1"
   },
-  "settings.appearance.dateColors.keywords": "date, color, age, modified, wilting, app color, accent, fade, fresh, old",
+  "settings.appearance.dateColors.keywords": "вік, давність, старі файли, нові файли, свіжі, згасання, засихання, підсвічування, акцент",
   "@settings.appearance.dateColors.keywords": {
     "sourceHash": "65cbe5d"
   },
-  "settings.appearance.dateTimeFormat.label": "Date and time format",
+  "settings.appearance.dateTimeFormat.label": "Формат дати й часу",
   "@settings.appearance.dateTimeFormat.label": {
     "sourceHash": "fcfc2a6"
   },
-  "settings.appearance.dateTimeFormat.description": "How to display dates and times in the file list.",
+  "settings.appearance.dateTimeFormat.description": "Як показувати дати й час у списку файлів.",
   "@settings.appearance.dateTimeFormat.description": {
     "sourceHash": "628571a"
   },
-  "settings.appearance.dateTimeFormat.opt.system": "System default",
+  "settings.appearance.dateTimeFormat.opt.system": "Типовий системний",
   "@settings.appearance.dateTimeFormat.opt.system": {
     "sourceHash": "b045921"
   },
   "settings.appearance.dateTimeFormat.opt.iso": "ISO 8601",
   "@settings.appearance.dateTimeFormat.opt.iso": {
-    "sourceHash": "408dd66"
+    "sourceHash": "408dd66",
+    "sameAsSourceJustification": "Standard name kept as-is per the @key description; Ukrainian writes the standard as ISO 8601 (the pile's MS terminology keeps it Latin)."
   },
-  "settings.appearance.dateTimeFormat.optDesc.iso": "e.g., 2025-01-25 14:30",
+  "settings.appearance.dateTimeFormat.optDesc.iso": "наприклад, 2025-01-25 14:30",
   "@settings.appearance.dateTimeFormat.optDesc.iso": {
     "sourceHash": "63c1f1d"
   },
-  "settings.appearance.dateTimeFormat.opt.short": "Short",
+  "settings.appearance.dateTimeFormat.opt.short": "Короткий",
   "@settings.appearance.dateTimeFormat.opt.short": {
     "sourceHash": "f5d61ea"
   },
-  "settings.appearance.dateTimeFormat.optDesc.short": "e.g., 01/25 14:30",
+  "settings.appearance.dateTimeFormat.optDesc.short": "наприклад, 01/25 14:30",
   "@settings.appearance.dateTimeFormat.optDesc.short": {
     "sourceHash": "4475197"
   },
-  "settings.appearance.dateTimeFormat.opt.custom": "Custom…",
+  "settings.appearance.dateTimeFormat.opt.custom": "Власний…",
   "@settings.appearance.dateTimeFormat.opt.custom": {
     "sourceHash": "c4e69d5"
   },
-  "settings.appearance.dateTimeFormat.keywords": "date, time, format, custom, timestamp",
+  "settings.appearance.dateTimeFormat.keywords": "годинник, позначка часу, відображення дати, вигляд дати, 24 години",
   "@settings.appearance.dateTimeFormat.keywords": {
     "sourceHash": "8fb735b"
   },
-  "settings.appearance.customDateTimeFormat.label": "Custom date/time format",
+  "settings.appearance.customDateTimeFormat.label": "Власний формат дати й часу",
   "@settings.appearance.customDateTimeFormat.label": {
     "sourceHash": "620b7a0"
   },
-  "settings.appearance.customDateTimeFormat.description": "Format string for custom date/time display. Use placeholders like YYYY, MM, DD, HH, mm, ss.",
+  "settings.appearance.customDateTimeFormat.description": "Шаблон для власного формату дати й часу. Використовуйте заповнювачі YYYY, MM, DD, HH, mm, ss тощо.",
   "@settings.appearance.customDateTimeFormat.description": {
     "sourceHash": "577dee6"
   },
-  "settings.appearance.customDateTimeFormat.keywords": "custom, format, date, time, placeholder",
+  "settings.appearance.customDateTimeFormat.keywords": "шаблон, маска, рядок формату, свій формат, YYYY",
   "@settings.appearance.customDateTimeFormat.keywords": {
     "sourceHash": "1be6452"
   },
@@ -171,75 +172,75 @@
   "@settings.listing.stripedRows.keywords": {
     "sourceHash": "3a8c62d"
   },
-  "settings.appearance.tintLocal.label": "Tint local-volume panes",
+  "settings.appearance.tintLocal.label": "Відтінок панелей локальних томів",
   "@settings.appearance.tintLocal.label": {
     "sourceHash": "d907724"
   },
-  "settings.appearance.tintLocal.description": "Background tint applied to panes showing a local drive.",
+  "settings.appearance.tintLocal.description": "Фоновий відтінок для панелей, що показують локальний диск.",
   "@settings.appearance.tintLocal.description": {
     "sourceHash": "3c86b48"
   },
-  "settings.appearance.tintLocal.keywords": "tint, pane, color, volume, local, background, highlight",
+  "settings.appearance.tintLocal.keywords": "фон, колір фону, підсвічування, внутрішній диск, зовнішній диск, розрізнення",
   "@settings.appearance.tintLocal.keywords": {
     "sourceHash": "955fcd6"
   },
-  "settings.appearance.tintSmb.label": "Tint server panes (SMB, SFTP, WebDAV, S3)",
+  "settings.appearance.tintSmb.label": "Відтінок панелей серверів (SMB, SFTP, WebDAV, S3)",
   "@settings.appearance.tintSmb.label": {
     "sourceHash": "d912bcf"
   },
-  "settings.appearance.tintSmb.description": "Background tint applied to panes showing an SMB share, an SFTP server, a WebDAV server, or S3 storage.",
+  "settings.appearance.tintSmb.description": "Фоновий відтінок для панелей, що показують спільну папку SMB, сервер SFTP чи WebDAV або сховище S3.",
   "@settings.appearance.tintSmb.description": {
     "sourceHash": "bddee40"
   },
-  "settings.appearance.tintSmb.keywords": "tint, pane, color, volume, server, network, background, highlight",
+  "settings.appearance.tintSmb.keywords": "фон, колір фону, мережа, мережевий диск, хмара, хмарне сховище, підсвічування",
   "@settings.appearance.tintSmb.keywords": {
     "sourceHash": "880947f"
   },
-  "settings.appearance.tintMtp.label": "Tint device panes (MTP, ADB)",
+  "settings.appearance.tintMtp.label": "Відтінок панелей пристроїв (MTP, ADB)",
   "@settings.appearance.tintMtp.label": {
     "sourceHash": "c50c536"
   },
-  "settings.appearance.tintMtp.description": "Background tint applied to panes showing a phone, Kindle, or camera, whether it’s connected over MTP or ADB.",
+  "settings.appearance.tintMtp.description": "Фоновий відтінок для панелей, що показують телефон, Kindle або камеру, підʼєднані як через MTP, так і через ADB.",
   "@settings.appearance.tintMtp.description": {
     "sourceHash": "d70512d"
   },
-  "settings.appearance.tintMtp.keywords": "tint, pane, color, volume, phone, device, camera, background, highlight",
+  "settings.appearance.tintMtp.keywords": "фон, колір фону, смартфон, електронна книга, фотоапарат, підсвічування",
   "@settings.appearance.tintMtp.keywords": {
     "sourceHash": "332d7b6"
   },
-  "settings.appearance.textSize.label": "Text size",
+  "settings.appearance.textSize.label": "Розмір тексту",
   "@settings.appearance.textSize.label": {
     "sourceHash": "d68761c"
   },
-  "settings.appearance.textSize.description": "Scales text and UI throughout the app. Compounds with the macOS Accessibility text size, where 100% means “exactly the system size”.",
+  "settings.appearance.textSize.description": "Масштабує текст та інтерфейс у всій програмі. Поєднується з розміром тексту в розділі «Доступність» macOS, де 100 % означає «точно як у системі».",
   "@settings.appearance.textSize.description": {
     "sourceHash": "49a0a6b"
   },
-  "settings.appearance.textSize.keywords": "text, size, font, larger, smaller, accessibility, zoom, scale",
+  "settings.appearance.textSize.keywords": "шрифт, кегль, більше, менше, збільшити, зменшити, масштаб, зум, читабельність",
   "@settings.appearance.textSize.keywords": {
     "sourceHash": "d5080b3"
   },
-  "settings.appearance.uiDensity.label": "UI density",
+  "settings.appearance.uiDensity.label": "Щільність інтерфейсу",
   "@settings.appearance.uiDensity.label": {
     "sourceHash": "81344d8"
   },
-  "settings.appearance.uiDensity.description": "Controls the spacing and size of UI elements throughout the app.",
+  "settings.appearance.uiDensity.description": "Керує відступами й розміром елементів інтерфейсу в усій програмі.",
   "@settings.appearance.uiDensity.description": {
     "sourceHash": "e7ead7a"
   },
-  "settings.appearance.uiDensity.opt.compact": "Compact",
+  "settings.appearance.uiDensity.opt.compact": "Компактно",
   "@settings.appearance.uiDensity.opt.compact": {
     "sourceHash": "9945264"
   },
-  "settings.appearance.uiDensity.opt.comfortable": "Comfortable",
+  "settings.appearance.uiDensity.opt.comfortable": "Зручно",
   "@settings.appearance.uiDensity.opt.comfortable": {
     "sourceHash": "459a23a"
   },
-  "settings.appearance.uiDensity.opt.spacious": "Spacious",
+  "settings.appearance.uiDensity.opt.spacious": "Просторо",
   "@settings.appearance.uiDensity.opt.spacious": {
     "sourceHash": "57edf23"
   },
-  "settings.appearance.uiDensity.keywords": "compact, comfortable, spacious, size, spacing, dense",
+  "settings.appearance.uiDensity.keywords": "тісно, щільно, вільно, проміжки, поля, висота рядків, розміщення",
   "@settings.appearance.uiDensity.keywords": {
     "sourceHash": "26f3879"
   },
@@ -287,23 +288,23 @@
   "@settings.listing.sizeUnit.keywords": {
     "sourceHash": "63c1aed"
   },
-  "settings.appearance.fileSizeFormat.label": "File size format",
+  "settings.appearance.fileSizeFormat.label": "Формат розміру файлів",
   "@settings.appearance.fileSizeFormat.label": {
     "sourceHash": "355c89b"
   },
-  "settings.appearance.fileSizeFormat.description": "How to show sizes everywhere: binary (KiB, MiB, where 1 KiB = 1,024 bytes) or SI decimal (kB, MB, where 1 kB = 1,000 bytes).",
+  "settings.appearance.fileSizeFormat.description": "Як показувати розміри всюди: двійкові (КіБ, МіБ, де 1 КіБ = 1 024 байти) або десяткові SI (КБ, МБ, де 1 КБ = 1 000 байтів).",
   "@settings.appearance.fileSizeFormat.description": {
     "sourceHash": "db264e2"
   },
-  "settings.appearance.fileSizeFormat.opt.binary": "Binary (KiB, MiB, GiB)",
+  "settings.appearance.fileSizeFormat.opt.binary": "Двійковий (КіБ, МіБ, ГіБ)",
   "@settings.appearance.fileSizeFormat.opt.binary": {
     "sourceHash": "0a4ce4e"
   },
-  "settings.appearance.fileSizeFormat.opt.si": "SI decimal (kB, MB, GB)",
+  "settings.appearance.fileSizeFormat.opt.si": "Десятковий SI (КБ, МБ, ГБ)",
   "@settings.appearance.fileSizeFormat.opt.si": {
     "sourceHash": "4dcc22e"
   },
-  "settings.appearance.fileSizeFormat.keywords": "size, bytes, binary, decimal",
+  "settings.appearance.fileSizeFormat.keywords": "одиниці виміру, кілобайт, мегабайт, гігабайт, 1024, 1000",
   "@settings.appearance.fileSizeFormat.keywords": {
     "sourceHash": "ce11b1b"
   },
@@ -319,27 +320,27 @@
   "@settings.listing.sizeMismatchWarning.keywords": {
     "sourceHash": "3f332ce"
   },
-  "settings.appearance.useAppIconsForDocuments.label": "Use app icons for documents",
+  "settings.appearance.useAppIconsForDocuments.label": "Використовувати іконки програм для документів",
   "@settings.appearance.useAppIconsForDocuments.label": {
     "sourceHash": "71561ae"
   },
-  "settings.appearance.useAppIconsForDocuments.description": "Show the app’s icon for documents instead of generic file type icons. More colorful but slightly slower.",
+  "settings.appearance.useAppIconsForDocuments.description": "Показує для документів іконку програми замість загальних іконок типів файлів. Барвистіше, але трохи повільніше.",
   "@settings.appearance.useAppIconsForDocuments.description": {
     "sourceHash": "9651182"
   },
-  "settings.appearance.useAppIconsForDocuments.keywords": "icon, document, file, app, colorful",
+  "settings.appearance.useAppIconsForDocuments.keywords": "значки, піктограми, барвисті, кольорові, зображення",
   "@settings.appearance.useAppIconsForDocuments.keywords": {
     "sourceHash": "b039472"
   },
-  "settings.appearance.showFunctionKeyBar.label": "Show function key bar",
+  "settings.appearance.showFunctionKeyBar.label": "Показувати панель функціональних клавіш",
   "@settings.appearance.showFunctionKeyBar.label": {
     "sourceHash": "e80f18d"
   },
-  "settings.appearance.showFunctionKeyBar.description": "Show the row of F-key command buttons (Rename, View, Copy, and so on) at the bottom of the window.",
+  "settings.appearance.showFunctionKeyBar.description": "Показує внизу вікна рядок кнопок команд для клавіш F («Перейменувати», «Перегляд», «Скопіювати» тощо).",
   "@settings.appearance.showFunctionKeyBar.description": {
     "sourceHash": "138b56b"
   },
-  "settings.appearance.showFunctionKeyBar.keywords": "function, key, bar, shortcut, buttons, bottom, toolbar",
+  "settings.appearance.showFunctionKeyBar.keywords": "F1, F12, клавіші F, гарячі клавіші, кнопки, нижня панель, панель інструментів",
   "@settings.appearance.showFunctionKeyBar.keywords": {
     "sourceHash": "c42e176"
   },
@@ -555,7 +556,7 @@
   "@settings.fileOperations.defaultConflictPolicy.opt.overwriteOlder": {
     "sourceHash": "6c111a2"
   },
-  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Запитати пізніше",
+  "settings.fileOperations.defaultConflictPolicy.opt.stop": "Спитати пізніше",
   "@settings.fileOperations.defaultConflictPolicy.opt.stop": {
     "sourceHash": "5d74b49"
   },
@@ -1088,7 +1089,7 @@
   "@settings.behavior.fileSystemWatching.globalGoToLatestShortcut.acknowledged.label": {
     "sourceHash": "f45f095"
   },
-  "settings.behavior.fileSystemWatching.globalGoToLatestShortcut.acknowledged.description": "Внутрішнє. Вимикає сповіщення із застереженням під час першого спрацювання.",
+  "settings.behavior.fileSystemWatching.globalGoToLatestShortcut.acknowledged.description": "Внутрішнє: вимикає сповіщення із застереженням під час першого спрацювання.",
   "@settings.behavior.fileSystemWatching.globalGoToLatestShortcut.acknowledged.description": {
     "sourceHash": "5f4247c"
   },
@@ -1096,7 +1097,7 @@
   "@settings.behavior.fileSystemWatching.downloadsToastCollapsed.label": {
     "sourceHash": "8294731"
   },
-  "settings.behavior.fileSystemWatching.downloadsToastCollapsed.description": "Внутрішнє. Запамʼятовує, чи сповіщення про викачане востаннє було згорнуте.",
+  "settings.behavior.fileSystemWatching.downloadsToastCollapsed.description": "Внутрішнє: запамʼятовує, чи сповіщення про викачане востаннє було згорнуте.",
   "@settings.behavior.fileSystemWatching.downloadsToastCollapsed.description": {
     "sourceHash": "aab60b8"
   },
@@ -1617,75 +1618,75 @@
   "@settings.updates.attachEmailToReports.keywords": {
     "sourceHash": "6fba4e5"
   },
-  "settings.advanced.prefetchBufferSize.label": "Prefetch buffer size",
+  "settings.advanced.prefetchBufferSize.label": "Розмір буфера попереднього завантаження",
   "@settings.advanced.prefetchBufferSize.label": {
     "sourceHash": "4043154"
   },
-  "settings.advanced.prefetchBufferSize.description": "Number of items to prefetch around the visible range for smoother scrolling.",
+  "settings.advanced.prefetchBufferSize.description": "Скільки елементів завантажувати наперед довкола видимої частини списку, щоб прокручування було плавнішим.",
   "@settings.advanced.prefetchBufferSize.description": {
     "sourceHash": "39f13c9"
   },
-  "settings.advanced.prefetchBufferSize.keywords": "prefetch, buffer, scroll, performance",
+  "settings.advanced.prefetchBufferSize.keywords": "наперед, підвантаження, прокручування, плавність, швидкодія, продуктивність, кеш",
   "@settings.advanced.prefetchBufferSize.keywords": {
     "sourceHash": "8e07ea0"
   },
-  "settings.advanced.virtualizationBufferRows.label": "Virtualization buffer (rows)",
+  "settings.advanced.virtualizationBufferRows.label": "Буфер віртуалізації (у рядках)",
   "@settings.advanced.virtualizationBufferRows.label": {
     "sourceHash": "07b7869"
   },
-  "settings.advanced.virtualizationBufferRows.description": "Extra rows to render above and below the visible area.",
+  "settings.advanced.virtualizationBufferRows.description": "Скільки додаткових рядків відмальовувати над видимою областю й під нею.",
   "@settings.advanced.virtualizationBufferRows.description": {
     "sourceHash": "82a0e9a"
   },
-  "settings.advanced.virtualizationBufferRows.keywords": "virtualization, buffer, row, render",
+  "settings.advanced.virtualizationBufferRows.keywords": "рядки, відмальовування, малювання, прокручування, плавність, швидкодія",
   "@settings.advanced.virtualizationBufferRows.keywords": {
     "sourceHash": "2342517"
   },
-  "settings.advanced.virtualizationBufferColumns.label": "Virtualization buffer (columns)",
+  "settings.advanced.virtualizationBufferColumns.label": "Буфер віртуалізації (у стовпцях)",
   "@settings.advanced.virtualizationBufferColumns.label": {
     "sourceHash": "a9e8dba"
   },
-  "settings.advanced.virtualizationBufferColumns.description": "Extra columns to render in brief view.",
+  "settings.advanced.virtualizationBufferColumns.description": "Скільки додаткових стовпців відмальовувати в режимі «Короткий вигляд».",
   "@settings.advanced.virtualizationBufferColumns.description": {
     "sourceHash": "a1cbd98"
   },
-  "settings.advanced.virtualizationBufferColumns.keywords": "virtualization, buffer, column, brief",
+  "settings.advanced.virtualizationBufferColumns.keywords": "стовпці, колонки, короткий, відмальовування, прокручування, швидкодія",
   "@settings.advanced.virtualizationBufferColumns.keywords": {
     "sourceHash": "f4c112b"
   },
-  "settings.advanced.fileWatcherDebounce.label": "File watcher debounce",
+  "settings.advanced.fileWatcherDebounce.label": "Затримка відстеження змін файлів",
   "@settings.advanced.fileWatcherDebounce.label": {
     "sourceHash": "6a3842d"
   },
-  "settings.advanced.fileWatcherDebounce.description": "Delay after file system changes before refreshing.",
+  "settings.advanced.fileWatcherDebounce.description": "Скільки чекати після змін у файловій системі, перш ніж оновити список.",
   "@settings.advanced.fileWatcherDebounce.description": {
     "sourceHash": "084a2a7"
   },
-  "settings.advanced.fileWatcherDebounce.keywords": "watcher, debounce, refresh, delay",
+  "settings.advanced.fileWatcherDebounce.keywords": "стеження, зміни, оновлення, очікування, пауза, пакет змін",
   "@settings.advanced.fileWatcherDebounce.keywords": {
     "sourceHash": "a389923"
   },
-  "settings.advanced.diskSpaceChangeThreshold.label": "Disk space change threshold (MB)",
+  "settings.advanced.diskSpaceChangeThreshold.label": "Поріг зміни місця на диску (МБ)",
   "@settings.advanced.diskSpaceChangeThreshold.label": {
     "sourceHash": "1d95fc6"
   },
-  "settings.advanced.diskSpaceChangeThreshold.description": "Minimum change in available disk space before updating the status bar. The status bar polls disk space every few seconds; small changes below this threshold are ignored to reduce visual noise.",
+  "settings.advanced.diskSpaceChangeThreshold.description": "Мінімальна зміна вільного місця на диску, після якої оновлюється панель стану. Панель стану перевіряє місце на диску кожні кілька секунд; менші зміни, нижчі за цей поріг, Cmdr ігнорує, щоб не створювати зайвого візуального шуму.",
   "@settings.advanced.diskSpaceChangeThreshold.description": {
     "sourceHash": "f09c3cb"
   },
-  "settings.advanced.diskSpaceChangeThreshold.keywords": "disk, space, threshold, poll, refresh, status, bar",
+  "settings.advanced.diskSpaceChangeThreshold.keywords": "вільне місце, диск, мегабайти, оновлення, опитування, межа, цифри",
   "@settings.advanced.diskSpaceChangeThreshold.keywords": {
     "sourceHash": "74628c1"
   },
-  "settings.fileViewer.suppressBinaryWarning.label": "Suppress the raw-view warning for binary files",
+  "settings.fileViewer.suppressBinaryWarning.label": "Не показувати застереження під час перегляду двійкових файлів",
   "@settings.fileViewer.suppressBinaryWarning.label": {
     "sourceHash": "8cdaada"
   },
-  "settings.fileViewer.suppressBinaryWarning.description": "F3 opens Cmdr’s file viewer, which shows raw bytes (with lossy UTF-8 for non-text content). When you open an image, PDF, archive, or other binary file, the viewer shows a red banner explaining that ⇧Space (Quick Look) or Enter (open in the associated app) is probably what you wanted. Turn this on (or click “Never show this warning again” in the banner) to suppress the warning for good.",
+  "settings.fileViewer.suppressBinaryWarning.description": "F3 відкриває переглядач файлів Cmdr, який показує сирі байти (нетекстовий вміст відображається як UTF-8 із втратами). Коли ви відкриваєте зображення, PDF, архів чи інший двійковий файл, переглядач показує червоний банер із поясненням, що вам, найімовірніше, потрібен ⇧Пробіл (Швидкий перегляд) або Enter (відкрити в повʼязаній програмі). Увімкніть цей параметр (або натисніть «Більше не показувати це застереження» на банері), щоб назавжди прибрати застереження.",
   "@settings.fileViewer.suppressBinaryWarning.description": {
     "sourceHash": "a93b4cb"
   },
-  "settings.fileViewer.suppressBinaryWarning.keywords": "viewer, binary, image, raw, warning, banner, quick look",
+  "settings.fileViewer.suppressBinaryWarning.keywords": "двійковий, бінарний, зображення, байти, банер, попередження, сирий вигляд",
   "@settings.fileViewer.suppressBinaryWarning.keywords": {
     "sourceHash": "1508efc"
   },
@@ -1701,15 +1702,15 @@
   "@settings.fileExplorer.suppressQuickLookHint.keywords": {
     "sourceHash": "8f4a843"
   },
-  "settings.suggestedOps.suppressApprovalNotice.label": "Suppress the approval note in AI suggestions",
+  "settings.suggestedOps.suppressApprovalNotice.label": "Не показувати примітку про схвалення в пропозиціях ШІ",
   "@settings.suggestedOps.suppressApprovalNotice.label": {
     "sourceHash": "33f9993"
   },
-  "settings.suggestedOps.suppressApprovalNotice.description": "The AI suggestions dialog opens with a note saying the AI suggested what’s in it and that nothing runs until you approve it. Turn this on (or close the note with its ×) to stop showing it.",
+  "settings.suggestedOps.suppressApprovalNotice.description": "Діалогове вікно «Пропозиції ШІ» відкривається з приміткою про те, що його вміст запропонував ШІ і що нічого не виконується, доки ви це не схвалите. Увімкніть цей параметр (або закрийте примітку кнопкою ×), щоб більше її не показувати.",
   "@settings.suggestedOps.suppressApprovalNotice.description": {
     "sourceHash": "8d7605d"
   },
-  "settings.suggestedOps.suppressApprovalNotice.keywords": "suggestion, approve, note, warning, ai, banner",
+  "settings.suggestedOps.suppressApprovalNotice.keywords": "пропозиції, схвалення, підтвердження, попередження, банер, штучний інтелект",
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
@@ -1725,35 +1726,35 @@
   "@settings.fileExplorer.tabs.closedTabHistorySize.keywords": {
     "sourceHash": "bb60e7b"
   },
-  "settings.advanced.dragThreshold.label": "Drag threshold",
+  "settings.advanced.dragThreshold.label": "Поріг перетягування",
   "@settings.advanced.dragThreshold.label": {
     "sourceHash": "d624e2a"
   },
-  "settings.advanced.dragThreshold.description": "Minimum distance in pixels before a drag operation starts.",
+  "settings.advanced.dragThreshold.description": "Мінімальна відстань у пікселях, після якої починається операція перетягування.",
   "@settings.advanced.dragThreshold.description": {
     "sourceHash": "7704bfa"
   },
-  "settings.advanced.dragThreshold.keywords": "drag, threshold, pixel, distance",
+  "settings.advanced.dragThreshold.keywords": "миша, перетягнути, відстань, пікселі, чутливість, клацання",
   "@settings.advanced.dragThreshold.keywords": {
     "sourceHash": "1dec520"
   },
-  "settings.advanced.exitFullScreenOnEscape.label": "Exit full screen on Escape",
+  "settings.advanced.exitFullScreenOnEscape.label": "Виходити з повноекранного режиму клавішею Escape",
   "@settings.advanced.exitFullScreenOnEscape.label": {
     "sourceHash": "f98be5e"
   },
-  "settings.advanced.exitFullScreenOnEscape.description": "When the main window is in full screen, Escape takes it out. Escape in a dialog or menu only closes that.",
+  "settings.advanced.exitFullScreenOnEscape.description": "Коли головне вікно в повноекранному режимі, Escape виводить його з цього режиму. У діалоговому вікні чи меню Escape лише закриває його.",
   "@settings.advanced.exitFullScreenOnEscape.description": {
     "sourceHash": "a862b71"
   },
-  "settings.advanced.exitFullScreenOnEscape.keywords": "escape, full screen, fullscreen, maximize, window, restore, exit",
+  "settings.advanced.exitFullScreenOnEscape.keywords": "Esc, на весь екран, вікно, згорнути, відновити, вийти, вихід",
   "@settings.advanced.exitFullScreenOnEscape.keywords": {
     "sourceHash": "592c454"
   },
-  "settings.advanced.exitFullScreenOnEscapeHintShown.label": "Escape full-screen hint shown",
+  "settings.advanced.exitFullScreenOnEscapeHintShown.label": "Підказку про вихід з повноекранного режиму клавішею Escape показано",
   "@settings.advanced.exitFullScreenOnEscapeHintShown.label": {
     "sourceHash": "583b08f"
   },
-  "settings.advanced.exitFullScreenOnEscapeHintShown.description": "Internal: tracks whether the one-time toast about Escape leaving full screen has been shown. Hidden from the UI.",
+  "settings.advanced.exitFullScreenOnEscapeHintShown.description": "Внутрішнє: позначає, чи вже показано одноразове сповіщення про те, що Escape виводить з повноекранного режиму. В інтерфейсі приховано.",
   "@settings.advanced.exitFullScreenOnEscapeHintShown.description": {
     "sourceHash": "76ba76c"
   },
@@ -1813,75 +1814,75 @@
   "@settings.fileOperations.progressUpdateInterval.keywords": {
     "sourceHash": "49c3811"
   },
-  "settings.advanced.maxLogStorageMb.label": "Maximum disk space for log files (MB)",
+  "settings.advanced.maxLogStorageMb.label": "Максимум місця на диску для файлів журналу (МБ)",
   "@settings.advanced.maxLogStorageMb.label": {
     "sourceHash": "d6af6b4"
   },
-  "settings.advanced.maxLogStorageMb.description": "Maximum disk space for log files. Set to 0 to disable log storage; error reports cannot be sent without logs. Changes to a non-zero value take effect on next app launch.",
+  "settings.advanced.maxLogStorageMb.description": "Максимальний обсяг місця на диску для файлів журналу. Задайте 0, щоб вимкнути зберігання журналу; без журналів звіти про помилки надіслати не можна. Зміна на ненульове значення діє після наступного запуску програми.",
   "@settings.advanced.maxLogStorageMb.description": {
     "sourceHash": "725bb26"
   },
-  "settings.advanced.maxLogStorageMb.keywords": "log, storage, disk, cap, rotation, error, report, privacy",
+  "settings.advanced.maxLogStorageMb.keywords": "журнали, логи, обсяг, місце, ротація, звіт, приватність, налагодження",
   "@settings.advanced.maxLogStorageMb.keywords": {
     "sourceHash": "328d0cc"
   },
-  "settings.advanced.mountTimeout.label": "Mount timeout",
+  "settings.advanced.mountTimeout.label": "Час очікування монтування",
   "@settings.advanced.mountTimeout.label": {
     "sourceHash": "b5bce4f"
   },
-  "settings.advanced.mountTimeout.description": "Timeout for mounting network shares.",
+  "settings.advanced.mountTimeout.description": "Час очікування під час монтування спільних папок у мережі.",
   "@settings.advanced.mountTimeout.description": {
     "sourceHash": "3da30e1"
   },
-  "settings.advanced.mountTimeout.keywords": "mount, timeout, network, share",
+  "settings.advanced.mountTimeout.keywords": "тайм-аут, підключення, мережеві диски, чекати, затримка, сервер",
   "@settings.advanced.mountTimeout.keywords": {
     "sourceHash": "3327884"
   },
-  "settings.advanced.showSafeSaveFiles.label": "Show other apps’ temporary files",
+  "settings.advanced.showSafeSaveFiles.label": "Показувати тимчасові файли інших програм",
   "@settings.advanced.showSafeSaveFiles.label": {
     "sourceHash": "c43c6af"
   },
-  "settings.advanced.showSafeSaveFiles.description": "When apps like TextEdit and Preview save a file, macOS writes the new version alongside it under a temporary name (ending in “.sb-”) and swaps it in. Turn this off to keep those out of the file list.",
+  "settings.advanced.showSafeSaveFiles.description": "Коли такі програми, як Мініредактор і Оглядач, зберігають файл, macOS записує нову версію поруч під тимчасовою назвою (що закінчується на «.sb-») і потім підміняє нею оригінал. Вимкніть цей параметр, щоб такі файли не зʼявлялися в списку файлів.",
   "@settings.advanced.showSafeSaveFiles.description": {
     "sourceHash": "b371701"
   },
-  "settings.advanced.showSafeSaveFiles.keywords": "safe-save, temp, temporary, preview, autosave",
+  "settings.advanced.showSafeSaveFiles.keywords": "тимчасові, безпечне збереження, автозбереження, мініредактор, оглядач, приховані",
   "@settings.advanced.showSafeSaveFiles.keywords": {
     "sourceHash": "a56607a"
   },
-  "settings.advanced.showStagingTempFiles.label": "Show Cmdr’s temporary files",
+  "settings.advanced.showStagingTempFiles.label": "Показувати тимчасові файли Cmdr",
   "@settings.advanced.showStagingTempFiles.label": {
     "sourceHash": "61c8190"
   },
-  "settings.advanced.showStagingTempFiles.description": "While copying, Cmdr writes each file under a temporary name and renames it once the file is complete, so a crash can’t leave a half-written file under a real name. Leftovers from an interrupted copy are always shown.",
+  "settings.advanced.showStagingTempFiles.description": "Під час копіювання Cmdr записує кожен файл під тимчасовою назвою і перейменовує його, щойно файл записано повністю, тож збій не може залишити частково записаний файл під справжньою назвою. Залишки перерваного копіювання показано завжди.",
   "@settings.advanced.showStagingTempFiles.description": {
     "sourceHash": "a562689"
   },
-  "settings.advanced.showStagingTempFiles.keywords": "temp, temporary, staging, copy, transfer, partial",
+  "settings.advanced.showStagingTempFiles.keywords": "тимчасові, проміжні, копіювання, передавання, частково, незавершені",
   "@settings.advanced.showStagingTempFiles.keywords": {
     "sourceHash": "3b07cc3"
   },
-  "settings.advanced.logLlmCalls.label": "Log AI model calls",
+  "settings.advanced.logLlmCalls.label": "Записувати виклики моделі ШІ в журнал",
   "@settings.advanced.logLlmCalls.label": {
     "sourceHash": "f865b3e"
   },
-  "settings.advanced.logLlmCalls.description": "Save every AI request and response to a local folder (llm-logs) for debugging. These files stay on your Mac and include the file names and paths Cmdr sends to your provider.",
+  "settings.advanced.logLlmCalls.description": "Зберігає кожен запит до ШІ та відповідь на нього в локальну папку (llm-logs) для налагодження. Ці файли залишаються на вашому Mac і містять назви файлів і шляхи, які Cmdr надсилає вашому постачальнику.",
   "@settings.advanced.logLlmCalls.description": {
     "sourceHash": "86b3d34"
   },
-  "settings.advanced.logLlmCalls.keywords": "ai, log, debug, request, response, prompt",
+  "settings.advanced.logLlmCalls.keywords": "ШІ, журнал, налагодження, запит, відповідь, промпт, модель",
   "@settings.advanced.logLlmCalls.keywords": {
     "sourceHash": "6d0a3a0"
   },
-  "settings.advanced.serviceResolveTimeout.label": "Service resolve timeout",
+  "settings.advanced.serviceResolveTimeout.label": "Час очікування визначення адреси сервісу",
   "@settings.advanced.serviceResolveTimeout.label": {
     "sourceHash": "a4b4e3e"
   },
-  "settings.advanced.serviceResolveTimeout.description": "Timeout for resolving network services via Bonjour.",
+  "settings.advanced.serviceResolveTimeout.description": "Час очікування під час визначення адрес мережевих сервісів через Bonjour.",
   "@settings.advanced.serviceResolveTimeout.description": {
     "sourceHash": "5cf231d"
   },
-  "settings.advanced.serviceResolveTimeout.keywords": "resolve, timeout, service discovery, network discovery, lookup, local network, wait",
+  "settings.advanced.serviceResolveTimeout.keywords": "виявлення, пошук серверів, локальна мережа, адреса, чекати, тайм-аут",
   "@settings.advanced.serviceResolveTimeout.keywords": {
     "sourceHash": "c4e3d7c"
   },
@@ -1897,35 +1898,35 @@
   "@settings.search.recentSearches.maxCount.keywords": {
     "sourceHash": "e5cef7d"
   },
-  "settings.selection.recentSelections.maxCount.label": "Recent selections to remember",
+  "settings.selection.recentSelections.maxCount.label": "Скільки недавніх шаблонів вибору запамʼятовувати",
   "@settings.selection.recentSelections.maxCount.label": {
     "sourceHash": "e8a5d37"
   },
-  "settings.selection.recentSelections.maxCount.description": "How many recent selections to keep for the Select / Deselect files dialog footer and history popover. Older entries roll off as new ones land. 0 disables history (the footer and popover hide and no new entries are recorded).",
+  "settings.selection.recentSelections.maxCount.description": "Скільки недавніх шаблонів вибору зберігати для нижньої панелі та спливного вікна історії в діалогових вікнах «Вибрати файли» і «Скасувати вибір файлів». Найстаріші записи зникають, коли зʼявляються нові. 0 вимикає історію (нижню панель і спливне вікно буде приховано, а нові записи не зберігатимуться).",
   "@settings.selection.recentSelections.maxCount.description": {
     "sourceHash": "ae04ef0"
   },
-  "settings.selection.recentSelections.maxCount.keywords": "selection, select, recent, history, cap, limit, max, count",
+  "settings.selection.recentSelections.maxCount.keywords": "вибір, шаблони, історія, ліміт, обмеження, максимум, кількість, останні",
   "@settings.selection.recentSelections.maxCount.keywords": {
     "sourceHash": "2986d5f"
   },
-  "settings.advanced.oldMacosNoticeShown.label": "Old macOS notice shown",
+  "settings.advanced.oldMacosNoticeShown.label": "Сповіщення про стару версію macOS показано",
   "@settings.advanced.oldMacosNoticeShown.label": {
     "sourceHash": "21b14e0"
   },
-  "settings.advanced.oldMacosNoticeShown.description": "Internal: tracks whether the one-time best-effort notice for a Mac below the supported macOS version has been shown. Hidden from the UI.",
+  "settings.advanced.oldMacosNoticeShown.description": "Внутрішнє: позначає, чи вже показано одноразове сповіщення про те, що на Mac із версією macOS, нижчою за підтримувану, Cmdr працює без гарантій. В інтерфейсі приховано.",
   "@settings.advanced.oldMacosNoticeShown.description": {
     "sourceHash": "8ae26f2"
   },
-  "settings.onboarding.upgradeNudgeShown.label": "Onboarding upgrade nudge shown",
+  "settings.onboarding.upgradeNudgeShown.label": "Нагадування про початкове налаштування після оновлення показано",
   "@settings.onboarding.upgradeNudgeShown.label": {
     "sourceHash": "d34a727"
   },
-  "settings.onboarding.upgradeNudgeShown.description": "Internal: tracks whether the one-time “the Onboarding menu item now exists” toast has fired for an existing user after the wizard revamp. Hidden from the UI.",
+  "settings.onboarding.upgradeNudgeShown.description": "Внутрішнє: позначає, чи вже показано наявному користувачеві одноразове сповіщення «Тепер у меню є пункт „Початкове налаштування“» після переробки асистента першого запуску. В інтерфейсі приховано.",
   "@settings.onboarding.upgradeNudgeShown.description": {
     "sourceHash": "c877371"
   },
-  "settings.askCmdr.consentRevokePending.label": "Ask Cmdr off, waiting to be saved",
+  "settings.askCmdr.consentRevokePending.label": "Ask Cmdr вимкнено, очікує збереження",
   "@settings.askCmdr.consentRevokePending.label": {
     "sourceHash": "1ecd887"
   },
@@ -1933,135 +1934,135 @@
   "@settings.ai.cloudConsentRevokePending.label": {
     "sourceHash": "16456dc"
   },
-  "settings.onboarding.completed.label": "Onboarding completed",
+  "settings.onboarding.completed.label": "Початкове налаштування завершено",
   "@settings.onboarding.completed.label": {
     "sourceHash": "4730c4f"
   },
-  "settings.onboarding.fullDiskAccessChoice.label": "Full Disk Access choice",
+  "settings.onboarding.fullDiskAccessChoice.label": "Повний доступ до диска: вибір",
   "@settings.onboarding.fullDiskAccessChoice.label": {
     "sourceHash": "4d73a2b"
   },
-  "settings.onboarding.termsAcceptedVersion.label": "Accepted terms version",
+  "settings.onboarding.termsAcceptedVersion.label": "Версія прийнятих умов",
   "@settings.onboarding.termsAcceptedVersion.label": {
     "sourceHash": "f4bdd97"
   },
-  "settings.onboarding.termsAcceptedAt.label": "Terms accepted at",
+  "settings.onboarding.termsAcceptedAt.label": "Час прийняття умов",
   "@settings.onboarding.termsAcceptedAt.label": {
     "sourceHash": "b35cf3b"
   },
-  "settings.advanced.updateCheckInterval.label": "Update check interval",
+  "settings.advanced.updateCheckInterval.label": "Інтервал перевірки оновлень",
   "@settings.advanced.updateCheckInterval.label": {
     "sourceHash": "91912bc"
   },
-  "settings.advanced.updateCheckInterval.description": "How often to check for updates in the background.",
+  "settings.advanced.updateCheckInterval.description": "Як часто перевіряти наявність оновлень у фоновому режимі.",
   "@settings.advanced.updateCheckInterval.description": {
     "sourceHash": "2bdd38a"
   },
-  "settings.advanced.updateCheckInterval.keywords": "update, interval, background, check",
+  "settings.advanced.updateCheckInterval.keywords": "нова версія, частота, автоматично, фон, як часто",
   "@settings.advanced.updateCheckInterval.keywords": {
     "sourceHash": "2952cdc"
   },
-  "settings.tint.none": "No tint",
+  "settings.tint.none": "Без відтінку",
   "@settings.tint.none": {
     "sourceHash": "ac86605"
   },
-  "settings.tint.red": "Red",
+  "settings.tint.red": "Червоний",
   "@settings.tint.red": {
     "sourceHash": "ba19e9c"
   },
-  "settings.tint.orange": "Orange",
+  "settings.tint.orange": "Оранжевий",
   "@settings.tint.orange": {
     "sourceHash": "78e7771"
   },
-  "settings.tint.amber": "Amber",
+  "settings.tint.amber": "Бурштиновий",
   "@settings.tint.amber": {
     "sourceHash": "a5cccbc"
   },
-  "settings.tint.lime": "Lime",
+  "settings.tint.lime": "Лаймовий",
   "@settings.tint.lime": {
     "sourceHash": "c9665c9"
   },
-  "settings.tint.green": "Green",
+  "settings.tint.green": "Зелений",
   "@settings.tint.green": {
     "sourceHash": "d486dfb"
   },
-  "settings.tint.teal": "Teal",
+  "settings.tint.teal": "Бірюзовий",
   "@settings.tint.teal": {
     "sourceHash": "fa15a5c"
   },
-  "settings.tint.cyan": "Cyan",
+  "settings.tint.cyan": "Блакитний",
   "@settings.tint.cyan": {
     "sourceHash": "e95bb22"
   },
-  "settings.tint.blue": "Blue",
+  "settings.tint.blue": "Синій",
   "@settings.tint.blue": {
     "sourceHash": "ec7d56a"
   },
-  "settings.tint.indigo": "Indigo",
+  "settings.tint.indigo": "Індиго",
   "@settings.tint.indigo": {
     "sourceHash": "d81ab14"
   },
-  "settings.tint.purple": "Purple",
+  "settings.tint.purple": "Бузковий",
   "@settings.tint.purple": {
     "sourceHash": "7d465fb"
   },
-  "settings.tint.pink": "Pink",
+  "settings.tint.pink": "Рожевий",
   "@settings.tint.pink": {
     "sourceHash": "bd38ed7"
   },
-  "settings.tint.brown": "Brown",
+  "settings.tint.brown": "Коричневий",
   "@settings.tint.brown": {
     "sourceHash": "18f2855"
   },
-  "settings.section.appearance": "Appearance",
+  "settings.section.appearance": "Вигляд",
   "@settings.section.appearance": {
     "sourceHash": "3907fa7"
   },
-  "settings.section.colorsAndFormats": "Colors and formats",
+  "settings.section.colorsAndFormats": "Кольори й формати",
   "@settings.section.colorsAndFormats": {
     "sourceHash": "c5e0ce4"
   },
-  "settings.section.zoomAndDensity": "Zoom and density",
+  "settings.section.zoomAndDensity": "Масштаб і щільність",
   "@settings.section.zoomAndDensity": {
     "sourceHash": "7af249b"
   },
-  "settings.section.fileAndFolderSizes": "File and folder sizes",
+  "settings.section.fileAndFolderSizes": "Розміри файлів і папок",
   "@settings.section.fileAndFolderSizes": {
     "sourceHash": "37d2ca1"
   },
-  "settings.section.listing": "Listing",
+  "settings.section.listing": "Список файлів",
   "@settings.section.listing": {
     "sourceHash": "fc7f1aa"
   },
-  "settings.section.behavior": "Behavior",
+  "settings.section.behavior": "Поведінка",
   "@settings.section.behavior": {
     "sourceHash": "edf8d3f"
   },
-  "settings.section.navigationAndFileOps": "Navigation & file ops",
+  "settings.section.navigationAndFileOps": "Навігація та операції з файлами",
   "@settings.section.navigationAndFileOps": {
     "sourceHash": "4e26af0"
   },
-  "settings.navigationAndFileOps.card.navigation": "Navigation",
+  "settings.navigationAndFileOps.card.navigation": "Навігація",
   "@settings.navigationAndFileOps.card.navigation": {
     "sourceHash": "3db65f8"
   },
-  "settings.navigationAndFileOps.card.fileOperations": "File operations",
+  "settings.navigationAndFileOps.card.fileOperations": "Операції з файлами",
   "@settings.navigationAndFileOps.card.fileOperations": {
     "sourceHash": "ed23515"
   },
-  "settings.navigationAndFileOps.card.textEditor": "Text editor",
+  "settings.navigationAndFileOps.card.textEditor": "Текстовий редактор",
   "@settings.navigationAndFileOps.card.textEditor": {
     "sourceHash": "95642d5"
   },
-  "settings.navigationAndFileOps.card.terminal": "Terminal",
+  "settings.navigationAndFileOps.card.terminal": "Термінал",
   "@settings.navigationAndFileOps.card.terminal": {
     "sourceHash": "e0926fd"
   },
-  "settings.navigationAndFileOps.card.showInFinder": "Show in Finder",
+  "settings.navigationAndFileOps.card.showInFinder": "Показати у Finder",
   "@settings.navigationAndFileOps.card.showInFinder": {
     "sourceHash": "c2a9c77"
   },
-  "settings.revealHandler.label": "Let other apps show files in Cmdr",
+  "settings.revealHandler.label": "Дозволити іншим програмам показувати файли в Cmdr",
   "@settings.revealHandler.label": {
     "sourceHash": "8c39a2f"
   },
@@ -2069,23 +2070,23 @@
   "@settings.behavior.revealHandler.keywords": {
     "sourceHash": "ad680cd"
   },
-  "settings.revealHandler.description": "When another app runs “Show in Finder”, Cmdr opens that folder with the file under the cursor. Finder stays your default file manager everywhere else.",
+  "settings.revealHandler.description": "Коли інша програма виконує «Показати у Finder», Cmdr відкриває ту папку з файлом під курсором. Скрізь деінде Finder залишається вашим типовим файловим менеджером.",
   "@settings.revealHandler.description": {
     "sourceHash": "9522e41"
   },
-  "settings.revealHandler.heldByOtherApp": "Currently: {app}. Turning this on hands “Show in Finder” to Cmdr.",
+  "settings.revealHandler.heldByOtherApp": "Зараз: {app}. Якщо ввімкнути цей параметр, «Показати у Finder» перейде до Cmdr.",
   "@settings.revealHandler.heldByOtherApp": {
     "sourceHash": "4b956ef"
   },
-  "settings.revealHandler.uninstallWarning": "<lead>Before you uninstall Cmdr, switch this off.</lead> macOS keeps sending “Show in Finder” here, and with Cmdr gone those clicks quietly do nothing.",
+  "settings.revealHandler.uninstallWarning": "<lead>Перш ніж видалити Cmdr, вимкніть цей параметр.</lead> macOS і далі надсилатиме «Показати у Finder» сюди, і без Cmdr ці клацання тихо нічого не робитимуть.",
   "@settings.revealHandler.uninstallWarning": {
     "sourceHash": "9464597"
   },
-  "settings.revealHandler.notInApplications": "Move Cmdr to your Applications folder to switch this on. From where it runs now, moving or deleting Cmdr would leave every “Show in Finder” click pointing at nothing.",
+  "settings.revealHandler.notInApplications": "Перемістіть Cmdr у папку «Програми», щоб увімкнути цей параметр. Якщо перемістити чи видалити Cmdr з поточного місця, кожне клацання «Показати у Finder» вестиме в нікуди.",
   "@settings.revealHandler.notInApplications": {
     "sourceHash": "1a380cf"
   },
-  "settings.revealHandler.notProductionBuild": "Only a released copy of Cmdr can switch this on. Dev and test builds come and go, and deleting one would leave every “Show in Finder” click pointing at nothing.",
+  "settings.revealHandler.notProductionBuild": "Увімкнути цей параметр може лише випущена версія Cmdr. Збірки для розробки й тестування зʼявляються і зникають, і після видалення такої збірки кожне клацання «Показати у Finder» вестиме в нікуди.",
   "@settings.revealHandler.notProductionBuild": {
     "sourceHash": "7195002"
   },
@@ -2169,7 +2170,7 @@
   "@settings.behavior.openTerminalHereToastSeen.description": {
     "sourceHash": "f976886"
   },
-  "settings.section.archives": "Archives",
+  "settings.section.archives": "Архіви",
   "@settings.section.archives": {
     "sourceHash": "e404aa8"
   },
@@ -2241,587 +2242,592 @@
   "@settings.behavior.adbHintDismissed.description": {
     "sourceHash": "37afcbc"
   },
-  "settings.section.notifications": "Notifications",
+  "settings.section.notifications": "Сповіщення",
   "@settings.section.notifications": {
     "sourceHash": "7880118"
   },
-  "settings.section.search": "Search",
+  "settings.section.search": "Пошук",
   "@settings.section.search": {
     "sourceHash": "49c266b"
   },
-  "settings.section.indexing": "Indexing",
+  "settings.section.indexing": "Індексування",
   "@settings.section.indexing": {
     "sourceHash": "cc24d96"
   },
-  "settings.section.driveIndexing": "Drive indexing",
+  "settings.section.driveIndexing": "Індексування дисків",
   "@settings.section.driveIndexing": {
     "sourceHash": "38d916b"
   },
-  "settings.section.imageIndexing": "Image indexing",
+  "settings.section.imageIndexing": "Індексування зображень",
   "@settings.section.imageIndexing": {
     "sourceHash": "442068b"
   },
-  "settings.section.ai": "AI",
+  "settings.section.ai": "ШІ",
   "@settings.section.ai": {
     "sourceHash": "11fb682"
   },
-  "settings.section.aiProvider": "Provider",
+  "settings.section.aiProvider": "Постачальник",
   "@settings.section.aiProvider": {
     "sourceHash": "472590a"
   },
   "settings.section.askCmdr": "Ask Cmdr",
   "@settings.section.askCmdr": {
-    "sourceHash": "aafb1ce"
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Product name of the in-app assistant; the ask-cmdr ruling keeps it verbatim in every language."
   },
-  "settings.askCmdr.intro": "Chat with an AI about your files, drives, and history. Cmdr reads names, paths, and sizes to answer, looks inside a file only when you ask about it, and never changes a file without your approval.",
+  "settings.askCmdr.intro": "Спілкуйтеся в чаті з ШІ про ваші файли, диски й історію. Щоб відповісти, Cmdr читає назви, шляхи й розміри, зазирає у файл лише тоді, коли ви про нього запитуєте, і ніколи не змінює файл без вашого схвалення.",
   "@settings.askCmdr.intro": {
     "sourceHash": "3b16f89"
   },
   "settings.askCmdr.enabled.label": "Ask Cmdr",
   "@settings.askCmdr.enabled.label": {
-    "sourceHash": "aafb1ce"
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Product name of the in-app assistant; the ask-cmdr ruling keeps it verbatim in every language."
   },
-  "settings.askCmdr.enabled.description": "Chat with Cmdr about your files in a side panel.",
+  "settings.askCmdr.enabled.description": "Чат із Cmdr про ваші файли на панелі збоку.",
   "@settings.askCmdr.enabled.description": {
     "sourceHash": "a1116db"
   },
-  "settings.askCmdr.enabled.keywords": "ai, chat, assistant, enable, disable, turn on, turn off",
+  "settings.askCmdr.enabled.keywords": "ШІ, чат, асистент, помічник, увімкнути, вимкнути, штучний інтелект",
   "@settings.askCmdr.enabled.keywords": {
     "sourceHash": "3ca6b54"
   },
-  "settings.askCmdr.cloudOffHint": "Ask Cmdr uses your cloud AI service. Allow cloud AI in AI settings to start chatting.",
+  "settings.askCmdr.cloudOffHint": "Ask Cmdr використовує ваш хмарний сервіс ШІ. Дозвольте хмарний ШІ в параметрах ШІ, щоб почати чат.",
   "@settings.askCmdr.cloudOffHint": {
     "sourceHash": "1d3ec5d"
   },
-  "settings.askCmdr.openAiSettings": "Go to AI settings",
+  "settings.askCmdr.openAiSettings": "Перейти до параметрів ШІ",
   "@settings.askCmdr.openAiSettings": {
     "sourceHash": "973a020"
   },
-  "settings.askCmdr.provider.title": "Provider and model",
+  "settings.askCmdr.provider.title": "Постачальник і модель",
   "@settings.askCmdr.provider.title": {
     "sourceHash": "b9fdc88"
   },
-  "settings.askCmdr.provider.shared": "Cmdr uses the AI provider and key you set up in Settings › AI ({provider}).",
+  "settings.askCmdr.provider.shared": "Cmdr використовує постачальника ШІ та ключ, які ви налаштували в Параметрах › ШІ ({provider}).",
   "@settings.askCmdr.provider.shared": {
     "sourceHash": "9442b09"
   },
-  "settings.askCmdr.provider.off": "Turn on an AI provider in Settings › AI to start chatting.",
+  "settings.askCmdr.provider.off": "Увімкніть постачальника ШІ в Параметрах › ШІ, щоб почати чат.",
   "@settings.askCmdr.provider.off": {
     "sourceHash": "5cc1481"
   },
-  "settings.askCmdr.interactiveModel.label": "Ask Cmdr model",
+  "settings.askCmdr.interactiveModel.label": "Модель для Ask Cmdr",
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "The model the chat uses. Leave blank to use the same model as Cmdr’s other AI features. Example: claude-sonnet-5-5",
+  "settings.askCmdr.interactiveModel.description": "Модель, яку використовує чат. Залиште поле порожнім, щоб використовувати ту саму модель, що й інші функції ШІ в Cmdr. Приклад: claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
     "sourceHash": "e301e99"
   },
-  "settings.askCmdr.interactiveModel.placeholder": "Same as Cmdr’s AI",
+  "settings.askCmdr.interactiveModel.placeholder": "Та сама, що для ШІ в Cmdr",
   "@settings.askCmdr.interactiveModel.placeholder": {
     "sourceHash": "2631f3d"
   },
-  "settings.askCmdr.interactiveModel.keywords": "ai, chat, assistant, model, override, different model",
+  "settings.askCmdr.interactiveModel.keywords": "ШІ, чат, асистент, інша модель, окрема модель, замінити",
   "@settings.askCmdr.interactiveModel.keywords": {
     "sourceHash": "e55416b"
   },
-  "settings.askCmdr.chatMemorySize.label": "Chat memory size",
+  "settings.askCmdr.chatMemorySize.label": "Розмір памʼяті чату",
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "How much of the conversation Cmdr sends to the model. Automatic uses your model’s whole context window; a size caps it lower to spend less.",
+  "settings.askCmdr.chatMemorySize.description": "Скільки розмови Cmdr надсилає моделі. «Автоматично» використовує все контекстне вікно вашої моделі; конкретний розмір обмежує його, щоб витрачати менше.",
   "@settings.askCmdr.chatMemorySize.description": {
     "sourceHash": "b222b81"
   },
-  "settings.askCmdr.chatMemorySize.opt.auto": "Automatic (recommended)",
+  "settings.askCmdr.chatMemorySize.opt.auto": "Автоматично (рекомендовано)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {
     "sourceHash": "4331988"
   },
-  "settings.askCmdr.chatMemorySize.overWindow": "Your model may refuse a message this long. Cmdr keeps the value you set.",
+  "settings.askCmdr.chatMemorySize.overWindow": "Ваша модель може відхилити таке довге повідомлення. Cmdr зберігає задане вами значення.",
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
-  "settings.askCmdr.spendPause.label": "Check in when an answer costs over",
+  "settings.askCmdr.spendPause.label": "Питати дозволу, коли відповідь коштує понад",
   "@settings.askCmdr.spendPause.label": {
     "sourceHash": "0d0fa3b"
   },
-  "settings.askCmdr.spendPause.description": "One answer can run many lookups. Past this estimated cost, Cmdr pauses it and asks before it spends more. Estimates use list prices, so caching usually makes the real cost lower.",
+  "settings.askCmdr.spendPause.description": "Одна відповідь може запускати багато пошуків. Коли орієнтовна вартість перевищує цю суму, Cmdr призупиняє відповідь і питає, перш ніж витрачати більше. Оцінка спирається на публічні ціни, тож завдяки кешуванню реальна вартість зазвичай нижча.",
   "@settings.askCmdr.spendPause.description": {
     "sourceHash": "089be96"
   },
-  "settings.askCmdr.spendPause.opt.never": "Never",
+  "settings.askCmdr.spendPause.opt.never": "Ніколи",
   "@settings.askCmdr.spendPause.opt.never": {
     "sourceHash": "6300ef8"
   },
-  "settings.askCmdr.spendPause.keywords": "cost, spend, money, price, budget, limit, pause, dollars, expensive",
+  "settings.askCmdr.spendPause.keywords": "гроші, ціна, бюджет, витрати, ліміт, пауза, долари, дорого",
   "@settings.askCmdr.spendPause.keywords": {
     "sourceHash": "ebe4f4a"
   },
-  "settings.askCmdr.chatMemorySize.keywords": "chat, memory, context, window, tokens, size, budget, history",
+  "settings.askCmdr.chatMemorySize.keywords": "контекст, токени, обсяг, бюджет, історія, розмова, вікно",
   "@settings.askCmdr.chatMemorySize.keywords": {
     "sourceHash": "7efd03c"
   },
-  "settings.askCmdr.proactive.title": "On its own",
+  "settings.askCmdr.proactive.title": "З власної ініціативи",
   "@settings.askCmdr.proactive.title": {
     "sourceHash": "42e696a"
   },
-  "settings.askCmdr.proactive.label": "Let Cmdr start conversations",
+  "settings.askCmdr.proactive.label": "Дозволити Cmdr починати розмови",
   "@settings.askCmdr.proactive.label": {
     "sourceHash": "a85ef48"
   },
-  "settings.askCmdr.proactive.description": "Cmdr watches the folders you work in and starts a chat when it has something to suggest. Nothing runs until you approve it.",
+  "settings.askCmdr.proactive.description": "Cmdr стежить за папками, у яких ви працюєте, і починає чат, коли має що запропонувати. Нічого не виконується, доки ви це не схвалите.",
   "@settings.askCmdr.proactive.description": {
     "sourceHash": "556f155"
   },
-  "settings.askCmdr.proactive.keywords": "proactive, suggestions, automatic, notice, watch, wake, ai",
+  "settings.askCmdr.proactive.keywords": "проактивно, пропозиції, автоматично, стеження, ініціатива, сам",
   "@settings.askCmdr.proactive.keywords": {
     "sourceHash": "3be12a4"
   },
-  "settings.askCmdr.wakeDelay.label": "How soon Cmdr looks",
+  "settings.askCmdr.wakeDelay.label": "Як швидко Cmdr зазирає в папки",
   "@settings.askCmdr.wakeDelay.label": {
     "sourceHash": "a7368d0"
   },
-  "settings.askCmdr.wakeDelay.description": "How soon Cmdr looks at a folder that just changed. Longer means a calmer assistant.",
+  "settings.askCmdr.wakeDelay.description": "Як швидко Cmdr зазирає в папку, що щойно змінилася. Що довше, то спокійніший асистент.",
   "@settings.askCmdr.wakeDelay.description": {
     "sourceHash": "08790da"
   },
-  "settings.askCmdr.wakeDelay.summary": "Busy folders get a look within {hot}, quieter ones within {warm}.",
+  "settings.askCmdr.wakeDelay.summary": "Папки, де багато змін, Cmdr переглядає протягом {hot}, а тихіші папки протягом {warm}.",
   "@settings.askCmdr.wakeDelay.summary": {
     "sourceHash": "ad03c00"
   },
-  "settings.askCmdr.wakeDelay.keywords": "delay, wait, timing, how often, frequency, calm, quiet, proactive",
+  "settings.askCmdr.wakeDelay.keywords": "затримка, очікування, частота, як часто, спокійно, тихо, проактивно",
   "@settings.askCmdr.wakeDelay.keywords": {
     "sourceHash": "f8bcbd5"
   },
-  "settings.askCmdr.wakeToast.label": "Show a notice when a suggestion appears",
+  "settings.askCmdr.wakeToast.label": "Показувати сповіщення, коли зʼявляється пропозиція",
   "@settings.askCmdr.wakeToast.label": {
     "sourceHash": "58b4167"
   },
-  "settings.askCmdr.wakeToast.description": "A small message in the corner when Cmdr stages something for you to review.",
+  "settings.askCmdr.wakeToast.description": "Невелике повідомлення в куті, коли Cmdr підготує щось вам на перевірку.",
   "@settings.askCmdr.wakeToast.description": {
     "sourceHash": "dd04b0a"
   },
-  "settings.askCmdr.wakeToast.keywords": "toast, notice, notification, suggestion, proactive, alert",
+  "settings.askCmdr.wakeToast.keywords": "спливне, повідомлення, пропозиція, проактивно, нагадування",
   "@settings.askCmdr.wakeToast.keywords": {
     "sourceHash": "6ed1b7d"
   },
-  "settings.askCmdr.memory.title": "What Cmdr remembers",
+  "settings.askCmdr.memory.title": "Що Cmdr памʼятає",
   "@settings.askCmdr.memory.title": {
     "sourceHash": "be6fce6"
   },
-  "settings.askCmdr.memory.description": "Cmdr keeps a small folder of notes about you, and sends it with every message. Have a look, or start it over.",
+  "settings.askCmdr.memory.description": "Cmdr зберігає невелику папку нотаток про вас і надсилає її з кожним повідомленням. Перегляньте її або почніть з чистого аркуша.",
   "@settings.askCmdr.memory.description": {
     "sourceHash": "0948ddb"
   },
-  "settings.askCmdr.memory.open": "Open memory folder",
+  "settings.askCmdr.memory.open": "Відкрити папку памʼяті",
   "@settings.askCmdr.memory.open": {
     "sourceHash": "cffe1da"
   },
-  "settings.askCmdr.openMemoryFolder.keywords": "memory, folder, notes, remember, open",
+  "settings.askCmdr.openMemoryFolder.keywords": "нотатки, записи, папка, спогади, відкрити, про мене",
   "@settings.askCmdr.openMemoryFolder.keywords": {
     "sourceHash": "fcd353e"
   },
-  "settings.askCmdr.memory.forgotten": "Cmdr’s notes are gone. It starts over from here.",
+  "settings.askCmdr.memory.forgotten": "Нотаток Cmdr більше немає. Звідси Cmdr починає з чистого аркуша.",
   "@settings.askCmdr.memory.forgotten": {
     "sourceHash": "f3d9022"
   },
-  "settings.askCmdr.memory.notAllForgotten": "Cmdr couldn’t delete every note. Open the memory folder to remove the rest.",
+  "settings.askCmdr.memory.notAllForgotten": "Cmdr не вдалося видалити всі нотатки. Відкрийте папку памʼяті, щоб видалити решту.",
   "@settings.askCmdr.memory.notAllForgotten": {
     "sourceHash": "3ae9870"
   },
-  "settings.askCmdr.spend.title": "Spending",
+  "settings.askCmdr.spend.title": "Витрати",
   "@settings.askCmdr.spend.title": {
     "sourceHash": "c2c7ae2"
   },
-  "settings.askCmdr.spend.empty": "No usage yet. Your token use and estimated cost will show up here.",
+  "settings.askCmdr.spend.empty": "Використання поки немає. Тут зʼявляться ваші витрати токенів і орієнтовна вартість.",
   "@settings.askCmdr.spend.empty": {
     "sourceHash": "baaf9d6"
   },
-  "settings.askCmdr.spend.disclaimer": "These are estimates. Your provider bills you directly, so check your provider’s dashboard for the exact amount.",
+  "settings.askCmdr.spend.disclaimer": "Це орієнтовні суми. Постачальник виставляє вам рахунок напряму, тож точну суму дивіться в особистому кабінеті постачальника.",
   "@settings.askCmdr.spend.disclaimer": {
     "sourceHash": "81fd190"
   },
-  "settings.section.fileSystems": "File systems",
+  "settings.section.fileSystems": "Файлові системи",
   "@settings.section.fileSystems": {
     "sourceHash": "d1fad23"
   },
-  "settings.section.smbNetworkShares": "SMB/Network shares",
+  "settings.section.smbNetworkShares": "SMB/спільні папки в мережі",
   "@settings.section.smbNetworkShares": {
     "sourceHash": "d971dec"
   },
-  "settings.section.servers": "Servers (SFTP, WebDAV)",
+  "settings.section.servers": "Сервери (SFTP, WebDAV)",
   "@settings.section.servers": {
     "sourceHash": "58704f8"
   },
   "settings.section.adb": "Android (ADB)",
   "@settings.section.adb": {
-    "sourceHash": "bc9c1a1"
+    "sourceHash": "bc9c1a1",
+    "sameAsSourceJustification": "Android is a product name and ADB its protocol abbreviation, both kept verbatim per the key description; nothing else to translate."
   },
-  "settings.section.mtp": "MTP (Android/Kindle/cameras)",
+  "settings.section.mtp": "MTP (Android/Kindle/камери)",
   "@settings.section.mtp": {
     "sourceHash": "a68fa47"
   },
   "settings.section.git": "Git",
   "@settings.section.git": {
-    "sourceHash": "b949c92"
+    "sourceHash": "b949c92",
+    "sameAsSourceJustification": "Git is the version-control tool's name, kept verbatim per the key description (the uk catalog also keeps fileExplorer.columns.git as Git)."
   },
-  "settings.section.viewer": "Viewer",
+  "settings.section.viewer": "Переглядач",
   "@settings.section.viewer": {
     "sourceHash": "678bfa6"
   },
-  "settings.navigationAndFileOps.card.operationLog": "Operation log",
+  "settings.navigationAndFileOps.card.operationLog": "Журнал операцій",
   "@settings.navigationAndFileOps.card.operationLog": {
     "sourceHash": "2c97965"
   },
-  "settings.operationLog.intro": "Cmdr logs your file operations so you can review your history and undo actions. Choose whether to record them, how long to keep the log, and how much disk space it can use.",
+  "settings.operationLog.intro": "Cmdr записує ваші операції з файлами, щоб ви могли переглянути історію й відмінити дії. Виберіть, чи записувати їх, як довго зберігати журнал і скільки місця на диску він може займати.",
   "@settings.operationLog.intro": {
     "sourceHash": "2185fcd"
   },
-  "settings.operationLog.enabled.label": "Record file operations",
+  "settings.operationLog.enabled.label": "Записувати операції з файлами",
   "@settings.operationLog.enabled.label": {
     "sourceHash": "edfee55"
   },
-  "settings.operationLog.enabled.description": "While this is off, Cmdr doesn’t record new copies, moves, renames, or deletes, so you can’t undo them. Your existing history stays, and you can still undo what’s in it.",
+  "settings.operationLog.enabled.description": "Поки цей перемикач вимкнено, Cmdr не записує нові копіювання, переміщення, перейменування й видалення, тож відмінити їх не вийде. Наявна історія залишається, і те, що в ній є, можна відмінити й далі.",
   "@settings.operationLog.enabled.description": {
     "sourceHash": "41f90d4"
   },
-  "settings.operationLog.enabled.keywords": "operation, log, history, record, recording, undo, journal, privacy, turn off",
+  "settings.operationLog.enabled.keywords": "операції, журнал, історія, запис, записування, відміна, скасувати дію, приватність, вимкнути, лог",
   "@settings.operationLog.enabled.keywords": {
     "sourceHash": "25f39cc"
   },
-  "settings.operationLog.maxAge.label": "Keep history for",
+  "settings.operationLog.maxAge.label": "Зберігати історію",
   "@settings.operationLog.maxAge.label": {
     "sourceHash": "ca05015"
   },
-  "settings.operationLog.maxAge.description": "How long Cmdr keeps logged operations before automatically removing the oldest ones.",
+  "settings.operationLog.maxAge.description": "Як довго Cmdr зберігає записані операції, перш ніж автоматично вилучати найстаріші.",
   "@settings.operationLog.maxAge.description": {
     "sourceHash": "7d35887"
   },
-  "settings.operationLog.maxAge.opt.forever": "Forever",
+  "settings.operationLog.maxAge.opt.forever": "Завжди",
   "@settings.operationLog.maxAge.opt.forever": {
     "sourceHash": "55f980c"
   },
-  "settings.operationLog.maxAge.opt.days30": "30 days",
+  "settings.operationLog.maxAge.opt.days30": "30 днів",
   "@settings.operationLog.maxAge.opt.days30": {
     "sourceHash": "ffd7280"
   },
-  "settings.operationLog.maxAge.opt.days90": "90 days",
+  "settings.operationLog.maxAge.opt.days90": "90 днів",
   "@settings.operationLog.maxAge.opt.days90": {
     "sourceHash": "38825b0"
   },
-  "settings.operationLog.maxAge.opt.year1": "1 year",
+  "settings.operationLog.maxAge.opt.year1": "1 рік",
   "@settings.operationLog.maxAge.opt.year1": {
     "sourceHash": "91647ba"
   },
-  "settings.operationLog.maxAge.keywords": "operation, log, history, retention, age, keep, prune, forever, days, undo",
+  "settings.operationLog.maxAge.keywords": "журнал, історія, термін, тривалість, давність, очищення, назавжди, дні, місяці, відміна",
   "@settings.operationLog.maxAge.keywords": {
     "sourceHash": "cc6f4ec"
   },
-  "settings.operationLog.maxSize.label": "Maximum size",
+  "settings.operationLog.maxSize.label": "Максимальний розмір",
   "@settings.operationLog.maxSize.label": {
     "sourceHash": "5a9f1ff"
   },
-  "settings.operationLog.maxSize.description": "The most disk space the operation log can use. When it fills up, Cmdr removes the oldest operations first.",
+  "settings.operationLog.maxSize.description": "Скільки місця на диску може займати журнал операцій. Коли ліміт вичерпано, Cmdr спершу вилучає найстаріші операції.",
   "@settings.operationLog.maxSize.description": {
     "sourceHash": "ad5152a"
   },
-  "settings.operationLog.maxSize.keywords": "operation, log, history, retention, size, disk, space, limit, megabytes, gigabytes",
+  "settings.operationLog.maxSize.keywords": "журнал, історія, розмір, обсяг, диск, місце, ліміт, обмеження, мегабайти, гігабайти, МБ, ГБ",
   "@settings.operationLog.maxSize.keywords": {
     "sourceHash": "2ea4edc"
   },
-  "settings.section.mcpServer": "MCP server",
+  "settings.section.mcpServer": "Сервер MCP",
   "@settings.section.mcpServer": {
     "sourceHash": "d938c81"
   },
-  "settings.section.updatesAndPrivacy": "Updates & privacy",
+  "settings.section.updatesAndPrivacy": "Оновлення та приватність",
   "@settings.section.updatesAndPrivacy": {
     "sourceHash": "74062eb"
   },
-  "settings.section.advanced": "Advanced",
+  "settings.section.advanced": "Експертні",
   "@settings.section.advanced": {
     "sourceHash": "9f088db"
   },
-  "settings.section.keyboardShortcuts": "Keyboard shortcuts",
+  "settings.section.keyboardShortcuts": "Клавіатурні скорочення",
   "@settings.section.keyboardShortcuts": {
     "sourceHash": "e9bef0b"
   },
-  "settings.section.license": "License",
+  "settings.section.license": "Ліцензія",
   "@settings.section.license": {
     "sourceHash": "c011d60"
   },
-  "settings.summary.colorsAndFormats": "Theme, app color, date and size coloring, and date/time format.",
+  "settings.summary.colorsAndFormats": "Тема, колір програми, кольори дат і розмірів, формат дати й часу.",
   "@settings.summary.colorsAndFormats": {
     "sourceHash": "ad30daf"
   },
-  "settings.summary.zoomAndDensity": "Text size and UI density for the whole app.",
+  "settings.summary.zoomAndDensity": "Розмір тексту й щільність інтерфейсу для всієї програми.",
   "@settings.summary.zoomAndDensity": {
     "sourceHash": "e32bbcf"
   },
-  "settings.summary.fileAndFolderSizes": "How sizes are shown in the file list and warnings about size mismatches.",
+  "settings.summary.fileAndFolderSizes": "Як показувати розміри в списку файлів і застереження про розбіжність розмірів.",
   "@settings.summary.fileAndFolderSizes": {
     "sourceHash": "cdd8214"
   },
-  "settings.summary.listing": "Document icons, folder sorting, and Brief mode column width.",
+  "settings.summary.listing": "Іконки документів, сортування папок і ширина стовпців у режимі «Короткий вигляд».",
   "@settings.summary.listing": {
     "sourceHash": "ebed448"
   },
-  "settings.summary.navigationAndFileOps": "Double-click-to-parent navigation, and behavior when renaming files.",
+  "settings.summary.navigationAndFileOps": "Перехід у батьківську папку подвійним клацанням і поведінка під час перейменування файлів.",
   "@settings.summary.navigationAndFileOps": {
     "sourceHash": "68e38d0"
   },
-  "settings.summary.archives": "What pressing Enter does on archives and app bundles: browse inside, open, or ask.",
+  "settings.summary.archives": "Що робить клавіша Enter на архівах і пакетах програм: переглянути вміст, відкрити чи запитати.",
   "@settings.summary.archives": {
     "sourceHash": "340a411"
   },
-  "settings.summary.notifications": "Downloads notifications, the global go-to-latest-download shortcut, and low-disk-space warnings.",
+  "settings.summary.notifications": "Сповіщення про викачане, глобальне скорочення для переходу до останнього викачаного файлу та застереження про брак місця на диску.",
   "@settings.summary.notifications": {
     "sourceHash": "e681776"
   },
-  "settings.summary.search": "Live-applied filename and regex searches, and the recent-searches cap.",
+  "settings.summary.search": "Пошук за назвою і регулярними виразами, що застосовується одразу, і ліміт недавніх пошуків.",
   "@settings.summary.search": {
     "sourceHash": "0e1d70f"
   },
-  "settings.summary.smbNetworkShares": "Enable networking, direct SMB connections, share cache, and timeouts.",
+  "settings.summary.smbNetworkShares": "Увімкнення роботи з мережею, пряме підʼєднання SMB, кеш спільних папок і час очікування.",
   "@settings.summary.smbNetworkShares": {
     "sourceHash": "10604ac"
   },
-  "settings.summary.servers": "The SSH host keys you’ve trusted.",
+  "settings.summary.servers": "Ключі хостів SSH, яким ви довіряєте.",
   "@settings.summary.servers": {
     "sourceHash": "3335380"
   },
-  "settings.summary.adb": "Browse an Android phone that has USB debugging turned on.",
+  "settings.summary.adb": "Перегляд файлів на телефоні Android, де ввімкнено «Налагодження USB».",
   "@settings.summary.adb": {
     "sourceHash": "fb69a13"
   },
-  "settings.summary.mtp": "Detect Android, Kindle, and camera devices over USB.",
+  "settings.summary.mtp": "Виявлення пристроїв Android, Kindle і камер через USB.",
   "@settings.summary.mtp": {
     "sourceHash": "f01960a"
   },
-  "settings.summary.git": "Repository chip, per-file status column, and the virtual `.git` portal.",
+  "settings.summary.git": "Мітка репозиторію, стовпець стану кожного файлу й віртуальний портал `.git`.",
   "@settings.summary.git": {
     "sourceHash": "fa23394"
   },
-  "settings.summary.mcpServer": "Configure the Model Context Protocol server for AI integrations.",
+  "settings.summary.mcpServer": "Налаштування сервера Model Context Protocol для інтеграцій зі ШІ.",
   "@settings.summary.mcpServer": {
     "sourceHash": "4cde8a6"
   },
-  "settings.summary.aiProvider": "Turn AI off, connect a cloud provider, or run a model locally.",
+  "settings.summary.aiProvider": "Вимкнути ШІ, підʼєднати хмарного постачальника або запускати модель локально.",
   "@settings.summary.aiProvider": {
     "sourceHash": "2fe940b"
   },
-  "settings.summary.askCmdr": "Chat with an AI about your files, drives, and history, and pick the model it uses.",
+  "settings.summary.askCmdr": "Чат зі ШІ про ваші файли, диски й історію, а також вибір моделі для нього.",
   "@settings.summary.askCmdr": {
     "sourceHash": "67eef6a"
   },
-  "settings.summary.driveIndexing": "Background drive indexing so search finds your files fast.",
+  "settings.summary.driveIndexing": "Фонове індексування дисків, щоб пошук швидко знаходив ваші файли.",
   "@settings.summary.driveIndexing": {
     "sourceHash": "ef8be32"
   },
-  "settings.summary.imageIndexing": "Search the text inside your images. Runs on your Mac, and nothing leaves it.",
+  "settings.summary.imageIndexing": "Пошук тексту на ваших зображеннях. Працює на вашому Mac, і ніщо не виходить за його межі.",
   "@settings.summary.imageIndexing": {
     "sourceHash": "cbeb785"
   },
-  "settings.summary.noSubsections": "This section has no subsections.",
+  "settings.summary.noSubsections": "У цьому розділі немає підрозділів.",
   "@settings.summary.noSubsections": {
     "sourceHash": "ba4b5b5"
   },
-  "settings.control.resetToDefault": "Reset to default",
+  "settings.control.resetToDefault": "Скинути до типового",
   "@settings.control.resetToDefault": {
     "sourceHash": "bc5b45a"
   },
-  "settings.control.restartRequired": "Restart required",
+  "settings.control.restartRequired": "Потрібен перезапуск",
   "@settings.control.restartRequired": {
     "sourceHash": "b468711"
   },
-  "settings.control.customValuePlaceholder": "Enter custom value",
+  "settings.control.customValuePlaceholder": "Введіть власне значення",
   "@settings.control.customValuePlaceholder": {
     "sourceHash": "999a63f"
   },
-  "settings.control.customOption": "Custom…",
+  "settings.control.customOption": "Власне…",
   "@settings.control.customOption": {
     "sourceHash": "c4e69d5"
   },
-  "settings.control.customPrefix": "Custom: {value}",
+  "settings.control.customPrefix": "Власне: {value}",
   "@settings.control.customPrefix": {
     "sourceHash": "58c3782"
   },
-  "settings.control.backToPresetsAriaLabel": "Back to presets",
+  "settings.control.backToPresetsAriaLabel": "Назад до наборів параметрів",
   "@settings.control.backToPresetsAriaLabel": {
     "sourceHash": "1579f3f"
   },
-  "settings.control.showValue": "Show value",
+  "settings.control.showValue": "Показати значення",
   "@settings.control.showValue": {
     "sourceHash": "fad206e"
   },
-  "settings.control.hideValue": "Hide value",
+  "settings.control.hideValue": "Сховати значення",
   "@settings.control.hideValue": {
     "sourceHash": "381d9c1"
   },
-  "settings.control.unitItems": "items",
+  "settings.control.unitItems": "елем.",
   "@settings.control.unitItems": {
     "sourceHash": "5f3c4f8"
   },
-  "settings.managed.rowNote": "Your organization manages this setting.",
+  "settings.managed.rowNote": "Цим параметром керує ваша установа.",
   "@settings.managed.rowNote": {
     "sourceHash": "891206b"
   },
-  "settings.managed.sectionNote": "Your organization manages some of these settings.",
+  "settings.managed.sectionNote": "Деякими з цих параметрів керує ваша установа.",
   "@settings.managed.sectionNote": {
     "sourceHash": "ab52c49"
   },
-  "settings.managed.summary.title": "Managed by your organization",
+  "settings.managed.summary.title": "Керує ваша установа",
   "@settings.managed.summary.title": {
     "sourceHash": "5450801"
   },
-  "settings.managed.summary.usageStats": "Usage stats",
+  "settings.managed.summary.usageStats": "Статистика використання",
   "@settings.managed.summary.usageStats": {
     "sourceHash": "4e0483c"
   },
-  "settings.managed.summary.usageStatsOff": "Off",
+  "settings.managed.summary.usageStatsOff": "Вимкнено",
   "@settings.managed.summary.usageStatsOff": {
     "sourceHash": "ca7981b"
   },
-  "settings.managed.summary.reports": "Crash and error reports",
+  "settings.managed.summary.reports": "Звіти про аварії та помилки",
   "@settings.managed.summary.reports": {
     "sourceHash": "ef409c3"
   },
-  "settings.managed.summary.reportsOff": "Off",
+  "settings.managed.summary.reportsOff": "Вимкнено",
   "@settings.managed.summary.reportsOff": {
     "sourceHash": "ca7981b"
   },
-  "settings.managed.summary.securityLog": "Security events",
+  "settings.managed.summary.securityLog": "Події безпеки",
   "@settings.managed.summary.securityLog": {
     "sourceHash": "774b6e0"
   },
-  "settings.managed.summary.securityLogRequired": "Always recorded",
+  "settings.managed.summary.securityLogRequired": "Завжди записуються",
   "@settings.managed.summary.securityLogRequired": {
     "sourceHash": "baf73d6"
   },
-  "settings.managed.summary.updates": "Updates",
+  "settings.managed.summary.updates": "Оновлення",
   "@settings.managed.summary.updates": {
     "sourceHash": "22e2bad"
   },
-  "settings.managed.summary.updatesOff": "Off",
+  "settings.managed.summary.updatesOff": "Вимкнено",
   "@settings.managed.summary.updatesOff": {
     "sourceHash": "ca7981b"
   },
-  "settings.managed.summary.ai": "AI",
+  "settings.managed.summary.ai": "ШІ",
   "@settings.managed.summary.ai": {
     "sourceHash": "11fb682"
   },
-  "settings.managed.summary.aiOff": "Off",
+  "settings.managed.summary.aiOff": "Вимкнено",
   "@settings.managed.summary.aiOff": {
     "sourceHash": "ca7981b"
   },
-  "settings.managed.summary.upTo": "Up to version {ceiling}",
+  "settings.managed.summary.upTo": "До версії {ceiling} включно",
   "@settings.managed.summary.upTo": {
     "sourceHash": "01b151a"
   },
-  "settings.managed.summary.manualChecksOnly": "Checked by hand only",
+  "settings.managed.summary.manualChecksOnly": "Лише ручна перевірка",
   "@settings.managed.summary.manualChecksOnly": {
     "sourceHash": "1969d26"
   },
-  "settings.managed.summary.upToManualChecksOnly": "Up to version {ceiling}, checked by hand only",
+  "settings.managed.summary.upToManualChecksOnly": "До версії {ceiling} включно, лише ручна перевірка",
   "@settings.managed.summary.upToManualChecksOnly": {
     "sourceHash": "21aaa8a"
   },
-  "settings.managed.summary.onDeviceOnly": "On-device only",
+  "settings.managed.summary.onDeviceOnly": "Лише на пристрої",
   "@settings.managed.summary.onDeviceOnly": {
     "sourceHash": "d4f8552"
   },
-  "settings.managed.summary.cloudHostsOnly": "Cloud AI only through {hosts}",
+  "settings.managed.summary.cloudHostsOnly": "Хмарний ШІ лише через {hosts}",
   "@settings.managed.summary.cloudHostsOnly": {
     "sourceHash": "00f1237"
   },
-  "settings.sidebar.searchPlaceholder": "Search settings…",
+  "settings.sidebar.searchPlaceholder": "Пошук параметрів…",
   "@settings.sidebar.searchPlaceholder": {
     "sourceHash": "57054c5"
   },
-  "settings.sidebar.clearSearch": "Clear search",
+  "settings.sidebar.clearSearch": "Очистити пошук",
   "@settings.sidebar.clearSearch": {
     "sourceHash": "3b7ea51"
   },
-  "settings.sidebar.sections": "Settings sections",
+  "settings.sidebar.sections": "Розділи параметрів",
   "@settings.sidebar.sections": {
     "sourceHash": "e26d51d"
   },
-  "settings.sidebar.matchCount": "{count, plural, =0 {No settings match} one {{countText} section matches} other {{countText} sections match}}",
+  "settings.sidebar.matchCount": "{count, plural, =0 {Немає параметрів, що збігаються} one {{countText} розділ має збіги} few {{countText} розділи мають збіги} many {{countText} розділів мають збіги} other {{countText} розділу мають збіги}}",
   "@settings.sidebar.matchCount": {
     "sourceHash": "fb95dc1"
   },
-  "settings.appearance.themeColorSwatchAria": "Open System Settings to change the system theme color",
+  "settings.appearance.themeColorSwatchAria": "Відкрити Системні параметри, щоб змінити колір теми системи",
   "@settings.appearance.themeColorSwatchAria": {
     "sourceHash": "4cad022"
   },
-  "settings.appearance.appColorHintPrefix": "To change your system theme color, go to",
+  "settings.appearance.appColorHintPrefix": "Щоб змінити колір теми системи, перейдіть у",
   "@settings.appearance.appColorHintPrefix": {
     "sourceHash": "748470a"
   },
   "settings.appearance.appColorHintLinkMac": "{systemSettings} > {appearance}",
   "@settings.appearance.appColorHintLinkMac": {
-    "sourceHash": "5c94206"
+    "sourceHash": "5c94206",
+    "sameAsSourceJustification": "Placeholder-only path: both parts are OS-localized macOS labels injected at runtime, and the > separator is how Ukrainian macOS paths read too."
   },
-  "settings.appearance.appColorHintLinkOther": "your system appearance settings",
+  "settings.appearance.appColorHintLinkOther": "системні параметри вигляду",
   "@settings.appearance.appColorHintLinkOther": {
     "sourceHash": "0aad057"
   },
-  "settings.appearance.datePreviewLabel": "Preview:",
+  "settings.appearance.datePreviewLabel": "Попередній перегляд:",
   "@settings.appearance.datePreviewLabel": {
     "sourceHash": "75954c5"
   },
-  "settings.appearance.dateInvalidFormat": "Invalid format",
+  "settings.appearance.dateInvalidFormat": "Неправильний формат",
   "@settings.appearance.dateInvalidFormat": {
     "sourceHash": "b14c1c9"
   },
-  "settings.appearance.hideFormatHelp": "Hide format help",
+  "settings.appearance.hideFormatHelp": "Сховати довідку щодо формату",
   "@settings.appearance.hideFormatHelp": {
     "sourceHash": "391c6b3"
   },
-  "settings.appearance.showFormatHelp": "Show format help",
+  "settings.appearance.showFormatHelp": "Показати довідку щодо формату",
   "@settings.appearance.showFormatHelp": {
     "sourceHash": "01cb92f"
   },
-  "settings.appearance.formatPlaceholdersTitle": "Format placeholders",
+  "settings.appearance.formatPlaceholdersTitle": "Заповнювачі формату",
   "@settings.appearance.formatPlaceholdersTitle": {
     "sourceHash": "9099bde"
   },
-  "settings.appearance.formatHelpYear": "4-digit year (2025)",
+  "settings.appearance.formatHelpYear": "Чотирицифровий рік (2025)",
   "@settings.appearance.formatHelpYear": {
     "sourceHash": "467ff57"
   },
-  "settings.appearance.formatHelpMonth": "2-digit month (01-12)",
+  "settings.appearance.formatHelpMonth": "Двоцифровий місяць (01–12)",
   "@settings.appearance.formatHelpMonth": {
     "sourceHash": "b11b1a6"
   },
-  "settings.appearance.formatHelpDay": "2-digit day (01-31)",
+  "settings.appearance.formatHelpDay": "Двоцифровий день (01–31)",
   "@settings.appearance.formatHelpDay": {
     "sourceHash": "cb5c2d8"
   },
-  "settings.appearance.formatHelpHour": "2-digit hour (00-23)",
+  "settings.appearance.formatHelpHour": "Двоцифрова година (00–23)",
   "@settings.appearance.formatHelpHour": {
     "sourceHash": "01feb4d"
   },
-  "settings.appearance.formatHelpMinute": "2-digit minute (00-59)",
+  "settings.appearance.formatHelpMinute": "Двоцифрова хвилина (00–59)",
   "@settings.appearance.formatHelpMinute": {
     "sourceHash": "6dffd33"
   },
-  "settings.appearance.formatHelpSecond": "2-digit second (00-59)",
+  "settings.appearance.formatHelpSecond": "Двоцифрова секунда (00–59)",
   "@settings.appearance.formatHelpSecond": {
     "sourceHash": "982834c"
   },
-  "settings.appearance.tintGroupDescription": "Adds a faint background tint to panes so you can tell volume types apart at a glance.",
+  "settings.appearance.tintGroupDescription": "Додає панелям ледь помітний фоновий відтінок, щоб з першого погляду розрізняти типи томів.",
   "@settings.appearance.tintGroupDescription": {
     "sourceHash": "fae3040"
   },
-  "settings.appearance.tintSwatchAria": "Choose a tint color for {label}",
+  "settings.appearance.tintSwatchAria": "Вибір кольору відтінку: {label}",
   "@settings.appearance.tintSwatchAria": {
     "sourceHash": "b9030b5"
   },
-  "settings.appearance.tintColorsAria": "Tint colors",
+  "settings.appearance.tintColorsAria": "Кольори відтінку",
   "@settings.appearance.tintColorsAria": {
     "sourceHash": "c649cd7"
   },
-  "settings.appearance.tintTriggerAria": "{label} (currently: {colorName})",
+  "settings.appearance.tintTriggerAria": "{label} (зараз: {colorName})",
   "@settings.appearance.tintTriggerAria": {
     "sourceHash": "d9a874a"
   },
@@ -2849,7 +2855,7 @@
   "@settings.ai.tooltipLocalDisabled": {
     "sourceHash": "8119608"
   },
-  "settings.fileSystemWatching.indexSize": "Index size",
+  "settings.fileSystemWatching.indexSize": "Розмір індексу",
   "@settings.fileSystemWatching.indexSize": {
     "sourceHash": "adbb92c"
   },
@@ -2857,59 +2863,59 @@
   "@settings.indexing.indexSize.keywords": {
     "sourceHash": "2a99f52"
   },
-  "settings.fileSystemWatching.clearing": "Clearing…",
+  "settings.fileSystemWatching.clearing": "Очищення…",
   "@settings.fileSystemWatching.clearing": {
     "sourceHash": "9a81378"
   },
-  "settings.fileSystemWatching.clearIndex": "Clear index",
+  "settings.fileSystemWatching.clearIndex": "Очистити індекс",
   "@settings.fileSystemWatching.clearIndex": {
     "sourceHash": "14e9925"
   },
-  "settings.fileSystemWatching.noIndex": "No index",
+  "settings.fileSystemWatching.noIndex": "Індексу немає",
   "@settings.fileSystemWatching.noIndex": {
     "sourceHash": "14eee3b"
   },
-  "settings.fileSystemWatching.clearIndexDescription": "Deletes every drive’s index. Indexing builds it again, and so does searching a folder Cmdr hasn’t indexed.",
+  "settings.fileSystemWatching.clearIndexDescription": "Видаляє індекс кожного диска. Індексування створить його знову, як і пошук у папці, яку Cmdr ще не проіндексував.",
   "@settings.fileSystemWatching.clearIndexDescription": {
     "sourceHash": "b6074f3"
   },
-  "settings.fileSystemWatching.cardDownloads": "Downloads",
+  "settings.fileSystemWatching.cardDownloads": "Викачане",
   "@settings.fileSystemWatching.cardDownloads": {
     "sourceHash": "d5fdc1a"
   },
-  "settings.notifications.cardOnScreen": "On-screen notifications",
+  "settings.notifications.cardOnScreen": "Сповіщення на екрані",
   "@settings.notifications.cardOnScreen": {
     "sourceHash": "e6a780e"
   },
-  "settings.fileSystemWatching.cardLowDiskSpace": "Low disk space",
+  "settings.fileSystemWatching.cardLowDiskSpace": "Мало місця на диску",
   "@settings.fileSystemWatching.cardLowDiskSpace": {
     "sourceHash": "5b1f5bf"
   },
-  "settings.appearance.card.language": "Language",
+  "settings.appearance.card.language": "Мова",
   "@settings.appearance.card.language": {
     "sourceHash": "a4fe652"
   },
-  "settings.appearance.card.theme": "Theme",
+  "settings.appearance.card.theme": "Тема",
   "@settings.appearance.card.theme": {
     "sourceHash": "efb52e7"
   },
-  "settings.appearance.card.listColoring": "List coloring",
+  "settings.appearance.card.listColoring": "Розфарбування списку",
   "@settings.appearance.card.listColoring": {
     "sourceHash": "6e50578"
   },
-  "settings.appearance.card.dateAndTime": "Date and time",
+  "settings.appearance.card.dateAndTime": "Дата й час",
   "@settings.appearance.card.dateAndTime": {
     "sourceHash": "a079c3b"
   },
-  "settings.appearance.card.paneTints": "Pane tints",
+  "settings.appearance.card.paneTints": "Відтінки панелей",
   "@settings.appearance.card.paneTints": {
     "sourceHash": "8bc83d1"
   },
-  "settings.appearance.card.namesAndIcons": "Names and icons",
+  "settings.appearance.card.namesAndIcons": "Назви й іконки",
   "@settings.appearance.card.namesAndIcons": {
     "sourceHash": "8386169"
   },
-  "settings.appearance.card.briefMode": "Brief mode",
+  "settings.appearance.card.briefMode": "Короткий вигляд",
   "@settings.appearance.card.briefMode": {
     "sourceHash": "b75e4b3"
   },
@@ -2921,63 +2927,64 @@
   "@settings.network.card.performanceAndTimeouts": {
     "sourceHash": "51014ee"
   },
-  "settings.advanced.card.performance": "Performance",
+  "settings.advanced.card.performance": "Швидкодія",
   "@settings.advanced.card.performance": {
     "sourceHash": "442aded"
   },
-  "settings.advanced.card.fileWatching": "File watching",
+  "settings.advanced.card.fileWatching": "Відстеження змін файлів",
   "@settings.advanced.card.fileWatching": {
     "sourceHash": "c65b844"
   },
-  "settings.advanced.card.networkAndMounts": "Network and mounts",
+  "settings.advanced.card.networkAndMounts": "Мережа й монтування",
   "@settings.advanced.card.networkAndMounts": {
     "sourceHash": "cdde638"
   },
-  "settings.advanced.card.hintsAndWarnings": "Hints and warnings",
+  "settings.advanced.card.hintsAndWarnings": "Підказки й застереження",
   "@settings.advanced.card.hintsAndWarnings": {
     "sourceHash": "8754216"
   },
-  "settings.advanced.card.input": "Input",
+  "settings.advanced.card.input": "Введення",
   "@settings.advanced.card.input": {
     "sourceHash": "36ecb4f"
   },
-  "settings.advanced.card.fileOperations": "File operations",
+  "settings.advanced.card.fileOperations": "Операції з файлами",
   "@settings.advanced.card.fileOperations": {
     "sourceHash": "ed23515"
   },
-  "settings.advanced.card.historyAndLimits": "History and limits",
+  "settings.advanced.card.historyAndLimits": "Історія й ліміти",
   "@settings.advanced.card.historyAndLimits": {
     "sourceHash": "3e01a24"
   },
-  "settings.advanced.card.loggingAndDiagnostics": "Logging and diagnostics",
+  "settings.advanced.card.loggingAndDiagnostics": "Журналювання й діагностика",
   "@settings.advanced.card.loggingAndDiagnostics": {
     "sourceHash": "5d74805"
   },
-  "settings.advanced.card.updates": "Updates",
+  "settings.advanced.card.updates": "Оновлення",
   "@settings.advanced.card.updates": {
     "sourceHash": "22e2bad"
   },
   "settings.advanced.card.askCmdr": "Ask Cmdr",
   "@settings.advanced.card.askCmdr": {
-    "sourceHash": "aafb1ce"
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Product name of the in-app assistant; the ask-cmdr ruling keeps it verbatim in every language."
   },
-  "settings.askCmdr.toolGroupsOnAnswer.label": "Tool groups when the answer arrives",
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Групи інструментів, коли надходить відповідь",
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr shows what the AI looks at while it works. Pick whether those lines fold away once the answer arrives.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr показує, що переглядає ШІ під час роботи. Виберіть, чи згортати ці рядки, коли надійде відповідь.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
     "sourceHash": "785da0a"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Згортати їх",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
     "sourceHash": "01052be"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Leave them as I had them",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Залишати як є",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
     "sourceHash": "0aa6718"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistant, chat, collapse, expand, fold, tools, steps, answer",
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "асистент, чат, згорнути, розгорнути, інструменти, кроки, відповідь",
   "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
     "sourceHash": "6a9f055"
   },
@@ -2993,19 +3000,19 @@
   "@settings.updates.card.securityEvents": {
     "sourceHash": "774b6e0"
   },
-  "settings.securityLog.enabled.label": "Record security events",
+  "settings.securityLog.enabled.label": "Записувати події безпеки",
   "@settings.securityLog.enabled.label": {
     "sourceHash": "9f5e32e"
   },
-  "settings.securityLog.enabled.description": "Keep a small file on this Mac that notes security-relevant changes and refusals, like cloud AI consent, an installed update, or an app turned away from the MCP server. It holds no file names, contents, or passwords, and it never leaves your Mac.",
+  "settings.securityLog.enabled.description": "Зберігати на цьому Mac невеликий файл, де записано важливі для безпеки зміни й відмови, як-от згоду на хмарний ШІ, інстальоване оновлення чи програму, якій сервер MCP відмовив у доступі. У ньому немає назв файлів, їхнього вмісту чи паролів, і він ніколи не залишає ваш Mac.",
   "@settings.securityLog.enabled.description": {
     "sourceHash": "11361eb"
   },
-  "settings.securityLog.enabled.keywords": "security, log, audit, record, events, access, privacy",
+  "settings.securityLog.enabled.keywords": "безпека, аудит, журнал, лог, події, доступ, приватність, конфіденційність",
   "@settings.securityLog.enabled.keywords": {
     "sourceHash": "6f113c0"
   },
-  "settings.securityLog.showInFinder": "Show in Finder",
+  "settings.securityLog.showInFinder": "Показати у Finder",
   "@settings.securityLog.showInFinder": {
     "sourceHash": "c2a9c77"
   },
@@ -3013,7 +3020,7 @@
   "@settings.updates.showSecurityLog.keywords": {
     "sourceHash": "a5708ab"
   },
-  "settings.fileSystemWatching.globalShortcutHint": "Change the shortcut under Keyboard shortcuts → Go to latest download (global).",
+  "settings.fileSystemWatching.globalShortcutHint": "Змінити скорочення можна в розділі «Клавіатурні скорочення» → «Перейти до останнього викачаного файлу (глобально)».",
   "@settings.fileSystemWatching.globalShortcutHint": {
     "sourceHash": "1af3da4"
   },
@@ -3074,87 +3081,87 @@
   "@settings.updates.emailPrivacyNote": {
     "sourceHash": "cf92795"
   },
-  "settings.logging.openLogFile": "Open log file",
+  "settings.logging.openLogFile": "Відкрити файл журналу",
   "@settings.logging.openLogFile": {
     "sourceHash": "ec1bc04"
   },
-  "settings.advanced.openLogFile.keywords": "log, logs, file, folder, reveal",
+  "settings.advanced.openLogFile.keywords": "журнал, логи, файл, папка, показати, знайти",
   "@settings.advanced.openLogFile.keywords": {
     "sourceHash": "25e0c5a"
   },
-  "settings.logging.copied": "Copied!",
+  "settings.logging.copied": "Скопійовано!",
   "@settings.logging.copied": {
     "sourceHash": "ea61bc1"
   },
-  "settings.logging.copyDiagnostics": "Copy diagnostic info",
+  "settings.logging.copyDiagnostics": "Скопіювати діагностичну інформацію",
   "@settings.logging.copyDiagnostics": {
     "sourceHash": "b8e7644"
   },
-  "settings.advanced.copyDiagnostics.keywords": "diagnostics, copy, version, support, clipboard",
+  "settings.advanced.copyDiagnostics.keywords": "діагностика, скопіювати, версія, підтримка, буфер обміну, звіт",
   "@settings.advanced.copyDiagnostics.keywords": {
     "sourceHash": "d7ce56b"
   },
-  "settings.mcp.checkPort": "Check port",
+  "settings.mcp.checkPort": "Перевірити порт",
   "@settings.mcp.checkPort": {
     "sourceHash": "de685bf"
   },
-  "settings.mcp.runningOnPort": "Server is running on port {runningPort}",
+  "settings.mcp.runningOnPort": "Сервер працює на порту {runningPort}",
   "@settings.mcp.runningOnPort": {
     "sourceHash": "a9dd980"
   },
-  "settings.mcp.ephemeral": "(ephemeral)",
+  "settings.mcp.ephemeral": "(тимчасовий)",
   "@settings.mcp.ephemeral": {
     "sourceHash": "42fb229"
   },
-  "settings.mcp.portInUseFallback": "(port {port} was in use)",
+  "settings.mcp.portInUseFallback": "(порт {port} уже використовувався)",
   "@settings.mcp.portInUseFallback": {
     "sourceHash": "bf23daa"
   },
-  "settings.mcp.checkingPort": "Checking port availability…",
+  "settings.mcp.checkingPort": "Перевірка, чи вільний порт…",
   "@settings.mcp.checkingPort": {
     "sourceHash": "6069f12"
   },
-  "settings.mcp.portAvailable": "Port {port} is available",
+  "settings.mcp.portAvailable": "Порт {port} вільний",
   "@settings.mcp.portAvailable": {
     "sourceHash": "4559f69"
   },
-  "settings.mcp.portInUseStillRunning": "Port {port} is in use, still running on port {runningPort}",
+  "settings.mcp.portInUseStillRunning": "Порт {port} уже використовується, сервер і далі працює на порту {runningPort}",
   "@settings.mcp.portInUseStillRunning": {
     "sourceHash": "e188629"
   },
-  "settings.mcp.portInUse": "Port {port} is in use",
+  "settings.mcp.portInUse": "Порт {port} уже використовується",
   "@settings.mcp.portInUse": {
     "sourceHash": "4f746de"
   },
-  "settings.mcp.usePortInstead": "Use port {suggestedPort} instead",
+  "settings.mcp.usePortInstead": "Використати порт {suggestedPort}",
   "@settings.mcp.usePortInstead": {
     "sourceHash": "a0d7a0d"
   },
-  "settings.advanced.warningBanner": "These settings are for advanced users. Incorrect values may cause performance issues or unexpected behavior.",
+  "settings.advanced.warningBanner": "Ці параметри для досвідчених користувачів. Неправильні значення можуть погіршити швидкодію або спричинити неочікувану поведінку.",
   "@settings.advanced.warningBanner": {
     "sourceHash": "b1dbbf4"
   },
-  "settings.advanced.resetAll": "Reset all to defaults",
+  "settings.advanced.resetAll": "Скинути все до типових",
   "@settings.advanced.resetAll": {
     "sourceHash": "a04d9be"
   },
-  "settings.advanced.resetAll.keywords": "reset, defaults, restore, factory",
+  "settings.advanced.resetAll.keywords": "скинути, типові, відновити, заводські, початкові",
   "@settings.advanced.resetAll.keywords": {
     "sourceHash": "05b1de6"
   },
-  "settings.advanced.resetAllConfirm": "Reset all advanced settings to their defaults? This cannot be undone.",
+  "settings.advanced.resetAllConfirm": "Скинути всі експертні параметри до типових? Цю дію не можна відмінити.",
   "@settings.advanced.resetAllConfirm": {
     "sourceHash": "be08f2a"
   },
-  "settings.advanced.resetAllConfirmTitle": "Reset advanced settings",
+  "settings.advanced.resetAllConfirmTitle": "Скинути експертні параметри",
   "@settings.advanced.resetAllConfirmTitle": {
     "sourceHash": "a1d9808"
   },
-  "settings.advanced.defaultPrefix": "Default:",
+  "settings.advanced.defaultPrefix": "Типово:",
   "@settings.advanced.defaultPrefix": {
     "sourceHash": "d1f6d9e"
   },
-  "settings.applier.logStorageRestart": "Restart Cmdr to apply the log storage change.",
+  "settings.applier.logStorageRestart": "Перезапустіть Cmdr, щоб застосувати нові параметри зберігання журналу.",
   "@settings.applier.logStorageRestart": {
     "sourceHash": "b833dee"
   },
@@ -3214,15 +3221,15 @@
   "@settings.mediaIndex.chosenFolders.removeAria": {
     "sourceHash": "338e30a"
   },
-  "settings.window.title": "Settings",
+  "settings.window.title": "Параметри",
   "@settings.window.title": {
     "sourceHash": "74a883a"
   },
-  "settings.window.loading": "Loading settings…",
+  "settings.window.loading": "Завантаження параметрів…",
   "@settings.window.loading": {
     "sourceHash": "e71a134"
   },
-  "settings.servers.card.trustedHostKeys": "Trusted host keys",
+  "settings.servers.card.trustedHostKeys": "Довірені ключі хостів",
   "@settings.servers.card.trustedHostKeys": {
     "sourceHash": "46c5c9d"
   },
@@ -3230,7 +3237,7 @@
   "@settings.network.trustedHostKeys.keywords": {
     "sourceHash": "d111f38"
   },
-  "settings.servers.card.trustedCertificates": "Trusted certificates",
+  "settings.servers.card.trustedCertificates": "Довірені сертифікати",
   "@settings.servers.card.trustedCertificates": {
     "sourceHash": "3259d5c"
   },
@@ -3238,87 +3245,87 @@
   "@settings.network.trustedCertificates.keywords": {
     "sourceHash": "554a965"
   },
-  "settings.servers.trustedCertificates.description": "When macOS doesn’t trust a server’s certificate, Cmdr asks before it trusts it for you, and remembers your answer here. Home servers often make their own.",
+  "settings.servers.trustedCertificates.description": "Коли macOS не довіряє сертифікату сервера, Cmdr питає вас, перш ніж довіряти йому, і запамʼятовує вашу відповідь тут. Домашні сервери часто створюють власні сертифікати.",
   "@settings.servers.trustedCertificates.description": {
     "sourceHash": "0b00c1e"
   },
-  "settings.servers.trustedCertificates.empty": "Nothing trusted yet. When you connect to a WebDAV server macOS doesn’t trust, Cmdr shows you its certificate’s fingerprint and asks.",
+  "settings.servers.trustedCertificates.empty": "Поки нічого не довірено. Коли ви підʼєднаєтеся до сервера WebDAV, якому macOS не довіряє, Cmdr покаже відбиток його сертифіката й запитає вас.",
   "@settings.servers.trustedCertificates.empty": {
     "sourceHash": "a3c2089"
   },
-  "settings.servers.trustedCertificates.confirmTitle": "Forget this certificate?",
+  "settings.servers.trustedCertificates.confirmTitle": "Забути цей сертифікат?",
   "@settings.servers.trustedCertificates.confirmTitle": {
     "sourceHash": "848e837"
   },
-  "settings.servers.trustedCertificates.confirm": "The next time you connect to {host}, Cmdr will show you its certificate’s fingerprint and ask whether to trust it.",
+  "settings.servers.trustedCertificates.confirm": "Наступного разу, коли ви підʼєднаєтеся до сервера {host}, Cmdr покаже відбиток сертифіката сервера й запитає, чи довіряти йому.",
   "@settings.servers.trustedCertificates.confirm": {
     "sourceHash": "d1e2c68"
   },
-  "settings.servers.trustedHostKeys.description": "Cmdr asks before it trusts a server’s key the first time you connect, and remembers your answer here. Saved servers live in the Servers list, not on this page.",
+  "settings.servers.trustedHostKeys.description": "Коли ви вперше підʼєднуєтеся до сервера, Cmdr питає, перш ніж довіряти його ключу, і запамʼятовує вашу відповідь тут. Збережені сервери містяться в списку «Сервери», а не на цій сторінці.",
   "@settings.servers.trustedHostKeys.description": {
     "sourceHash": "b3a8900"
   },
-  "settings.servers.trustedHostKeys.empty": "Nothing trusted yet. The first time you connect to an SFTP server, Cmdr shows you its fingerprint and asks.",
+  "settings.servers.trustedHostKeys.empty": "Поки нічого не довірено. Коли ви вперше підʼєднаєтеся до сервера SFTP, Cmdr покаже відбиток його ключа й запитає вас.",
   "@settings.servers.trustedHostKeys.empty": {
     "sourceHash": "7bc982e"
   },
-  "settings.servers.trustedHostKeys.approvedPrefix": "Trusted",
+  "settings.servers.trustedHostKeys.approvedPrefix": "Довірено",
   "@settings.servers.trustedHostKeys.approvedPrefix": {
     "sourceHash": "639538c"
   },
-  "settings.servers.trustedHostKeys.forget": "Forget",
+  "settings.servers.trustedHostKeys.forget": "Забути",
   "@settings.servers.trustedHostKeys.forget": {
     "sourceHash": "a6bd489"
   },
-  "settings.servers.trustedHostKeys.confirmTitle": "Forget this key?",
+  "settings.servers.trustedHostKeys.confirmTitle": "Забути цей ключ?",
   "@settings.servers.trustedHostKeys.confirmTitle": {
     "sourceHash": "524bfa5"
   },
-  "settings.servers.trustedHostKeys.confirm": "The next time you connect to {host}, Cmdr will show you its key fingerprint and ask whether to trust it.",
+  "settings.servers.trustedHostKeys.confirm": "Наступного разу, коли ви підʼєднаєтеся до сервера {host}, Cmdr покаже відбиток ключа сервера й запитає, чи довіряти йому.",
   "@settings.servers.trustedHostKeys.confirm": {
     "sourceHash": "6db1a3f"
   },
-  "settings.adb.status.label": "Status",
+  "settings.adb.status.label": "Стан",
   "@settings.adb.status.label": {
     "sourceHash": "920e413"
   },
-  "settings.adb.status.foundAt": "Found at {path}",
+  "settings.adb.status.foundAt": "Знайдено: {path}",
   "@settings.adb.status.foundAt": {
     "sourceHash": "c49cc6a"
   },
-  "settings.adb.status.notFound": "Not found",
+  "settings.adb.status.notFound": "Не знайдено",
   "@settings.adb.status.notFound": {
     "sourceHash": "e3ebaa1"
   },
-  "settings.adb.status.watching": "Watching for phones.",
+  "settings.adb.status.watching": "Стеження за телефонами ввімкнено.",
   "@settings.adb.status.watching": {
     "sourceHash": "d1538e3"
   },
-  "settings.adb.status.notWatching": "Not watching for phones right now.",
+  "settings.adb.status.notWatching": "Зараз стеження за телефонами не ведеться.",
   "@settings.adb.status.notWatching": {
     "sourceHash": "6e1936c"
   },
-  "settings.adb.status.keywords": "status, re-check, recheck, found, not found, install, watching for phones, detect phones, connected",
+  "settings.adb.status.keywords": "стан, перевірити знову, перевірка, знайдено, не знайдено, інсталювати, встановити, телефони, виявлення, підключено",
   "@settings.adb.status.keywords": {
     "sourceHash": "3e05996"
   },
-  "settings.adb.recheck": "Re-check",
+  "settings.adb.recheck": "Перевірити знову",
   "@settings.adb.recheck": {
     "sourceHash": "24fcca0"
   },
-  "settings.adb.install.intro": "Install the Android platform tools, then choose Re-check:",
+  "settings.adb.install.intro": "Інсталюйте Android platform tools, а тоді натисніть «Перевірити знову»:",
   "@settings.adb.install.intro": {
     "sourceHash": "9f7a0f4"
   },
-  "settings.adb.pathPlaceholder": "Cmdr looks for adb the usual way",
+  "settings.adb.pathPlaceholder": "Cmdr шукає adb у звичних місцях",
   "@settings.adb.pathPlaceholder": {
     "sourceHash": "538b307"
   },
-  "settings.adb.browse": "Browse…",
+  "settings.adb.browse": "Огляд…",
   "@settings.adb.browse": {
     "sourceHash": "93c6b66"
   },
-  "settings.adb.pickerTitle": "Choose the adb command",
+  "settings.adb.pickerTitle": "Вибрати команду adb",
   "@settings.adb.pickerTitle": {
     "sourceHash": "d6fc142"
   },
@@ -3330,15 +3337,15 @@
   "@settings.fileExplorer.quickFilterIntroSeen.description": {
     "sourceHash": "855c661"
   },
-  "settings.dataWipe.card": "Your data on this Mac",
+  "settings.dataWipe.card": "Ваші дані на цьому Mac",
   "@settings.dataWipe.card": {
     "sourceHash": "e4b3cee"
   },
-  "settings.dataWipe.description": "Delete everything Cmdr keeps on this Mac: settings, saved passwords, histories, indexes, and downloaded models. Cmdr quits afterwards.",
+  "settings.dataWipe.description": "Видаляє все, що Cmdr зберігає на цьому Mac: параметри, збережені паролі, історію, індекси й викачані моделі. Після цього Cmdr завершує роботу.",
   "@settings.dataWipe.description": {
     "sourceHash": "f1012f4"
   },
-  "settings.dataWipe.button": "Delete all Cmdr data",
+  "settings.dataWipe.button": "Видалити всі дані Cmdr",
   "@settings.dataWipe.button": {
     "sourceHash": "fbb253f"
   },
@@ -3346,147 +3353,147 @@
   "@settings.updates.deleteAllData.keywords": {
     "sourceHash": "0ffb0f6"
   },
-  "settings.dataWipe.title": "Delete all Cmdr data on this Mac?",
+  "settings.dataWipe.title": "Видалити всі дані Cmdr на цьому Mac?",
   "@settings.dataWipe.title": {
     "sourceHash": "35db003"
   },
-  "settings.dataWipe.intro": "Cmdr deletes everything it keeps on this Mac, then quits. This can’t be undone.",
+  "settings.dataWipe.intro": "Cmdr видалить усе, що зберігає на цьому Mac, а потім завершить роботу. Цю дію не можна відмінити.",
   "@settings.dataWipe.intro": {
     "sourceHash": "61ed875"
   },
-  "settings.dataWipe.introWithSize": "Cmdr deletes everything it keeps on this Mac ({sizeText}), then quits. This can’t be undone.",
+  "settings.dataWipe.introWithSize": "Cmdr видалить усе, що зберігає на цьому Mac ({sizeText}), а потім завершить роботу. Цю дію не можна відмінити.",
   "@settings.dataWipe.introWithSize": {
     "sourceHash": "e5262e8"
   },
-  "settings.dataWipe.goesHeading": "What goes",
+  "settings.dataWipe.goesHeading": "Що буде видалено",
   "@settings.dataWipe.goesHeading": {
     "sourceHash": "8b63982"
   },
-  "settings.dataWipe.goes.settings": "Settings and keyboard shortcuts",
+  "settings.dataWipe.goes.settings": "Параметри й клавіатурні скорочення",
   "@settings.dataWipe.goes.settings": {
     "sourceHash": "1601cfc"
   },
-  "settings.dataWipe.goes.servers": "Saved servers and their passwords",
+  "settings.dataWipe.goes.servers": "Збережені сервери та їхні паролі",
   "@settings.dataWipe.goes.servers": {
     "sourceHash": "9cf965e"
   },
-  "settings.dataWipe.goes.apiKeys": "API keys for cloud AI",
+  "settings.dataWipe.goes.apiKeys": "Ключі API для хмарного ШІ",
   "@settings.dataWipe.goes.apiKeys": {
     "sourceHash": "146397c"
   },
-  "settings.dataWipe.goes.license": "The license on this Mac. To activate it again, enter the license key from your purchase email.",
+  "settings.dataWipe.goes.license": "Ліцензія на цьому Mac. Щоб активувати її знову, введіть ліцензійний ключ із листа про покупку.",
   "@settings.dataWipe.goes.license": {
     "sourceHash": "90b5b06"
   },
-  "settings.dataWipe.goes.licenseIfAny": "The license on this Mac, if you activated one. To activate it again, enter the license key from your purchase email.",
+  "settings.dataWipe.goes.licenseIfAny": "Ліцензія на цьому Mac, якщо ви її активували. Щоб активувати її знову, введіть ліцензійний ключ із листа про покупку.",
   "@settings.dataWipe.goes.licenseIfAny": {
     "sourceHash": "db7f6f2"
   },
-  "settings.dataWipe.goes.askCmdr": "Ask Cmdr chats and what it remembers about you",
+  "settings.dataWipe.goes.askCmdr": "Чати Ask Cmdr і все, що запамʼятано про вас",
   "@settings.dataWipe.goes.askCmdr": {
     "sourceHash": "f1494a4"
   },
-  "settings.dataWipe.goes.histories": "Recent folders, searches, and other histories",
+  "settings.dataWipe.goes.histories": "Недавні папки, пошуки та інша історія",
   "@settings.dataWipe.goes.histories": {
     "sourceHash": "10b27a1"
   },
-  "settings.dataWipe.goes.operationLog": "The operation log of your copies, moves, and deletes",
+  "settings.dataWipe.goes.operationLog": "Журнал операцій: ваші копіювання, переміщення й видалення",
   "@settings.dataWipe.goes.operationLog": {
     "sourceHash": "d73e0a5"
   },
-  "settings.dataWipe.goes.indexes": "The drive index and image search data",
+  "settings.dataWipe.goes.indexes": "Індекс дисків і дані пошуку зображень",
   "@settings.dataWipe.goes.indexes": {
     "sourceHash": "ac147df"
   },
-  "settings.dataWipe.goes.models": "Downloaded AI models",
+  "settings.dataWipe.goes.models": "Викачані моделі ШІ",
   "@settings.dataWipe.goes.models": {
     "sourceHash": "b8cd7cb"
   },
-  "settings.dataWipe.goes.modelsWithSize": "Downloaded AI models ({sizeText})",
+  "settings.dataWipe.goes.modelsWithSize": "Викачані моделі ШІ ({sizeText})",
   "@settings.dataWipe.goes.modelsWithSize": {
     "sourceHash": "f764f1c"
   },
-  "settings.dataWipe.goes.logs": "Logs and crash reports",
+  "settings.dataWipe.goes.logs": "Журнали та звіти про аварії",
   "@settings.dataWipe.goes.logs": {
     "sourceHash": "8e29ed1"
   },
-  "settings.dataWipe.staysHeading": "What stays",
+  "settings.dataWipe.staysHeading": "Що залишиться",
   "@settings.dataWipe.staysHeading": {
     "sourceHash": "012db50"
   },
-  "settings.dataWipe.stays": "Your own files, everything on your drives and servers, and the Cmdr app itself. Data on Cmdr’s servers stays too; the privacy policy says how to have it deleted.",
+  "settings.dataWipe.stays": "Ваші власні файли, усе на ваших дисках і серверах, а також сама програма Cmdr. Дані на серверах Cmdr теж залишаються; як попросити їх видалити, пояснює політика конфіденційності.",
   "@settings.dataWipe.stays": {
     "sourceHash": "469e635"
   },
-  "settings.dataWipe.cancel": "Cancel",
+  "settings.dataWipe.cancel": "Скасувати",
   "@settings.dataWipe.cancel": {
     "sourceHash": "19766ed"
   },
-  "settings.dataWipe.confirm": "Delete all and quit",
+  "settings.dataWipe.confirm": "Видалити все й завершити",
   "@settings.dataWipe.confirm": {
     "sourceHash": "5efdab7"
   },
-  "settings.dataWipe.deleting": "Deleting…",
+  "settings.dataWipe.deleting": "Видалення…",
   "@settings.dataWipe.deleting": {
     "sourceHash": "43b5894"
   },
-  "settings.dataWipe.refused.operationsRunning": "{count, plural, one {A file operation is still running. Let it finish or cancel it, then try again.} other {{countText} file operations are still running. Let them finish or cancel them, then try again.}}",
+  "settings.dataWipe.refused.operationsRunning": "{count, plural, =1 {Одна операція з файлами ще виконується. Дочекайтеся її завершення або скасуйте її, а тоді спробуйте ще раз.} one {{countText} операція з файлами ще виконується. Дочекайтеся завершення або скасуйте операції, а тоді спробуйте ще раз.} few {{countText} операції з файлами ще виконуються. Дочекайтеся їх завершення або скасуйте їх, а тоді спробуйте ще раз.} many {{countText} операцій з файлами ще виконуються. Дочекайтеся їх завершення або скасуйте їх, а тоді спробуйте ще раз.} other {{countText} операції з файлами ще виконуються. Дочекайтеся їх завершення або скасуйте їх, а тоді спробуйте ще раз.}}",
   "@settings.dataWipe.refused.operationsRunning": {
     "sourceHash": "00207ae"
   },
-  "settings.dataWipe.refused.alreadyRunning": "Cmdr is already deleting its data. Give it a moment.",
+  "settings.dataWipe.refused.alreadyRunning": "Cmdr уже видаляє свої дані. Зачекайте трохи.",
   "@settings.dataWipe.refused.alreadyRunning": {
     "sourceHash": "58e2485"
   },
-  "settings.dataWipe.refused.interrupted": "Something stopped Cmdr partway, so some data may be left. Try again?",
+  "settings.dataWipe.refused.interrupted": "Щось зупинило Cmdr посеред процесу, тож частина даних могла залишитися. Спробувати ще раз?",
   "@settings.dataWipe.refused.interrupted": {
     "sourceHash": "a15fe21"
   },
-  "settings.dataWipe.doneTitle": "Cmdr deleted its data",
+  "settings.dataWipe.doneTitle": "Дані Cmdr видалено",
   "@settings.dataWipe.doneTitle": {
     "sourceHash": "18aa13d"
   },
-  "settings.dataWipe.doneMessage": "Everything Cmdr kept on this Mac is gone. To remove the app as well, move it to the Trash after Cmdr quits.",
+  "settings.dataWipe.doneMessage": "Усе, що Cmdr зберігав на цьому Mac, видалено. Щоб видалити й саму програму, перемістіть її в Смітник, коли Cmdr завершить роботу.",
   "@settings.dataWipe.doneMessage": {
     "sourceHash": "a0d09dc"
   },
-  "settings.dataWipe.partialTitle": "Cmdr deleted most of its data",
+  "settings.dataWipe.partialTitle": "Більшість даних Cmdr видалено",
   "@settings.dataWipe.partialTitle": {
     "sourceHash": "4a43b33"
   },
-  "settings.dataWipe.partialMessage": "A few things couldn’t be deleted. To finish, remove these yourself:",
+  "settings.dataWipe.partialMessage": "Деякі речі не вдалося видалити. Щоб завершити, видаліть їх самостійно:",
   "@settings.dataWipe.partialMessage": {
     "sourceHash": "24d0b58"
   },
-  "settings.dataWipe.leftover.secretItems": "{count, plural, one {One item in Keychain Access named “{itemName}”} other {{countText} items in Keychain Access named “{itemName}”}}",
+  "settings.dataWipe.leftover.secretItems": "{count, plural, =1 {Один елемент вʼязки з назвою «{itemName}» у програмі «Ключар»} one {{countText} елемент вʼязки з назвою «{itemName}» у програмі «Ключар»} few {{countText} елементи вʼязки з назвою «{itemName}» у програмі «Ключар»} many {{countText} елементів вʼязки з назвою «{itemName}» у програмі «Ключар»} other {{countText} елемента вʼязки з назвою «{itemName}» у програмі «Ключар»}}",
   "@settings.dataWipe.leftover.secretItems": {
     "sourceHash": "91321bb"
   },
-  "settings.dataWipe.leftover.secretsUnreadable": "Any items in Keychain Access named “{itemName}”",
+  "settings.dataWipe.leftover.secretsUnreadable": "Будь-які елементи вʼязки з назвою «{itemName}» у програмі «Ключар»",
   "@settings.dataWipe.leftover.secretsUnreadable": {
     "sourceHash": "e3b3312"
   },
-  "settings.dataWipe.quit": "Quit Cmdr",
+  "settings.dataWipe.quit": "Завершити Cmdr",
   "@settings.dataWipe.quit": {
     "sourceHash": "b3455b4"
   },
-  "settings.askCmdr.forgetMemory.keywords": "forget, memory, erase, delete, remembers, privacy",
+  "settings.askCmdr.forgetMemory.keywords": "забути, стерти, видалити, нотатки, приватність, очистити",
   "@settings.askCmdr.forgetMemory.keywords": {
     "sourceHash": "e653535"
   },
-  "settings.shortcuts.resetAll.keywords": "reset, shortcuts, defaults, restore, keyboard",
+  "settings.shortcuts.resetAll.keywords": "скинути, скорочення, типові, відновити, клавіатура, гарячі клавіші, за замовчуванням",
   "@settings.shortcuts.resetAll.keywords": {
     "sourceHash": "ccbedb0"
   },
-  "settings.license.manageKey.keywords": "license, key, manage, activate, activation, change",
+  "settings.license.manageKey.keywords": "ліцензія, ключ, керувати, активувати, активація, змінити, код",
   "@settings.license.manageKey.keywords": {
     "sourceHash": "3e2241e"
   },
-  "settings.license.enterKey.keywords": "license, key, enter, activate, activation, redeem",
+  "settings.license.enterKey.keywords": "ліцензія, ключ, ввести, активувати, активація, код, покупка",
   "@settings.license.enterKey.keywords": {
     "sourceHash": "ebb9475"
   },
-  "settings.license.getLicense.keywords": "license, buy, purchase, pricing, commercial, personal, upgrade",
+  "settings.license.getLicense.keywords": "ліцензія, купити, придбати, покупка, ціна, вартість, комерційна, особиста",
   "@settings.license.getLicense.keywords": {
     "sourceHash": "5454f6d"
   }

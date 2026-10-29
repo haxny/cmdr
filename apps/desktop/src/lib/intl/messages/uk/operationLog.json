@@ -1,225 +1,225 @@
 {
-  "operationLog.dialog.title": "Operation log",
+  "operationLog.dialog.title": "Журнал операцій",
   "@operationLog.dialog.title": {
     "sourceHash": "2c97965"
   },
-  "operationLog.dialog.loading": "Loading…",
+  "operationLog.dialog.loading": "Завантаження…",
   "@operationLog.dialog.loading": {
     "sourceHash": "ba3bbbe"
   },
-  "operationLog.dialog.loadError": "Couldn’t load your operation history. Try again in a moment.",
+  "operationLog.dialog.loadError": "Не вдалося завантажити журнал операцій. Спробуйте ще раз за мить.",
   "@operationLog.dialog.loadError": {
     "sourceHash": "cf26c51"
   },
-  "operationLog.dialog.empty": "No operations yet. Copy, move, rename, or delete something and it’ll show up here.",
+  "operationLog.dialog.empty": "Операцій ще немає. Скопіюйте, перемістіть, перейменуйте або видаліть щось, і це зʼявиться тут.",
   "@operationLog.dialog.empty": {
     "sourceHash": "2dea414"
   },
-  "operationLog.dialog.recordingOff": "The operation log isn’t recording, so new copies, moves, renames, and deletes don’t show up here and can’t be undone. Turn it back on in Settings to record them again.",
+  "operationLog.dialog.recordingOff": "Журнал операцій зараз нічого не записує, тож нові копіювання, переміщення, перейменування й видалення тут не зʼявляються, і відмінити їх не можна. Знову увімкніть запис у Параметрах, щоб журнал їх записував.",
   "@operationLog.dialog.recordingOff": {
     "sourceHash": "0519736"
   },
-  "operationLog.dialog.itemsError": "Couldn’t load these items.",
+  "operationLog.dialog.itemsError": "Не вдалося завантажити ці елементи.",
   "@operationLog.dialog.itemsError": {
     "sourceHash": "596819e"
   },
-  "operationLog.dialog.noItems": "This operation has no recorded items.",
+  "operationLog.dialog.noItems": "Для цієї операції не записано жодного елемента.",
   "@operationLog.dialog.noItems": {
     "sourceHash": "c7d7bfb"
   },
-  "operationLog.dialog.moreItems": "{count, plural, one {and {countText} more item} other {and {countText} more items}}",
+  "operationLog.dialog.moreItems": "{count, plural, one {і ще {countText} елемент} few {і ще {countText} елементи} many {і ще {countText} елементів} other {і ще {countText} елемента}}",
   "@operationLog.dialog.moreItems": {
     "sourceHash": "c39507d"
   },
-  "operationLog.dialog.loadMore": "Load 50 more",
+  "operationLog.dialog.loadMore": "Завантажити ще 50",
   "@operationLog.dialog.loadMore": {
     "sourceHash": "baef697"
   },
-  "operationLog.dialog.rollBack": "Roll back",
+  "operationLog.dialog.rollBack": "Відкотити",
   "@operationLog.dialog.rollBack": {
     "sourceHash": "931f703"
   },
-  "operationLog.dialog.finishRollBack": "Finish rolling back",
+  "operationLog.dialog.finishRollBack": "Завершити відкочування",
   "@operationLog.dialog.finishRollBack": {
     "sourceHash": "dbe3771"
   },
-  "operationLog.dialog.rollbackOf": "Rollback of “<operationLink>{operation}</operationLink>” from {time}",
+  "operationLog.dialog.rollbackOf": "Відкат операції «<operationLink>{operation}</operationLink>» від {time}",
   "@operationLog.dialog.rollbackOf": {
     "sourceHash": "4885c73"
   },
-  "operationLog.dialog.rollbackOfUnlisted": "Rollback of an earlier operation",
+  "operationLog.dialog.rollbackOfUnlisted": "Відкат однієї з давніших операцій",
   "@operationLog.dialog.rollbackOfUnlisted": {
     "sourceHash": "50d060d"
   },
-  "operationLog.dialog.latestRollback": "Latest rollback: “<operationLink>{operation}</operationLink>” from {time}",
+  "operationLog.dialog.latestRollback": "Останній відкат: «<operationLink>{operation}</operationLink>» від {time}",
   "@operationLog.dialog.latestRollback": {
     "sourceHash": "a8275f9"
   },
-  "operationLog.dialog.close": "Close",
+  "operationLog.dialog.close": "Закрити",
   "@operationLog.dialog.close": {
     "sourceHash": "7d9eb7a"
   },
-  "operationLog.summary.copy": "{count, plural, one {Copied {countText} item} other {Copied {countText} items}}",
+  "operationLog.summary.copy": "{count, plural, one {Скопійовано {countText} елемент} few {Скопійовано {countText} елементи} many {Скопійовано {countText} елементів} other {Скопійовано {countText} елемента}}",
   "@operationLog.summary.copy": {
     "sourceHash": "c296979"
   },
-  "operationLog.summary.move": "{count, plural, one {Moved {countText} item} other {Moved {countText} items}}",
+  "operationLog.summary.move": "{count, plural, one {Переміщено {countText} елемент} few {Переміщено {countText} елементи} many {Переміщено {countText} елементів} other {Переміщено {countText} елемента}}",
   "@operationLog.summary.move": {
     "sourceHash": "a6a88d9"
   },
-  "operationLog.summary.delete": "{count, plural, one {Deleted {countText} item} other {Deleted {countText} items}}",
+  "operationLog.summary.delete": "{count, plural, one {Видалено {countText} елемент} few {Видалено {countText} елементи} many {Видалено {countText} елементів} other {Видалено {countText} елемента}}",
   "@operationLog.summary.delete": {
     "sourceHash": "97ec6b7"
   },
-  "operationLog.summary.trash": "{count, plural, one {Moved {countText} item to the trash} other {Moved {countText} items to the trash}}",
+  "operationLog.summary.trash": "{count, plural, one {Переміщено {countText} елемент у Смітник} few {Переміщено {countText} елементи в Смітник} many {Переміщено {countText} елементів у Смітник} other {Переміщено {countText} елемента в Смітник}}",
   "@operationLog.summary.trash": {
     "sourceHash": "34b4457"
   },
-  "operationLog.summary.rename": "{count, plural, one {Renamed {countText} item} other {Renamed {countText} items}}",
+  "operationLog.summary.rename": "{count, plural, one {Перейменовано {countText} елемент} few {Перейменовано {countText} елементи} many {Перейменовано {countText} елементів} other {Перейменовано {countText} елемента}}",
   "@operationLog.summary.rename": {
     "sourceHash": "73f6409"
   },
-  "operationLog.summary.createFolder": "{count, plural, one {Created {countText} folder} other {Created {countText} folders}}",
+  "operationLog.summary.createFolder": "{count, plural, one {Створено {countText} папку} few {Створено {countText} папки} many {Створено {countText} папок} other {Створено {countText} папки}}",
   "@operationLog.summary.createFolder": {
     "sourceHash": "275bbc1"
   },
-  "operationLog.summary.createFile": "{count, plural, one {Created {countText} file} other {Created {countText} files}}",
+  "operationLog.summary.createFile": "{count, plural, one {Створено {countText} файл} few {Створено {countText} файли} many {Створено {countText} файлів} other {Створено {countText} файлу}}",
   "@operationLog.summary.createFile": {
     "sourceHash": "ad16d52"
   },
-  "operationLog.summary.compress": "{count, plural, one {Compressed {countText} item} other {Compressed {countText} items}}",
+  "operationLog.summary.compress": "{count, plural, one {Заархівовано {countText} елемент} few {Заархівовано {countText} елементи} many {Заархівовано {countText} елементів} other {Заархівовано {countText} елемента}}",
   "@operationLog.summary.compress": {
     "sourceHash": "24d78df"
   },
-  "operationLog.summary.archiveEdit": "Edited an archive",
+  "operationLog.summary.archiveEdit": "Відредаговано архів",
   "@operationLog.summary.archiveEdit": {
     "sourceHash": "a1bbfcb"
   },
-  "operationLog.summary.archiveExtract": "Extracted an archive",
+  "operationLog.summary.archiveExtract": "Розпаковано архів",
   "@operationLog.summary.archiveExtract": {
     "sourceHash": "ab99337"
   },
-  "operationLog.initiator.user": "You",
+  "operationLog.initiator.user": "Ви",
   "@operationLog.initiator.user": {
     "sourceHash": "08b0419"
   },
-  "operationLog.initiator.aiClient": "AI client",
+  "operationLog.initiator.aiClient": "Клієнт ШІ",
   "@operationLog.initiator.aiClient": {
     "sourceHash": "caf5878"
   },
-  "operationLog.initiator.agent": "Agent",
+  "operationLog.initiator.agent": "Агент",
   "@operationLog.initiator.agent": {
     "sourceHash": "11b39c9"
   },
-  "operationLog.initiator.agentEdited": "Agent, with your edits",
+  "operationLog.initiator.agentEdited": "Агент, із вашими змінами",
   "@operationLog.initiator.agentEdited": {
     "sourceHash": "16c4cd2"
   },
-  "operationLog.status.queued": "Queued",
+  "operationLog.status.queued": "У черзі",
   "@operationLog.status.queued": {
     "sourceHash": "661ff40"
   },
-  "operationLog.status.running": "Running",
+  "operationLog.status.running": "Виконується",
   "@operationLog.status.running": {
     "sourceHash": "f4ccae2"
   },
-  "operationLog.status.done": "Done",
+  "operationLog.status.done": "Готово",
   "@operationLog.status.done": {
     "sourceHash": "11a6767"
   },
-  "operationLog.status.failed": "Didn’t finish",
+  "operationLog.status.failed": "Не завершено",
   "@operationLog.status.failed": {
     "sourceHash": "59ea57b"
   },
-  "operationLog.status.canceled": "Canceled",
+  "operationLog.status.canceled": "Скасовано",
   "@operationLog.status.canceled": {
     "sourceHash": "13ca2ee"
   },
-  "operationLog.rollback.notRollbackable": "Can’t roll back",
+  "operationLog.rollback.notRollbackable": "Не можна відкотити",
   "@operationLog.rollback.notRollbackable": {
     "sourceHash": "c6f78ba"
   },
-  "operationLog.rollback.rollbackable": "Can roll back",
+  "operationLog.rollback.rollbackable": "Можна відкотити",
   "@operationLog.rollback.rollbackable": {
     "sourceHash": "6e87942"
   },
-  "operationLog.rollback.rollingBack": "Rolling back",
+  "operationLog.rollback.rollingBack": "Відкочування",
   "@operationLog.rollback.rollingBack": {
     "sourceHash": "8b9e964"
   },
-  "operationLog.rollback.rolledBack": "Rolled back",
+  "operationLog.rollback.rolledBack": "Відкочено",
   "@operationLog.rollback.rolledBack": {
     "sourceHash": "7159223"
   },
-  "operationLog.rollback.partiallyRolledBack": "Partly rolled back",
+  "operationLog.rollback.partiallyRolledBack": "Частково відкочено",
   "@operationLog.rollback.partiallyRolledBack": {
     "sourceHash": "ea54c83"
   },
-  "operationLog.rollback.partiallyRolledBackNotice": "Cmdr rolled back what it could and left the rest as it was. Finishing takes another pass and skips anything Cmdr still isn’t sure about.",
+  "operationLog.rollback.partiallyRolledBackNotice": "Cmdr відкотив усе, що зміг, а решту залишив як було. Щоб завершити, Cmdr пройде операцію ще раз і знову пропустить усе, у чому досі не впевнений.",
   "@operationLog.rollback.partiallyRolledBackNotice": {
     "sourceHash": "77e6f25"
   },
-  "operationLog.rollback.refusalAlreadyRollingBack": "This one is already rolling back. Watch it in the queue.",
+  "operationLog.rollback.refusalAlreadyRollingBack": "Цю операцію вже відкочують. Стежте за нею у вікні «Черга операцій».",
   "@operationLog.rollback.refusalAlreadyRollingBack": {
     "sourceHash": "282a49a"
   },
-  "operationLog.rollback.refusalAlreadyRolledBack": "This one is already back the way it was.",
+  "operationLog.rollback.refusalAlreadyRolledBack": "Цю операцію вже відкочено: усе так, як було до неї.",
   "@operationLog.rollback.refusalAlreadyRolledBack": {
     "sourceHash": "36844e7"
   },
-  "operationLog.rollback.refusalOverwrote": "This operation replaced files that were already there. Cmdr doesn’t keep copies of what it replaces, so the originals can’t come back.",
+  "operationLog.rollback.refusalOverwrote": "Ця операція замінила файли, які вже були на місці. Cmdr не зберігає копій того, що замінює, тож оригінали вже не повернути.",
   "@operationLog.rollback.refusalOverwrote": {
     "sourceHash": "c4fb3c4"
   },
-  "operationLog.rollback.refusalPermanentDelete": "A permanent delete leaves nothing to put back.",
+  "operationLog.rollback.refusalPermanentDelete": "Після остаточного видалення відновлювати нічого.",
   "@operationLog.rollback.refusalPermanentDelete": {
     "sourceHash": "5073539"
   },
-  "operationLog.rollback.refusalArchiveOverwrite": "This archive replaced an older one with the same name. Cmdr doesn’t keep copies of what it replaces, so the older one can’t come back.",
+  "operationLog.rollback.refusalArchiveOverwrite": "Цей архів замінив старіший архів із такою самою назвою. Cmdr не зберігає копій того, що замінює, тож старіший архів уже не повернути.",
   "@operationLog.rollback.refusalArchiveOverwrite": {
     "sourceHash": "86a374d"
   },
-  "operationLog.rollback.refusalZipEditUnsupported": "Cmdr can’t undo changes made inside an archive yet.",
+  "operationLog.rollback.refusalZipEditUnsupported": "Cmdr поки що не вміє відміняти зміни всередині архіву.",
   "@operationLog.rollback.refusalZipEditUnsupported": {
     "sourceHash": "e0892dd"
   },
-  "operationLog.rollback.refusalJournalIncomplete": "Cmdr’s record of this operation isn’t complete, so rolling it back could touch the wrong files.",
+  "operationLog.rollback.refusalJournalIncomplete": "Запис Cmdr про цю операцію неповний, тож відкат може зачепити не ті файли.",
   "@operationLog.rollback.refusalJournalIncomplete": {
     "sourceHash": "4176739"
   },
-  "operationLog.rollback.refusalDirectoryMerge": "This move merged the folder into one that was already there. Cmdr can’t tell which files came along and which were already inside, so there’s no safe way back.",
+  "operationLog.rollback.refusalDirectoryMerge": "Це переміщення обʼєднало папку з тією, що вже була на місці. Cmdr не може розрізнити, які файли прийшли разом із нею, а які вже були всередині, тож безпечно повернути все назад не вийде.",
   "@operationLog.rollback.refusalDirectoryMerge": {
     "sourceHash": "2dad38d"
   },
-  "operationLog.rollback.refusalStagedConflictResolved": "This move ran into a name that was already taken and asked what to do about it. That answer is part of the result now, so there’s no single way back.",
+  "operationLog.rollback.refusalStagedConflictResolved": "Це переміщення натрапило на вже зайняту назву й запитало, що робити. Та відповідь тепер стала частиною результату, тож єдиного способу повернути все назад немає.",
   "@operationLog.rollback.refusalStagedConflictResolved": {
     "sourceHash": "03ddd6e"
   },
-  "operationLog.rollback.refusalVolumeUnavailable": "Connect the drive this operation used, then try again.",
+  "operationLog.rollback.refusalVolumeUnavailable": "Підʼєднайте диск, який використовувала ця операція, а потім спробуйте ще раз.",
   "@operationLog.rollback.refusalVolumeUnavailable": {
     "sourceHash": "935d109"
   },
-  "operationLog.rollback.refusalUnknown": "This operation isn’t in your history anymore.",
+  "operationLog.rollback.refusalUnknown": "Цієї операції більше немає у вашій історії.",
   "@operationLog.rollback.refusalUnknown": {
     "sourceHash": "f94c33d"
   },
-  "operationLog.rollback.refusalUnexpected": "Cmdr couldn’t start the rollback. Try again in a moment.",
+  "operationLog.rollback.refusalUnexpected": "Cmdr не вдалося запустити відкат. Спробуйте ще раз за мить.",
   "@operationLog.rollback.refusalUnexpected": {
     "sourceHash": "bef54f1"
   },
-  "operationLog.outcome.done": "Done",
+  "operationLog.outcome.done": "Готово",
   "@operationLog.outcome.done": {
     "sourceHash": "11a6767"
   },
-  "operationLog.outcome.skipped": "Skipped",
+  "operationLog.outcome.skipped": "Пропущено",
   "@operationLog.outcome.skipped": {
     "sourceHash": "12698ce"
   },
-  "operationLog.outcome.failed": "Didn’t finish",
+  "operationLog.outcome.failed": "Не завершено",
   "@operationLog.outcome.failed": {
     "sourceHash": "59ea57b"
   },
-  "operationLog.outcome.rolledBack": "Rolled back",
+  "operationLog.outcome.rolledBack": "Відкочено",
   "@operationLog.outcome.rolledBack": {
     "sourceHash": "7159223"
   }

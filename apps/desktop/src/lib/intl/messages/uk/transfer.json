@@ -1,97 +1,97 @@
 {
-  "transfer.trash": "Moved {countText} {count, plural, one {file} other {files}} to trash",
+  "transfer.trash": "Переміщено в Смітник {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
   "@transfer.trash": {
     "sourceHash": "0be2310"
   },
-  "transfer.delete": "Delete complete: {countText} {count, plural, one {file} other {files}}",
+  "transfer.delete": "Видалення завершено: {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
   "@transfer.delete": {
     "sourceHash": "dc69b52"
   },
-  "transfer.compress.split": "Compressed {phrase}.",
+  "transfer.compress.split": "Заархівовано {phrase}.",
   "@transfer.compress.split": {
     "sourceHash": "daf7381"
   },
-  "transfer.compress.fileOnly": "Compressed {countText} {count, plural, one {file} other {files}}.",
+  "transfer.compress.fileOnly": "Заархівовано {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}.",
   "@transfer.compress.fileOnly": {
     "sourceHash": "af9d928"
   },
-  "transfer.movedPhrase": "{kind, select, both {{filesText} {files, plural, one {file} other {files}} and {foldersText} {folders, plural, one {folder} other {folders}}} foldersOnly {{foldersText} {folders, plural, one {folder} other {folders}}} other {{filesText} {files, plural, one {file} other {files}}}}",
+  "transfer.movedPhrase": "{kind, select, both {{filesText} {files, plural, one {файл} few {файли} many {файлів} other {файлу}} і {foldersText} {folders, plural, one {папку} few {папки} many {папок} other {папки}}} foldersOnly {{foldersText} {folders, plural, one {папку} few {папки} many {папок} other {папки}}} other {{filesText} {files, plural, one {файл} few {файли} many {файлів} other {файлу}}}}",
   "@transfer.movedPhrase": {
     "sourceHash": "e43d866"
   },
-  "transfer.split.clean": "{verb, select, copy {Copied} other {Moved}} {phrase}.",
+  "transfer.split.clean": "{verb, select, copy {Скопійовано} other {Переміщено}} {phrase}.",
   "@transfer.split.clean": {
     "sourceHash": "5241e2a"
   },
-  "transfer.split.skipped": "{verb, select, copy {Copied} other {Moved}} {phrase}, skipped {skippedText} {skipped, plural, one {file} other {files}} (already at the target).",
+  "transfer.split.skipped": "{verb, select, copy {Скопійовано} other {Переміщено}} {phrase}, пропущено {skippedText} {skipped, plural, one {файл} few {файли} many {файлів} other {файлу}} (уже є в цільовій папці).",
   "@transfer.split.skipped": {
     "sourceHash": "5fe3ee2"
   },
-  "transfer.fileOnly.allDone": "{verb, select, copy {Copy} other {Move}} complete: {verb, select, copy {copied} other {moved}} {transferredText} {transferred, plural, one {file} other {files}}.",
+  "transfer.fileOnly.allDone": "{verb, select, copy {Копіювання} other {Переміщення}} завершено: {verb, select, copy {скопійовано} other {переміщено}} {transferredText} {transferred, plural, one {файл} few {файли} many {файлів} other {файлу}}.",
   "@transfer.fileOnly.allDone": {
     "sourceHash": "19c9b7d"
   },
-  "transfer.fileOnly.allSkippedSingle": "{verb, select, copy {Copy} other {Move}} complete: file already at the target, not {verb, select, copy {copied} other {moved}}.",
+  "transfer.fileOnly.allSkippedSingle": "{verb, select, copy {Копіювання} other {Переміщення}} завершено: файл уже є в цільовій папці, тому його не {verb, select, copy {скопійовано} other {переміщено}}.",
   "@transfer.fileOnly.allSkippedSingle": {
     "sourceHash": "9ed3c9a"
   },
-  "transfer.fileOnly.allSkippedMany": "{verb, select, copy {Copy} other {Move}} complete: skipped all {skippedText} {skipped, plural, one {file} other {files}} (already at the target), nothing was {verb, select, copy {copied} other {moved}}.",
+  "transfer.fileOnly.allSkippedMany": "{verb, select, copy {Копіювання} other {Переміщення}} завершено: {skipped, plural, one {пропущено {skippedText} файл} few {пропущено всі {skippedText} файли} many {пропущено всі {skippedText} файлів} other {пропущено всі {skippedText} файлу}} (уже є в цільовій папці), нічого не {verb, select, copy {скопійовано} other {переміщено}}.",
   "@transfer.fileOnly.allSkippedMany": {
     "sourceHash": "5b688cf"
   },
-  "transfer.fileOnly.mixedCopy": "Copy complete: copied {transferredText}, skipped {skippedText}. All {processedText} of your selected {processed, plural, one {file} other {files}} are now at the target.",
+  "transfer.fileOnly.mixedCopy": "Копіювання завершено: скопійовано {transferredText}, пропущено {skippedText}. Тепер усі вибрані файли є в цільовій папці ({processedText} {processed, plural, one {файл} few {файли} many {файлів} other {файлу}}).",
   "@transfer.fileOnly.mixedCopy": {
     "sourceHash": "b00606b"
   },
-  "transfer.fileOnly.mixedMove": "Move complete: moved {transferredText}, skipped {skippedText}. {skippedText} {skipped, plural, one {file} other {files}} {skipped, plural, one {was} other {were}} already at the target.",
+  "transfer.fileOnly.mixedMove": "Переміщення завершено: переміщено {transferredText}, пропущено {skippedText}. {skippedText} {skipped, plural, one {файл уже є} few {файли вже є} many {файлів уже є} other {файлу вже є}} в цільовій папці.",
   "@transfer.fileOnly.mixedMove": {
     "sourceHash": "1457a4f"
   },
-  "transfer.appearedDuringMove": "{countText} {count, plural, one {item} other {items}} appeared in {scope, select, manyFolders {{folderName} and other source folders} other {{folderName}}} during the move and {count, plural, one {stays} other {stay}} there.",
+  "transfer.appearedDuringMove": "{count, plural, one {{countText} елемент зʼявився} few {{countText} елементи зʼявилися} many {{countText} елементів зʼявилися} other {{countText} елемента зʼявилися}} {scope, select, manyFolders {у папці «{folderName}» та інших вихідних папках} other {у папці «{folderName}»}} під час переміщення й {count, plural, one {залишається} few {залишаються} many {залишаються} other {залишаються}} там.",
   "@transfer.appearedDuringMove": {
     "sourceHash": "b884882"
   },
-  "transfer.changedDuringMove": "{countText} {count, plural, one {item} other {items}} changed during the move and {count, plural, one {stays} other {stay}} in {scope, select, manyFolders {{folderName} and other source folders} other {{folderName}}}.",
+  "transfer.changedDuringMove": "{count, plural, one {{countText} елемент змінився під час переміщення й залишається} few {{countText} елементи змінилися під час переміщення й залишаються} many {{countText} елементів змінилися під час переміщення й залишаються} other {{countText} елемента змінилися під час переміщення й залишаються}} {scope, select, manyFolders {у папці «{folderName}» та інших вихідних папках} other {у папці «{folderName}»}}.",
   "@transfer.changedDuringMove": {
     "sourceHash": "b446f54"
   },
-  "transfer.durabilityUnconfirmed": "Cmdr couldn’t confirm the copies are fully written to {volumeName}. If the drive was unplugged or is failing, check them before you rely on them.",
+  "transfer.durabilityUnconfirmed": "Cmdr не вдалося підтвердити, що копії повністю записано на диск «{volumeName}». Якщо диск відʼєднали або він виходить з ладу, перевірте копії, перш ніж на них покладатися.",
   "@transfer.durabilityUnconfirmed": {
     "sourceHash": "48f67b4"
   },
-  "transfer.durabilityUnconfirmedUnnamed": "Cmdr couldn’t confirm the copies are fully written to the drive. If it was unplugged or is failing, check them before you rely on them.",
+  "transfer.durabilityUnconfirmedUnnamed": "Cmdr не вдалося підтвердити, що копії повністю записано на диск. Якщо його відʼєднали або він виходить з ладу, перевірте копії, перш ніж на них покладатися.",
   "@transfer.durabilityUnconfirmedUnnamed": {
     "sourceHash": "20e5d33"
   },
-  "transfer.metadataLeftBehind": "This server can’t store {classes}, so those stayed behind.",
+  "transfer.metadataLeftBehind": "Цей сервер не може зберігати {classes}, тож їх не перенесено.",
   "@transfer.metadataLeftBehind": {
     "sourceHash": "e8c3789"
   },
-  "transfer.lockedSkipped": "{count, plural, one {{countText} locked item stayed where it was.} other {{countText} locked items stayed where they were.}}",
+  "transfer.lockedSkipped": "{count, plural, one {{countText} замкнений елемент залишився там, де був.} few {{countText} замкнені елементи залишилися там, де були.} many {{countText} замкнених елементів залишилися там, де були.} other {{countText} замкненого елемента залишилися там, де були.}}",
   "@transfer.lockedSkipped": {
     "sourceHash": "5b9d086"
   },
-  "transfer.systemLockedKept": "{count, plural, one {{countText} item is locked by macOS, so it stayed where it was.} other {{countText} items are locked by macOS, so they stayed where they were.}}",
+  "transfer.systemLockedKept": "{count, plural, one {{countText} елемент замкнено на рівні macOS, тож він залишився там, де був.} few {{countText} елементи замкнено на рівні macOS, тож вони залишилися там, де були.} many {{countText} елементів замкнено на рівні macOS, тож вони залишилися там, де були.} other {{countText} елемента замкнено на рівні macOS, тож вони залишилися там, де були.}}",
   "@transfer.systemLockedKept": {
     "sourceHash": "5aa9499"
   },
-  "transfer.metadataClass.creationDates": "creation dates",
+  "transfer.metadataClass.creationDates": "дати створення",
   "@transfer.metadataClass.creationDates": {
     "sourceHash": "4b3c6e7"
   },
-  "transfer.metadataClass.permissions": "permissions",
+  "transfer.metadataClass.permissions": "привілеї",
   "@transfer.metadataClass.permissions": {
     "sourceHash": "4fe3cdd"
   },
-  "transfer.metadataClass.lockedAndHidden": "Locked and Hidden flags",
+  "transfer.metadataClass.lockedAndHidden": "позначки «Замкнено» й «Приховано»",
   "@transfer.metadataClass.lockedAndHidden": {
     "sourceHash": "18174cd"
   },
-  "transfer.metadataClass.extendedAttributes": "Finder tags",
+  "transfer.metadataClass.extendedAttributes": "теги Finder",
   "@transfer.metadataClass.extendedAttributes": {
     "sourceHash": "fd34d8e"
   },
-  "transfer.metadataClass.folderDates": "folder dates",
+  "transfer.metadataClass.folderDates": "дати змінення папок",
   "@transfer.metadataClass.folderDates": {
     "sourceHash": "a5ea852"
   }

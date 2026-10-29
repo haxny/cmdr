@@ -675,6 +675,92 @@
         "source": "Why",
         "reason": "Two questions. `onboarding.stepFda.why` asks what Cmdr needs Full Disk Access FOR, a purpose (`Зачем?`); `suggestedOps.agentReason` leads the AI's reason for a suggestion, a cause (`Почему:`, which its spoken form `Почему, по словам ИИ:` starts with)."
       }
+    ],
+    "uk": [
+      {
+        "source": "{count, plural, one {file} other {files}}",
+        "reason": "Case, not drift: Ukrainian declines the counted noun by its slot. `fileExplorer.summary.fileNoun` follows «з» (genitive: «з 21 файлу»); the scan lines are nominative counts («21 файл»)."
+      },
+      {
+        "source": "{countText} {count, plural, one {file} other {files}}",
+        "reason": "Case, not drift: Ukrainian declines the counted noun by its slot. `queue.row.fileCount` follows a verbal noun (genitive: «Копіювання 21 файлу»); the others are nominative."
+      },
+      {
+        "source": "{countText} {count, plural, one {folder} other {folders}}",
+        "reason": "Case, not drift: Ukrainian declines the counted noun by its slot. the delete/transfer parts are the accusative object of the title verb («Видалити 1 папку»); `queue.row.folderCount` follows a verbal noun (genitive)."
+      },
+      {
+        "source": "{countText} {count, plural, one {item} other {items}}",
+        "reason": "Case, not drift: Ukrainian declines the counted noun by its slot. `queue.row.itemCount` follows a verbal noun (genitive); the context-menu count is nominative."
+      },
+      {
+        "source": "Advanced",
+        "reason": "Two surfaces: `settings.section.advanced` is Finder’s own Settings tab name «Експертні»; `servers.sheet.advanced` is a collapsible group inside a form, where «Додатково» reads naturally (the `advanced` ruling allows both)."
+      },
+      {
+        "source": "any",
+        "reason": "Agreement: «будь-який» qualifies a size, «будь-коли» is the date’s “any time”."
+      },
+      {
+        "source": "Archive",
+        "reason": "Two senses: `askCmdr.sessions.archive` is the verb (archive a chat, «Архівувати»); `suggestedOps.facts.archive` names an archive file («Архів»)."
+      },
+      {
+        "source": "Both",
+        "reason": "Different referents: the file-type filter covers files and folders together («Усе»); the notifications option is both of two channels («Обидва»)."
+      },
+      {
+        "source": "Browse",
+        "reason": "Two senses, as in de: «Огляд» is the button that opens the system file picker; `settings.archives.opt.browse` means step into an archive and list it («Переглянути»)."
+      },
+      {
+        "source": "Compact",
+        "reason": "Agreement: the date preset is an adjective for a format («Компактний»); UI density is an adverbial option («Компактно»), as its @key notes."
+      },
+      {
+        "source": "custom",
+        "reason": "Gender agreement with the implied noun: size (розмір, masculine) → «власний», date (дата, feminine) → «власна»."
+      },
+      {
+        "source": "Custom",
+        "reason": "Gender agreement with the implied noun: format/timeout (masculine) → «Власний»; `settings.control.customOption` is a neuter value → «Власне»."
+      },
+      {
+        "source": "Edit",
+        "reason": "Ukrainian macOS names the Edit menu with a noun («Редагування»); actions and buttons are verbs («Редагувати»)."
+      },
+      {
+        "source": "Modified",
+        "reason": "Agreement: «Змінено» is a status/column; the shortcuts section heading names the filtered files, plural «Змінені»."
+      },
+      {
+        "source": "Off",
+        "reason": "The multi-rename search-option tooltip uses the short pair «Увімк» / «Вимк» for space; settings options spell out «Вимкнено»."
+      },
+      {
+        "source": "Running",
+        "reason": "Two subjects: the local AI server is alive («Працює»); an operation or decision is in progress («Виконується»)."
+      },
+      {
+        "source": "Search",
+        "reason": "Noun vs verb: titles and section names are «Пошук»; the query bar’s run button is the verb «Шукати»."
+      },
+      {
+        "source": "Select",
+        "reason": "Ukrainian macOS writes the menu name as a noun («Вибір»); `menu.queue.select` and the picker placeholder are actions («Вибрати»)."
+      },
+      {
+        "source": "System default",
+        "reason": "Agreement with three different nouns: language («Типова мова системи»), format («Типовий системний»), and app («Типова програма»)."
+      },
+      {
+        "source": "View",
+        "reason": "The F3 command and the View menu use macOS’s noun «Перегляд»; `menu.file.view` is an action in the File menu («Переглянути»)."
+      },
+      {
+        "source": "Zoom",
+        "reason": "Two features: the View menu’s text zoom («Масштаб»), and the Window menu’s Zoom, which Ukrainian macOS calls «Оптимізувати»."
+      }
     ]
   },
   "notYetReviewed": {

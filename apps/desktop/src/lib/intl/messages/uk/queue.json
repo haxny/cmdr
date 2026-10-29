@@ -1,193 +1,193 @@
 {
-  "queue.windowTitle": "Operation queue",
+  "queue.windowTitle": "Черга операцій",
   "@queue.windowTitle": {
     "sourceHash": "fa91417"
   },
-  "queue.heading": "Operations",
+  "queue.heading": "Операції",
   "@queue.heading": {
     "sourceHash": "358cc20"
   },
-  "queue.empty.title": "Nothing in the queue",
+  "queue.empty.title": "Черга порожня",
   "@queue.empty.title": {
     "sourceHash": "ef2b1ef"
   },
-  "queue.empty.body": "Copies, moves, deletes, and other file operations show up here while they run, so you can pause, resume, or cancel them.",
+  "queue.empty.body": "Тут зʼявляються копіювання, переміщення, видалення та інші операції з файлами, поки вони виконуються, тож їх можна призупинити, поновити або скасувати.",
   "@queue.empty.body": {
     "sourceHash": "89e6045"
   },
-  "queue.row.label": "{type, select, copy {Copying} move {Moving} delete {Deleting} trash {Moving to trash} rename {Renaming} create_folder {Creating folder} create_file {Creating file} archive_edit {Editing archive} compress {Compressing} other {Working}}",
+  "queue.row.label": "{type, select, copy {Копіювання} move {Переміщення} delete {Видалення} trash {Переміщення в Смітник} rename {Перейменування} create_folder {Створення папки} create_file {Створення файлу} archive_edit {Редагування архіву} compress {Архівування} other {Виконання операції}}",
   "@queue.row.label": {
     "sourceHash": "3c8e776"
   },
-  "queue.row.reversalMovingBack": "Putting files back",
+  "queue.row.reversalMovingBack": "Повернення файлів на місце",
   "@queue.row.reversalMovingBack": {
     "sourceHash": "19ac5eb"
   },
-  "queue.row.reversalDeleting": "Deleting what it created",
+  "queue.row.reversalDeleting": "Видалення того, що створила операція",
   "@queue.row.reversalDeleting": {
     "sourceHash": "f88d220"
   },
-  "queue.row.reversalRenamingBack": "Putting the old names back",
+  "queue.row.reversalRenamingBack": "Повернення старих назв",
   "@queue.row.reversalRenamingBack": {
     "sourceHash": "3e00fd5"
   },
-  "queue.row.reversalInFolder": "in {folder}",
+  "queue.row.reversalInFolder": "у папці «{folder}»",
   "@queue.row.reversalInFolder": {
     "sourceHash": "da9d7fa"
   },
-  "queue.row.itemCount": "{countText} {count, plural, one {item} other {items}}",
+  "queue.row.itemCount": "{countText} {count, plural, one {елемента} few {елементів} many {елементів} other {елемента}}",
   "@queue.row.itemCount": {
     "sourceHash": "66337df"
   },
-  "queue.row.folderCount": "{countText} {count, plural, one {folder} other {folders}}",
+  "queue.row.folderCount": "{countText} {count, plural, one {папки} few {папок} many {папок} other {папки}}",
   "@queue.row.folderCount": {
     "sourceHash": "9bd56b2"
   },
-  "queue.row.fileCount": "{countText} {count, plural, one {file} other {files}}",
+  "queue.row.fileCount": "{countText} {count, plural, one {файлу} few {файлів} many {файлів} other {файлу}}",
   "@queue.row.fileCount": {
     "sourceHash": "76ef0a6"
   },
-  "queue.row.foldersAndFiles": "{folders} and {files}",
+  "queue.row.foldersAndFiles": "{folders} і {files}",
   "@queue.row.foldersAndFiles": {
     "sourceHash": "7eae0a3"
   },
-  "queue.row.itemsMore": "{count, plural, other {… and {countText} more}}",
+  "queue.row.itemsMore": "{count, plural, one {… і ще {countText}} few {… і ще {countText}} many {… і ще {countText}} other {… і ще {countText}}}",
   "@queue.row.itemsMore": {
     "sourceHash": "4a4022c"
   },
-  "queue.row.itemsInFolder": "in {folder}",
+  "queue.row.itemsInFolder": "у папці «{folder}»",
   "@queue.row.itemsInFolder": {
     "sourceHash": "da9d7fa"
   },
-  "queue.row.status": "{status, select, queued {Waiting} running {Running} paused {Paused} done {Done} cancelled {Canceled} failed {Couldn’t finish} other {Running}}",
+  "queue.row.status": "{status, select, queued {Очікування} running {Виконується} paused {Призупинено} done {Готово} cancelled {Скасовано} failed {Не завершено} other {Виконується}}",
   "@queue.row.status": {
     "sourceHash": "d7a7517"
   },
-  "queue.row.statusAwaitingAnswer": "Needs your answer",
+  "queue.row.statusAwaitingAnswer": "Потрібна ваша відповідь",
   "@queue.row.statusAwaitingAnswer": {
     "sourceHash": "84ec74a"
   },
-  "queue.row.awaitingAnswerTooltip": "Answer the prompt in the main window and this operation carries on.",
+  "queue.row.awaitingAnswerTooltip": "Дайте відповідь на запит у головному вікні, і операція продовжиться.",
   "@queue.row.awaitingAnswerTooltip": {
     "sourceHash": "bf51776"
   },
-  "queue.row.pause": "Pause",
+  "queue.row.pause": "Призупинити",
   "@queue.row.pause": {
     "sourceHash": "858e4ba"
   },
-  "queue.row.resume": "Resume",
+  "queue.row.resume": "Поновити",
   "@queue.row.resume": {
     "sourceHash": "d640c74"
   },
-  "queue.row.foreground": "Show",
+  "queue.row.foreground": "Показати",
   "@queue.row.foreground": {
     "sourceHash": "0df6f1c"
   },
-  "queue.row.foregroundTooltip": "Show this operation’s progress dialog in the main window, and bring that window forward. The operation keeps running either way.",
+  "queue.row.foregroundTooltip": "Показати діалогове вікно перебігу цієї операції в головному вікні й вивести це вікно на передній план. Операція виконується далі в будь-якому разі.",
   "@queue.row.foregroundTooltip": {
     "sourceHash": "88c52de"
   },
-  "queue.row.cancel": "Cancel",
+  "queue.row.cancel": "Скасувати",
   "@queue.row.cancel": {
     "sourceHash": "19766ed"
   },
-  "queue.row.dismiss": "Dismiss",
+  "queue.row.dismiss": "Закрити",
   "@queue.row.dismiss": {
     "sourceHash": "48845bf"
   },
-  "queue.row.dismissAria": "Dismiss this operation",
+  "queue.row.dismissAria": "Закрити рядок цієї операції",
   "@queue.row.dismissAria": {
     "sourceHash": "ff1b528"
   },
-  "queue.row.treeToggleAria": "Files in this operation",
+  "queue.row.treeToggleAria": "Файли цієї операції",
   "@queue.row.treeToggleAria": {
     "sourceHash": "6c35afe"
   },
-  "queue.row.treeToggleTooltip": "{open, select, yes {Hide the files} other {Show the files}}",
+  "queue.row.treeToggleTooltip": "{open, select, yes {Сховати файли} other {Показати файли}}",
   "@queue.row.treeToggleTooltip": {
     "sourceHash": "71ba668"
   },
-  "queue.row.retry": "Retry",
+  "queue.row.retry": "Спробувати ще раз",
   "@queue.row.retry": {
     "sourceHash": "942087c"
   },
-  "queue.row.retryAria": "Retry this operation",
+  "queue.row.retryAria": "Спробувати ще раз виконати цю операцію",
   "@queue.row.retryAria": {
     "sourceHash": "7694afb"
   },
-  "queue.row.selectAria": "Select this operation",
+  "queue.row.selectAria": "Вибрати цю операцію",
   "@queue.row.selectAria": {
     "sourceHash": "6618ecc"
   },
-  "queue.list.aria": "Operations",
+  "queue.list.aria": "Операції",
   "@queue.list.aria": {
     "sourceHash": "358cc20"
   },
-  "queue.reorder.moved": "{direction, select, earlier {Moved up.} other {Moved down.}} Now {position} of {waiting} in line.",
+  "queue.reorder.moved": "{direction, select, earlier {Переміщено вище.} other {Переміщено нижче.}} Місце в черзі: {position} з {waiting}.",
   "@queue.reorder.moved": {
     "sourceHash": "00e58dc"
   },
-  "queue.reorder.atEdge": "{direction, select, earlier {Already first in line.} other {Already last in line.}}",
+  "queue.reorder.atEdge": "{direction, select, earlier {Операція вже перша в черзі.} other {Операція вже остання в черзі.}}",
   "@queue.reorder.atEdge": {
     "sourceHash": "768e3f3"
   },
-  "queue.reorder.notQueued": "Only waiting operations can move.",
+  "queue.reorder.notQueued": "Переміщувати можна лише операції, що очікують.",
   "@queue.reorder.notQueued": {
     "sourceHash": "8097038"
   },
-  "queue.toolbar.pauseAll": "Pause all",
+  "queue.toolbar.pauseAll": "Призупинити всі",
   "@queue.toolbar.pauseAll": {
     "sourceHash": "0b6258b"
   },
-  "queue.toolbar.resumeAll": "Resume all",
+  "queue.toolbar.resumeAll": "Поновити всі",
   "@queue.toolbar.resumeAll": {
     "sourceHash": "43e673c"
   },
-  "queue.toolbar.cancelSelected": "Cancel selected",
+  "queue.toolbar.cancelSelected": "Скасувати вибрані",
   "@queue.toolbar.cancelSelected": {
     "sourceHash": "34e18e5"
   },
-  "queue.toolbar.dismissAll": "Dismiss all",
+  "queue.toolbar.dismissAll": "Закрити всі",
   "@queue.toolbar.dismissAll": {
     "sourceHash": "97fac9e"
   },
-  "queue.toolbar.selectedCount": "{count, plural, one {# selected} other {# selected}}",
+  "queue.toolbar.selectedCount": "{count, plural, one {Вибрано: #} few {Вибрано: #} many {Вибрано: #} other {Вибрано: #}}",
   "@queue.toolbar.selectedCount": {
     "sourceHash": "5f13640"
   },
-  "queue.failureToast.title": "{type, select, copy {Couldn’t finish copying} move {Couldn’t finish moving} delete {Couldn’t finish deleting} trash {Couldn’t finish moving to trash} rename {Couldn’t finish renaming} create_folder {Couldn’t finish creating the folder} create_file {Couldn’t finish creating the file} archive_edit {Couldn’t finish editing the archive} other {Couldn’t finish}}",
+  "queue.failureToast.title": "{type, select, copy {Не вдалося завершити копіювання} move {Не вдалося завершити переміщення} delete {Не вдалося завершити видалення} trash {Не вдалося завершити переміщення в Смітник} rename {Не вдалося завершити перейменування} create_folder {Не вдалося завершити створення папки} create_file {Не вдалося завершити створення файлу} archive_edit {Не вдалося завершити редагування архіву} other {Не вдалося завершити операцію}}",
   "@queue.failureToast.title": {
     "sourceHash": "b5f2b47"
   },
-  "queue.failureToast.action": "Show in operation queue",
+  "queue.failureToast.action": "Показати у вікні «Черга операцій»",
   "@queue.failureToast.action": {
     "sourceHash": "607fbb1"
   },
-  "queue.handoffToast.action": "Show in operation queue",
+  "queue.handoffToast.action": "Показати у вікні «Черга операцій»",
   "@queue.handoffToast.action": {
     "sourceHash": "607fbb1"
   },
-  "queue.failureToast.summary": "{count, plural, one {{countText} operation couldn’t finish} other {{countText} operations couldn’t finish}}",
+  "queue.failureToast.summary": "{count, plural, one {Не вдалося завершити {countText} операцію} few {Не вдалося завершити {countText} операції} many {Не вдалося завершити {countText} операцій} other {Не вдалося завершити {countText} операції}}",
   "@queue.failureToast.summary": {
     "sourceHash": "a55d85a"
   },
-  "queue.chip.failed": "{count, plural, one {{countText} operation couldn’t finish} other {{countText} operations couldn’t finish}}. Open the operation queue to see why.",
+  "queue.chip.failed": "{count, plural, one {Не вдалося завершити {countText} операцію} few {Не вдалося завершити {countText} операції} many {Не вдалося завершити {countText} операцій} other {Не вдалося завершити {countText} операції}}. Відкрийте вікно «Черга операцій», щоб переглянути причини.",
   "@queue.chip.failed": {
     "sourceHash": "9c0036b"
   },
-  "queue.chip.ariaLabel": "{label}, {percentText} percent. Open the operation queue.",
+  "queue.chip.ariaLabel": "{label}, відсоток виконання: {percentText}. Відкрити вікно «Черга операцій».",
   "@queue.chip.ariaLabel": {
     "sourceHash": "3ff7a01"
   },
-  "queue.chip.scanningAriaLabel": "{label}, scanning. Open the operation queue.",
+  "queue.chip.scanningAriaLabel": "{label}, сканування. Відкрити вікно «Черга операцій».",
   "@queue.chip.scanningAriaLabel": {
     "sourceHash": "791fc9f"
   },
-  "queue.chip.indeterminateAriaLabel": "{label}. Open the operation queue.",
+  "queue.chip.indeterminateAriaLabel": "{label}. Відкрити вікно «Черга операцій».",
   "@queue.chip.indeterminateAriaLabel": {
     "sourceHash": "d35fc3f"
   },
-  "queue.chip.tooltip": "{label}{count, plural, =0 {} one { · {countText} item} other { · {countText} items}}{hasDestination, select, yes { · to {destination}} other {}} · {percentText}%{hasDetail, select, yes { · {detail}} other {}}",
+  "queue.chip.tooltip": "{label}{count, plural, =0 {} one { · {countText} елемент} few { · {countText} елементи} many { · {countText} елементів} other { · {countText} елемента}}{hasDestination, select, yes { · у папку «{destination}»} other {}} · {percentText} %{hasDetail, select, yes { · {detail}} other {}}",
   "@queue.chip.tooltip": {
     "sourceHash": "6680100"
   }

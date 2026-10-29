@@ -1,441 +1,441 @@
 {
-  "suggestedOps.title": "AI suggestions",
+  "suggestedOps.title": "Пропозиції ШІ",
   "@suggestedOps.title": {
     "sourceHash": "1a1f5b9"
   },
-  "suggestedOps.description": "The agent suggested the actions below. Apply them only if you agree.",
+  "suggestedOps.description": "Агент запропонував дії, наведені нижче. Застосовуйте їх, лише якщо ви згодні.",
   "@suggestedOps.description": {
     "sourceHash": "4d98280"
   },
-  "suggestedOps.approvalNoticeDismiss": "Don’t show this again",
+  "suggestedOps.approvalNoticeDismiss": "Більше не показувати",
   "@suggestedOps.approvalNoticeDismiss": {
     "sourceHash": "2c23c21"
   },
-  "suggestedOps.sweepWhen.justNow": "Suggested just now",
+  "suggestedOps.sweepWhen.justNow": "Запропоновано щойно",
   "@suggestedOps.sweepWhen.justNow": {
     "sourceHash": "4606788"
   },
-  "suggestedOps.sweepWhen.minutesAgo": "Suggested {countText} {count, plural, one {minute} other {minutes}} ago",
+  "suggestedOps.sweepWhen.minutesAgo": "Запропоновано {countText} {count, plural, one {хвилину} few {хвилини} many {хвилин} other {хвилини}} тому",
   "@suggestedOps.sweepWhen.minutesAgo": {
     "sourceHash": "96782e0"
   },
-  "suggestedOps.sweepWhen.today": "Suggested today at {time}",
+  "suggestedOps.sweepWhen.today": "Запропоновано сьогодні о {time}",
   "@suggestedOps.sweepWhen.today": {
     "sourceHash": "105ec27"
   },
-  "suggestedOps.sweepWhen.yesterday": "Suggested yesterday at {time}",
+  "suggestedOps.sweepWhen.yesterday": "Запропоновано вчора о {time}",
   "@suggestedOps.sweepWhen.yesterday": {
     "sourceHash": "a0d2061"
   },
-  "suggestedOps.sweepWhen.earlier": "Suggested {date}",
+  "suggestedOps.sweepWhen.earlier": "Запропоновано {date}",
   "@suggestedOps.sweepWhen.earlier": {
     "sourceHash": "cbe0d5f"
   },
-  "suggestedOps.empty": "Nothing is waiting for you right now.",
+  "suggestedOps.empty": "Зараз на вас нічого не чекає.",
   "@suggestedOps.empty": {
     "sourceHash": "b93eccd"
   },
-  "suggestedOps.loadFailed": "Cmdr couldn’t read the suggestions. Close this dialog and open it again.",
+  "suggestedOps.loadFailed": "Cmdr не вдалося прочитати пропозиції. Закрийте це діалогове вікно й відкрийте його знову.",
   "@suggestedOps.loadFailed": {
     "sourceHash": "139450e"
   },
-  "suggestedOps.agentReason": "Why:",
+  "suggestedOps.agentReason": "Чому:",
   "@suggestedOps.agentReason": {
     "sourceHash": "ad389aa"
   },
-  "suggestedOps.agentReasonTooltip": "The AI’s own words. Cmdr didn’t check them.",
+  "suggestedOps.agentReasonTooltip": "Це власні слова ШІ. Cmdr їх не перевіряв.",
   "@suggestedOps.agentReasonTooltip": {
     "sourceHash": "aadab2c"
   },
-  "suggestedOps.agentReasonSpoken": "Why, according to the AI:",
+  "suggestedOps.agentReasonSpoken": "Чому, на думку ШІ:",
   "@suggestedOps.agentReasonSpoken": {
     "sourceHash": "0c0a448"
   },
-  "suggestedOps.fileCount": "{countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.fileCount": "{countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
   "@suggestedOps.fileCount": {
     "sourceHash": "76ef0a6"
   },
-  "suggestedOps.action.move": "Move",
+  "suggestedOps.action.move": "Перемістити",
   "@suggestedOps.action.move": {
     "sourceHash": "6ecc3df"
   },
-  "suggestedOps.action.copy": "Copy",
+  "suggestedOps.action.copy": "Скопіювати",
   "@suggestedOps.action.copy": {
     "sourceHash": "e21f935"
   },
-  "suggestedOps.action.trash": "Move to Trash",
+  "suggestedOps.action.trash": "Перемістити в Смітник",
   "@suggestedOps.action.trash": {
     "sourceHash": "9adcdf3"
   },
-  "suggestedOps.action.delete": "Delete",
+  "suggestedOps.action.delete": "Видалити",
   "@suggestedOps.action.delete": {
     "sourceHash": "e2d0a54"
   },
-  "suggestedOps.action.rename": "Rename",
+  "suggestedOps.action.rename": "Перейменувати",
   "@suggestedOps.action.rename": {
     "sourceHash": "3064d79"
   },
-  "suggestedOps.action.compress": "Compress",
+  "suggestedOps.action.compress": "Створити архів",
   "@suggestedOps.action.compress": {
     "sourceHash": "033fc04"
   },
-  "suggestedOps.action.extract": "Extract",
+  "suggestedOps.action.extract": "Розпакувати",
   "@suggestedOps.action.extract": {
     "sourceHash": "c15301c"
   },
-  "suggestedOps.approve.move": "Move {countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.approve.move": "Перемістити {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
   "@suggestedOps.approve.move": {
     "sourceHash": "4c89041"
   },
-  "suggestedOps.approve.copy": "Copy {countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.approve.copy": "Скопіювати {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
   "@suggestedOps.approve.copy": {
     "sourceHash": "e10c490"
   },
-  "suggestedOps.approve.trash": "Move {countText} {count, plural, one {file} other {files}} to Trash",
+  "suggestedOps.approve.trash": "Перемістити {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}} у Смітник",
   "@suggestedOps.approve.trash": {
     "sourceHash": "3c82946"
   },
-  "suggestedOps.approve.delete": "Delete {countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.approve.delete": "Видалити {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
   "@suggestedOps.approve.delete": {
     "sourceHash": "218cf04"
   },
-  "suggestedOps.approve.rename": "Rename {countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.approve.rename": "Перейменувати {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
   "@suggestedOps.approve.rename": {
     "sourceHash": "412518d"
   },
-  "suggestedOps.approve.compress": "Compress {countText} {count, plural, one {file} other {files}}",
+  "suggestedOps.approve.compress": "Стиснути {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
   "@suggestedOps.approve.compress": {
     "sourceHash": "7df0dfc"
   },
-  "suggestedOps.approve.extract": "Extract {countText} {count, plural, one {archive} other {archives}}",
+  "suggestedOps.approve.extract": "Розпакувати {countText} {count, plural, one {архів} few {архіви} many {архівів} other {архіву}}",
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
   },
-  "suggestedOps.approve.addServer": "Save server",
+  "suggestedOps.approve.addServer": "Зберегти сервер",
   "@suggestedOps.approve.addServer": {
     "sourceHash": "726b9af"
   },
-  "suggestedOps.approve.editServer": "Save changes",
+  "suggestedOps.approve.editServer": "Зберегти зміни",
   "@suggestedOps.approve.editServer": {
     "sourceHash": "dd0ae7a"
   },
-  "suggestedOps.reject": "Reject",
+  "suggestedOps.reject": "Відхилити",
   "@suggestedOps.reject": {
     "sourceHash": "ab604a3"
   },
-  "suggestedOps.facts.from": "From",
+  "suggestedOps.facts.from": "Звідки",
   "@suggestedOps.facts.from": {
     "sourceHash": "2181976"
   },
-  "suggestedOps.facts.to": "To",
+  "suggestedOps.facts.to": "Куди",
   "@suggestedOps.facts.to": {
     "sourceHash": "f4b06ef"
   },
-  "suggestedOps.facts.folder": "Folder",
+  "suggestedOps.facts.folder": "Папка",
   "@suggestedOps.facts.folder": {
     "sourceHash": "74ccd43"
   },
-  "suggestedOps.facts.archive": "Archive",
+  "suggestedOps.facts.archive": "Архів",
   "@suggestedOps.facts.archive": {
     "sourceHash": "66f4804"
   },
-  "suggestedOps.facts.trash": "The Trash",
+  "suggestedOps.facts.trash": "Смітник",
   "@suggestedOps.facts.trash": {
     "sourceHash": "4e42c6e"
   },
-  "suggestedOps.facts.severalFolders": "Several folders",
+  "suggestedOps.facts.severalFolders": "Кілька папок",
   "@suggestedOps.facts.severalFolders": {
     "sourceHash": "7c32950"
   },
-  "suggestedOps.reversible.trash": "You can undo this: {count, plural, one {it goes} other {they go}} to the Trash",
+  "suggestedOps.reversible.trash": "Це можна відмінити: {count, plural, =1 {елемент потрапить} one {елементи потраплять} few {елементи потраплять} many {елементи потраплять} other {елементи потраплять}} у Смітник",
   "@suggestedOps.reversible.trash": {
     "sourceHash": "55bf957"
   },
-  "suggestedOps.reversible.moveBack": "You can undo this: Cmdr can move {count, plural, one {it} other {them}} back",
+  "suggestedOps.reversible.moveBack": "Це можна відмінити: Cmdr може перемістити {count, plural, =1 {елемент} one {елементи} few {елементи} many {елементи} other {елементи}} назад",
   "@suggestedOps.reversible.moveBack": {
     "sourceHash": "14c0a31"
   },
-  "suggestedOps.reversible.renameBack": "You can undo this: Cmdr can change the {count, plural, one {name} other {names}} back",
+  "suggestedOps.reversible.renameBack": "Це можна відмінити: Cmdr може повернути {count, plural, =1 {стару назву} one {старі назви} few {старі назви} many {старі назви} other {старі назви}}",
   "@suggestedOps.reversible.renameBack": {
     "sourceHash": "4c7e3c3"
   },
-  "suggestedOps.reversible.removeCopies": "You can undo this: Cmdr deletes the copies",
+  "suggestedOps.reversible.removeCopies": "Це можна відмінити: Cmdr видалить копії",
   "@suggestedOps.reversible.removeCopies": {
     "sourceHash": "0ec3b08"
   },
-  "suggestedOps.reversible.removeArchive": "You can undo this: Cmdr deletes the new archive",
+  "suggestedOps.reversible.removeArchive": "Це можна відмінити: Cmdr видалить новий архів",
   "@suggestedOps.reversible.removeArchive": {
     "sourceHash": "2c8278f"
   },
-  "suggestedOps.reversible.removeExtracted": "You can undo this: Cmdr deletes what it extracted",
+  "suggestedOps.reversible.removeExtracted": "Це можна відмінити: Cmdr видалить те, що розпакував",
   "@suggestedOps.reversible.removeExtracted": {
     "sourceHash": "977a513"
   },
-  "suggestedOps.irreversible.delete": "This can’t be undone: the files are deleted for good",
+  "suggestedOps.irreversible.delete": "Це не можна відмінити: файли буде видалено назавжди",
   "@suggestedOps.irreversible.delete": {
     "sourceHash": "e32da9a"
   },
-  "suggestedOps.noTrash": "This drive has no Trash",
+  "suggestedOps.noTrash": "На цьому диску немає Смітника",
   "@suggestedOps.noTrash": {
     "sourceHash": "38a6adc"
   },
-  "suggestedOps.noTrashTooltip": "The drive these files are on keeps no Trash, so approving this deletes them for good.",
+  "suggestedOps.noTrashTooltip": "На диску з цими файлами немає Смітника, тож схвалення видалить їх назавжди.",
   "@suggestedOps.noTrashTooltip": {
     "sourceHash": "4327cb2"
   },
-  "suggestedOps.irreversible.overwrite": "This can’t be undone: it replaces an existing archive",
+  "suggestedOps.irreversible.overwrite": "Це не можна відмінити: наявний архів буде замінено",
   "@suggestedOps.irreversible.overwrite": {
     "sourceHash": "0d5c5bb"
   },
-  "suggestedOps.irreversible.other": "This can’t be undone",
+  "suggestedOps.irreversible.other": "Це не можна відмінити",
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
   },
-  "suggestedOps.reversible.forgetServer": "You can undo this: forget the server in Servers",
+  "suggestedOps.reversible.forgetServer": "Це можна відмінити: забудьте сервер у розділі «Сервери»",
   "@suggestedOps.reversible.forgetServer": {
     "sourceHash": "892c381"
   },
-  "suggestedOps.reversible.changeServerBack": "You can undo this: change the server back in Servers",
+  "suggestedOps.reversible.changeServerBack": "Це можна відмінити: поверніть попередні параметри сервера в розділі «Сервери»",
   "@suggestedOps.reversible.changeServerBack": {
     "sourceHash": "ff1ea36"
   },
-  "suggestedOps.folderWillBeCreated": "Cmdr will create this folder",
+  "suggestedOps.folderWillBeCreated": "Cmdr створить цю папку",
   "@suggestedOps.folderWillBeCreated": {
     "sourceHash": "26243e5"
   },
-  "suggestedOps.folderWillBeCreatedTooltip": "The target folder is not there yet. Approving creates it, exactly as it would if you started the move yourself.",
+  "suggestedOps.folderWillBeCreatedTooltip": "Цільової папки ще немає. Схвалення створить її так само, як якби ви почали переміщення самі.",
   "@suggestedOps.folderWillBeCreatedTooltip": {
     "sourceHash": "2d28b7c"
   },
-  "suggestedOps.destinationUnknown": "Cmdr couldn’t check the target folder",
+  "suggestedOps.destinationUnknown": "Cmdr не вдалося перевірити цільову папку",
   "@suggestedOps.destinationUnknown": {
     "sourceHash": "dc78d1d"
   },
-  "suggestedOps.destinationNotConnected": "The target isn’t connected",
+  "suggestedOps.destinationNotConnected": "Місце призначення не підʼєднано",
   "@suggestedOps.destinationNotConnected": {
     "sourceHash": "51dcf8e"
   },
-  "suggestedOps.destinationNotConnectedTooltip": "Cmdr hasn’t connected to this drive or server yet. Approving won’t start until it’s connected, the same as when you move files there yourself.",
+  "suggestedOps.destinationNotConnectedTooltip": "Cmdr ще не підʼєднався до цього диска чи сервера. Після схвалення операція почнеться лише тоді, коли його буде підʼєднано. Так само буває, коли ви самі переміщуєте туди файли.",
   "@suggestedOps.destinationNotConnectedTooltip": {
     "sourceHash": "af06219"
   },
-  "suggestedOps.fromPattern": "Matched by a pattern",
+  "suggestedOps.fromPattern": "Знайдено за шаблоном",
   "@suggestedOps.fromPattern": {
     "sourceHash": "20e88a9"
   },
-  "suggestedOps.changedUnderReview": "The AI changed this suggestion while you were reading it.",
+  "suggestedOps.changedUnderReview": "ШІ змінив цю пропозицію, поки ви її читали.",
   "@suggestedOps.changedUnderReview": {
     "sourceHash": "5d07c7c"
   },
-  "suggestedOps.showNewVersion": "Show the new version",
+  "suggestedOps.showNewVersion": "Показати нову версію",
   "@suggestedOps.showNewVersion": {
     "sourceHash": "2b92d18"
   },
-  "suggestedOps.filesLabel": "Files in “{name}”",
+  "suggestedOps.filesLabel": "Файли пропозиції «{name}»",
   "@suggestedOps.filesLabel": {
     "sourceHash": "adf93b7"
   },
-  "suggestedOps.columnInclude": "Include",
+  "suggestedOps.columnInclude": "Включити",
   "@suggestedOps.columnInclude": {
     "sourceHash": "7285576"
   },
-  "suggestedOps.includeAll": "Include all files",
+  "suggestedOps.includeAll": "Включити всі файли",
   "@suggestedOps.includeAll": {
     "sourceHash": "ac6c70c"
   },
-  "suggestedOps.columnName": "Name",
+  "suggestedOps.columnName": "Назва",
   "@suggestedOps.columnName": {
     "sourceHash": "dcd1d52"
   },
-  "suggestedOps.columnFolder": "Folder",
+  "suggestedOps.columnFolder": "Папка",
   "@suggestedOps.columnFolder": {
     "sourceHash": "74ccd43"
   },
-  "suggestedOps.columnNewName": "New name",
+  "suggestedOps.columnNewName": "Нова назва",
   "@suggestedOps.columnNewName": {
     "sourceHash": "04eea2a"
   },
-  "suggestedOps.columnSize": "Size",
+  "suggestedOps.columnSize": "Розмір",
   "@suggestedOps.columnSize": {
     "sourceHash": "1af8519"
   },
-  "suggestedOps.columnModified": "Last modified",
+  "suggestedOps.columnModified": "Востаннє змінено",
   "@suggestedOps.columnModified": {
     "sourceHash": "0fe1058"
   },
-  "suggestedOps.factChanged": "Changed since the suggestion",
+  "suggestedOps.factChanged": "Змінено після пропозиції",
   "@suggestedOps.factChanged": {
     "sourceHash": "958780a"
   },
-  "suggestedOps.factChangedTooltip": "When suggested: {then} / Now: {now}",
+  "suggestedOps.factChangedTooltip": "На момент пропозиції: {then} / Зараз: {now}",
   "@suggestedOps.factChangedTooltip": {
     "sourceHash": "8bf4166"
   },
-  "suggestedOps.fileMissing": "Moved or deleted",
+  "suggestedOps.fileMissing": "Переміщено або видалено",
   "@suggestedOps.fileMissing": {
     "sourceHash": "2073c5b"
   },
-  "suggestedOps.snapshotOnly": "From when the AI suggested this",
+  "suggestedOps.snapshotOnly": "Дані на момент пропозиції ШІ",
   "@suggestedOps.snapshotOnly": {
     "sourceHash": "f6b2d27"
   },
-  "suggestedOps.snapshotOnlyTooltip": "Cmdr couldn’t check this file just now, so this is what it was when the AI suggested it.",
+  "suggestedOps.snapshotOnlyTooltip": "Cmdr не вдалося щойно перевірити цей файл, тож тут показано значення на момент, коли ШІ це запропонував.",
   "@suggestedOps.snapshotOnlyTooltip": {
     "sourceHash": "d6a081c"
   },
-  "suggestedOps.sourceNotConnected": "Cmdr isn’t connected to the drive these files are on, so their sizes and dates are from when the AI suggested this.",
+  "suggestedOps.sourceNotConnected": "Cmdr не підʼєднаний до диска, на якому лежать ці файли, тож їхні розміри й дати показано на момент, коли ШІ це запропонував.",
   "@suggestedOps.sourceNotConnected": {
     "sourceHash": "07d5134"
   },
-  "suggestedOps.sourceGone": "The drive these files were on isn’t here any more, so their sizes and dates are from when the AI suggested this.",
+  "suggestedOps.sourceGone": "Диска, на якому були ці файли, більше немає, тож їхні розміри й дати показано на момент, коли ШІ це запропонував.",
   "@suggestedOps.sourceGone": {
     "sourceHash": "1b30de5"
   },
-  "suggestedOps.factUnknown": "Unknown",
+  "suggestedOps.factUnknown": "Невідомо",
   "@suggestedOps.factUnknown": {
     "sourceHash": "b764cdc"
   },
-  "suggestedOps.includeFile": "Include {name}",
+  "suggestedOps.includeFile": "Включити «{name}»",
   "@suggestedOps.includeFile": {
     "sourceHash": "a44fb71"
   },
-  "suggestedOps.showMore": "Show {countText} more",
+  "suggestedOps.showMore": "Показати ще {countText}",
   "@suggestedOps.showMore": {
     "sourceHash": "4061571"
   },
-  "suggestedOps.showAll": "Show all {countText}",
+  "suggestedOps.showAll": "Показати всі {countText}",
   "@suggestedOps.showAll": {
     "sourceHash": "912b5d0"
   },
-  "suggestedOps.loadingFiles": "Loading the files…",
+  "suggestedOps.loadingFiles": "Завантаження файлів…",
   "@suggestedOps.loadingFiles": {
     "sourceHash": "83257e6"
   },
-  "suggestedOps.filesLoadFailed": "Cmdr couldn’t load these files.",
+  "suggestedOps.filesLoadFailed": "Cmdr не вдалося завантажити ці файли.",
   "@suggestedOps.filesLoadFailed": {
     "sourceHash": "01f1b86"
   },
-  "suggestedOps.retryFiles": "Try again",
+  "suggestedOps.retryFiles": "Спробувати ще раз",
   "@suggestedOps.retryFiles": {
     "sourceHash": "d8b8392"
   },
-  "suggestedOps.decisionNotRecorded": "Cmdr couldn’t save your answer. Try again.",
+  "suggestedOps.decisionNotRecorded": "Cmdr не вдалося зберегти вашу відповідь. Спробуйте ще раз.",
   "@suggestedOps.decisionNotRecorded": {
     "sourceHash": "9eae594"
   },
-  "suggestedOps.approvalUnsure": "Cmdr isn’t sure the approval went through. Check the operation queue before you approve it again.",
+  "suggestedOps.approvalUnsure": "Cmdr не впевнений, що схвалення спрацювало. Перевірте вікно «Черга операцій», перш ніж схвалювати знову.",
   "@suggestedOps.approvalUnsure": {
     "sourceHash": "fba515a"
   },
-  "suggestedOps.refusal.label": "Why this didn’t start",
+  "suggestedOps.refusal.label": "Чому це не запустилося",
   "@suggestedOps.refusal.label": {
     "sourceHash": "e176570"
   },
-  "suggestedOps.refusal.nothingToRun.message": "Cmdr couldn’t read any of these files when you approved, so nothing ran.",
+  "suggestedOps.refusal.nothingToRun.message": "Під час схвалення Cmdr не вдалося прочитати жодного з цих файлів, тож нічого не виконано.",
   "@suggestedOps.refusal.nothingToRun.message": {
     "sourceHash": "3018819"
   },
-  "suggestedOps.refusal.nothingToRun.suggestion": "Check that they’re still there, then approve it again, or reject it.",
+  "suggestedOps.refusal.nothingToRun.suggestion": "Перевірте, чи файли досі на місці, а тоді схваліть пропозицію знову або відхиліть її.",
   "@suggestedOps.refusal.nothingToRun.suggestion": {
     "sourceHash": "f4cfc9e"
   },
-  "suggestedOps.refusal.nothingSelected.message": "None of the files you ticked are in this suggestion any more, so nothing ran.",
+  "suggestedOps.refusal.nothingSelected.message": "Жодного з позначених вами файлів більше немає в цій пропозиції, тож нічого не виконано.",
   "@suggestedOps.refusal.nothingSelected.message": {
     "sourceHash": "7de9324"
   },
-  "suggestedOps.refusal.nothingSelected.suggestion": "Tick the files you want, then approve it again.",
+  "suggestedOps.refusal.nothingSelected.suggestion": "Позначте потрібні файли, а тоді схваліть пропозицію знову.",
   "@suggestedOps.refusal.nothingSelected.suggestion": {
     "sourceHash": "db90f78"
   },
-  "suggestedOps.refusal.couldNotStart.message": "Cmdr couldn’t turn this suggestion into an operation, so nothing ran.",
+  "suggestedOps.refusal.couldNotStart.message": "Cmdr не вдалося перетворити цю пропозицію на операцію, тож нічого не виконано.",
   "@suggestedOps.refusal.couldNotStart.message": {
     "sourceHash": "77ef48b"
   },
-  "suggestedOps.refusal.couldNotStart.suggestion": "Reject it, and ask Cmdr to suggest it again.",
+  "suggestedOps.refusal.couldNotStart.suggestion": "Відхиліть пропозицію й попросіть Cmdr запропонувати її знову.",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
     "sourceHash": "1d2b1bd"
   },
-  "suggestedOps.refusal.serverLabel": "Why this wasn’t saved",
+  "suggestedOps.refusal.serverLabel": "Чому це не збережено",
   "@suggestedOps.refusal.serverLabel": {
     "sourceHash": "c1958af"
   },
-  "suggestedOps.refusal.serverChanged.message": "This server changed since the AI suggested this, so Cmdr saved nothing.",
+  "suggestedOps.refusal.serverChanged.message": "Цей сервер змінився після того, як ШІ це запропонував, тож Cmdr нічого не зберіг.",
   "@suggestedOps.refusal.serverChanged.message": {
     "sourceHash": "a346372"
   },
-  "suggestedOps.refusal.serverChanged.suggestion": "Ask Cmdr to suggest it again, or edit the server in Servers.",
+  "suggestedOps.refusal.serverChanged.suggestion": "Попросіть Cmdr запропонувати це знову або змініть сервер у розділі «Сервери».",
   "@suggestedOps.refusal.serverChanged.suggestion": {
     "sourceHash": "cab1352"
   },
-  "suggestedOps.refusal.alreadySaved.message": "This server is already in your servers list, so Cmdr saved nothing.",
+  "suggestedOps.refusal.alreadySaved.message": "Цей сервер уже є у вашому списку серверів, тож Cmdr нічого не зберіг.",
   "@suggestedOps.refusal.alreadySaved.message": {
     "sourceHash": "111276b"
   },
-  "suggestedOps.refusal.alreadySaved.suggestion": "Open it from Servers, or ask Cmdr to suggest a change to it instead.",
+  "suggestedOps.refusal.alreadySaved.suggestion": "Відкрийте сервер у розділі «Сервери» або попросіть Cmdr натомість запропонувати зміни до нього.",
   "@suggestedOps.refusal.alreadySaved.suggestion": {
     "sourceHash": "6ec8bdc"
   },
-  "suggestedOps.refusal.nameTaken.message": "Another saved server is already called {name}, so Cmdr saved nothing.",
+  "suggestedOps.refusal.nameTaken.message": "Інший збережений сервер уже має назву «{name}», тож Cmdr нічого не зберіг.",
   "@suggestedOps.refusal.nameTaken.message": {
     "sourceHash": "1d0c01c"
   },
-  "suggestedOps.refusal.nameTaken.suggestion": "Ask Cmdr to suggest another name.",
+  "suggestedOps.refusal.nameTaken.suggestion": "Попросіть Cmdr запропонувати іншу назву.",
   "@suggestedOps.refusal.nameTaken.suggestion": {
     "sourceHash": "e366b0c"
   },
-  "suggestedOps.server.add": "Add a server",
+  "suggestedOps.server.add": "Додати сервер",
   "@suggestedOps.server.add": {
     "sourceHash": "8667e21"
   },
-  "suggestedOps.server.change": "Change server settings",
+  "suggestedOps.server.change": "Змінити параметри сервера",
   "@suggestedOps.server.change": {
     "sourceHash": "187a941"
   },
-  "suggestedOps.server.field.port": "Port",
+  "suggestedOps.server.field.port": "Порт",
   "@suggestedOps.server.field.port": {
     "sourceHash": "72e9a59"
   },
-  "suggestedOps.server.field.account": "Account",
+  "suggestedOps.server.field.account": "Обліковий запис",
   "@suggestedOps.server.field.account": {
     "sourceHash": "7e1b0d5"
   },
-  "suggestedOps.server.field.share": "Shared folder",
+  "suggestedOps.server.field.share": "Спільна папка",
   "@suggestedOps.server.field.share": {
     "sourceHash": "4268344"
   },
-  "suggestedOps.server.field.bucket": "Bucket",
+  "suggestedOps.server.field.bucket": "Бакет",
   "@suggestedOps.server.field.bucket": {
     "sourceHash": "c83b657"
   },
-  "suggestedOps.server.notSet": "Not set",
+  "suggestedOps.server.notSet": "Не задано",
   "@suggestedOps.server.notSet": {
     "sourceHash": "4895f73"
   },
-  "suggestedOps.server.changesTo": "changes to",
+  "suggestedOps.server.changesTo": "змінюється на",
   "@suggestedOps.server.changesTo": {
     "sourceHash": "8c0db20"
   },
-  "suggestedOps.server.newAddress": "A new address",
+  "suggestedOps.server.newAddress": "Нова адреса",
   "@suggestedOps.server.newAddress": {
     "sourceHash": "5fc5498"
   },
-  "suggestedOps.server.newAddressTooltip": "None of your saved servers is at this address. Check that it’s the one you mean.",
+  "suggestedOps.server.newAddressTooltip": "Жоден із ваших збережених серверів не має цієї адреси. Перевірте, чи це той сервер, що вам потрібен.",
   "@suggestedOps.server.newAddressTooltip": {
     "sourceHash": "16d851c"
   },
-  "suggestedOps.server.sharesAffected": "This changes {countText} saved {count, plural, one {share} other {shares}} on this server.",
+  "suggestedOps.server.sharesAffected": "Ця зміна стосується {countText} {count, plural, one {збереженої спільної папки} few {збережених спільних папок} many {збережених спільних папок} other {збереженої спільної папки}} на цьому сервері.",
   "@suggestedOps.server.sharesAffected": {
     "sourceHash": "390f931"
   },
-  "suggestedOps.indicatorTooltip": "AI suggestions are waiting. Click to review them.",
+  "suggestedOps.indicatorTooltip": "На вас чекають пропозиції ШІ. Клацніть, щоб перевірити їх.",
   "@suggestedOps.indicatorTooltip": {
     "sourceHash": "4508b0b"
   },
-  "suggestedOps.newNameTaken": "Name already taken",
+  "suggestedOps.newNameTaken": "Назву вже зайнято",
   "@suggestedOps.newNameTaken": {
     "sourceHash": "58e9841"
   },
-  "suggestedOps.newNameTakenTooltip": "Something called “{name}” is already there.",
+  "suggestedOps.newNameTakenTooltip": "Там уже є щось із назвою «{name}».",
   "@suggestedOps.newNameTakenTooltip": {
     "sourceHash": "b18f96a"
   }

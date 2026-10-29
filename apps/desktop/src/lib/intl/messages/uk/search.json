@@ -1,229 +1,229 @@
 {
-  "search.dialog.title": "Search",
+  "search.dialog.title": "Пошук",
   "@search.dialog.title": {
     "sourceHash": "49c266b"
   },
-  "search.runHint": "Press Enter to search",
+  "search.runHint": "Натисніть Enter, щоб шукати",
   "@search.runHint": {
     "sourceHash": "406d32e"
   },
-  "search.action.showAll.label": "Show all in main window",
+  "search.action.showAll.label": "Показати всі в головному вікні",
   "@search.action.showAll.label": {
     "sourceHash": "782075a"
   },
-  "search.action.showAll.tooltip": "Open the search results in the active pane",
+  "search.action.showAll.tooltip": "Відкрити результати пошуку на активній панелі",
   "@search.action.showAll.tooltip": {
     "sourceHash": "4e8c58a"
   },
-  "search.action.goToFile.label": "Go to file",
+  "search.action.goToFile.label": "Перейти до файлу",
   "@search.action.goToFile.label": {
     "sourceHash": "70299e6"
   },
-  "search.action.goToFile.tooltip": "Open the file in the active pane",
+  "search.action.goToFile.tooltip": "Відкрити файл на активній панелі",
   "@search.action.goToFile.tooltip": {
     "sourceHash": "2627d2e"
   },
-  "search.recent.runAria": "Run recent {mode} search: {query}",
+  "search.recent.runAria": "Запустити недавній пошук у режимі «{mode}»: {query}",
   "@search.recent.runAria": {
     "sourceHash": "fb0939c"
   },
-  "search.systemDirExclude.default": "Excludes common system and build folders",
+  "search.systemDirExclude.default": "Виключає поширені системні папки й папки збірок",
   "@search.systemDirExclude.default": {
     "sourceHash": "dcdf28a"
   },
-  "search.systemDirExclude.heading": "These folders are hidden:",
+  "search.systemDirExclude.heading": "Ці папки приховано:",
   "@search.systemDirExclude.heading": {
     "sourceHash": "5ee8d52"
   },
-  "search.notAFolderToast": "Search results aren’t a folder. Paste into a real folder instead.",
+  "search.notAFolderToast": "Результати пошуку — це не папка. Вставте у справжню папку.",
   "@search.notAFolderToast": {
     "sourceHash": "a801255"
   },
-  "search.searchableFolder.disabledTooltip": "Current folder is search results, which isn’t searchable. Open a real folder first.",
+  "search.searchableFolder.disabledTooltip": "Поточна папка — це результати пошуку, у них шукати не можна. Спершу відкрийте справжню папку.",
   "@search.searchableFolder.disabledTooltip": {
     "sourceHash": "42e599d"
   },
-  "search.imageResults.title": "Text in images",
+  "search.imageResults.title": "Текст на зображеннях",
   "@search.imageResults.title": {
     "sourceHash": "d4c2a29"
   },
-  "search.imageResults.count": "{totalText} found",
+  "search.imageResults.count": "Знайдено: {totalText}",
   "@search.imageResults.count": {
     "sourceHash": "3132fe5"
   },
-  "search.imageResults.countCapped": "showing {shownText} of {totalText}",
+  "search.imageResults.countCapped": "показано {shownText} з {totalText}",
   "@search.imageResults.countCapped": {
     "sourceHash": "3191a77"
   },
-  "search.imageResults.indexing": "Still indexing images, so results may be incomplete.",
+  "search.imageResults.indexing": "Зображення ще індексуються, тож результати можуть бути неповними.",
   "@search.imageResults.indexing": {
     "sourceHash": "20841d8"
   },
-  "search.imageResults.notIndexed": "This drive’s images aren’t indexed yet. They’ll become searchable once indexing runs.",
+  "search.imageResults.notIndexed": "Зображення на цьому диску ще не проіндексовано. Шукати в них можна буде після індексування.",
   "@search.imageResults.notIndexed": {
     "sourceHash": "aa3cc36"
   },
-  "search.imageResults.empty": "No images contain this text.",
+  "search.imageResults.empty": "Жодне зображення не містить цього тексту.",
   "@search.imageResults.empty": {
     "sourceHash": "edb6672"
   },
-  "search.imageResults.networkOff": "Turn on image indexing for this network drive in Settings to search the text inside its photos.",
+  "search.imageResults.networkOff": "Увімкніть у Параметрах індексування зображень для цього мережевого диска, щоб шукати текст на його фото.",
   "@search.imageResults.networkOff": {
     "sourceHash": "ccf901b"
   },
-  "search.imageResults.paused": "This drive is disconnected, so these are the photos indexed so far.",
+  "search.imageResults.paused": "Цей диск відʼєднано, тож тут показано фото, проіндексовані до відʼєднання.",
   "@search.imageResults.paused": {
     "sourceHash": "ec483f7"
   },
-  "search.imageResults.findSimilar": "Find similar images",
+  "search.imageResults.findSimilar": "Знайти схожі зображення",
   "@search.imageResults.findSimilar": {
     "sourceHash": "708c3bd"
   },
-  "search.imageResults.matchedDescription": "Matched your description",
+  "search.imageResults.matchedDescription": "Збігається з вашим описом",
   "@search.imageResults.matchedDescription": {
     "sourceHash": "3b30350"
   },
-  "search.imageResults.similarTo": "Similar to {name}",
+  "search.imageResults.similarTo": "Схожі на «{name}»",
   "@search.imageResults.similarTo": {
     "sourceHash": "fc94bbb"
   },
-  "search.imageResults.backToResults": "Back to search",
+  "search.imageResults.backToResults": "Назад до пошуку",
   "@search.imageResults.backToResults": {
     "sourceHash": "22252a1"
   },
-  "search.imageResults.similarEmpty": "No similar images found.",
+  "search.imageResults.similarEmpty": "Схожих зображень не знайдено.",
   "@search.imageResults.similarEmpty": {
     "sourceHash": "d3ef9f7"
   },
-  "search.walkHandoff.running": "Still searching for {label}",
+  "search.walkHandoff.running": "Пошук «{label}» ще триває",
   "@search.walkHandoff.running": {
     "sourceHash": "79a7339"
   },
-  "search.walkHandoff.counts": "{matchCount, plural, one {# match} other {# matches}} so far, {folderCount, plural, one {# folder} other {# folders}} scanned",
+  "search.walkHandoff.counts": "{matchCount, plural, one {Поки що # збіг} few {Поки що # збіги} many {Поки що # збігів} other {Поки що # збігу}}, {folderCount, plural, one {проскановано # папку} few {проскановано # папки} many {проскановано # папок} other {проскановано # папки}}",
   "@search.walkHandoff.counts": {
     "sourceHash": "8e68f3f"
   },
-  "search.walkHandoff.reopen": "Reopen search",
+  "search.walkHandoff.reopen": "Знову відкрити пошук",
   "@search.walkHandoff.reopen": {
     "sourceHash": "6b49872"
   },
-  "search.walkHandoff.stop": "Stop",
+  "search.walkHandoff.stop": "Зупинити",
   "@search.walkHandoff.stop": {
     "sourceHash": "cae7d57"
   },
-  "search.walkHandoff.hideTooltip": "Hide this. The search keeps running.",
+  "search.walkHandoff.hideTooltip": "Сховати це повідомлення. Пошук триває далі.",
   "@search.walkHandoff.hideTooltip": {
     "sourceHash": "7ee94f1"
   },
-  "search.walkHandoff.finished": "{count, plural, one {Found # match} other {Found # matches}} for {label}.",
+  "search.walkHandoff.finished": "Пошук «{label}»: {count, plural, one {знайдено # збіг} few {знайдено # збіги} many {знайдено # збігів} other {знайдено # збігу}}.",
   "@search.walkHandoff.finished": {
     "sourceHash": "0cbc210"
   },
-  "search.walkHandoff.stoppedShort": "The results for {label} may be short: Cmdr didn’t get through everything.",
+  "search.walkHandoff.stoppedShort": "Результати пошуку «{label}» можуть бути неповними: Cmdr переглянув не все.",
   "@search.walkHandoff.stoppedShort": {
     "sourceHash": "d196ce2"
   },
-  "search.walkHandoff.superseded": "Cmdr stopped adding to the results for {label}, because your new search took over.",
+  "search.walkHandoff.superseded": "Cmdr припинив додавати результати до пошуку «{label}», бо ви почали новий пошук.",
   "@search.walkHandoff.superseded": {
     "sourceHash": "83aa5a2"
   },
-  "search.coverage.uncovered.local": "Cmdr hasn’t indexed {drive} yet, so this search skipped:",
+  "search.coverage.uncovered.local": "Cmdr ще не проіндексував {drive}, тож цей пошук пропустив:",
   "@search.coverage.uncovered.local": {
     "sourceHash": "8fe8ce1"
   },
-  "search.coverage.uncovered.network": "Cmdr doesn’t index network drives unless you ask, so this search skipped:",
+  "search.coverage.uncovered.network": "Cmdr індексує мережеві диски лише на ваше прохання, тож цей пошук пропустив:",
   "@search.coverage.uncovered.network": {
     "sourceHash": "0066012"
   },
-  "search.coverage.uncovered.unavailable": "Cmdr can’t search {drive} yet, so this search skipped:",
+  "search.coverage.uncovered.unavailable": "Cmdr поки не може охопити пошуком {drive}, тож цей пошук пропустив:",
   "@search.coverage.uncovered.unavailable": {
     "sourceHash": "6f9cb5b"
   },
-  "search.coverage.uncovered.indexing": "Cmdr is still indexing {drive} and hasn’t reached these folders yet, so this search skipped:",
+  "search.coverage.uncovered.indexing": "Cmdr ще індексує {drive} і поки не дійшов до цих папок, тож цей пошук пропустив:",
   "@search.coverage.uncovered.indexing": {
     "sourceHash": "9cf6003"
   },
-  "search.coverage.unresolved": "{count, plural, one {Cmdr’s index doesn’t cover this folder yet, so this search skipped it:} other {Cmdr’s index doesn’t cover these folders yet, so this search skipped them:}}",
+  "search.coverage.unresolved": "{count, plural, =1 {Індекс Cmdr поки не охоплює цю папку, тож цей пошук її пропустив:} one {Індекс Cmdr поки не охоплює ці папки, тож цей пошук їх пропустив:} few {Індекс Cmdr поки не охоплює ці папки, тож цей пошук їх пропустив:} many {Індекс Cmdr поки не охоплює ці папки, тож цей пошук їх пропустив:} other {Індекс Cmdr поки не охоплює ці папки, тож цей пошук їх пропустив:}}",
   "@search.coverage.unresolved": {
     "sourceHash": "6afa798"
   },
-  "search.coverage.walk.cancelled": "You stopped this search, so it shows what Cmdr had found by then. Everything it read on the way is saved, so searching again picks up from there.",
+  "search.coverage.walk.cancelled": "Ви зупинили цей пошук, тож тут те, що Cmdr устиг знайти. Усе, що він прочитав дорогою, збережено, тож повторний пошук продовжить звідти.",
   "@search.coverage.walk.cancelled": {
     "sourceHash": "ea9caa1"
   },
-  "search.coverage.walk.interrupted": "This search stopped early, so there may be more on {drive}. Searching again picks up where it left off.",
+  "search.coverage.walk.interrupted": "Цей пошук зупинився передчасно, тож {drive} може містити ще щось. Повторний пошук продовжить із того місця, де цей зупинився.",
   "@search.coverage.walk.interrupted": {
     "sourceHash": "4c6a0a4"
   },
-  "search.coverage.walk.abandoned": "Some folders stopped answering, so Cmdr moved on without them and this list may be short. Searching again gives them another try.",
+  "search.coverage.walk.abandoned": "Деякі папки перестали відповідати, тож Cmdr пішов далі без них, і цей список може бути неповним. Під час повторного пошуку Cmdr спробує ще раз.",
   "@search.coverage.walk.abandoned": {
     "sourceHash": "4a6a2af"
   },
-  "search.coverage.walk.abandonedCount": "{count, plural, one {One spot on this drive stopped answering, so Cmdr moved on without it and this list may be short. Cmdr comes back to it later, and searching again gives it another try.} other {{countText} spots on this drive stopped answering, so Cmdr moved on without them and this list may be short. Cmdr comes back to them later, and searching again gives them another try.}}",
+  "search.coverage.walk.abandonedCount": "{count, plural, =1 {Одне місце на цьому диску перестало відповідати, тож Cmdr пішов далі без нього, і цей список може бути неповним. Cmdr повернеться до нього пізніше, а під час повторного пошуку спробує ще раз.} one {{countText} місце на цьому диску перестало відповідати, тож Cmdr пішов далі без них, і цей список може бути неповним. Cmdr повернеться до них пізніше, а під час повторного пошуку спробує ще раз.} few {{countText} місця на цьому диску перестали відповідати, тож Cmdr пішов далі без них, і цей список може бути неповним. Cmdr повернеться до них пізніше, а під час повторного пошуку спробує ще раз.} many {{countText} місць на цьому диску перестали відповідати, тож Cmdr пішов далі без них, і цей список може бути неповним. Cmdr повернеться до них пізніше, а під час повторного пошуку спробує ще раз.} other {{countText} місця на цьому диску перестали відповідати, тож Cmdr пішов далі без них, і цей список може бути неповним. Cmdr повернеться до них пізніше, а під час повторного пошуку спробує ще раз.}}",
   "@search.coverage.walk.abandonedCount": {
     "sourceHash": "2a79bc5"
   },
-  "search.coverage.denied": "{count, plural, one {Cmdr wasn’t allowed to look inside this folder, so nothing from it is in the results:} other {Cmdr wasn’t allowed to look inside these folders, so nothing from them is in the results:}}",
+  "search.coverage.denied": "{count, plural, =1 {Cmdr не дозволили зазирнути в цю папку, тож у результатах немає нічого з неї:} one {Cmdr не дозволили зазирнути в ці папки, тож у результатах немає нічого з них:} few {Cmdr не дозволили зазирнути в ці папки, тож у результатах немає нічого з них:} many {Cmdr не дозволили зазирнути в ці папки, тож у результатах немає нічого з них:} other {Cmdr не дозволили зазирнути в ці папки, тож у результатах немає нічого з них:}}",
   "@search.coverage.denied": {
     "sourceHash": "c71fc2e"
   },
-  "search.coverage.deniedFullDiskAccess": "With full disk access, Cmdr can search folders like these.",
+  "search.coverage.deniedFullDiskAccess": "Коли Cmdr матиме повний доступ до диска, пошук охопить і такі папки.",
   "@search.coverage.deniedFullDiskAccess": {
     "sourceHash": "8de9168"
   },
-  "search.coverage.setUpFullDiskAccess": "Set up full disk access",
+  "search.coverage.setUpFullDiskAccess": "Налаштувати повний доступ до диска",
   "@search.coverage.setUpFullDiskAccess": {
     "sourceHash": "98226cc"
   },
-  "search.coverage.declined": "{count, plural, one {Cmdr doesn’t look inside snapshot folders, so nothing from this one is in the results:} other {Cmdr doesn’t look inside snapshot folders, so nothing from these is in the results:}}",
+  "search.coverage.declined": "{count, plural, =1 {Cmdr не зазирає в папки знімків, тож у результатах немає нічого з цієї папки:} one {Cmdr не зазирає в папки знімків, тож у результатах немає нічого з цих папок:} few {Cmdr не зазирає в папки знімків, тож у результатах немає нічого з цих папок:} many {Cmdr не зазирає в папки знімків, тож у результатах немає нічого з цих папок:} other {Cmdr не зазирає в папки знімків, тож у результатах немає нічого з цих папок:}}",
   "@search.coverage.declined": {
     "sourceHash": "85465f3"
   },
-  "search.coverage.stillCovering": "{count, plural, one {Another search is going through this folder right now, so its files will turn up in a moment:} other {Another search is going through these folders right now, so their files will turn up in a moment:}}",
+  "search.coverage.stillCovering": "{count, plural, =1 {Інший пошук саме переглядає цю папку, тож її файли зʼявляться за мить:} one {Інший пошук саме переглядає ці папки, тож їхні файли зʼявляться за мить:} few {Інший пошук саме переглядає ці папки, тож їхні файли зʼявляться за мить:} many {Інший пошук саме переглядає ці папки, тож їхні файли зʼявляться за мить:} other {Інший пошук саме переглядає ці папки, тож їхні файли зʼявляться за мить:}}",
   "@search.coverage.stillCovering": {
     "sourceHash": "acd21dc"
   },
-  "search.coverage.unnamedDrive": "this drive",
+  "search.coverage.unnamedDrive": "цей диск",
   "@search.coverage.unnamedDrive": {
     "sourceHash": "5092f21"
   },
-  "search.coverage.indexDrive": "Index this drive",
+  "search.coverage.indexDrive": "Індексувати цей диск",
   "@search.coverage.indexDrive": {
     "sourceHash": "dce1f3a"
   },
-  "search.coverage.dontAskAgain": "Don’t ask again",
+  "search.coverage.dontAskAgain": "Більше не питати",
   "@search.coverage.dontAskAgain": {
     "sourceHash": "3f6e4da"
   },
-  "search.coverage.toast.started": "Indexing {drive} now. Searches here will be instant once it finishes.",
+  "search.coverage.toast.started": "Диск «{drive}» індексується. Щойно індексування завершиться, пошук тут працюватиме миттєво.",
   "@search.coverage.toast.started": {
     "sourceHash": "fb6978e"
   },
-  "search.coverage.toast.indexingOff": "Drive indexing is off in Settings, so nothing indexes. Turn it on under Indexing > Drive indexing.",
+  "search.coverage.toast.indexingOff": "Індексування дисків вимкнено в Параметрах, тож нічого не індексується. Увімкніть його в розділі «Індексування > Індексування дисків».",
   "@search.coverage.toast.indexingOff": {
     "sourceHash": "abfe24b"
   },
-  "search.coverage.toast.deferredUntilSearchEnds": "Cmdr is already searching {drive}. Indexing starts as soon as that finishes.",
+  "search.coverage.toast.deferredUntilSearchEnds": "Cmdr уже шукає на диску «{drive}». Індексування почнеться, щойно пошук завершиться.",
   "@search.coverage.toast.deferredUntilSearchEnds": {
     "sourceHash": "d62392a"
   },
-  "search.coverage.toast.notStarted": "Cmdr can’t index {drive} right now. You can try again from the drive menu.",
+  "search.coverage.toast.notStarted": "Cmdr зараз не вдається проіндексувати «{drive}». Спробуйте ще раз із меню диска.",
   "@search.coverage.toast.notStarted": {
     "sourceHash": "7b98412"
   },
-  "search.snapshot.defaultLabel": "Search",
+  "search.snapshot.defaultLabel": "Пошук",
   "@search.snapshot.defaultLabel": {
     "sourceHash": "49c266b"
   },
-  "search.snapshot.cappedLabel": "{label} (first {capText} of {totalText})",
+  "search.snapshot.cappedLabel": "{label} (перші {capText} з {totalText})",
   "@search.snapshot.cappedLabel": {
     "sourceHash": "35523ac"
   },
-  "search.runTitle": "Search, including folders that aren’t indexed yet",
+  "search.runTitle": "Шукати, зокрема в папках, які ще не проіндексовано",
   "@search.runTitle": {
     "sourceHash": "1c389b2"
   },
-  "search.coverage.pressEnter": "Press Enter and Cmdr will look through it now.",
+  "search.coverage.pressEnter": "Натисніть Enter, і Cmdr перегляне пропущене просто зараз.",
   "@search.coverage.pressEnter": {
     "sourceHash": "f340335"
   }

@@ -165,123 +165,124 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "Your drive index is outdated. It looks like the app hasn’t run for a while. Running a fresh scan to catch up.",
+  "indexing.rescan.staleIndex": "Індекс диска застарів. Схоже, програма давно не запускалася. Cmdr сканує диск заново, щоб наздогнати зміни.",
   "@indexing.rescan.staleIndex": {
     "sourceHash": "cce4c74"
   },
-  "indexing.rescan.journalGap": "The system’s file change log doesn’t go back far enough. Running a fresh scan to rebuild the index.",
+  "indexing.rescan.journalGap": "Системний журнал змін файлів не сягає так далеко в минуле. Cmdr сканує диск заново, щоб перебудувати індекс.",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"
   },
-  "indexing.rescan.replayOverflow": "A lot of file changes happened since last run. Running a fresh scan instead of replaying them one by one.",
+  "indexing.rescan.replayOverflow": "Від останнього запуску змінилося дуже багато файлів. Cmdr сканує диск заново, замість того щоб відтворювати зміни одну за одною.",
   "@indexing.rescan.replayOverflow": {
     "sourceHash": "70c7481"
   },
-  "indexing.rescan.watcherStartFailed": "Couldn’t start the file change watcher. Running a fresh scan to get the index up to date.",
+  "indexing.rescan.watcherStartFailed": "Не вдалося запустити відстеження змін файлів. Cmdr сканує диск заново, щоб індекс знову став актуальним.",
   "@indexing.rescan.watcherStartFailed": {
     "sourceHash": "07fb462"
   },
-  "indexing.rescan.reconcilerBufferOverflow": "Heavy filesystem activity overwhelmed the event buffer. Running a fresh scan to stay accurate.",
+  "indexing.rescan.reconcilerBufferOverflow": "Через бурхливу активність у файловій системі переповнився буфер подій. Cmdr сканує диск заново, щоб дані залишалися точними.",
   "@indexing.rescan.reconcilerBufferOverflow": {
     "sourceHash": "d6000e4"
   },
-  "indexing.rescan.incompletePreviousScan": "The previous scan didn’t finish (the app may have been closed). Restarting the scan from scratch.",
+  "indexing.rescan.incompletePreviousScan": "Попереднє сканування не завершилося (можливо, програму закрили). Cmdr починає сканування з нуля.",
   "@indexing.rescan.incompletePreviousScan": {
     "sourceHash": "804084a"
   },
-  "indexing.rescan.watcherChannelOverflow": "A burst of filesystem activity overflowed the watcher channel. Running a fresh scan to stay accurate.",
+  "indexing.rescan.watcherChannelOverflow": "Сплеск активності у файловій системі переповнив канал відстеження змін. Cmdr сканує диск заново, щоб дані залишалися точними.",
   "@indexing.rescan.watcherChannelOverflow": {
     "sourceHash": "b7ce086"
   },
-  "indexing.rescan.fallback": "Running a fresh drive scan to keep the index accurate.",
+  "indexing.rescan.fallback": "Cmdr сканує диск заново, щоб індекс залишався точним.",
   "@indexing.rescan.fallback": {
     "sourceHash": "cd99826"
   },
-  "indexing.needsFreshScan.afterDisconnect": "{name} was disconnected while Cmdr was updating its index. The next scan of this drive starts from scratch, so its folder sizes are right again.",
+  "indexing.needsFreshScan.afterDisconnect": "Диск «{name}» відʼєднався, поки Cmdr оновлював його індекс. Наступне сканування цього диска почнеться з нуля, і розміри папок знову будуть правильні.",
   "@indexing.needsFreshScan.afterDisconnect": {
     "sourceHash": "a90dbdf"
   },
-  "indexing.memoryStop.paused": "Cmdr paused drive indexing because it was using too much memory. Folder sizes may be out of date until you restart Cmdr.",
+  "indexing.memoryStop.paused": "Cmdr призупинив індексування дисків, бо використовував забагато памʼяті. Розміри папок можуть бути застарілі, доки ви не перезапустите Cmdr.",
   "@indexing.memoryStop.paused": {
     "sourceHash": "32d225a"
   },
-  "indexing.firstConnect.title": "Index {name}?",
+  "indexing.firstConnect.title": "Індексувати диск «{name}»?",
   "@indexing.firstConnect.title": {
     "sourceHash": "0734a24"
   },
-  "indexing.firstConnect.body": "Cmdr can index this drive in the background so folder sizes and search work here. It only runs while the drive is connected.",
+  "indexing.firstConnect.body": "Cmdr може індексувати цей диск у фоновому режимі, щоб тут працювали розміри папок і пошук. Індексування працює, лише поки диск підʼєднано.",
   "@indexing.firstConnect.body": {
     "sourceHash": "56ec1e5"
   },
-  "indexing.firstConnect.enable": "Enable indexing",
+  "indexing.firstConnect.enable": "Увімкнути індексування",
   "@indexing.firstConnect.enable": {
     "sourceHash": "3dc7ddf"
   },
-  "indexing.firstConnect.silenceDrive": "Don’t ask again for this drive",
+  "indexing.firstConnect.silenceDrive": "Більше не питати про цей диск",
   "@indexing.firstConnect.silenceDrive": {
     "sourceHash": "8d7a674"
   },
-  "indexing.firstConnect.silenceAll": "Don’t ask again for any drives",
+  "indexing.firstConnect.silenceAll": "Більше не питати про жоден диск",
   "@indexing.firstConnect.silenceAll": {
     "sourceHash": "0e10003"
   },
-  "indexing.staleDialog.title": "This drive’s index may be out of date",
+  "indexing.staleDialog.title": "Індекс цього диска може бути застарілим",
   "@indexing.staleDialog.title": {
     "sourceHash": "7de163b"
   },
-  "indexing.staleDialog.body": "While {name} was disconnected, files on it may have changed. Folder sizes and search results might be a bit off until you rescan. The yellow status next to the drive always shows when this happens, and a rescan refreshes it.",
+  "indexing.staleDialog.body": "Поки диск «{name}» був відʼєднаний, файли на цьому диску могли змінитися. Розміри папок і результати пошуку можуть бути трохи неточними, доки ви не запустите повторне сканування. Жовта позначка стану біля диска завжди показує, коли таке трапляється, а повторне сканування оновлює дані.",
   "@indexing.staleDialog.body": {
     "sourceHash": "c04519a"
   },
-  "indexing.staleDialog.titlePhone": "This phone’s index may be out of date",
+  "indexing.staleDialog.titlePhone": "Індекс цього телефону може бути застарілим",
   "@indexing.staleDialog.titlePhone": {
     "sourceHash": "1f41e08"
   },
-  "indexing.staleDialog.bodyPhone": "{name} doesn’t tell Cmdr when its files change, so Cmdr keeps its index current with the changes Cmdr makes itself. Changes made on the phone, like new photos, show up in folder sizes and search after a rescan. The yellow status next to the phone stays as a reminder.",
+  "indexing.staleDialog.bodyPhone": "Телефон «{name}» не повідомляє Cmdr, коли файли на телефоні змінюються, тож Cmdr оновлює індекс, враховуючи зміни, які вносить сам. Зміни, зроблені на телефоні, як-от нові фото, зʼявляться в розмірах папок і в пошуку після повторного сканування. Жовта позначка стану біля телефону залишиться як нагадування.",
   "@indexing.staleDialog.bodyPhone": {
     "sourceHash": "2751fdf"
   },
-  "indexing.staleDialog.neverShowAgain": "Never show again",
+  "indexing.staleDialog.neverShowAgain": "Більше не показувати",
   "@indexing.staleDialog.neverShowAgain": {
     "sourceHash": "f2d1044"
   },
-  "indexing.staleDialog.close": "Close",
+  "indexing.staleDialog.close": "Закрити",
   "@indexing.staleDialog.close": {
     "sourceHash": "7d9eb7a"
   },
-  "indexing.enrich.label": "Image indexing",
+  "indexing.enrich.label": "Індексування зображень",
   "@indexing.enrich.label": {
     "sourceHash": "442068b"
   },
-  "indexing.enrich.progress": "{done, plural, one {{doneText} of {totalText} image} other {{doneText} of {totalText} images}}",
+  "indexing.enrich.progress": "{done, plural, one {Зображень: {doneText} з {totalText}} few {Зображень: {doneText} з {totalText}} many {Зображень: {doneText} з {totalText}} other {Зображень: {doneText} з {totalText}}}",
   "@indexing.enrich.progress": {
     "sourceHash": "b307416"
   },
-  "indexing.enrich.rate": "{rateText}/min",
+  "indexing.enrich.rate": "{rateText}/хв",
   "@indexing.enrich.rate": {
     "sourceHash": "255f3b4"
   },
   "indexing.enrich.rateEta": "{rate} · {eta}",
   "@indexing.enrich.rateEta": {
-    "sourceHash": "ac6a373"
+    "sourceHash": "ac6a373",
+    "sameAsSourceJustification": "Two placeholders joined by a middle dot; Ukrainian uses the same separator (as `indexing.scan.countersElapsed`), nothing to translate."
   },
-  "indexing.enrich.pausedIdle": "Waiting until you’re idle",
+  "indexing.enrich.pausedIdle": "Очікування, поки ви зайняті",
   "@indexing.enrich.pausedIdle": {
     "sourceHash": "ee9b2e9"
   },
-  "indexing.enrich.pausedDisconnected": "Paused, resumes on reconnect",
+  "indexing.enrich.pausedDisconnected": "Призупинено, поновиться після повторного підʼєднання",
   "@indexing.enrich.pausedDisconnected": {
     "sourceHash": "1483989"
   },
-  "indexing.enrich.queued": "Image indexing starts after the drive scan",
+  "indexing.enrich.queued": "Індексування зображень почнеться після сканування диска",
   "@indexing.enrich.queued": {
     "sourceHash": "09e94f5"
   },
-  "indexing.enrich.imagesBarLabel": "Images indexed",
+  "indexing.enrich.imagesBarLabel": "Проіндексовано зображень",
   "@indexing.enrich.imagesBarLabel": {
     "sourceHash": "f4b2ca5"
   },
-  "indexing.enrich.bytesBarLabel": "Image data processed",
+  "indexing.enrich.bytesBarLabel": "Оброблено даних зображень",
   "@indexing.enrich.bytesBarLabel": {
     "sourceHash": "58952a9"
   }

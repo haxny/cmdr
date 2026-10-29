@@ -1,129 +1,130 @@
 {
-  "updates.failure.check": "Cmdr couldn’t check for updates. {reason}",
+  "updates.failure.check": "Cmdr не вдалося перевірити наявність оновлень. {reason}",
   "@updates.failure.check": {
     "sourceHash": "5fb454c"
   },
-  "updates.failure.checkUntyped": "Cmdr couldn’t check for updates. Check your internet connection and try again later.",
+  "updates.failure.checkUntyped": "Cmdr не вдалося перевірити наявність оновлень. Перевірте підʼєднання до інтернету й спробуйте ще раз пізніше.",
   "@updates.failure.checkUntyped": {
     "sourceHash": "233f5d9"
   },
-  "updates.failure.download": "Cmdr couldn’t download the update. Try again later.",
+  "updates.failure.download": "Cmdr не вдалося викачати оновлення. Спробуйте ще раз пізніше.",
   "@updates.failure.download": {
     "sourceHash": "1becb1b"
   },
-  "updates.failure.install": "Cmdr couldn’t install the update. Try again later, or get the latest Cmdr from getcmdr.com.",
+  "updates.failure.install": "Cmdr не вдалося інсталювати оновлення. Спробуйте ще раз пізніше або викачайте найновіший Cmdr із getcmdr.com.",
   "@updates.failure.install": {
     "sourceHash": "05a4714"
   },
-  "updates.failure.notGenuine": "Cmdr didn’t install this update: it isn’t a genuine Cmdr release.",
+  "updates.failure.notGenuine": "Cmdr не інсталював це оновлення: це не справжній випуск Cmdr.",
   "@updates.failure.notGenuine": {
     "sourceHash": "1858e23"
   },
-  "updates.toast.ready": "A new version of Cmdr is ready.",
+  "updates.toast.ready": "Нова версія Cmdr готова.",
   "@updates.toast.ready": {
     "sourceHash": "622668e"
   },
-  "updates.toast.readyDetail": "Restart now, or you’ll get it the next time you open Cmdr.",
+  "updates.toast.readyDetail": "Перезапустіть зараз, або нова версія запрацює, щойно ви наступного разу відкриєте Cmdr.",
   "@updates.toast.readyDetail": {
     "sourceHash": "42ce099"
   },
-  "updates.toast.securityFix": "This update fixes {count, plural, one {a security issue} other {# security issues}}.",
+  "updates.toast.securityFix": "Це оновлення виправляє {count, plural, =1 {проблему безпеки} one {# проблему безпеки} few {# проблеми безпеки} many {# проблем безпеки} other {# проблеми безпеки}}.",
   "@updates.toast.securityFix": {
     "sourceHash": "3033a3b"
   },
-  "updates.toast.securityFixDetail": "Restart Cmdr to finish installing it.",
+  "updates.toast.securityFixDetail": "Перезапустіть Cmdr, щоб завершити інсталяцію.",
   "@updates.toast.securityFixDetail": {
     "sourceHash": "8070021"
   },
-  "updates.toast.readAdvisory": "Read the advisory",
+  "updates.toast.readAdvisory": "Прочитати бюлетень",
   "@updates.toast.readAdvisory": {
     "sourceHash": "a96f533"
   },
   "updates.toast.versionChange": "v{prev} → v{next}",
   "@updates.toast.versionChange": {
-    "sourceHash": "41b26f1"
+    "sourceHash": "41b26f1",
+    "sameAsSourceJustification": "Placeholders, the literal v prefix, and an arrow only; the @key asks to keep it identical, and Ukrainian writes version numbers the same way."
   },
-  "updates.toast.versionChangeAria": "Updating from version {prev} to version {next}",
+  "updates.toast.versionChangeAria": "Оновлення з версії {prev} до версії {next}",
   "@updates.toast.versionChangeAria": {
     "sourceHash": "911d79c"
   },
-  "updates.toast.later": "Later",
+  "updates.toast.later": "Пізніше",
   "@updates.toast.later": {
     "sourceHash": "73b6e48"
   },
-  "updates.toast.restart": "Restart now",
+  "updates.toast.restart": "Перезапустити",
   "@updates.toast.restart": {
     "sourceHash": "09af100"
   },
-  "updates.unwritable.adminHeadline": "Cmdr {version} is out, but Cmdr can’t install it itself",
+  "updates.unwritable.adminHeadline": "Вийшов Cmdr {version}, але Cmdr не може сам його інсталювати",
   "@updates.unwritable.adminHeadline": {
     "sourceHash": "8e6aecc"
   },
-  "updates.unwritable.adminDetail": "{path} belongs to another account. To update, download Cmdr from <website>getcmdr.com</website> and drag it into Applications. macOS will ask for your password.",
+  "updates.unwritable.adminDetail": "Програма {path} належить іншому обліковому запису. Щоб оновити її, викачайте Cmdr із <website>getcmdr.com</website> і перетягніть його в папку «Програми». macOS запитає ваш пароль.",
   "@updates.unwritable.adminDetail": {
     "sourceHash": "66ecdd2"
   },
-  "updates.unwritable.standardHeadline": "Cmdr {version} is out",
+  "updates.unwritable.standardHeadline": "Вийшов Cmdr {version}",
   "@updates.unwritable.standardHeadline": {
     "sourceHash": "02ffda7"
   },
-  "updates.unwritable.standardDetail": "Your account can’t update Cmdr on this Mac. Ask your IT team, or whoever manages this Mac, to update it.",
+  "updates.unwritable.standardDetail": "З вашого облікового запису не можна оновити Cmdr на цьому Mac. Попросіть ІТ-відділ або того, хто керує цим Mac, оновити Cmdr.",
   "@updates.unwritable.standardDetail": {
     "sourceHash": "d3148ea"
   },
-  "updates.moveToApplicationsDialog.title": "Move Cmdr to your Applications folder",
+  "updates.moveToApplicationsDialog.title": "Перемістіть Cmdr у папку «Програми»",
   "@updates.moveToApplicationsDialog.title": {
     "sourceHash": "97f87a0"
   },
-  "updates.moveToApplicationsDialog.translocated": "A new version is ready, but macOS is running Cmdr from a temporary read-only copy of itself. That’s what happens when you open an app straight from where you downloaded it, and it means updates have nowhere to land.",
+  "updates.moveToApplicationsDialog.translocated": "Нова версія готова, але macOS запускає Cmdr з тимчасової копії, доступної лише для читання. Так буває, коли відкрити програму прямо там, куди її викачано, і тоді оновленням нікуди записатися.",
   "@updates.moveToApplicationsDialog.translocated": {
     "sourceHash": "ed64953"
   },
-  "updates.moveToApplicationsDialog.readOnlyVolume": "A new version is ready, but Cmdr is running from a read-only spot, usually a disk image that’s still mounted. That means updates have nowhere to land.",
+  "updates.moveToApplicationsDialog.readOnlyVolume": "Нова версія готова, але Cmdr працює з місця, доступного лише для читання, зазвичай з образу диска, який досі змонтовано. Тож оновленням нікуди записатися.",
   "@updates.moveToApplicationsDialog.readOnlyVolume": {
     "sourceHash": "a23ef5a"
   },
-  "updates.moveToApplicationsDialog.howTo": "Quit Cmdr, drag it into your Applications folder, and open it from there. Every update after that arrives on its own.",
+  "updates.moveToApplicationsDialog.howTo": "Завершіть Cmdr, перетягніть його в папку «Програми» й відкрийте звідти. Після цього всі оновлення надходитимуть самі.",
   "@updates.moveToApplicationsDialog.howTo": {
     "sourceHash": "76a136d"
   },
-  "updates.moveToApplicationsDialog.gotIt": "Got it",
+  "updates.moveToApplicationsDialog.gotIt": "Зрозуміло",
   "@updates.moveToApplicationsDialog.gotIt": {
     "sourceHash": "5ad3dbd"
   },
-  "updates.status.noUpdates": "No updates found. Current version: v{version}",
+  "updates.status.noUpdates": "Оновлень не знайдено. Поточна версія: v{version}",
   "@updates.status.noUpdates": {
     "sourceHash": "63a4ecb"
   },
-  "updates.status.checking": "Checking…",
+  "updates.status.checking": "Перевірка…",
   "@updates.status.checking": {
     "sourceHash": "ec963ff"
   },
-  "updates.status.downloading": "Update found, downloading v{next} (current: v{prev})…",
+  "updates.status.downloading": "Знайдено оновлення, викачування v{next} (поточна версія: v{prev})…",
   "@updates.status.downloading": {
     "sourceHash": "480c6da"
   },
-  "updates.status.installing": "Installing v{next} (current: v{prev})…",
+  "updates.status.installing": "Інсталяція v{next} (поточна версія: v{prev})…",
   "@updates.status.installing": {
     "sourceHash": "214ef12"
   },
-  "updates.status.managedOff": "Your organization manages updates for Cmdr.",
+  "updates.status.managedOff": "Оновленнями Cmdr керує ваша установа.",
   "@updates.status.managedOff": {
     "sourceHash": "aa342dc"
   },
-  "updates.status.heldByPolicy": "Cmdr {available} is out, but your organization keeps this Mac on {ceiling} or earlier.",
+  "updates.status.heldByPolicy": "Вийшов Cmdr {available}, але ваша установа обмежує Cmdr на цьому Mac версією {ceiling} або ранішою.",
   "@updates.status.heldByPolicy": {
     "sourceHash": "5c9b196"
   },
-  "updates.status.unwritableAdmin": "Cmdr {version} is out, but Cmdr can’t install it itself. Download it from getcmdr.com and drag it into Applications.",
+  "updates.status.unwritableAdmin": "Вийшов Cmdr {version}, але Cmdr не може сам його інсталювати. Викачайте його з getcmdr.com і перетягніть у папку «Програми».",
   "@updates.status.unwritableAdmin": {
     "sourceHash": "9524e82"
   },
-  "updates.status.unwritableStandard": "Cmdr {version} is out, but your account can’t update Cmdr on this Mac.",
+  "updates.status.unwritableStandard": "Вийшов Cmdr {version}, але з вашого облікового запису не можна оновити Cmdr на цьому Mac.",
   "@updates.status.unwritableStandard": {
     "sourceHash": "64ce45c"
   },
-  "updates.status.ready": "Update v{next} ready. Restart to apply.",
+  "updates.status.ready": "Оновлення v{next} готове. Перезапустіть, щоб застосувати.",
   "@updates.status.ready": {
     "sourceHash": "2c226ff"
   }

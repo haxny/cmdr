@@ -1,61 +1,61 @@
 {
-  "selection.dialog.title.add": "Select files",
+  "selection.dialog.title.add": "Вибрати файли",
   "@selection.dialog.title.add": {
     "sourceHash": "e04221c"
   },
-  "selection.dialog.title.remove": "Deselect files",
+  "selection.dialog.title.remove": "Скасувати вибір файлів",
   "@selection.dialog.title.remove": {
     "sourceHash": "537ddbe"
   },
-  "selection.runHint": "Press Enter to filter",
+  "selection.runHint": "Натисніть Enter, щоб фільтрувати",
   "@selection.runHint": {
     "sourceHash": "c8d00d2"
   },
-  "selection.action.select.label": "Select these files",
+  "selection.action.select.label": "Вибрати ці файли",
   "@selection.action.select.label": {
     "sourceHash": "9f385e8"
   },
-  "selection.action.select.tooltip": "Select these files in the focused pane",
+  "selection.action.select.tooltip": "Вибрати ці файли на панелі у фокусі",
   "@selection.action.select.tooltip": {
     "sourceHash": "d427136"
   },
-  "selection.action.deselect.label": "Deselect these files",
+  "selection.action.deselect.label": "Скасувати вибір цих файлів",
   "@selection.action.deselect.label": {
     "sourceHash": "c0d3db4"
   },
-  "selection.action.deselect.tooltip": "Deselect these files in the focused pane",
+  "selection.action.deselect.tooltip": "Скасувати вибір цих файлів на панелі у фокусі",
   "@selection.action.deselect.tooltip": {
     "sourceHash": "bf77e53"
   },
-  "selection.notice.snapshotPane": "Matching what is shown in the list (the full path).",
+  "selection.notice.snapshotPane": "Шаблон порівнюється з тим, що показано в списку (з повним шляхом).",
   "@selection.notice.snapshotPane": {
     "sourceHash": "aa4306e"
   },
-  "selection.recent.trailingTooltip": "Show all recent selections",
+  "selection.recent.trailingTooltip": "Показати всі недавні шаблони вибору",
   "@selection.recent.trailingTooltip": {
     "sourceHash": "c694665"
   },
-  "selection.recent.allButtonAria": "All recent selections",
+  "selection.recent.allButtonAria": "Усі недавні шаблони вибору",
   "@selection.recent.allButtonAria": {
     "sourceHash": "b6ea4d8"
   },
-  "selection.recent.filterPlaceholder": "Filter recent selections",
+  "selection.recent.filterPlaceholder": "Фільтрувати недавні шаблони вибору",
   "@selection.recent.filterPlaceholder": {
     "sourceHash": "1f8347f"
   },
-  "selection.recent.emptyMessage": "No matching recent selections",
+  "selection.recent.emptyMessage": "Жоден недавній шаблон вибору не відповідає цьому фільтру",
   "@selection.recent.emptyMessage": {
     "sourceHash": "f404527"
   },
-  "selection.recent.popoverAria": "Recent selections",
+  "selection.recent.popoverAria": "Недавні шаблони вибору",
   "@selection.recent.popoverAria": {
     "sourceHash": "94c77ad"
   },
-  "selection.recent.listboxAria": "Recent selections",
+  "selection.recent.listboxAria": "Недавні шаблони вибору",
   "@selection.recent.listboxAria": {
     "sourceHash": "94c77ad"
   },
-  "selection.recent.applyAria": "Apply recent {mode} selection: {query}",
+  "selection.recent.applyAria": "Застосувати недавній шаблон вибору в режимі «{mode}»: {query}",
   "@selection.recent.applyAria": {
     "sourceHash": "717317a"
   }

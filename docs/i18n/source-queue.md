@@ -23,10 +23,10 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `errors.eject.unmountRefusedByProcesses`: zh-Hant's list join can run Latin into Han with no space
   (`cfprefsd和其他程序`). (zh-Hant)
 - `queryUi.date.preset.thisMonth`, `.lastMonth`: `{month}` arrives nominative, so Slavic locales can't say "from the 1st
-  of October" (`с 1 октября`). Pass a preformatted day-and-month. (ru)
+  of October" (`с 1 октября`). Pass a preformatted day-and-month. (ru, uk)
 - `fileOperations.cancelRollback.reason.unverifiable.named`, `askCmdr.renameUndo.skipReason.unverifiable.named`:
   byte-identical English, but one is about items and the other about files; split the wording or say so. (ru)
-- `servers.paneState.cancelCycleTooltip`: "Switch back to retry" doesn't say switch back to what. (ru)
+- `servers.paneState.cancelCycleTooltip`: "Switch back to retry" doesn't say switch back to what. (ru, uk)
 - `fileExplorer.navigation.favoriteStatus.connects`, `favoriteUnreachable.forgotten`: `{place}` is a share, a server, or
   a phone, and nothing says which, so case languages can't put a type noun before it (`к серверу «…»`) and fall back to
   a parenthesis or colon. Pass a `{kind}` select (share / server / phone) alongside it. (ru)
@@ -50,7 +50,8 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `queue.row.itemCount`, `.folderCount`, `.fileCount`: the row splices them after the `queue.row.label` action word
   ("Copying 3 items"), but a case language wants the genitive after a verbal noun (ru `Копирование 3 объектов`) and the
   count also stands alone in the tooltip, so one form can't fit both. Consider a whole-row key with the counts inside,
-  or say in the descriptions that the chunk reads as a separate column (ru ships nominative for now). (ru)
+  or say in the descriptions that the chunk reads as a separate column (ru ships nominative for now; uk genitive). (ru,
+  uk)
 - Term consistency ties the badge `fileExplorer.fileIcon.sync.downloading` ("Downloading") to the progress line
   `settings.mediaIndex.clip.downloading` ("Downloading…"), since edge punctuation is stripped. Finder's own badge reads
   differently (de `Laden …`, `AXBADGE8`), so a locale can't follow Finder there without an allowlist entry. Decide
@@ -58,10 +59,10 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - The reference pile has no git vocabulary (detached, unborn, ahead/behind, uncommitted changes): no tier names them.
   git's own `po/<lang>.po` (github.com/git/git, `po/`) is the authoritative translation for ~20 languages; propose
   adding it to the pile as a git-domain source. sv mined it live for `git-detached`, `git-unborn`, `git-dirty`. (sv, ru,
-  es, de)
+  es, de, uk)
 - `concepts.json` `archive-chat` matches `fileExplorer.list.rowKind.archive` ("archive", a zip file), so the brief lists
   the chat-archiving verb for it. Add that key to `archive-chat`'s `notMatch` and let the `archive` concept match it; hu
-  carries a per-locale `exceptions` entry meanwhile. (hu, nl, vi, pt, sv, es, ru, zh-Hant, de)
+  carries a per-locale `exceptions` entry meanwhile. (hu, nl, vi, pt, sv, es, ru, zh-Hant, de, uk)
 - Term consistency ties `fileExplorer.list.parentRowName` ("Parent folder", a spoken noun naming the `..` row) to
   `menu.go.parentFolder` ("Parent folder", the Go command, which follows Finder's Enclosing Folder: ru
   `На уровень выше`). The description asks for a noun, so the row reads `Родительская папка`. Reword one English source,
@@ -82,7 +83,8 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   `виртуальная папка`, the catalog's word for the git portal's folders; sv used `vy`, same risk; vi used
   `khu vực chỉ để xem`, "a view-only area", since `chế độ xem` is the display mode; pt used `visualização`, same risk;
   fr used `vue`, same risk; zh-Hant used `虛擬資料夾`, since `檢視` is the verb and `顯示方式` the view mode; nl used
-  `weergave`, same risk; es used `vista`, same risk, since it's also `la vista breve` / `la vista completa`)
+  `weergave`, same risk; es used `vista`, same risk, since it's also `la vista breve` / `la vista completa`; uk used
+  `віртуальна папка`, like ru)
 - `fileExplorer.restic.forgetPassword.noBackup`: the description says to keep “Browse snapshots” in English; confirm
   that folder's name is never localized, or the quoted label goes stale the day it is. (all)
 - `fileOperations.transferProgress.conflictPolicyCaption`: `{policy}` reuses the copy dialog's BUTTON labels, which most
@@ -110,11 +112,12 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `errors.volume.signatureInvalid`, `errors.write.replySignatureRefused.message`: "so Cmdr stopped" has no object, and
   verbs like sv `stoppade` need one; say what stopped in the description, or write "stopped there". (sv)
 - `errors.eject.*`: the description lets the fragment start lowercase after the host's colon, but every shipped sibling
-  starts capitalized. Say it for the whole family. (hu)
+  starts capitalized. Say it for the whole family, and whether a standalone surface (MCP) reads them. (hu, uk)
 - Proposed rule: a version number or other insert after a word that must agree with it (an article that depends on
   pronunciation, a case ending) goes in a colon slot (`settings.managed.summary.upTo`). (hu)
 - Proposed rule: a first-person checkbox label ("I’ve checked the key") may go impersonal where the first person would
-  gender the user (ru past tense). Say so in such descriptions. (ru)
+  gender the user (ru past tense). Say so in such descriptions (`servers.hostKey.changedDisclosure`,
+  `servers.certificate.changedDisclosure`). (ru, uk)
 - `servers.refusal.s3FieldMalformed`: say a locale may name the classes ("letters a–z, digits 0–9") as long as both
   ranges stay verbatim. (fr)
 - `errors.serverRequest.blockedByPolicy`: say which noun "this feature" should use (match
@@ -164,3 +167,72 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   with a `notMatch` "check in when", which a future "check in" string won't share. (all)
 - `settings.askCmdr.spendPause.opt.never` vs `servers.hub.neverUsed`: "Never" as a choice vs never happened needed
   allowlist entries in vi, zh, zh-Hant; a distinct English ("Never used") would avoid it. (vi, zh, zh-Hant)
+
+## Ukrainian first pass (#767)
+
+All (uk) unless noted.
+
+- Proposed rule: CLDR `one` also covers 21, 31… in uk and ru, so English single-item wording belongs in an `=1` arm
+  (`askCmdr.tool.preview.firstRows` says "Here’s the first one" in `one`). Descriptions saying "always two or more"
+  (`fileOperations.cancelRollback.reason.*.counted`) or with an unknown clash count
+  (`fileOperations.transferDialog.policy*`) should say which category the count can still hit.
+- A counted noun with no plural param forces a counted-label colon in Slavic locales:
+  `errors.write.trashRefused.message.*`, `errors.write.deviceDisconnected.sided.*`,
+  `errors.eject.unmountRefusedByProcesses`, `fileOperations.validation.*TooLong` (`maxBytes`),
+  `licensing.dialog.pendingHint`, `licensing.dialog.retryExhausted`, `multiRename.presets.listFull`,
+  `settings.control.unitItems`. `indexing.enrich.progress` drives the plural by `{done}` where the noun follows
+  `{total}`. Pass plurals, or make the colon form the documented rule (native menus like `menu.edit.undoTrashMany` can't
+  pluralize).
+- Concept `notMatch` proposals: `global` ← "in-app" (`downloads.toast.inAppHint`, `*Notifications.opt.inApp`); `storage`
+  ← "log storage"; `attachment` ← "attach my email" (`common.attachEmail*`,
+  `settings.updates.attachEmailToReports.label`); `zoom` ← `menu.window.zoom`; `app` ← ".app"; `browse` ← "Browse…"
+  (file picker); `just-now` ← "just now" meaning at the moment; `move` ← "↑↓ to move"; `context-menu` ← a bare
+  "Right-click … choose"; `destination` ← a symlink's "target"; `complete` ← "may be incomplete"; `failed` ← "if it
+  fails".
+- Concept `permission` means file-system rights, but FDA and privacy copy uses it for a macOS consent
+  (`onboarding.stepFda.*`, `onboarding.stepAi.bannerBody.denied`, `errors.listing.notPermitted.explanation`). Split a
+  `privacy-permission` concept. Also `ai-lookup` vs search: say the two must stay distinct (`askCmdr.limit.*`).
+- Seeding should cross-check sibling concepts: uk's `select`, `deselect`, and `invert-selection` rulings disagreed.
+- Batch paired keys together: a quoted label and its source (`askCmdr.wake.needsFullDiskAccess` /
+  `search.coverage.setUpFullDiskAccess`, `commands.multiRename*.label` / `multiRename.*`) in different batches can't be
+  checked at translation time.
+- Quote real labels in English: `ai.cloudConsent.logsNote` ("Log AI model calls"), `settings.askCmdr.cloudOffHint`,
+  `errors.listing.couldntReadUnknown.explanation` ("Technical details"),
+  `fileExplorer.navigation.driveIndex.refusedIndexingOff`, `menuIndexingOffNote`,
+  `fileExplorer.quickLookHint.configurable` (Settings paths; or pass them as placeholders).
+  `fileOperations.transferDialog.smbNativeNote` quotes "Connect directly", which no item says.
+- Descriptions name the wrong thing: `viewer.markdown.remoteImages.notice` (the button is "Load images from the web"),
+  `updates.toast.later` (update-ready toast), `viewer.search.searching` ("three dots" vs …),
+  `fileOperations.transferProgress.smallerDisabledTooltip` and `errors.listing.deletePending.suggestion` (dash type),
+  `settings.mediaIndex.networkVolumes.intro` / `importanceThreshold.label` (stale Settings path),
+  `onboarding.stepAi.table.searchWithout` (no such date label), `search.walkHandoff.counts` / `finished` (params not in
+  English), `errors.provider.cmVolumes.displayName` / `genericCloudStorage.displayName` (never rendered; dead keys?).
+- Descriptions contradict: `errors.listing.notEnoughMemory.suggestion` says keep "Activity Monitor" English, the concept
+  and its sibling say macOS localizes it; `settings.analytics.email.description` vs `settings.updates.emailPlaceholder`
+  on the sample address; `licensing.acknowledgements.signature` allows a script change while
+  `onboarding.stepBeta.greeting` keeps "David" (lead: Latin «David» everywhere; align the signature's).
+- Descriptions should add: whether `{path}` is a full path or a name (`errors.listing.*Errno.explanation`); what "accept
+  any prompt" is (`errors.listing.notConnected.suggestion`, `errors.write.notConnected.suggestion`); what "check out"
+  means (`errors.git.blobTooLarge.suggestion`); that `filesPart` / `foldersPart` are the title verb's object; what the
+  annotation agrees with (`fileOperations.transferProgress.annotationLarger` / `annotationNewer`); every host of
+  `licensing.about.fallbackOrg` and `indexing.eta.*`; that `fileExplorer.restrictedFolder.tooltip` may restructure
+  around its paths; that `fileOperations.transferProgress.queueTooltip` may inflect the window name; whether
+  `fileExplorer.git.portalIntro.showHidden` reuses the switch label; that `servers.sheet.remember` stays
+  protocol-neutral (S3 keys too); that `settings.network.customTimeoutUnit` follows a free number.
+- English wording: `commands.navUp.label` / `navDown` "Select …" only moves the cursor ("Move cursor to …");
+  `multiRename.reason.*` say "file" where folders count ("item"); `errors.write.readOnlyDevice.destination.fallbackName`
+  "The target device" → "The destination"; `errors.volume.connectionTimeout` personifies the connection;
+  `ai.cloudConsent.askCmdr.title` "it" → "Cmdr"; `ai.translateError.emptyResponse.body` "bigger budget" is vague;
+  `onboarding.stepFda.revoked.intro` "accepted" → "granted"; `fileExplorer.navigation.disconnectBusyTooltip` /
+  `ejectBusyTooltip` read as imperatives; `errorReporter.sentToast.message` / `amendedToast.message` end in a colon
+  before the badge; `settings.mediaIndex.reclaim.confirmTitle` lacks "?";
+  `settings.behavior.fileSystemWatching.globalGoToLatestShortcut.acknowledged.label` is jargon.
+- English consistency: menu vs command ellipses (`menu.app.acknowledgements`, `menu.app.licenseEnter`,
+  `menu.help.sendFeedback`); command descriptions mix imperative and third person; "Full/Brief view" vs "mode"
+  (`settings.listing.showExtensionInName.description`, `settings.listing.stripedRows.description`,
+  `settings.fileExplorer.git.showStatusColumn.description`); hyphen ranges in `settings.appearance.formatHelp*`;
+  `licensing.about.srTitle` = `menu.app.about` must match or diverge on purpose; `ui.select.placeholder` "Select…"
+  collides with the Select menu; `settings.fileSystemWatching.globalShortcutHint` should name one canonical command key.
+- `settings.mediaIndex.networkVolumes.alwaysAria` doesn't contain its visible label (WCAG 2.5.3) in English either.
+- `viewer.copyDialog.refuseBody`, `viewer.statusBar.hint.image`: "keep 100 MB / 100% literal" clashes with locale
+  typography (uk «100 МБ», «100 %»); say "keep the number, write units your way".

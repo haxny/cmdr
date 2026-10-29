@@ -1,557 +1,558 @@
 {
-  "ai.toast.downloadingTitle": "Downloading AI model…",
+  "ai.toast.downloadingTitle": "Викачування моделі ШІ…",
   "@ai.toast.downloadingTitle": {
     "sourceHash": "85d48ae"
   },
-  "ai.toast.startingDownload": "Starting download…",
+  "ai.toast.startingDownload": "Початок викачування…",
   "@ai.toast.startingDownload": {
     "sourceHash": "22309b1"
   },
-  "ai.toast.progress": "{percentText} · {downloaded} / {total} · {speed}/s{eta, select, none {} other { · {eta} remaining}}",
+  "ai.toast.progress": "{percentText} · {downloaded} / {total} · {speed}/с{eta, select, none {} other { · залишилося {eta}}}",
   "@ai.toast.progress": {
     "sourceHash": "93d798b"
   },
-  "ai.toast.cancel": "Cancel",
+  "ai.toast.cancel": "Скасувати",
   "@ai.toast.cancel": {
     "sourceHash": "19766ed"
   },
-  "ai.toast.installingTitle": "Setting up AI…",
+  "ai.toast.installingTitle": "Налаштування ШІ…",
   "@ai.toast.installingTitle": {
     "sourceHash": "85f7001"
   },
-  "ai.toast.installingDescription": "Starting server",
+  "ai.toast.installingDescription": "Запуск сервера",
   "@ai.toast.installingDescription": {
     "sourceHash": "8a0f9d9"
   },
-  "ai.toast.readyTitle": "AI ready",
+  "ai.toast.readyTitle": "ШІ готовий",
   "@ai.toast.readyTitle": {
     "sourceHash": "276c384"
   },
-  "ai.toast.readyDescription": "Try creating a new folder (F7) to see AI-powered name suggestions.",
+  "ai.toast.readyDescription": "Спробуйте створити нову папку (F7), щоб побачити пропозиції назв від ШІ.",
   "@ai.toast.readyDescription": {
     "sourceHash": "b3ae1b2"
   },
-  "ai.toast.gotIt": "Got it",
+  "ai.toast.gotIt": "Зрозуміло",
   "@ai.toast.gotIt": {
     "sourceHash": "5ad3dbd"
   },
-  "ai.toast.startingTitle": "AI starting…",
+  "ai.toast.startingTitle": "Запуск ШІ…",
   "@ai.toast.startingTitle": {
     "sourceHash": "d0a6a15"
   },
-  "ai.toast.startingDescription": "Loading the model, this takes a few seconds",
+  "ai.toast.startingDescription": "Модель завантажується, це займе кілька секунд",
   "@ai.toast.startingDescription": {
     "sourceHash": "94ecf6d"
   },
-  "ai.toast.downloadCloseTooltip": "Close this notification; the download will continue in the background",
+  "ai.toast.downloadCloseTooltip": "Закрити це сповіщення; викачування продовжиться у фоновому режимі",
   "@ai.toast.downloadCloseTooltip": {
     "sourceHash": "16db2bd"
   },
-  "ai.translateError.off.title": "AI is turned off",
+  "ai.translateError.off.title": "ШІ вимкнено",
   "@ai.translateError.off.title": {
     "sourceHash": "99ce709"
   },
-  "ai.translateError.off.body": "Turn on a provider in Settings > AI to use AI search.",
+  "ai.translateError.off.body": "Увімкніть постачальника в Параметрах > ШІ, щоб користуватися пошуком із ШІ.",
   "@ai.translateError.off.body": {
     "sourceHash": "d8d6368"
   },
-  "ai.cloudConsent.label": "Allow cloud AI",
+  "ai.cloudConsent.label": "Дозволити хмарний ШІ",
   "@ai.cloudConsent.label": {
     "sourceHash": "9947821"
   },
-  "ai.cloudConsent.description": "Cmdr sends nothing to a cloud AI service until you turn this on.",
+  "ai.cloudConsent.description": "Cmdr нічого не надсилає хмарному сервісу ШІ, доки ви цього не ввімкнете.",
   "@ai.cloudConsent.description": {
     "sourceHash": "2f568e5"
   },
-  "ai.cloudConsent.disclosureTitle": "What Cmdr sends",
+  "ai.cloudConsent.disclosureTitle": "Що надсилає Cmdr",
   "@ai.cloudConsent.disclosureTitle": {
     "sourceHash": "6907e64"
   },
-  "ai.cloudConsent.intro": "With this on, Cmdr sends these to the AI service you set up below:",
+  "ai.cloudConsent.intro": "Коли цей перемикач увімкнено, Cmdr надсилає таке сервісу ШІ, налаштованому нижче:",
   "@ai.cloudConsent.intro": {
     "sourceHash": "9462a5a"
   },
-  "ai.cloudConsent.whereItGoes": "Where your data goes, and what happens to it there, depends on the service you pick and your agreement with it. That includes Ollama, LM Studio, and custom endpoints: the data goes wherever that server runs. Cmdr’s own servers never see any of it.",
+  "ai.cloudConsent.whereItGoes": "Куди потрапляють ваші дані і що з ними там відбувається, залежить від вибраного сервісу та вашої угоди з ним. Це стосується й Ollama, LM Studio та власних кінцевих точок: дані йдуть туди, де працює відповідний сервер. Власні сервери Cmdr нічого з цього не бачать.",
   "@ai.cloudConsent.whereItGoes": {
     "sourceHash": "44dd8ba"
   },
-  "ai.cloudConsent.folderSuggestions": "<b>New folder name suggestions</b>: the current folder’s path and up to 100 names in it",
+  "ai.cloudConsent.folderSuggestions": "<b>Пропозиції назв для нової папки</b>: шлях поточної папки й до 100 назв у ній",
   "@ai.cloudConsent.folderSuggestions": {
     "sourceHash": "e2c592a"
   },
-  "ai.cloudConsent.search": "<b>Search in plain words</b>: the text you type",
+  "ai.cloudConsent.search": "<b>Пошук звичайними словами</b>: текст, який ви вводите",
   "@ai.cloudConsent.search": {
     "sourceHash": "e6d4ef9"
   },
-  "ai.cloudConsent.selection": "<b>Select by description</b>: what you type, plus up to 240 names from the current folder",
+  "ai.cloudConsent.selection": "<b>Вибір за описом</b>: те, що ви вводите, а також до 240 назв із поточної папки",
   "@ai.cloudConsent.selection": {
     "sourceHash": "1e1c3c3"
   },
-  "ai.cloudConsent.askCmdr.title": "<b>Ask Cmdr</b>, when you chat or when it starts a conversation on its own:",
+  "ai.cloudConsent.askCmdr.title": "<b>Ask Cmdr</b>, коли ви пишете в чат або коли Cmdr сам починає розмову:",
   "@ai.cloudConsent.askCmdr.title": {
     "sourceHash": "26e139c"
   },
-  "ai.cloudConsent.askCmdr.item.messages": "Your messages",
+  "ai.cloudConsent.askCmdr.item.messages": "Ваші повідомлення",
   "@ai.cloudConsent.askCmdr.item.messages": {
     "sourceHash": "befc6e9"
   },
-  "ai.cloudConsent.askCmdr.item.names": "The names and paths of files and folders Cmdr looks at to answer you",
+  "ai.cloudConsent.askCmdr.item.names": "Назви й шляхи файлів і папок, які Cmdr переглядає, щоб вам відповісти",
   "@ai.cloudConsent.askCmdr.item.names": {
     "sourceHash": "ce3259d"
   },
-  "ai.cloudConsent.askCmdr.item.sizes": "Their sizes and dates",
+  "ai.cloudConsent.askCmdr.item.sizes": "Їхні розміри й дати",
   "@ai.cloudConsent.askCmdr.item.sizes": {
     "sourceHash": "2484530"
   },
-  "ai.cloudConsent.askCmdr.item.contents": "Parts of files Cmdr opens to answer you: some text, PDF pages, what’s inside an archive, and a photo’s camera details and location",
+  "ai.cloudConsent.askCmdr.item.contents": "Частини файлів, які Cmdr відкриває, щоб вам відповісти: трохи тексту, сторінки PDF, вміст архіву, а також відомості про камеру й місце зйомки фото",
   "@ai.cloudConsent.askCmdr.item.contents": {
     "sourceHash": "fcd0b73"
   },
-  "ai.cloudConsent.askCmdr.item.envelope": "What you’re looking at right now: your current folder, cursor, selection, and connected drives",
+  "ai.cloudConsent.askCmdr.item.envelope": "Те, що ви зараз переглядаєте: поточна папка, курсор, вибір і підʼєднані диски",
   "@ai.cloudConsent.askCmdr.item.envelope": {
     "sourceHash": "2e5a0ef"
   },
-  "ai.cloudConsent.askCmdr.item.attachments": "Any file or folder you attach to a question, by its name and path only",
+  "ai.cloudConsent.askCmdr.item.attachments": "Будь-який файл чи папка, вкладені в запитання: лише назва та шлях",
   "@ai.cloudConsent.askCmdr.item.attachments": {
     "sourceHash": "b9ad2af"
   },
-  "ai.cloudConsent.askCmdr.item.memory": "The notes Cmdr keeps about you, sent again with every message",
+  "ai.cloudConsent.askCmdr.item.memory": "Нотатки про вас, які зберігає Cmdr: вони щоразу надсилаються з кожним повідомленням",
   "@ai.cloudConsent.askCmdr.item.memory": {
     "sourceHash": "7779513"
   },
-  "ai.cloudConsent.askCmdr.contentsRule": "Cmdr never sends whole files, photos, or thumbnails. When you ask about a file, it can read a limited part of it: some lines of text, a few pages of a PDF along with its title and author, the list of files inside an archive, or a photo’s camera details, including where it was taken. Photo search works the same way: the text Cmdr recognized inside the matching photos and their tags go to your provider so it can find them. Cmdr can suggest renames, moves, and cleanups, and nothing happens to a file until you approve it.",
+  "ai.cloudConsent.askCmdr.contentsRule": "Cmdr ніколи не надсилає файли, фото чи мініатюри цілком. Коли ви запитуєте про файл, Cmdr може прочитати обмежену його частину: кілька рядків тексту, кілька сторінок PDF разом із назвою й автором документа, список файлів в архіві або відомості про камеру, з якою зроблено фото, зокрема місце зйомки. Пошук зображень працює так само: текст, який Cmdr розпізнав на відповідних фото, і їхні теги надсилаються вашому постачальнику, щоб він міг їх знайти. Cmdr може запропонувати перейменування, переміщення та прибирання, і з файлом нічого не станеться, доки ви цього не схвалите.",
   "@ai.cloudConsent.askCmdr.contentsRule": {
     "sourceHash": "5a378c1"
   },
-  "ai.cloudConsent.askCmdr.memory": "Cmdr writes itself notes about you: how you like things organized, what you’ve turned down before, anything you ask it to remember. Those notes ride along with every message you send, for as long as they exist, and they can include text Cmdr recognized inside your photos. You can read them, or wipe them, any time in the Ask Cmdr settings.",
+  "ai.cloudConsent.askCmdr.memory": "Cmdr веде для себе нотатки про вас: як ви любите все впорядковувати, від чого ви раніше відмовлялися, усе, що ви просите запамʼятати. Ці нотатки йдуть разом із кожним повідомленням, яке ви надсилаєте, доки вони існують, і можуть містити текст, який Cmdr розпізнав на ваших фото. Ви можете будь-коли прочитати їх або стерти в параметрах Ask Cmdr.",
   "@ai.cloudConsent.askCmdr.memory": {
     "sourceHash": "496c78d"
   },
-  "ai.cloudConsent.askCmdr.proactive": "Cmdr also watches the folders you use and starts a conversation when it has something to suggest, so messages can reach your provider without you asking first. You can turn that off in the Ask Cmdr settings, under “On its own”.",
+  "ai.cloudConsent.askCmdr.proactive": "Також Cmdr стежить за папками, якими ви користуєтеся, і починає розмову, коли має що запропонувати, тож повідомлення можуть надходити до вашого постачальника ще до того, як ви про щось запитаєте. Це можна вимкнути в параметрах Ask Cmdr, у розділі «З власної ініціативи».",
   "@ai.cloudConsent.askCmdr.proactive": {
     "sourceHash": "abfa80b"
   },
-  "ai.cloudConsent.askCmdr.chatsStayLocal": "Your Ask Cmdr chats stay on your Mac, in a local database you can open and read.",
+  "ai.cloudConsent.askCmdr.chatsStayLocal": "Чати Ask Cmdr залишаються на вашому Mac, у локальній базі даних, яку можна відкрити й прочитати.",
   "@ai.cloudConsent.askCmdr.chatsStayLocal": {
     "sourceHash": "283cdd7"
   },
-  "ai.cloudConsent.logsNote": "If you turn on LLM call logging in Advanced settings, Cmdr also saves each request and reply to a folder on your Mac. Those logs stay local too, never sent anywhere.",
+  "ai.cloudConsent.logsNote": "Якщо ввімкнути журналювання викликів LLM у Параметрах > Експертні, Cmdr також зберігатиме кожен запит і відповідь у папці на вашому Mac. Ці журнали теж залишаються локальними й нікуди не надсилаються.",
   "@ai.cloudConsent.logsNote": {
     "sourceHash": "7e211fc"
   },
-  "ai.cloudConsent.turnOffAnyTime": "Turn this off any time and Cmdr stops sending right away. Your service, key, and chats stay as they are.",
+  "ai.cloudConsent.turnOffAnyTime": "Вимкніть це будь-коли, і Cmdr одразу зупинить надсилання. Ваш сервіс, ключ і чати залишаться без змін.",
   "@ai.cloudConsent.turnOffAnyTime": {
     "sourceHash": "464c39f"
   },
-  "ai.cloudConsent.notSaved": "Cmdr couldn’t save your choice. Try again?",
+  "ai.cloudConsent.notSaved": "Cmdr не вдалося зберегти ваш вибір. Спробувати ще раз?",
   "@ai.cloudConsent.notSaved": {
     "sourceHash": "6bd80e9"
   },
-  "ai.translateError.notConfigured.title": "AI needs a bit more setup",
+  "ai.translateError.notConfigured.title": "ШІ треба ще трохи налаштувати",
   "@ai.translateError.notConfigured.title": {
     "sourceHash": "bf5688a"
   },
-  "ai.translateError.notConfigured.body": "Finish your provider setup in Settings > AI, then try again.",
+  "ai.translateError.notConfigured.body": "Завершіть налаштування постачальника в Параметрах > ШІ, а потім спробуйте ще раз.",
   "@ai.translateError.notConfigured.body": {
     "sourceHash": "65133a8"
   },
-  "ai.translateError.noCloudConsent.title": "Cloud AI is off",
+  "ai.translateError.noCloudConsent.title": "Хмарний ШІ вимкнено",
   "@ai.translateError.noCloudConsent.title": {
     "sourceHash": "2e56781"
   },
-  "ai.translateError.noCloudConsent.body": "Allow it in Settings > AI, then try again.",
+  "ai.translateError.noCloudConsent.body": "Дозвольте його в Параметрах > ШІ, а потім спробуйте ще раз.",
   "@ai.translateError.noCloudConsent.body": {
     "sourceHash": "fde3eb5"
   },
-  "ai.translateError.authFailed.title": "That API key got turned down",
+  "ai.translateError.authFailed.title": "Цей ключ API не прийняли",
   "@ai.translateError.authFailed.title": {
     "sourceHash": "93e6261"
   },
-  "ai.translateError.authFailed.body": "Check your key in Settings > AI - it might be wrong or revoked.",
+  "ai.translateError.authFailed.body": "Перевірте ключ у Параметрах > ШІ: можливо, він неправильний або його відкликали.",
   "@ai.translateError.authFailed.body": {
     "sourceHash": "2159d5e"
   },
-  "ai.translateError.rateLimited.title": "Your AI provider is out of room",
+  "ai.translateError.rateLimited.title": "Ваш постачальник ШІ досяг ліміту",
   "@ai.translateError.rateLimited.title": {
     "sourceHash": "26e286e"
   },
-  "ai.translateError.rateLimited.body": "It’s rate-limiting requests or your plan is out of quota. Check your plan and billing, then try again.",
+  "ai.translateError.rateLimited.body": "Діє обмеження запитів, або у вашому тарифі вичерпано квоту. Перевірте тариф і оплату, а потім спробуйте ще раз.",
   "@ai.translateError.rateLimited.body": {
     "sourceHash": "ca3616b"
   },
-  "ai.translateError.timeout.title": "The AI took too long",
+  "ai.translateError.timeout.title": "ШІ відповідав надто довго",
   "@ai.translateError.timeout.title": {
     "sourceHash": "d684e3f"
   },
-  "ai.translateError.timeout.body": "The request timed out. Give it another go in a moment.",
+  "ai.translateError.timeout.body": "Вичерпався час очікування запиту. Спробуйте ще раз за мить.",
   "@ai.translateError.timeout.body": {
     "sourceHash": "249b720"
   },
-  "ai.translateError.unavailable.title": "Can’t reach your AI provider",
+  "ai.translateError.unavailable.title": "Не вдається звʼязатися з вашим постачальником ШІ",
   "@ai.translateError.unavailable.title": {
     "sourceHash": "74e6ba8"
   },
-  "ai.translateError.unavailable.body": "Check your internet or the provider’s status, then try again.",
+  "ai.translateError.unavailable.body": "Перевірте звʼязок з інтернетом або стан постачальника, а потім спробуйте ще раз.",
   "@ai.translateError.unavailable.body": {
     "sourceHash": "c44a8ed"
   },
-  "ai.translateError.emptyResponse.title": "The AI came back empty",
+  "ai.translateError.emptyResponse.title": "ШІ повернув порожню відповідь",
   "@ai.translateError.emptyResponse.title": {
     "sourceHash": "61afc33"
   },
-  "ai.translateError.emptyResponse.body": "Your model may need a bigger budget for this. Try a faster model like gpt-4.1-mini in Settings > AI.",
+  "ai.translateError.emptyResponse.body": "Можливо, вашій моделі для цього потрібен більший ліміт. Спробуйте швидшу модель, як-от gpt-4.1-mini, у Параметрах > ШІ.",
   "@ai.translateError.emptyResponse.body": {
     "sourceHash": "f1704cc"
   },
-  "ai.translateError.serverError.title": "Your AI provider hit a snag",
+  "ai.translateError.serverError.title": "Ваш постачальник ШІ натрапив на проблему",
   "@ai.translateError.serverError.title": {
     "sourceHash": "1b98f6a"
   },
-  "ai.translateError.serverError.body": "It returned something unexpected. Try again in a moment.",
+  "ai.translateError.serverError.body": "Він повернув щось неочікуване. Спробуйте ще раз за мить.",
   "@ai.translateError.serverError.body": {
     "sourceHash": "3f4af5c"
   },
-  "ai.translateError.parseError.title": "Couldn’t read the AI’s answer",
+  "ai.translateError.parseError.title": "Не вдалося прочитати відповідь ШІ",
   "@ai.translateError.parseError.title": {
     "sourceHash": "02af146"
   },
-  "ai.translateError.parseError.body": "Try again, or pick a different model in Settings > AI.",
+  "ai.translateError.parseError.body": "Спробуйте ще раз або виберіть іншу модель у Параметрах > ШІ.",
   "@ai.translateError.parseError.body": {
     "sourceHash": "c299ec6"
   },
-  "ai.translateError.unknownProvider.title": "That AI provider isn’t recognized",
+  "ai.translateError.unknownProvider.title": "Цього постачальника ШІ не розпізнано",
   "@ai.translateError.unknownProvider.title": {
     "sourceHash": "794a4c7"
   },
-  "ai.translateError.unknownProvider.body": "Pick a provider in Settings > AI.",
+  "ai.translateError.unknownProvider.body": "Виберіть постачальника в Параметрах > ШІ.",
   "@ai.translateError.unknownProvider.body": {
     "sourceHash": "7042a75"
   },
-  "ai.translateError.managed.title": "Your organization manages AI in Cmdr",
+  "ai.translateError.managed.title": "ШІ в Cmdr керує ваша установа",
   "@ai.translateError.managed.title": {
     "sourceHash": "12f8233"
   },
-  "ai.translateError.managed.body": "Your IT team can tell you which AI services you can use.",
+  "ai.translateError.managed.body": "Ваш ІТ-відділ підкаже, якими сервісами ШІ можна користуватися.",
   "@ai.translateError.managed.body": {
     "sourceHash": "cb7e811"
   },
-  "ai.cloud.serviceAria": "Cloud AI service",
+  "ai.cloud.serviceAria": "Хмарний сервіс ШІ",
   "@ai.cloud.serviceAria": {
     "sourceHash": "7dec1e0"
   },
-  "ai.cloud.apiKeyPlaceholderAnthropic": "Example: sk-ant-abc123…",
+  "ai.cloud.apiKeyPlaceholderAnthropic": "Приклад: sk-ant-abc123…",
   "@ai.cloud.apiKeyPlaceholderAnthropic": {
     "sourceHash": "89347d5"
   },
-  "ai.cloud.askCmdrOverrideHint": "The chat uses its own model ({model}) instead of this one. Change it in the Ask Cmdr section.",
+  "ai.cloud.askCmdrOverrideHint": "Чат використовує власну модель ({model}), а не цю. Змінити її можна в розділі Ask Cmdr.",
   "@ai.cloud.askCmdrOverrideHint": {
     "sourceHash": "5a5539a"
   },
-  "ai.cloud.modelPlaceholderExample": "Example: {model}",
+  "ai.cloud.modelPlaceholderExample": "Приклад: {model}",
   "@ai.cloud.modelPlaceholderExample": {
     "sourceHash": "2287b9f"
   },
-  "ai.cloud.checking": "Checking…",
+  "ai.cloud.checking": "Перевірка…",
   "@ai.cloud.checking": {
     "sourceHash": "ec963ff"
   },
-  "ai.cloud.connected": "Connected",
+  "ai.cloud.connected": "Підʼєднано",
   "@ai.cloud.connected": {
     "sourceHash": "2296556"
   },
-  "ai.cloud.connectedNoModels": "Connected (model list not available)",
+  "ai.cloud.connectedNoModels": "Підʼєднано (список моделей недоступний)",
   "@ai.cloud.connectedNoModels": {
     "sourceHash": "54f2b6f"
   },
-  "ai.cloud.contextWindow": "Context window: {windowText} {window, plural, one {token} other {tokens}}",
+  "ai.cloud.contextWindow": "Контекстне вікно: {windowText} {window, plural, one {токен} few {токени} many {токенів} other {токена}}",
   "@ai.cloud.contextWindow": {
     "sourceHash": "fad1fe6"
   },
-  "ai.cloud.contextWindowEstimate": "Context window: about {windowText} {window, plural, one {token} other {tokens}} (from Cmdr’s built-in list)",
+  "ai.cloud.contextWindowEstimate": "Контекстне вікно: приблизно {windowText} {window, plural, one {токен} few {токени} many {токенів} other {токена}} (із вбудованого списку Cmdr)",
   "@ai.cloud.contextWindowEstimate": {
     "sourceHash": "999230f"
   },
-  "ai.cloud.effort.recommended": "Recommended",
+  "ai.cloud.effort.recommended": "Рекомендовано",
   "@ai.cloud.effort.recommended": {
     "sourceHash": "d70604e"
   },
-  "ai.cloud.effort.recommendedWithLevel": "Recommended ({level})",
+  "ai.cloud.effort.recommendedWithLevel": "Рекомендовано ({level})",
   "@ai.cloud.effort.recommendedWithLevel": {
     "sourceHash": "e9e8984"
   },
-  "ai.cloud.effort.off": "Off",
+  "ai.cloud.effort.off": "Вимкнено",
   "@ai.cloud.effort.off": {
     "sourceHash": "ca7981b"
   },
-  "ai.cloud.effort.low": "Low",
+  "ai.cloud.effort.low": "Низький",
   "@ai.cloud.effort.low": {
     "sourceHash": "f793de2"
   },
-  "ai.cloud.effort.medium": "Medium",
+  "ai.cloud.effort.medium": "Середній",
   "@ai.cloud.effort.medium": {
     "sourceHash": "8e588cd"
   },
-  "ai.cloud.effort.high": "High",
+  "ai.cloud.effort.high": "Високий",
   "@ai.cloud.effort.high": {
     "sourceHash": "c4ebc6d"
   },
-  "ai.cloud.effort.max": "Max",
+  "ai.cloud.effort.max": "Максимальний",
   "@ai.cloud.effort.max": {
     "sourceHash": "a1a5936"
   },
-  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr uses its own model, {model}, so this applies to that model.",
+  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr використовує власну модель, {model}, тож це стосується саме цієї моделі.",
   "@ai.cloud.effort.forAskCmdrModel": {
     "sourceHash": "3a36d6f"
   },
-  "ai.cloud.effort.levelsUnknown": "This service doesn’t say which levels this model takes, so it decides.",
+  "ai.cloud.effort.levelsUnknown": "Цей сервіс не повідомляє, які рівні підтримує ця модель, тож він вирішує сам.",
   "@ai.cloud.effort.levelsUnknown": {
     "sourceHash": "4688a12"
   },
-  "ai.cloud.maxOutput": "Longest reply: {outputText} {output, plural, one {token} other {tokens}}",
+  "ai.cloud.maxOutput": "Найдовша відповідь: {outputText} {output, plural, one {токен} few {токени} many {токенів} other {токена}}",
   "@ai.cloud.maxOutput": {
     "sourceHash": "16bd61d"
   },
-  "ai.cloud.recheck": "Recheck",
+  "ai.cloud.recheck": "Перевірити ще раз",
   "@ai.cloud.recheck": {
     "sourceHash": "1f47d83"
   },
-  "ai.cloud.authError": "API key is invalid",
+  "ai.cloud.authError": "Ключ API недійсний",
   "@ai.cloud.authError": {
     "sourceHash": "74a88e4"
   },
-  "ai.cloud.connectionError": "Can’t reach server",
+  "ai.cloud.connectionError": "Не вдається звʼязатися із сервером",
   "@ai.cloud.connectionError": {
     "sourceHash": "79d79fb"
   },
-  "ai.cloud.genericError": "Something went wrong",
+  "ai.cloud.genericError": "Щось пішло не так",
   "@ai.cloud.genericError": {
     "sourceHash": "ab827e3"
   },
-  "ai.cloud.timedOut": "The server didn’t answer in time. Try again in a moment.",
+  "ai.cloud.timedOut": "Сервер не відповів вчасно. Спробуйте ще раз за мить.",
   "@ai.cloud.timedOut": {
     "sourceHash": "d6888fb"
   },
-  "ai.cloud.invalidEndpoint": "That address doesn’t look right. Use a full web address starting with https://.",
+  "ai.cloud.invalidEndpoint": "Ця адреса виглядає неправильно. Введіть повну веб-адресу, що починається з https://.",
   "@ai.cloud.invalidEndpoint": {
     "sourceHash": "a791485"
   },
-  "ai.cloud.insecureEndpoint": "Your API key only travels over a secure connection. Change the address to start with https://.",
+  "ai.cloud.insecureEndpoint": "Ключ API передається лише захищеним підʼєднанням. Змініть адресу, щоб вона починалася з https://.",
   "@ai.cloud.insecureEndpoint": {
     "sourceHash": "df152da"
   },
-  "ai.cloud.providerRefused": "The service turned the request down (code {status}).",
+  "ai.cloud.providerRefused": "Сервіс відхилив запит (код {status}).",
   "@ai.cloud.providerRefused": {
     "sourceHash": "e3496e5"
   },
-  "ai.cloud.testConnection": "Test connection",
+  "ai.cloud.testConnection": "Перевірити підʼєднання",
   "@ai.cloud.testConnection": {
     "sourceHash": "5bcf311"
   },
-  "ai.local.memoryWarningAria": "Memory warning",
+  "ai.local.memoryWarningAria": "Застереження про памʼять",
   "@ai.local.memoryWarningAria": {
     "sourceHash": "7688d6a"
   },
-  "ai.local.warningDanger": "This exceeds your available memory. Your system may slow down significantly.",
+  "ai.local.warningDanger": "Це більше, ніж доступна памʼять. Система може значно сповільнитися.",
   "@ai.local.warningDanger": {
     "sourceHash": "dd5c518"
   },
-  "ai.local.warningCaution": "This uses most of your available memory. Other apps may slow down.",
+  "ai.local.warningCaution": "Це займає більшу частину доступної памʼяті. Інші програми можуть сповільнитися.",
   "@ai.local.warningCaution": {
     "sourceHash": "f8070e9"
   },
-  "ai.local.statusRestarting": "Restarting…",
+  "ai.local.statusRestarting": "Перезапуск…",
   "@ai.local.statusRestarting": {
     "sourceHash": "75d0f14"
   },
-  "ai.local.statusStarting": "Starting…",
+  "ai.local.statusStarting": "Запуск…",
   "@ai.local.statusStarting": {
     "sourceHash": "bbe5fc3"
   },
-  "ai.local.statusRunning": "Running",
+  "ai.local.statusRunning": "Працює",
   "@ai.local.statusRunning": {
     "sourceHash": "f4ccae2"
   },
-  "ai.local.statusStopped": "Stopped",
+  "ai.local.statusStopped": "Зупинено",
   "@ai.local.statusStopped": {
     "sourceHash": "1a4f630"
   },
-  "ai.local.installStepExtracting": "Step 1 of 4: Extracting runtime…",
+  "ai.local.installStepExtracting": "Крок 1 з 4: розпакування середовища виконання…",
   "@ai.local.installStepExtracting": {
     "sourceHash": "44fc84b"
   },
-  "ai.local.installStepDownloading": "Step 2 of 4: Downloading model…",
+  "ai.local.installStepDownloading": "Крок 2 з 4: викачування моделі…",
   "@ai.local.installStepDownloading": {
     "sourceHash": "99d712f"
   },
-  "ai.local.installStepVerifying": "Step 3 of 4: Verifying download…",
+  "ai.local.installStepVerifying": "Крок 3 з 4: перевірка викачаного…",
   "@ai.local.installStepVerifying": {
     "sourceHash": "302f79a"
   },
-  "ai.local.installStepStarting": "Step 4 of 4: Starting server…",
+  "ai.local.installStepStarting": "Крок 4 з 4: запуск сервера…",
   "@ai.local.installStepStarting": {
     "sourceHash": "696bd5e"
   },
-  "ai.local.startingDownload": "Starting download…",
+  "ai.local.startingDownload": "Початок викачування…",
   "@ai.local.startingDownload": {
     "sourceHash": "22309b1"
   },
-  "ai.local.etaSeconds": "~{value} sec left",
+  "ai.local.etaSeconds": "залишилося ~{value} с",
   "@ai.local.etaSeconds": {
     "sourceHash": "045b712"
   },
-  "ai.local.etaMinutes": "~{value} min left",
+  "ai.local.etaMinutes": "залишилося ~{value} хв",
   "@ai.local.etaMinutes": {
     "sourceHash": "978afd8"
   },
-  "ai.local.etaHours": "~{value} hr left",
+  "ai.local.etaHours": "залишилося ~{value} год",
   "@ai.local.etaHours": {
     "sourceHash": "b1944ec"
   },
-  "ai.local.modelLabel": "Model",
+  "ai.local.modelLabel": "Модель",
   "@ai.local.modelLabel": {
     "sourceHash": "5e2c614"
   },
-  "ai.local.serverLabel": "Server",
+  "ai.local.serverLabel": "Сервер",
   "@ai.local.serverLabel": {
     "sourceHash": "aef7de2"
   },
-  "ai.local.modelUnknown": "Unknown",
+  "ai.local.modelUnknown": "Невідомо",
   "@ai.local.modelUnknown": {
     "sourceHash": "b764cdc"
   },
   "ai.local.modelSizeUnknown": "?",
   "@ai.local.modelSizeUnknown": {
-    "sourceHash": "8a8de82"
+    "sourceHash": "8a8de82",
+    "sameAsSourceJustification": "A lone question mark for an unknown size; punctuation only, same in Ukrainian."
   },
-  "ai.local.notInstalled": "Not installed. The local model ({modelName}, {modelSize}) runs entirely on your device for maximum privacy. Requires Apple silicon.",
+  "ai.local.notInstalled": "Не інстальовано. Локальна модель ({modelName}, {modelSize}) працює повністю на вашому пристрої для максимальної приватності. Потрібен Mac з Apple silicon.",
   "@ai.local.notInstalled": {
     "sourceHash": "c865b94"
   },
-  "ai.local.applyContextSize": "Apply",
+  "ai.local.applyContextSize": "Застосувати",
   "@ai.local.applyContextSize": {
     "sourceHash": "31e392d"
   },
-  "ai.local.ramGaugeAria": "Memory usage gauge",
+  "ai.local.ramGaugeAria": "Шкала використання памʼяті",
   "@ai.local.ramGaugeAria": {
     "sourceHash": "d6d09e9"
   },
-  "ai.local.ramLegendSystem": "System {size}",
+  "ai.local.ramLegendSystem": "Система {size}",
   "@ai.local.ramLegendSystem": {
     "sourceHash": "1497c04"
   },
-  "ai.local.ramLegendApps": "Apps {size}",
+  "ai.local.ramLegendApps": "Програми {size}",
   "@ai.local.ramLegendApps": {
     "sourceHash": "d02b14c"
   },
-  "ai.local.ramLegendCmdrAi": "Cmdr AI {size}",
+  "ai.local.ramLegendCmdrAi": "ШІ Cmdr {size}",
   "@ai.local.ramLegendCmdrAi": {
     "sourceHash": "93e2741"
   },
-  "ai.local.ramLegendProjected": "Projected",
+  "ai.local.ramLegendProjected": "Прогноз",
   "@ai.local.ramLegendProjected": {
     "sourceHash": "e394afa"
   },
-  "ai.local.ramLegendFreed": "Freed",
+  "ai.local.ramLegendFreed": "Звільнено",
   "@ai.local.ramLegendFreed": {
     "sourceHash": "c8affca"
   },
-  "ai.local.ramLegendFree": "Free {size}",
+  "ai.local.ramLegendFree": "Вільно {size}",
   "@ai.local.ramLegendFree": {
     "sourceHash": "afe9c0d"
   },
-  "ai.local.cancel": "Cancel",
+  "ai.local.cancel": "Скасувати",
   "@ai.local.cancel": {
     "sourceHash": "19766ed"
   },
-  "ai.local.stopServer": "Stop server",
+  "ai.local.stopServer": "Зупинити сервер",
   "@ai.local.stopServer": {
     "sourceHash": "a21bf60"
   },
-  "ai.local.startServer": "Start server",
+  "ai.local.startServer": "Запустити сервер",
   "@ai.local.startServer": {
     "sourceHash": "7b7da6f"
   },
-  "ai.local.deleteModel": "Delete model",
+  "ai.local.deleteModel": "Видалити модель",
   "@ai.local.deleteModel": {
     "sourceHash": "b7828ba"
   },
-  "ai.local.downloadModel": "Download model",
+  "ai.local.downloadModel": "Викачати модель",
   "@ai.local.downloadModel": {
     "sourceHash": "9979bea"
   },
-  "ai.local.deleteDialogTitleDeleting": "Deleting model…",
+  "ai.local.deleteDialogTitleDeleting": "Видалення моделі…",
   "@ai.local.deleteDialogTitleDeleting": {
     "sourceHash": "d3a7e58"
   },
-  "ai.local.deleteDialogTitle": "Delete AI model?",
+  "ai.local.deleteDialogTitle": "Видалити модель ШІ?",
   "@ai.local.deleteDialogTitle": {
     "sourceHash": "c486f0c"
   },
-  "ai.local.deletingStatus": "Stopping server and removing files…",
+  "ai.local.deletingStatus": "Зупинення сервера й видалення файлів…",
   "@ai.local.deletingStatus": {
     "sourceHash": "e9de1ca"
   },
-  "ai.local.deleteConfirmMessage": "This frees up {modelSize} of disk space. You’ll need to re-download it to use local AI again.",
+  "ai.local.deleteConfirmMessage": "Це звільнить {modelSize} місця на диску. Щоб знову користуватися локальним ШІ, модель доведеться викачати ще раз.",
   "@ai.local.deleteConfirmMessage": {
     "sourceHash": "b295742"
   },
-  "ai.local.deleteButtonDeleting": "Deleting…",
+  "ai.local.deleteButtonDeleting": "Видалення…",
   "@ai.local.deleteButtonDeleting": {
     "sourceHash": "43b5894"
   },
-  "ai.local.deleteButton": "Delete",
+  "ai.local.deleteButton": "Видалити",
   "@ai.local.deleteButton": {
     "sourceHash": "e2d0a54"
   },
-  "ai.secretError.keychainTitle": "{op, select, save {Couldn’t save your API key: macOS Keychain denied access} other {Couldn’t read your saved API key: macOS Keychain denied access}}",
+  "ai.secretError.keychainTitle": "{op, select, save {Не вдалося зберегти ключ API: Вʼязка ключів macOS не надала доступу} other {Не вдалося прочитати збережений ключ API: Вʼязка ключів macOS не надала доступу}}",
   "@ai.secretError.keychainTitle": {
     "sourceHash": "2b2ef89"
   },
-  "ai.secretError.keychainBody": "{op, select, save {Open Keychain Access and check the “Cmdr” entry, or delete it and try saving again.} other {Open Keychain Access, find the “Cmdr” entry, grant access, or delete it and re-enter your key.}}",
+  "ai.secretError.keychainBody": "{op, select, save {Відкрийте програму «Ключар» і перевірте запис «Cmdr» або видаліть цей запис і спробуйте зберегти ще раз.} other {Відкрийте програму «Ключар», знайдіть запис «Cmdr» і надайте доступ або видаліть цей запис і введіть ключ знову.}}",
   "@ai.secretError.keychainBody": {
     "sourceHash": "8f1380e"
   },
-  "ai.secretError.keyringTitle": "{op, select, save {Couldn’t save your API key: your system keyring denied access} other {Couldn’t read your saved API key: your system keyring denied access}}",
+  "ai.secretError.keyringTitle": "{op, select, save {Не вдалося зберегти ключ API: системна вʼязка ключів не надала доступу} other {Не вдалося прочитати збережений ключ API: системна вʼязка ключів не надала доступу}}",
   "@ai.secretError.keyringTitle": {
     "sourceHash": "60f5401"
   },
-  "ai.secretError.keyringBody": "Unlock your keyring (Passwords / Keyrings app) and try again.",
+  "ai.secretError.keyringBody": "Відімкніть вʼязку ключів (у програмі «Паролі та ключі» чи подібній) і спробуйте ще раз.",
   "@ai.secretError.keyringBody": {
     "sourceHash": "023bde3"
   },
-  "ai.secretError.genericTitle": "{op, select, save {Couldn’t save your API key.} other {Couldn’t read your saved API key.}}",
+  "ai.secretError.genericTitle": "{op, select, save {Не вдалося зберегти ключ API.} other {Не вдалося прочитати збережений ключ API.}}",
   "@ai.secretError.genericTitle": {
     "sourceHash": "c343e42"
   },
-  "ai.secretError.genericBody": "Check that your system keyring is available, then try again. If it persists, restart the app.",
+  "ai.secretError.genericBody": "Перевірте, чи доступна системна вʼязка ключів, і спробуйте ще раз. Якщо проблема не зникне, перезапустіть програму.",
   "@ai.secretError.genericBody": {
     "sourceHash": "2ee417d"
   },
-  "ai.secretError.removeTitle": "Couldn’t remove your saved API key.",
+  "ai.secretError.removeTitle": "Не вдалося вилучити збережений ключ API.",
   "@ai.secretError.removeTitle": {
     "sourceHash": "5986628"
   },
-  "ai.secretError.removeKeychainBody": "Open Keychain Access, find the “Cmdr” entry, and delete it there.",
+  "ai.secretError.removeKeychainBody": "Відкрийте програму «Ключар», знайдіть запис «Cmdr» і видаліть його там.",
   "@ai.secretError.removeKeychainBody": {
     "sourceHash": "4e3abe7"
   },
-  "ai.managed.aiOff": "Your organization turned off AI in Cmdr.",
+  "ai.managed.aiOff": "Ваша установа вимкнула ШІ в Cmdr.",
   "@ai.managed.aiOff": {
     "sourceHash": "25b7aef"
   },
-  "ai.managed.cloudAiOff": "Your organization allows only on-device AI.",
+  "ai.managed.cloudAiOff": "Ваша установа дозволяє лише ШІ на пристрої.",
   "@ai.managed.cloudAiOff": {
     "sourceHash": "894c53d"
   },
-  "ai.managed.hostNotAllowed": "Your organization doesn’t allow this AI service. Your IT team can tell you which ones you can use.",
+  "ai.managed.hostNotAllowed": "Ваша установа не дозволяє цей сервіс ШІ. Ваш ІТ-відділ підкаже, якими сервісами можна користуватися.",
   "@ai.managed.hostNotAllowed": {
     "sourceHash": "845a19f"
   },
-  "ai.managed.localOnlyUnsupported": "Your organization allows only on-device AI, and this Mac can’t run it.",
+  "ai.managed.localOnlyUnsupported": "Ваша установа дозволяє лише ШІ на пристрої, а цей Mac не може його запускати.",
   "@ai.managed.localOnlyUnsupported": {
     "sourceHash": "b760ca4"
   },
-  "ai.managed.serviceNotAllowed": "not allowed by your organization",
+  "ai.managed.serviceNotAllowed": "не дозволено вашою установою",
   "@ai.managed.serviceNotAllowed": {
     "sourceHash": "026e7e3"
   }
