@@ -82,5 +82,9 @@
   "@common.sizeUnit.petabyte": {
     "sourceHash": "f9085bf",
     "sameAsSourceJustification": "Unit symbol: the macOS pt-BR Finder writes the same symbol (LocalizableMerged.json SP22 “PB”), so pt-BR keeps it."
+  },
+  "common.sizeComparison.same": "(mesmo tamanho)",
+  "@common.sizeComparison.same": {
+    "sourceHash": "2d0f788"
   }
 }

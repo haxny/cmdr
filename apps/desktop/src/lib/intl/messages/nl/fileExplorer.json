@@ -1557,6 +1557,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Weet je zeker dat je de extensie ‘.{oldExt}’ wilt verwijderen? macOS toont dit onderdeel dan als een gewone map in plaats van als één onderdeel.} other {Weet je zeker dat je de extensie ‘.{oldExt}’ wilt verwijderen? Zonder extensie weet je Mac misschien niet met welke app het bestand moet openen.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Weet je zeker dat je de extensie ‘.{newExt}’ wilt toevoegen? macOS toont deze map dan mogelijk als één onderdeel.} other {Weet je zeker dat je de extensie ‘.{newExt}’ wilt toevoegen? Je bestand opent de volgende keer mogelijk in een andere app.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "Behoud zonder extensie",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": "Verwijder .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Sta extensiewijzigingen altijd toe",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"

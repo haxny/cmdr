@@ -1545,6 +1545,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {确定要移除扩展名“.{oldExt}”吗？macOS 会把这一项显示为普通文件夹，而不是单个项目。} other {确定要移除扩展名“.{oldExt}”吗？没有扩展名，你的 Mac 可能不知道该用哪个 App 打开这个文件。}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {确定要添加扩展名“.{newExt}”吗？macOS 可能会把这个文件夹显示为单个项目。} other {确定要添加扩展名“.{newExt}”吗？下次打开时，文件可能会用不同的 App 打开。}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "保持无扩展名",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": "移除 .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "始终允许更改扩展名",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"

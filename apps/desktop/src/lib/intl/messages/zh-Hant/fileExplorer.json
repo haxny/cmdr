@@ -1545,6 +1545,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {確定要移除副檔名「.{oldExt}」嗎？macOS 會把這個項目顯示成一般資料夾，而不是單一項目。} other {確定要移除副檔名「.{oldExt}」嗎？少了副檔名，你的 Mac 可能不知道該用哪個 App 開啟這個檔案。}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {確定要加入副檔名「.{newExt}」嗎？macOS 可能會把這個資料夾顯示成單一項目。} other {確定要加入副檔名「.{newExt}」嗎？下次開啟時，這個檔案可能會用不同的 App 開啟。}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "保持無副檔名",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": "移除 .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "總是允許更改副檔名",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"

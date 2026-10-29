@@ -1548,6 +1548,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Är du säker på att du vill ta bort filtillägget ”.{oldExt}”? macOS visar då objektet som en vanlig mapp i stället för som ett enda objekt.} other {Är du säker på att du vill ta bort filtillägget ”.{oldExt}”? Utan det vet din Mac kanske inte vilken app som ska öppna filen.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Är du säker på att du vill lägga till filtillägget ”.{newExt}”? macOS kan då visa mappen som ett enda objekt.} other {Är du säker på att du vill lägga till filtillägget ”.{newExt}”? Din fil kan öppnas i en annan app nästa gång du öppnar den.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "Behåll utan filtillägg",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": "Ta bort .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Tillåt alltid ändringar av tillägg",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"

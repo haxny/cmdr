@@ -82,5 +82,9 @@
   "@common.sizeUnit.petabyte": {
     "sourceHash": "f9085bf",
     "sameAsSourceJustification": "Swedish writes the international unit symbols unchanged (Nautilus sv ”500 kB”, Swedish macOS Finder sizes), so the symbol stays verbatim."
+  },
+  "common.sizeComparison.same": "(samma storlek)",
+  "@common.sizeComparison.same": {
+    "sourceHash": "2d0f788"
   }
 }

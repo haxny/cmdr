@@ -1551,6 +1551,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Bạn có chắc muốn gỡ bỏ đuôi “.{oldExt}”? macOS sẽ hiển thị mục này như một thư mục bình thường thay vì một mục duy nhất.} other {Bạn có chắc muốn gỡ bỏ đuôi “.{oldExt}”? Không có đuôi tệp, máy Mac của bạn có thể không biết dùng ứng dụng nào để mở tệp.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Bạn có chắc muốn thêm đuôi “.{newExt}”? macOS có thể hiển thị thư mục này như một mục duy nhất.} other {Bạn có chắc muốn thêm đuôi “.{newExt}”? Tệp của bạn có thể mở bằng một ứng dụng khác trong lần mở tới.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "Giữ không đuôi tệp",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": "Gỡ bỏ .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Luôn cho phép đổi đuôi tệp",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"

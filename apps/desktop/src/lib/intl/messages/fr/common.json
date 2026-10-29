@@ -71,5 +71,9 @@
   "common.sizeUnit.petabyte": "Po",
   "@common.sizeUnit.petabyte": {
     "sourceHash": "f9085bf"
+  },
+  "common.sizeComparison.same": "(même taille)",
+  "@common.sizeComparison.same": {
+    "sourceHash": "2d0f788"
   }
 }

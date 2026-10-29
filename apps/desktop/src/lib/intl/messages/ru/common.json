@@ -71,5 +71,9 @@
   "common.sizeUnit.petabyte": "ПБ",
   "@common.sizeUnit.petabyte": {
     "sourceHash": "f9085bf"
+  },
+  "common.sizeComparison.same": "(того же размера)",
+  "@common.sizeComparison.same": {
+    "sourceHash": "2d0f788"
   }
 }

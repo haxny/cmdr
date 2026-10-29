@@ -81,5 +81,9 @@
   "@common.sizeUnit.petabyte": {
     "sourceHash": "f9085bf",
     "sameAsSourceJustification": "Decimal SI symbol, kept Latin: macOS zh-CN Finder writes Latin unit symbols after a number (ProgressStatusView: 64.0 MB/1.33 GB), and Double Commander zh leaves its KB/MB untranslated; Chinese has no native unit symbols."
+  },
+  "common.sizeComparison.same": "（大小相同）",
+  "@common.sizeComparison.same": {
+    "sourceHash": "2d0f788"
   }
 }

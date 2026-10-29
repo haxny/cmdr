@@ -1554,6 +1554,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Tem certeza de que quer remover a extensão “.{oldExt}”? O macOS vai mostrar este item como uma pasta comum, e não como um item único.} other {Tem certeza de que quer remover a extensão “.{oldExt}”? Sem ela, seu Mac pode não saber com qual aplicativo abrir o arquivo.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Tem certeza de que quer adicionar a extensão “.{newExt}”? O macOS pode mostrar esta pasta como um item único.} other {Tem certeza de que quer adicionar a extensão “.{newExt}”? Seu arquivo pode abrir em um aplicativo diferente da próxima vez.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "Manter sem extensão",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": "Remover .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Permitir sempre alterações de extensão",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"

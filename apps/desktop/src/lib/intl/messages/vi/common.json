@@ -82,5 +82,9 @@
   "@common.sizeUnit.petabyte": {
     "sourceHash": "f9085bf",
     "sameAsSourceJustification": "Unit symbol: macOS vi Foundation `FileSizeFormatting.loctable` keeps KB/MB/GB/TB/PB as Latin symbols (verified on macOS 26, plutil, 2026-10-06), and Finder vi (`SP24`–`SP26`) agrees."
+  },
+  "common.sizeComparison.same": "(cùng kích cỡ)",
+  "@common.sizeComparison.same": {
+    "sourceHash": "2d0f788"
   }
 }

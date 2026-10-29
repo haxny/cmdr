@@ -1548,6 +1548,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Biztosan eltávolítod ezt a kiterjesztést: „.{oldExt}”? A macOS ezután sima mappaként jeleníti meg, nem egyetlen elemként.} other {Biztosan eltávolítod ezt a kiterjesztést: „.{oldExt}”? Nélküle lehet, hogy a Mac nem tudja, melyik app nyissa meg a fájlt.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Biztosan hozzáadod ezt a kiterjesztést: „.{newExt}”? Lehet, hogy a macOS ezután egyetlen elemként jeleníti meg ezt a mappát.} other {Biztosan hozzáadod ezt a kiterjesztést: „.{newExt}”? Lehet, hogy a fájl legközelebb más appban nyílik meg.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "Megtartás kiterjesztés nélkül",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": ".{oldExt} eltávolítása",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Mindig engedélyezd a kiterjesztés módosítását",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"

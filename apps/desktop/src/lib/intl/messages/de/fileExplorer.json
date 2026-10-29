@@ -1551,6 +1551,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Möchtest du die Endung „.{oldExt}“ wirklich entfernen? macOS zeigt das Objekt dann als normalen Ordner an, nicht mehr als einzelnes Objekt.} other {Möchtest du die Endung „.{oldExt}“ wirklich entfernen? Ohne sie weiß dein Mac vielleicht nicht, mit welcher App sich die Datei öffnen lässt.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Möchtest du die Endung „.{newExt}“ wirklich hinzufügen? macOS zeigt diesen Ordner dann vielleicht als einzelnes Objekt an.} other {Möchtest du die Endung „.{newExt}“ wirklich hinzufügen? Deine Datei wird beim nächsten Öffnen vielleicht in einer anderen App geöffnet.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "Ohne Endung lassen",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": ".{oldExt} entfernen",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Endungsänderungen immer erlauben",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"

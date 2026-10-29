@@ -81,5 +81,9 @@
   "@common.sizeUnit.petabyte": {
     "sourceHash": "f9085bf",
     "sameAsSourceJustification": "Unit symbol shared with English: German macOS Finder writes KB/MB/GB unchanged (pile de/macOS, size formatter strings), and SI keeps the lowercase k (kB)."
+  },
+  "common.sizeComparison.same": "(gleich groß)",
+  "@common.sizeComparison.same": {
+    "sourceHash": "2d0f788"
   }
 }
