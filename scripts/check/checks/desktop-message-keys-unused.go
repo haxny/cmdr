@@ -203,20 +203,124 @@ func readUnusedCheckSources(srcDir string, exts ...string) ([]string, int, error
 // appears in no source file and that aren't covered by an allowlisted dynamic
 // prefix. Using a substring scan (not a strict accessor-call regex) is
 // deliberate: it credits any indirection that stores the literal (registry
-// `*Key` fields, Record maps), matching the codegen's findCatalogKeyMentions
-// dead-key suppression, so the only keys flagged are genuinely absent ones.
+// `*Key` fields, Record maps), so the only keys flagged are genuinely absent
+// ones.
 func findUnusedMessageKeys(catalogKeys, sources, dynamicPrefixes []string) []string {
-	var unused []string
+	var scanned []string
 	for _, key := range catalogKeys {
-		if hasAnyPrefix(key, dynamicPrefixes) {
-			continue
+		if !hasAnyPrefix(key, dynamicPrefixes) {
+			scanned = append(scanned, key)
 		}
-		if !mentionedInAny(key, sources) {
+	}
+	mentioned := newKeyMentionMatcher(scanned).mentioned(sources)
+	var unused []string
+	for _, key := range scanned {
+		if !mentioned[key] {
 			unused = append(unused, key)
 		}
 	}
 	sort.Strings(unused)
 	return unused
+}
+
+// keyMentionMatcher finds every key that occurs as a substring of a text in ONE pass over the
+// text, whatever the key count: an Aho-Corasick automaton compiled to a dense DFA over the byte
+// classes the keys use (every other byte is class 0 and leads back to the root). A
+// `strings.Contains` per key per file cost ~20 s on the real tree (5,000+ keys × 2,000+ files).
+type keyMentionMatcher struct {
+	keys    []string
+	class   [256]int32 // byte → class; 0 = a byte no key contains
+	classes int32
+	next    []int32 // next[state*classes+class] → state
+	// out holds the key indexes ending exactly at a state; dict links a state to the nearest
+	// proper-suffix state that ends a key (-1 for none), so one visit reports every key ending here.
+	out  [][]int
+	dict []int32
+}
+
+func newKeyMentionMatcher(keys []string) *keyMentionMatcher {
+	m := &keyMentionMatcher{keys: keys, classes: 1}
+	for _, k := range keys {
+		for i := 0; i < len(k); i++ {
+			if m.class[k[i]] == 0 {
+				m.class[k[i]] = m.classes
+				m.classes++
+			}
+		}
+	}
+	// Build the trie: state 0 is the root, -1 marks a missing edge until the BFS fills it.
+	newState := func() int32 {
+		for range m.classes {
+			m.next = append(m.next, -1)
+		}
+		m.out = append(m.out, nil)
+		m.dict = append(m.dict, -1)
+		return int32(len(m.out) - 1)
+	}
+	newState()
+	for idx, k := range keys {
+		s := int32(0)
+		for i := 0; i < len(k); i++ {
+			edge := s*m.classes + m.class[k[i]]
+			if m.next[edge] < 0 {
+				child := newState()
+				m.next[edge] = child
+			}
+			s = m.next[edge]
+		}
+		m.out[s] = append(m.out[s], idx)
+	}
+	// BFS: complete every edge into a DFA transition and compute the dictionary-suffix links.
+	fail := make([]int32, len(m.out))
+	queue := make([]int32, 0, len(m.out))
+	for c := range m.classes {
+		edge := m.next[c]
+		if edge <= 0 || c == 0 {
+			m.next[c] = 0
+			continue
+		}
+		fail[edge] = 0
+		queue = append(queue, edge)
+	}
+	for head := 0; head < len(queue); head++ {
+		s := queue[head]
+		f := fail[s]
+		if len(m.out[f]) > 0 {
+			m.dict[s] = f
+		} else {
+			m.dict[s] = m.dict[f]
+		}
+		for c := int32(1); c < m.classes; c++ {
+			edge := s*m.classes + c
+			if child := m.next[edge]; child > 0 {
+				fail[child] = m.next[f*m.classes+c]
+				queue = append(queue, child)
+			} else {
+				m.next[edge] = m.next[f*m.classes+c]
+			}
+		}
+		m.next[s*m.classes] = 0
+	}
+	return m
+}
+
+// mentioned reports, for each key, whether it occurs in any of the texts.
+func (m *keyMentionMatcher) mentioned(texts []string) map[string]bool {
+	seen := make([]bool, len(m.out)) // a state whose whole dict chain is already reported
+	found := make(map[string]bool, len(m.keys))
+	for _, text := range texts {
+		s := int32(0)
+		for i := 0; i < len(text); i++ {
+			s = m.next[s*m.classes+m.class[text[i]]]
+			for t := s; t > 0 && !seen[t]; t = m.dict[t] {
+				seen[t] = true
+				for _, idx := range m.out[t] {
+					found[m.keys[idx]] = true
+				}
+			}
+		}
+	}
+	return found
 }
 
 // unusedDynamicPrefixesWithoutKeys returns the allowlisted prefixes that no
@@ -243,15 +347,6 @@ func unusedDynamicPrefixesWithoutKeys(catalogKeys, dynamicPrefixes []string) []s
 func hasAnyPrefix(s string, prefixes []string) bool {
 	for _, p := range prefixes {
 		if strings.HasPrefix(s, p) {
-			return true
-		}
-	}
-	return false
-}
-
-func mentionedInAny(key string, sources []string) bool {
-	for _, src := range sources {
-		if strings.Contains(src, key) {
 			return true
 		}
 	}

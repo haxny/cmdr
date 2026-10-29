@@ -357,15 +357,12 @@ job.
 
 ## Dead-key honesty + the orphan check
 
-Two layers look for catalog keys never referenced in code:
-
-- The codegen prints a non-fatal dead-key WARNING. Its usage scan only sees STATICALLY-written keys (`t('literal')`,
-  `<Trans key="literal">`), so a dynamically-built key reads as dead there.
-- `desktop-message-keys-unused` (Go check, error-level) is the enforced net: a catalog key whose literal appears in NO
-  `apps/desktop/src/` file (test files included) and isn't covered by an allowlisted dynamic prefix is a hard failure,
-  because an orphan key is dead translation work that costs money once human translators are involved. It credits any
-  indirection that stores the literal (registry `*Key` fields, Record maps), so the only keys it flags are genuinely
-  absent ones.
+One layer owns catalog keys never referenced in code: `desktop-message-keys-unused` (Go check, error-level, fast lane).
+A catalog key whose literal appears in NO `apps/desktop/src/` or `src-tauri/src/` file (test files included) and isn't
+covered by an allowlisted dynamic prefix is a hard failure, because an orphan key is dead translation work that costs
+money once human translators are involved. It credits any indirection that stores the literal (registry `*Key` fields,
+Record maps), so the only keys it flags are genuinely absent ones. It matches every key in one pass per file (an
+Aho-Corasick automaton); the codegen only answers the inverse (keys used in code but missing from the catalog).
 
 Keys assembled at runtime never appear verbatim, so they're carried by a closed, documented dynamic-prefix allowlist
 (`unusedKeyDynamicPrefixes` in `scripts/check/checks/desktop-message-keys-unused.go`, the single source). Today that's

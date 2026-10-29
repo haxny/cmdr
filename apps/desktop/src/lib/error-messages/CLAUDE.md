@@ -29,9 +29,9 @@ files. Writing rules: `docs/style-guide.md` (active voice, friendly, never the w
   entities collide with ICU's brace/apostrophe grammar, so catalog values are PLAIN strings that bypass ICU, and do NOT
   double apostrophes (the ICU `''` rule doesn't apply; write them normally). The compose pipeline (catalog lookup →
   `interpolate` escaped `{path}`/`{osMessage}` → `expandSystemStrings` → snarkdown/`{@html}`) is unchanged.
-- **The codegen dead-key report lists EVERY `errors.*` key** (keys are built dynamically, so the usage scanner can't see
-  them). It's a non-fatal warning; `pnpm check` stays green. To find a truly-dead error key, read the factory logic, not
-  this report. See `../intl/messages/DETAILS.md` § Dead-key honesty.
+- **The orphan check can't see `errors.*` keys** (they're built dynamically), so `desktop-message-keys-unused` carries
+  their prefixes on its dynamic allowlist. To find a truly-dead error key, read the factory logic. See
+  `../intl/messages/DETAILS.md` § Dead-key honesty.
 - **`escapeMarkdown` is the XSS boundary.** The composed explanation / suggestion is `{@html}`-injected via
   `renderErrorMarkdown` → snarkdown (`../file-explorer/pane/error-pane-utils.ts`). EVERY interpolated runtime value
   (path, OS message, device name, free-form provider text) MUST pass through `esc(...)` before landing in a template.

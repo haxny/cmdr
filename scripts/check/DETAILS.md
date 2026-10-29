@@ -343,7 +343,7 @@ lock".
 check (positionally or via `--check`) implicitly includes slow checks (`includeSlow = len(checkNames) > 0`); group/app
 selectors don't.
 
-**Fast lane (`--fast`):** `IsFast: true` marks the curated pre-commit check set: 78 checks, about 6 s wall even with
+**Fast lane (`--fast`):** `IsFast: true` marks the curated pre-commit check set: 80 checks, about 6 s wall even with
 `--fresh` (verified on the M1 Max agent box, `pnpm check --fast --ci --fresh`, 2026-10-13), intended to run before every
 commit. Its budget is 5–10 s, so formatters, test suites, typecheckers, `knip`, and the i18n generator-freshness lanes
 stay in the default lane. It's an editorial pick, not a timing-derived list (see Key decisions below). Named check
@@ -1055,11 +1055,14 @@ cost. **Why**: with `--fresh` the lane took 54 s, almost all of it a long tail o
 runner, or a whole-tree generator: `message-keys-fresh` (33 s), `message-keys-unused` (24 s), `go-tests`,
 `i18n-termbase`, `staticcheck`, `api-server-tests`, `knip`, `go-vet`, `macos-symbol-floor`, the dashboard's
 svelte-check, tests, and knip, `e2e-linux-typecheck`, `api-server-typecheck`, and `go-version-single-source`. Moving
-them to the default lane cut it to ~6 s (2026-10-13). The formatters (`oxfmt`, `rustfmt`) left too: the git hooks format
-staged files at commit and the whole repo at push (`docs/tooling/git-hooks.md`), so a formatter in `--fast` caught
-nothing the next commit wouldn't. `FilterFastChecks` keeps only `IsFast` entries and a `DependsOn` edge to a check
-outside the run counts as satisfied, so a setup step (`api-server-worker-types`, `dashboard-svelte-kit-sync`) is fast
-exactly when one of its dependents is; both left with theirs. The scanners that catch real failures stay
+them to the default lane cut it to ~6 s (2026-10-13). The two message-key lanes came back once they stopped scanning per
+key: the codegen dropped its dead-key scan (`message-keys-unused` owns that question) and the Go check matches every key
+in one Aho-Corasick pass per file, taking them from 27–35 s and 22–27 s to ~0.5 s and ~0.7 s wall (5,189 keys, 3,967
+files, load ~90, `pnpm check <id> --fresh`, 2026-10-29). The formatters (`oxfmt`, `rustfmt`) left too: the git hooks
+format staged files at commit and the whole repo at push (`docs/tooling/git-hooks.md`), so a formatter in `--fast`
+caught nothing the next commit wouldn't. `FilterFastChecks` keeps only `IsFast` entries and a `DependsOn` edge to a
+check outside the run counts as satisfied, so a setup step (`api-server-worker-types`, `dashboard-svelte-kit-sync`) is
+fast exactly when one of its dependents is; both left with theirs. The scanners that catch real failures stay
 (`macos-availability`, `discarded-outcome`).
 
 **Decision**: `CIOnly` field on `CheckDefinition` (mirrors `IsSlow`). **Why**: Keeps "this check runs only in CI"

@@ -1,20 +1,18 @@
 /**
  * TDD for the message-key codegen (`gen-message-keys-lib.ts`): catalog → the
- * `MessageKey` union, plus the missing-key (build failure) and dead-key
- * (warning) reports.
+ * `MessageKey` union, plus the missing-key report (a build failure).
  *
  * The codegen reads `messages/en/*.json` and scans source for `t()`/`<Trans>`/
- * `getMessage()` key usages. These tests drive both pure pieces (the catalog
- * parse + the source scan + the diff) against in-memory inputs, so no real
- * catalog or source tree is touched.
+ * `getMessage()` key usages. These tests drive the pure pieces (the catalog
+ * parse, the source scan, and the missing-key diff) against in-memory inputs,
+ * so no real catalog or source tree is touched.
  */
 import { describe, it, expect } from 'vitest'
 import {
   collectCatalogKeys,
   stripMetadataKeys,
   extractUsedKeys,
-  findCatalogKeyMentions,
-  diffKeys,
+  findMissingKeys,
   emitKeysModule,
 } from './gen-message-keys-lib.ts'
 
@@ -78,75 +76,19 @@ describe('extractUsedKeys', () => {
   })
 })
 
-describe('findCatalogKeyMentions', () => {
-  it('finds catalog keys mentioned via a Record map (dead-key suppression of indirection)', () => {
-    const src = `const M = { Appearance: 'settings.section.appearance', red: 'settings.tint.red' }`
-    const mentioned = findCatalogKeyMentions(src, [
-      'settings.section.appearance',
-      'settings.tint.red',
-      'settings.tint.blue',
-    ])
-    expect(mentioned.has('settings.section.appearance')).toBe(true)
-    expect(mentioned.has('settings.tint.red')).toBe(true)
-    expect(mentioned.has('settings.tint.blue')).toBe(false) // not mentioned
-  })
-
-  it('is robust to apostrophes in nearby backtick strings (substring scan, not quote parsing)', () => {
-    const src = "const e = `Invalid '${x}'`; const M = { red: 'settings.tint.red' }"
-    expect(findCatalogKeyMentions(src, ['settings.tint.red']).has('settings.tint.red')).toBe(true)
-  })
-})
-
-describe('diffKeys', () => {
-  it('suppresses the dead warning for a catalog key reached only via a literal (indirection)', () => {
-    // The key is never directly referenced (no t('x')), but its literal appears
-    // in a Record map, so it must NOT be reported dead.
-    const result = diffKeys({
-      catalogKeys: ['settings.section.appearance'],
-      usedKeys: new Set(),
-      literalKeys: new Set(['settings.section.appearance']),
-    })
-    expect(result.dead).toEqual([])
-    expect(result.missing).toEqual([])
-  })
-
-  it('a literal that is not a direct reference never becomes a missing key', () => {
-    // `literalKeys` must not feed missing detection: a non-catalog dotted
-    // literal (e.g. a setting id) stays out of `missing`.
-    const result = diffKeys({
-      catalogKeys: ['settings.theme.mode.label'],
-      usedKeys: new Set(['settings.theme.mode.label']),
-      literalKeys: new Set(['developer.mcpPort', 'settings.theme.mode.label']),
-    })
-    expect(result.missing).toEqual([])
-    expect(result.dead).toEqual([])
-  })
-
+describe('findMissingKeys', () => {
   it('reports keys used in code but missing from the catalog', () => {
-    const result = diffKeys({
-      catalogKeys: ['transfer.trash'],
-      usedKeys: new Set(['transfer.trash', 'transfer.missing']),
-    })
-    expect(result.missing).toEqual(['transfer.missing'])
-    expect(result.dead).toEqual([])
+    expect(findMissingKeys(['transfer.trash'], new Set(['transfer.trash', 'transfer.missing']))).toEqual([
+      'transfer.missing',
+    ])
   })
 
-  it('reports catalog keys never used in code (dead)', () => {
-    const result = diffKeys({
-      catalogKeys: ['transfer.trash', 'transfer.unused'],
-      usedKeys: new Set(['transfer.trash']),
-    })
-    expect(result.missing).toEqual([])
-    expect(result.dead).toEqual(['transfer.unused'])
+  it('ignores catalog keys nobody uses (the `message-keys-unused` Go check owns those)', () => {
+    expect(findMissingKeys(['transfer.trash', 'transfer.unused'], new Set(['transfer.trash']))).toEqual([])
   })
 
-  it('returns both lists sorted and empty when in sync', () => {
-    const result = diffKeys({
-      catalogKeys: ['a.one', 'a.two'],
-      usedKeys: new Set(['a.two', 'a.one']),
-    })
-    expect(result.missing).toEqual([])
-    expect(result.dead).toEqual([])
+  it('returns the missing keys sorted', () => {
+    expect(findMissingKeys(['a.one'], new Set(['z.two', 'a.one', 'b.three']))).toEqual(['b.three', 'z.two'])
   })
 })
 

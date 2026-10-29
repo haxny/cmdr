@@ -437,6 +437,7 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🎨 Svelte",
 		DependsOn:   nil,
+		IsFast:      true,
 		Inputs:      svelteInputs,
 		Run:         RunDesktopMessageKeysFresh,
 	},
@@ -493,8 +494,10 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🎨 Svelte",
 		DependsOn:   nil,
-		Inputs:      svelteInputs,
-		Run:         RunDesktopMessageKeysUnused,
+		IsFast:      true,
+		// The Rust half: `menu_t` call sites are the only reference the native menu keys have.
+		Inputs: inputs(svelteInputs, rustAppTreeInputs),
+		Run:    RunDesktopMessageKeysUnused,
 	},
 	{
 		ID:          "desktop-message-screenshots-fresh",

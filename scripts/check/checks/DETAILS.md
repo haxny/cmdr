@@ -2129,41 +2129,41 @@ doubles as production code.
   `origin/main`, committed or not, for an agent to run beside `--fast`; the full `svelte-tests` stays the gate),
   import-cycles, jscpd (the frontend clone list, TypeScript and Svelte), message-keys-fresh (regenerate-and-diff
   `keys.gen.ts` from the message catalogs), message-key-naming (the `area.feature.leaf` shape + known-area first
-  segment), message-keys-unused (catalog keys never referenced in `src/`; error-level, with a closed dynamic-prefix
-  allowlist for runtime-built keys), message-screenshots-fresh (ERROR on a structural break: a representative rule
-  reaching no catalog key, or a rule or `@key.screenshot` naming an image the committed capture report lacks; warns on
-  stale couplings and on a rule every key of which has its own capture; runs the coupler's `--check` and maps its exit
-  code, reads no PNGs; a warn prints the coupler's one-line summary, which also counts report keys the catalogs dropped,
-  and saves the lists as `Details`. Not an auto-fixer on purpose: `pnpm i18n:couple` is deterministic, but after a key
-  rename it would clear the renamed key's still-truthful screenshot, which the warn exists to spare until the next
-  capture), i18n-stale (warn-only; a non-`en` translation whose `@key.sourceHash` no longer matches the value it was
-  translated from), i18n-parity (ERROR; each locale key's `{placeholder}`+`<tag>` set, or raw `{token}` set for
-  `errors.*`, must equal that of the value it renders instead of, since a mismatch crashes at runtime), i18n-icu (ERROR;
-  every message is written in its own family's grammar: an ICU message must compile via `intl-messageformat`, and a RAW
-  value (`errors.*` plus the native `menu.*`) must carry no ICU escaping, since a doubled `''` renders verbatim there;
-  the one locale check that inspects `en` too, the rule being about a catalog's own syntax), i18n-tag-param-collision
-  (ERROR; a message naming a `<tag>` and a `{param}` alike renders the param as a stringified handler, because `Trans`
-  lets the tag win the merged lookup), i18n-trans-snippets (ERROR; a message `<tag>` with no matching `snippets={{ … }}`
-  key at the call site renders as nothing, so its inner text silently vanishes; catches a rename finished on only one
-  side), i18n-plural (ERROR; each plural covers its locale's required CLDR categories, gated on the English source's
-  plural shape), i18n-coverage (ERROR; for a full translation, keys missing from the locale or still showing English
-  without a `@key.sameAsSourceJustification`, either of which ships a half-translated locale. "Still English" is
-  byte-identical OR English text under a plural/select branch set the locale legitimately changed, which byte comparison
-  alone reads as translated; for an OVERLAY the rules invert, and a key identical to what it overrides, or unknown to
-  it, is the finding), i18n-dont-translate (warn-only; a curated brand/system token English carries but the locale
-  dropped), i18n-terms (warn-only, nickname of desktop-i18n-term-consistency; the only CROSS-key check: two keys sharing
-  one English value must render one way in a locale, judged on the EFFECTIVE value so a half-forked overlay term is
-  caught, with a reasoned allowlist and a ratchet-down `notYetReviewed` baseline for locales that predate it),
-  i18n-aria-label (ERROR, desktop-i18n-aria-label; a translated `fooAria` must still CONTAIN its visible `foo` label
-  (WCAG 2.5.3), gated on English getting it right, so it needs no allowlist and grandfathers nothing), i18n-termbase
-  (desktop-i18n-termbase; ERROR on a schema problem in `docs/i18n/concepts.json` / `<tag>/terms.json`, WARN on coverage
-  drift past a per-locale ratchet-down count in `apps/desktop/scripts/i18n-termbase-baseline.json`: a shipped key whose
-  English uses a ruled concept while its translation carries none of the ruling's forms; the same file's
-  `decisionsBytes` warns when a locale's `decisions.md` grows past its byte budget, which local runs ratchet down and
-  record for a first-seen file. Script exit 3 is the ERROR, 1 the WARN; a locale with no `terms.json` is skipped. Its CI
-  step sits in `hygiene` beside i18n-citations, since `docs/i18n/` is outside the `svelte` filter;
-  `docs/i18n/termbase.md`), i18n-mechanics (desktop-i18n-mechanics; ERROR on a malformed
-  `docs/i18n/<tag>/mechanics.json`, WARN past a ratchet-down count in
+  segment), message-keys-unused (catalog keys never referenced in `src/` or `src-tauri/src/`; error-level, with a closed
+  dynamic-prefix allowlist for runtime-built keys; one Aho-Corasick pass per file, so both message-key lanes are fast),
+  message-screenshots-fresh (ERROR on a structural break: a representative rule reaching no catalog key, or a rule or
+  `@key.screenshot` naming an image the committed capture report lacks; warns on stale couplings and on a rule every key
+  of which has its own capture; runs the coupler's `--check` and maps its exit code, reads no PNGs; a warn prints the
+  coupler's one-line summary, which also counts report keys the catalogs dropped, and saves the lists as `Details`. Not
+  an auto-fixer on purpose: `pnpm i18n:couple` is deterministic, but after a key rename it would clear the renamed key's
+  still-truthful screenshot, which the warn exists to spare until the next capture), i18n-stale (warn-only; a non-`en`
+  translation whose `@key.sourceHash` no longer matches the value it was translated from), i18n-parity (ERROR; each
+  locale key's `{placeholder}`+`<tag>` set, or raw `{token}` set for `errors.*`, must equal that of the value it renders
+  instead of, since a mismatch crashes at runtime), i18n-icu (ERROR; every message is written in its own family's
+  grammar: an ICU message must compile via `intl-messageformat`, and a RAW value (`errors.*` plus the native `menu.*`)
+  must carry no ICU escaping, since a doubled `''` renders verbatim there; the one locale check that inspects `en` too,
+  the rule being about a catalog's own syntax), i18n-tag-param-collision (ERROR; a message naming a `<tag>` and a
+  `{param}` alike renders the param as a stringified handler, because `Trans` lets the tag win the merged lookup),
+  i18n-trans-snippets (ERROR; a message `<tag>` with no matching `snippets={{ … }}` key at the call site renders as
+  nothing, so its inner text silently vanishes; catches a rename finished on only one side), i18n-plural (ERROR; each
+  plural covers its locale's required CLDR categories, gated on the English source's plural shape), i18n-coverage
+  (ERROR; for a full translation, keys missing from the locale or still showing English without a
+  `@key.sameAsSourceJustification`, either of which ships a half-translated locale. "Still English" is byte-identical OR
+  English text under a plural/select branch set the locale legitimately changed, which byte comparison alone reads as
+  translated; for an OVERLAY the rules invert, and a key identical to what it overrides, or unknown to it, is the
+  finding), i18n-dont-translate (warn-only; a curated brand/system token English carries but the locale dropped),
+  i18n-terms (warn-only, nickname of desktop-i18n-term-consistency; the only CROSS-key check: two keys sharing one
+  English value must render one way in a locale, judged on the EFFECTIVE value so a half-forked overlay term is caught,
+  with a reasoned allowlist and a ratchet-down `notYetReviewed` baseline for locales that predate it), i18n-aria-label
+  (ERROR, desktop-i18n-aria-label; a translated `fooAria` must still CONTAIN its visible `foo` label (WCAG 2.5.3), gated
+  on English getting it right, so it needs no allowlist and grandfathers nothing), i18n-termbase (desktop-i18n-termbase;
+  ERROR on a schema problem in `docs/i18n/concepts.json` / `<tag>/terms.json`, WARN on coverage drift past a per-locale
+  ratchet-down count in `apps/desktop/scripts/i18n-termbase-baseline.json`: a shipped key whose English uses a ruled
+  concept while its translation carries none of the ruling's forms; the same file's `decisionsBytes` warns when a
+  locale's `decisions.md` grows past its byte budget, which local runs ratchet down and record for a first-seen file.
+  Script exit 3 is the ERROR, 1 the WARN; a locale with no `terms.json` is skipped. Its CI step sits in `hygiene` beside
+  i18n-citations, since `docs/i18n/` is outside the `svelte` filter; `docs/i18n/termbase.md`), i18n-mechanics
+  (desktop-i18n-mechanics; ERROR on a malformed `docs/i18n/<tag>/mechanics.json`, WARN past a ratchet-down count in
   `apps/desktop/scripts/i18n-mechanics-baseline.json` on catalog values breaking the locale's declared typography: a
   straight `"`, an undeclared quote mark, `...`, or a hit of its spacing or hedge patterns. A locale with no file is
   skipped, an overlay inherits its base's, and `--adopt <tag>` records a newly declared locale once. Same exit contract
