@@ -41,13 +41,12 @@ re-reads or follows a file that something else renamed.
   cover last as `key: "none"`. The covers are copied out under the lock (shared buffers) and their pixel sizes read
   after it. Then covers that look the same are one choice (`cover_likeness.rs`, the evidence in its header): with two or
   more distinct covers, each gets a likeness (`cover_image::likeness_of`, cached by key:len, decoded off every lock):
-  a horizontal and a vertical dHash (each within `NEAR_DUPLICATE_BITS = 5`), a 32×32 grey grid and a 4×4 colour grid
-  (per cell within `GREY_TOLERANCE` / `COLOUR_TOLERANCE`); all four must agree, because dHash alone merges solid colours
-  and one template with another title. A flat picture (both hashes nearly all 0 or all 1) and one that doesn't decode
+  a horizontal and a vertical dHash (each within `NEAR_DUPLICATE_BITS = 5`), a 64×64 grey grid and a 4×4 colour grid
+  (per cell within `GREY_TOLERANCE` / `COLOUR_TOLERANCE`); all four must agree, because dHash alone merges solid colours,
+  one template with another title, and one artwork with another small disc label ("CD 1" / "CD 2"). A flat picture (both hashes nearly all 0 or all 1) and one that doesn't decode
   never merge. Each cover joins the NEAREST earlier seed (`seeds_of`, never chaining); the largest in pixels stands
   (its key, MIME, size), the files are summed, and `nearDuplicates` counts the others. The panel's "Use it for all N
-  files" is `use_cover_for_all` with that key: one edit, one ⌘Z.
-  `use_cover_for_all(key)` gives every readable file that cover (`"none"` removes them), a key no file
+  files" passes that key to `use_cover_for_all(key)` (one edit, one ⌘Z), which gives every readable file that cover (`"none"` removes them), a key no file
   carries any more is `UnknownCover`. `set_cover_from_bytes` (a paste) takes at most 10 MiB sniffed by the magic bytes;
   `set_cover_from_path` (a drop) reads only a regular file at an absolute path: `symlink_metadata` refuses a folder,
   FIFO, or symlink (`CoverNotAFile`), the open is `O_NOFOLLOW | O_NONBLOCK`, and the open file is checked again, then

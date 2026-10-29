@@ -94,6 +94,35 @@ fn template(side: u32, title: &str, tint: [f32; 3], photo: u32) -> DynamicImage 
     }))
 }
 
+/// A badge about 5 % of the cover, in its lower-left corner.
+const BADGE: (f32, f32, f32, f32) = (0.05, 0.33, 0.78, 0.96);
+/// A small corner label, under 1 % of the cover (66×42 px of 600): it merged on a 32×32 grey grid.
+const SMALL_BADGE: (f32, f32, f32, f32) = (0.05, 0.16, 0.89, 0.96);
+
+/// [`artwork`] with a light badge at `left, right, top, bottom` (fractions of the side) holding
+/// `label` in dark blocks, as ripped audiobooks mark each disc's copy of one artwork ("CD 1").
+fn badged(side: u32, label: &str, (left, right, top, bottom): (f32, f32, f32, f32)) -> DynamicImage {
+    let s = side as f32;
+    let letters: Vec<char> = label.chars().collect();
+    let glyph_width = (right - left) / letters.len() as f32;
+    let mut picture = artwork(side).to_rgb8();
+    for (x, y, pixel) in picture.enumerate_pixels_mut() {
+        let (fx, fy) = (x as f32 / s, y as f32 / s);
+        if (left..right).contains(&fx) && (top..bottom).contains(&fy) {
+            let at = (fx - left) / glyph_width;
+            let letter = letters[(at as usize).min(letters.len() - 1)];
+            let col = (at.fract() * 4.0) as u32;
+            let row = ((fy - top) / (bottom - top) * 5.0) as u32;
+            *pixel = if col < 3 && glyph(letter, col, row.min(4)) {
+                Rgb([30, 25, 20])
+            } else {
+                Rgb([245, 245, 240])
+            };
+        }
+    }
+    DynamicImage::ImageRgb8(picture)
+}
+
 const BLUE: [f32; 3] = [0.3, 0.5, 1.0];
 const GREEN: [f32; 3] = [0.3, 1.0, 0.5];
 
@@ -166,7 +195,13 @@ fn copies_of(master: &DynamicImage) -> Vec<Cover> {
 
 #[test]
 fn re_encoded_and_resized_copies_look_the_same() {
-    for master in [artwork(600), other_artwork(600), template(600, "Book One", BLUE, 0)] {
+    for master in [
+        artwork(600),
+        other_artwork(600),
+        template(600, "Book One", BLUE, 0),
+        badged(600, "CD 1", BADGE),
+        badged(600, "CD 1", SMALL_BADGE),
+    ] {
         let copies = copies_of(&master);
         for copy in &copies[1..] {
             assert!(
@@ -201,6 +236,28 @@ fn different_pictures_never_look_the_same() {
         ("another title", book("Book One", BLUE, 0), book("Book Two", BLUE, 0)),
         ("another photo", book("Book One", BLUE, 0), book("Book One", BLUE, 1)),
         ("another colour", book("Book One", BLUE, 0), book("Book One", GREEN, 0)),
+        // One artwork per disc, told apart only by a small badge: merged, "use for all" would
+        // give every disc the first one's badge.
+        (
+            "another disc badge",
+            jpeg(&badged(600, "CD 1", BADGE), 90),
+            jpeg(&badged(600, "CD 2", BADGE), 90),
+        ),
+        (
+            "another small disc label",
+            jpeg(&badged(600, "CD 1", SMALL_BADGE), 90),
+            jpeg(&badged(600, "CD 2", SMALL_BADGE), 90),
+        ),
+        (
+            "another small disc label, resized",
+            jpeg(&badged(600, "CD 1", SMALL_BADGE), 90),
+            jpeg(&resized(&badged(600, "CD 2", SMALL_BADGE), 500), 80),
+        ),
+        (
+            "a badge or none",
+            jpeg(&artwork(600), 90),
+            jpeg(&badged(600, "CD 1", BADGE), 90),
+        ),
     ];
     for (what, a, b) in &pairs {
         assert_eq!(apart(a, b), None, "{what}: {:?}", look(a).spread(&look(b)));

@@ -4,34 +4,35 @@
 //!
 //! Four signals, all of which must agree, because each alone is fooled by something a book shelf
 //! has: a horizontal and a vertical dHash (the layout of light and dark, blind to colour and to
-//! anything small), a 32×32 grey grid compared cell by cell (catches a different title or photo in
-//! the same template), and a 4×4 colour grid (catches the same template in another colour). A
-//! picture whose both hashes carry almost no bits (a solid or smooth cover) never merges: there is
-//! nothing to tell two such covers apart by.
+//! anything small), a 64×64 grey grid compared cell by cell (catches a different title or photo in
+//! the same template, and a small "CD 1" / "CD 2" label on one artwork), and a 4×4 colour grid
+//! (catches the same template in another colour). A picture whose both hashes carry almost no bits
+//! (a solid or smooth cover) never merges: there is nothing to tell two such covers apart by.
 //!
 //! Evidence for the limits (`image` 0.25.10, `cover_near_test.rs` pictures plus one real MP3
 //! audiobook, 2026-10-29). Copies (JPEG quality 90 against 70, 600 px against 500 px, PNG against
-//! JPEG): hashes 0–1 bits apart, grey cells at most 12 apart, colour at most 2. The real book's 24
-//! distinct re-encoded copies of its cover: 0 bits, alike. Different pictures: another picture
-//! 20/25 bits; the same template with another title only 1/0 bits (dHash alone would merge it)
-//! but grey 174; another photo 18/18 bits, grey 84; another colour 4/7 bits, grey 81, colour 61;
-//! two solid colours 0/0 bits (flat, never merged), colour 171. The limits sit between, with a
-//! margin both ways: 5 bits per hash, 32 per grey cell, 16 per colour channel.
+//! JPEG): hashes 0–2 bits apart, grey cells at most 28 apart, colour at most 2. The real book's 24
+//! distinct re-encoded copies of its cover: 0 bits, grey 0, alike. Different pictures: another
+//! picture grey 210; the same template with another title only 1/0 bits (dHash alone would merge
+//! it) but grey 205; another photo grey 87; another colour grey 82, colour 61; mirrored grey 77;
+//! one artwork with another disc label: grey 218 for a badge of 5 % of the cover, 94 for a label
+//! under 1 % (66×42 px of 600, which a 32×32 grid averaged down to 25 and merged); two solid
+//! colours 0/0 bits (flat, never merged), colour 171. The limits sit between, with a margin both
+//! ways: 5 bits per hash, 48 per grey cell, 16 per colour channel.
 
 use image::{DynamicImage, GrayImage};
 
 /// Each dHash may differ in at most this many of its 64 bits.
 pub const NEAR_DUPLICATE_BITS: u32 = 5;
-/// A cell of the 32×32 grey grid may differ by at most this much (of 255).
-pub const GREY_TOLERANCE: u8 = 32;
+/// A cell of the 64×64 grey grid may differ by at most this much (of 255).
+pub const GREY_TOLERANCE: u8 = 48;
 /// A channel of a cell of the 4×4 colour grid may differ by at most this much (of 255).
 pub const COLOUR_TOLERANCE: u8 = 16;
 /// A hash with at most this many bits set, or unset, says almost nothing about the picture.
 const FLAT_BITS: u32 = 2;
 
-const GREY_SIDE: u32 = 32;
 const COLOUR_SIDE: u32 = 4;
-/// The one box-sampled thumbnail every signal is read from.
+/// The one box-sampled thumbnail every signal is read from; its grey is the grey grid itself.
 const BASE_SIDE: u32 = 64;
 
 /// What a cover looks like, small: enough to tell a copy from another picture.
@@ -54,7 +55,7 @@ pub fn likeness(picture: &DynamicImage) -> Likeness {
     Likeness {
         across: hash(&across, |x, y| ((x, y), (x + 1, y))),
         down: hash(&down, |x, y| ((x, y), (x, y + 1))),
-        grey: base.thumbnail_exact(GREY_SIDE, GREY_SIDE).to_luma8().into_raw(),
+        grey: base.to_luma8().into_raw(),
         colour: base.thumbnail_exact(COLOUR_SIDE, COLOUR_SIDE).to_rgb8().into_raw(),
     }
 }

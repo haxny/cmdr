@@ -142,7 +142,7 @@ pub(super) fn thumbnail_encodes() -> usize {
 }
 
 /// How many likenesses stay cached; past it the cache starts over. A book whose every file carries its own re-encoded
-/// copy of the cover has one per file, so this is well above a big book's file count (each is about 1 KiB).
+/// copy of the cover has one per file, so this is well above a big book's file count (each is about 4 KiB, 8 MiB at most).
 const LIKENESS_CACHE_LIMIT: usize = 2048;
 
 /// Likenesses by cover key and length, as [`THUMBNAILS`]; `None` for a cover that doesn't decode.
