@@ -169,6 +169,14 @@
   "@askCmdr.tool.proposeSuggestions.done": {
     "sourceHash": "42457d2"
   },
+  "askCmdr.tool.proposeServer.doing": "Bereidt een serversuggestie voor",
+  "@askCmdr.tool.proposeServer.doing": {
+    "sourceHash": "cf8e5f0"
+  },
+  "askCmdr.tool.proposeServer.done": "Serversuggestie voorbereid",
+  "@askCmdr.tool.proposeServer.done": {
+    "sourceHash": "b075032"
+  },
   "askCmdr.tool.nothingToSuggest.doing": "Bepaalt of het het vermelden waard is",
   "@askCmdr.tool.nothingToSuggest.doing": {
     "sourceHash": "51ef519"
@@ -177,11 +185,11 @@
   "@askCmdr.tool.nothingToSuggest.done": {
     "sourceHash": "2287381"
   },
-  "askCmdr.tool.memoryWrite.doing": "Slaat een notitie over je op",
+  "askCmdr.tool.memoryWrite.doing": "Bewaart een notitie over je",
   "@askCmdr.tool.memoryWrite.doing": {
     "sourceHash": "9c2a59e"
   },
-  "askCmdr.tool.memoryWrite.done": "Notitie over je opgeslagen",
+  "askCmdr.tool.memoryWrite.done": "Notitie over je bewaard",
   "@askCmdr.tool.memoryWrite.done": {
     "sourceHash": "cb3d875"
   },
@@ -193,6 +201,18 @@
   "@askCmdr.tool.memoryEdit.done": {
     "sourceHash": "5fdfbdc"
   },
+  "askCmdr.tool.connectVolume.doing": "Maakt verbinding met je server",
+  "@askCmdr.tool.connectVolume.doing": {
+    "sourceHash": "5f24f83"
+  },
+  "askCmdr.tool.connectVolume.done": "Verbonden met je server",
+  "@askCmdr.tool.connectVolume.done": {
+    "sourceHash": "8f89103"
+  },
+  "askCmdr.tool.connectVolume.tried": "Probeerde verbinding te maken met je server",
+  "@askCmdr.tool.connectVolume.tried": {
+    "sourceHash": "b6d7bcf"
+  },
   "askCmdr.tool.unknown.doing": "Bezig",
   "@askCmdr.tool.unknown.doing": {
     "sourceHash": "a92f044"
@@ -201,9 +221,450 @@
   "@askCmdr.tool.unknown.done": {
     "sourceHash": "05cc2be"
   },
-  "askCmdr.tool.refused": "Dat verzoek was niet beschikbaar",
-  "@askCmdr.tool.refused": {
-    "sourceHash": "f5e6dcc"
+  "askCmdr.tool.listDir.folder.doing": "Haalt de inhoud van <place>{name}</place> op",
+  "@askCmdr.tool.listDir.folder.doing": {
+    "sourceHash": "d9a6c6c"
+  },
+  "askCmdr.tool.listDir.folder.done": "Inhoud van <place>{name}</place> opgehaald",
+  "@askCmdr.tool.listDir.folder.done": {
+    "sourceHash": "f079af1"
+  },
+  "askCmdr.tool.listPaneFiles.selection.doing": "Haalt je selectie in <place>{name}</place> op",
+  "@askCmdr.tool.listPaneFiles.selection.doing": {
+    "sourceHash": "7beaf97"
+  },
+  "askCmdr.tool.listPaneFiles.selection.done": "Je selectie in <place>{name}</place> opgehaald",
+  "@askCmdr.tool.listPaneFiles.selection.done": {
+    "sourceHash": "497e22a"
+  },
+  "askCmdr.tool.folderImportance.folder.doing": "Controleert het belang van <place>{name}</place>",
+  "@askCmdr.tool.folderImportance.folder.doing": {
+    "sourceHash": "59d84ca"
+  },
+  "askCmdr.tool.folderImportance.folder.done": "Belang van <place>{name}</place> gecontroleerd",
+  "@askCmdr.tool.folderImportance.folder.done": {
+    "sourceHash": "f167904"
+  },
+  "askCmdr.tool.inspectFile.files.doing": "{others, plural, =0 {Kijkt in <place>{name}</place>} one {Kijkt in <place>{name}</place> en nog {othersText} bestand} other {Kijkt in <place>{name}</place> en nog {othersText} bestanden}}",
+  "@askCmdr.tool.inspectFile.files.doing": {
+    "sourceHash": "2038d00"
+  },
+  "askCmdr.tool.inspectFile.files.done": "{others, plural, =0 {In <place>{name}</place> gekeken} one {In <place>{name}</place> en nog {othersText} bestand gekeken} other {In <place>{name}</place> en nog {othersText} bestanden gekeken}}",
+  "@askCmdr.tool.inspectFile.files.done": {
+    "sourceHash": "63018e2"
+  },
+  "askCmdr.tool.imageFacts.files.doing": "{others, plural, =0 {Leest wat er in <place>{name}</place> staat} one {Leest wat er in <place>{name}</place> en nog {othersText} foto staat} other {Leest wat er in <place>{name}</place> en nog {othersText} foto''s staat}}",
+  "@askCmdr.tool.imageFacts.files.doing": {
+    "sourceHash": "5e7fbe6"
+  },
+  "askCmdr.tool.imageFacts.files.done": "{others, plural, =0 {Gelezen wat er in <place>{name}</place> staat} one {Gelezen wat er in <place>{name}</place> en nog {othersText} foto staat} other {Gelezen wat er in <place>{name}</place> en nog {othersText} foto''s staat}}",
+  "@askCmdr.tool.imageFacts.files.done": {
+    "sourceHash": "b3df6a5"
+  },
+  "askCmdr.tool.search.queryInFolders.doing": "{folders, plural, one {Zoekt naar ‘{query}’ in <places>{placesText}</places>} other {Zoekt naar ‘{query}’ in <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.doing": {
+    "sourceHash": "61bd031"
+  },
+  "askCmdr.tool.search.queryInFolders.done": "{folders, plural, one {Gezocht naar ‘{query}’ in <places>{placesText}</places>} other {Gezocht naar ‘{query}’ in <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.done": {
+    "sourceHash": "188f225"
+  },
+  "askCmdr.tool.search.query.doing": "Zoekt naar ‘{query}’",
+  "@askCmdr.tool.search.query.doing": {
+    "sourceHash": "5b0939b"
+  },
+  "askCmdr.tool.search.query.done": "Gezocht naar ‘{query}’",
+  "@askCmdr.tool.search.query.done": {
+    "sourceHash": "04e348f"
+  },
+  "askCmdr.tool.search.inFolders.doing": "{folders, plural, one {Zoekt in <places>{placesText}</places>} other {Zoekt in <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.doing": {
+    "sourceHash": "0989f2a"
+  },
+  "askCmdr.tool.search.inFolders.done": "{folders, plural, one {Gezocht in <places>{placesText}</places>} other {Gezocht in <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.done": {
+    "sourceHash": "017aef4"
+  },
+  "askCmdr.tool.searchPhotos.query.doing": "Doorzoekt je foto''s op ‘{query}’",
+  "@askCmdr.tool.searchPhotos.query.doing": {
+    "sourceHash": "b2e0e1f"
+  },
+  "askCmdr.tool.searchPhotos.query.done": "Je foto''s doorzocht op ‘{query}’",
+  "@askCmdr.tool.searchPhotos.query.done": {
+    "sourceHash": "5b60316"
+  },
+  "askCmdr.tool.proposeRenamePlan.count.doing": "{count, plural, one {Bereidt een plan voor om de naam van {countText} bestand te wijzigen} other {Bereidt een plan voor om de namen van {countText} bestanden te wijzigen}}",
+  "@askCmdr.tool.proposeRenamePlan.count.doing": {
+    "sourceHash": "30c839d"
+  },
+  "askCmdr.tool.proposeRenamePlan.count.done": "{count, plural, one {Plan voorbereid om de naam van {countText} bestand te wijzigen} other {Plan voorbereid om de namen van {countText} bestanden te wijzigen}}",
+  "@askCmdr.tool.proposeRenamePlan.count.done": {
+    "sourceHash": "2e2e790"
+  },
+  "askCmdr.tool.proposeSuggestions.count.doing": "{count, plural, one {Bereidt {countText} suggestie voor} other {Bereidt {countText} suggesties voor}}",
+  "@askCmdr.tool.proposeSuggestions.count.doing": {
+    "sourceHash": "971e695"
+  },
+  "askCmdr.tool.proposeSuggestions.count.done": "{count, plural, one {{countText} suggestie voorbereid} other {{countText} suggesties voorbereid}}",
+  "@askCmdr.tool.proposeSuggestions.count.done": {
+    "sourceHash": "cbb1273"
+  },
+  "askCmdr.tool.memoryWrite.file.doing": "Bewaart een notitie in <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.doing": {
+    "sourceHash": "364c7ec"
+  },
+  "askCmdr.tool.memoryWrite.file.done": "Notitie bewaard in <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.done": {
+    "sourceHash": "8e7a923"
+  },
+  "askCmdr.tool.memoryWrite.file.tried": "Probeerde een notitie in <place>{name}</place> te bewaren",
+  "@askCmdr.tool.memoryWrite.file.tried": {
+    "sourceHash": "16921ce"
+  },
+  "askCmdr.tool.memoryWrite.tried": "Probeerde een notitie te bewaren",
+  "@askCmdr.tool.memoryWrite.tried": {
+    "sourceHash": "25f76fa"
+  },
+  "askCmdr.tool.memoryEdit.file.doing": "Werkt <place>{name}</place> bij",
+  "@askCmdr.tool.memoryEdit.file.doing": {
+    "sourceHash": "17b6898"
+  },
+  "askCmdr.tool.memoryEdit.file.done": "<place>{name}</place> bijgewerkt",
+  "@askCmdr.tool.memoryEdit.file.done": {
+    "sourceHash": "9dc9f76"
+  },
+  "askCmdr.tool.memoryEdit.file.tried": "Probeerde <place>{name}</place> bij te werken",
+  "@askCmdr.tool.memoryEdit.file.tried": {
+    "sourceHash": "aeb94cd"
+  },
+  "askCmdr.tool.memoryEdit.tried": "Probeerde zijn eigen notities bij te werken",
+  "@askCmdr.tool.memoryEdit.tried": {
+    "sourceHash": "015f12a"
+  },
+  "askCmdr.tool.unknown.named.doing": "Vraagt om ‘{name}’",
+  "@askCmdr.tool.unknown.named.doing": {
+    "sourceHash": "e220c3b"
+  },
+  "askCmdr.tool.unknown.named.done": "Gevraagd om ‘{name}’",
+  "@askCmdr.tool.unknown.named.done": {
+    "sourceHash": "2a9ce37"
+  },
+  "askCmdr.tool.showInPane": "Toon {path} in een paneel",
+  "@askCmdr.tool.showInPane": {
+    "sourceHash": "98180ea"
+  },
+  "askCmdr.tool.repeat": "Zelfde als hierboven",
+  "@askCmdr.tool.repeat": {
+    "sourceHash": "87115ee"
+  },
+  "askCmdr.tool.outcomeSeparator": ", ",
+  "@askCmdr.tool.outcomeSeparator": {
+    "sourceHash": "0a07f65",
+    "sameAsSourceJustification": "Dutch uses the same comma plus space as English (Microsoft Dutch style guide punctuation); punctuation only, nothing to translate."
+  },
+  "askCmdr.tool.outcome.items": "{count, plural, one {{countText} onderdeel} other {{countText} onderdelen}}",
+  "@askCmdr.tool.outcome.items": {
+    "sourceHash": "5fbad7e"
+  },
+  "askCmdr.tool.outcome.itemsShown": "{shownText} van {totalText} getoond",
+  "@askCmdr.tool.outcome.itemsShown": {
+    "sourceHash": "87b4f4b"
+  },
+  "askCmdr.tool.outcome.itemsShownAtLeast": "{shownText} van minstens {totalText} getoond",
+  "@askCmdr.tool.outcome.itemsShownAtLeast": {
+    "sourceHash": "e57786f"
+  },
+  "askCmdr.tool.outcome.matches": "{count, plural, one {{countText} resultaat} other {{countText} resultaten}}",
+  "@askCmdr.tool.outcome.matches": {
+    "sourceHash": "8804edf"
+  },
+  "askCmdr.tool.outcome.matchesSoFar": "{count, plural, one {{countText} resultaat tot nu toe} other {{countText} resultaten tot nu toe}}",
+  "@askCmdr.tool.outcome.matchesSoFar": {
+    "sourceHash": "712f992"
+  },
+  "askCmdr.tool.outcome.nothingFound": "niets gevonden",
+  "@askCmdr.tool.outcome.nothingFound": {
+    "sourceHash": "9772cc8"
+  },
+  "askCmdr.tool.outcome.nothingFoundYet": "nog niets gevonden",
+  "@askCmdr.tool.outcome.nothingFoundYet": {
+    "sourceHash": "0d0778e"
+  },
+  "askCmdr.tool.outcome.imageIndexingOff": "het indexeren van afbeeldingen staat uit",
+  "@askCmdr.tool.outcome.imageIndexingOff": {
+    "sourceHash": "5e9e5f6"
+  },
+  "askCmdr.tool.outcome.semanticModelNotInstalled": "het model voor semantisch zoeken is niet geïnstalleerd",
+  "@askCmdr.tool.outcome.semanticModelNotInstalled": {
+    "sourceHash": "54dc9af"
+  },
+  "askCmdr.tool.outcome.staged": "{count, plural, one {{countText} klaar om te beoordelen} other {{countText} klaar om te beoordelen}}",
+  "@askCmdr.tool.outcome.staged": {
+    "sourceHash": "b0aba27"
+  },
+  "askCmdr.tool.outcome.notStaged": "niets te beoordelen",
+  "@askCmdr.tool.outcome.notStaged": {
+    "sourceHash": "40a1608"
+  },
+  "askCmdr.tool.outcome.toolUnavailable": "geen van zijn hulpmiddelen",
+  "@askCmdr.tool.outcome.toolUnavailable": {
+    "sourceHash": "9d46d4e"
+  },
+  "askCmdr.tool.outcome.repeatedCall": "overgeslagen: dat had het al geprobeerd",
+  "@askCmdr.tool.outcome.repeatedCall": {
+    "sourceHash": "059d9db"
+  },
+  "askCmdr.tool.outcome.problem": "dat lukte niet",
+  "@askCmdr.tool.outcome.problem": {
+    "sourceHash": "05a940f"
+  },
+  "askCmdr.tool.outcome.miss.unknownVolume": "geen schijf met die naam",
+  "@askCmdr.tool.outcome.miss.unknownVolume": {
+    "sourceHash": "94aa69b"
+  },
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "staat niet op de genoemde schijf",
+  "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
+    "sourceHash": "5a87cd6"
+  },
+  "askCmdr.tool.outcome.miss.noVolumeAtPath": "daar is geen schijf verbonden",
+  "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
+    "sourceHash": "8ce9e0e"
+  },
+  "askCmdr.tool.outcome.miss.volumeNotConnected": "die schijf is niet verbonden",
+  "@askCmdr.tool.outcome.miss.volumeNotConnected": {
+    "sourceHash": "d7b4614"
+  },
+  "askCmdr.tool.outcome.miss.needsDiskAccess": "heeft volledige schijftoegang nodig",
+  "@askCmdr.tool.outcome.miss.needsDiskAccess": {
+    "sourceHash": "a0a6a84"
+  },
+  "askCmdr.tool.outcome.miss.unreachable": "de schijf reageerde niet",
+  "@askCmdr.tool.outcome.miss.unreachable": {
+    "sourceHash": "f39fad7"
+  },
+  "askCmdr.tool.outcome.miss.notFound": "niet aanwezig",
+  "@askCmdr.tool.outcome.miss.notFound": {
+    "sourceHash": "56ee722"
+  },
+  "askCmdr.tool.outcome.miss.excluded": "een overgeslagen systeemmap",
+  "@askCmdr.tool.outcome.miss.excluded": {
+    "sourceHash": "8198768"
+  },
+  "askCmdr.tool.outcome.miss.permissionDenied": "geen bevoegdheid om te kijken",
+  "@askCmdr.tool.outcome.miss.permissionDenied": {
+    "sourceHash": "75756a9"
+  },
+  "askCmdr.tool.outcome.miss.cancelled": "gestopt tijdens het lezen",
+  "@askCmdr.tool.outcome.miss.cancelled": {
+    "sourceHash": "4389728"
+  },
+  "askCmdr.tool.outcome.connection.alreadyConnected": "er was al verbinding",
+  "@askCmdr.tool.outcome.connection.alreadyConnected": {
+    "sourceHash": "168827a"
+  },
+  "askCmdr.tool.outcome.connection.stillReconnecting": "nog bezig met opnieuw verbinden",
+  "@askCmdr.tool.outcome.connection.stillReconnecting": {
+    "sourceHash": "078929e"
+  },
+  "askCmdr.tool.outcome.connection.needsCredentials": "vraagt je om in te loggen",
+  "@askCmdr.tool.outcome.connection.needsCredentials": {
+    "sourceHash": "1833a39"
+  },
+  "askCmdr.tool.outcome.connection.needsApproval": "vraagt om je goedkeuring",
+  "@askCmdr.tool.outcome.connection.needsApproval": {
+    "sourceHash": "80288d6"
+  },
+  "askCmdr.tool.outcome.connection.rejected": "de server zei nee",
+  "@askCmdr.tool.outcome.connection.rejected": {
+    "sourceHash": "53878fc"
+  },
+  "askCmdr.tool.outcome.connection.unreachable": "de server reageerde niet",
+  "@askCmdr.tool.outcome.connection.unreachable": {
+    "sourceHash": "80aae90"
+  },
+  "askCmdr.tool.outcome.connection.notSaved": "geen opgeslagen server",
+  "@askCmdr.tool.outcome.connection.notSaved": {
+    "sourceHash": "1ac6950"
+  },
+  "askCmdr.tool.outcome.connection.cancelled": "gestopt tijdens het verbinden",
+  "@askCmdr.tool.outcome.connection.cancelled": {
+    "sourceHash": "2934c58"
+  },
+  "askCmdr.tool.outcome.memory.outsideMemory": "dat valt buiten zijn notitiemap",
+  "@askCmdr.tool.outcome.memory.outsideMemory": {
+    "sourceHash": "c320cc4"
+  },
+  "askCmdr.tool.outcome.memory.notMarkdown": "notities moeten Markdown-bestanden zijn",
+  "@askCmdr.tool.outcome.memory.notMarkdown": {
+    "sourceHash": "a75dc2f"
+  },
+  "askCmdr.tool.outcome.memory.noPath": "er is geen notitie opgegeven",
+  "@askCmdr.tool.outcome.memory.noPath": {
+    "sourceHash": "6392377"
+  },
+  "askCmdr.tool.outcome.memory.directoryFull": "de notitiemap is vol",
+  "@askCmdr.tool.outcome.memory.directoryFull": {
+    "sourceHash": "330a5d9"
+  },
+  "askCmdr.tool.outcome.memory.noSuchFile": "die notitie bestaat niet",
+  "@askCmdr.tool.outcome.memory.noSuchFile": {
+    "sourceHash": "e11b4e5"
+  },
+  "askCmdr.tool.outcome.memory.noMatch": "de te wijzigen tekst staat niet in de notitie",
+  "@askCmdr.tool.outcome.memory.noMatch": {
+    "sourceHash": "ed063fe"
+  },
+  "askCmdr.tool.outcome.memory.notUnique": "de te wijzigen tekst staat meer dan eens in de notitie",
+  "@askCmdr.tool.outcome.memory.notUnique": {
+    "sourceHash": "1527ba7"
+  },
+  "askCmdr.tool.outcome.memory.unwritable": "de notitie kon niet worden geschreven",
+  "@askCmdr.tool.outcome.memory.unwritable": {
+    "sourceHash": "4edf07b"
+  },
+  "askCmdr.tool.outcome.memory.unavailable": "zijn notitiemap is niet beschikbaar",
+  "@askCmdr.tool.outcome.memory.unavailable": {
+    "sourceHash": "bcf32e3"
+  },
+  "askCmdr.tool.outcome.memory.other": "de notitie is niet gewijzigd",
+  "@askCmdr.tool.outcome.memory.other": {
+    "sourceHash": "00d5f3c"
+  },
+  "askCmdr.tool.outcome.noAnswer": "geen antwoord vastgelegd",
+  "@askCmdr.tool.outcome.noAnswer": {
+    "sourceHash": "43eb550"
+  },
+  "askCmdr.tool.details": "Wat er terugkwam",
+  "@askCmdr.tool.details": {
+    "sourceHash": "79665b6"
+  },
+  "askCmdr.tool.preview.loading": "Ophalen wat er terugkwam",
+  "@askCmdr.tool.preview.loading": {
+    "sourceHash": "99e2019"
+  },
+  "askCmdr.tool.preview.given": "Het model kreeg {givenText} van {totalText} te zien",
+  "@askCmdr.tool.preview.given": {
+    "sourceHash": "8384012"
+  },
+  "askCmdr.tool.preview.givenSoFar": "Het model kreeg {givenText} te zien van {totalText} die tot nu toe gevonden zijn",
+  "@askCmdr.tool.preview.givenSoFar": {
+    "sourceHash": "2235a21"
+  },
+  "askCmdr.tool.preview.firstRows": "{count, plural, one {Dit is de eerste. Met ‘Kopieer’ krijg je het hele resultaat.} other {Dit zijn de eerste {countText}. Met ‘Kopieer’ krijg je het hele resultaat.}}",
+  "@askCmdr.tool.preview.firstRows": {
+    "sourceHash": "1b695fc"
+  },
+  "askCmdr.tool.preview.noRows": "Hier valt geen lijst te tonen. Met ‘Kopieer’ krijg je het hele resultaat.",
+  "@askCmdr.tool.preview.noRows": {
+    "sourceHash": "d80bc30"
+  },
+  "askCmdr.tool.preview.problemLabel": "Wat het model te horen kreeg:",
+  "@askCmdr.tool.preview.problemLabel": {
+    "sourceHash": "edf1200"
+  },
+  "askCmdr.tool.preview.setAside": "Dit resultaat is opzijgezet om ruimte te maken, dus er is niets meer van te tonen.",
+  "@askCmdr.tool.preview.setAside": {
+    "sourceHash": "2b7a0ee"
+  },
+  "askCmdr.tool.preview.notFound": "Dit resultaat is er niet meer.",
+  "@askCmdr.tool.preview.notFound": {
+    "sourceHash": "eaa5a2c"
+  },
+  "askCmdr.tool.preview.unavailable": "Cmdr kan dit resultaat nu niet lezen.",
+  "@askCmdr.tool.preview.unavailable": {
+    "sourceHash": "5649f24"
+  },
+  "askCmdr.tool.preview.line": "regel {lineText}",
+  "@askCmdr.tool.preview.line": {
+    "sourceHash": "7d8370c"
+  },
+  "askCmdr.tool.preview.status.missing": "niet aanwezig",
+  "@askCmdr.tool.preview.status.missing": {
+    "sourceHash": "56ee722"
+  },
+  "askCmdr.tool.preview.status.unreadable": "kon niet worden gelezen",
+  "@askCmdr.tool.preview.status.unreadable": {
+    "sourceHash": "1e9c923"
+  },
+  "askCmdr.tool.preview.status.unreachable": "onbereikbaar",
+  "@askCmdr.tool.preview.status.unreachable": {
+    "sourceHash": "86f57c8"
+  },
+  "askCmdr.tool.preview.status.unsupportedVolume": "op een schijf waar de AI niet in kan kijken",
+  "@askCmdr.tool.preview.status.unsupportedVolume": {
+    "sourceHash": "945bf7c"
+  },
+  "askCmdr.tool.preview.status.noVolumeAtPath": "op een schijf die niet verbonden is",
+  "@askCmdr.tool.preview.status.noVolumeAtPath": {
+    "sourceHash": "3b32abe"
+  },
+  "askCmdr.tool.preview.status.notIndexed": "nog niet geïndexeerd",
+  "@askCmdr.tool.preview.status.notIndexed": {
+    "sourceHash": "c0da718"
+  },
+  "askCmdr.tool.preview.copy": "Kopieer",
+  "@askCmdr.tool.preview.copy": {
+    "sourceHash": "e21f935"
+  },
+  "askCmdr.tool.preview.copyLabel": "Kopieer het hele resultaat als JSON",
+  "@askCmdr.tool.preview.copyLabel": {
+    "sourceHash": "91a0434"
+  },
+  "askCmdr.tool.preview.copied": "Gekopieerd",
+  "@askCmdr.tool.preview.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "askCmdr.tool.preview.copyRefused": "Het klembord nam het niet aan. Opnieuw proberen?",
+  "@askCmdr.tool.preview.copyRefused": {
+    "sourceHash": "5b856ff"
+  },
+  "askCmdr.toolGroup.summary": "Rondgekeken: {parts}",
+  "@askCmdr.toolGroup.summary": {
+    "sourceHash": "2808d11"
+  },
+  "askCmdr.toolGroup.summaryRunning": "Kijkt rond: {parts}",
+  "@askCmdr.toolGroup.summaryRunning": {
+    "sourceHash": "db287ea"
+  },
+  "askCmdr.toolGroup.folders": "{count, plural, one {{countText} map} other {{countText} mappen}}",
+  "@askCmdr.toolGroup.folders": {
+    "sourceHash": "3c46f04"
+  },
+  "askCmdr.toolGroup.files": "{count, plural, one {{countText} bestand} other {{countText} bestanden}}",
+  "@askCmdr.toolGroup.files": {
+    "sourceHash": "3c08428"
+  },
+  "askCmdr.toolGroup.searches": "{count, plural, one {{countText} zoekopdracht} other {{countText} zoekopdrachten}}",
+  "@askCmdr.toolGroup.searches": {
+    "sourceHash": "f280511"
+  },
+  "askCmdr.toolGroup.checks": "{count, plural, one {{countText} controle} other {{countText} controles}}",
+  "@askCmdr.toolGroup.checks": {
+    "sourceHash": "a09f7fb"
+  },
+  "askCmdr.toolGroup.plans": "{count, plural, one {{countText} plan} other {{countText} plannen}}",
+  "@askCmdr.toolGroup.plans": {
+    "sourceHash": "bd332c0"
+  },
+  "askCmdr.toolGroup.notes": "{count, plural, one {{countText} notitie} other {{countText} notities}}",
+  "@askCmdr.toolGroup.notes": {
+    "sourceHash": "2623802"
+  },
+  "askCmdr.toolGroup.other": "{count, plural, one {{countText} andere stap} other {{countText} andere stappen}}",
+  "@askCmdr.toolGroup.other": {
+    "sourceHash": "6108287"
+  },
+  "askCmdr.turnStats.summary": "{calls, plural, one {{callsText} toolaanroep} other {{callsText} toolaanroepen}} · {duration} · {tokens, plural, one {{tokensText} token} other {{tokensText} tokens}}",
+  "@askCmdr.turnStats.summary": {
+    "sourceHash": "a7d484d"
+  },
+  "askCmdr.turnStats.summaryNoDuration": "{calls, plural, one {{callsText} toolaanroep} other {{callsText} toolaanroepen}} · {tokens, plural, one {{tokensText} token} other {{tokensText} tokens}}",
+  "@askCmdr.turnStats.summaryNoDuration": {
+    "sourceHash": "d768ba2"
+  },
+  "askCmdr.turnStats.stopped": "Gestopt · {summary}",
+  "@askCmdr.turnStats.stopped": {
+    "sourceHash": "0f6ea99"
   },
   "askCmdr.error.noKey": "Voeg je API-sleutel toe in instellingen om te beginnen met chatten.",
   "@askCmdr.error.noKey": {
@@ -248,6 +709,67 @@
   "askCmdr.error.budgetExhausted": "Dit antwoord liep tegen zijn limiet aan voordat het klaar was. Probeer iets specifiekers te vragen.",
   "@askCmdr.error.budgetExhausted": {
     "sourceHash": "ea2beb2"
+  },
+  "askCmdr.limit.toolRounds.answered": "Cmdr staat per antwoord maximaal {maxText} {max, plural, one {opzoekronde} other {opzoekrondes}} toe. Dit antwoord heeft die limiet bereikt, dus het is gestopt met zoeken en heeft geantwoord met wat het had gevonden.",
+  "@askCmdr.limit.toolRounds.answered": {
+    "sourceHash": "3e45f64"
+  },
+  "askCmdr.limit.toolRounds.unfinished": "Cmdr staat per antwoord maximaal {maxText} {max, plural, one {opzoekronde} other {opzoekrondes}} toe. Dit antwoord heeft die limiet bereikt voordat het klaar was.",
+  "@askCmdr.limit.toolRounds.unfinished": {
+    "sourceHash": "ee13e2d"
+  },
+  "askCmdr.limit.wallTime": "Cmdr staat per antwoord maximaal {minutesText} {minutes, plural, one {minuut} other {minuten}} toe. Dit antwoord heeft die limiet bereikt voordat het klaar was.",
+  "@askCmdr.limit.wallTime": {
+    "sourceHash": "fc47e07"
+  },
+  "askCmdr.limit.repeatedCall.answered": "Dit antwoord bleef dezelfde opzoeking herhalen, dus Cmdr liet het stoppen met zoeken en antwoorden met wat het had gevonden.",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "sourceHash": "884a9ae"
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "Dit antwoord bleef dezelfde opzoeking herhalen, dus Cmdr heeft het gestopt voordat het klaar was.",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "sourceHash": "c21dbe9"
+  },
+  "askCmdr.limit.noProgress.answered": "In de laatste {maxText} {max, plural, one {opzoekronde} other {opzoekrondes}} vond dit antwoord niets nieuws, dus Cmdr liet het stoppen met zoeken en antwoorden met wat het had gevonden.",
+  "@askCmdr.limit.noProgress.answered": {
+    "sourceHash": "6dc1bc0"
+  },
+  "askCmdr.limit.noProgress.unfinished": "In de laatste {maxText} {max, plural, one {opzoekronde} other {opzoekrondes}} vond dit antwoord niets nieuws, dus Cmdr heeft het gestopt voordat het klaar was.",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "sourceHash": "30c3354"
+  },
+  "askCmdr.limit.stalled": "De AI-aanbieder heeft {maxText} {max, plural, one {seconde} other {seconden}} niets verstuurd, dus Cmdr heeft dit antwoord beëindigd.",
+  "@askCmdr.limit.stalled": {
+    "sourceHash": "6b72ac1"
+  },
+  "askCmdr.spendPause.question": "Dit antwoord heeft tot nu toe ongeveer {cost} gekost. Doorgaan?",
+  "@askCmdr.spendPause.question": {
+    "sourceHash": "a59f9e2"
+  },
+  "askCmdr.spendPause.estimateNote": "Een schatting op basis van lijstprijzen. Door het cachen bij je aanbieder vallen de echte kosten meestal lager uit.",
+  "@askCmdr.spendPause.estimateNote": {
+    "sourceHash": "0ca2362"
+  },
+  "askCmdr.spendPause.keepGoing": "Ga door",
+  "@askCmdr.spendPause.keepGoing": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.spendPause.stop": "Stop",
+  "@askCmdr.spendPause.stop": {
+    "sourceHash": "cae7d57",
+    "sameAsSourceJustification": "Native Dutch imperative of 'stoppen', identical to English; the `stop` ruling's button form, byte-identical to `askCmdr.composer.stop` in the same panel."
+  },
+  "askCmdr.limit.fixed": "Het is een vaste limiet, er is geen instelling om hem te wijzigen. Zit hij je in de weg, <feedback>laat het ons weten</feedback>.",
+  "@askCmdr.limit.fixed": {
+    "sourceHash": "d0c4bc7"
+  },
+  "askCmdr.limit.continue": "Ga door",
+  "@askCmdr.limit.continue": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.limit.continueMessage": "Ga alsjeblieft verder waar je gestopt bent.",
+  "@askCmdr.limit.continueMessage": {
+    "sourceHash": "8c7a012"
   },
   "askCmdr.error.repeatedToolCall": "Dit antwoord bleef dezelfde opzoeking herhalen zonder verder te komen. Probeer het anders te vragen.",
   "@askCmdr.error.repeatedToolCall": {
@@ -359,9 +881,33 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
-  "askCmdr.composer.providerOff": "Zet een AI-aanbieder aan in instellingen om te beginnen met chatten.",
-  "@askCmdr.composer.providerOff": {
-    "sourceHash": "e466415"
+  "askCmdr.composer.sendNeedsProvider": "Stel een AI-aanbieder in om te versturen",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Ask Cmdr heeft een AI-aanbieder nodig om te chatten. Kies er een in Instellingen.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Je cloud-AI-aanbieder heeft een API-sleutel nodig voordat Ask Cmdr kan chatten. Voeg die in Instellingen toe.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Je cloud-AI-aanbieder heeft een adres nodig voordat Ask Cmdr kan chatten. Voeg dat in Instellingen toe.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "Lokale AI is nog niet gedownload, dus Ask Cmdr kan niet chatten. Stel die in bij Instellingen.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "Lokale AI draait niet, dus Ask Cmdr kan niet chatten. Start die in Instellingen.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "Ga naar AI-instellingen",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
   },
   "askCmdr.attachment.remove": "Verwijder bijlage",
   "@askCmdr.attachment.remove": {
@@ -387,9 +933,9 @@
   "@askCmdr.gate.cloudOff.body": {
     "sourceHash": "d3d3252"
   },
-  "askCmdr.gate.cloudOff.openSettings": "Open AI-instellingen",
+  "askCmdr.gate.cloudOff.openSettings": "Ga naar AI-instellingen",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "Alles vergeten wat Cmdr over je onthoudt?",
   "@askCmdr.forget.title": {
@@ -419,6 +965,14 @@
   "askCmdr.cost.estimate": "ongeveer {amount}",
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
+  },
+  "askCmdr.cost.underAmount": "minder dan {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "Het bedrag is in USD en houdt geen rekening met het cachen bij je aanbieder. Je echte rekening is waarschijnlijk maar een fractie hiervan, omdat de context die onze aanroepen delen in de cache staat.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
   },
   "askCmdr.cost.unknown": "kosten onbekend",
   "@askCmdr.cost.unknown": {
@@ -692,6 +1246,10 @@
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
   },
+  "askCmdr.context.baselineTooltip": "Elk bericht begint met {usedText} van {budgetText} {budget, plural, one {token} other {tokens}} (geschat) voor de instructies en hulpmiddelen van Cmdr",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
+  },
   "askCmdr.wake.thinking": "Cmdr kijkt even naar wat er is veranderd. Open de chat.",
   "@askCmdr.wake.thinking": {
     "sourceHash": "772ca6e"
@@ -799,6 +1357,30 @@
   "askCmdr.decision.verbExtract": "uitpakken",
   "@askCmdr.decision.verbExtract": {
     "sourceHash": "c924f71"
+  },
+  "askCmdr.decision.serverRejected": "Je hebt het {verbName} afgewezen",
+  "@askCmdr.decision.serverRejected": {
+    "sourceHash": "b9797ee"
+  },
+  "askCmdr.decision.serverApproved": "Je hebt het {verbName} goedgekeurd",
+  "@askCmdr.decision.serverApproved": {
+    "sourceHash": "5ed18c2"
+  },
+  "askCmdr.decision.verbAddServer": "toevoegen van een server",
+  "@askCmdr.decision.verbAddServer": {
+    "sourceHash": "0304bc5"
+  },
+  "askCmdr.decision.verbEditServer": "wijzigen van de instellingen van een server",
+  "@askCmdr.decision.verbEditServer": {
+    "sourceHash": "155d3fd"
+  },
+  "askCmdr.decision.saved": "Opgeslagen",
+  "@askCmdr.decision.saved": {
+    "sourceHash": "b5c120b"
+  },
+  "askCmdr.decision.savedNotShare": "Server opgeslagen, de gedeelde map niet",
+  "@askCmdr.decision.savedNotShare": {
+    "sourceHash": "e93a7bc"
   },
   "askCmdr.railBoundary.closedToast": "Ask Cmdr liep tegen een probleem aan en is gesloten. Open het opnieuw om verder te gaan.",
   "@askCmdr.railBoundary.closedToast": {

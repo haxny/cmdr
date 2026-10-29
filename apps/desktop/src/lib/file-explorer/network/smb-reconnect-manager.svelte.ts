@@ -29,7 +29,12 @@
 import { untrack } from 'svelte'
 import { SvelteMap } from 'svelte/reactivity'
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import { reconnectVolume, getVolumeSignInState, onVolumeConnectionChanged } from '#lib/tauri-commands/index.js'
+import {
+  reconnectVolume,
+  getVolumeSignInState,
+  onVolumeConnectionChanged,
+  onVolumeReconnectRequested,
+} from '#lib/tauri-commands/index.js'
 import type { SignInShape } from '#lib/tauri-commands/index.js'
 import { asReconnectError, describeReconnectRefusal } from './reconnect-error'
 import { getAppLogger } from '#lib/logging/logger.js'
@@ -141,6 +146,13 @@ class SmbReconnectManager {
           this.handleGuestRefused(volumeId)
           break
       }
+    })
+    // Ask Cmdr's `connect_volume` on a dropped volume: the same lazy start a pane landing
+    // on it makes (`servers/connect-flow.ts` arm 1), so the backend never runs a loop of its own.
+    // Held for the app's life, like the listener above.
+    await onVolumeReconnectRequested(({ volumeId }) => {
+      log.debug('volume-reconnect-requested: volumeId={volumeId}', { volumeId })
+      this.startCycle(volumeId)
     })
   }
 

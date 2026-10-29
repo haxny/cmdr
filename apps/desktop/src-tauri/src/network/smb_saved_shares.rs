@@ -14,13 +14,13 @@
 
 use std::time::Duration;
 
-use crate::commands::servers::ServerConnectOutcome;
 use crate::network::connect_wiring::{AttemptTable, DialTicket};
 use crate::network::known_shares::{self, AuthOptions, ConnectionMode, KnownNetworkShare};
 use crate::network::mount::MountError;
 use crate::network::one_shot_credentials::SecretOffer;
 use crate::network::os_mount_notice::FallbackNotice;
 use crate::network::{keychain, smb_upgrade};
+use crate::saved_servers::ServerConnectOutcome;
 use cmdr_fs::log_private::LogPrivate;
 
 /// How long a Keychain read or write may take, the bound the secret commands use.
@@ -63,7 +63,8 @@ pub struct MountedShare<'a> {
 /// can list it, and the next mount fills the id in.
 ///
 /// ❗ The first mount of a share whose server MOVED completes the move: its id is the
-/// one favorites and tabs re-key to (`server_move::smb::complete`).
+/// one favorites and tabs re-key to (`server_move::smb::complete`). It is also the
+/// first connect of a host saved without contact (`manual_servers::note_first_connect`).
 pub async fn remember_mount(mounted: MountedShare<'_>) -> Option<String> {
     let volume_id = smb_upgrade::mounted_volume_id(mounted.mount_path).await;
     let completed = known_shares::remember_share(KnownNetworkShare {
@@ -85,9 +86,19 @@ pub async fn remember_mount(mounted: MountedShare<'_>) -> Option<String> {
         volume_id: volume_id.clone(),
         mount_path: volume_id.as_ref().map(|_| mounted.mount_path.to_string()),
         pinned: false,
+        server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     });
     if let Some(completed) = completed {
         crate::server_move::smb::complete(completed).await;
+    }
+    // A host saved without contact is connected now, so it may join the discovery list.
+    crate::network::manual_servers::note_first_connect(&crate::network::server_identity::SmbServer::new(
+        mounted.address,
+        mounted.port,
+    ));
+    if let Some(id) = &volume_id {
+        crate::network::smb_server_guid::adopt_live_guid(id);
     }
     volume_id
 }
@@ -118,12 +129,16 @@ pub async fn remember_mount_since(mounted: MountedShare<'_>, set_out: DialTicket
 /// ❗ Republishes the lists: the hub re-reads the saved stores on `volumes-changed`,
 /// and an Add that changed only a share's account changed no volume, so the row
 /// kept its old account until the pane left the hub.
+///
+/// ❗ Contacts nothing: no mount went through, so the GUID probe skips the row
+/// (`smb_server_guid::rows_to_probe`) until one does. So it claims no connection
+/// either: a new row reads "never used", and a saved one keeps its time.
 pub fn remember_named_share(host_name: &str, share: &str, username: Option<&str>) {
     known_shares::remember_share(KnownNetworkShare {
         server_name: host_name.to_string(),
         share_name: share.to_string(),
         protocol: "smb".to_string(),
-        last_connected_at: chrono::Utc::now().to_rfc3339(),
+        last_connected_at: String::new(),
         last_connection_mode: ConnectionMode::Credentials,
         last_known_auth_options: AuthOptions::GuestOrCredentials,
         username: username.map(str::to_string),
@@ -132,6 +147,8 @@ pub fn remember_named_share(host_name: &str, share: &str, username: Option<&str>
         volume_id: None,
         mount_path: None,
         pinned: false,
+        server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     });
     crate::volume_broadcast::emit_volumes_changed();
 }
@@ -173,6 +190,7 @@ pub fn remember_favorited_share(mount_path: &str, volume_id: &str) {
         volume_id,
     );
     if known_shares::remember_share_unless_saved(row) {
+        crate::network::smb_server_guid::adopt_live_guid(volume_id);
         log::info!(
             "Saved the share {:?} on {:?} for a favorite",
             LogPrivate::volume(&info.share),
@@ -207,6 +225,8 @@ fn favorited_share_row(
         volume_id: Some(volume_id.to_string()),
         mount_path: Some(mount_path.to_string()),
         pinned: false,
+        server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     }
 }
 

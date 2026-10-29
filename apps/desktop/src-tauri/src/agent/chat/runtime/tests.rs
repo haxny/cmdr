@@ -1,16 +1,15 @@
-//! Runtime tests: single-flight, the per-message budgets, cancellation at a tool
-//! boundary, the crash-safe persistence model, cost metering, an end-to-end fake-driven
-//! multi-tool turn, and the typed error surface plus the two gates on what reaches the
-//! LLM (the envelope's attachments, and the send gate).
+//! Runtime tests: single-flight, cancellation at a tool boundary, the crash-safe
+//! persistence model, cost metering, an end-to-end fake-driven multi-tool turn, and the
+//! typed error surface plus the two gates on what reaches the LLM (the envelope's
+//! attachments, and the send gate).
 //!
-//! Four sibling files hold the rest, all borrowing the fixtures in `test_support.rs`:
-//! `repeat_tests.rs` (the repeat breaker), `context_budget_tests.rs` (context drops and
-//! the fullness gauge), `model_change_tests.rs` (which model a thread is on), and
-//! `wake_tests.rs` (the wake path).
+//! Sibling files hold the rest, all borrowing the fixtures in `test_support.rs`:
+//! `limit_tests.rs` (the per-answer limits and the spend pause), `repeat_tests.rs` (the
+//! repeat breaker), `context_budget_tests.rs` (context drops and the fullness gauge),
+//! `slot_change_tests.rs` (which model a thread is on), and `wake_tests.rs` (the wake path).
 
 use super::test_support::*;
 use super::*;
-use crate::agent::chat::context::{MAX_TOOL_TURNS, MAX_WALL_TIME};
 use crate::test_support::wait_until_async;
 
 // ── Single-flight ─────────────────────────────────────────────────────────────
@@ -41,83 +40,6 @@ async fn a_second_send_queues_and_emits_queued() {
 
     drop(first);
     waiter.await.expect("the queued send proceeds once released");
-}
-
-// ── Budgets ───────────────────────────────────────────────────────────────────
-
-#[tokio::test]
-async fn max_tool_turns_halts_before_the_ninth_respond() {
-    let conn = migrated_conn();
-    let id = conversation(&conn);
-    // More tool turns than the cap allows; the runtime must stop before the 9th respond.
-    let programs = (0..MAX_TOOL_TURNS + 4)
-        .map(|_| Program::Tools {
-            calls: vec![(ToolId::ListDir, json!({ "path": "/" }))],
-            usage: AgentUsage::default(),
-        })
-        .collect();
-    let llm = ProgrammableLlm::new(programs);
-    let (tx, mut rx) = unbounded_channel();
-
-    let result = run_turn(
-        &llm,
-        &OkDispatcher,
-        &conn,
-        &[],
-        &params(id, Some("keep going")),
-        &tx,
-        &CancellationToken::new(),
-    )
-    .await;
-
-    assert_eq!(result, TurnResult::Failed(AgentErrorKind::BudgetExhausted));
-    assert_eq!(
-        llm.calls_seen().len(),
-        MAX_TOOL_TURNS,
-        "exactly MAX_TOOL_TURNS respond calls fire; the ninth never does"
-    );
-    assert!(
-        drain(&mut rx).contains(&AgentChatEvent::Failed {
-            kind: AgentErrorKind::BudgetExhausted,
-            detail: None,
-        }),
-        "the budget-exhausted notice is emitted"
-    );
-}
-
-#[tokio::test(start_paused = true)]
-async fn max_wall_time_halts_the_loop() {
-    let conn = migrated_conn();
-    let id = conversation(&conn);
-    let programs = (0..5)
-        .map(|_| Program::Tools {
-            calls: vec![(ToolId::ListDir, json!({ "path": "/" }))],
-            usage: AgentUsage::default(),
-        })
-        .collect();
-    let llm = ProgrammableLlm::new(programs);
-    let (tx, _rx) = unbounded_channel();
-
-    // One dispatch crosses the configured wall-time ceiling, so it trips after one tool round.
-    let result = run_turn(
-        &llm,
-        &SleepingDispatcher {
-            secs: MAX_WALL_TIME.as_secs() + 1,
-        },
-        &conn,
-        &[],
-        &params(id, Some("slow please")),
-        &tx,
-        &CancellationToken::new(),
-    )
-    .await;
-
-    assert_eq!(result, TurnResult::Failed(AgentErrorKind::BudgetExhausted));
-    assert_eq!(
-        llm.calls_seen().len(),
-        1,
-        "the wall clock halts the loop after one round"
-    );
 }
 
 // ── Cancellation ──────────────────────────────────────────────────────────────
@@ -160,6 +82,232 @@ async fn cancellation_mid_loop_stops_cleanly_at_a_tool_boundary() {
     );
 }
 
+#[tokio::test]
+async fn stop_reaches_a_tool_call_that_is_waiting_on_a_slow_volume() {
+    // The turn hands its own token to every dispatch, so a call blocked on a wedged mount
+    // answers when the user presses Stop instead of holding the turn until the mount does.
+    let conn = migrated_conn();
+    let id = conversation(&conn);
+    let llm = ProgrammableLlm::new(vec![Program::Tools {
+        calls: vec![(ToolId::ListDir, json!({ "path": "/Volumes/naspi-1" }))],
+        usage: AgentUsage::default(),
+    }]);
+    let cancel = CancellationToken::new();
+    let dispatcher = Arc::new(StopAwareDispatcher::default());
+    let (tx, _rx) = unbounded_channel();
+    let stopper = {
+        let (dispatcher, cancel) = (dispatcher.clone(), cancel.clone());
+        tokio::spawn(async move {
+            dispatcher.reached.notified().await;
+            cancel.cancel();
+        })
+    };
+
+    let turn_params = params(id, Some("list the nas"));
+    let turn = run_turn(&llm, dispatcher.as_ref(), &conn, &[], &turn_params, &tx, &cancel);
+    let result = tokio::time::timeout(Duration::from_secs(5), turn)
+        .await
+        .expect("Stop must reach the in-flight call");
+    stopper.await.expect("the stopper ran");
+
+    assert_eq!(result, TurnResult::Cancelled);
+    // The turn's own Stop race lets a handler that stops itself answer first, so the row
+    // names the folder it was reading rather than the generic `cancelled`.
+    assert_eq!(
+        persisted_tool_results(&conn, id),
+        vec![json!({ "miss": "cancelled", "location": { "path": "/Volumes/naspi-1" } })]
+    );
+}
+
+/// The tool results a thread persisted, in order.
+fn persisted_tool_results(conn: &Connection, id: i64) -> Vec<Value> {
+    store::list_messages(conn, id, 100, 0)
+        .expect("list")
+        .into_iter()
+        .filter_map(|message| match message.content {
+            store::StoredContent::Message { parts, .. } => match parts.into_iter().next() {
+                Some(AgentPart::ToolResult(result)) => Some(result.content),
+                _ => None,
+            },
+            store::StoredContent::Event(_) => None,
+        })
+        .collect()
+}
+
+/// Run a one-call turn whose call `dispatcher` holds open, pressing Stop once it's in flight.
+async fn stop_mid_call(conn: &Connection, id: i64, tool: ToolId, dispatcher: &HeldDispatcher) -> TurnResult {
+    let llm = ProgrammableLlm::new(vec![Program::Tools {
+        calls: vec![(tool, json!({}))],
+        usage: AgentUsage::default(),
+    }]);
+    let cancel = CancellationToken::new();
+    let (tx, _rx) = unbounded_channel();
+    let turn_params = params(id, Some("go"));
+    let turn = run_turn(&llm, dispatcher, conn, &[], &turn_params, &tx, &cancel);
+    let stop = async {
+        dispatcher.reached.notified().await;
+        cancel.cancel();
+        dispatcher.release.notify_one();
+    };
+    let (result, ()) = tokio::time::timeout(Duration::from_secs(5), async { tokio::join!(turn, stop) })
+        .await
+        .expect("Stop must end the turn");
+    result
+}
+
+#[tokio::test]
+async fn stop_abandons_an_in_flight_call_of_any_tool_and_records_it_cancelled() {
+    // A handler that never looks at the token (here one that would never return on its
+    // own) still lets go on Stop: the turn drops the call, and the thread keeps a result
+    // row for it so the next turn loads a whole call/result pair.
+    let conn = migrated_conn();
+    let id = conversation(&conn);
+    let dispatcher = HeldDispatcher::forever();
+
+    let result = stop_mid_call(&conn, id, ToolId::Search, &dispatcher).await;
+
+    assert_eq!(result, TurnResult::Cancelled);
+    assert_eq!(
+        persisted_tool_results(&conn, id),
+        vec![json!({ "miss": "cancelled", "detail": "The user stopped this turn before this call finished." })]
+    );
+}
+
+#[tokio::test]
+async fn stop_lets_a_call_that_may_be_writing_finish_with_its_real_answer() {
+    // A proposal or a memory note commits on a blocking thread that dropping the call can't
+    // stop. Recording `cancelled` beside a proposal the user can see would be a lie, so these
+    // run to their own end, and the turn stops right after.
+    for tool in [ToolId::ProposeSuggestions, ToolId::MemoryWrite] {
+        let conn = migrated_conn();
+        let id = conversation(&conn);
+        let dispatcher = HeldDispatcher::until_released(json!({ "readyForReview": true }));
+
+        let result = stop_mid_call(&conn, id, tool.clone(), &dispatcher).await;
+
+        assert_eq!(result, TurnResult::Cancelled, "{}", tool.as_wire_name());
+        assert_eq!(
+            persisted_tool_results(&conn, id),
+            vec![json!({ "readyForReview": true })],
+            "{} keeps what it really did",
+            tool.as_wire_name()
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_call_after_stop_is_never_dispatched() {
+    // Stop lands during the first of two calls in one message. The second never starts, even
+    // a proposal, and still gets its result row.
+    let conn = migrated_conn();
+    let id = conversation(&conn);
+    let llm = ProgrammableLlm::new(vec![Program::Tools {
+        calls: vec![
+            (ToolId::ListDir, json!({ "path": "/" })),
+            (ToolId::ProposeSuggestions, json!({})),
+        ],
+        usage: AgentUsage::default(),
+    }]);
+    let cancel = CancellationToken::new();
+    let dispatcher = CancellingDispatcher { token: cancel.clone() };
+    let (tx, _rx) = unbounded_channel();
+
+    let result = run_turn(&llm, &dispatcher, &conn, &[], &params(id, Some("go")), &tx, &cancel).await;
+
+    assert_eq!(result, TurnResult::Cancelled);
+    let results = persisted_tool_results(&conn, id);
+    assert_eq!(results.len(), 2, "both calls keep a result row");
+    assert_eq!(results[0], json!({ "ok": true }), "the first call ran");
+    assert_eq!(results[1]["miss"], "cancelled", "the second never started");
+}
+
+/// Where a model call can hang: before the provider answers at all, or after it opened the
+/// stream but before its next chunk. Neither watches the turn's token, which is the point: the
+/// turn itself must hear Stop, whatever an `AgentLlm` does with the token it's handed.
+enum Hang {
+    BeforeOpening,
+    AfterOpening,
+}
+
+struct HangingLlm(Hang);
+
+impl AgentLlm for HangingLlm {
+    fn respond<'a>(
+        &'a self,
+        _system: &'a str,
+        _tools: &'a [ToolDeclaration],
+        _messages: &'a [AgentMessage],
+        _call: crate::agent::llm::CallSettings,
+        _cancel: CancellationToken,
+    ) -> BoxFuture<'a, Result<crate::agent::llm::AgentDeltaStream, AgentLlmError>> {
+        match self.0 {
+            Hang::BeforeOpening => futures_util::future::pending().boxed(),
+            Hang::AfterOpening => async { Ok(futures_util::stream::pending().boxed()) }.boxed(),
+        }
+    }
+}
+
+/// ⚠️ Stop must end the turn wherever the model call is, or the turn keeps spending: a provider
+/// that's slow to answer (a long queue, a model thinking before its first token) used to hold the
+/// turn until it did, the user's Stop notwithstanding.
+#[tokio::test]
+async fn stop_ends_a_model_call_that_never_answers() {
+    for hang in [Hang::BeforeOpening, Hang::AfterOpening] {
+        let conn = migrated_conn();
+        let id = conversation(&conn);
+        let llm = HangingLlm(hang);
+        let cancel = CancellationToken::new();
+        let (tx, _rx) = unbounded_channel();
+        let turn_params = params(id, Some("go"));
+        let turn = run_turn(&llm, &OkDispatcher, &conn, &[], &turn_params, &tx, &cancel);
+        let stop = async {
+            tokio::task::yield_now().await;
+            cancel.cancel();
+        };
+
+        let (result, ()) = tokio::time::timeout(Duration::from_secs(5), async { tokio::join!(turn, stop) })
+            .await
+            .expect("Stop must end a model call that never answers");
+
+        assert_eq!(result, TurnResult::Cancelled);
+    }
+}
+
+#[tokio::test]
+async fn every_call_hears_the_origin_its_caller_stated() {
+    // The gate reads the origin the CALLER states, never one inferred from the opener: here a
+    // background turn that opens with plain text still reaches its calls as a wake.
+    let conn = migrated_conn();
+    let id = conversation(&conn);
+    let llm = ProgrammableLlm::new(vec![
+        Program::Tools {
+            calls: vec![(ToolId::ListVolumes, json!({}))],
+            usage: AgentUsage::default(),
+        },
+        Program::Answer {
+            chunks: vec!["done".to_string()],
+            usage: AgentUsage::default(),
+        },
+    ]);
+    let dispatcher = OriginRecordingDispatcher::default();
+    let (tx, _rx) = unbounded_channel();
+    let mut turn_params = params(id, Some("looks like the user"));
+    turn_params.origin = TurnOrigin::Wake;
+
+    run_turn(
+        &llm,
+        &dispatcher,
+        &conn,
+        &[],
+        &turn_params,
+        &tx,
+        &CancellationToken::new(),
+    )
+    .await;
+
+    assert_eq!(dispatcher.seen(), vec![TurnOrigin::Wake]);
+}
+
 // ── Crash / persistence semantics ─────────────────────────────────────────────
 
 #[tokio::test]
@@ -193,6 +341,7 @@ async fn crash_a_stream_dropped_mid_text_persists_nothing() {
     assert!(events.contains(&AgentChatEvent::Failed {
         kind: AgentErrorKind::UnfinishedReply,
         detail: None,
+        turn: None,
     }));
     assert!(
         !events.iter().any(|e| matches!(e, AgentChatEvent::UserPersisted { .. })),
@@ -236,6 +385,7 @@ async fn an_assistant_turn_with_nothing_in_it_is_an_unfinished_reply() {
     assert!(drain(&mut rx).contains(&AgentChatEvent::Failed {
         kind: AgentErrorKind::UnfinishedReply,
         detail: None,
+        turn: None,
     }));
 }
 
@@ -273,7 +423,7 @@ async fn crash_c_completed_turns_persist_and_a_retry_resumes_from_them() {
     // Turn 1's rows survive: user, assistant(tool_call), and the tool result. The
     // crashed turn 2's assistant row is absent.
     let persisted = store::list_messages(&conn, id, 100, 0).expect("list");
-    let roles: Vec<AgentRole> = persisted.iter().map(stored_role).collect();
+    let roles = transcript_roles(&persisted);
     assert_eq!(
         roles,
         vec![AgentRole::User, AgentRole::Assistant, AgentRole::Tool],
@@ -386,11 +536,7 @@ async fn end_to_end_multi_tool_turn_dispatches_and_answers() {
     assert!(matches!(result, TurnResult::Answered { .. }));
 
     // Persisted: user, assistant(2 tool calls), 2 tool results, assistant(answer).
-    let roles: Vec<AgentRole> = store::list_messages(&conn, id, 100, 0)
-        .expect("list")
-        .iter()
-        .map(stored_role)
-        .collect();
+    let roles = transcript_roles(&store::list_messages(&conn, id, 100, 0).expect("list"));
     assert_eq!(
         roles,
         vec![
@@ -405,7 +551,7 @@ async fn end_to_end_multi_tool_turn_dispatches_and_answers() {
     let events = drain(&mut rx);
     let tool_finished = events
         .iter()
-        .filter(|e| matches!(e, AgentChatEvent::ToolCallFinished { ok: true, .. }))
+        .filter(|e| matches!(e, AgentChatEvent::ToolCallFinished { outcome, .. } if outcome.ok()))
         .count();
     assert_eq!(tool_finished, 2, "both tool calls dispatched and finished ok");
     assert!(
@@ -472,6 +618,7 @@ async fn a_pre_stream_provider_error_persists_nothing_and_is_typed() {
     assert!(drain(&mut rx).contains(&AgentChatEvent::Failed {
         kind: AgentErrorKind::Provider,
         detail: Some("programmable: script exhausted".to_string()),
+        turn: None,
     }));
 }
 
@@ -500,6 +647,7 @@ async fn a_mid_stream_provider_error_carries_its_detail() {
     assert!(drain(&mut rx).contains(&AgentChatEvent::Failed {
         kind: AgentErrorKind::Provider,
         detail: Some("HTTP 404: model gone".to_string()),
+        turn: None,
     }));
 }
 
@@ -532,15 +680,19 @@ async fn attachments_reach_the_llm_in_the_envelope_and_nothing_more() {
     };
     let params = TurnParams {
         conversation_id: id,
+        origin: TurnOrigin::Text,
         user: Some(UserTurn::Text("summarize this")),
         cmdr_md: None,
-        memory: None,
+        memory: &[],
         envelope: &env,
         offset: offset(),
         now_secs: 1_780_000_000,
         provider: ProviderTag::Local,
         model: "fake-model".to_string(),
         prompt_budget: TEST_PROMPT_BUDGET,
+        chat_memory_tokens: TEST_PROMPT_BUDGET,
+        call: crate::agent::llm::CallSettings::default(),
+        spend_pause: None,
     };
 
     let result = run_turn(&llm, &OkDispatcher, &conn, &[], &params, &tx, &CancellationToken::new()).await;

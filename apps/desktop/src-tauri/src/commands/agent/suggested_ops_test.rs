@@ -54,7 +54,7 @@ fn each_refusal_keeps_the_recovery_it_implies() {
     ));
 }
 
-/// Every refusal to START reaches the dialog as a reason it can word, ❌ never a sentence
+/// Every refusal to START reaches the dialog as a reason it can word, â never a sentence
 /// it can only log (#184). An unconnected phone keeps the transfer dialogs' own variant, so
 /// the suggestion reads exactly as a clicked copy off that phone would.
 #[test]
@@ -115,6 +115,7 @@ fn group(id: i64, set_id: i64, verb: ProposalVerb) -> GroupSummary {
         },
         live_op_count: 5,
         total_op_count: 7,
+        server: None,
     }
 }
 
@@ -124,7 +125,7 @@ fn facts(destination_state: DestinationState) -> GroupReadFacts {
         destination_state,
         source_volume_name: None,
         destination_volume_name: None,
-        run_blocker: None,
+        runs_as: None,
     }
 }
 
@@ -181,10 +182,10 @@ impl Volume for TrashKeeping {
     }
 }
 
-/// A trash group on a volume with no Trash says it can't run, before anyone approves it: the OS
-/// refuses every item and deletes nothing (#747). The undo promise stays the verb's own.
+/// A trash group on a volume with no Trash says it runs as a permanent delete, before anyone
+/// approves it: trashing there would refuse every item (#747). The undo promise stays the verb's own.
 #[test]
-fn a_trash_group_on_a_volume_without_a_trash_says_it_cant_run() {
+fn a_trash_group_on_a_volume_without_a_trash_says_it_runs_as_a_permanent_delete() {
     let mut trash = group(1, 1, ProposalVerb::Trash).group;
     trash.destination = None;
 
@@ -194,10 +195,10 @@ fn a_trash_group_on_a_volume_without_a_trash_says_it_cant_run() {
     trash.source_volume_id = "smb-saved".into();
     let on_unconnected = read_facts(&trash, volume_facts(), DestinationState::NotApplicable);
 
-    assert_eq!(on_root.run_blocker, None);
-    assert_eq!(on_share.run_blocker, Some(RunBlocker::NoTrash));
+    assert_eq!(on_root.runs_as, None);
+    assert_eq!(on_share.runs_as, Some(RunsAs::PermanentDelete));
     assert_eq!(
-        on_unconnected.run_blocker, None,
+        on_unconnected.runs_as, None,
         "approval refuses an unconnected source with its own typed reason"
     );
 }
@@ -228,6 +229,66 @@ fn the_destination_volume_is_named_even_before_anyone_connects_it() {
     assert_eq!(destination_volume_id_of(&trashing), None);
 }
 
+/// A group the agent named on a share that isn't connected is stored on the live, signed-in
+/// sibling it was re-addressed onto, so the header names the volume the approval will WRITE
+/// to, â never the one the agent asked for.
+#[test]
+fn a_re_addressed_destination_is_named_as_the_volume_written_to() {
+    use crate::location::resolve::{IndexSources, VolumeFact};
+    use crate::location::share_identity::ShareIdentity;
+    use crate::mcp::resources::volumes::VolumeKind;
+    use crate::network::server_guid::GuidProof;
+
+    let nas = |id: &str, root: &str, live: bool| VolumeFact {
+        id: id.to_string(),
+        name: id.to_string(),
+        kind: VolumeKind::Smb,
+        root: root.to_string(),
+        live,
+        connection_state: None,
+        earlier_roots: Vec::new(),
+        index: IndexSources::none(id),
+        share: Some(ShareIdentity::new(
+            Some(("6ba7b810-9dad-11d1-80b4-00c04fd430c8", GuidProof::Authenticated)),
+            "naspi",
+            Some("david"),
+        )),
+    };
+    let facts = crate::location::resolve::VolumeFacts {
+        volumes: vec![
+            VolumeFact {
+                kind: VolumeKind::Local,
+                share: None,
+                ..nas("root", "/", true)
+            },
+            nas("smb-saved", "/Volumes/naspi", false),
+            nas("smb-naspi", "/Volumes/naspi-1", true),
+        ],
+        mount_areas: vec!["/Volumes".to_string()],
+    };
+    let conn = crate::sqlite_util::open_in_memory().expect("in-memory db");
+    crate::agent::store::run_migrations(&conn, crate::agent::store::MIGRATIONS).expect("migrate");
+    let group_id = crate::agent::tools::suggestions::stage_for_test(
+        &conn,
+        &serde_json::json!({ "groups": [{
+            "verb": "move",
+            "sourceVolumeId": "root",
+            "displayName": "One invoice",
+            "destination": { "volumeId": "smb-saved", "path": "/Volumes/naspi/papers" },
+            "paths": ["/Users/someone/Downloads/Invoice-X.pdf"],
+        }] }),
+        &facts,
+    );
+    let group = crate::agent::store::proposals::get_group(&conn, group_id)
+        .expect("read")
+        .expect("exists");
+
+    let read = read_facts(&group, volume_facts(), DestinationState::NotApplicable);
+    assert_eq!(read.destination_volume_name.as_deref(), Some("naspi on 192.168.1.5"));
+    assert_eq!(destination_volume_id_of(&group), Some("smb-naspi"));
+    assert_eq!(group.destination.as_deref(), Some("/Volumes/naspi-1/papers"));
+}
+
 fn sweep(id: i64) -> ProposalSweep {
     ProposalSweep {
         id,
@@ -249,8 +310,9 @@ fn a_group_view_carries_every_fact_the_user_judges_it_by() {
             destination_state: DestinationState::WillBeCreated,
             source_volume_name: Some("Macintosh HD".into()),
             destination_volume_name: Some("Macintosh HD".into()),
-            run_blocker: Some(RunBlocker::NoTrash),
+            runs_as: Some(RunsAs::PermanentDelete),
         },
+        None,
     );
 
     assert_eq!(view.group_id, 7);
@@ -274,7 +336,7 @@ fn a_group_view_carries_every_fact_the_user_judges_it_by() {
         Reversibility::RestoreMove,
         "the verb's own promise, from the store"
     );
-    assert_eq!(view.run_blocker, Some(RunBlocker::NoTrash));
+    assert_eq!(view.runs_as, Some(RunsAs::PermanentDelete));
     assert_eq!(view.destination_state, DestinationState::WillBeCreated);
     assert_eq!(view.live_op_count, 5);
     assert_eq!(view.total_op_count, 7, "the deselected rows are part of the record");
@@ -288,7 +350,7 @@ fn a_selector_built_group_reports_its_provenance() {
     let mut summary = group(1, 1, ProposalVerb::Trash);
     summary.group.selector = Some("{\"root\":\"~/Downloads\"}".into());
 
-    assert!(to_group_view(summary, facts(DestinationState::NotApplicable)).from_selector);
+    assert!(to_group_view(summary, facts(DestinationState::NotApplicable), None).from_selector);
 }
 
 /// An index that held nothing must stay absent all the way to the row. A zero would render
@@ -364,6 +426,8 @@ async fn a_destination_on_a_saved_share_nobody_connected_says_so() {
         volume_id: Some(volume_id.to_string()),
         mount_path: Some("/Volumes/naspi-suggested-ops-test".to_string()),
         pinned: true,
+        server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     });
 
     let state = destination_state(&move_to(volume_id, "/Volumes/naspi-suggested-ops-test/Installers")).await;
@@ -421,13 +485,14 @@ async fn a_destination_whose_volume_refuses_the_check_is_unknown() {
 fn groups_fold_under_the_sweep_that_produced_them() {
     let rows = vec![
         (
-            to_group_view(group(1, 10, ProposalVerb::Move), facts(DestinationState::Exists)),
+            to_group_view(group(1, 10, ProposalVerb::Move), facts(DestinationState::Exists), None),
             Some(sweep(10)),
         ),
         (
             to_group_view(
                 group(2, 10, ProposalVerb::Trash),
                 facts(DestinationState::NotApplicable),
+                None,
             ),
             Some(sweep(10)),
         ),
@@ -435,6 +500,7 @@ fn groups_fold_under_the_sweep_that_produced_them() {
             to_group_view(
                 group(3, 11, ProposalVerb::Delete),
                 facts(DestinationState::NotApplicable),
+                None,
             ),
             Some(sweep(11)),
         ),
@@ -456,7 +522,7 @@ fn groups_fold_under_the_sweep_that_produced_them() {
 #[test]
 fn groups_whose_sweep_row_is_missing_are_still_shown() {
     let rows = vec![(
-        to_group_view(group(1, 42, ProposalVerb::Move), facts(DestinationState::Exists)),
+        to_group_view(group(1, 42, ProposalVerb::Move), facts(DestinationState::Exists), None),
         None,
     )];
 

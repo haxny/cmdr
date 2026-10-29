@@ -28,8 +28,8 @@ the problem and the next step, and avoid a bare "चूक" (error) status label
 
 - **Polite second person, addressing the user directly.** Konkani (like neighboring Marathi) distinguishes a polite
   second-person form (`तुमी`) from a familiar one (`तूं`). Software uses the polite form. Recommended default: **polite
-  `तुमी`-register throughout.** Confidence: medium-high; a native reviewer confirms the exact form, since Konkani
-  pronoun usage varies by community/region.
+  `तुमी`-register throughout.** Confidence: medium-high; a native reviewer confirms the exact form, since Konkani pronoun
+  usage varies by community/region.
 - **Action labels (buttons, menu items): the established imperative form.** No GNOME catalog to anchor verb labels;
   follow MS terminology and the Goa Konkani Academi conventions, keeping labels short. Use full polite-form verbs in
   sentences to the user. Confidence: medium pending a term pass.

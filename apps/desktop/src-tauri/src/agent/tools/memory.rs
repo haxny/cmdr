@@ -18,7 +18,7 @@
 use serde_json::{Value, json};
 use tauri::{AppHandle, Runtime};
 
-use crate::agent::memory::{MemoryRefusal, MemoryWritten};
+use crate::agent::memory::{MemoryRefusal, MemoryRefusalKind, MemoryWritten};
 use crate::mcp::{ToolError, ToolResult};
 
 /// `memory_write`'s arguments. Terse on purpose: every schema rides in the cached prefix of
@@ -136,7 +136,7 @@ fn detail_of(refusal: &MemoryRefusal) -> String {
 fn unavailable() -> Value {
     json!({
         "saved": false,
-        "refused": "unavailable",
+        "refused": MemoryRefusalKind::Unavailable.token(),
         "detail": "Memory is not available in this session.",
     })
 }

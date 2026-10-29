@@ -3,9 +3,9 @@
   "@suggestedOps.title": {
     "sourceHash": "1a1f5b9"
   },
-  "suggestedOps.description": "Эти операции предложил ИИ. Ничего не выполнится без вашего одобрения.",
+  "suggestedOps.description": "Агент предложил действия ниже. Применяйте их, только если вы согласны.",
   "@suggestedOps.description": {
-    "sourceHash": "73255a0"
+    "sourceHash": "4d98280"
   },
   "suggestedOps.approvalNoticeDismiss": "Больше не показывать",
   "@suggestedOps.approvalNoticeDismiss": {
@@ -37,7 +37,7 @@
   },
   "suggestedOps.loadFailed": "Cmdr не удалось прочитать предложения. Закройте окно и откройте его снова.",
   "@suggestedOps.loadFailed": {
-    "sourceHash": "ef0da3e"
+    "sourceHash": "139450e"
   },
   "suggestedOps.agentReason": "Почему:",
   "@suggestedOps.agentReason": {
@@ -54,6 +54,34 @@
   "suggestedOps.fileCount": "{countText} {count, plural, one {файл} few {файла} many {файлов} other {файла}}",
   "@suggestedOps.fileCount": {
     "sourceHash": "76ef0a6"
+  },
+  "suggestedOps.action.move": "Переместить",
+  "@suggestedOps.action.move": {
+    "sourceHash": "6ecc3df"
+  },
+  "suggestedOps.action.copy": "Скопировать",
+  "@suggestedOps.action.copy": {
+    "sourceHash": "e21f935"
+  },
+  "suggestedOps.action.trash": "Переместить в Корзину",
+  "@suggestedOps.action.trash": {
+    "sourceHash": "9adcdf3"
+  },
+  "suggestedOps.action.delete": "Удалить",
+  "@suggestedOps.action.delete": {
+    "sourceHash": "e2d0a54"
+  },
+  "suggestedOps.action.rename": "Переименовать",
+  "@suggestedOps.action.rename": {
+    "sourceHash": "3064d79"
+  },
+  "suggestedOps.action.compress": "Сжать",
+  "@suggestedOps.action.compress": {
+    "sourceHash": "033fc04"
+  },
+  "suggestedOps.action.extract": "Распаковать",
+  "@suggestedOps.action.extract": {
+    "sourceHash": "c15301c"
   },
   "suggestedOps.approve.move": "Переместить {countText} {count, plural, one {файл} few {файла} many {файлов} other {файла}}",
   "@suggestedOps.approve.move": {
@@ -82,6 +110,14 @@
   "suggestedOps.approve.extract": "Распаковать {countText} {count, plural, one {архив} few {архива} many {архивов} other {архива}}",
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
+  },
+  "suggestedOps.approve.addServer": "Сохранить сервер",
+  "@suggestedOps.approve.addServer": {
+    "sourceHash": "726b9af"
+  },
+  "suggestedOps.approve.editServer": "Сохранить изменения",
+  "@suggestedOps.approve.editServer": {
+    "sourceHash": "dd0ae7a"
   },
   "suggestedOps.reject": "Отклонить",
   "@suggestedOps.reject": {
@@ -139,13 +175,13 @@
   "@suggestedOps.irreversible.delete": {
     "sourceHash": "e32da9a"
   },
-  "suggestedOps.blocked.noTrash": "Нельзя выполнить: на этом диске нет Корзины",
-  "@suggestedOps.blocked.noTrash": {
-    "sourceHash": "f08e038"
+  "suggestedOps.noTrash": "На этом диске нет Корзины",
+  "@suggestedOps.noTrash": {
+    "sourceHash": "38a6adc"
   },
-  "suggestedOps.blocked.noTrashTooltip": "На диске с этими файлами нет Корзины, поэтому переместить их туда не получится и ничего не произойдет. Отклоните предложение или, если нужно именно это, удалите файлы сами.",
-  "@suggestedOps.blocked.noTrashTooltip": {
-    "sourceHash": "f2a5d5f"
+  "suggestedOps.noTrashTooltip": "На диске с этими файлами нет Корзины, поэтому после одобрения они будут удалены безвозвратно.",
+  "@suggestedOps.noTrashTooltip": {
+    "sourceHash": "4327cb2"
   },
   "suggestedOps.irreversible.overwrite": "Это нельзя отменить: существующий архив будет заменен",
   "@suggestedOps.irreversible.overwrite": {
@@ -154,6 +190,14 @@
   "suggestedOps.irreversible.other": "Это нельзя отменить",
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
+  },
+  "suggestedOps.reversible.forgetServer": "Это можно отменить: забудьте сервер в списке «Серверы»",
+  "@suggestedOps.reversible.forgetServer": {
+    "sourceHash": "892c381"
+  },
+  "suggestedOps.reversible.changeServerBack": "Это можно отменить: верните прежние настройки сервера в списке «Серверы»",
+  "@suggestedOps.reversible.changeServerBack": {
+    "sourceHash": "ff1ea36"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr создаст эту папку",
   "@suggestedOps.folderWillBeCreated": {
@@ -307,12 +351,92 @@
   "@suggestedOps.refusal.couldNotStart.message": {
     "sourceHash": "77ef48b"
   },
-  "suggestedOps.refusal.couldNotStart.suggestion": "Отклоните предложение и попросите ИИ предложить его заново.",
+  "suggestedOps.refusal.couldNotStart.suggestion": "Отклоните предложение и попросите Cmdr предложить его заново.",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
-    "sourceHash": "5b5b779"
+    "sourceHash": "1d2b1bd"
+  },
+  "suggestedOps.refusal.serverLabel": "Почему это не сохранилось",
+  "@suggestedOps.refusal.serverLabel": {
+    "sourceHash": "c1958af"
+  },
+  "suggestedOps.refusal.serverChanged.message": "Настройки сервера изменились после того, как ИИ это предложил, поэтому Cmdr ничего не сохранил.",
+  "@suggestedOps.refusal.serverChanged.message": {
+    "sourceHash": "a346372"
+  },
+  "suggestedOps.refusal.serverChanged.suggestion": "Попросите Cmdr сделать новое предложение или измените сервер в списке «Серверы».",
+  "@suggestedOps.refusal.serverChanged.suggestion": {
+    "sourceHash": "cab1352"
+  },
+  "suggestedOps.refusal.alreadySaved.message": "Этот сервер уже есть в вашем списке «Серверы», поэтому Cmdr ничего не сохранил.",
+  "@suggestedOps.refusal.alreadySaved.message": {
+    "sourceHash": "111276b"
+  },
+  "suggestedOps.refusal.alreadySaved.suggestion": "Откройте сервер в списке «Серверы» или попросите Cmdr лучше предложить изменения для него.",
+  "@suggestedOps.refusal.alreadySaved.suggestion": {
+    "sourceHash": "6ec8bdc"
+  },
+  "suggestedOps.refusal.nameTaken.message": "Другой сохраненный сервер уже называется «{name}», поэтому Cmdr ничего не сохранил.",
+  "@suggestedOps.refusal.nameTaken.message": {
+    "sourceHash": "1d0c01c"
+  },
+  "suggestedOps.refusal.nameTaken.suggestion": "Попросите Cmdr предложить другое название.",
+  "@suggestedOps.refusal.nameTaken.suggestion": {
+    "sourceHash": "e366b0c"
+  },
+  "suggestedOps.server.add": "Добавление сервера",
+  "@suggestedOps.server.add": {
+    "sourceHash": "8667e21"
+  },
+  "suggestedOps.server.change": "Изменение настроек сервера",
+  "@suggestedOps.server.change": {
+    "sourceHash": "187a941"
+  },
+  "suggestedOps.server.field.port": "Порт",
+  "@suggestedOps.server.field.port": {
+    "sourceHash": "72e9a59"
+  },
+  "suggestedOps.server.field.account": "Учетная запись",
+  "@suggestedOps.server.field.account": {
+    "sourceHash": "7e1b0d5"
+  },
+  "suggestedOps.server.field.share": "Общая папка",
+  "@suggestedOps.server.field.share": {
+    "sourceHash": "4268344"
+  },
+  "suggestedOps.server.field.bucket": "Бакет",
+  "@suggestedOps.server.field.bucket": {
+    "sourceHash": "c83b657"
+  },
+  "suggestedOps.server.notSet": "Не задано",
+  "@suggestedOps.server.notSet": {
+    "sourceHash": "4895f73"
+  },
+  "suggestedOps.server.changesTo": "меняется на",
+  "@suggestedOps.server.changesTo": {
+    "sourceHash": "8c0db20"
+  },
+  "suggestedOps.server.newAddress": "Новый адрес",
+  "@suggestedOps.server.newAddress": {
+    "sourceHash": "5fc5498"
+  },
+  "suggestedOps.server.newAddressTooltip": "По этому адресу нет ни одного из ваших сохраненных серверов. Проверьте, тот ли это адрес.",
+  "@suggestedOps.server.newAddressTooltip": {
+    "sourceHash": "16d851c"
+  },
+  "suggestedOps.server.sharesAffected": "Это изменение затрагивает {countText} {count, plural, one {сохраненную общую папку} few {сохраненные общие папки} many {сохраненных общих папок} other {сохраненной общей папки}} на этом сервере.",
+  "@suggestedOps.server.sharesAffected": {
+    "sourceHash": "390f931"
   },
   "suggestedOps.indicatorTooltip": "Предложения ИИ ожидают ответа. Нажмите, чтобы посмотреть.",
   "@suggestedOps.indicatorTooltip": {
     "sourceHash": "4508b0b"
+  },
+  "suggestedOps.newNameTaken": "Имя уже занято",
+  "@suggestedOps.newNameTaken": {
+    "sourceHash": "58e9841"
+  },
+  "suggestedOps.newNameTakenTooltip": "Там уже есть объект с именем «{name}».",
+  "@suggestedOps.newNameTakenTooltip": {
+    "sourceHash": "b18f96a"
   }
 }

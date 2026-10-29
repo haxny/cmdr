@@ -150,7 +150,7 @@ mod tests {
         let original = VolumeCopyConfig {
             preview_id: Some("preview-1".into()),
             pre_known_conflicts: vec!["a.txt".into()],
-            destination_name: Some("renamed.txt".into()),
+            leaves: crate::types::TransferLeaves::single("renamed.txt"),
             conflict_resolution: crate::types::ConflictResolution::Skip,
             ..VolumeCopyConfig::default()
         };
@@ -168,7 +168,34 @@ mod tests {
 
         assert_eq!(retry.preview_id, None);
         assert!(retry.pre_known_conflicts.is_empty());
-        assert_eq!(retry.destination_name.as_deref(), Some("renamed.txt"));
+        assert_eq!(retry.leaves, crate::types::TransferLeaves::single("renamed.txt"));
         assert_eq!(retry.conflict_resolution, crate::types::ConflictResolution::Skip);
+    }
+
+    /// A retry names each item exactly as the first run did.
+    #[test]
+    fn a_retry_keeps_the_name_of_each_item() {
+        let leaves = crate::types::TransferLeaves::per_source([
+            (PathBuf::from("/a.pdf"), "alpha.pdf".to_string()),
+            (PathBuf::from("/b.pdf"), "beta.pdf".to_string()),
+        ]);
+        let recipe = RetryRecipe {
+            start: RetryStart::Move,
+            events: Arc::new(CollectorEventSink::new()),
+            source_volume_id: "root".into(),
+            source_paths: vec![
+                PathBuf::from("/a.pdf"),
+                PathBuf::from("/b.pdf"),
+                PathBuf::from("/c.pdf"),
+            ],
+            dest_volume_id: "root".into(),
+            dest_path: "/filed".into(),
+            config: VolumeCopyConfig {
+                leaves: leaves.clone(),
+                ..VolumeCopyConfig::default()
+            },
+        };
+
+        assert_eq!(recipe.retry_config().leaves, leaves);
     }
 }

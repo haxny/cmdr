@@ -17,5 +17,5 @@ workspace = true
 # `unstable` is for `write_sort_key_to`; ICU4X exempts it from semver, and an API
 # change there is a compile error, never a silent one. ❌ Never persist a key:
 # `src/lib.rs`.
-icu_collator = { version = "2.3.1", features = ["unstable"] }
-icu_locale_core = "2.2"
+icu_collator = { version = "2.4.0", features = ["unstable"] }
+icu_locale_core = "2.4"

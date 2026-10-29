@@ -14,6 +14,9 @@ through `source-queue.md`.
   or bookish one.
 - **Add nothing English doesn't say**: a vague amount stays vague ("a few days" and "for a while" never become a
   number), an unknown count stays number-neutral, and a time English leaves open stays open.
+- **Doing/done pairs share a verb**: a done label must read as finished. Where your language's past form of the English
+  verb doesn't ("searched" with no natural finished participle), use a nearby verb ("looked up", "went through"), as
+  long as the doing and done lines of the pair use the same one.
 - **No "try again" where retrying can't help**: a deterministic refusal (not found, no permission) says what the user
   can do instead.
 - **Escalate, don't work around**: a problem in the English source (inconsistent or ambiguous English, a weak or wrong

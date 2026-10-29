@@ -40,6 +40,17 @@
     "forms": "het account (het-woord)",
     "sources": "catalog (errors.json five times, onboarding.json)"
   },
+  "action": {
+    "chosen": "actie",
+    "exceptions": {
+      "fileOperations.transferDialog.operationAria": "names the Copy / Move / Compress choice, a file operation, so bewerking"
+    },
+    "accept": ["acties"],
+    "forms": "Dialog actions → Dialoogacties; the actions below → de acties hieronder",
+    "confidence": "tentative",
+    "sources": "Microsoft terminology (action → actie); catalog (queryUi.dialog.actionsAria, onboarding.stepAi.comparisonIntro); macOS Finder SP95/TL26 says Taak, but that labels the toolbar Action menu button, a different concept",
+    "note": "macOS Taak names the toolbar’s Action menu; if Cmdr ever names that control, quote Taak there."
+  },
   "activate": {
     "accept": ["activeren", "geactiveerd", "activering"],
     "chosen": "Activeer",
@@ -74,6 +85,17 @@
     "forms": "Cmdr Settings section → Geavanceerd; quote settings.section.advanced exactly in navigation paths",
     "sources": "Network.appex Localizable (ADVANCED); catalog settings.section.advanced (macOS 26.6.2 build 25G83, live loctable key cross-reference, 2026-10-02)"
   },
+  "ai-context": {
+    "chosen": "context",
+    "confidence": "high",
+    "sources": "MS terminology (context → context); askCmdr.cost.estimateTooltip"
+  },
+  "ai-agent": {
+    "chosen": "agent",
+    "forms": "de agent",
+    "confidence": "high",
+    "sources": "Microsoft terminology (agent → agent); catalog (queryUi.ai.lead); macOS has no AI-agent sense"
+  },
   "ai-feature": {
     "accept": ["de AI", "AI-"],
     "chosen": "AI-functies",
@@ -100,6 +122,13 @@
     "confidence": "tentative",
     "forms": "het antwoord; an AI answer and a server reply are both antwoord in this catalog",
     "sources": "catalog (errors.write.replySignatureRefused.title, securityNotices.smbSignatureRefused.*: antwoord); MS terminology reply → beantwoorden (the verb)"
+  },
+  "ai-lookup": {
+    "accept": ["opzoekingen", "opzoekronde"],
+    "chosen": "opzoeking",
+    "confidence": "high",
+    "forms": "a round of lookups → opzoekronde / opzoekrondes",
+    "sources": "catalog precedent: `askCmdr.error.repeatedToolCall`, `askCmdr.event.contextTrimmed`"
   },
   "ai-tool": {
     "accept": ["hulpmiddelen", "tool", "tools"],
@@ -212,7 +241,7 @@
     "sources": "macOS Finder (TL5 / GROUP_APPLICATIONS = Apps, Go menu 258.title, TL_HELP_APPS = Ga naar de map 'Apps')"
   },
   "apply": {
-    "accept": ["toepassen", "toegepast", "toe te passen", "past"],
+    "accept": ["toepassen", "toegepast", "toe te passen", "past", "Pas ze"],
     "chosen": "Pas toe",
     "confidence": "high",
     "exceptions": {
@@ -681,11 +710,23 @@
     "forms": "button Verbind; Connect to server → Verbind met server; Connect as guest → Verbind als gast; progress Verbinden met {name}…; status Verbonden; in a sentence verbinding maken; a phone plugged in by cable is aangesloten, not verbonden",
     "sources": "macOS Finder (Connect to server → Verbind met server, Connect As… → Verbind als…), AppKit (Connecting… → Verbinden…, Connected → Verbonden)"
   },
+  "conversation": {
+    "chosen": "gesprek",
+    "confidence": "high",
+    "sources": "MS terminology (gesprek); shipped settings.askCmdr.chatMemorySize.description",
+    "accept": ["chat"]
+  },
   "learn-more": {
     "chosen": "Meer over",
     "confidence": "high",
     "forms": "More about “X” → Meer over ‘X’",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "niveau",
+    "confidence": "high",
+    "sources": "MS terminology (niveau); shipped settings.archives.compressionLevel.label",
+    "accept": ["niveaus", "zoom"]
   },
   "link": {
     "chosen": "link",
@@ -1867,6 +1908,24 @@
     "confidence": "high",
     "forms": "the Servers list → de lijst Servers (the hub's name after the noun); server list → serverlijst; stops listing it → haalt … uit de lijst; the verb list (apps, shares, names) → tonen, opsommen, noemen in prose",
     "sources": "catalog (servers.pinHint.body, settings.servers intro: in de lijst Servers), Microsoft Terminology (list → lijst)"
+  },
+  "listing": {
+    "accept": [
+      "inhoud",
+      "mapinhoud",
+      "ophalen",
+      "opgehaald",
+      "haalt",
+      "laden",
+      "geladen",
+      "op te sommen",
+      "op een rij zetten",
+      "Lijst"
+    ],
+    "chosen": "inhoud ophalen",
+    "confidence": "tentative",
+    "forms": "AI tool line → Haalt de inhoud van <place>{name}</place> op / Inhoud van <place>{name}</place> opgehaald (sibling askCmdr.tool.listDir: Haalt mapinhoud op); a selection → Haalt je selectie in … op; a pane loading → laden (Nautilus Map wordt geladen…)",
+    "sources": "catalog (askCmdr.tool.listDir.doing/done), Thunar (de inhoud van deze map), Nautilus (Map wordt geladen…); no macOS or MS noun for a listing"
   },
   "local": {
     "accept": ["lokale"],
@@ -3326,7 +3385,8 @@
   "thinking": {
     "chosen": "Nadenken…",
     "confidence": "tentative",
-    "sources": "bare infinitive + ellipsis per the progress convention; no AI-assistant precedent in the pile"
+    "sources": "bare infinitive + ellipsis per the progress convention; no AI-assistant precedent in the pile",
+    "proseAccept": ["nadenk"]
   },
   "threshold": {
     "accept": ["drempelwaarde"],
@@ -3900,5 +3960,34 @@
     "confidence": "high",
     "forms": "button / placeholder imperative Laad (Laad meer, Laad een voorinstelling); infinitive laden in prose (kon … niet laden)",
     "sources": "macOS SystemSettings CDsAndDvDsSettingsIntents (load → laden); DC Laad voorinstelling 1 (actloadpreset1); catalog askCmdr.sessions.loadMore"
+  },
+  "start": {
+    "chosen": "starten",
+    "accept": ["gestart", "start", "begint", "beginnen", "begonnen"],
+    "confidence": "high",
+    "forms": "a task that didn't begin → er is niets gestart / is niet gestart (Waarom dit niet is gestart); status Nog niet gestart",
+    "sources": "macOS CoreServices (De app %@ kon niet worden gestart); catalog suggestedOps.refusal.label, indexing.step.statusPending, fileOperations.transferProgress.rowsStillSettlingToast (er is niets gestart)"
+  },
+  "zip": {
+    "chosen": "zip",
+    "accept": ["zip-archief", "zip-archieven", "zip-bestand", "zip-programma"],
+    "confidence": "high",
+    "forms": "prose de zip (in de zip, de zip openen); English zip archive → zip-archief, lowercase and hyphenated like every format token; Apple's kind name capitalizes (Zip-archief) only as a Finder Kind label",
+    "sources": "macOS Archive Utility and Finder (Zip archive → Zip-archief, Zip file → Zip-bestand); catalog errors.write.archive* family (de zip, zip-programma's, 15+ hits)"
+  },
+  "reasoning-effort": {
+    "chosen": "Redeneerinspanning",
+    "confidence": "tentative",
+    "sources": "OpenAI docs are English-only; no established rendering, so built from the locale’s reasoning wording"
+  },
+  "reasoning-effort-anthropic": {
+    "chosen": "Inspanning",
+    "confidence": "tentative",
+    "sources": "Anthropic localized docs, platform.claude.com/docs/<lang>/build-with-claude/effort, read 2026-10-28: no nl docs; the catalog already says inspanning"
+  },
+  "thinking-level": {
+    "chosen": "Denkniveau",
+    "confidence": "tentative",
+    "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
   }
 }

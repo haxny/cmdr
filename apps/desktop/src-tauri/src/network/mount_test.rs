@@ -1,8 +1,8 @@
 //! Tests for the NetFS mount path (`mount.rs`).
 //!
 //! Split out under the directory's `*_test.rs` convention: the module's own surface
-//! is small and its tests are not (five drive real Docker Samba containers through
-//! NetFS, one at a time machine-wide: [`NetfsFixtureLock`]; two of them end in a real
+//! is small and its tests are not (six drive real Docker Samba containers through
+//! NetFS, one at a time machine-wide: [`NetfsFixtureLock`]; three of them end in a real
 //! macOS kernel mount).
 
 use super::*;
@@ -853,4 +853,81 @@ fn a_mount_gets_its_own_session_when_the_machine_has_another_servers_or_accounts
         &same_server_other_account,
         &[]
     ));
+}
+
+/// What Ask Cmdr's `connect_volume` dials: a SAVED share, with no secret offered, so only
+/// what's stored. A stored password connects it; with none stored it answers
+/// `NeedsCredentials` before any mount starts, so nothing can raise a dialog
+/// (`agent/tools/DETAILS.md` § Connecting a saved place). The `auth` fixture lets only
+/// `testuser` in. The secret store is a file in a scratch dir, ❌ never the login Keychain.
+#[cfg(target_os = "macos")]
+#[tokio::test]
+#[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
+async fn smb_integration_a_saved_share_connects_on_its_stored_password_and_asks_for_none_without_one() {
+    use crate::commands::servers::ServerConnectOutcome;
+    use crate::network::connect_wiring::DialTicket;
+    use crate::network::known_shares::{AuthOptions, ConnectionMode, KnownNetworkShare};
+    use crate::network::server_guid::GuidProof;
+    use crate::network::smb_saved_shares::connect_saved_share;
+    use std::time::{Duration, Instant};
+
+    let _secrets = crate::test_support::isolate_secrets();
+    let _netfs = NetfsFixtureLock::acquire();
+    let port: u16 = std::env::var("SMB_CONSUMER_AUTH_PORT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10481);
+    // The Keychain keys a share's password by its server NAME, so each half names its own.
+    let saved = |server_name: &str| KnownNetworkShare {
+        server_name: server_name.to_string(),
+        share_name: "private".to_string(),
+        protocol: "smb".to_string(),
+        last_connected_at: "2026-10-26T00:00:00Z".to_string(),
+        last_connection_mode: ConnectionMode::Credentials,
+        last_known_auth_options: AuthOptions::CredentialsOnly,
+        username: Some("testuser".to_string()),
+        // ❗ Not `localhost`, which every other NetFS test dials: macOS hands a mount any
+        // session live to the same host NAME, and this one signs in as `testuser`, which
+        // the guest tests on `localhost` must never ride (see `NetfsFixtureLock`).
+        address: Some("127.0.0.1".to_string()),
+        port: Some(port),
+        volume_id: None,
+        mount_path: None,
+        pinned: true,
+        server_guid: None,
+        server_guid_proof: GuidProof::Unauthenticated,
+    };
+
+    let started = Instant::now();
+    let unstored = connect_saved_share(
+        saved("cmdr-test-nothing-stored"),
+        DialTicket::now(),
+        "unstored",
+        None,
+        None,
+    )
+    .await;
+    assert!(
+        matches!(unstored, ServerConnectOutcome::NeedsCredentials),
+        "with no stored password the dial must ask for one, got {unstored:?}"
+    );
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "answered before any mount could raise a dialog"
+    );
+
+    crate::network::keychain::save_credentials("cmdr-test-stored", None, "testuser", "testpass")
+        .expect("the scratch secret store takes the password");
+    let stored = connect_saved_share(saved("cmdr-test-stored"), DialTicket::now(), "stored", None, None).await;
+    if let ServerConnectOutcome::Connected { volume_id } = &stored
+        && let Some(volume) = crate::file_system::volume::manager::get_volume_manager().get(volume_id)
+    {
+        let _ = std::process::Command::new("diskutil")
+            .args(["unmount", "force", &volume.root().to_string_lossy()])
+            .output();
+    }
+    assert!(
+        matches!(stored, ServerConnectOutcome::Connected { .. }),
+        "the stored password must connect the saved share, got {stored:?}"
+    );
 }

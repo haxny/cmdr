@@ -228,7 +228,8 @@ pub fn find(host: &str, port: u16, username: &str) -> Option<KnownSftpServer> {
 /// STORED pin wins, because this runs on every successful connect: a pin taken
 /// from the caller would put an unpinned row back in the switcher the next time
 /// the session came back, which is an unpin that undoes itself. Changing a pin is
-/// its own writer's job.
+/// its own writer's job. An empty `last_connected_at` is a save that connected
+/// nothing, so on a replace the stored time stays.
 pub fn remember(mut server: KnownSftpServer) {
     {
         let mut store = known().lock_ignore_poison();
@@ -242,6 +243,9 @@ pub fn remember(mut server: KnownSftpServer) {
             // drift as only one of them got updated.
             Some(existing) => {
                 server.pinned = existing.pinned;
+                if server.last_connected_at.is_empty() {
+                    server.last_connected_at = std::mem::take(&mut existing.last_connected_at);
+                }
                 *existing = server;
             }
             None => store.known_sftp_servers.push(server),

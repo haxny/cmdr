@@ -3,9 +3,9 @@
   "@suggestedOps.title": {
     "sourceHash": "1a1f5b9"
   },
-  "suggestedOps.description": "De AI heeft dit voorgesteld. Er gebeurt niets tot je het goedkeurt.",
+  "suggestedOps.description": "De agent heeft de acties hieronder voorgesteld. Pas ze alleen toe als je het ermee eens bent.",
   "@suggestedOps.description": {
-    "sourceHash": "73255a0"
+    "sourceHash": "4d98280"
   },
   "suggestedOps.approvalNoticeDismiss": "Toon dit niet meer",
   "@suggestedOps.approvalNoticeDismiss": {
@@ -35,9 +35,9 @@
   "@suggestedOps.empty": {
     "sourceHash": "b93eccd"
   },
-  "suggestedOps.loadFailed": "Cmdr kon de suggesties niet lezen. Sluit dit en open het opnieuw.",
+  "suggestedOps.loadFailed": "Cmdr kon de suggesties niet lezen. Sluit dit venster en open het opnieuw.",
   "@suggestedOps.loadFailed": {
-    "sourceHash": "ef0da3e"
+    "sourceHash": "139450e"
   },
   "suggestedOps.agentReason": "Waarom:",
   "@suggestedOps.agentReason": {
@@ -54,6 +54,34 @@
   "suggestedOps.fileCount": "{countText} {count, plural, one {bestand} other {bestanden}}",
   "@suggestedOps.fileCount": {
     "sourceHash": "76ef0a6"
+  },
+  "suggestedOps.action.move": "Verplaats",
+  "@suggestedOps.action.move": {
+    "sourceHash": "6ecc3df"
+  },
+  "suggestedOps.action.copy": "Kopieer",
+  "@suggestedOps.action.copy": {
+    "sourceHash": "e21f935"
+  },
+  "suggestedOps.action.trash": "Naar prullenmand",
+  "@suggestedOps.action.trash": {
+    "sourceHash": "9adcdf3"
+  },
+  "suggestedOps.action.delete": "Verwijder",
+  "@suggestedOps.action.delete": {
+    "sourceHash": "e2d0a54"
+  },
+  "suggestedOps.action.rename": "Wijzig naam",
+  "@suggestedOps.action.rename": {
+    "sourceHash": "3064d79"
+  },
+  "suggestedOps.action.compress": "Comprimeer",
+  "@suggestedOps.action.compress": {
+    "sourceHash": "033fc04"
+  },
+  "suggestedOps.action.extract": "Pak uit",
+  "@suggestedOps.action.extract": {
+    "sourceHash": "c15301c"
   },
   "suggestedOps.approve.move": "Verplaats {countText} {count, plural, one {bestand} other {bestanden}}",
   "@suggestedOps.approve.move": {
@@ -82,6 +110,14 @@
   "suggestedOps.approve.extract": "Pak {countText} {count, plural, one {archief} other {archieven}} uit",
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
+  },
+  "suggestedOps.approve.addServer": "Bewaar server",
+  "@suggestedOps.approve.addServer": {
+    "sourceHash": "726b9af"
+  },
+  "suggestedOps.approve.editServer": "Bewaar wijzigingen",
+  "@suggestedOps.approve.editServer": {
+    "sourceHash": "dd0ae7a"
   },
   "suggestedOps.reject": "Weiger",
   "@suggestedOps.reject": {
@@ -139,13 +175,13 @@
   "@suggestedOps.irreversible.delete": {
     "sourceHash": "e32da9a"
   },
-  "suggestedOps.blocked.noTrash": "Niet uitvoerbaar: deze schijf heeft geen prullenmand",
-  "@suggestedOps.blocked.noTrash": {
-    "sourceHash": "f08e038"
+  "suggestedOps.noTrash": "Deze schijf heeft geen prullenmand",
+  "@suggestedOps.noTrash": {
+    "sourceHash": "38a6adc"
   },
-  "suggestedOps.blocked.noTrashTooltip": "De schijf met deze bestanden heeft geen prullenmand, dus naar de prullenmand verplaatsen kan niet en er zou niets gebeuren. Weiger dit, of verwijder de bestanden zelf als je dat wilt.",
-  "@suggestedOps.blocked.noTrashTooltip": {
-    "sourceHash": "f2a5d5f"
+  "suggestedOps.noTrashTooltip": "De schijf waar deze bestanden op staan, heeft geen prullenmand, dus als je dit goedkeurt, worden ze definitief verwijderd.",
+  "@suggestedOps.noTrashTooltip": {
+    "sourceHash": "4327cb2"
   },
   "suggestedOps.irreversible.overwrite": "Dit kun je niet ongedaan maken: een bestaand archief wordt vervangen",
   "@suggestedOps.irreversible.overwrite": {
@@ -154,6 +190,14 @@
   "suggestedOps.irreversible.other": "Dit kun je niet ongedaan maken",
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
+  },
+  "suggestedOps.reversible.forgetServer": "Dit kun je ongedaan maken: vergeet de server in de lijst Servers",
+  "@suggestedOps.reversible.forgetServer": {
+    "sourceHash": "892c381"
+  },
+  "suggestedOps.reversible.changeServerBack": "Dit kun je ongedaan maken: zet de instellingen van de server terug in de lijst Servers",
+  "@suggestedOps.reversible.changeServerBack": {
+    "sourceHash": "ff1ea36"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr maakt deze map aan",
   "@suggestedOps.folderWillBeCreated": {
@@ -307,12 +351,94 @@
   "@suggestedOps.refusal.couldNotStart.message": {
     "sourceHash": "77ef48b"
   },
-  "suggestedOps.refusal.couldNotStart.suggestion": "Weiger het en vraag de AI om het opnieuw voor te stellen.",
+  "suggestedOps.refusal.couldNotStart.suggestion": "Weiger het en vraag Ask Cmdr om het opnieuw voor te stellen.",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
-    "sourceHash": "5b5b779"
+    "sourceHash": "1d2b1bd"
+  },
+  "suggestedOps.refusal.serverLabel": "Waarom dit niet is bewaard",
+  "@suggestedOps.refusal.serverLabel": {
+    "sourceHash": "c1958af"
+  },
+  "suggestedOps.refusal.serverChanged.message": "Deze server is gewijzigd sinds de AI dit voorstelde, dus Cmdr heeft niets bewaard.",
+  "@suggestedOps.refusal.serverChanged.message": {
+    "sourceHash": "a346372"
+  },
+  "suggestedOps.refusal.serverChanged.suggestion": "Vraag Ask Cmdr om het opnieuw voor te stellen, of wijzig de server in de lijst Servers.",
+  "@suggestedOps.refusal.serverChanged.suggestion": {
+    "sourceHash": "cab1352"
+  },
+  "suggestedOps.refusal.alreadySaved.message": "Deze server staat al in je lijst Servers, dus Cmdr heeft niets bewaard.",
+  "@suggestedOps.refusal.alreadySaved.message": {
+    "sourceHash": "111276b"
+  },
+  "suggestedOps.refusal.alreadySaved.suggestion": "Open de server via de lijst Servers, of vraag Ask Cmdr liever om een wijziging aan deze server voor te stellen.",
+  "@suggestedOps.refusal.alreadySaved.suggestion": {
+    "sourceHash": "6ec8bdc"
+  },
+  "suggestedOps.refusal.nameTaken.message": "Een andere opgeslagen server heet al {name}, dus Cmdr heeft niets bewaard.",
+  "@suggestedOps.refusal.nameTaken.message": {
+    "sourceHash": "1d0c01c"
+  },
+  "suggestedOps.refusal.nameTaken.suggestion": "Vraag Ask Cmdr om een andere naam voor te stellen.",
+  "@suggestedOps.refusal.nameTaken.suggestion": {
+    "sourceHash": "e366b0c"
+  },
+  "suggestedOps.server.add": "Server toevoegen",
+  "@suggestedOps.server.add": {
+    "sourceHash": "8667e21"
+  },
+  "suggestedOps.server.change": "Serverinstellingen wijzigen",
+  "@suggestedOps.server.change": {
+    "sourceHash": "187a941"
+  },
+  "suggestedOps.server.field.port": "Poort",
+  "@suggestedOps.server.field.port": {
+    "sourceHash": "72e9a59"
+  },
+  "suggestedOps.server.field.account": "Account",
+  "@suggestedOps.server.field.account": {
+    "sourceHash": "7e1b0d5",
+    "sameAsSourceJustification": "Dutch for a user account is \"account\" (het account): the nl termbase rules account → account (high), and the catalog already uses it (servers.sheet.accountLocked, servers.sheet.s3AccountId → Account-ID)."
+  },
+  "suggestedOps.server.field.share": "Gedeelde map",
+  "@suggestedOps.server.field.share": {
+    "sourceHash": "4268344"
+  },
+  "suggestedOps.server.field.bucket": "Bucket",
+  "@suggestedOps.server.field.bucket": {
+    "sourceHash": "c83b657",
+    "sameAsSourceJustification": "Dutch for an S3 bucket is \"bucket\": Microsoft terminology renders \"bucket\" (a virtual container) as \"bucket\" (DUTCH.tbx in the reference pile, 2026-10-02), matching servers.sheet.s3Bucket."
+  },
+  "suggestedOps.server.notSet": "Niet ingesteld",
+  "@suggestedOps.server.notSet": {
+    "sourceHash": "4895f73"
+  },
+  "suggestedOps.server.changesTo": "wordt",
+  "@suggestedOps.server.changesTo": {
+    "sourceHash": "8c0db20"
+  },
+  "suggestedOps.server.newAddress": "Een nieuw adres",
+  "@suggestedOps.server.newAddress": {
+    "sourceHash": "5fc5498"
+  },
+  "suggestedOps.server.newAddressTooltip": "Geen van je opgeslagen servers staat op dit adres. Controleer of dit het adres is dat je bedoelt.",
+  "@suggestedOps.server.newAddressTooltip": {
+    "sourceHash": "16d851c"
+  },
+  "suggestedOps.server.sharesAffected": "Deze wijziging geldt voor {countText} opgeslagen {count, plural, one {gedeelde map} other {gedeelde mappen}} op deze server.",
+  "@suggestedOps.server.sharesAffected": {
+    "sourceHash": "390f931"
   },
   "suggestedOps.indicatorTooltip": "Er staan AI-suggesties klaar. Klik om ze te bekijken.",
   "@suggestedOps.indicatorTooltip": {
     "sourceHash": "4508b0b"
+  },
+  "suggestedOps.newNameTaken": "Naam is al in gebruik",
+  "@suggestedOps.newNameTaken": {
+    "sourceHash": "58e9841"
+  },
+  "suggestedOps.newNameTakenTooltip": "Daar staat al iets met de naam ‘{name}’.",
+  "@suggestedOps.newNameTakenTooltip": {
+    "sourceHash": "b18f96a"
   }
 }

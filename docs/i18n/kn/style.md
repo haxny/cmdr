@@ -40,9 +40,9 @@ name the problem and the next step, and avoid a bare "ದೋಷ" (error) status 
 - **Regional variant: one, `kn` (`kn-IN`).** Kannada is the official language of Karnataka, India; no second national
   standard, no variant matrix. Confidence: high.
 - **Gender / inclusive language: low problem.** Kannada nouns have gender (masculine/feminine/neuter) and third-person
-  pronouns are gendered, but the polite `ನೀವು` address and the usual UI verb forms don't force the user's gender. Where
-  a sentence would expose gender, rewrite impersonally or use the neuter/plural. No big inclusive-form workaround
-  needed. Confidence: high.
+  pronouns are gendered, but the polite `ನೀವು` address and the usual UI verb forms don't force the user's gender. Where a
+  sentence would expose gender, rewrite impersonally or use the neuter/plural. No big inclusive-form workaround needed.
+  Confidence: high.
 - **Capitalization: not applicable.** Kannada script has no case. Don't capitalize labels. Confidence: confirmed.
 - **Agglutination and case suffixes affect placeholder grammar (high).** Kannada is agglutinative: nouns take case
   suffixes (often with vowel/sandhi changes at the join). A `{path}` or `{name}` placeholder followed by a case suffix

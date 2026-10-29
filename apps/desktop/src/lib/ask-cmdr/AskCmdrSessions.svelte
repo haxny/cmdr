@@ -11,6 +11,7 @@
     import Spinner from '#lib/ui/Spinner.svelte'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { newChatShortcutText } from './ask-cmdr-trigger.svelte'
     import {
         chooseThread,
         clearSearch,
@@ -58,24 +59,45 @@
         editingId = null
     }
 
+    let sessionsElement = $state<HTMLDivElement | null>(null)
+
+    // The rename field leaves the page once it's done, taking focus with it: a keyboard rename
+    // hands focus to its row, so it doesn't fall to `<body>`. A blur-commit (a click elsewhere)
+    // leaves focus where the click put it.
+    async function focusRow(id: number): Promise<void> {
+        await tick()
+        sessionsElement?.querySelector<HTMLButtonElement>(`[data-conversation-row="${String(id)}"]`)?.focus()
+    }
+
     function onRenameKeydown(event: KeyboardEvent): void {
+        const id = editingId
         if (event.key === 'Enter') {
             event.preventDefault()
             void commitRename()
+            if (id !== null) void focusRow(id)
         } else if (event.key === 'Escape') {
             event.preventDefault()
             cancelRename()
+            if (id !== null) void focusRow(id)
         }
     }
+
+    const newChatShortcut = $derived(newChatShortcutText())
 </script>
 
-<div class="sessions">
+<div class="sessions" bind:this={sessionsElement}>
     <header class="sessions-header">
         <button type="button" class="icon-button" onclick={closeSessions} aria-label={tString('askCmdr.sessions.back')}>
             <Icon name="arrow-left" size={16} aria-hidden="true" />
         </button>
         <span class="sessions-title">{tString('askCmdr.sessions.title')}</span>
-        <button type="button" class="icon-button" onclick={startNewChat} aria-label={tString('askCmdr.newChat')}>
+        <button
+            type="button"
+            class="icon-button"
+            onclick={startNewChat}
+            aria-label={tString('askCmdr.newChat')}
+            use:tooltip={{ text: tString('askCmdr.newChat'), shortcut: newChatShortcut }}
+        >
             <Icon name="file-plus" size={16} aria-hidden="true" />
         </button>
     </header>
@@ -179,7 +201,12 @@
                                 onblur={() => void commitRename()}
                             />
                         {:else}
-                            <button type="button" class="row" onclick={() => void chooseThread(conversation.id)}>
+                            <button
+                                type="button"
+                                class="row"
+                                data-conversation-row={conversation.id}
+                                onclick={() => void chooseThread(conversation.id)}
+                            >
                                 <span class="row-heading">
                                     {#if startedByTheAgent(conversation.origin)}
                                         <!-- Nobody typed the first message in this one. The

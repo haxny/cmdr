@@ -147,3 +147,20 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - Proposed: `sync-locale-keys.ts` drops termbase exceptions that name deleted keys (four locales failed on the retired
   "undo by deleting what it writes" pill key). (fr)
 - The AI suggestions dialog keys ship without screenshots; the pills and fact lines need them most. (fr, hu)
+- `suggestedOps.action.*`: the label renders in its own span before the AI's title, so verb-final languages can't
+  reorder (`Bewegen Alte Installer`). Add a `{action} {title}` frame key, or call it a chip label. (de, hu, nl)
+- `suggestedOps.newNameTaken` ("Name already taken") and `multiRename.status.targetExists` ("Name is taken") say one
+  thing in two Englishes; align them so `i18n-terms` keeps locales in step. (all)
+- `settings.ai.reasoningEfforts.keywords`: Settings search matches only the `thinkingLevel` label, so a user whose row
+  reads the Anthropic or OpenAI-style name finds it only through keywords; every locale now lists its two sibling labels
+  there. Proposed rule: when one setting shows per-context labels, its keywords carry every label the search label
+  doesn’t. (all)
+- `settings.ai.reasoningEfforts.description` (“More effort helps…”) is unchanged, so zh / zh-Hant still say `强度越高` /
+  `強度越高`, a word none of the three new labels uses; consider wording the English around thinking time so no locale
+  echoes a label it no longer shows. (zh, zh-Hant)
+- `askCmdr.limit.repeatedCall.answered`, `askCmdr.limit.noProgress.answered`: "Cmdr stopped it looking" reads as a typo
+  for "stopped it from looking"; consider "Cmdr had it stop looking and answer with what it found". (all)
+- `settings.askCmdr.spendPause.label`: "Check in" (ask the user) collides with the `check` (verify) concept; patched
+  with a `notMatch` "check in when", which a future "check in" string won't share. (all)
+- `settings.askCmdr.spendPause.opt.never` vs `servers.hub.neverUsed`: "Never" as a choice vs never happened needed
+  allowlist entries in vi, zh, zh-Hant; a distinct English ("Never used") would avoid it. (vi, zh, zh-Hant)

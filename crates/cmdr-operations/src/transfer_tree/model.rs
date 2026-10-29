@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::types::WriteOperationError;
+use crate::types::{TransferLeaves, WriteOperationError};
 
 /// A node's stable id: its index in the arena. Assigned once when the scan's
 /// tree is built and never reused, so the frontend keys rows and hand toggles
@@ -144,8 +144,7 @@ pub(crate) struct ActiveLeaf {
 
 /// Where a transfer's sources land, so a failure that names a DESTINATION path
 /// (a full disk, a folder that won't take a write) finds its row: each source
-/// sits in a landing folder under its own name, or under the name the user gave
-/// the copy of a single source.
+/// sits in a landing folder under the name its [`TransferLeaves`] gives it.
 // DEFAULT-OK: no landing folder is "nothing lands anywhere a path could name",
 // which is what a compress (its destination is one archive) truthfully says.
 #[derive(Debug, Default)]
@@ -153,17 +152,16 @@ pub(crate) struct TreeLanding {
     /// Where the sources land: the destination folder, plus a cross-FS move's
     /// staging folder, which its copy phase writes into first.
     folders: Vec<PathBuf>,
-    /// The name the user gave a single source's copy.
-    named: Option<String>,
+    /// The name each source lands as.
+    leaves: TransferLeaves,
 }
 
 impl TreeLanding {
-    /// Each source lands in `folder` under its own name, or under `named` when
-    /// the user named the copy of a single source.
-    pub(crate) fn under(folder: &Path, named: Option<&str>) -> Self {
+    /// Each source lands in `folder` under the name `leaves` gives it.
+    pub(crate) fn under(folder: &Path, leaves: &TransferLeaves) -> Self {
         Self {
             folders: vec![folder.to_path_buf()],
-            named: named.map(str::to_owned),
+            leaves: leaves.clone(),
         }
     }
 
@@ -400,22 +398,23 @@ impl TreeModel {
     fn landed_source<'p>(&self, below: &'p Path) -> Option<(NodeId, &'p Path)> {
         let mut components = below.components();
         let landed_as = components.next()?.as_os_str();
-        let node = match &self.landing.named {
-            Some(named) if self.sources.len() == 1 && landed_as == named.as_str() => *self.sources.values().next()?,
-            _ => {
-                let mut by_name = self
-                    .sources
-                    .iter()
-                    .filter(|(source, _)| source.file_name() == Some(landed_as))
-                    .map(|(_, node)| *node);
-                let node = by_name.next()?;
-                if by_name.next().is_some() {
-                    return None;
-                }
-                node
-            }
-        };
+        // The source that lands under that name, else the one whose own name it
+        // is (a path that names where a source would have landed unrenamed).
+        let node = self
+            .only_source(|source| self.landing.leaves.leaf_of(source) == Some(landed_as))
+            .or_else(|| self.only_source(|source| source.file_name() == Some(landed_as)))?;
         Some((node, components.as_path()))
+    }
+
+    /// The one source `matches` picks, or `None` when none or several do.
+    fn only_source(&self, matches: impl Fn(&Path) -> bool) -> Option<NodeId> {
+        let mut picked = self
+            .sources
+            .iter()
+            .filter(|(source, _)| matches(source))
+            .map(|(_, node)| *node);
+        let node = picked.next()?;
+        picked.next().is_none().then_some(node)
     }
 
     /// The child of `folder` called `name`, by a walk over its children.

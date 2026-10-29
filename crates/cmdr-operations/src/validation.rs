@@ -10,29 +10,6 @@ use std::path::{Path, PathBuf};
 
 use super::types::{PermissionSide, WriteOperationError};
 
-/// An explicit transfer leaf names exactly one source and never escapes its parent.
-pub(crate) fn validate_transfer_destination_name(
-    sources: &[PathBuf],
-    destination: &Path,
-    name: Option<&str>,
-) -> Result<(), WriteOperationError> {
-    let Some(name) = name else { return Ok(()) };
-    let named_path = destination.join(name);
-    if sources.len() != 1
-        || sources[0].file_name().is_none()
-        || name.is_empty()
-        || name.contains(['/', '\0'])
-        || name == "."
-        || name == ".."
-    {
-        return Err(WriteOperationError::InvalidName {
-            path: named_path.display().to_string(),
-            message: "Choose one item and a filename without path separators".into(),
-        });
-    }
-    validate_path_length(&named_path)
-}
-
 pub(crate) fn validate_sources(sources: &[PathBuf]) -> Result<(), WriteOperationError> {
     for source in sources {
         // Use symlink_metadata to check existence without following symlinks
@@ -58,9 +35,28 @@ pub(crate) fn validate_sources(sources: &[PathBuf]) -> Result<(), WriteOperation
 /// Byte-exact names only. Whether two names differing in case or normalization
 /// are one file is the destination filesystem's call, not ours — the same rule
 /// `DestNameIndex` follows for a fold-only match — and refusing them here would
-/// block a legitimate transfer onto a case-sensitive volume.
+/// block a legitimate transfer onto a case-sensitive volume. Names chosen per
+/// source are a different question, folded at the start
+/// (`leaf_validation::validate_transfer_leaves`); this check still runs under them, because
+/// the native engines key their subtree remap on `<destination>/<own name>`.
 pub(crate) fn validate_source_names_are_distinct(sources: &[PathBuf]) -> Result<(), WriteOperationError> {
-    let mut seen: HashMap<&std::ffi::OsStr, &PathBuf> = HashMap::with_capacity(sources.len());
+    match first_shared_name(sources.iter().map(PathBuf::as_path)) {
+        Some((name, first, second)) => Err(WriteOperationError::DuplicateSourceNames {
+            name: name.to_string_lossy().into_owned(),
+            first: first.display().to_string(),
+            second: second.display().to_string(),
+        }),
+        None => Ok(()),
+    }
+}
+
+/// The first two of `sources` sharing a byte-exact name, the rule
+/// [`validate_source_names_are_distinct`] refuses on, and what
+/// `TransferLeaves::check_own_names` asks ahead of a start.
+pub(crate) fn first_shared_name<'a>(
+    sources: impl IntoIterator<Item = &'a Path>,
+) -> Option<(&'a std::ffi::OsStr, &'a Path, &'a Path)> {
+    let mut seen: HashMap<&std::ffi::OsStr, &Path> = HashMap::new();
     for source in sources {
         // A path with no final component (`/`, a trailing `..`) can't be a
         // selected item; the existence check above already spoke for it.
@@ -68,14 +64,10 @@ pub(crate) fn validate_source_names_are_distinct(sources: &[PathBuf]) -> Result<
             continue;
         };
         if let Some(first) = seen.insert(name, source) {
-            return Err(WriteOperationError::DuplicateSourceNames {
-                name: name.to_string_lossy().into_owned(),
-                first: first.display().to_string(),
-                second: source.display().to_string(),
-            });
+            return Some((name, first, source));
         }
     }
-    Ok(())
+    None
 }
 
 /// Ensures the destination exists as a directory, creating it (and any missing

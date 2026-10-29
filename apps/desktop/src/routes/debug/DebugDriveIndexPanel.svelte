@@ -99,7 +99,9 @@
         const diffHours = Math.floor(diffMs / 3_600_000)
         const diffDays = Math.floor(diffMs / 86_400_000)
 
+        // eslint-disable-next-line cmdr/no-raw-locale-format -- dev-only Debug window, deliberately English and untranslated
         const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+        // eslint-disable-next-line cmdr/no-raw-locale-format -- dev-only Debug window, deliberately English and untranslated
         const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
         let ago: string

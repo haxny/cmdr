@@ -19,8 +19,9 @@ use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, Runtime};
 
+pub use jail::shown_location;
 pub use outcomes::{OUTCOMES_FILE, OUTCOMES_MAX_BYTES, OUTCOMES_MAX_ENTRIES};
-pub use refusal::MemoryRefusal;
+pub use refusal::{MemoryRefusal, MemoryRefusalKind};
 pub use store::{HUB_FILE, MEMORY_DIR_MAX_BYTES, MEMORY_MODEL_MAX_BYTES, MemoryStore, MemoryWritten};
 
 /// Where memory lives under the app data dir.
@@ -46,8 +47,14 @@ pub fn store_for<R: Runtime>(app: &AppHandle<R>) -> Option<MemoryStore> {
     }
 }
 
-/// What one turn carries of the agent's memory: the hub file, cut to this turn's share of the
-/// resolved prompt budget (`chat::budget::memory_slice_bytes`), with a note when it was cut.
-pub fn read_for_turn<R: Runtime>(app: &AppHandle<R>, prompt_budget: usize) -> Option<String> {
-    store_for(app)?.read_for_prompt(crate::agent::chat::budget::memory_slice_bytes(prompt_budget))
+/// What one turn carries of the agent's memory: one entry per file, cut to this turn's share
+/// of the resolved prompt budget (`chat::budget::memory_slice_bytes`), with a note when it was
+/// cut.
+pub fn read_for_turn<R: Runtime>(
+    app: &AppHandle<R>,
+    prompt_budget: usize,
+) -> Vec<crate::agent::llm::types::MemoryNote> {
+    store_for(app)
+        .map(|store| store.read_for_prompt(crate::agent::chat::budget::memory_slice_bytes(prompt_budget)))
+        .unwrap_or_default()
 }

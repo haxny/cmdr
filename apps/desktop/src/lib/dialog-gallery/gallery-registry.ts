@@ -232,6 +232,7 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
       { id: 'reply_signature_refused', label: 'Server reply refused' },
       { id: 'destination_inside_source', label: 'Destination inside source' },
       { id: 'duplicate_source_names', label: 'Two sources share a name' },
+      { id: 'named_leaves_refused', label: 'Per-item names refused' },
       { id: 'sources_span_volumes', label: 'Sources straddle a view' },
       { id: 'archive_entry_name_refused', label: 'Name a zip can’t hold' },
       { id: 'archive_entry_names_collide', label: 'Two zip entries collide' },
@@ -448,6 +449,16 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
         id: 'hard-cases',
         label: 'Irreversible groups and 60,000 files',
         note: 'A permanent delete, a compress that overwrites an archive, and a 60,000-op group.',
+      },
+      {
+        id: 'servers',
+        label: 'Server cards',
+        note: 'An SFTP server to add, at an address Cmdr has never saved, and a NAS whose name and account would change, with the shares the change reaches. No password field on either.',
+      },
+      {
+        id: 'server-refused',
+        label: 'Server cards given back',
+        note: 'The same two cards after their saves were refused: a name another server took meanwhile, and a saved server that changed under the edit.',
       },
       {
         id: 'changed-and-refused',

@@ -58,6 +58,8 @@ vi.mock('./ask-cmdr-trigger.svelte', () => ({
   openRail: vi.fn(() => Promise.resolve()),
   ensureThreadLoaded: vi.fn(() => Promise.resolve()),
   newChat: vi.fn(),
+  openNewChat: vi.fn(),
+  newChatShortcutText: () => '⌘N',
   setRailWidth: vi.fn(),
   sendMessage: vi.fn(),
   stopStreaming: vi.fn(),
@@ -104,6 +106,10 @@ import AskCmdrCostFooter from './AskCmdrCostFooter.svelte'
 import AskCmdrMessage from './AskCmdrMessage.svelte'
 import AskCmdrRail from './AskCmdrRail.svelte'
 import AskCmdrToolLine from './AskCmdrToolLine.svelte'
+import AskCmdrToolGroup from './AskCmdrToolGroup.svelte'
+import AskCmdrToolPreview from './AskCmdrToolPreview.svelte'
+import AskCmdrTurnStats from './AskCmdrTurnStats.svelte'
+import type { ToolDetailState } from './ask-cmdr-tool-groups.svelte'
 import { openCloudConsentSettings } from '#lib/ai/cloud-consent.svelte.js'
 import { setSetting } from '#lib/settings/index.js'
 
@@ -112,6 +118,18 @@ function container(): HTMLDivElement {
   const target = document.createElement('div')
   document.body.appendChild(target)
   return target
+}
+
+/** A settled tool line that looked at a folder. */
+function folderLine(path: string): RailToolCall {
+  return {
+    callId: 'c1',
+    tool: 'list_dir',
+    running: false,
+    subject: { kind: 'folder', path: { text: path, linkable: true } },
+    outcome: { kind: 'items', returned: 3, total: 3, lowerBound: false },
+    repeatOf: null,
+  }
 }
 
 /** The composer's "Ask about selection" read, with nothing to attach. */
@@ -302,7 +320,7 @@ describe('AskCmdrCostFooter a11y', () => {
 describe('AskCmdrMessage a11y', () => {
   function mountMessage(message: RailMessage): HTMLElement {
     const target = container()
-    mount(AskCmdrMessage, { target, props: { message } })
+    mount(AskCmdrMessage, { target, props: { message, revealPath: () => Promise.resolve() } })
     return target
   }
 
@@ -330,10 +348,15 @@ describe('AskCmdrMessage a11y', () => {
     const target = mountMessage({
       kind: 'assistant',
       id: null,
-      text: 'Your **Downloads** folder is the largest.',
-      tools: [{ callId: 'c1', tool: 'largest_dirs', running: false, ok: true, path: '/Users/me' }],
+      turnId: 1,
+      rounds: [
+        { messageId: 2, text: 'Let me look.', calls: [folderLine('/Users/me')] },
+        { messageId: null, text: 'Your **Downloads** folder is the largest.', calls: [] },
+      ],
       thinking: true,
+      stalled: false,
       streaming: true,
+      stats: null,
     })
     await tick()
     await expectNoA11yViolations(target)
@@ -343,10 +366,12 @@ describe('AskCmdrMessage a11y', () => {
     const target = mountMessage({
       kind: 'assistant',
       id: 5,
-      text: 'Here is a list:\n\n- one\n- two',
-      tools: [],
+      turnId: 4,
+      rounds: [{ messageId: 5, text: 'Here is a list:\n\n- one\n- two', calls: [] }],
       thinking: false,
+      stalled: false,
       streaming: false,
+      stats: null,
     })
     await tick()
     await expectNoA11yViolations(target)
@@ -392,7 +417,7 @@ describe('AskCmdrRail a11y', () => {
 
   function mountRail(): HTMLElement {
     const target = container()
-    mount(AskCmdrRail, { target, props: { readSelection: noSelection } })
+    mount(AskCmdrRail, { target, props: { readSelection: noSelection, revealPath: () => Promise.resolve() } })
     return target
   }
 
@@ -454,10 +479,12 @@ describe('AskCmdrRail a11y', () => {
       {
         kind: 'assistant',
         id: 2,
-        text: 'Your **Downloads** folder is the largest.',
-        tools: [{ callId: 'c1', tool: 'largest_dirs', running: false, ok: true, path: '/Users/me' }],
+        turnId: 1,
+        rounds: [{ messageId: 2, text: 'Your **Downloads** folder is the largest.', calls: [folderLine('/Users/me')] }],
         thinking: false,
+        stalled: false,
         streaming: false,
+        stats: null,
       },
     ] satisfies RailMessage[]
     const target = mountRail()
@@ -477,19 +504,33 @@ describe('AskCmdrRail a11y', () => {
 /**
  * Tier 3 a11y tests for `AskCmdrToolLine.svelte`.
  *
- * One collapsible "looked at X" line for a tool call. Covers the running state (a busy
- * status with a spinner), a finished-ok line with an expandable path, its expanded state,
- * and a refused line. `role="status"` + `aria-busy` and the toggle's `aria-expanded` are
- * the load-bearing attributes.
+ * One tool call's row: what it looked at, with each path a link, and what came back. Covers the
+ * running state (a spinner), a finished line with a path link, a search naming several folders,
+ * a repeat with its tag, and a refused line. Lines are deliberately NOT live regions (a 12-call
+ * turn would chatter): the bubble's last prose is the one that announces.
  */
 describe('AskCmdrToolLine a11y', () => {
   function tool(overrides: Partial<RailToolCall> = {}): RailToolCall {
-    return { callId: 'c1', tool: 'list_dir', running: false, ok: true, path: null, ...overrides }
+    return {
+      callId: 'c1',
+      tool: 'list_dir',
+      running: false,
+      subject: null,
+      outcome: { kind: 'answered' },
+      repeatOf: null,
+      ...overrides,
+    }
   }
 
   function mountLine(t: RailToolCall): HTMLElement {
     const target = container()
-    mount(AskCmdrToolLine, { target, props: { tool: t } })
+    mount(AskCmdrToolLine, {
+      target,
+      props: {
+        line: { key: `1:${t.callId}`, messageId: 1, occurrence: 0, call: t },
+        revealPath: () => Promise.resolve(),
+      },
+    })
     return target
   }
 
@@ -500,24 +541,114 @@ describe('AskCmdrToolLine a11y', () => {
   })
 
   it('a finished line with a path has no a11y violations', async () => {
-    const target = mountLine(tool({ path: '/Users/me/Documents' }))
+    const target = mountLine(
+      tool({ subject: { kind: 'folder', path: { text: '/Users/me/Documents', linkable: true } } }),
+    )
     await tick()
     await expectNoA11yViolations(target)
   })
 
-  it('an expanded line has no a11y violations', async () => {
-    const target = mountLine(tool({ path: '/Users/me/Documents' }))
+  it('a search naming several folders has no a11y violations', async () => {
+    const target = mountLine(
+      tool({
+        tool: 'search',
+        subject: {
+          kind: 'search',
+          query: '*.pdf',
+          scopePaths: [
+            { text: '/Users/me/Documents', linkable: true },
+            { text: '/Users/me/Desktop', linkable: true },
+          ],
+        },
+        outcome: { kind: 'matches', returned: 3, matchCount: 3, lowerBound: false },
+      }),
+    )
     await tick()
-    const toggle = target.querySelector<HTMLButtonElement>('.tool-toggle')
-    if (toggle === null) throw new Error('expected a .tool-toggle button')
-    toggle.click()
+    expect(target.querySelectorAll('button.link-button')).toHaveLength(2)
+    await expectNoA11yViolations(target)
+  })
+
+  it('a repeat with its tag has no a11y violations', async () => {
+    const target = mountLine(
+      tool({
+        subject: { kind: 'folder', path: { text: '/Users/me/Documents', linkable: true } },
+        repeatOf: { messageId: 1, callId: 'c0' },
+      }),
+    )
     await tick()
-    expect(target.querySelector('.detail')).not.toBeNull()
+    expect(target.querySelector('.repeat')).not.toBeNull()
     await expectNoA11yViolations(target)
   })
 
   it('a refused line has no a11y violations', async () => {
-    const target = mountLine(tool({ ok: false }))
+    const target = mountLine(tool({ outcome: { kind: 'refused', reason: { kind: 'problem' } } }))
+    await tick()
+    await expectNoA11yViolations(target)
+  })
+
+  it('an open group of lines has no a11y violations, and its header is no live region', async () => {
+    const target = container()
+    const lines = ['c1', 'c2'].map((callId) => ({
+      key: `1:${callId}`,
+      messageId: 1,
+      occurrence: 0,
+      call: tool({ callId, subject: { kind: 'folder', path: { text: `/Users/me/${callId}`, linkable: true } } }),
+    }))
+    mount(AskCmdrToolGroup, { target, props: { lines, live: true, revealPath: () => Promise.resolve() } })
+    await tick()
+    const toggle = target.querySelector('.group-toggle')
+    expect(toggle?.getAttribute('aria-expanded')).toBe('true')
+    expect(target.querySelector('[role="status"], [aria-live]')).toBeNull()
+    await expectNoA11yViolations(target)
+  })
+
+  it('a turn’s stats line has no a11y violations', async () => {
+    const target = container()
+    mount(AskCmdrTurnStats, {
+      target,
+      props: { stats: { toolCalls: 3, wallMs: 4200, promptTokens: 1200, completionTokens: 80 } },
+    })
+    await tick()
+    expect(target.textContent).toContain('3 tool calls')
+    await expectNoA11yViolations(target)
+  })
+
+  it('an expanded preview with rows, a refusal, and Copy has no a11y violations', async () => {
+    const target = container()
+    const detail: ToolDetailState = {
+      status: 'ready',
+      detail: {
+        rawJson: '{}',
+        preview: {
+          rows: [
+            {
+              name: 'a.txt',
+              path: '/Users/me/a.txt',
+              kind: 'file',
+              sizeBytes: 1200,
+              line: 4,
+              snippet: 'hello',
+              status: null,
+            },
+            {
+              name: 'gone.txt',
+              path: null,
+              kind: 'other',
+              sizeBytes: null,
+              line: null,
+              snippet: null,
+              status: 'missing',
+            },
+          ],
+          rowsGivenToModel: 2,
+          total: 40,
+          lowerBound: false,
+          problem: 'A sentence for the model.',
+          setAside: false,
+        },
+      },
+    }
+    mount(AskCmdrToolPreview, { target, props: { id: 'p1', detail, revealPath: () => Promise.resolve() } })
     await tick()
     await expectNoA11yViolations(target)
   })

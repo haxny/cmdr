@@ -47,6 +47,7 @@ pub mod install;
 pub mod llm_log;
 pub mod managed;
 pub mod manager;
+pub mod model_capabilities;
 mod process;
 pub mod server;
 /// Endpoints + model ids for every `client_real_*_test`. One line to edit when a provider

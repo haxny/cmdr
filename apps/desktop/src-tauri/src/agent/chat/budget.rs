@@ -16,16 +16,24 @@
 //! budget: a user who picks 200,000 would let a single result claim 100,000, and the same
 //! handler would hand that to an MCP client whose window is a tenth of it.
 //!
-//! **Three sources decide a budget, and the answer says which one did**
-//! ([`BudgetSource`]): the user's explicit size, the local server's configured window, or
-//! this module's family table, with [`DEFAULT_PROMPT_TOKEN_BUDGET`] as the honest miss path.
-//! There is no provider-reported window: no API this app talks to reports one, so a stale
-//! table must be VISIBLE (logged with its source) rather than silently authoritative.
+//! **Automatic means the whole window.** A known window resolves to all of it, less the reply's
+//! room ([`AGENT_MAX_OUTPUT_TOKENS`]) and a margin for our `chars/4` estimator's error
+//! ([`ESTIMATE_SAFETY_PERCENT`]). There is no cap below the window: what a big prompt costs is
+//! for compaction to answer (planned, `DETAILS.md` § Resolving one budget), not for a ceiling
+//! that hides most of a 1M window from the user.
+//!
+//! **Four sources decide a budget, and the answer says which one did** ([`BudgetSource`]):
+//! the user's explicit size, the local server's configured window, the window the provider
+//! itself reports (`ai::model_capabilities`, handed in as a value), or this module's family
+//! table, with [`DEFAULT_PROMPT_TOKEN_BUDGET`] as the honest miss path. The table is the
+//! fallback for providers that report nothing (OpenAI, DeepSeek, xAI) and for the first send
+//! before a report arrives, so a stale table must be VISIBLE (logged with its source) rather
+//! than silently authoritative.
 //!
 //! **Context windows drift** — re-verify the families below against each provider's model
 //! docs at release time, the way `agent::pricing` is re-verified. Every window listed is a
-//! floor ("at least this big"), the budget derived from it sits far below it, and an unknown
-//! model falls back to [`DEFAULT_PROMPT_TOKEN_BUDGET`] rather than guessing high.
+//! floor ("at least this big"), and an unknown model falls back to
+//! [`DEFAULT_PROMPT_TOKEN_BUDGET`] rather than guessing high.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -43,25 +51,23 @@ pub const CHARS_PER_TOKEN_ESTIMATE: usize = 4;
 /// guessing high turns into a hard provider rejection mid-turn.
 pub const DEFAULT_PROMPT_TOKEN_BUDGET: usize = 16_000;
 
-/// The cap on any family's budget: what a known cloud family whose window is 128,000 or more
-/// gets. Far below those windows on purpose, since a prompt this size costs real money per
-/// call and dilutes the model's attention. It still holds a 200-row folder listing plus a
-/// full `image_facts` batch with room to spare, which is what the interactive slot actually
-/// needs.
-pub const PROMPT_BUDGET_60K: usize = 60_000;
-
-/// The share of a context window one prompt may claim, in percent. The rest is headroom for
-/// the reply, which comes out of the same window.
-const PROMPT_BUDGET_WINDOW_PERCENT: usize = 60;
+/// The share of what's left of a window, after the reply's room, that the prompt leaves
+/// unclaimed, in percent: the margin for [`CHARS_PER_TOKEN_ESTIMATE`]'s error. `chars/4` is
+/// close for English prose, but the agent's prompts are mostly JSON, paths, and file names,
+/// which real tokenizers split finer (about 3.5 characters a token), so a prompt the estimate
+/// puts right at the window would be over it. Overrunning is a hard provider rejection
+/// mid-turn; erring here costs a sliver of a large window.
+pub const ESTIMATE_SAFETY_PERCENT: usize = 15;
 
 /// The smallest local context window Ask Cmdr can run a turn in
 /// (`ai.localContextSize`). Below it the numbers don't work: every call pays
-/// [`FIXED_PROMPT_OVERHEAD_TOKENS`] before the user has said a word, and one paged tool
-/// result can spend [`MAX_TOOL_RESULT_TOKENS`] more. At 32,768 the resolved budget is
-/// 19,660, which clears that pair with room for the conversation itself; one window down,
-/// 16,384 resolves to 9,830, which falls short of the prefix plus half a paged result and
-/// is not a working chat. The setting offers nothing smaller, and a window that still comes
-/// in under this is refused honestly ([`BudgetRefusal`]) rather than assembled against.
+/// [`FIXED_PROMPT_OVERHEAD_TOKENS`] before the user has said a word, the reply claims
+/// [`AGENT_MAX_OUTPUT_TOKENS`] of the same window, and one paged tool result can spend
+/// [`MAX_TOOL_RESULT_TOKENS`] more. At 32,768 the resolved budget is 17,652, which clears
+/// that with room for the conversation itself; one window down, 16,384 resolves to 3,726,
+/// which can't even hold the prefix. The setting offers nothing smaller, and a window that
+/// still comes in under this is refused honestly ([`BudgetRefusal`]) rather than assembled
+/// against.
 ///
 /// ⚠️ **This floor is derived from the prefix, so a tool joining the view can outgrow it.**
 /// `the_floor_leaves_room_for_a_prefix_and_a_paged_result` is what catches that; answer it
@@ -86,13 +92,13 @@ const _: () = assert!(MAX_TOOL_RESULT_TOKENS < DEFAULT_PROMPT_TOKEN_BUDGET);
 /// What every call pays before the user has said a word: the system prompt plus the tool
 /// declarations. Measured against the shipped assets, and pinned there —
 /// `context/cost_tests.rs` fails if the real prefix drifts away from this figure. The system
-/// prompt is 1,994 of it, the 19 tool declarations the rest.
+/// prompt is 2,378 of it, the 21 tool declarations the rest.
 ///
 /// It grows whenever a tool joins the view, and every call pays it whether or not it uses
-/// that tool: the suggested-ops trio cost about 1,100 tokens of schema between them, which
-/// is roughly four files off a 16,000-token rename batch, and `search`, the most expensive
-/// single declaration, costs 560 even trimmed. Keep a new schema terse.
-pub const FIXED_PROMPT_OVERHEAD_TOKENS: usize = 6_263;
+/// that tool: the four suggested-ops tools cost about 1,300 tokens of schema between them,
+/// which is roughly four files off a 16,000-token rename batch, and `propose_suggestions`,
+/// the most expensive single declaration, costs 759 even trimmed. Keep a new schema terse.
+pub const FIXED_PROMPT_OVERHEAD_TOKENS: usize = 7_107;
 
 /// What one `image_facts` row costs at the corpus' average OCR length.
 pub const IMAGE_FACTS_TOKENS_PER_FILE: usize = 269;
@@ -111,16 +117,20 @@ pub const LISTING_TOKENS_PER_FILE: usize = 21;
 pub const RENAME_TOKENS_PER_FILE: usize =
     IMAGE_FACTS_TOKENS_PER_FILE + PLAN_ROW_TOKENS_PER_FILE + LISTING_TOKENS_PER_FILE;
 
-/// Per-call output room, shared by reasoning tokens, visible text, and tool calls.
+/// The BASE per-call output room, shared by reasoning tokens, visible text, and tool calls: what a
+/// call gets when the model barely thinks. A higher reasoning effort raises the actual ceiling
+/// (`effort::reply_room`), and the prompt budget leaves that much of the window free
+/// ([`BudgetInputs::reply_tokens`]).
 pub const AGENT_MAX_OUTPUT_TOKENS: u32 = 12_000;
 
 /// How much of [`AGENT_MAX_OUTPUT_TOKENS`] a batch hint leaves for the model's reasoning and
 /// its accompanying sentence, rather than for plan rows.
 ///
-/// Half the slot, because we cannot see how much a reasoning model will spend before it starts
-/// emitting: `ai::client` already retries with a raised ceiling when reasoning consumes the
-/// whole budget, so an exhausted slot is an observed failure here, not a hypothetical. Erring
-/// large costs a smaller batch; erring small costs the entire plan, cut off mid-JSON.
+/// Half the BASE slot, because we cannot see how much a reasoning model will spend before it
+/// starts emitting, and an exhausted slot ends the turn unfinished (`UnfinishedReply`; the agent
+/// path has no retry). Erring large costs a smaller batch; erring small costs the entire plan,
+/// cut off mid-JSON. The batch stays sized on the base slot at every effort: a bigger slot at a
+/// higher effort is room the model spends thinking, not room for more rows.
 const REASONING_RESERVE_TOKENS: usize = AGENT_MAX_OUTPUT_TOKENS as usize / 2;
 
 /// The share of a budget [`files_per_batch`] leaves unclaimed. The measured 100-file turn
@@ -161,25 +171,35 @@ pub fn files_per_batch(prompt_tokens: usize) -> usize {
 /// up, so a smaller share costs detail rather than correctness.
 const WAKE_DIGEST_BUDGET_PERCENT: usize = 20;
 
+/// The most a wake's digest may spend, however large the window. A digest is a summary the
+/// agent reads to decide whether anything is worth saying, and it already spends its share on
+/// the highest-interest folders first, so past this a bigger window buys a longer tail of
+/// low-interest folders at the price of every wake. It is what a 60,000-token budget gave the
+/// digest, a size the wake loop was tuned against.
+pub const WAKE_DIGEST_MAX_TOKENS: usize = 10_000;
+
 /// What a wake's digest may spend, out of the turn's resolved prompt budget.
 ///
 /// Derived rather than a constant, for the same reason [`files_per_batch`] is: a user on a
 /// small local window must not have the digest alone push their tool results out of the
-/// prompt. `0` is a meaningful answer — a budget that cannot hold the prefix cannot hold a
-/// digest either, and the wake then stays quiet rather than opening a thread it can say
-/// nothing in.
+/// prompt. And capped at [`WAKE_DIGEST_MAX_TOKENS`], since a fifth of a 1M window is a digest
+/// nobody needs. `0` is a meaningful answer — a budget that cannot hold the prefix cannot
+/// hold a digest either, and the wake then stays quiet rather than opening a thread it can
+/// say nothing in.
 pub fn wake_digest_budget(prompt_tokens: usize) -> usize {
-    prompt_tokens.saturating_sub(FIXED_PROMPT_OVERHEAD_TOKENS) * WAKE_DIGEST_BUDGET_PERCENT / 100
+    (prompt_tokens.saturating_sub(FIXED_PROMPT_OVERHEAD_TOKENS) * WAKE_DIGEST_BUDGET_PERCENT / 100)
+        .min(WAKE_DIGEST_MAX_TOKENS)
 }
 
 /// What share of a turn's prompt budget the agent's own memory may claim.
 ///
-/// A tenth, and a SHARE rather than a byte count, for a reason a flat cap can't cover: the
-/// system string is never elided (`context::assemble_prompt` tightens tool results only), so
-/// every byte of memory is a permanent tax on every turn of every thread. Run the numbers a
+/// A tenth, and a SHARE rather than a byte count, for a reason a flat cap can't cover: memory
+/// notes are never elided (`context::assemble_prompt` tightens tool results only), so every
+/// byte of memory is a permanent tax on every thread, paid again in each turn whose memory
+/// changed (`context::memory_notes_for_turn`). Run the numbers a
 /// flat 8 KB would give at the smallest window the app supports: [`MIN_LOCAL_CONTEXT_TOKENS`]
-/// resolves to a 19,660-token budget, the fixed overhead takes 6,263 of it, and 8 KB of memory
-/// at [`CHARS_PER_TOKEN_ESTIMATE`] takes 2,048 more, so memory alone would claim about a sixth
+/// resolves to a 17,652-token budget, the fixed overhead takes 7,107 of it, and 8 KB of memory
+/// at [`CHARS_PER_TOKEN_ESTIMATE`] takes 2,048 more, so memory alone would claim about a fifth
 /// of what is left for the digest, the envelope, the history, and every tool result, and it would
 /// claim the same 2,048 on a window a tenth the size. **And the agent writes this file itself**,
 /// so a flat cap lets it permanently degrade its own chat with no way back.
@@ -189,48 +209,139 @@ const MEMORY_BUDGET_PERCENT: usize = 10;
 /// than tokens because the reader is slicing a file (`agent::memory`), and it says in the
 /// prompt when it had to cut.
 ///
+/// No cap of its own on a large window: from a budget of about 170,000 up, the slice exceeds
+/// `memory::MEMORY_DIR_MAX_BYTES` (64 KB, about 16,000 tokens), so the disk cap is what binds
+/// and the whole folder rides along: a small share of such a window, cached after the turn
+/// that carries it.
+///
 /// ⚠️ Not to be confused with `memory::MEMORY_DIR_MAX_BYTES`: that one protects DISK and is a
 /// constant; this one protects the PROMPT and moves with the model.
 pub fn memory_slice_bytes(prompt_tokens: usize) -> usize {
     prompt_tokens.saturating_sub(FIXED_PROMPT_OVERHEAD_TOKENS) * MEMORY_BUDGET_PERCENT / 100 * CHARS_PER_TOKEN_ESTIMATE
 }
 
-/// One family's context window, matched by model-id prefix (longest first, like
-/// `agent::pricing`'s table, so a more specific id wins over the family it shares a stem
-/// with). The budget is DERIVED from the window ([`budget_for_window`]) rather than stored
-/// beside it, so a family can't carry a budget its window couldn't hold.
+/// One family's context window, matched by model-id prefix. The FIRST matching row wins, so a
+/// more specific id sits above the family it shares a stem with. The budget is DERIVED from
+/// the window ([`budget_for`]) rather than stored beside it, so a family can't carry a
+/// budget its window couldn't hold.
 struct ModelFamily {
     prefix: &'static str,
     /// At least this many tokens. Verify at release time; drift upward is harmless.
     window_tokens: usize,
 }
 
-/// What one prompt may claim inside `window_tokens`: [`PROMPT_BUDGET_WINDOW_PERCENT`] of it,
-/// capped at [`PROMPT_BUDGET_60K`]. The rest of the window is the reply's.
-fn budget_for_window(window_tokens: usize) -> usize {
-    (window_tokens * PROMPT_BUDGET_WINDOW_PERCENT / 100).min(PROMPT_BUDGET_60K)
+/// What one prompt may claim inside `window_tokens`: all of it, less the reply's room
+/// (`reply_tokens`, which comes out of the same window) and [`ESTIMATE_SAFETY_PERCENT`] of the
+/// rest for the estimator's error.
+fn budget_for(window_tokens: usize, reply_tokens: usize) -> usize {
+    window_tokens.saturating_sub(reply_tokens) * (100 - ESTIMATE_SAFETY_PERCENT) / 100
 }
 
-/// Claude families all carry 200,000-token windows or more.
-const ANTHROPIC_FAMILIES: &[ModelFamily] = &[ModelFamily {
-    prefix: "claude-",
-    window_tokens: 200_000,
-}];
+/// [`budget_for`] with the base reply slot: what a window gives a model that barely thinks.
+#[cfg(test)]
+fn budget_for_window(window_tokens: usize) -> usize {
+    budget_for(window_tokens, AGENT_MAX_OUTPUT_TOKENS as usize)
+}
+
+/// Claude 4.6 and everything after carry a 1M window; 4.5 and older carry 200,000. Anthropic
+/// reports both through `GET /v1/models` (`max_input_tokens`), so this table only answers
+/// before that report arrives (verified 2026-10-27, `max_input_tokens` for all 14 listed
+/// models). The dated and undated ids of the old generations sit above the catch-all.
+const ANTHROPIC_FAMILIES: &[ModelFamily] = &[
+    ModelFamily {
+        prefix: "claude-3",
+        window_tokens: 200_000,
+    },
+    ModelFamily {
+        prefix: "claude-opus-4-0",
+        window_tokens: 200_000,
+    },
+    ModelFamily {
+        prefix: "claude-opus-4-1",
+        window_tokens: 200_000,
+    },
+    ModelFamily {
+        prefix: "claude-opus-4-2025",
+        window_tokens: 200_000,
+    },
+    ModelFamily {
+        prefix: "claude-opus-4-5",
+        window_tokens: 200_000,
+    },
+    ModelFamily {
+        prefix: "claude-sonnet-4-0",
+        window_tokens: 200_000,
+    },
+    ModelFamily {
+        prefix: "claude-sonnet-4-2025",
+        window_tokens: 200_000,
+    },
+    ModelFamily {
+        prefix: "claude-sonnet-4-5",
+        window_tokens: 200_000,
+    },
+    ModelFamily {
+        prefix: "claude-haiku-4-5",
+        window_tokens: 200_000,
+    },
+    ModelFamily {
+        prefix: "claude-",
+        window_tokens: 1_000_000,
+    },
+];
 
 /// The OpenAI-compatible families, first-party and third-party alike, because every provider
 /// preset except Anthropic and Gemini routes through the OpenAI adapter (`ai::client`) and so
-/// arrives here as [`ProviderTag::OpenAi`].
+/// arrives here as [`ProviderTag::OpenAi`]. OpenAI, DeepSeek, Qwen, and xAI report no window
+/// in their model lists, so for them this table is the only knowledge there is; the OpenAI
+/// rows are from OpenRouter's catalog, which does report them (verified 2026-10-27,
+/// `context_length` in `GET /api/v1/models`).
 ///
 /// **The class this table gets wrong when it's short**: a family Cmdr ships a provider preset
-/// for, whose window is far above [`PROMPT_BUDGET_60K`], silently taking the conservative
-/// default because nobody added a row. `deepseek`, `qwen`, `grok`, and `mistral` were all in
-/// that state at once. `unknown_families_take_the_conservative_default` walks every shipped
-/// preset's default model, so the next preset added without a row here fails a test instead
-/// of quietly costing a user four fifths of their window.
+/// for silently taking the conservative default because nobody added a row. `deepseek`,
+/// `qwen`, `grok`, and `mistral` were all in that state at once.
+/// `every_shipped_cloud_preset_is_in_the_family_table` walks every shipped preset's default
+/// model, so the next preset added without a row here fails a test instead of quietly costing
+/// a user most of their window.
 ///
 /// Anything older and smaller (`gpt-3.5-turbo`) is absent on purpose and takes the
 /// conservative default.
 const OPENAI_COMPATIBLE_FAMILIES: &[ModelFamily] = &[
+    ModelFamily {
+        prefix: "gpt-6",
+        window_tokens: 1_050_000,
+    },
+    // The 5.4 line splits: the flagship and pro carry 1,050,000, mini and nano 400,000, and the
+    // image model 272,000.
+    ModelFamily {
+        prefix: "gpt-5.4-mini",
+        window_tokens: 400_000,
+    },
+    ModelFamily {
+        prefix: "gpt-5.4-nano",
+        window_tokens: 400_000,
+    },
+    ModelFamily {
+        prefix: "gpt-5.4-image",
+        window_tokens: 272_000,
+    },
+    ModelFamily {
+        prefix: "gpt-5.4",
+        window_tokens: 1_050_000,
+    },
+    ModelFamily {
+        prefix: "gpt-5.5",
+        window_tokens: 1_050_000,
+    },
+    ModelFamily {
+        prefix: "gpt-5.6",
+        window_tokens: 1_050_000,
+    },
+    // The chat-tuned 5.2 is far smaller than the 5.x family it shares a stem with.
+    ModelFamily {
+        prefix: "gpt-5.2-chat",
+        window_tokens: 128_000,
+    },
     ModelFamily {
         prefix: "gpt-5",
         window_tokens: 400_000,
@@ -280,9 +391,9 @@ const OPENAI_COMPATIBLE_FAMILIES: &[ModelFamily] = &[
         window_tokens: 131_072,
     },
     // Zhipu's GLM line, which is what Fireworks serves in place of the Llamas it dropped.
-    // Fireworks reports 1,048,576 for `glm-5p3` (verified 2026-09-04), but a 128,000 floor
-    // already saturates the 60,000-token prompt cap, so claiming more buys nothing and this
-    // stays true for a smaller GLM on another host.
+    // Fireworks reports 1,048,576 for `glm-5p3` in its model list (verified 2026-10-27), which
+    // is what a Fireworks user gets; this floor is for the moment before that report arrives
+    // and for a smaller GLM on another host.
     ModelFamily {
         prefix: "glm-",
         window_tokens: 128_000,
@@ -303,15 +414,17 @@ const OPENAI_COMPATIBLE_FAMILIES: &[ModelFamily] = &[
         prefix: "llama-v3",
         window_tokens: 128_000,
     },
+    // Just under 128K, so a rounded 128,000 would overclaim (verified 2026-10-27, OpenRouter's
+    // `perplexity/sonar`; Perplexity's own model list doesn't serve its chat models).
     ModelFamily {
         prefix: "sonar",
-        window_tokens: 128_000,
+        window_tokens: 127_072,
     },
 ];
 
 /// Gemini's chat models carry a 1M-token window across 2.x and 3.x flash and pro; the image
 /// variants are far smaller, so they come first (verified 2026-10-26, `inputTokenLimit` in
-/// `GET /v1/models`).
+/// `GET /v1/models`, which `ai::model_capabilities` reads too).
 const GEMINI_FAMILIES: &[ModelFamily] = &[
     ModelFamily {
         prefix: "gemini-3-pro-image",
@@ -339,13 +452,35 @@ const GEMINI_FAMILIES: &[ModelFamily] = &[
     },
 ];
 
+/// Where a model's window came from. The settings surface names it, so a guess from the table
+/// never passes for the provider's word.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WindowSource {
+    /// The local server's configured context window (`ai.localContextSize`).
+    LocalServer,
+    /// The provider's own model list (`ai::model_capabilities`).
+    Provider,
+    /// This module's family table: a floor someone verified once, which may have aged.
+    FamilyTable,
+}
+
+/// A model's context window as far as anything here knows it, and who said so.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KnownWindow {
+    pub tokens: usize,
+    pub source: WindowSource,
+}
+
 /// Which source decided a budget. Carried out of [`resolve_prompt_budget`] and logged at
-/// send, so "60,000 because the table says `claude-` has 200,000" is distinguishable from
-/// "60,000 because you asked for it" and from "16,000 because nothing here knows this model".
+/// send, so "839,800 because Anthropic says this model has 1,000,000" is distinguishable from
+/// "160,000 because you asked for it", from "the table's guess", and from "16,000 because
+/// nothing here knows this model".
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BudgetSource {
     /// The user's explicit "Chat memory size" choice, used as given.
     UserSetting,
+    /// The window the provider's own model list reports.
+    ProviderReported,
     /// A model family this module recognizes.
     FamilyTable,
     /// The local server's configured context window (`ai.localContextSize`).
@@ -359,6 +494,7 @@ impl BudgetSource {
     pub fn label(self) -> &'static str {
         match self {
             Self::UserSetting => "the user's chat-memory setting",
+            Self::ProviderReported => "the window the provider reports",
             Self::FamilyTable => "the model-family table",
             Self::LocalServerWindow => "the local server's context window",
             Self::Default => "the conservative default (model not in the family table)",
@@ -377,6 +513,13 @@ pub struct BudgetInputs<'a> {
     /// The local server's configured window (`ai.localContextSize`). Only read for
     /// [`ProviderTag::Local`].
     pub local_context_tokens: u32,
+    /// The window the provider's model list reports for this model, when a report has arrived
+    /// (`ai::model_capabilities`). Ignored for [`ProviderTag::Local`], whose window is the
+    /// server's own setting.
+    pub reported_window_tokens: Option<usize>,
+    /// The reply's ceiling this slot sends (`effort::resolve_effort`): Automatic leaves that much of
+    /// the window free, since thinking, the reply, and its tool calls all come out of it.
+    pub reply_tokens: usize,
 }
 
 /// One resolved budget, plus everything needed to tell the user the truth about it.
@@ -388,8 +531,9 @@ pub struct ResolvedBudget {
     /// The window we believe this model has, when any source knows it. `None` means nothing
     /// here knows, so no claim about the window can honestly be made.
     pub known_window_tokens: Option<usize>,
-    /// The user's explicit size is larger than [`Self::known_window_tokens`]. It is used
-    /// ANYWAY: this table will be wrong sometimes and the user may be right about their own
+    /// The user's explicit size, plus the reply's room, is larger than
+    /// [`Self::known_window_tokens`]. It is used
+    /// ANYWAY: our knowledge will be wrong sometimes and the user may be right about their own
     /// model. The settings surface warns that the model may refuse a message this long.
     pub over_known_window: bool,
 }
@@ -404,21 +548,37 @@ pub enum BudgetRefusal {
     LocalWindowBelowFloor { window_tokens: u32, floor_tokens: u32 },
 }
 
-/// The window we believe a slot's model has: the local server's configured window, else the
-/// family table, else nothing. There is no provider-reported window to consult.
-pub fn known_window_tokens(provider: ProviderTag, model: &str, local_context_tokens: u32) -> Option<usize> {
-    if provider == ProviderTag::Local {
-        return Some(local_context_tokens as usize);
-    }
+/// The window we believe a slot's model has: the local server's configured window for a local
+/// model; for a cloud one, what the provider reports, else the family table; else nothing.
+pub fn known_window(
+    provider: ProviderTag,
+    model: &str,
+    local_context_tokens: u32,
+    reported_window_tokens: Option<usize>,
+) -> Option<KnownWindow> {
     let table = match provider {
+        ProviderTag::Local => {
+            return Some(KnownWindow {
+                tokens: local_context_tokens as usize,
+                source: WindowSource::LocalServer,
+            });
+        }
         ProviderTag::Anthropic => ANTHROPIC_FAMILIES,
         // The Responses API is the same OpenAI catalog with the same windows.
         ProviderTag::OpenAi | ProviderTag::OpenAiResponses => OPENAI_COMPATIBLE_FAMILIES,
         ProviderTag::Gemini => GEMINI_FAMILIES,
-        ProviderTag::Local => unreachable!("handled above"),
     };
+    if let Some(tokens) = reported_window_tokens {
+        return Some(KnownWindow {
+            tokens,
+            source: WindowSource::Provider,
+        });
+    }
     let id = normalized_model_id(model);
-    table.iter().find(|f| id.starts_with(f.prefix)).map(|f| f.window_tokens)
+    table.iter().find(|f| id.starts_with(f.prefix)).map(|f| KnownWindow {
+        tokens: f.window_tokens,
+        source: WindowSource::FamilyTable,
+    })
 }
 
 /// A model id reduced to what the family table matches on: lowercased, and stripped of any
@@ -432,9 +592,9 @@ fn normalized_model_id(model: &str) -> String {
 /// The assembled-prompt token budget for one slot, and where the number came from.
 ///
 /// The user's explicit choice wins outright, even above the window we think the model has
-/// (warned, never blocked). "Automatic" follows the local server's window for a local model
-/// and the family table for a cloud one, and falls back to [`DEFAULT_PROMPT_TOKEN_BUDGET`]
-/// for a model nothing here recognizes.
+/// (warned, never blocked). "Automatic" spends the whole known window ([`budget_for`]):
+/// the local server's for a local model, the provider's report or the family table for a cloud
+/// one, and falls back to [`DEFAULT_PROMPT_TOKEN_BUDGET`] for a model nothing here recognizes.
 pub fn resolve_prompt_budget(inputs: BudgetInputs<'_>) -> Result<ResolvedBudget, BudgetRefusal> {
     if inputs.provider == ProviderTag::Local && inputs.local_context_tokens < MIN_LOCAL_CONTEXT_TOKENS {
         return Err(BudgetRefusal::LocalWindowBelowFloor {
@@ -442,21 +602,34 @@ pub fn resolve_prompt_budget(inputs: BudgetInputs<'_>) -> Result<ResolvedBudget,
             floor_tokens: MIN_LOCAL_CONTEXT_TOKENS,
         });
     }
-    let known_window_tokens = known_window_tokens(inputs.provider, inputs.model, inputs.local_context_tokens);
+    let window = known_window(
+        inputs.provider,
+        inputs.model,
+        inputs.local_context_tokens,
+        inputs.reported_window_tokens,
+    );
+    let known_window_tokens = window.map(|w| w.tokens);
 
     if let Some(chosen) = inputs.user_choice {
         return Ok(ResolvedBudget {
             prompt_tokens: chosen,
             source: BudgetSource::UserSetting,
             known_window_tokens,
-            over_known_window: known_window_tokens.is_some_and(|window| chosen > window),
+            // The reply comes out of the same window: a provider refuses prompt plus `max_tokens` past it.
+            over_known_window: known_window_tokens.is_some_and(|window| chosen + inputs.reply_tokens > window),
         });
     }
 
-    let (prompt_tokens, source) = match (inputs.provider, known_window_tokens) {
-        (ProviderTag::Local, Some(window)) => (budget_for_window(window), BudgetSource::LocalServerWindow),
-        (_, Some(window)) => (budget_for_window(window), BudgetSource::FamilyTable),
-        (_, None) => (DEFAULT_PROMPT_TOKEN_BUDGET, BudgetSource::Default),
+    let (prompt_tokens, source) = match window {
+        Some(KnownWindow { tokens, source }) => (
+            budget_for(tokens, inputs.reply_tokens),
+            match source {
+                WindowSource::LocalServer => BudgetSource::LocalServerWindow,
+                WindowSource::Provider => BudgetSource::ProviderReported,
+                WindowSource::FamilyTable => BudgetSource::FamilyTable,
+            },
+        ),
+        None => (DEFAULT_PROMPT_TOKEN_BUDGET, BudgetSource::Default),
     };
     Ok(ResolvedBudget {
         prompt_tokens,
@@ -464,6 +637,25 @@ pub fn resolve_prompt_budget(inputs: BudgetInputs<'_>) -> Result<ResolvedBudget,
         known_window_tokens,
         over_known_window: false,
     })
+}
+
+/// The chat memory a thread's timeline names ("Chat memory changed to …"), which moves only when
+/// the USER moved something: their "Chat memory size" or the model. It's the prompt budget with
+/// the base reply slot (an effort only reserves more reply), sized from the family table when
+/// the table knows the model (a provider report arriving mid-thread would otherwise read as a
+/// change nobody made). The actual budget a turn assembles against is [`resolve_prompt_budget`]'s.
+pub fn chat_memory_figure(inputs: BudgetInputs<'_>) -> Result<usize, BudgetRefusal> {
+    let table_knows = known_window(inputs.provider, inputs.model, inputs.local_context_tokens, None).is_some();
+    resolve_prompt_budget(BudgetInputs {
+        reply_tokens: AGENT_MAX_OUTPUT_TOKENS as usize,
+        reported_window_tokens: if table_knows {
+            None
+        } else {
+            inputs.reported_window_tokens
+        },
+        ..inputs
+    })
+    .map(|resolved| resolved.prompt_tokens)
 }
 
 /// Estimate a string's token size (chars / [`CHARS_PER_TOKEN_ESTIMATE`]).
@@ -486,289 +678,4 @@ pub fn estimate_serialized_tokens<T: Serialize>(value: &T) -> usize {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// A slot on Automatic: the everyday case.
-    fn automatic(provider: ProviderTag, model: &str) -> ResolvedBudget {
-        resolve_prompt_budget(BudgetInputs {
-            provider,
-            model,
-            user_choice: None,
-            local_context_tokens: MIN_LOCAL_CONTEXT_TOKENS,
-        })
-        .expect("a cloud slot is never refused")
-    }
-
-    #[test]
-    fn automatic_follows_the_family_table() {
-        for (provider, model) in [
-            (ProviderTag::Anthropic, "claude-sonnet-4-5"),
-            (ProviderTag::OpenAi, "gpt-4o-mini"),
-            (ProviderTag::OpenAi, "gpt-4.1"),
-            (ProviderTag::OpenAiResponses, "gpt-5"),
-            (ProviderTag::OpenAi, "o4-mini"),
-            (ProviderTag::Gemini, "gemini-2.5-flash"),
-            (ProviderTag::Gemini, "gemini-3.8-flash"),
-        ] {
-            let resolved = automatic(provider, model);
-            assert_eq!(
-                (resolved.prompt_tokens, resolved.source),
-                (PROMPT_BUDGET_60K, BudgetSource::FamilyTable),
-                "the 60k budget covers {model}, from the table"
-            );
-        }
-    }
-
-    /// Every model Cmdr ships as a provider preset's default, from
-    /// `lib/settings/cloud-providers.ts`. A cloud family belongs in the table; a
-    /// local-endpoint preset (Ollama, LM Studio) or an unconfigured Custom endpoint does NOT,
-    /// because its window is whatever the user's own server was started with and guessing
-    /// high there is a rejected prompt.
-    #[test]
-    fn every_shipped_cloud_preset_is_in_the_family_table() {
-        for model in [
-            "gpt-4.1-mini",                                      // OpenAI, Azure OpenAI
-            "claude-sonnet-5-5",                                 // Anthropic
-            "gemini-3.8-flash",                                  // Google Gemini
-            "openai/gpt-oss-120b",                               // Groq
-            "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8", // Together AI
-            "accounts/fireworks/models/glm-5p3",                 // Fireworks AI
-            "mistral-small-latest",                              // Mistral AI
-            "openai/gpt-4.1-mini",                               // OpenRouter
-            "deepseek-chat",                                     // DeepSeek
-            "qwen-plus",                                         // Qwen
-            "grok-3-mini-fast",                                  // xAI
-            "sonar",                                             // Perplexity
-        ] {
-            let provider = match model {
-                m if m.starts_with("claude-") => ProviderTag::Anthropic,
-                m if m.starts_with("gemini-") => ProviderTag::Gemini,
-                _ => ProviderTag::OpenAi,
-            };
-            let resolved = automatic(provider, model);
-            assert_eq!(
-                resolved.source,
-                BudgetSource::FamilyTable,
-                "a provider preset defaults to {model}, so the table must know its window; \
-                 without a row it silently takes a {DEFAULT_PROMPT_TOKEN_BUDGET}-token slice of a far larger window"
-            );
-            assert_eq!(
-                resolved.prompt_tokens, PROMPT_BUDGET_60K,
-                "the table gives {model} a window of at least 128,000"
-            );
-        }
-    }
-
-    #[test]
-    fn an_unknown_model_falls_back_to_the_conservative_default() {
-        // Guessing high on an unknown slug is a hard provider rejection mid-turn, so the
-        // miss path must be the SMALL number, never the large one.
-        for model in [
-            "some-future-model-9000",
-            "gpt-3.5-turbo", // a small-window family, absent from the table on purpose
-            "llama3.2",      // Ollama's default: a window only the user's own server knows
-            "loaded-model",  // LM Studio's placeholder id
-            "",              // Custom, unconfigured
-        ] {
-            let resolved = automatic(ProviderTag::OpenAi, model);
-            assert_eq!(
-                (resolved.prompt_tokens, resolved.source, resolved.known_window_tokens),
-                (DEFAULT_PROMPT_TOKEN_BUDGET, BudgetSource::Default, None),
-                "{model} is not in the table, so nothing may claim to know its window"
-            );
-        }
-    }
-
-    #[test]
-    fn an_explicit_size_is_honoured_and_labelled() {
-        let resolved = resolve_prompt_budget(BudgetInputs {
-            provider: ProviderTag::Anthropic,
-            model: "claude-sonnet-4-5",
-            user_choice: Some(32_000),
-            local_context_tokens: 0,
-        })
-        .expect("a cloud slot is never refused");
-        assert_eq!(
-            (resolved.prompt_tokens, resolved.source),
-            (32_000, BudgetSource::UserSetting),
-            "the user's choice wins over the table, in both directions"
-        );
-        assert!(!resolved.over_known_window, "32,000 fits a 200,000-token window");
-    }
-
-    #[test]
-    fn a_size_above_the_known_window_warns_and_is_still_used() {
-        let resolved = resolve_prompt_budget(BudgetInputs {
-            provider: ProviderTag::OpenAi,
-            model: "gpt-4o", // 128,000
-            user_choice: Some(200_000),
-            local_context_tokens: 0,
-        })
-        .expect("a cloud slot is never refused");
-        // Never blocked: our table will be wrong sometimes and the user may be right about
-        // their own model. The UI names the consequence instead.
-        assert_eq!(resolved.prompt_tokens, 200_000);
-        assert_eq!(resolved.source, BudgetSource::UserSetting);
-        assert_eq!(resolved.known_window_tokens, Some(128_000));
-        assert!(resolved.over_known_window);
-    }
-
-    #[test]
-    fn an_unknown_model_cannot_be_over_its_window() {
-        // Nothing knows the window, so there is nothing to warn about — silence beats a
-        // guess dressed as a warning.
-        let resolved = resolve_prompt_budget(BudgetInputs {
-            provider: ProviderTag::OpenAi,
-            model: "some-future-model-9000",
-            user_choice: Some(200_000),
-            local_context_tokens: 0,
-        })
-        .expect("a cloud slot is never refused");
-        assert!(!resolved.over_known_window);
-        assert_eq!(resolved.known_window_tokens, None);
-    }
-
-    #[test]
-    fn a_local_budget_tracks_the_configured_context_window() {
-        let resolved = resolve_prompt_budget(BudgetInputs {
-            provider: ProviderTag::Local,
-            model: "ministral-3b",
-            user_choice: None,
-            local_context_tokens: 32_768,
-        })
-        .expect("a window at or above the floor resolves");
-        assert_eq!(
-            (resolved.prompt_tokens, resolved.source),
-            (19_660, BudgetSource::LocalServerWindow),
-            "60% of the window, so the reply keeps room in the same window"
-        );
-        assert_eq!(resolved.known_window_tokens, Some(32_768));
-        // The local provider never reads the cloud tables, whatever the model is called.
-        assert_eq!(
-            automatic(ProviderTag::Local, "claude-sonnet-4-5").prompt_tokens,
-            budget_for_window(MIN_LOCAL_CONTEXT_TOKENS as usize)
-        );
-    }
-
-    #[test]
-    fn a_local_window_under_the_floor_is_refused_honestly() {
-        // The setting can't produce this any more, but a server started with a smaller
-        // window still can. Assembling anyway would send a prompt the server must reject.
-        let refusal = resolve_prompt_budget(BudgetInputs {
-            provider: ProviderTag::Local,
-            model: "ministral-3b",
-            user_choice: None,
-            local_context_tokens: 4_096,
-        })
-        .expect_err("a window under the floor cannot hold one turn");
-        assert_eq!(
-            refusal,
-            BudgetRefusal::LocalWindowBelowFloor {
-                window_tokens: 4_096,
-                floor_tokens: MIN_LOCAL_CONTEXT_TOKENS,
-            }
-        );
-        // An explicit size can't talk a too-small server into working either.
-        assert!(
-            resolve_prompt_budget(BudgetInputs {
-                provider: ProviderTag::Local,
-                model: "ministral-3b",
-                user_choice: Some(60_000),
-                local_context_tokens: 4_096,
-            })
-            .is_err(),
-            "the window is the server's, not the setting's, so the refusal stands"
-        );
-    }
-
-    /// The assertion that decides where [`MIN_LOCAL_CONTEXT_TOKENS`] has to sit. A tool
-    /// joining the agent view grows the prefix, and this is what notices when the growth has
-    /// left the smallest window unable to hold a turn. ❌ Don't answer a failure here by
-    /// lowering the fraction; raise the floor, or make the prefix smaller.
-    #[test]
-    fn the_floor_leaves_room_for_a_prefix_and_a_paged_result() {
-        let floored = budget_for_window(MIN_LOCAL_CONTEXT_TOKENS as usize);
-        assert!(
-            floored > FIXED_PROMPT_OVERHEAD_TOKENS + MAX_TOOL_RESULT_TOKENS / 2,
-            "the floor exists so a local user gets a working turn: a budget of {floored} against \
-             a prefix of {FIXED_PROMPT_OVERHEAD_TOKENS}"
-        );
-        assert!(
-            files_per_batch(floored) > 0,
-            "a local user on the floor can rename a batch"
-        );
-    }
-
-    /// ⚠️ Memory is a PERMANENT tax: the system string is never elided, so whatever it claims
-    /// is gone from every turn of every thread for good. And the agent writes the file itself,
-    /// so a flat byte cap would let it degrade its own chat with no way back. At the smallest
-    /// window the app supports, a memory file sitting on its 64 KB disk cap has to be cut hard.
-    #[test]
-    fn memory_claims_a_share_of_the_budget_rather_than_a_fixed_block() {
-        let floored = budget_for_window(MIN_LOCAL_CONTEXT_TOKENS as usize);
-        let on_the_floor = memory_slice_bytes(floored);
-
-        assert!(
-            on_the_floor < crate::agent::memory::MEMORY_DIR_MAX_BYTES as usize,
-            "a memory file at its disk cap must be CUT at the smallest window, not carried whole: \
-             {} of a {floored}-token budget",
-            crate::pluralize::pluralize(on_the_floor as u64, "byte")
-        );
-        let workable = floored - FIXED_PROMPT_OVERHEAD_TOKENS;
-        assert!(
-            on_the_floor / CHARS_PER_TOKEN_ESTIMATE * 5 < workable,
-            "memory must leave the conversation the bulk of what the prefix didn't take: \
-             {} against {workable} workable tokens",
-            crate::pluralize::pluralize(on_the_floor as u64, "byte")
-        );
-        assert!(
-            memory_slice_bytes(PROMPT_BUDGET_60K) > on_the_floor,
-            "a bigger window has to be able to carry more of it, or the share is a constant in disguise"
-        );
-    }
-
-    #[test]
-    fn a_batch_hint_derives_from_the_budget() {
-        // (budget − 10% headroom − 6,263 of prefix) / 349 per file, while the prompt is what
-        // binds.
-        assert_eq!(files_per_batch(16_000), 23);
-        assert_eq!(files_per_batch(32_000), 64);
-        // Past roughly 45,000 the reply's own ceiling binds instead, and the hint stops
-        // growing with the budget: 6,000 emittable tokens / 59 per row.
-        assert_eq!(files_per_batch(60_000), 101);
-        assert_eq!(
-            files_per_batch(200_000),
-            101,
-            "a huge window still gets one reply's worth"
-        );
-        // A budget that can't even hold the prefix says so, rather than proposing one file.
-        assert_eq!(files_per_batch(2_000), 0);
-    }
-
-    /// The hint is advertised to the model as "propose this many files", and the model answers
-    /// by EMITTING that many plan rows. So a hint the completion slot can't hold doesn't
-    /// degrade, it truncates: the model is cut off mid-JSON and the whole plan is lost, which
-    /// is worse than a smaller batch. Reasoning tokens come out of the same slot, so the cap
-    /// has to leave room for them.
-    #[test]
-    fn a_batch_hint_never_exceeds_what_one_reply_can_emit() {
-        for budget in [16_000, 32_000, 60_000, 128_000, 200_000] {
-            let rows = files_per_batch(budget);
-            let plan_output = rows * PLAN_ROW_TOKENS_PER_FILE;
-            assert!(
-                plan_output <= AGENT_MAX_OUTPUT_TOKENS as usize - REASONING_RESERVE_TOKENS,
-                "a {budget}-token budget advertises a batch of {rows}, needing output of {plan_output}, \
-                 past what one reply can emit alongside its reasoning"
-            );
-        }
-    }
-
-    #[test]
-    fn estimates_agree_across_the_shapes_they_measure() {
-        assert_eq!(estimate_tokens_str("abcd"), 1);
-        assert_eq!(estimate_tokens_str("abcde"), 2, "partial tokens round up");
-        let value = serde_json::json!({ "a": "bc" });
-        assert_eq!(estimate_tokens_of_value(&value), estimate_serialized_tokens(&value));
-    }
-}
+mod tests;

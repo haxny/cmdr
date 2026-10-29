@@ -172,12 +172,6 @@ impl crate::Operations {
         initiator: cmdr_operation_log::types::Initiator,
         expected_sources: Option<ExpectedSources>,
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
-        super::super::super::validation::validate_transfer_destination_name(
-            &source_paths,
-            &dest_path,
-            config.destination_name.as_deref(),
-        )?;
-
         // Validate that volumes support the required operations
         if !source_volume.supports_export() {
             return Err(WriteOperationError::IoError {
@@ -188,7 +182,7 @@ impl crate::Operations {
 
         // Optimization: If both volumes are local filesystem paths, use the battle-tested
         // copy.rs implementation which has proper cancellation support via macOS copyfile API.
-        if let (Some(src_root), Some(dest_root)) = (source_volume.local_path(), dest_volume.local_path()) {
+        if let Some((src_root, dest_root)) = super::native_roots(source_volume.as_ref(), dest_volume.as_ref()) {
             log::debug!(
                 "copy_between_volumes: both volumes are local, delegating to native copy (src={}, dest={})",
                 LogPrivate::dir_path(&src_root),
@@ -199,7 +193,10 @@ impl crate::Operations {
             // joined: the IPC boundary already anchors what the transfer dialog
             // sends, and a raw join would re-root an absolute dest under itself
             // (`/Volumes/USB/sub` → `/Volumes/USB/Volumes/USB/sub`).
-            let absolute_sources: Vec<PathBuf> = source_paths.iter().map(|p| src_root.join(p)).collect();
+            let absolute_sources: Vec<PathBuf> = source_paths
+                .iter()
+                .map(|p| super::on_local_root(&src_root, p))
+                .collect();
             let absolute_dest = cmdr_fs::volume::root_anchored(&dest_root, &dest_path);
 
             // Convert VolumeCopyConfig to WriteOperationConfig, preserving preview_id
@@ -211,7 +208,8 @@ impl crate::Operations {
                 max_conflicts_to_show: config.max_conflicts_to_show,
                 preview_id: config.preview_id,
                 pre_known_conflicts: config.pre_known_conflicts,
-                destination_name: config.destination_name,
+                // Keyed by the re-rooted paths, in the same step as the sources.
+                leaves: config.leaves.rebased(|p| super::on_local_root(&src_root, p)),
                 space_shortfall: config.space_shortfall,
                 source_kinds: config.source_kinds,
                 ..Default::default()
@@ -616,12 +614,6 @@ pub async fn copy_volumes_with_progress(
     dest_path: &Path,
     config: &VolumeCopyConfig,
 ) -> Result<(), WriteFailure> {
-    super::super::super::validation::validate_transfer_destination_name(
-        source_paths,
-        dest_path,
-        config.destination_name.as_deref(),
-    )
-    .map_err(WriteFailure::synthetic)?;
     log::debug!(
         "copy_volumes_with_progress: starting operation_id={}, {} sources",
         operation_id,
@@ -753,10 +745,9 @@ pub async fn copy_volumes_with_progress(
         &*events,
     )
     .await?;
-    state.transfer_tree.install(
-        preflight.tree.take(),
-        TreeLanding::under(dest_path, config.destination_name.as_deref()),
-    );
+    state
+        .transfer_tree
+        .install(preflight.tree.take(), TreeLanding::under(dest_path, &config.leaves));
     let total_files = preflight.total_files;
     let total_bytes = preflight.total_bytes;
     let known_directory_paths = preflight.known_directory_paths();
@@ -897,16 +888,10 @@ pub async fn copy_volumes_with_progress(
     // these to a free ` (N)` name instead of ever asking. Local twin:
     // `../copy/mod.rs`. `DETAILS.md` § "Self-collision (duplicating in place)".
     pre_skip_paths.retain(|source| {
-        source
-            .file_name()
-            .map(|name| {
-                let target_name = config
-                    .destination_name
-                    .as_deref()
-                    .map(Path::new)
-                    .unwrap_or_else(|| Path::new(name));
-                !is_the_same_item(&source_volume, source, &dest_volume, &dest_path.join(target_name))
-            })
+        config
+            .leaves
+            .leaf_of(source)
+            .map(|leaf| !is_the_same_item(&source_volume, source, &dest_volume, &dest_path.join(leaf)))
             .unwrap_or(true)
     });
 

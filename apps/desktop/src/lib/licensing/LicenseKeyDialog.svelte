@@ -25,6 +25,7 @@
     import Spinner from '#lib/ui/Spinner.svelte'
     import Trans from '#lib/intl/Trans.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatLicenseDate } from '#lib/settings/sections/license-section-utils.js'
     import { addToast } from '#lib/ui/toast/toast-store.svelte.js'
 
     interface Props {
@@ -74,18 +75,6 @@
     const hasExistingLicense = $derived(existingLicense !== null)
     const cleanedKey = $derived(licenseKey.replace(/\s/g, ''))
 
-    function formatDate(dateStr: string | null | undefined): string {
-        if (!dateStr) return ''
-        try {
-            return new Date(dateStr).toLocaleDateString(undefined, {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-            })
-        } catch {
-            return dateStr
-        }
-    }
 
     function getLicenseTypeLabel(licenseType: string | null | undefined): string | null {
         if (licenseType === 'commercial_perpetual') return tString('licensing.dialog.typeCommercialPerpetual')
@@ -103,14 +92,14 @@
         if (s?.type === 'commercial') {
             if (s.licenseType === 'commercial_perpetual') {
                 return s.expiresAt
-                    ? tString('licensing.dialog.validityPerpetualUntil', { date: formatDate(s.expiresAt) })
+                    ? tString('licensing.dialog.validityPerpetualUntil', { date: formatLicenseDate(s.expiresAt) })
                     : tString('licensing.dialog.validityPerpetual')
             }
             return s.expiresAt
-                ? tString('licensing.dialog.validityValidUntil', { date: formatDate(s.expiresAt) })
+                ? tString('licensing.dialog.validityValidUntil', { date: formatLicenseDate(s.expiresAt) })
                 : tString('licensing.dialog.validityActive')
         }
-        if (s?.type === 'expired') return tString('licensing.dialog.validityExpiredOn', { date: formatDate(s.expiredAt) })
+        if (s?.type === 'expired') return tString('licensing.dialog.validityExpiredOn', { date: formatLicenseDate(s.expiredAt) })
         return null
     }
 
@@ -259,7 +248,7 @@
                 setCachedStatus(newStatus)
                 isServerInvalidError = false
                 showError(
-                    tString('licensing.dialog.expiredOnError', { date: formatDate(newStatus.expiredAt) }),
+                    tString('licensing.dialog.expiredOnError', { date: formatLicenseDate(newStatus.expiredAt) }),
                     tString('licensing.dialog.expiredOnHelp'),
                 )
             } else if (newStatus?.type === 'personal') {

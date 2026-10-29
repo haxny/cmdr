@@ -28,6 +28,13 @@
   editor adds or strips them at will, and the system prompt's bytes must not depend on that). The opener is the last
   text of a user message, where the newline carried nothing. The system prompt's bytes are unchanged by the move
   (verified by a byte-for-byte comparison against the old `const` before it was deleted, 2026-10-20).
+- **Decision: the system prompt asks for one sentence before every batch of tool calls.** Why: the rail renders a
+  turn's narration between the tool lines it explains, and without the ask the model narrated nothing. Measured live on
+  `claude-sonnet-5-5` (dev build, 2026-10-26): two tool-running turns (three rounds) with no ask put no text before any of them;
+  a softer "Before a batch of tool calls, say in one short sentence what you are checking." still got none; the current
+  "Every time you call tools, first write one short sentence…" narrated every round ("I'll check the biggest folders on
+  your Desktop first.", "Next, the contents of vo-test."). Cost: about 31 tokens of prefix. The fixed overhead
+  re-measured at 2,114 (system) + 4,275 (declarations) = 6,389 against the then-pinned 6,263, inside `cost_tests.rs`'s ±10%.
 
 ## Not here
 

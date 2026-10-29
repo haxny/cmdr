@@ -151,6 +151,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
         skip_ledger: Some(Arc::clone(&leaf_ledger)),
         // Skips and failures from the driver, `Done` from the closure below.
         report_source_outcomes: true,
+        leaves: config.leaves.clone(),
     };
     // The driver bounds its closures as
     // `for<'a> FnMut(...) -> Pin<Box<dyn Future + Send + 'a>>` — the
@@ -185,13 +186,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
         bulk_skip_bytes,
         pre_skip_paths,
         &driver_config,
-        super::landing::top_level_precheck(
-            state,
-            &dest_volume,
-            op_probe.clone(),
-            super::landing::NewName::Respell,
-            config.destination_name.as_deref(),
-        ),
+        super::landing::top_level_precheck(state, &dest_volume, op_probe.clone(), super::landing::NewName::Respell),
         super::top_level_conflict::TopLevelConflicts {
             source_volume: Arc::clone(&source_volume),
             dest_volume: Arc::clone(&dest_volume),

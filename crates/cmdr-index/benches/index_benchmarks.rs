@@ -235,7 +235,7 @@ fn assert_fixture_is_read(fixture: &Fixture) {
     );
 
     let stats = index()
-        .dir_stats_batch(&fixture.child_dirs)
+        .dir_stats_batch(ROOT_VOLUME_ID, &fixture.child_dirs)
         .expect("dir-stats batch over the fixture");
     let found = stats.iter().filter(|s| s.is_some()).count();
     assert_eq!(
@@ -291,7 +291,7 @@ fn bench_get_dir_stats_batch(c: &mut Criterion) {
 
         group.throughput(Throughput::Elements(dirs as u64));
         group.bench_with_input(BenchmarkId::from_parameter(dirs), &fixture.child_dirs, |b, paths| {
-            b.iter(|| index().dir_stats_batch(paths))
+            b.iter(|| index().dir_stats_batch(ROOT_VOLUME_ID, paths))
         });
 
         test_uninstall_root_read_pool();

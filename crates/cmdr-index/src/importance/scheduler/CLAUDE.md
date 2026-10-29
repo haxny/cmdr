@@ -26,10 +26,9 @@ Fills each volume's store: `mod.rs` (the `ImportanceScheduler` handle, `ScoringP
   deletes rows nothing re-adds. ❌ Don't reintroduce a `/` ⇒ full-pass escalation, which pegged a core.
 - **`sanitize_incremental_batch` gates the batch BEFORE the read pool and the walk**, dropping the bare `/`, empties,
   and every FLOORED path. ❌ Don't remove the idle floor.
-- **An incremental reads only the CHANGED SUBTREES** (`scoped_walk.rs`). ❌ Don't prune floored subtrees from the
-  descent (a marker inside a `node_modules` still raises the folders above it), ❌ don't add a `folders.is_empty()`
-  early return (an all-deleted batch is exactly the one whose rows must be CLEARED), ❌ don't raise
-  `SCOPED_WALK_MAX_ORIGINS` / `SCOPED_WALK_MAX_DIRS`.
+- **An incremental reads only the CHANGED SUBTREES** (`scoped_walk.rs`). ❌ Don't add a `folders.is_empty()` early
+  return (an all-deleted batch is exactly the one whose rows must be CLEARED), ❌ don't raise `SCOPED_WALK_MAX_ORIGINS`
+  / `SCOPED_WALK_MAX_DIRS`.
 - **An origin past `SCOPED_WALK_MAX_DIRS` is DEMOTED to rescoring itself alone** (`plan_incremental_batch`, keyed on
   `dir_stats.recursive_dir_count`, ❌ never a path shape). A demoted origin is ❌ NEVER in the clear list (or the clear
   wipes a subtree the pass didn't read) and absorbs ❌ NOTHING in `dedupe_nested_origins` (or `$HOME` swallows the real

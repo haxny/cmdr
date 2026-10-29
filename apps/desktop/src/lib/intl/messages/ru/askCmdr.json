@@ -168,6 +168,14 @@
   "@askCmdr.tool.proposeSuggestions.done": {
     "sourceHash": "42457d2"
   },
+  "askCmdr.tool.proposeServer.doing": "Подготовка предложения о сервере",
+  "@askCmdr.tool.proposeServer.doing": {
+    "sourceHash": "cf8e5f0"
+  },
+  "askCmdr.tool.proposeServer.done": "Предложение о сервере подготовлено",
+  "@askCmdr.tool.proposeServer.done": {
+    "sourceHash": "b075032"
+  },
   "askCmdr.tool.nothingToSuggest.doing": "Оценка, стоит ли об этом сообщать",
   "@askCmdr.tool.nothingToSuggest.doing": {
     "sourceHash": "51ef519"
@@ -192,6 +200,18 @@
   "@askCmdr.tool.memoryEdit.done": {
     "sourceHash": "5fdfbdc"
   },
+  "askCmdr.tool.connectVolume.doing": "Подключение к серверу",
+  "@askCmdr.tool.connectVolume.doing": {
+    "sourceHash": "5f24f83"
+  },
+  "askCmdr.tool.connectVolume.done": "Сервер подключен",
+  "@askCmdr.tool.connectVolume.done": {
+    "sourceHash": "8f89103"
+  },
+  "askCmdr.tool.connectVolume.tried": "Попытка подключиться к серверу",
+  "@askCmdr.tool.connectVolume.tried": {
+    "sourceHash": "b6d7bcf"
+  },
   "askCmdr.tool.unknown.doing": "В работе",
   "@askCmdr.tool.unknown.doing": {
     "sourceHash": "a92f044"
@@ -200,9 +220,450 @@
   "@askCmdr.tool.unknown.done": {
     "sourceHash": "05cc2be"
   },
-  "askCmdr.tool.refused": "Этот запрос недоступен",
-  "@askCmdr.tool.refused": {
-    "sourceHash": "f5e6dcc"
+  "askCmdr.tool.listDir.folder.doing": "Просмотр папки <place>{name}</place>",
+  "@askCmdr.tool.listDir.folder.doing": {
+    "sourceHash": "d9a6c6c"
+  },
+  "askCmdr.tool.listDir.folder.done": "Папка <place>{name}</place> просмотрена",
+  "@askCmdr.tool.listDir.folder.done": {
+    "sourceHash": "f079af1"
+  },
+  "askCmdr.tool.listPaneFiles.selection.doing": "Просмотр выделенных объектов в папке <place>{name}</place>",
+  "@askCmdr.tool.listPaneFiles.selection.doing": {
+    "sourceHash": "7beaf97"
+  },
+  "askCmdr.tool.listPaneFiles.selection.done": "Выделенные объекты в папке <place>{name}</place> просмотрены",
+  "@askCmdr.tool.listPaneFiles.selection.done": {
+    "sourceHash": "497e22a"
+  },
+  "askCmdr.tool.folderImportance.folder.doing": "Проверка важности папки <place>{name}</place>",
+  "@askCmdr.tool.folderImportance.folder.doing": {
+    "sourceHash": "59d84ca"
+  },
+  "askCmdr.tool.folderImportance.folder.done": "Важность папки <place>{name}</place> проверена",
+  "@askCmdr.tool.folderImportance.folder.done": {
+    "sourceHash": "f167904"
+  },
+  "askCmdr.tool.inspectFile.files.doing": "{others, plural, =0 {Просмотр содержимого файла <place>{name}</place>} one {Просмотр содержимого файла <place>{name}</place> и еще {othersText} файла} few {Просмотр содержимого файла <place>{name}</place> и еще {othersText} файлов} many {Просмотр содержимого файла <place>{name}</place> и еще {othersText} файлов} other {Просмотр содержимого файла <place>{name}</place> и еще {othersText} файла}}",
+  "@askCmdr.tool.inspectFile.files.doing": {
+    "sourceHash": "2038d00"
+  },
+  "askCmdr.tool.inspectFile.files.done": "{others, plural, =0 {Содержимое файла <place>{name}</place> просмотрено} one {Содержимое файла <place>{name}</place> и еще {othersText} файла просмотрено} few {Содержимое файла <place>{name}</place> и еще {othersText} файлов просмотрено} many {Содержимое файла <place>{name}</place> и еще {othersText} файлов просмотрено} other {Содержимое файла <place>{name}</place> и еще {othersText} файла просмотрено}}",
+  "@askCmdr.tool.inspectFile.files.done": {
+    "sourceHash": "63018e2"
+  },
+  "askCmdr.tool.imageFacts.files.doing": "{others, plural, =0 {Чтение содержимого фотографии <place>{name}</place>} one {Чтение содержимого фотографии <place>{name}</place> и еще {othersText} фотографии} few {Чтение содержимого фотографии <place>{name}</place> и еще {othersText} фотографий} many {Чтение содержимого фотографии <place>{name}</place> и еще {othersText} фотографий} other {Чтение содержимого фотографии <place>{name}</place> и еще {othersText} фотографии}}",
+  "@askCmdr.tool.imageFacts.files.doing": {
+    "sourceHash": "5e7fbe6"
+  },
+  "askCmdr.tool.imageFacts.files.done": "{others, plural, =0 {Содержимое фотографии <place>{name}</place> прочитано} one {Содержимое фотографии <place>{name}</place> и еще {othersText} фотографии прочитано} few {Содержимое фотографии <place>{name}</place> и еще {othersText} фотографий прочитано} many {Содержимое фотографии <place>{name}</place> и еще {othersText} фотографий прочитано} other {Содержимое фотографии <place>{name}</place> и еще {othersText} фотографии прочитано}}",
+  "@askCmdr.tool.imageFacts.files.done": {
+    "sourceHash": "b3df6a5"
+  },
+  "askCmdr.tool.search.queryInFolders.doing": "{folders, plural, =1 {Поиск «{query}» в папке <places>{placesText}</places>} one {Поиск «{query}» в папках <places>{placesText}</places>} few {Поиск «{query}» в папках <places>{placesText}</places>} many {Поиск «{query}» в папках <places>{placesText}</places>} other {Поиск «{query}» в папках <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.doing": {
+    "sourceHash": "61bd031"
+  },
+  "askCmdr.tool.search.queryInFolders.done": "{folders, plural, =1 {Завершен поиск «{query}» в папке <places>{placesText}</places>} one {Завершен поиск «{query}» в папках <places>{placesText}</places>} few {Завершен поиск «{query}» в папках <places>{placesText}</places>} many {Завершен поиск «{query}» в папках <places>{placesText}</places>} other {Завершен поиск «{query}» в папках <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.done": {
+    "sourceHash": "188f225"
+  },
+  "askCmdr.tool.search.query.doing": "Поиск «{query}»",
+  "@askCmdr.tool.search.query.doing": {
+    "sourceHash": "5b0939b"
+  },
+  "askCmdr.tool.search.query.done": "Поиск «{query}» завершен",
+  "@askCmdr.tool.search.query.done": {
+    "sourceHash": "04e348f"
+  },
+  "askCmdr.tool.search.inFolders.doing": "{folders, plural, =1 {Поиск в папке <places>{placesText}</places>} one {Поиск в папках <places>{placesText}</places>} few {Поиск в папках <places>{placesText}</places>} many {Поиск в папках <places>{placesText}</places>} other {Поиск в папках <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.doing": {
+    "sourceHash": "0989f2a"
+  },
+  "askCmdr.tool.search.inFolders.done": "{folders, plural, =1 {Завершен поиск в папке <places>{placesText}</places>} one {Завершен поиск в папках <places>{placesText}</places>} few {Завершен поиск в папках <places>{placesText}</places>} many {Завершен поиск в папках <places>{placesText}</places>} other {Завершен поиск в папках <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.done": {
+    "sourceHash": "017aef4"
+  },
+  "askCmdr.tool.searchPhotos.query.doing": "Поиск фотографий по запросу «{query}»",
+  "@askCmdr.tool.searchPhotos.query.doing": {
+    "sourceHash": "b2e0e1f"
+  },
+  "askCmdr.tool.searchPhotos.query.done": "Поиск фотографий по запросу «{query}» завершен",
+  "@askCmdr.tool.searchPhotos.query.done": {
+    "sourceHash": "5b60316"
+  },
+  "askCmdr.tool.proposeRenamePlan.count.doing": "{count, plural, one {Подготовка плана переименования {countText} файла} few {Подготовка плана переименования {countText} файлов} many {Подготовка плана переименования {countText} файлов} other {Подготовка плана переименования {countText} файла}}",
+  "@askCmdr.tool.proposeRenamePlan.count.doing": {
+    "sourceHash": "30c839d"
+  },
+  "askCmdr.tool.proposeRenamePlan.count.done": "{count, plural, one {План переименования {countText} файла подготовлен} few {План переименования {countText} файлов подготовлен} many {План переименования {countText} файлов подготовлен} other {План переименования {countText} файла подготовлен}}",
+  "@askCmdr.tool.proposeRenamePlan.count.done": {
+    "sourceHash": "2e2e790"
+  },
+  "askCmdr.tool.proposeSuggestions.count.doing": "{count, plural, one {Подготовка {countText} предложения} few {Подготовка {countText} предложений} many {Подготовка {countText} предложений} other {Подготовка {countText} предложения}}",
+  "@askCmdr.tool.proposeSuggestions.count.doing": {
+    "sourceHash": "971e695"
+  },
+  "askCmdr.tool.proposeSuggestions.count.done": "{count, plural, one {Подготовлено {countText} предложение} few {Подготовлено {countText} предложения} many {Подготовлено {countText} предложений} other {Подготовлено {countText} предложения}}",
+  "@askCmdr.tool.proposeSuggestions.count.done": {
+    "sourceHash": "cbb1273"
+  },
+  "askCmdr.tool.memoryWrite.file.doing": "Сохранение заметки в файл <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.doing": {
+    "sourceHash": "364c7ec"
+  },
+  "askCmdr.tool.memoryWrite.file.done": "Заметка сохранена в файл <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.done": {
+    "sourceHash": "8e7a923"
+  },
+  "askCmdr.tool.memoryWrite.file.tried": "Не удалось сохранить заметку в файл <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.tried": {
+    "sourceHash": "16921ce"
+  },
+  "askCmdr.tool.memoryWrite.tried": "Не удалось сохранить заметку",
+  "@askCmdr.tool.memoryWrite.tried": {
+    "sourceHash": "25f76fa"
+  },
+  "askCmdr.tool.memoryEdit.file.doing": "Обновление заметки <place>{name}</place>",
+  "@askCmdr.tool.memoryEdit.file.doing": {
+    "sourceHash": "17b6898"
+  },
+  "askCmdr.tool.memoryEdit.file.done": "Заметка <place>{name}</place> обновлена",
+  "@askCmdr.tool.memoryEdit.file.done": {
+    "sourceHash": "9dc9f76"
+  },
+  "askCmdr.tool.memoryEdit.file.tried": "Не удалось обновить заметку <place>{name}</place>",
+  "@askCmdr.tool.memoryEdit.file.tried": {
+    "sourceHash": "aeb94cd"
+  },
+  "askCmdr.tool.memoryEdit.tried": "Не удалось обновить заметки",
+  "@askCmdr.tool.memoryEdit.tried": {
+    "sourceHash": "015f12a"
+  },
+  "askCmdr.tool.unknown.named.doing": "Запрос инструмента «{name}»",
+  "@askCmdr.tool.unknown.named.doing": {
+    "sourceHash": "e220c3b"
+  },
+  "askCmdr.tool.unknown.named.done": "Запрошен инструмент «{name}»",
+  "@askCmdr.tool.unknown.named.done": {
+    "sourceHash": "2a9ce37"
+  },
+  "askCmdr.tool.showInPane": "Показать в панели: {path}",
+  "@askCmdr.tool.showInPane": {
+    "sourceHash": "98180ea"
+  },
+  "askCmdr.tool.repeat": "То же, что выше",
+  "@askCmdr.tool.repeat": {
+    "sourceHash": "87115ee"
+  },
+  "askCmdr.tool.outcomeSeparator": ", ",
+  "@askCmdr.tool.outcomeSeparator": {
+    "sourceHash": "0a07f65",
+    "sameAsSourceJustification": "Russian comma plus a space, the same punctuation and spacing as English (style.md § Typography)."
+  },
+  "askCmdr.tool.outcome.items": "{count, plural, one {{countText} объект} few {{countText} объекта} many {{countText} объектов} other {{countText} объекта}}",
+  "@askCmdr.tool.outcome.items": {
+    "sourceHash": "5fbad7e"
+  },
+  "askCmdr.tool.outcome.itemsShown": "показано {shownText} из {totalText}",
+  "@askCmdr.tool.outcome.itemsShown": {
+    "sourceHash": "87b4f4b"
+  },
+  "askCmdr.tool.outcome.itemsShownAtLeast": "показано {shownText} из {totalText} или больше",
+  "@askCmdr.tool.outcome.itemsShownAtLeast": {
+    "sourceHash": "e57786f"
+  },
+  "askCmdr.tool.outcome.matches": "{count, plural, one {{countText} совпадение} few {{countText} совпадения} many {{countText} совпадений} other {{countText} совпадения}}",
+  "@askCmdr.tool.outcome.matches": {
+    "sourceHash": "8804edf"
+  },
+  "askCmdr.tool.outcome.matchesSoFar": "{count, plural, one {пока {countText} совпадение} few {пока {countText} совпадения} many {пока {countText} совпадений} other {пока {countText} совпадения}}",
+  "@askCmdr.tool.outcome.matchesSoFar": {
+    "sourceHash": "712f992"
+  },
+  "askCmdr.tool.outcome.nothingFound": "ничего не найдено",
+  "@askCmdr.tool.outcome.nothingFound": {
+    "sourceHash": "9772cc8"
+  },
+  "askCmdr.tool.outcome.nothingFoundYet": "пока ничего не найдено",
+  "@askCmdr.tool.outcome.nothingFoundYet": {
+    "sourceHash": "0d0778e"
+  },
+  "askCmdr.tool.outcome.imageIndexingOff": "индексация изображений выключена",
+  "@askCmdr.tool.outcome.imageIndexingOff": {
+    "sourceHash": "5e9e5f6"
+  },
+  "askCmdr.tool.outcome.semanticModelNotInstalled": "модель семантического поиска не установлена",
+  "@askCmdr.tool.outcome.semanticModelNotInstalled": {
+    "sourceHash": "54dc9af"
+  },
+  "askCmdr.tool.outcome.staged": "{count, plural, one {к проверке: {countText}} few {к проверке: {countText}} many {к проверке: {countText}} other {к проверке: {countText}}}",
+  "@askCmdr.tool.outcome.staged": {
+    "sourceHash": "b0aba27"
+  },
+  "askCmdr.tool.outcome.notStaged": "проверять нечего",
+  "@askCmdr.tool.outcome.notStaged": {
+    "sourceHash": "40a1608"
+  },
+  "askCmdr.tool.outcome.toolUnavailable": "такого инструмента нет",
+  "@askCmdr.tool.outcome.toolUnavailable": {
+    "sourceHash": "9d46d4e"
+  },
+  "askCmdr.tool.outcome.repeatedCall": "пропущено: это уже пробовали",
+  "@askCmdr.tool.outcome.repeatedCall": {
+    "sourceHash": "059d9db"
+  },
+  "askCmdr.tool.outcome.problem": "не получилось",
+  "@askCmdr.tool.outcome.problem": {
+    "sourceHash": "05a940f"
+  },
+  "askCmdr.tool.outcome.miss.unknownVolume": "диска с таким именем нет",
+  "@askCmdr.tool.outcome.miss.unknownVolume": {
+    "sourceHash": "94aa69b"
+  },
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "не на указанном диске",
+  "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
+    "sourceHash": "5a87cd6"
+  },
+  "askCmdr.tool.outcome.miss.noVolumeAtPath": "там нет подключенного диска",
+  "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
+    "sourceHash": "8ce9e0e"
+  },
+  "askCmdr.tool.outcome.miss.volumeNotConnected": "этот диск не подключен",
+  "@askCmdr.tool.outcome.miss.volumeNotConnected": {
+    "sourceHash": "d7b4614"
+  },
+  "askCmdr.tool.outcome.miss.needsDiskAccess": "нужен полный доступ к диску",
+  "@askCmdr.tool.outcome.miss.needsDiskAccess": {
+    "sourceHash": "a0a6a84"
+  },
+  "askCmdr.tool.outcome.miss.unreachable": "диск не ответил",
+  "@askCmdr.tool.outcome.miss.unreachable": {
+    "sourceHash": "f39fad7"
+  },
+  "askCmdr.tool.outcome.miss.notFound": "отсутствует",
+  "@askCmdr.tool.outcome.miss.notFound": {
+    "sourceHash": "56ee722"
+  },
+  "askCmdr.tool.outcome.miss.excluded": "пропущенная системная папка",
+  "@askCmdr.tool.outcome.miss.excluded": {
+    "sourceHash": "8198768"
+  },
+  "askCmdr.tool.outcome.miss.permissionDenied": "нет прав доступа",
+  "@askCmdr.tool.outcome.miss.permissionDenied": {
+    "sourceHash": "75756a9"
+  },
+  "askCmdr.tool.outcome.miss.cancelled": "остановлено во время чтения",
+  "@askCmdr.tool.outcome.miss.cancelled": {
+    "sourceHash": "4389728"
+  },
+  "askCmdr.tool.outcome.connection.alreadyConnected": "уже подключено",
+  "@askCmdr.tool.outcome.connection.alreadyConnected": {
+    "sourceHash": "168827a"
+  },
+  "askCmdr.tool.outcome.connection.stillReconnecting": "повторное подключение еще идет",
+  "@askCmdr.tool.outcome.connection.stillReconnecting": {
+    "sourceHash": "078929e"
+  },
+  "askCmdr.tool.outcome.connection.needsCredentials": "нужно войти",
+  "@askCmdr.tool.outcome.connection.needsCredentials": {
+    "sourceHash": "1833a39"
+  },
+  "askCmdr.tool.outcome.connection.needsApproval": "нужно ваше одобрение",
+  "@askCmdr.tool.outcome.connection.needsApproval": {
+    "sourceHash": "80288d6"
+  },
+  "askCmdr.tool.outcome.connection.rejected": "сервер отказал",
+  "@askCmdr.tool.outcome.connection.rejected": {
+    "sourceHash": "53878fc"
+  },
+  "askCmdr.tool.outcome.connection.unreachable": "сервер не ответил",
+  "@askCmdr.tool.outcome.connection.unreachable": {
+    "sourceHash": "80aae90"
+  },
+  "askCmdr.tool.outcome.connection.notSaved": "этот сервер не сохранен",
+  "@askCmdr.tool.outcome.connection.notSaved": {
+    "sourceHash": "1ac6950"
+  },
+  "askCmdr.tool.outcome.connection.cancelled": "остановлено во время подключения",
+  "@askCmdr.tool.outcome.connection.cancelled": {
+    "sourceHash": "2934c58"
+  },
+  "askCmdr.tool.outcome.memory.outsideMemory": "файл вне папки заметок",
+  "@askCmdr.tool.outcome.memory.outsideMemory": {
+    "sourceHash": "c320cc4"
+  },
+  "askCmdr.tool.outcome.memory.notMarkdown": "заметки должны быть файлами Markdown",
+  "@askCmdr.tool.outcome.memory.notMarkdown": {
+    "sourceHash": "a75dc2f"
+  },
+  "askCmdr.tool.outcome.memory.noPath": "файл заметки не указан",
+  "@askCmdr.tool.outcome.memory.noPath": {
+    "sourceHash": "6392377"
+  },
+  "askCmdr.tool.outcome.memory.directoryFull": "папка заметок заполнена",
+  "@askCmdr.tool.outcome.memory.directoryFull": {
+    "sourceHash": "330a5d9"
+  },
+  "askCmdr.tool.outcome.memory.noSuchFile": "такой заметки нет",
+  "@askCmdr.tool.outcome.memory.noSuchFile": {
+    "sourceHash": "e11b4e5"
+  },
+  "askCmdr.tool.outcome.memory.noMatch": "в заметке нет текста для замены",
+  "@askCmdr.tool.outcome.memory.noMatch": {
+    "sourceHash": "ed063fe"
+  },
+  "askCmdr.tool.outcome.memory.notUnique": "текст для замены встречается в заметке больше одного раза",
+  "@askCmdr.tool.outcome.memory.notUnique": {
+    "sourceHash": "1527ba7"
+  },
+  "askCmdr.tool.outcome.memory.unwritable": "не удалось записать заметку",
+  "@askCmdr.tool.outcome.memory.unwritable": {
+    "sourceHash": "4edf07b"
+  },
+  "askCmdr.tool.outcome.memory.unavailable": "папка заметок недоступна",
+  "@askCmdr.tool.outcome.memory.unavailable": {
+    "sourceHash": "bcf32e3"
+  },
+  "askCmdr.tool.outcome.memory.other": "заметка не изменена",
+  "@askCmdr.tool.outcome.memory.other": {
+    "sourceHash": "00d5f3c"
+  },
+  "askCmdr.tool.outcome.noAnswer": "ответ не получен",
+  "@askCmdr.tool.outcome.noAnswer": {
+    "sourceHash": "43eb550"
+  },
+  "askCmdr.tool.details": "Результат запроса",
+  "@askCmdr.tool.details": {
+    "sourceHash": "79665b6"
+  },
+  "askCmdr.tool.preview.loading": "Загрузка результата запроса",
+  "@askCmdr.tool.preview.loading": {
+    "sourceHash": "99e2019"
+  },
+  "askCmdr.tool.preview.given": "Модели показано {givenText} из {totalText}",
+  "@askCmdr.tool.preview.given": {
+    "sourceHash": "8384012"
+  },
+  "askCmdr.tool.preview.givenSoFar": "Пока найдено: {totalText}, модели показано: {givenText}",
+  "@askCmdr.tool.preview.givenSoFar": {
+    "sourceHash": "2235a21"
+  },
+  "askCmdr.tool.preview.firstRows": "{count, plural, =1 {Здесь показана первая запись. Весь результат копирует кнопка «Скопировать».} one {Показано первых записей: {countText}. Весь результат копирует кнопка «Скопировать».} few {Показано первых записей: {countText}. Весь результат копирует кнопка «Скопировать».} many {Показано первых записей: {countText}. Весь результат копирует кнопка «Скопировать».} other {Показано первых записей: {countText}. Весь результат копирует кнопка «Скопировать».}}",
+  "@askCmdr.tool.preview.firstRows": {
+    "sourceHash": "1b695fc"
+  },
+  "askCmdr.tool.preview.noRows": "Здесь нечего показать списком. Весь результат копирует кнопка «Скопировать».",
+  "@askCmdr.tool.preview.noRows": {
+    "sourceHash": "d80bc30"
+  },
+  "askCmdr.tool.preview.problemLabel": "Что сообщили модели:",
+  "@askCmdr.tool.preview.problemLabel": {
+    "sourceHash": "edf1200"
+  },
+  "askCmdr.tool.preview.setAside": "Этот результат убрали, чтобы освободить место, поэтому показать нечего.",
+  "@askCmdr.tool.preview.setAside": {
+    "sourceHash": "2b7a0ee"
+  },
+  "askCmdr.tool.preview.notFound": "Этого результата больше нет.",
+  "@askCmdr.tool.preview.notFound": {
+    "sourceHash": "eaa5a2c"
+  },
+  "askCmdr.tool.preview.unavailable": "Cmdr сейчас не может прочитать этот результат.",
+  "@askCmdr.tool.preview.unavailable": {
+    "sourceHash": "5649f24"
+  },
+  "askCmdr.tool.preview.line": "строка {lineText}",
+  "@askCmdr.tool.preview.line": {
+    "sourceHash": "7d8370c"
+  },
+  "askCmdr.tool.preview.status.missing": "отсутствует",
+  "@askCmdr.tool.preview.status.missing": {
+    "sourceHash": "56ee722"
+  },
+  "askCmdr.tool.preview.status.unreadable": "не удалось прочитать",
+  "@askCmdr.tool.preview.status.unreadable": {
+    "sourceHash": "1e9c923"
+  },
+  "askCmdr.tool.preview.status.unreachable": "нет связи",
+  "@askCmdr.tool.preview.status.unreachable": {
+    "sourceHash": "86f57c8"
+  },
+  "askCmdr.tool.preview.status.unsupportedVolume": "на диске, куда ИИ не может заглянуть",
+  "@askCmdr.tool.preview.status.unsupportedVolume": {
+    "sourceHash": "945bf7c"
+  },
+  "askCmdr.tool.preview.status.noVolumeAtPath": "на диске, который не подключен",
+  "@askCmdr.tool.preview.status.noVolumeAtPath": {
+    "sourceHash": "3b32abe"
+  },
+  "askCmdr.tool.preview.status.notIndexed": "еще не проиндексировано",
+  "@askCmdr.tool.preview.status.notIndexed": {
+    "sourceHash": "c0da718"
+  },
+  "askCmdr.tool.preview.copy": "Скопировать",
+  "@askCmdr.tool.preview.copy": {
+    "sourceHash": "e21f935"
+  },
+  "askCmdr.tool.preview.copyLabel": "Скопировать весь результат в формате JSON",
+  "@askCmdr.tool.preview.copyLabel": {
+    "sourceHash": "91a0434"
+  },
+  "askCmdr.tool.preview.copied": "Скопировано",
+  "@askCmdr.tool.preview.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "askCmdr.tool.preview.copyRefused": "Буфер обмена не принял текст. Попробовать еще раз?",
+  "@askCmdr.tool.preview.copyRefused": {
+    "sourceHash": "5b856ff"
+  },
+  "askCmdr.toolGroup.summary": "Просмотрено: {parts}",
+  "@askCmdr.toolGroup.summary": {
+    "sourceHash": "2808d11"
+  },
+  "askCmdr.toolGroup.summaryRunning": "Просмотр: {parts}",
+  "@askCmdr.toolGroup.summaryRunning": {
+    "sourceHash": "db287ea"
+  },
+  "askCmdr.toolGroup.folders": "{count, plural, one {{countText} папка} few {{countText} папки} many {{countText} папок} other {{countText} папки}}",
+  "@askCmdr.toolGroup.folders": {
+    "sourceHash": "3c46f04"
+  },
+  "askCmdr.toolGroup.files": "{count, plural, one {{countText} файл} few {{countText} файла} many {{countText} файлов} other {{countText} файла}}",
+  "@askCmdr.toolGroup.files": {
+    "sourceHash": "3c08428"
+  },
+  "askCmdr.toolGroup.searches": "{count, plural, one {{countText} поиск} few {{countText} поиска} many {{countText} поисков} other {{countText} поиска}}",
+  "@askCmdr.toolGroup.searches": {
+    "sourceHash": "f280511"
+  },
+  "askCmdr.toolGroup.checks": "{count, plural, one {{countText} проверка} few {{countText} проверки} many {{countText} проверок} other {{countText} проверки}}",
+  "@askCmdr.toolGroup.checks": {
+    "sourceHash": "a09f7fb"
+  },
+  "askCmdr.toolGroup.plans": "{count, plural, one {{countText} план} few {{countText} плана} many {{countText} планов} other {{countText} плана}}",
+  "@askCmdr.toolGroup.plans": {
+    "sourceHash": "bd332c0"
+  },
+  "askCmdr.toolGroup.notes": "{count, plural, one {{countText} заметка} few {{countText} заметки} many {{countText} заметок} other {{countText} заметки}}",
+  "@askCmdr.toolGroup.notes": {
+    "sourceHash": "2623802"
+  },
+  "askCmdr.toolGroup.other": "{count, plural, one {{countText} другой шаг} few {{countText} других шага} many {{countText} других шагов} other {{countText} другого шага}}",
+  "@askCmdr.toolGroup.other": {
+    "sourceHash": "6108287"
+  },
+  "askCmdr.turnStats.summary": "{calls, plural, one {{callsText} вызов инструмента} few {{callsText} вызова инструментов} many {{callsText} вызовов инструментов} other {{callsText} вызова инструментов}} · {duration} · {tokens, plural, one {{tokensText} токен} few {{tokensText} токена} many {{tokensText} токенов} other {{tokensText} токена}}",
+  "@askCmdr.turnStats.summary": {
+    "sourceHash": "a7d484d"
+  },
+  "askCmdr.turnStats.summaryNoDuration": "{calls, plural, one {{callsText} вызов инструмента} few {{callsText} вызова инструментов} many {{callsText} вызовов инструментов} other {{callsText} вызова инструментов}} · {tokens, plural, one {{tokensText} токен} few {{tokensText} токена} many {{tokensText} токенов} other {{tokensText} токена}}",
+  "@askCmdr.turnStats.summaryNoDuration": {
+    "sourceHash": "d768ba2"
+  },
+  "askCmdr.turnStats.stopped": "Остановлено · {summary}",
+  "@askCmdr.turnStats.stopped": {
+    "sourceHash": "0f6ea99"
   },
   "askCmdr.error.noKey": "Добавьте API-ключ в настройках, чтобы начать общение.",
   "@askCmdr.error.noKey": {
@@ -247,6 +708,66 @@
   "askCmdr.error.budgetExhausted": "Этот ответ уперся в лимит, не дойдя до конца. Попробуйте спросить что-то более конкретное.",
   "@askCmdr.error.budgetExhausted": {
     "sourceHash": "ea2beb2"
+  },
+  "askCmdr.limit.toolRounds.answered": "Этот ответ уперся в лимит Cmdr (не больше {maxText} {max, plural, one {раунда} few {раундов} many {раундов} other {раунда}} поиска), поэтому поиск остановлен, а ответ собран из того, что удалось найти.",
+  "@askCmdr.limit.toolRounds.answered": {
+    "sourceHash": "3e45f64"
+  },
+  "askCmdr.limit.toolRounds.unfinished": "Этот ответ уперся в лимит Cmdr (не больше {maxText} {max, plural, one {раунда} few {раундов} many {раундов} other {раунда}} поиска) и не успел завершиться.",
+  "@askCmdr.limit.toolRounds.unfinished": {
+    "sourceHash": "ee13e2d"
+  },
+  "askCmdr.limit.wallTime": "Этот ответ уперся в лимит Cmdr (не больше {minutesText} {minutes, plural, one {минуты} few {минут} many {минут} other {минуты}} на ответ) и не успел завершиться.",
+  "@askCmdr.limit.wallTime": {
+    "sourceHash": "fc47e07"
+  },
+  "askCmdr.limit.repeatedCall.answered": "Этот ответ раз за разом повторял один и тот же поиск, поэтому Cmdr остановил поиск, а ответ собран из того, что удалось найти.",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "sourceHash": "884a9ae"
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "Этот ответ раз за разом повторял один и тот же поиск, поэтому Cmdr остановил его, и он не успел завершиться.",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "sourceHash": "c21dbe9"
+  },
+  "askCmdr.limit.noProgress.answered": "За последние {maxText} {max, plural, one {раунд} few {раунда} many {раундов} other {раунда}} поиска этот ответ не нашел ничего нового, поэтому Cmdr остановил поиск, а ответ собран из того, что удалось найти.",
+  "@askCmdr.limit.noProgress.answered": {
+    "sourceHash": "6dc1bc0"
+  },
+  "askCmdr.limit.noProgress.unfinished": "За последние {maxText} {max, plural, one {раунд} few {раунда} many {раундов} other {раунда}} поиска этот ответ не нашел ничего нового, поэтому Cmdr остановил его, и он не успел завершиться.",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "sourceHash": "30c3354"
+  },
+  "askCmdr.limit.stalled": "Поставщик ИИ ничего не присылал {maxText} {max, plural, one {секунду} few {секунды} many {секунд} other {секунды}}, поэтому Cmdr завершил этот ответ.",
+  "@askCmdr.limit.stalled": {
+    "sourceHash": "6b72ac1"
+  },
+  "askCmdr.spendPause.question": "Пока этот ответ обошелся примерно в {cost}. Продолжить?",
+  "@askCmdr.spendPause.question": {
+    "sourceHash": "a59f9e2"
+  },
+  "askCmdr.spendPause.estimateNote": "Это примерная стоимость по базовым тарифам. Из-за кэширования у вашего поставщика реальная стоимость обычно ниже.",
+  "@askCmdr.spendPause.estimateNote": {
+    "sourceHash": "0ca2362"
+  },
+  "askCmdr.spendPause.keepGoing": "Продолжить",
+  "@askCmdr.spendPause.keepGoing": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.spendPause.stop": "Остановить",
+  "@askCmdr.spendPause.stop": {
+    "sourceHash": "cae7d57"
+  },
+  "askCmdr.limit.fixed": "Это фиксированный лимит, и в настройках его не изменить. Если он мешает, <feedback>напишите нам</feedback>.",
+  "@askCmdr.limit.fixed": {
+    "sourceHash": "d0c4bc7"
+  },
+  "askCmdr.limit.continue": "Продолжить",
+  "@askCmdr.limit.continue": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.limit.continueMessage": "Пожалуйста, продолжайте с того места, где остановились.",
+  "@askCmdr.limit.continueMessage": {
+    "sourceHash": "8c7a012"
   },
   "askCmdr.error.repeatedToolCall": "Один и тот же поиск повторялся без результата. Попробуйте спросить по-другому.",
   "@askCmdr.error.repeatedToolCall": {
@@ -356,9 +877,33 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
-  "askCmdr.composer.providerOff": "Включите поставщика ИИ в настройках, чтобы начать общение.",
-  "@askCmdr.composer.providerOff": {
-    "sourceHash": "e466415"
+  "askCmdr.composer.sendNeedsProvider": "Настройте поставщика ИИ, чтобы отправить",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Для общения Ask Cmdr нужен поставщик ИИ. Выберите его в настройках.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Облачному поставщику ИИ нужен API-ключ, чтобы Ask Cmdr мог общаться. Добавьте его в настройках.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Облачному поставщику ИИ нужен адрес, чтобы Ask Cmdr мог общаться. Добавьте его в настройках.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "Локальный ИИ еще не загружен, поэтому Ask Cmdr не может общаться. Установите его в настройках.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "Локальный ИИ не запущен, поэтому Ask Cmdr не может общаться. Запустите его в настройках.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "Открыть настройки ИИ",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
   },
   "askCmdr.attachment.remove": "Удалить вложение",
   "@askCmdr.attachment.remove": {
@@ -386,7 +931,7 @@
   },
   "askCmdr.gate.cloudOff.openSettings": "Открыть настройки ИИ",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "Забыть все, что Cmdr помнит о вас?",
   "@askCmdr.forget.title": {
@@ -415,6 +960,14 @@
   "askCmdr.cost.estimate": "около {amount}",
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
+  },
+  "askCmdr.cost.underAmount": "меньше {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "Сумма указана в USD и не учитывает кэширование у вашего поставщика. Реальный счет, скорее всего, составит лишь долю этой суммы, потому что общий контекст наших вызовов кэшируется.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
   },
   "askCmdr.cost.unknown": "стоимость неизвестна",
   "@askCmdr.cost.unknown": {
@@ -688,6 +1241,10 @@
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
   },
+  "askCmdr.context.baselineTooltip": "Каждое сообщение начинается примерно с {usedText} из {budgetText} {budget, plural, one {токена} few {токенов} many {токенов} other {токена}} на инструкции и инструменты Cmdr",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
+  },
   "askCmdr.wake.thinking": "Cmdr просматривает изменения. Откройте чат.",
   "@askCmdr.wake.thinking": {
     "sourceHash": "772ca6e"
@@ -795,6 +1352,30 @@
   "askCmdr.decision.verbExtract": "распаковка",
   "@askCmdr.decision.verbExtract": {
     "sourceHash": "c924f71"
+  },
+  "askCmdr.decision.serverRejected": "Вы отклонили {verbName}",
+  "@askCmdr.decision.serverRejected": {
+    "sourceHash": "b9797ee"
+  },
+  "askCmdr.decision.serverApproved": "Вы одобрили {verbName}",
+  "@askCmdr.decision.serverApproved": {
+    "sourceHash": "5ed18c2"
+  },
+  "askCmdr.decision.verbAddServer": "добавление сервера",
+  "@askCmdr.decision.verbAddServer": {
+    "sourceHash": "0304bc5"
+  },
+  "askCmdr.decision.verbEditServer": "изменение настроек сервера",
+  "@askCmdr.decision.verbEditServer": {
+    "sourceHash": "155d3fd"
+  },
+  "askCmdr.decision.saved": "Сохранен",
+  "@askCmdr.decision.saved": {
+    "sourceHash": "b5c120b"
+  },
+  "askCmdr.decision.savedNotShare": "Сохранен сервер, но не его общая папка",
+  "@askCmdr.decision.savedNotShare": {
+    "sourceHash": "e93a7bc"
   },
   "askCmdr.railBoundary.closedToast": "В Ask Cmdr возникла проблема, и он закрылся. Откройте его снова, чтобы продолжить.",
   "@askCmdr.railBoundary.closedToast": {

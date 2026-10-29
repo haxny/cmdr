@@ -34,6 +34,13 @@
     "confidence": "high",
     "sources": "MS terminology pt-BR (account → conta); shipped pt catalog"
   },
+  "action": {
+    "chosen": "ação",
+    "accept": ["ações"],
+    "forms": "the actions below → as ações abaixo",
+    "confidence": "high",
+    "sources": "macOS pt-BR Finder LocalizableMerged SP95/TL26 (Action → Ação); catalog (settings.operationLog.intro, onboarding.stepAi.comparisonIntro)"
+  },
   "activate": {
     "chosen": "Ativar",
     "accept": ["ativa", "ativá", "ativou"],
@@ -60,6 +67,17 @@
     "forms": "Cmdr Settings section → Avançado; quote settings.section.advanced exactly in navigation paths",
     "sources": "Network.appex Localizable (ADVANCED); catalog settings.section.advanced (macOS 26.6.2 build 25G83, live loctable key cross-reference, 2026-10-02)"
   },
+  "ai-context": {
+    "chosen": "contexto",
+    "confidence": "high",
+    "sources": "MS terminology (context → contexto); askCmdr.cost.estimateTooltip"
+  },
+  "ai-agent": {
+    "chosen": "agente",
+    "forms": "masculine: o agente",
+    "confidence": "high",
+    "sources": "Microsoft terminology (agent → agente); catalog (queryUi.ai.lead); macOS has no AI-agent sense"
+  },
   "ai-feature": {
     "chosen": "recursos de IA",
     "accept": ["a IA", "à IA", "de IA", "por IA"],
@@ -79,6 +97,13 @@
     "accept": ["respostas", "respond"],
     "confidence": "high",
     "sources": "MS terminology pt-BR resposta; catalog"
+  },
+  "ai-lookup": {
+    "accept": ["consultas"],
+    "chosen": "consulta",
+    "confidence": "high",
+    "forms": "a round of lookups → rodada de consultas",
+    "sources": "catalog precedent: `askCmdr.error.repeatedToolCall`, `askCmdr.event.contextTrimmed`"
   },
   "ai-tool": {
     "chosen": "ferramenta",
@@ -157,7 +182,7 @@
   },
   "apply": {
     "chosen": "Aplicar",
-    "accept": ["aplica"],
+    "accept": ["aplica", "aplique"],
     "confidence": "high",
     "sources": "MS terminology pt-BR; shipped pt catalog"
   },
@@ -643,11 +668,23 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR ConnectToWindow, NetAuthAgent (Conectar)"
   },
+  "conversation": {
+    "chosen": "conversa",
+    "confidence": "high",
+    "sources": "MS terminology pt-BR (conversa); shipped settings.askCmdr.chatMemorySize.description",
+    "accept": ["conversas", "chat"]
+  },
   "learn-more": {
     "chosen": "Mais sobre",
     "confidence": "high",
     "forms": "More about “X” → Mais sobre “X”",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "nível",
+    "confidence": "high",
+    "sources": "MS terminology pt-BR (nível); shipped settings.archives.compressionLevel.label",
+    "accept": ["níveis", "zoom"]
   },
   "link": {
     "chosen": "link",
@@ -1705,6 +1742,13 @@
     "forms": "the Servers list → a lista Servidores (the row name after the noun, like grupo Rede)",
     "confidence": "high",
     "sources": "macOS pt-BR Finder “Lista” (view as List); Microsoft pt-BR terminology list → lista; Nautilus pt_BR “Visão em lista”"
+  },
+  "listing": {
+    "chosen": "listar",
+    "accept": ["Listando", "Listou", "Listagem"],
+    "forms": "Ask Cmdr tool line → Listando <place>{name}</place> / Listou <place>{name}</place>; the Settings section Listing → Listagem (settings.section.listing)",
+    "confidence": "high",
+    "sources": "Double Commander pt-BR (Listing → Listando, Listing \"%s\" → Listando \"%s\"); catalog (askCmdr.tool.listDir.doing Listando uma pasta)"
   },
   "local": {
     "chosen": "local",
@@ -2874,7 +2918,7 @@
   "slow": {
     "chosen": "lento",
     "accept": ["lenta", "devagar"],
-    "proseAccept": ["demorando"],
+    "proseAccept": ["demorando", "demoram"],
     "forms": "4x mais lenta do que …; a volume slow to answer → o volume está demorando para responder",
     "confidence": "high",
     "sources": "MS terminology pt-BR (conexão mais lenta)"
@@ -2901,6 +2945,13 @@
     "forms": "transfer-dialog heading From → De",
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR; MS terminology pt-BR"
+  },
+  "start": {
+    "chosen": "começar",
+    "accept": ["começ", "inici", "executad"],
+    "forms": "a task starting → começar; so nothing started → então nada começou; Why this didn’t start → Por que isto não começou; the suggestion refusals say nada foi executado",
+    "confidence": "high",
+    "sources": "catalog (suggestedOps.refusal.label Por que isto não começou; fileOperations.transferProgress.rowsStillSettlingToast então nada começou; nada foi executado 3×)"
   },
   "start-up": {
     "chosen": "inicialização",
@@ -2940,7 +2991,7 @@
   },
   "stop": {
     "chosen": "Parar",
-    "accept": ["parou", "pare", "param", "interromp", "para de", "parando", "parado"],
+    "accept": ["parou", "pare", "param", "interromp", "para de", "parando", "parado", "parass"],
     "forms": "The transfer has stopped moving → A transferência parou de avançar",
     "avoid": [
       {
@@ -3106,7 +3157,8 @@
   "thinking": {
     "chosen": "Pensando",
     "confidence": "high",
-    "sources": "shipped pt catalog"
+    "sources": "shipped pt catalog",
+    "proseAccept": ["pens", "raciocínio"]
   },
   "this-mac": {
     "chosen": "este Mac",
@@ -3440,6 +3492,13 @@
     },
     "sources": "shipped pt catalog"
   },
+  "zip": {
+    "chosen": "zip",
+    "accept": ["arquivo zip", "arquivos zip", "Zip"],
+    "forms": "masculine bare prose noun (o zip, no zip, do zip); a zip archive → um arquivo zip (Finder's Arquivo zip; see archive)",
+    "confidence": "high",
+    "sources": "macOS Finder pt-BR (Zip file → Arquivo zip); catalog (no zip, do zip 6×, arquivos zip 3×)"
+  },
   "zoom": {
     "chosen": "zoom",
     "accept": ["Ampliar", "Reduzir"],
@@ -3617,5 +3676,20 @@
     "confidence": "high",
     "sources": "shipped pt catalog (multiRename.removeDiacritics, multiRename.preset.removeDiacritics Remover acentos)",
     "note": "Everyday pt-BR calls every letter mark (´ ` ^ ~ ¨) acento; diacríticos is bookish."
+  },
+  "reasoning-effort": {
+    "chosen": "Esforço de raciocínio",
+    "confidence": "tentative",
+    "sources": "OpenAI docs are English-only; no established rendering, so built from the locale’s reasoning wording"
+  },
+  "reasoning-effort-anthropic": {
+    "chosen": "Esforço",
+    "confidence": "high",
+    "sources": "Anthropic localized docs, platform.claude.com/docs/<lang>/build-with-claude/effort, read 2026-10-28 (pt-BR title Esforço)"
+  },
+  "thinking-level": {
+    "chosen": "Nível de pensamento",
+    "confidence": "tentative",
+    "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (Pensamento do Gemini)"
   }
 }

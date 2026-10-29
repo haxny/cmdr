@@ -381,7 +381,9 @@ split-layout rule, and the `SettingPasswordInput` store-driven vs controlled mod
   item checked from the same persisted key), and the reverse direction, a menu click arriving as `settings-changed`,
   writes the setting from `routes/(main)/listener-setup.ts`. Pinned by `settings-applier-show-hidden.test.ts`.
 - **ai-config.ts**: AI configuration plumbing shared by Settings, the onboarding wizard, and the applier listener.
-  Exports `pushConfigToBackend()` (read-fresh push of the current AI config to Rust). Lives here rather than under
+  Exports `pushConfigToBackend()` (read-fresh push of the current AI config to Rust), which emits `ai-config:pushed` to
+  every window once the push lands, and `onAiConfigPushed()` to hear it (Ask Cmdr's provider readiness re-reads the
+  backend on it, so a key saved in the Settings window reaches the main window's rail). Lives here rather than under
   `sections/` so it isn't tied to a UI subcomponent path.
 - **network-settings.ts**: Network-specific setting helpers (proxy config, SMB auth defaults)
 - **settings-window.ts**: Logic for opening/focusing/closing the settings window (Tauri window management). Takes a

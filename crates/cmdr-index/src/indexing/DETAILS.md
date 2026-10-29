@@ -96,7 +96,9 @@ sizes → `read/DETAILS.md`; path mapping → `paths/DETAILS.md`; lifecycle of i
   estimates, each with an explicit "unknown" fallback. What counts as corruption (never widen it) and the schema:
   `store/DETAILS.md`.
 - **Per-volume everything.** Every invariant holds per `VolumeId`, keyed independently. The registry is the authority;
-  reads route through the per-volume `ReadPool`, never under the lifecycle lock. See `lifecycle/DETAILS.md`.
+  reads route through the per-volume `ReadPool`, never under the lifecycle lock. See `lifecycle/DETAILS.md`. A volume
+  the host doesn't serve answers per-path reads from its database on disk, read-only: `read/DETAILS.md` § A stopped
+  volume's database answers reads.
 - **Two records of the pipeline phase.** A global app-wide `DEBUG_STATS` ring (debug window) and a per-volume
   `index-phase-changed` event; `set_phase_for` does both so they can't drift. The phase EVENT lives in
   `events/DETAILS.md`; the phase MACHINE (`IndexPhase`) in `lifecycle/DETAILS.md`.

@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use super::*;
 use crate::test_fixtures::{
-    build_aes_zip, build_zip, build_zipcrypto_zip, deflated, dir, encrypted_entry, overstate_record_count,
+    FixtureFile, build_aes_zip, build_zip, build_zipcrypto_zip, deflated, dir, encrypted_entry, overstate_record_count,
     patch_equal_len, plain_entry, set_first_entry_encrypted, stored, zip64_stored,
 };
 use cmdr_fs::testing::TestDir;
@@ -373,6 +373,26 @@ async fn reads_stored_entry_bytes_exactly() {
     let src = bytes_source(zip);
 
     let mut reader = index.open_read("plain.txt", src, None).unwrap();
+    let (data, _) = read_all(&mut reader).await.unwrap();
+    assert_eq!(data, content);
+}
+
+#[tokio::test]
+async fn reads_zstd_compressed_entry() {
+    // Method 93: rc-zip's zstd decoder, the one the vendored rc-zip moved onto
+    // `zstd` 0.14 (`vendor/rc-zip/CMDR-PATCH.md`).
+    let content: Vec<u8> = (0..200_000).map(|i| (i % 251) as u8).collect();
+    let zip = build_zip(&[FixtureFile {
+        method: ::zip::CompressionMethod::Zstd,
+        ..deflated("data.bin", content.clone())
+    }]);
+    let method = u16::from_le_bytes([zip[8], zip[9]]);
+    assert_eq!(method, 93, "the fixture's local header must name zstd");
+    assert!(zip.len() < content.len() / 10, "the entry must actually be compressed");
+    let index = parse(&zip).unwrap();
+    let src = bytes_source(zip);
+
+    let mut reader = index.open_read("data.bin", src, None).unwrap();
     let (data, _) = read_all(&mut reader).await.unwrap();
     assert_eq!(data, content);
 }

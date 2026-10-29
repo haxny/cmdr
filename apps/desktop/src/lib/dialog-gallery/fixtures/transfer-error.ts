@@ -128,6 +128,14 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
       second: '/Users/david/Documents/2026/invoices',
     },
   },
+  named_leaves_refused: {
+    operationType: 'move',
+    error: {
+      type: 'named_leaves_refused',
+      path: '/Volumes/naspi/papers/invoices paid/2026-09-27 OpenAI invoice Rymd.pdf',
+      reason: 'sameName',
+    },
+  },
   sources_span_volumes: {
     operationType: 'copy',
     error: {

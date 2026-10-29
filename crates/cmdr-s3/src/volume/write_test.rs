@@ -353,16 +353,13 @@ async fn a_cancel_mid_multipart_leaves_no_upload_behind(service: FixtureService)
         .await;
 
     assert!(matches!(outcome, Err(VolumeError::Cancelled(_))), "got {outcome:?}");
+    // The cancel answers once its first abort is sent; the confirming rounds run after it,
+    // and only a confirmed abort clears the record. So wait for the record, THEN the server
+    // listing is guaranteed clean (asserting the listing first races the rounds).
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert!(
         unfinished_uploads(service, FIXTURE_BUCKET, &prefix).await.is_empty(),
         "a cancelled upload must be aborted on the server"
-    );
-    assert!(
-        volume
-            .inner
-            .ledger
-            .open_under(&volume.inner.account(), &prefix)
-            .is_empty()
     );
     assert!(!volume.exists(&path).await, "nothing was published");
 }

@@ -432,6 +432,8 @@ unlocked view.
 
 ## rustic_core 0.13.0 facts
 
+`rustic_core` is vendored (`vendor/rustic_core/CMDR-PATCH.md`) only to sit on `zstd` 0.14; its code is the release's.
+
 Read from `~/.cargo/registry/src/*/rustic_core-0.13.0/src/` (2026-10-20). Each one shaped a design above; re-check them
 on a bump.
 

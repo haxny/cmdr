@@ -28,7 +28,7 @@ const listenMock = vi.fn<(cb: (payload: AskCmdrTurn) => void) => Promise<() => v
 vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
   onAskCmdrTurn: (cb: (payload: AskCmdrTurn) => void) => listenMock(cb),
-  cancelAskCmdr: vi.fn(() => Promise.resolve()),
+  cancelAskCmdr: vi.fn(() => Promise.resolve({ tripped: 1, live: 1 })),
   listAskCmdrConversations: (l: number, o: number, a: boolean) => listMock({ limit: l, offset: o, includeArchived: a }),
   getAskCmdrConversation: (id: number) => getMock(id),
   searchAskCmdrConversations: vi.fn(() => Promise.resolve([])),
@@ -56,7 +56,7 @@ vi.mock('./ask-cmdr-gate.svelte', () => ({
 }))
 
 import { askCmdrState, newChat, sendMessage, switchToThread, type RailMessage } from './ask-cmdr-trigger.svelte'
-import { resetStoppedTurns } from './ask-cmdr-stream.svelte'
+import { resetTurnBookkeeping } from './ask-cmdr-stream.svelte'
 import { sessionsState } from './ask-cmdr-sessions.svelte'
 import { routeTurnEvent, startAskCmdrTurnStream, stopAskCmdrTurnStream } from './ask-cmdr-turn-stream.svelte'
 
@@ -66,7 +66,7 @@ const OPEN_THREAD = 7
 const OTHER_THREAD = 99
 
 function fire(conversationId: number, event: AskCmdrStreamEvent): void {
-  routeTurnEvent({ conversationId, event })
+  routeTurnEvent({ conversationId, run: null, event })
 }
 
 function row(id: number): ConversationRow {
@@ -79,10 +79,15 @@ function assistantAt(index: number): Extract<RailMessage, { kind: 'assistant' }>
   return message
 }
 
+/** A bubble's narration across its rounds. */
+function textOf(item: Extract<RailMessage, { kind: 'assistant' }>): string {
+  return item.rounds.map((round) => round.text).join('')
+}
+
 beforeEach(() => {
   stopAskCmdrTurnStream()
   sendMock.mockReset()
-  sendMock.mockImplementation((c) => Promise.resolve({ accepted: true, conversationId: c ?? OPEN_THREAD }))
+  sendMock.mockImplementation((c) => Promise.resolve({ accepted: true, conversationId: c ?? OPEN_THREAD, run: 1 }))
   listMock.mockReset()
   listMock.mockResolvedValue([])
   getMock.mockReset()
@@ -91,7 +96,7 @@ beforeEach(() => {
   listenMock.mockReset()
   listenMock.mockResolvedValue(unlistenMock)
   newChat()
-  resetStoppedTurns()
+  resetTurnBookkeeping()
   askCmdrState.messages = []
   askCmdrState.conversationId = null
   askCmdrState.streaming = false
@@ -117,8 +122,8 @@ describe('the main window subscription', () => {
     expect(listenMock).toHaveBeenCalledTimes(1)
 
     askCmdrState.conversationId = OPEN_THREAD
-    listenMock.mock.calls[0][0]({ conversationId: OPEN_THREAD, event: { type: 'textDelta', text: 'live' } })
-    expect(assistantAt(0).text).toBe('live')
+    listenMock.mock.calls[0][0]({ conversationId: OPEN_THREAD, run: null, event: { type: 'textDelta', text: 'live' } })
+    expect(textOf(assistantAt(0))).toBe('live')
   })
 
   it('stops listening on teardown, and can be started again', async () => {
@@ -144,13 +149,16 @@ describe('which thread an event belongs to', () => {
     expect(askCmdrState.streaming).toBe(false)
   })
 
-  it("adopts a new thread's id from its own started event", () => {
+  /** The id comes from the send's own answer, never from a `started`: a wake's could arrive in
+   *  the same moment. `ask-cmdr-send-before-id.test.ts` covers what happens in between. */
+  it("takes a new thread's id from its send's answer", async () => {
     sendMessage('first message in a fresh chat')
+    fire(OPEN_THREAD, { type: 'started' })
     expect(askCmdrState.conversationId).toBeNull()
 
-    fire(OPEN_THREAD, { type: 'started' })
-
-    expect(askCmdrState.conversationId).toBe(OPEN_THREAD)
+    await vi.waitFor(() => {
+      expect(askCmdrState.conversationId).toBe(OPEN_THREAD)
+    })
   })
 })
 
@@ -166,7 +174,7 @@ describe('picking a turn up part-way through', () => {
     fire(OPEN_THREAD, { type: 'textDelta', text: 'of an answer' })
 
     expect(askCmdrState.streaming).toBe(true)
-    expect(assistantAt(0).text).toBe('the second half of an answer')
+    expect(textOf(assistantAt(0))).toBe('the second half of an answer')
     expect(assistantAt(0).streaming).toBe(true)
 
     fire(OPEN_THREAD, {
@@ -175,15 +183,16 @@ describe('picking a turn up part-way through', () => {
       seq: 3,
       stop: 'completed',
       usage: { promptTokens: 1, completionTokens: 2 },
+      turn: null,
     })
 
     expect(askCmdrState.streaming).toBe(false)
     expect(assistantAt(0).id).toBe(12)
   })
 
-  /** A cancel gets no terminal event back, so the backend keeps dribbling for a chunk or two.
-   *  Without the stopped list those chunks would read as a live turn and put the rail back
-   *  into "working…" with nothing coming to clear it. */
+  /** After a cancel the backend keeps dribbling for a chunk or two before its `stopped`.
+   *  Without the pending stop those chunks would read as a live turn and put the rail back
+   *  into "working…" or grow a bubble the stop already ended. */
   it('a chunk arriving after the user stopped does not restart the turn', async () => {
     sendMessage('long one')
     fire(OPEN_THREAD, { type: 'started' })
@@ -195,7 +204,10 @@ describe('picking a turn up part-way through', () => {
     fire(OPEN_THREAD, { type: 'textDelta', text: ' and more' })
 
     expect(askCmdrState.streaming).toBe(false)
-    expect(assistantAt(1).text).toBe('partial')
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'assistant'])
+    // Nothing of that turn was stored, so its terminal leaves no bubble.
+    fire(OPEN_THREAD, { type: 'stopped', turn: null })
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user'])
   })
 })
 
@@ -245,11 +257,21 @@ describe('an answer to a suggestion', () => {
       promptTokens: null,
       completionTokens: null,
       createdAt: 0,
+      turnId: null,
+      duringTurn: false,
+      turnStats: null,
     }
   }
 
   function thread(id: number, messages: MessageView[]): ConversationDetailView {
-    return { conversation: row(id), messages, totalMessages: messages.length, lastContextUsage: null }
+    return {
+      conversation: row(id),
+      messages,
+      totalMessages: messages.length,
+      lastContextUsage: null,
+      turnInFlightSinceSeq: null,
+      spendPausedMicros: null,
+    }
   }
 
   function decisionLine(messageId: number, decision: ProposalDecision = turnedDown): RailMessage {
@@ -320,8 +342,8 @@ describe('an answer to a suggestion', () => {
     expect(askCmdrState.streaming).toBe(false)
   })
 
-  /** A fresh chat has no thread, so no suggestion was ever made in it. It adopts an id from
-   *  `started` alone: a decision must not hand it one, or paint into it. */
+  /** A fresh chat has no thread, so no suggestion was ever made in it. It takes an id from
+   *  its send's answer alone: a decision must not hand it one, or paint into it. */
   it('never lands in a chat that has no thread yet', () => {
     sendMessage('first message in a fresh chat')
 
@@ -345,7 +367,7 @@ describe('an answer to a suggestion', () => {
 
     expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['proposalDecisions', 'assistant'])
     expect(askCmdrState.messages[0]).toEqual(decisionLine(32, ran))
-    expect(assistantAt(1).text).toBe('the first half and the second')
+    expect(textOf(assistantAt(1))).toBe('the first half and the second')
   })
 
   /** A stopped thread drops late chunks so they can't restart the turn. A decision is not a

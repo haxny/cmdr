@@ -15,8 +15,9 @@ use rusqlite::{Connection, OptionalExtension, Transaction, TransactionBehavior, 
 use super::super::AgentStoreError;
 use super::super::events::{ConversationEvent, EVENT_ROLE_TOKEN};
 use super::super::rows::insert_message_row_in;
-use super::decode_token;
-use crate::agent::types::{ProposalDecision, ProposalStatus};
+use super::read::read_server_proposal;
+use super::{ProposalGroup, decode_token};
+use crate::agent::types::{ProposalDecision, ProposalOutcomeKind, ProposalStatus};
 
 /// A line written: its `messages` row and that row's place in the thread.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -158,6 +159,38 @@ fn rewrite(conn: &Connection, message_id: i64, decision: ProposalDecision) -> Re
         .prepare_cached("UPDATE messages SET content_blocks = ?2 WHERE id = ?1 AND role = ?3 RETURNING seq")?
         .query_row(params![message_id, content_blocks, EVENT_ROLE_TOKEN], |row| row.get(0))
         .optional()?)
+}
+
+/// A group's decision as its line says it: its verb, its display text, how many ops, and how it
+/// went, plus, for a server group, the protocol its draft names.
+///
+/// The protocol is read best-effort: a draft that won't read (every reader fails it closed)
+/// still leaves the line saying "the server `<name>`", because a lost word costs the agent less
+/// than a lost lesson.
+pub fn decision_of(
+    conn: &Connection,
+    group: &ProposalGroup,
+    ops: u32,
+    outcome: ProposalOutcomeKind,
+) -> ProposalDecision {
+    let protocol = if group.verb.is_server() {
+        match read_server_proposal(conn, group.id) {
+            Ok(proposal) => proposal.map(|proposal| proposal.draft.protocol),
+            Err(e) => {
+                log::warn!(target: "agent::store", "server group {}'s line names no protocol: {e}", group.id);
+                None
+            }
+        }
+    } else {
+        None
+    };
+    ProposalDecision {
+        verb: group.verb,
+        what: group.display_name.clone(),
+        ops,
+        outcome,
+        protocol,
+    }
 }
 
 fn event_json(decision: ProposalDecision) -> Result<String, AgentStoreError> {

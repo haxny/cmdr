@@ -1,8 +1,8 @@
 //! The `app_state` agent tool: a live snapshot of what the user is looking at —
 //! both panes (folder, cursor, selection, view) plus the mounted volumes.
 //!
-//! Built directly from `PaneStateStore` + the shipped `snapshot_volumes` core
-//! (not the private `build_state_yaml`), so the tool returns typed data, not
+//! Built directly from `PaneStateStore` + `list_volumes`'s volume map (not the
+//! private `build_state_yaml`), so the tool returns typed data, not
 //! parsed YAML. `get_focused_pane` returns the pane SIDE (`"left"`/`"right"`); the
 //! path comes from that side's pane state.
 //!
@@ -14,10 +14,9 @@ use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Manager, Runtime};
 
-use super::volumes::{VolumeSnapshot, to_volume_snapshots};
+use super::volumes::{VolumeSnapshot, snapshot_volume_map};
 use crate::mcp::PaneStateStore;
 use crate::mcp::pane_state::PaneState;
-use crate::mcp::resources::volumes::snapshot_volumes;
 use crate::mcp::{ToolError, ToolResult};
 
 /// One pane, flattened for the model.
@@ -170,7 +169,7 @@ pub async fn execute_app_state<R: Runtime>(app: &AppHandle<R>, _params: &Value) 
     let focused = store.get_focused_pane();
     let left = store.get_left();
     let right = store.get_right();
-    let volumes = to_volume_snapshots(&snapshot_volumes().await);
+    let volumes = snapshot_volume_map().await.volumes;
     let snapshot = build_app_state(focused, &left, &right, volumes);
     serde_json::to_value(&snapshot).map_err(|e| ToolError::internal(e.to_string()))
 }

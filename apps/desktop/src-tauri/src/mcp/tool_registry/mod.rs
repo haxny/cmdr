@@ -21,14 +21,16 @@
 //! every tool not tagged `[agent]`, so its write path is absent by construction, not policy.
 //! `access` classifies what a tool can do independently of transport authentication. The
 //! structural tests pin the agent view to exactly its authored `[agent]` entries AND require
-//! every one to be [`Access::Read`], [`Access::Propose`], or [`Access::Memory`], never
-//! [`Access::Write`]. **The agent can propose; only the user can approve** — no tool approves a
-//! proposal, and the only thing it writes is its own memory folder.
+//! every one to be [`Access::Read`], [`Access::Propose`], [`Access::Memory`], or
+//! [`Access::Session`], never [`Access::Write`]. **The agent can propose; only the user can
+//! approve** — no tool approves a proposal, the only thing it writes is its own memory folder,
+//! and the only session it opens is to a place the user saved.
 //!
 //! Wire output must stay byte-identical: each schema is the exact `json!` block (hoisted into
 //! [`schemas`] verbatim), and the tool order is the historical category concatenation. The
-//! `tool_snapshot_tests` fixture pins it. Schema keys serialize alphabetically (serde_json `Map`
-//! is a `BTreeMap`; `preserve_order` is off), so authored key order never affects the bytes.
+//! `tool_snapshot_tests` fixture pins it. Schema keys serialize in authored order: genai turns on
+//! serde_json's `preserve_order` for the whole build, so reordering a `json!` block's keys changes the
+//! bytes (and the snapshot). Anything a model reads as a key LIST sorts explicitly (`params.rs`).
 //!
 //! Split: this file is the mechanism (the two view dimensions, the params gate, and the
 //! `mcp_tools!` macro); `table.rs` is the data the macro expands. Layering: the table depends on the
@@ -67,8 +69,8 @@ pub enum Consumer {
     Agent,
 }
 
-/// Whether a tool reads, asks, remembers, or mutates. The agent view admits `Read`, `Propose`,
-/// and `Memory`, and must contain zero `Write` tools (see the module docs).
+/// Whether a tool reads, asks, remembers, connects, or mutates. The agent view admits `Read`,
+/// `Propose`, `Memory`, and `Session`, and must contain zero `Write` tools (see the module docs).
 ///
 /// The agent dispatch (`crate::agent::tools`) reads [`tool_access`] as a runtime backstop: it
 /// refuses to execute any tool classified `Write`, so "the agent can't act" holds even against a
@@ -95,6 +97,16 @@ pub enum Access {
     ///
     /// The containment itself is `agent::memory`'s jail, not this tag.
     Memory,
+    /// Opens a session to a place the user saved, with credentials the user stored. Adds or
+    /// edits no file, server, account, credential, pin, or setting; the saved place's own
+    /// connection bookkeeping updates the way a user's connect updates it.
+    ///
+    /// ⚠️ **A deliberate widening, like [`Access::Memory`]**, authored by hand into
+    /// `EXPECTED_SESSION_TOOL_NAMES` for the same reason: no structural check can prove a handler
+    /// dials only a saved place. The agent's gate also admits it only on a turn the user started
+    /// (`crate::agent::tools::view`), since a background connect can wake a sleeping NAS for a
+    /// digest nobody asked for. Agent invariant 7 (`agent/DETAILS.md`) is the promise.
+    Session,
     /// Mutates the filesystem OR app state (nav, cursor, selection, tabs, dialogs, settings,
     /// connect/eject, file ops, rollback-cancel); when in doubt a tool is `Write`. Never reachable
     /// from the agent view.

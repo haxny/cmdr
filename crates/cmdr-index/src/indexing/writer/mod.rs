@@ -643,7 +643,7 @@ impl IndexWriter {
         feeds_search: bool,
         volume_id: String,
     ) -> Result<Self, IndexStoreError> {
-        let conn = IndexStore::open_write_connection(db_path)?;
+        let mut conn = IndexStore::open_write_connection(db_path)?;
         // SQLite busy retry accounting. The handler only tallies the attempt; the ONE
         // summary line ("writer waited 340 ms over 27 attempts for the write lock") is
         // emitted when the episode closes, from `flush_busy_episode` in the writer loop.

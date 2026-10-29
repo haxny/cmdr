@@ -8,19 +8,19 @@
   reference — see `ask-cmdr-drop.ts` for why this is a native webview drag, not HTML5.
 -->
 <script lang="ts">
-    import { onMount } from 'svelte'
+    import { onMount, untrack } from 'svelte'
     import Icon from '#lib/ui/Icon.svelte'
     import TextArea from '#lib/ui/TextArea.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
-    import { getSetting, onSpecificSettingChange, type AiProvider } from '#lib/settings/index.js'
-    import { askCmdrFakeActive } from '#lib/tauri-commands/index.js'
     import { getAppLogger } from '#lib/logging/logger.js'
     import { addToast } from '#lib/ui/toast/index.js'
     import { formatInteger } from '#lib/intl/number-format.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import type { SelectionAttachmentsRead } from '#lib/file-explorer/pane/selection-attachments-read.js'
     import AskCmdrAttachmentChip from './AskCmdrAttachmentChip.svelte'
     import { installComposerDrop } from './ask-cmdr-drop'
+    import { providerGap, slotStatusState } from './ask-cmdr-slot-status.svelte'
     import {
         addAttachments,
         askCmdrState,
@@ -46,16 +46,14 @@
     let composing = $state(false)
     let dragOver = $state(false)
 
-    // Focus the composer when it mounts (the rail mounts on open, so opening focuses here).
+    // Focus the composer when it mounts (the rail mounts on open, so opening focuses here), and
+    // again on each `requestComposerFocus()` (New chat, the sessions panel closing).
     $effect(() => {
+        dependOn(askCmdrState.composerFocusRequest)
         textarea?.focus()
     })
 
     // Subscribe the composer as a native drag-drop target (no-op outside a Tauri webview).
-    // Under E2E the scripted fake LLM serves the send, so it counts as an active
-    // provider for the gate below (resolved once; false in prod and non-Tauri contexts).
-    let fakeActive = $state(false)
-
     onMount(() => {
         let unlisten: (() => void) | null = null
         void installComposerDrop(
@@ -63,26 +61,46 @@
             (active) => (dragOver = active),
             (refs) => { addAttachments(refs); },
         ).then((u) => (unlisten = u))
-        void askCmdrFakeActive().then((v) => (fakeActive = v))
         return () => unlisten?.()
     })
 
-    // Which AI provider Ask Cmdr uses, read live so flipping it in settings gates Send
-    // immediately (no restart). Provider off ⇒ can't start a new turn; an in-flight turn
-    // is unaffected (Send is already disabled while streaming). The E2E fake counts as a
-    // provider (`fakeActive`), so send-and-render is testable with no real provider.
-    let provider = $state<AiProvider>(getSetting('ai.provider'))
-    $effect(() => onSpecificSettingChange('ai.provider', (v) => { provider = v }))
-    const providerOff = $derived(provider === 'off' && !fakeActive)
+    // No provider ready (off, a missing key, local AI not set up) ⇒ can't start a new turn; the
+    // rail's notice says which and links to Settings, and Send's tooltip says why it's disabled.
+    // An in-flight turn is unaffected (Send is already disabled while streaming). The backend
+    // reads the E2E fake as ready, so send-and-render is testable with no real provider.
+    const providerBlocked = $derived(providerGap(slotStatusState.status) !== null)
 
     const streaming = $derived(askCmdrState.streaming)
-    const canSend = $derived(text.trim().length > 0 && !providerOff)
+    const canSend = $derived(text.trim().length > 0 && !providerBlocked)
     const attachments = $derived(askCmdrState.attachments)
+
+    // Send and Stop swap places as a turn starts and ends, so a focused one leaves the page under
+    // the cursor and focus would fall to `<body>`. Both hand it back to the prompt box, and so
+    // does a swap nobody clicked (the turn ended by itself, or a running one was picked up):
+    // `$effect.pre` sees the button before the swap removes it, the effect after.
+    let swapButton = $state<HTMLButtonElement | null>(null)
+    let swapHadFocus = false
+    $effect.pre(() => {
+        dependOn(streaming)
+        swapHadFocus = untrack(() => swapButton !== null && document.activeElement === swapButton)
+    })
+    $effect(() => {
+        dependOn(streaming)
+        if (!swapHadFocus) return
+        swapHadFocus = false
+        untrack(() => textarea?.focus())
+    })
 
     function submit(): void {
         if (askCmdrState.streaming || !canSend) return
         sendMessage(text)
         text = ''
+        textarea?.focus()
+    }
+
+    function stop(): void {
+        stopStreaming()
+        textarea?.focus()
     }
 
     async function attachSelection(): Promise<void> {
@@ -151,24 +169,35 @@
             oncompositionend={() => (composing = false)}
         />
         {#if streaming}
-            <button type="button" class="composer-button stop" onclick={stopStreaming} aria-label={tString('askCmdr.composer.stop')}>
+            <button
+                type="button"
+                class="composer-button stop"
+                bind:this={swapButton}
+                onclick={stop}
+                aria-label={tString('askCmdr.composer.stop')}
+            >
                 <Icon name="square" size={16} aria-hidden="true" />
             </button>
         {:else}
-            <button
-                type="button"
-                class="composer-button"
-                onclick={submit}
-                disabled={!canSend}
-                aria-label={tString('askCmdr.composer.send')}
+            <!-- A disabled button gets no hover events in WebKit, so the reason's tooltip sits on
+                 a wrapper. Screen readers get the reason from the rail's notice above. -->
+            <span
+                class="send-wrap"
+                use:tooltip={providerBlocked ? tString('askCmdr.composer.sendNeedsProvider') : undefined}
             >
-                <Icon name="corner-down-left" size={16} aria-hidden="true" />
-            </button>
+                <button
+                    type="button"
+                    class="composer-button"
+                    bind:this={swapButton}
+                    onclick={submit}
+                    disabled={!canSend}
+                    aria-label={tString('askCmdr.composer.send')}
+                >
+                    <Icon name="corner-down-left" size={16} aria-hidden="true" />
+                </button>
+            </span>
         {/if}
     </div>
-    {#if providerOff}
-        <p class="provider-off-hint">{tString('askCmdr.composer.providerOff')}</p>
-    {/if}
     {#if dragOver}
         <div class="drop-hint" aria-hidden="true">
             <Icon name="paperclip" size={16} aria-hidden="true" />
@@ -245,11 +274,9 @@
         background: var(--color-bg-tertiary);
     }
 
-    .provider-off-hint {
-        margin: 0;
-        font-size: var(--font-size-xs);
-        color: var(--color-text-tertiary);
-        line-height: var(--font-line-height-normal);
+    .send-wrap {
+        display: flex;
+        flex: none;
     }
 
     .drop-hint {

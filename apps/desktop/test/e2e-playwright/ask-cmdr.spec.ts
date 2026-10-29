@@ -1,7 +1,8 @@
 /**
  * E2E for the alpha "Ask Cmdr" chat rail: it toggles open from BOTH the View menu item and
  * the ⌘⌥A keyboard shortcut (with the ALPHA badge), focuses the composer on open and
- * returns focus to the panes on Escape, and streams a reply end-to-end.
+ * returns focus to the panes on Escape, streams a reply end-to-end, and shows a tool-running turn the
+ * same live and after reopening its thread.
  *
  * The send path runs against the deterministic scripted fake LLM (the app launches with
  * `CMDR_E2E_ASK_CMDR_FAKE=1`; see the e2e-playwright check + commands/agent.rs), so the
@@ -179,6 +180,98 @@ function sessionRowCount(page: TauriPage): Promise<number> {
   return page.evaluate<number>(`document.querySelectorAll('.ask-cmdr-rail .sessions .row').length`)
 }
 
+/** The sessions panel's row titles, `|`-joined. */
+function sessionRowTitles(page: TauriPage): Promise<string> {
+  return page.evaluate<string>(
+    `[...document.querySelectorAll('.ask-cmdr-rail .sessions .row-title')].map(r => r.textContent).join('|')`,
+  )
+}
+
+/** Opens the sessions panel, searches for `query`, and switches to the one thread it finds. The
+ * panel can still show an earlier search's result, so it waits for the row that names `query`. */
+async function openThreadBySearch(page: TauriPage, query: string): Promise<void> {
+  await page.evaluate(`document.querySelector('.ask-cmdr-rail [aria-label="Chats"]')?.click()`)
+  await expect.poll(() => sessionRowCount(page), { timeout: waitBudget(3000) }).toBeGreaterThanOrEqual(1)
+  await page.evaluate(`(() => {
+    const input = document.querySelector('.ask-cmdr-rail .sessions input.text-field-control');
+    input.focus();
+    input.value = ${JSON.stringify(query)};
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`)
+  await expect.poll(() => sessionRowTitles(page), { timeout: waitBudget(5000) }).toContain(query)
+  expect(await sessionRowCount(page)).toBe(1)
+  await page.evaluate(`document.querySelector('.ask-cmdr-rail .sessions .row')?.click()`)
+  await expect
+    .poll(() => page.evaluate<boolean>(`document.querySelector('.ask-cmdr-rail .sessions') === null`), {
+      timeout: waitBudget(3000),
+    })
+    .toBe(true)
+}
+
+/** The rail's last assistant bubble, as an expression. */
+const LAST_BUBBLE_JS = `[...document.querySelectorAll('.ask-cmdr-rail .msg')].filter(m => m.querySelector('.tools, .prose')).at(-1)`
+
+/** The last bubble's turn has ended: its stats line shows and nothing streams. */
+function lastTurnSettled(page: TauriPage): Promise<boolean> {
+  return page.evaluate<boolean>(`(() => {
+    const bubble = ${LAST_BUBBLE_JS};
+    return !!bubble && !!bubble.querySelector('.turn-stats') && !bubble.querySelector('.cursor');
+  })()`)
+}
+
+/** Opens every closed tool group of the last bubble, and says how many are still closed. */
+function openLastBubbleGroups(page: TauriPage): Promise<number> {
+  return page.evaluate<number>(`(() => {
+    const bubble = ${LAST_BUBBLE_JS};
+    const closed = () => [...(bubble?.querySelectorAll('.group-toggle[aria-expanded="false"]') ?? [])];
+    closed().forEach(toggle => toggle.click());
+    return closed().length;
+  })()`)
+}
+
+/** What a turn's bubble shows, in order: each round's narration, each run of tool lines (its
+ * group summary, and per line its label, outcome, repeat tag, and whether it expands), and the
+ * stats line. Lines inside a closed group don't render, so open them first. */
+interface BubbleShape {
+  segments: (
+    | { kind: 'text'; text: string }
+    | {
+        kind: 'tools'
+        summary: string | null
+        lines: { label: string; outcome: string | null; repeat: boolean; expandable: boolean }[]
+      }
+  )[]
+  stats: string | null
+}
+
+function lastBubbleShape(page: TauriPage): Promise<BubbleShape> {
+  return page.evaluate<BubbleShape>(`(() => {
+    const bubble = ${LAST_BUBBLE_JS};
+    const text = el => (el?.textContent || '').trim() || null;
+    const segments = [...bubble.children].flatMap(child => {
+      if (child.classList.contains('prose')) return [{ kind: 'text', text: text(child) }];
+      if (!child.classList.contains('tools')) return [];
+      return [{
+        kind: 'tools',
+        summary: text(child.querySelector('.group-toggle .summary')),
+        lines: [...child.querySelectorAll('.tool-line')].map(line => ({
+          label: text(line.querySelector('.label')),
+          outcome: text(line.querySelector('.outcome')),
+          repeat: line.querySelector('.repeat') !== null,
+          expandable: line.querySelector('button.expand')?.disabled === false,
+        })),
+      }];
+    });
+    return { segments, stats: text(bubble.querySelector('.turn-stats')) };
+  })()`)
+}
+
+/** Opens every group of the last bubble, then reads its shape. */
+async function settledBubbleShape(page: TauriPage): Promise<BubbleShape> {
+  await expect.poll(() => openLastBubbleGroups(page), { timeout: waitBudget(3000) }).toBe(0)
+  return lastBubbleShape(page)
+}
+
 test.describe('Ask Cmdr rail', () => {
   test.describe.configure({ timeout: waitBudget(30000) })
 
@@ -307,20 +400,10 @@ test.describe('Ask Cmdr rail', () => {
       input.value = ${JSON.stringify(`${nonce} budget`)};
       input.dispatchEvent(new Event('input', { bubbles: true }));
     })()`)
-    await expect
-      .poll(
-        () =>
-          page.evaluate<string>(
-            `[...document.querySelectorAll('.ask-cmdr-rail .sessions .row-title')].map(r => r.textContent).join('|')`,
-          ),
-        { timeout: waitBudget(5000) },
-      )
-      .toContain('budget')
+    await expect.poll(() => sessionRowTitles(page), { timeout: waitBudget(5000) }).toContain('budget')
 
     // Exactly one result, and it's the budget thread (not the grocery one).
-    const titles = await page.evaluate<string>(
-      `[...document.querySelectorAll('.ask-cmdr-rail .sessions .row-title')].map(r => r.textContent).join('|')`,
-    )
+    const titles = await sessionRowTitles(page)
     expect(titles).toContain('budget')
     expect(titles).not.toContain('grocery')
 
@@ -338,5 +421,87 @@ test.describe('Ask Cmdr rail', () => {
         { timeout: waitBudget(3000) },
       )
       .toBe(true)
+  })
+
+  // A tool-running turn reads the same live and reopened (the live stream and the history
+  // projection are two halves that must agree). The fake's `[tools]` script (`chat/session.rs`,
+  // `rail_fake_turn`) plays three rounds: narration + `app_state`, `list_volumes`, and a refused
+  // `delete`; narration + `list_volumes` twice, reusing round one's call ids; then the answer.
+  // `app_state` and `list_volumes` read this machine, so only their shape is asserted.
+  test('shows a tool-running turn the same live and after reopening the thread', async ({ tauriPage }) => {
+    const page = tauriPage as TauriPage
+    const nonce = `n${String(Date.now())}`
+    await openRailViaMenu(page)
+    await ensureChatReady(page)
+    await page.evaluate(`document.querySelector('.ask-cmdr-rail [aria-label="New chat"]')?.click()`)
+    await page.evaluate(`(() => {
+      const ta = document.querySelector('.ask-cmdr-rail textarea');
+      ta.focus();
+      ta.value = ${JSON.stringify(`[tools] ${nonce} look around`)};
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    })()`)
+    await expect.poll(() => lastTurnSettled(page), { timeout: waitBudget(15000) }).toBe(true)
+
+    const live = await settledBubbleShape(page)
+    expect(live.segments.map((segment) => segment.kind)).toEqual(['text', 'tools', 'text', 'tools', 'text'])
+    const [first, firstTools, second, secondTools, answer] = live.segments
+    expect(first).toEqual({ kind: 'text', text: 'Let me look at your panes and drives.' })
+    expect(second).toEqual({ kind: 'text', text: 'Checking the drives once more.' })
+    expect(answer).toEqual({ kind: 'text', text: "That's all, from the test assistant." })
+    if (firstTools.kind !== 'tools' || secondTools.kind !== 'tools') throw new Error('expected tool runs')
+
+    // Round one: each line names what it looked at; the hallucinated `delete` is refused.
+    expect(firstTools.summary).toMatch(/^Looked around: /)
+    expect(firstTools.lines.map((line) => line.label)).toEqual([
+      'Looked at what you’re looking at',
+      'Checked your drives',
+      'Asked for “delete”',
+    ])
+    expect(firstTools.lines[1].outcome).toMatch(/^\d[\d,]* items?$/)
+    expect(firstTools.lines[2].outcome).toBe('not a tool it has')
+    expect(firstTools.lines.map((line) => line.repeat)).toEqual([false, false, false])
+    expect(firstTools.lines.every((line) => line.expandable)).toBe(true)
+
+    // Round two: both `list_volumes` calls repeat round one's, though they reuse its call ids.
+    expect(secondTools.lines.map((line) => line.label)).toEqual(['Checked your drives', 'Checked your drives'])
+    expect(secondTools.lines.map((line) => line.repeat)).toEqual([true, true])
+
+    // The footer counts every call and how long the turn took; the fake reports no tokens, so
+    // their number isn't asserted.
+    expect(live.stats).toMatch(/^5 tool calls · .+ · .+ tokens?$/)
+
+    // Expanding a line shows what the model got, with Copy for the whole result.
+    await page.evaluate(`(() => {
+      const bubble = ${LAST_BUBBLE_JS};
+      bubble.querySelectorAll('.tool-line')[1].querySelector('button.expand').click();
+    })()`)
+    await expect
+      .poll(() => page.evaluate<number>(`(${LAST_BUBBLE_JS})?.querySelectorAll('.preview .rows .row').length ?? 0`), {
+        timeout: waitBudget(5000),
+      })
+      .toBeGreaterThan(0)
+    expect(
+      await page.evaluate<boolean>(
+        `(${LAST_BUBBLE_JS})?.querySelector('.preview [aria-label="Copy the whole result as JSON"]') != null`,
+      ),
+    ).toBe(true)
+
+    // Step away and come back through the history: the same turn, folded from the stored rows.
+    await page.evaluate(`document.querySelector('.ask-cmdr-rail [aria-label="New chat"]')?.click()`)
+    await expect
+      .poll(
+        () =>
+          page.evaluate<boolean>(
+            `!(document.querySelector('.ask-cmdr-rail')?.textContent || '').includes(${JSON.stringify(nonce)})`,
+          ),
+        {
+          timeout: waitBudget(3000),
+        },
+      )
+      .toBe(true)
+    await openThreadBySearch(page, nonce)
+    await expect.poll(() => lastTurnSettled(page), { timeout: waitBudget(5000) }).toBe(true)
+    expect(await settledBubbleShape(page)).toEqual(live)
   })
 })

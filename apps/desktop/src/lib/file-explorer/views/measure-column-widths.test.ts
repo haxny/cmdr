@@ -9,7 +9,7 @@ import type { FileEntry } from '../types'
 import { _setMeasureForTests, computeFullListColumnWidths, holdSizeColumnWidth } from './measure-column-widths'
 import { isDirSizeUpdating } from './full-list-utils'
 import { NO_WALKED_GROUND, isPathAffectedByWalk, type WalkedGround } from '#lib/indexing/walked-ground.js'
-import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { _setFormatLocaleForTests, _setLocaleForTests } from '#lib/intl/locale.js'
 import { _setCatalogForTests } from '#lib/intl/messages.svelte.js'
 import { formatSizeForDisplay } from '../selection/selection-info-utils'
 
@@ -480,6 +480,23 @@ describe('computeFullListColumnWidths', () => {
       // Same digit + separator count ("1,073,208" vs "1.073.208"), so the
       // shrink-wrapped width is identical: the separator swap doesn't drift it.
       expect(deWidth).toBe(enWidth)
+    })
+
+    it('measures English separators under an English UI on a Swedish region', () => {
+      // Numbers follow the app language, so the cell reads "1,073,208", never the
+      // region's no-break-space grouping, and the measure sees the same string.
+      _setMeasureForTests(fakeMeasure)
+      _setLocaleForTests('en')
+      _setFormatLocaleForTests('en-SE')
+      const big = entry({ name: 'z.bin', size: 1_073_208, physicalSize: 1_073_208 })
+      const opts = { unit: 'bytes' as const, format: 'binary' as const }
+
+      const cell = formatSizeForDisplay(1_073_208, opts)
+        .map((t) => t.value)
+        .join('')
+      expect(cell).toBe('1,073,208')
+      const w = computeFullListColumnWidths({ ...baseArgs, entries: [big], sizeFormatOpts: opts })
+      expect(w.size).toBe(cell.length * 7 + 2)
     })
   })
 })

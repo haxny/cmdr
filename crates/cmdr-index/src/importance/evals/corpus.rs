@@ -48,7 +48,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use super::scenario::{Availability, Scenario, ScenarioFolder};
-use crate::importance::classify::{is_denylisted, is_project_marker};
+use crate::importance::classify::{Disk, PathSpace, is_denylisted, is_project_marker};
 
 /// The path-class anchor names the scorer matches by name (must survive
 /// anonymization when they're a direct child of the home root). Kept in sync with
@@ -206,7 +206,13 @@ pub fn snapshot_index_to_scenario(
         .map_err(|e| format!("couldn't open index DB read-only: {e}"))?;
     // A snapshot of a database file has no volume behind it, so no stop signal.
     let never = tokio_util::sync::CancellationToken::new();
-    let mut folders = walk_index_folders(&conn, home, &never).map_err(|e| e.to_string())?;
+    // A network dump's paths are share-relative, so the boot disk's own roots don't apply.
+    let disk = match availability {
+        Availability::Local => Disk::Boot,
+        Availability::ListingOnly => Disk::Other,
+    };
+    let space = PathSpace::new(home, disk);
+    let mut folders = walk_index_folders(&conn, space, &never).map_err(|e| e.to_string())?;
 
     let synthetic_root = synthetic_root_for(&availability);
     let mut scenario_folders = Vec::with_capacity(folders.len());
@@ -218,8 +224,8 @@ pub fn snapshot_index_to_scenario(
             f.modified_at,
             f.children,
             path,
-            home,
-            f.has_marker_below,
+            space,
+            f.nearest_marker_below,
             f.under_floored_ancestor,
             OptionalSignals::default(),
         );

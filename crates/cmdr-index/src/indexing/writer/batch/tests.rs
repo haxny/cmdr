@@ -285,7 +285,7 @@ fn committed_entry_count(db_path: &Path) -> u64 {
 /// decision reads. Dropping the sender before the loop starts also exercises the
 /// disconnect path's commit.
 fn run_prefilled_loop(db_path: &Path, messages: Vec<WriteMessage>) -> usize {
-    let conn = IndexStore::open_write_connection(db_path).expect("write conn");
+    let mut conn = IndexStore::open_write_connection(db_path).expect("write conn");
     let commits = Arc::new(AtomicUsize::new(0));
     {
         let commits = Arc::clone(&commits);

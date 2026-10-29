@@ -1,7 +1,7 @@
 # zh-Hant decisions
 
-Distilled rulings: "X over Y because Z". Terms in `terms.json`, style in `style.md`, open questions in
-`review-queue.md`. `pnpm i18n:brief` pulls the sections whose heading cites a batch key.
+Distilled rulings: "X over Y because Z". Terms: `terms.json`; style: `style.md`; open questions: `review-queue.md`.
+`pnpm i18n:brief` pulls sections whose heading cites a batch key.
 
 Sources: **AP-TW** / **AP-HK** = macOS Finder + AppKit + SystemSettings; **AP live** = installed macOS bundles read by
 English key (macOS 26.6.2, 25G83; `../reference-pile/how-to-mine.md` § "No pile on this machine"); **MS** = Microsoft
@@ -82,6 +82,12 @@ work.
 - Archive `封存檔` (zip, tar, 7z), ❌ zip-only `壓縮檔`. Title `標題`, author `作者`.
 - Rail, settings intro, and consent make one promise in one wording: `問到某個檔案` + `查看…裡面的內容`;
   `沒有你的同意，絕不會更動任何檔案` (`任何檔案`, not `任何東西`: it writes its own notes).
+
+## Tool lines name their target (`askCmdr.tool.*.doing`/`.done`/`.tried`, `askCmdr.tool.outcome.*`, `askCmdr.toolGroup.*`)
+
+- A place goes before the verb (`正在 <places>…</places> 裡搜尋「{query}」` / `已在 … 裡搜尋`); `.tried` is `沒能…`
+  (calm, never `失敗`), so it can't read as landed. Outcomes after the `，` separator are bare phrases that quote the
+  settings names (`影像索引`, `語意搜尋模型`). Tool call `工具呼叫`, counted with `次`.
 
 ## System Settings pane names (`errors.git.*`, `errors.provider.*`, `*.emailPlaceholder`, `common.attachEmailPlaceholder`)
 
@@ -209,8 +215,8 @@ Deployment `部署`, endpoint `端點` (MS). The endpoint URL field `端點網�
 
 ## The phone's stale-index hint (`fileExplorer.navigation.driveIndex.tooltipStalePhone`, `indexing.staleDialog.*Phone`)
 
-Copies the drive family; only the cause changes: `不會…告訴 Cmdr` (❌ `通知`, the macOS notification), ❌ never a
-disconnect. `Cmdr 會讓索引跟上自己做的變動`, no unpromised `即時`.
+Copies the drive family; only the cause changes: `不會…告訴 Cmdr` (❌ `通知`, the macOS notification), ❌ a disconnect.
+`Cmdr 會讓索引跟上自己做的變動`, no unpromised `即時`.
 
 ## Mount and share-list sentences (`errors.mount.*`, `errors.shareList.*`, `fileExplorer.pane.directConnectionShareGoneToast`, `servers.refusal.accountNotPermitted`)
 
@@ -226,12 +232,12 @@ Waiting can't help: no `現在`, no `再試一次`; `這種情況等下去也不
 - Title `中斷連線`, body `斷線了`: the family's split, not drift. `正在中斷連線` / `中斷了連線`.
 - Sided bodies never label source or target: `把 {total} 個檔案中的 {done} 個…`, the rest placed (`還在磁碟機上`),
   `你原本的檔案`, `什麼都沒被丟掉`.
-- An unconfirmed move is ❌ never a failure (`無法確認這次移動`): Cmdr kept the originals on purpose,
+- An unconfirmed move isn’t a failure (`無法確認這次移動`): Cmdr kept the originals on purpose,
   `把你原本的檔案留在原處沒有動`. `原處` fits: those files never left.
 
 ## The favorites menu (`commands.favoritesOpen*`, `commands.favoritesAdd.description`, `fileExplorer.navigation.favorites*`/`.switcherFavorites`/`.favoriteUnreachable.*`, `menu.go.showFavorites`, `shortcuts.scope.favoritesMenu`)
 
-- `喜好項目選單`, `卷宗切換器`, `指令面板` stay apart: ❌ never `面板`, `清單`, or `切換器` for this one.
+- `喜好項目選單`, `卷宗切換器`, `指令面板` stay apart: ❌ `面板`, `清單`, or `切換器` here.
 - `顯示喜好項目` (as `顯示伺服器`; `開啟` opens files). `目前的資料夾`.
 - Can't add here: `…指向的是磁碟、共享資料夾、伺服器和手機上的資料夾`, no protocol names.
 - Off in Settings names the support (`Android 手機支援已⋯關閉`): `手機已關閉` reads as powered off.

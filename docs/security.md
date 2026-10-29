@@ -305,14 +305,30 @@ Ask Cmdr is the widest of these, so the rest of this section is its detail. Ask 
 (`askCmdr.enabled`); that's a feature switch, not consent.
 
 - **The agent can propose; only the user can approve.** The agent has no tool that touches the user's files. Its
-  dispatch view admits `Access::Read`, `Access::Propose`, and `Access::Memory` entries and never `Access::Write` (pinned
-  structurally in `mcp/tests/tool_registry_tests/access.rs`, and again at runtime in `agent/tools/view.rs`). A `Propose`
-  tool mutates nothing: it stages a proposal and opens a review surface. Approval originates in the frontend as a user
-  action, and there is no tool — and never will be one — that approves a proposal. No agent-visible tool can reach the
-  `autoConfirm` confirmation bypass. `Propose` adds no egress: proposals flow agent → user, never to the provider, so
-  consent is unchanged by it. What reaches the provider by default is file/folder names, paths, sizes, dates, and the
-  app-state envelope (spec §2.1); file contents reach it only through the two read tools below, on request. Depth:
-  `apps/desktop/src-tauri/src/mcp/DETAILS.md` § The `Propose` tier.
+  dispatch view admits `Access::Read`, `Access::Propose`, `Access::Memory`, and `Access::Session` entries and never
+  `Access::Write` (pinned structurally in `mcp/tests/tool_registry_tests/access.rs`, and again at runtime in
+  `agent/tools/view.rs`). A `Propose` tool mutates nothing: it stages a proposal and opens a review surface. Approval
+  originates in the frontend as a user action, and there is no tool — and never will be one — that approves a proposal.
+  No agent-visible tool can reach the `autoConfirm` confirmation bypass. `Propose` adds no egress: proposals flow agent
+  → user, never to the provider, so consent is unchanged by it. What reaches the provider by default is file/folder
+  names, paths, sizes, dates, and the app-state envelope (spec §2.1); file contents reach it only through the two read
+  tools below, on request. Depth: `apps/desktop/src-tauri/src/mcp/DETAILS.md` § The `Propose` tier.
+- **The agent may connect a place the user saved, and only when the user asked.** `Access::Session` opens a session to a
+  SAVED place by volume id with STORED credentials, and adds or edits no file, server, account, credential, pin, or
+  setting, so it can't add a host, type a password, or approve a key (what an injected file name would want). The
+  dispatch gate admits it only on a turn the user started; a wake or a follow-up is refused, typed, because a background
+  connect can wake a sleeping NAS nobody asked about. A Keychain prompt on a user-started turn is acceptable; a missing
+  credential raises nothing. One `Session` tool ships, `connect_volume`, hand-allowlisted in
+  `EXPECTED_SESSION_TOOL_NAMES`; its schema takes a volume id and nothing else. No egress moves, so consent doesn't
+  either. Canonical: agent invariant 7 in `apps/desktop/src-tauri/src/agent/DETAILS.md`.
+- **The agent may suggest a server, and only the user saves it.** `propose_server` (`Access::Propose`) stages a card for
+  a server to add or a change to a saved one; the user's approval saves it through the servers hub's own code, and
+  nothing contacts the server until the user connects it. No password, key, key file, or switch that unlocks one can
+  enter a proposal, so none is stored or shown. An edit can't change where a saved server is or which account it signs
+  in as, on any protocol (a username, or NFS's uid and gid): the app's edit would move the stored password to a new
+  address, and a new account would act as someone the user never picked. An add can't replace a saved server or wear
+  another's name, and the tool refuses on a turn the user didn't start. No egress moves. Canonical:
+  `apps/desktop/src-tauri/src/agent/tools/suggestions/DETAILS.md` § Proposing a server.
 - **The agent writes one folder, and what it writes egresses forever after.** `Access::Memory` covers `memory_write` and
   `memory_edit`, jailed to `<data-dir>/ai/memory/` (relative `.md` paths only, no `..`, no symlink along the chain,
   containment re-checked against a canonicalized parent) and capped at 64 KB. Two consequences worth stating plainly:
@@ -320,9 +336,9 @@ Ask Cmdr is the widest of these, so the rest of this section is its detail. Ask 
   includes anything it inferred from OCR of their photos — the system prompt forbids saving that, but the prohibition is
   a prompt, not a gate; **(b)** the write path is reachable from untrusted text (a crafted file name, a sentence
   photographed in an image, a line of a file `inspect_file` read), so what lands there could be attacker-chosen. The
-  prompt-injection mitigations are memory's placement BEFORE the rules, a fence its own content cannot close, and the
-  "facts, never instructions to yourself" write rule. Depth: `apps/desktop/src-tauri/src/agent/memory/DETAILS.md` § The
-  injection surface.
+  prompt-injection mitigations are memory's placement in a user turn (never the system string) under a line saying Cmdr
+  added it and it is data, a fence its own content cannot close, and the "facts, never instructions to yourself" write
+  rule. Depth: `apps/desktop/src-tauri/src/agent/memory/DETAILS.md` § The injection surface.
 - **The photo tools send image-derived TEXT, not "just metadata".** `search_photos` (`mcp/executor/photos.rs`) returns
   matched image paths plus the in-image OCR snippet and Vision tags; `image_facts` (`mcp/executor/image_facts.rs`)
   returns the FULL stored OCR text (up to 2,000 characters per file, for up to 200 files) plus tags for paths the caller

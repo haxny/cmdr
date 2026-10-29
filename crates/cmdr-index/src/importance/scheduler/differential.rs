@@ -12,6 +12,7 @@ use tokio_util::sync::CancellationToken;
 use super::recompute::{RescoreScope, ScoringInputs, rescore_rows, rescore_subset, sanitize_incremental_batch};
 use super::scoped_walk::plan_incremental_batch;
 use super::walk::{WalkedFolders, walk_index_folders};
+use crate::importance::classify::{Disk, PathSpace, marker_depth};
 use crate::importance::scorer::{SignalSet, Weights};
 use crate::importance::stop::PassError;
 use crate::importance::writer::WeightRow;
@@ -75,16 +76,18 @@ pub fn compare_walks_for_incremental(
     // A dev tool comparing walks over a database file has no volume to stop it.
     let never = CancellationToken::new();
     let unstopped = |e: PassError| e.to_string();
-    let mut full = walk_index_folders(&conn, home, &never).map_err(unstopped)?;
+    // The dev tool compares walks over a boot-disk index.
+    let space = PathSpace::new(home, Disk::Boot);
+    let mut full = walk_index_folders(&conn, space, &never).map_err(unstopped)?;
 
-    // Each origin's marker presence AS THE FULL WALK SEES IT, so the guard never
+    // Each origin's marker depth AS THE FULL WALK SEES IT, so the guard never
     // fires on a difference the comparison is meant to expose.
-    let mut markers: HashMap<String, bool> = HashMap::new();
+    let mut markers: HashMap<String, Option<u8>> = HashMap::new();
     full.for_each(|folder, path| {
         if origins.iter().any(|o| o == path) {
             markers.insert(
                 path.to_string(),
-                folder.children.has_direct_marker || folder.has_marker_below,
+                marker_depth(folder.children.has_direct_marker, folder.nearest_marker_below),
             );
         }
     });
@@ -94,7 +97,7 @@ pub fn compare_walks_for_incremental(
     let visits = HashMap::new();
     let inputs = ScoringInputs {
         weights: &weights,
-        home,
+        space,
         now_secs,
         available,
         visits: &visits,
@@ -108,7 +111,7 @@ pub fn compare_walks_for_incremental(
         // What the pass will act on: an over-budget origin is rescored alone, so both
         // sides of the comparison have to be narrowed to that one folder.
         let (cleared, demoted) = plan.lists_for(RescoreScope::ChangedSubtreesOnly);
-        let outcome = crate::importance::scheduler::scoped_walk::try_scoped_walk(&conn, home, &plan, &markers, &never)
+        let outcome = crate::importance::scheduler::scoped_walk::try_scoped_walk(&conn, space, &plan, &markers, &never)
             .map_err(unstopped)?;
         let scoped_walk = started.elapsed();
         let mut scoped = match outcome {
@@ -203,5 +206,8 @@ pub fn sample_origins(index_db: &std::path::Path, home: &str, max: usize) -> Res
         .filter_map(|id| IndexStore::reconstruct_path(&conn, id).ok())
         .collect();
     // The live path never sees a floored origin, so neither should the differential.
-    Ok(sanitize_incremental_batch(&paths, home).into_iter().take(max).collect())
+    Ok(sanitize_incremental_batch(&paths, PathSpace::new(home, Disk::Boot))
+        .into_iter()
+        .take(max)
+        .collect())
 }

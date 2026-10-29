@@ -91,6 +91,13 @@
     "match": ["ai client", "ai clients"],
     "sense": "An outside AI app driving Cmdr over its automation interface, named as the source of an operation."
   },
+  "ai-context": {
+    "distinct": ["context-window", "context-menu"],
+    "en": "context",
+    "match": ["context"],
+    "notMatch": ["context menu", "context menus", "context window", "model context protocol"],
+    "sense": "The conversation so far that Cmdr sends the AI model with each call, which providers cache between calls."
+  },
   "ai-feature": {
     "distinct": ["ask-cmdr", "cloud-ai"],
     "en": "AI features",
@@ -112,6 +119,13 @@
     "match": ["reply", "replies"],
     "notMatch": ["so we can reply", "a reply from", "server reply", "server's reply", "trust the reply"],
     "sense": "An Ask Cmdr assistant answer, or an AI provider response."
+  },
+  "ai-lookup": {
+    "distinct": ["ai-tool"],
+    "en": "lookup (AI)",
+    "match": ["lookup", "lookups"],
+    "notMatch": ["network discovery, lookup"],
+    "sense": "One call the Ask Cmdr assistant makes to look something up (list a folder, search), as the chat rail names it; a round runs one or more of them."
   },
   "ai-tool": {
     "en": "tool (AI)",
@@ -281,7 +295,7 @@
     "en": "Ask Cmdr",
     "match": ["ask cmdr"],
     "note": "Only the chat panel itself carries this name; a sentence that merely describes what the AI does says Cmdr or the AI.",
-    "notMatch": ["ask cmdr to"],
+    "notMatch": ["ask cmdr to", "ask cmdr for"],
     "sense": "The product name of the AI chat panel; stays verbatim in every language."
   },
   "ask-question": {
@@ -558,6 +572,7 @@
       "check the details",
       "worth checking",
       "check your provider",
+      "check in when",
       "check your inbox",
       "check “remember this choice"
     ],
@@ -1339,7 +1354,7 @@
     "distinct": ["file", "network-share"],
     "en": "folder",
     "match": ["folder", "folders", "directory", "directories"],
-    "notMatch": ["working directory"],
+    "notMatch": ["working directory", "shared folder"],
     "sense": "A folder on disk."
   },
   "follow": {
@@ -3632,6 +3647,7 @@
   "thinking": {
     "en": "Thinking…",
     "match": ["thinking"],
+    "notMatch": ["thinking level"],
     "sense": "The AI's reasoning status line."
   },
   "this-computer": {
@@ -4050,5 +4066,24 @@
     "en": "diacritics",
     "sense": "Accents and other marks on letters (á, ž, ß) that the Multi-Rename Tool can strip to plain letters.",
     "match": ["diacritics", "diacritic"]
+  },
+  "reasoning-effort": {
+    "en": "Reasoning effort",
+    "match": ["=reasoning effort"],
+    "sense": "The reasoning picker’s label for OpenAI-style services, whose docs call the setting reasoning effort (reasoning_effort).",
+    "distinct": ["reasoning-effort-anthropic", "thinking-level"],
+    "note": "One picker, three names, chosen per AI service; keep the three distinguishable, and render each the way that provider’s localized docs do where they exist."
+  },
+  "reasoning-effort-anthropic": {
+    "en": "Effort",
+    "match": ["=effort"],
+    "sense": "The reasoning picker’s label for Anthropic, whose docs call the setting effort: how much work the model puts into thinking, not physical effort.",
+    "distinct": ["reasoning-effort", "thinking-level"]
+  },
+  "thinking-level": {
+    "en": "Thinking level",
+    "match": ["=thinking level"],
+    "sense": "The reasoning picker’s label for Google Gemini (thinking_level) and the fallback name for services with none of their own; also the setting’s name in Settings search.",
+    "distinct": ["reasoning-effort", "reasoning-effort-anthropic", "thinking"]
   }
 }

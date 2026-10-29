@@ -31,6 +31,14 @@ Lead's guardrails, learned the hard way:
   helper names, and `CLAUDE.md` text; `rg -n '\b(M[0-9][a-z]?|Milestone\s*[0-9]|Phase\s*[0-9])\b' <touched paths>` finds
   them, and each becomes a descriptive name ("the watcher", "the hook contract"). The plan file keeps its own.
 - **Only the lead lands** (`scripts/land/CLAUDE.md`): a subagent can't wait out CI.
+- **Land ready branches as one batch, not one by one.** Cherry-pick every branch that's ready onto one fresh worktree
+  from `origin/main`, resolve conflicts once, run `pnpm check`, and `pnpm land` that. Why: each CI run holds macOS
+  runners (at most five at once) for 25–35 minutes, and each separate land moves `main` under the others, so they rebase
+  and rerun CI (one branch ran CI three times on 2026-10-28). Close the batched PRs, and remove their worktrees with
+  `remove-worktree.sh --force` once the batch is on `main`.
+- **Parallel agents that edit code each get their own worktree** with `isolation: "worktree"`: the harness's
+  `WorktreeCreate` hook makes it warm through `new-worktree.sh`, and the agent is pinned there. It can't join an
+  existing worktree, and nothing removes it for you: the lead does, once its branch has landed.
 
 ## Fan-out sweeps (parallel research or generation over a list)
 

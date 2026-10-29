@@ -1220,6 +1220,26 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label.reasoningEffort": "推理强度",
+  "@settings.ai.reasoningEfforts.label.reasoningEffort": {
+    "sourceHash": "3236aee"
+  },
+  "settings.ai.reasoningEfforts.label.effort": "努力程度",
+  "@settings.ai.reasoningEfforts.label.effort": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.label.thinkingLevel": "思考级别",
+  "@settings.ai.reasoningEfforts.label.thinkingLevel": {
+    "sourceHash": "96f115b"
+  },
+  "settings.ai.reasoningEfforts.description": "模型在回答前思考多久。强度越高，越能处理棘手的任务，但回复会更慢，思考过程也按输出计费。",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "推理强度、努力程度、推理、思考、强度、深度、速度、费用、成本、质量",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "3bbb127"
+  },
   "settings.ai.localContextSize.label": "上下文窗口",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2281,7 +2301,7 @@
   },
   "settings.askCmdr.openAiSettings": "打开 AI 设置",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "提供方和模型",
   "@settings.askCmdr.provider.title": {
@@ -2299,9 +2319,9 @@
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "聊天使用的模型。留空则使用与 Cmdr 其他 AI 功能相同的模型。例如：claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "聊天使用的模型。留空则使用与 Cmdr 其他 AI 功能相同的模型。例如：claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
-    "sourceHash": "881f8a4"
+    "sourceHash": "e301e99"
   },
   "settings.askCmdr.interactiveModel.placeholder": "与 Cmdr 的 AI 相同",
   "@settings.askCmdr.interactiveModel.placeholder": {
@@ -2315,9 +2335,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Cmdr 向模型发送多少聊天内容。自动会跟随你的模型的已知上限。",
+  "settings.askCmdr.chatMemorySize.description": "Cmdr 向模型发送多少聊天内容。自动会用满你的模型的整个上下文窗口；选一个大小则会设定更低的上限，花费更少。",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "自动（推荐）",
   "@settings.askCmdr.chatMemorySize.opt.auto": {
@@ -2326,6 +2346,22 @@
   "settings.askCmdr.chatMemorySize.overWindow": "你的模型可能会拒绝这么长的消息。Cmdr 会保留你设定的值。",
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
+  },
+  "settings.askCmdr.spendPause.label": "单次回答费用超过以下金额时询问",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "一次回答可能会进行很多次查询。预计费用超过这个金额时，Cmdr 会暂停回答，先问你再继续花费。估算按标价计算，缓存通常会让实际费用更低。",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "从不",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "费用、花费、钱、价格、预算、限额、暂停、美元、贵、账单",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
   },
   "settings.askCmdr.chatMemorySize.keywords": "聊天、记忆、上下文、窗口、令牌、大小、预算、历史、历史记录",
   "@settings.askCmdr.chatMemorySize.keywords": {
@@ -2929,6 +2965,31 @@
   "settings.advanced.card.updates": "更新",
   "@settings.advanced.card.updates": {
     "sourceHash": "22e2bad"
+  },
+  "settings.advanced.card.askCmdr": "Ask Cmdr",
+  "@settings.advanced.card.askCmdr": {
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Ask Cmdr is the chat panel's product name and stays verbatim (terms.json ask-cmdr, confirmed); the catalog's settings.section.askCmdr is the same Ask Cmdr."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.label": "收到回答后的工具分组",
+  "@settings.askCmdr.toolGroupsOnAnswer.label": {
+    "sourceHash": "e5e922b"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr 会显示 AI 工作时正在查看的内容。选择收到回答后要不要把这些行收起来。",
+  "@settings.askCmdr.toolGroupsOnAnswer.description": {
+    "sourceHash": "785da0a"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "全部收起",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
+    "sourceHash": "01052be"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "保持我之前的样子",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
+    "sourceHash": "0aa6718"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "助手、聊天、对话、折叠、展开、收起、工具、步骤、回答",
+  "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
+    "sourceHash": "6a9f055"
   },
   "settings.updates.card.updates": "更新",
   "@settings.updates.card.updates": {

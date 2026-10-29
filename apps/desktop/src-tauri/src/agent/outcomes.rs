@@ -32,8 +32,8 @@ use super::chat::stream::{AskCmdrStreamEvent, emit_turn_event};
 use super::memory::MemoryStore;
 use super::store::AgentStoreError;
 use super::store::proposals::{
-    ProposalGroup, ThreadLine, count_ops, get_group, get_sweep, open_running_line, rewrite_line, running_lines,
-    settle_line,
+    ProposalGroup, ThreadLine, count_ops, decision_of, get_group, get_sweep, open_running_line, read_server_proposal,
+    rewrite_line, running_lines, settle_line,
 };
 use super::types::{OpStatus, ProposalDecision, ProposalOutcomeKind, ProposalStatus};
 use super::wake::{WakeControl, send_control};
@@ -72,12 +72,7 @@ pub fn record_rejection(
     if source == RejectSource::DialogDismissed {
         return;
     }
-    let decision = ProposalDecision {
-        verb: group.verb,
-        what: group.display_name.clone(),
-        ops,
-        outcome: ProposalOutcomeKind::Rejected,
-    };
+    let decision = decision_of(conn, group, ops, ProposalOutcomeKind::Rejected);
     record(conn, memory, group, decision, now, true);
 }
 
@@ -130,12 +125,7 @@ pub fn record_running(conn: &Connection, group_id: i64, now: i64) {
         return;
     };
     let decision = match accepted_ops(conn, &group) {
-        Ok(ops) => ProposalDecision {
-            verb: group.verb,
-            what: group.display_name.clone(),
-            ops,
-            outcome: ProposalOutcomeKind::Running,
-        },
+        Ok(ops) => decision_of(conn, &group, ops, ProposalOutcomeKind::Running),
         Err(e) => {
             log::warn!(target: LOG_TARGET, "group {group_id} started with no line in its thread: {e}");
             return;
@@ -192,7 +182,20 @@ fn accepted_ops(conn: &Connection, group: &ProposalGroup) -> Result<u32, AgentSt
 /// `ops` is what the user ACCEPTED (every row minus the ones they deselected at review), so a
 /// cancelled group reads honestly: the three tallies simply don't add up to it, which is the
 /// truth about a run that stopped partway.
+///
+/// A server group has no ops to tally: it was saved, and its completion note (read here, so a
+/// group whose draft won't read fails rather than claiming a whole save) says what that save
+/// left undone.
 fn completed_decision(conn: &Connection, group: &ProposalGroup) -> Result<ProposalDecision, AgentStoreError> {
+    if let Some(proposal) = read_server_proposal(conn, group.id)? {
+        return Ok(ProposalDecision {
+            verb: group.verb,
+            what: group.display_name.clone(),
+            ops: 0,
+            outcome: ProposalOutcomeKind::Saved { note: proposal.note },
+            protocol: Some(proposal.draft.protocol),
+        });
+    }
     Ok(ProposalDecision {
         verb: group.verb,
         what: group.display_name.clone(),
@@ -202,6 +205,7 @@ fn completed_decision(conn: &Connection, group: &ProposalGroup) -> Result<Propos
             skipped: count_ops(conn, group.id, Some(OpStatus::Skipped))? as u32,
             failed: count_ops(conn, group.id, Some(OpStatus::Failed))? as u32,
         },
+        protocol: None,
     })
 }
 
@@ -260,6 +264,8 @@ fn record_in_thread(conn: &Connection, group_id: i64, conversation_id: i64, deci
 fn announce(conversation_id: i64, line: ThreadLine, decision: ProposalDecision) {
     emit_turn_event(
         conversation_id,
+        // A decision belongs to no turn.
+        None,
         AskCmdrStreamEvent::ProposalDecided {
             message_id: line.message_id,
             seq: line.seq,

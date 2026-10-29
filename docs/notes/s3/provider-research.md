@@ -235,8 +235,7 @@ a decision here.
 - Source: https://developers.cloudflare.com/r2/pricing/
 - Standard storage: $0.015/GB-month. IA: $0.01/GB-month.
 - Class A (writes and lists: `PutObject`, `CopyObject`, `ListObjects`, `ListBuckets`, `CreateMultipartUpload`,
-  `UploadPart`, `UploadPartCopy`, `CompleteMultipartUpload`, `ListMultipartUploads`, `ListParts`, and more):
-  $4.50 per
+  `UploadPart`, `UploadPartCopy`, `CompleteMultipartUpload`, `ListMultipartUploads`, `ListParts`, and more): $4.50 per
   million (IA $9.00).
 - Class B (`GetObject`, `HeadObject`, `HeadBucket`, and more): $0.36 per million (IA $0.90).
 - Free operations: `DeleteObject`, `DeleteBucket`, `AbortMultipartUpload`. `DeleteObjects` is in no list; the price
@@ -343,8 +342,7 @@ below therefore rest on corroboration.
 - Class D (event notifications): first 2,500/day free, then $0.004 per 10,000.
 - Egress: free up to 3x average monthly storage, then $0.01/GB.
 - No minimum file size fees, no minimum storage duration fees.
-- Note: the raw HTML of the transaction page still contains an older
-  "$0.005/GB/month" string that client-side script
+- Note: the raw HTML of the transaction page still contains an older "$0.005/GB/month" string that client-side script
   replaces with $0.00695; use $6.95/TB.
 
 ## Wasabi
@@ -519,10 +517,9 @@ https://docs.wasabi.com/apidocs/wasabi-api
 
 ### Pricing (page date 2026-07-13)
 
-- Source: https://docs.digitalocean.com/products/spaces/details/pricing/.
-  $5.00/month subscription with 250 GiB of
-  storage and 1,024 GiB of outbound transfer shared by every bucket; then $0.02/GiB-month
-  and $0.01/GiB. No per-request fees.
+- Source: https://docs.digitalocean.com/products/spaces/details/pricing/. $5.00/month subscription with 250 GiB of
+  storage and 1,024 GiB of outbound transfer shared by every bucket; then $0.02/GiB-month and $0.01/GiB. No per-request
+  fees.
 
 ## Server-side copy throughput
 

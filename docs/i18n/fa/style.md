@@ -165,8 +165,8 @@ forms.
 - **one**: 0 and 1 (`i=0..1`). Persian groups 0 with the singular. "۱ پرونده" / "1 file".
 - **other**: 2 and up. "۵ پرونده".
 - **Note: the counted noun usually does NOT add a plural suffix after a numeral** in Persian ("۵ پرونده", not "۵
-  پرونده‌ها"), the number already marks plurality. Keep both branches reading naturally; don't reflexively append "ها"
-  in the `other` branch. The `desktop-i18n-plural` check requires both categories.
+  پرونده‌ها"), the number already marks plurality. Keep both branches reading naturally; don't reflexively append "ها" in
+  the `other` branch. The `desktop-i18n-plural` check requires both categories.
 
 ## Notes and decisions
 

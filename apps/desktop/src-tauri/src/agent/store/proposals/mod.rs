@@ -27,8 +27,10 @@
 
 mod claim;
 mod complete;
+mod draft;
 mod read;
 mod recovery;
+mod server;
 mod thread_line;
 mod write;
 
@@ -40,14 +42,19 @@ pub use claim::{
     claim_group_for_execution, live_binding, record_acceptance, reject_group, release_claim,
 };
 pub use complete::{CompleteOutcome, mark_group_completed, record_op_outcome};
+pub use draft::{ServerDraft, ServerEdit, ServerProposal};
 pub use read::{
     GroupSummary, ProposalOp, ProposalSweep, count_ops, count_pending, get_group, get_sweep, list_groups, page_ops,
-    rejected_groups_since,
+    read_server_proposal, rejected_groups_since,
 };
 pub use recovery::recover_interrupted_groups;
-pub use thread_line::{RunningLine, ThreadLine, open_running_line, rewrite_line, running_lines, settle_line};
+pub use server::{ClaimedServer, ServerClaimOutcome, claim_server_group, mark_server_group_completed};
+pub use thread_line::{
+    RunningLine, ThreadLine, decision_of, open_running_line, rewrite_line, running_lines, settle_line,
+};
 pub use write::{
-    NewGroup, NewOp, NewRename, NewSweep, OpSnapshot, ReproposeOutcome, create_group, create_sweep, repropose_group,
+    NewGroup, NewOp, NewRename, NewSweep, OpSnapshot, ReproposeOutcome, TransferOp, create_group, create_sweep,
+    repropose_group,
 };
 
 use crate::agent::types::{ProposalStatus, ProposalVerb, Reversibility};
@@ -96,20 +103,27 @@ impl WritableDestination {
 ///
 /// One enum rather than a verb plus loose optional fields, because the pairing is exact:
 /// `trash_files_start` takes raw paths and no target, `move_files_start` takes one shared
-/// destination directory, and `start_bulk_rename` is the one executor whose rows carry their
-/// own destinations (it refuses a row whose source and destination parents differ, so its
-/// group binds the shared PARENT rather than a target).
+/// destination directory (and a name per source, so move and copy ops may carry one), and
+/// `start_bulk_rename`'s rows always carry their own destinations (it refuses a row whose
+/// source and destination parents differ, so its group binds the shared PARENT rather than a
+/// target). Extract, compress, trash, and delete ops can't carry a name at all.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "a handful are built per proposal call and written straight away: boxing the draft buys nothing"
+)]
 pub enum GroupIntent {
-    /// Move every source into one shared destination directory.
+    /// Move every source into one shared destination directory, each under its own name or
+    /// the one its op carries.
     Move {
         destination: WritableDestination,
-        sources: Vec<NewOp>,
+        sources: Vec<TransferOp>,
     },
-    /// Copy every source into one shared destination directory.
+    /// Copy every source into one shared destination directory, each under its own name or
+    /// the one its op carries.
     Copy {
         destination: WritableDestination,
-        sources: Vec<NewOp>,
+        sources: Vec<TransferOp>,
     },
     /// Extract archive-inner sources into one shared destination directory.
     Extract {
@@ -132,6 +146,14 @@ pub enum GroupIntent {
     Trash { sources: Vec<NewOp> },
     /// Delete every source permanently. Binds no target, and nothing takes it back.
     Delete { sources: Vec<NewOp> },
+    /// Save a server: a new one, or (with `edit`) changes to a saved one. ZERO ops: the draft
+    /// is the whole proposal, stored beside the group in its own transaction, and the group
+    /// takes the server claim rather than the acceptance record (`DETAILS.md` § A server
+    /// group).
+    SaveServer {
+        draft: ServerDraft,
+        edit: Option<ServerEdit>,
+    },
 }
 
 impl GroupIntent {
@@ -145,6 +167,8 @@ impl GroupIntent {
             GroupIntent::Rename { .. } => ProposalVerb::Rename,
             GroupIntent::Trash { .. } => ProposalVerb::Trash,
             GroupIntent::Delete { .. } => ProposalVerb::Delete,
+            GroupIntent::SaveServer { edit: None, .. } => ProposalVerb::AddServer,
+            GroupIntent::SaveServer { edit: Some(_), .. } => ProposalVerb::EditServer,
         }
     }
 
@@ -166,6 +190,7 @@ impl GroupIntent {
                 }
             }
             GroupIntent::Delete { .. } => Reversibility::Irreversible,
+            GroupIntent::SaveServer { .. } => Reversibility::ServerSettings,
         }
     }
 
@@ -185,30 +210,45 @@ impl GroupIntent {
                 (Some(archive.path.as_str()), Some(archive.volume_id.as_str()))
             }
             GroupIntent::Rename { parent, .. } => (Some(parent.as_str()), None),
-            GroupIntent::Trash { .. } | GroupIntent::Delete { .. } => (None, None),
+            GroupIntent::Trash { .. } | GroupIntent::Delete { .. } | GroupIntent::SaveServer { .. } => (None, None),
+        }
+    }
+
+    /// What `proposals.source_volume_id` (NOT NULL) holds. A file group's is the volume its
+    /// sources live on, as given. A server group has no sources: an edit stores the place it
+    /// changes, an add `""`, and nothing reads either.
+    pub(super) fn stored_source_volume<'a>(&'a self, given: &'a str) -> &'a str {
+        match self {
+            GroupIntent::SaveServer { edit: Some(edit), .. } => edit.editing.as_str(),
+            GroupIntent::SaveServer { edit: None, .. } => "",
+            _ => given,
         }
     }
 
     /// How many ops this intent carries. `COUNT`-free: it's the in-memory list's length.
     pub fn op_count(&self) -> usize {
         match self {
-            GroupIntent::Move { sources, .. }
-            | GroupIntent::Copy { sources, .. }
-            | GroupIntent::Extract { sources, .. }
+            GroupIntent::Move { sources, .. } | GroupIntent::Copy { sources, .. } => sources.len(),
+            GroupIntent::Extract { sources, .. }
             | GroupIntent::Compress { sources, .. }
             | GroupIntent::Trash { sources }
             | GroupIntent::Delete { sources } => sources.len(),
             GroupIntent::Rename { renames, .. } => renames.len(),
+            GroupIntent::SaveServer { .. } => 0,
         }
     }
 
-    /// Every op flattened into the row shape: source path, the per-op destination (rename
-    /// only), and the creation snapshot.
+    /// Every op flattened into the row shape: source path, the per-op destination NAME (a
+    /// rename's always, a move or copy op's when it lands under a new one), and the creation
+    /// snapshot.
     pub(super) fn rows(&self) -> Box<dyn Iterator<Item = (&str, Option<&str>, Option<&OpSnapshot>)> + '_> {
         match self {
-            GroupIntent::Move { sources, .. }
-            | GroupIntent::Copy { sources, .. }
-            | GroupIntent::Extract { sources, .. }
+            GroupIntent::Move { sources, .. } | GroupIntent::Copy { sources, .. } => Box::new(
+                sources
+                    .iter()
+                    .map(|op| (op.source_path.as_str(), op.new_name.as_deref(), op.snapshot.as_ref())),
+            ),
+            GroupIntent::Extract { sources, .. }
             | GroupIntent::Compress { sources, .. }
             | GroupIntent::Trash { sources }
             | GroupIntent::Delete { sources } => Box::new(
@@ -223,6 +263,7 @@ impl GroupIntent {
                     op.snapshot.as_ref(),
                 )
             })),
+            GroupIntent::SaveServer { .. } => Box::new(std::iter::empty()),
         }
     }
 }

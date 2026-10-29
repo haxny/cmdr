@@ -98,9 +98,9 @@ and the top traps live in `style.md`; don't repeat them here.
 ## Ask Cmdr (`askCmdr.*`, `settings.askCmdr.*`, `settings.advanced.logLlmCalls.*`, `commands.askCmdrToggle.*`, `suggestedOps.*`, `commands.suggestedOpsShow.*`, `errors.listing.deviceReconnecting.*`, `navigation.driveIndex.tooltipCoalesced*`)
 
 - unarchive → `désarchiver`; badge `Archivée` (conversation); on-device → `en local`.
-- Tool lines: verbal noun / `A <participe> …`, no pronoun (`Vérification de vos disques` / `A vérifié vos disques`).
-  Pairs beat stem symmetry: `Recherche dans vos photos` / `A cherché dans vos photos`. `inspectFile` →
-  `Lecture du contenu de fichiers` / `A lu le contenu de fichiers` (`contenu`: Cmdr reads inside).
+- Tool lines: verbal noun / `A <participe> …`, no pronoun (`Vérification de vos disques` / `A vérifié vos disques`),
+  outcomes too. Pairs beat stem symmetry (`Recherche…` / `A cherché…`). `inspectFile` → `Lecture du contenu…` /
+  `A lu le contenu…`. Inserts take a type noun (`du dossier {name}`).
 - Ask about X → `Posez des questions sur X` (empty state), `Posez une question…` (field), button
   `Interroger la sélection`. `renameReview.expired` keeps the brand (`Demandez à Cmdr…`).
 - rotate (through a cycle) → `permuter`; `faire pivoter` is images. `askCmdr.stalled` ends `…ou arrêter` (Stop).

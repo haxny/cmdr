@@ -81,6 +81,13 @@ Badges match `queue.row.status`. "Didn't finish" → `No se completó` (❌ `Fal
 `chat` / `chats` (RAE loan; `Chats` and `Ask Cmdr` carry justifications). usage → `uso` (❌ MS `utilización`); Spending
 → `Gasto`. token → `token` (MS's hits are security tokens). A bare `Preparó…` reads as a third-person subject.
 
+## Las líneas de herramienta (`askCmdr.tool.*`, `askCmdr.toolGroup.*`, `askCmdr.turnStats.*`)
+
+Done and tried lines are all `Se ha …` / `Se ha intentado …` (`memoryWrite.done` and `memoryEdit.done` realigned to
+match). Outcomes dodge agreement with an unknown count or noun: `sin resultados`, `pendientes de revisar`,
+`la nota sigue igual`, `El modelo ha visto {givenText} de {totalText}`. tool call → `consulta`; a stopped answer →
+`Detenida`.
+
 ## Fotos en unidades de red (`settings.mediaIndex.networkVolumes.*`, `search.imageResults.networkOff`/`.paused`)
 
 Status and help lines say `foto`; feature and label names keep `imagen` (English splits the same way). photo archive →

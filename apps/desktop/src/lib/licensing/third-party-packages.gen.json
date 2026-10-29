@@ -53,7 +53,7 @@
     },
     {
       "name": "aes",
-      "version": "0.9.1",
+      "version": "0.9.3",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/RustCrypto/block-ciphers"
     },
@@ -278,12 +278,6 @@
       "version": "0.10.3",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/phil-opp/rust-bit-field"
-    },
-    {
-      "name": "bitflags",
-      "version": "1.3.2",
-      "license": "MIT OR Apache-2.0",
-      "url": "https://github.com/bitflags/bitflags"
     },
     {
       "name": "bitflags",
@@ -575,13 +569,13 @@
     },
     {
       "name": "compression-codecs",
-      "version": "0.4.38",
+      "version": "0.4.46",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/Nullus157/async-compression"
     },
     {
       "name": "compression-core",
-      "version": "0.4.32",
+      "version": "0.4.34",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/Nullus157/async-compression"
     },
@@ -1144,12 +1138,6 @@
       "url": "https://github.com/servo/euclid"
     },
     {
-      "name": "eventsource-stream",
-      "version": "0.2.3",
-      "license": "MIT OR Apache-2.0",
-      "url": "https://github.com/jpopesculian/eventsource-stream"
-    },
-    {
       "name": "exacl",
       "version": "0.13.0",
       "license": "MIT",
@@ -1355,7 +1343,7 @@
     },
     {
       "name": "genai",
-      "version": "0.6.5",
+      "version": "0.7.1",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/jeremychone/rust-genai"
     },
@@ -1901,73 +1889,73 @@
     },
     {
       "name": "ico",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "license": "MIT",
       "url": "https://github.com/mdsteele/rust-ico"
     },
     {
       "name": "icu_collator",
-      "version": "2.3.1",
+      "version": "2.4.0",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "icu_collator_data",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "icu_collections",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "icu_locale_core",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "icu_locale_fallback",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "icu_locale_fallback_data",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "icu_normalizer",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "icu_normalizer_data",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "icu_properties",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "icu_properties_data",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "icu_provider",
-      "version": "2.3.1",
+      "version": "2.4.0",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
@@ -2165,7 +2153,7 @@
     },
     {
       "name": "libsqlite3-sys",
-      "version": "0.38.2",
+      "version": "0.39.0",
       "license": "MIT",
       "url": "https://github.com/rusqlite/rusqlite"
     },
@@ -2248,6 +2236,18 @@
       "url": "https://github.com/JohnTitor/mach2"
     },
     {
+      "name": "macro_rules_attribute",
+      "version": "0.2.3",
+      "license": "Apache-2.0 OR MIT OR Zlib",
+      "url": "https://github.com/danielhenrymantilla/macro_rules_attribute-rs"
+    },
+    {
+      "name": "macro_rules_attribute-proc_macro",
+      "version": "0.2.3",
+      "license": "Apache-2.0 OR MIT OR Zlib",
+      "url": "https://github.com/danielhenrymantilla/macro_rules_attribute-rs"
+    },
+    {
       "name": "maplit",
       "version": "1.0.2",
       "license": "MIT OR Apache-2.0",
@@ -2297,7 +2297,7 @@
     },
     {
       "name": "mdns-sd",
-      "version": "0.21.5",
+      "version": "0.21.6",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/keepsimple1/mdns-sd"
     },
@@ -2324,12 +2324,6 @@
       "version": "2.0.5",
       "license": "MIT",
       "url": "https://github.com/abonander/mime_guess"
-    },
-    {
-      "name": "minimal-lexical",
-      "version": "0.2.1",
-      "license": "MIT OR Apache-2.0",
-      "url": "https://github.com/Alexhuszagh/minimal-lexical"
     },
     {
       "name": "minisign-verify",
@@ -2375,7 +2369,7 @@
     },
     {
       "name": "mtp-rs",
-      "version": "0.33.0",
+      "version": "0.36.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/vdavid/mtp-rs"
     },
@@ -2408,12 +2402,6 @@
       "version": "0.31.3",
       "license": "MIT",
       "url": "https://github.com/nix-rust/nix"
-    },
-    {
-      "name": "nom",
-      "version": "7.1.3",
-      "license": "MIT",
-      "url": "https://github.com/Geal/nom"
     },
     {
       "name": "nom",
@@ -2842,6 +2830,12 @@
       "url": "https://github.com/dtolnay/paste"
     },
     {
+      "name": "pastey",
+      "version": "0.2.3",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/as1100k/pastey"
+    },
+    {
       "name": "path-dedot",
       "version": "4.0.1",
       "license": "MIT",
@@ -2981,15 +2975,9 @@
     },
     {
       "name": "plist",
-      "version": "1.10.1",
+      "version": "1.10.3",
       "license": "MIT",
       "url": "https://github.com/ebarnard/rust-plist/"
-    },
-    {
-      "name": "png",
-      "version": "0.17.16",
-      "license": "MIT OR Apache-2.0",
-      "url": "https://github.com/image-rs/image-png"
     },
     {
       "name": "png",
@@ -3107,7 +3095,7 @@
     },
     {
       "name": "pulldown-cmark",
-      "version": "0.13.4",
+      "version": "0.13.5",
       "license": "MIT",
       "url": "https://github.com/raphlinus/pulldown-cmark"
     },
@@ -3269,7 +3257,7 @@
     },
     {
       "name": "rusqlite",
-      "version": "0.40.2",
+      "version": "0.41.0",
       "license": "MIT",
       "url": "https://github.com/rusqlite/rusqlite"
     },
@@ -3641,7 +3629,7 @@
     },
     {
       "name": "smb2",
-      "version": "0.35.0",
+      "version": "0.36.0",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/vdavid/smb2"
     },
@@ -3832,6 +3820,12 @@
       "url": "https://github.com/mystor/synstructure"
     },
     {
+      "name": "synstructure",
+      "version": "0.14.0",
+      "license": "MIT",
+      "url": "https://github.com/mystor/synstructure"
+    },
+    {
       "name": "sysinfo",
       "version": "0.39.6",
       "license": "MIT",
@@ -3863,25 +3857,25 @@
     },
     {
       "name": "tauri",
-      "version": "2.12.4",
+      "version": "2.12.5",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/tauri-apps/tauri"
     },
     {
       "name": "tauri-build",
-      "version": "2.7.3",
+      "version": "2.7.4",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/tauri-apps/tauri"
     },
     {
       "name": "tauri-codegen",
-      "version": "2.7.3",
+      "version": "2.7.4",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/tauri-apps/tauri"
     },
     {
       "name": "tauri-macros",
-      "version": "2.7.3",
+      "version": "2.7.4",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/tauri-apps/tauri"
     },
@@ -3917,7 +3911,7 @@
     },
     {
       "name": "tauri-plugin-mcp-bridge",
-      "version": "0.13.1",
+      "version": "0.13.2",
       "license": "MIT",
       "url": "https://github.com/hypothesi/mcp-server-tauri"
     },
@@ -3959,7 +3953,7 @@
     },
     {
       "name": "tauri-runtime-wry",
-      "version": "2.12.2",
+      "version": "2.12.3",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/tauri-apps/tauri"
     },
@@ -4061,7 +4055,7 @@
     },
     {
       "name": "tinystr",
-      "version": "0.8.4",
+      "version": "0.8.5",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
@@ -4079,7 +4073,7 @@
     },
     {
       "name": "tokio",
-      "version": "1.53.3",
+      "version": "1.54.1",
       "license": "MIT",
       "url": "https://github.com/tokio-rs/tokio"
     },
@@ -4355,7 +4349,7 @@
     },
     {
       "name": "usearch",
-      "version": "2.26.4",
+      "version": "2.26.5",
       "license": "Apache-2.0",
       "url": "https://github.com/unum-cloud/USearch"
     },
@@ -4379,7 +4373,7 @@
     },
     {
       "name": "uuid",
-      "version": "1.28.0",
+      "version": "1.29.0",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/uuid-rs/uuid"
     },
@@ -4499,13 +4493,13 @@
     },
     {
       "name": "yoke",
-      "version": "0.8.3",
+      "version": "0.8.4",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "yoke-derive",
-      "version": "0.8.2",
+      "version": "0.8.4",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
@@ -4547,13 +4541,13 @@
     },
     {
       "name": "zerovec",
-      "version": "0.11.8",
+      "version": "0.11.9",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
     {
       "name": "zerovec-derive",
-      "version": "0.11.6",
+      "version": "0.11.7",
       "license": "Unicode-3.0",
       "url": "https://github.com/unicode-org/icu4x"
     },
@@ -4583,14 +4577,14 @@
     },
     {
       "name": "zstd",
-      "version": "0.13.3",
-      "license": "MIT",
+      "version": "0.14.3",
+      "license": "BSD-3-Clause",
       "url": "https://github.com/gyscos/zstd-rs"
     },
     {
       "name": "zstd-safe",
-      "version": "7.2.4",
-      "license": "MIT OR Apache-2.0",
+      "version": "8.2.0",
+      "license": "BSD-3-Clause",
       "url": "https://github.com/gyscos/zstd-rs"
     },
     {
@@ -4657,7 +4651,7 @@
     },
     {
       "name": "@formatjs/icu-messageformat-parser",
-      "version": "3.5.21",
+      "version": "3.5.22",
       "license": "MIT",
       "url": "https://github.com/formatjs/formatjs#readme"
     },
@@ -4717,7 +4711,7 @@
     },
     {
       "name": "@logtape/logtape",
-      "version": "2.4.1",
+      "version": "2.4.2",
       "license": "MIT",
       "url": "https://logtape.org/"
     },
@@ -5287,7 +5281,7 @@
     },
     {
       "name": "intl-messageformat",
-      "version": "12.1.3",
+      "version": "12.1.4",
       "license": "BSD-3-Clause",
       "url": "https://github.com/formatjs/formatjs"
     },

@@ -1221,6 +1221,26 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label.reasoningEffort": "Esforço de raciocínio",
+  "@settings.ai.reasoningEfforts.label.reasoningEffort": {
+    "sourceHash": "3236aee"
+  },
+  "settings.ai.reasoningEfforts.label.effort": "Esforço",
+  "@settings.ai.reasoningEfforts.label.effort": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.label.thinkingLevel": "Nível de pensamento",
+  "@settings.ai.reasoningEfforts.label.thinkingLevel": {
+    "sourceHash": "96f115b"
+  },
+  "settings.ai.reasoningEfforts.description": "Quanto tempo o modelo pensa antes de responder. Mais esforço ajuda em tarefas difíceis, mas as respostas demoram mais e o raciocínio é cobrado como saída.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "esforço de raciocínio, esforço, raciocínio, pensar, pensamento, profundidade, velocidade, custo, qualidade",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "3bbb127"
+  },
   "settings.ai.localContextSize.label": "Janela de contexto",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2283,7 +2303,7 @@
   },
   "settings.askCmdr.openAiSettings": "Abrir ajustes de IA",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Provedor e modelo",
   "@settings.askCmdr.provider.title": {
@@ -2301,9 +2321,9 @@
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "O modelo que o chat usa. Deixe em branco para usar o mesmo modelo dos outros recursos de IA do Cmdr. Exemplo: claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "O modelo que o chat usa. Deixe em branco para usar o mesmo modelo dos outros recursos de IA do Cmdr. Exemplo: claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
-    "sourceHash": "881f8a4"
+    "sourceHash": "e301e99"
   },
   "settings.askCmdr.interactiveModel.placeholder": "Igual à IA do Cmdr",
   "@settings.askCmdr.interactiveModel.placeholder": {
@@ -2317,9 +2337,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Quanto da conversa o Cmdr envia ao modelo. Automático segue o limite conhecido do seu modelo.",
+  "settings.askCmdr.chatMemorySize.description": "Quanto da conversa o Cmdr envia ao modelo. Automático usa toda a janela de contexto do seu modelo; um tamanho define um limite menor para gastar menos.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automático (recomendado)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {
@@ -2328,6 +2348,22 @@
   "settings.askCmdr.chatMemorySize.overWindow": "Seu modelo pode recusar uma mensagem tão longa. O Cmdr mantém o valor que você definiu.",
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
+  },
+  "settings.askCmdr.spendPause.label": "Perguntar quando uma resposta custar mais de",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Uma resposta pode fazer muitas consultas. Acima deste custo estimado, o Cmdr pausa a resposta e pergunta antes de gastar mais. As estimativas usam preços de tabela, então o cache costuma deixar o custo real menor.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Nunca",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "gasto, dinheiro, preço, orçamento, limite, pausa, dólares, caro, conta",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
   },
   "settings.askCmdr.chatMemorySize.keywords": "chat, conversa, memória, contexto, janela, tokens, tamanho, orçamento, histórico",
   "@settings.askCmdr.chatMemorySize.keywords": {
@@ -2932,6 +2968,31 @@
   "settings.advanced.card.updates": "Atualizações",
   "@settings.advanced.card.updates": {
     "sourceHash": "22e2bad"
+  },
+  "settings.advanced.card.askCmdr": "Ask Cmdr",
+  "@settings.advanced.card.askCmdr": {
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Ask Cmdr is the chat panel's product name and stays verbatim (pt terms.json ask-cmdr, confirmed); siblings settings.section.askCmdr and settings.askCmdr.enabled.label ship the same."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Grupos de ferramentas quando a resposta chega",
+  "@settings.askCmdr.toolGroupsOnAnswer.label": {
+    "sourceHash": "e5e922b"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.description": "O Ask Cmdr mostra o que a IA está olhando enquanto trabalha. Escolha se essas linhas se recolhem quando a resposta chegar.",
+  "@settings.askCmdr.toolGroupsOnAnswer.description": {
+    "sourceHash": "785da0a"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Recolher",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
+    "sourceHash": "01052be"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Deixar como estavam",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
+    "sourceHash": "0aa6718"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistente, chat, conversa, recolher, expandir, fechar, abrir, ferramentas, etapas, passos, resposta",
+  "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
+    "sourceHash": "6a9f055"
   },
   "settings.updates.card.updates": "Atualizações",
   "@settings.updates.card.updates": {

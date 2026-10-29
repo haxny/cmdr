@@ -1,6 +1,6 @@
 //! What a turn says about its own context: a budget-forced drop is announced once and
 //! revokes the dropped result's standing as evidence, and the rail's fullness gauge is fed
-//! one usage figure per turn from the assembly's own numbers. The fixtures come from the
+//! one usage figure per completed model call from that call's own assembly. The fixtures come from the
 //! sibling `test_support` module; the two oversized dispatchers below are used only here.
 
 use super::test_support::*;
@@ -13,7 +13,7 @@ use super::*;
 struct HugeDispatcher;
 
 impl ToolDispatcher for HugeDispatcher {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, _turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             ToolDispatchOutcome {
                 result: AgentToolResult {
@@ -42,7 +42,7 @@ impl RevokeRecordingDispatcher {
 }
 
 impl ToolDispatcher for RevokeRecordingDispatcher {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, _turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         async move {
             ToolDispatchOutcome {
                 result: AgentToolResult {
@@ -201,10 +201,12 @@ async fn a_budget_forced_context_drop_is_announced_once_per_turn() {
     assert!(*approx_tokens > 0, "the notice sizes what was dropped");
 }
 
-/// The gauge is driven by one event per turn carrying the assembly's own numbers. Two events
-/// would make the bar jump mid-turn; zero would leave it stale after a turn that grew the chat.
+/// The gauge and the cost footer move with every completed model call, not only at the turn's
+/// end: a long tool-running turn would otherwise show a frozen footer for minutes. Each call
+/// reports its own assembly's numbers, so the bar grows as tool results join the prompt, and
+/// each is metered before the rail is told to re-read the meter.
 #[tokio::test]
-async fn context_usage_is_reported_once_per_turn_with_the_assemblys_numbers() {
+async fn every_completed_model_call_reports_its_usage_and_its_metering() {
     let conn = migrated_conn();
     let id = conversation(&conn);
     let llm = ProgrammableLlm::new(vec![
@@ -233,31 +235,37 @@ async fn context_usage_is_reported_once_per_turn_with_the_assemblys_numbers() {
     .await;
     assert!(matches!(result, TurnResult::Answered { .. }), "the turn answers");
 
-    let reports: Vec<AgentChatEvent> = drain(&mut rx)
-        .into_iter()
-        .filter(|e| matches!(e, AgentChatEvent::ContextUsage { .. }))
+    let events = drain(&mut rx);
+    let reports: Vec<(usize, usize)> = events
+        .iter()
+        .filter_map(|e| match e {
+            AgentChatEvent::ContextUsage {
+                estimated_tokens,
+                budget_tokens,
+                ..
+            } => Some((*estimated_tokens, *budget_tokens)),
+            _ => None,
+        })
         .collect();
-    assert_eq!(
-        reports.len(),
-        1,
-        "exactly one usage report per turn, however many respond calls it took: {reports:?}"
-    );
-    let AgentChatEvent::ContextUsage {
-        estimated_tokens,
-        budget_tokens,
-        ..
-    } = &reports[0]
-    else {
-        unreachable!("filtered above")
-    };
-    assert_eq!(
-        *budget_tokens, 16_000,
-        "the report names the budget it was assembled against"
+    assert_eq!(reports.len(), 2, "one usage report per completed call: {reports:?}");
+    assert!(
+        reports.iter().all(|(_, budget)| *budget == 16_000),
+        "each report names the budget it was assembled against"
     );
     assert!(
-        *estimated_tokens > 0,
+        reports[0].0 > 0,
         "a real assembly costs something; a zero would render as an empty bar"
     );
+    assert!(
+        reports[1].0 > reports[0].0,
+        "the tool result joined the second call's prompt, so the bar grows: {reports:?}"
+    );
+    let metered = events
+        .iter()
+        .filter(|e| matches!(e, AgentChatEvent::CostMetered))
+        .count();
+    assert_eq!(metered, 2, "the rail re-reads the meter after each metered call");
+    let (estimated_tokens, budget_tokens) = (&reports[1].0, &reports[1].1);
 
     // And it outlives the turn, so reopening the thread shows the last known figure.
     assert_eq!(
@@ -267,8 +275,8 @@ async fn context_usage_is_reported_once_per_turn_with_the_assemblys_numbers() {
     );
 }
 
-/// A turn that never finishes reports no usage: the user is looking at an error line, and the
-/// previous turn's stored figure stays the last thing actually measured.
+/// A call that never reaches `End` reports no usage: the user is looking at an error line, and
+/// the previous call's stored figure stays the last thing actually measured.
 #[tokio::test]
 async fn a_failed_turn_reports_no_usage_and_leaves_the_stored_figure_alone() {
     let conn = migrated_conn();

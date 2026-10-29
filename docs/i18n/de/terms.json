@@ -70,6 +70,17 @@
     "forms": "the Settings section and the sheet's group → Erweitert; in prose → in den erweiterten Einstellungen",
     "sources": "AppKit AccessibilityImageDescriptions (NSAdvanced); catalog (settings.section.advanced)"
   },
+  "ai-context": {
+    "chosen": "Kontext",
+    "confidence": "high",
+    "sources": "MS terminology (context → Kontext); askCmdr.cost.estimateTooltip"
+  },
+  "ai-agent": {
+    "chosen": "Agent",
+    "forms": "masculine: der Agent; Here’s what the agent did → Das hat der Agent gemacht",
+    "confidence": "high",
+    "sources": "Microsoft terminology (agent → Agent); catalog (queryUi.ai.lead); macOS has no AI-agent sense"
+  },
   "ai-feature": {
     "chosen": "KI",
     "confidence": "high",
@@ -89,6 +100,13 @@
     "confidence": "high",
     "forms": "a reply that stopped mid-stream → Die Antwort wurde nicht abgeschlossen.",
     "sources": "standard German; catalog (askCmdr.error.unfinishedReply)"
+  },
+  "ai-lookup": {
+    "accept": ["Abfragen", "Abfragerunde"],
+    "chosen": "Abfrage",
+    "confidence": "high",
+    "forms": "a round of lookups → Abfragerunde (Cmdr erlaubt pro Antwort höchstens 25 Abfragerunden)",
+    "sources": "catalog precedent: `askCmdr.error.repeatedToolCall`, `askCmdr.event.contextTrimmed`"
   },
   "ai-tool": {
     "accept": ["Werkzeuge"],
@@ -311,6 +329,17 @@
     "confidence": "high",
     "forms": "pl. Spalten; the Name column → die Spalte Name / Namensspalte; sort column → Sortierspalte; column width → Spaltenbreite",
     "sources": "macOS Finder (FI43 Spalten, SV1 die Spalte „Name“, Spaltendarstellung), AppKit Browser (Breite dieser Spalte anpassen); catalog"
+  },
+  "context-window": {
+    "chosen": "Kontextfenster",
+    "confidence": "high",
+    "sources": "shipped settings.ai.localContextSize.label and settings.askCmdr.chatMemorySize.keywords"
+  },
+  "conversation": {
+    "chosen": "Unterhaltung",
+    "confidence": "high",
+    "sources": "MS terminology (Unterhaltung); shipped settings.askCmdr.chatMemorySize.description",
+    "accept": ["Chat"]
   },
   "damaged": {
     "chosen": "beschädigt",
@@ -761,6 +790,12 @@
     "confidence": "high",
     "forms": "More about “X” → Mehr über „X“",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "Stufe",
+    "confidence": "high",
+    "sources": "shipped settings.archives.compressionLevel.label (Komprimierungsstufe) over MS Ebene (a layer)",
+    "accept": ["Stufen", "Zoom"]
   },
   "link": {
     "chosen": "Link",
@@ -1424,6 +1459,12 @@
     "forms": "the whole-run time-left label → Insgesamt: {eta}",
     "sources": "GN insgesamt; DC Gesamt: (the label form, read stiffer before a time phrase)"
   },
+  "recommended": {
+    "chosen": "Empfohlen",
+    "confidence": "high",
+    "accept": ["empfohlen"],
+    "sources": "MS terminology (Empfohlen); shipped onboarding.stepAi.cloud.recommended"
+  },
   "scroll": {
     "accept": ["Scrollen", "scrollt"],
     "avoid": [
@@ -1518,6 +1559,12 @@
     "confidence": "high",
     "forms": "Step 1 of 2: X → Schritt 1 von 2: X (the X keeps its standalone form)",
     "sources": "MS terminology (step → Schritt); shipped catalog (onboarding.wizard.stepProgress, ai.local.installStepExtracting)"
+  },
+  "thinking": {
+    "chosen": "Denkt nach …",
+    "confidence": "tentative",
+    "accept": ["nachdenk", "Nachdenken", "Denkt nach"],
+    "sources": "shipped askCmdr.thinking; no AI-assistant precedent in the pile"
   },
   "web": {
     "accept": ["Web"],
@@ -3954,6 +4001,13 @@
     "forms": "command, menu item, and sheet title → Mehrfach umbenennen (menu with … after a no-break space); the act in prose → das Umbenennen; one run as a noun → Mehrfach-Umbenennung (Letzte Mehrfach-Umbenennung widerrufen)",
     "sources": "Total Commander de (6601 Mehrfach-Umbenenn-Tool; WCMD.MNU 2400 &Mehrfach-Umbenenn-Tool…); Double Commander de (Multi-Rename Tool → Mehrfaches Umbenennen); macOS Finder has no tool name (BulkRenameWindow: Umbenennen, Suchen:, Ersetzen durch:, Name mit Zähler)"
   },
+  "listing": {
+    "accept": ["aufgelistet", "Auflisten", "Dateiliste"],
+    "chosen": "auflisten",
+    "confidence": "high",
+    "forms": "Ask Cmdr tool line → <place>{name}</place> wird aufgelistet / <place>{name}</place> aufgelistet; the Settings section Listing → Dateiliste (settings.section.listing)",
+    "sources": "Double Commander de (Listing \"%s\" → »%s« auflisten); GNOME Nautilus de (Auflisten); catalog (askCmdr.tool.listDir.doing Ein Ordner wird aufgelistet)"
+  },
   "load": {
     "accept": ["geladen", "Laden", "lade", "lädt", "lädst"],
     "chosen": "laden",
@@ -4048,5 +4102,37 @@
     "confidence": "high",
     "forms": "a bare value or table cell → Unbekannt; after a noun → Größe unbekannt, Kosten unbekannt",
     "sources": "macOS (Unbekannt, Unbekannter Fehler); catalog (ai.local.modelUnknown Unbekannt, askCmdr.cost.unknown Kosten unbekannt)"
+  },
+  "start": {
+    "accept": ["gestartet", "starten", "startet", "lief", "läuft"],
+    "chosen": "starten",
+    "confidence": "high",
+    "exceptions": {
+      "indexing.step.statusPending": "a step's status chip for a step still waiting its turn → Ausstehend, the terse chip form"
+    },
+    "forms": "so nothing started → deshalb wurde nichts gestartet; Why this didn’t start → Warum es nicht gestartet ist; a refused approved suggestion may also say deshalb lief nichts",
+    "sources": "macOS (Das Programm „%@“ konnte nicht gestartet werden); catalog (suggestedOps.refusal.label, errors.write.namedLeavesRefused.message.notASource)"
+  },
+  "zip": {
+    "accept": ["Zips", "Zip-Archiv", "Zip-Archive", "Zip-Datei"],
+    "chosen": "Zip",
+    "confidence": "high",
+    "forms": "neuter: das Zip, ein Zip, des Zips; zip archive → Zip-Archiv (macOS Finder); the file itself → Zip-Datei; zip tools → Zip-Programme",
+    "sources": "macOS Finder (Zip-Archiv); catalog (errors.write.archiveEntryNameRefused.title Dieser Name passt nicht in ein Zip)"
+  },
+  "reasoning-effort": {
+    "chosen": "Denkaufwand",
+    "confidence": "tentative",
+    "sources": "OpenAI docs are English-only; no established rendering, so built from the locale’s reasoning wording; Azure’s MT Begründungsaufwand avoided (justification sense)"
+  },
+  "reasoning-effort-anthropic": {
+    "chosen": "Aufwand",
+    "confidence": "high",
+    "sources": "Anthropic localized docs, platform.claude.com/docs/<lang>/build-with-claude/effort, read 2026-10-28 (title Effort, glossed Aufwand)"
+  },
+  "thinking-level": {
+    "chosen": "Denkstufe",
+    "confidence": "tentative",
+    "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
   }
 }

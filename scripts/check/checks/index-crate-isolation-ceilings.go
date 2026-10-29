@@ -118,6 +118,12 @@ var surfaceGuardedCrates = []struct {
 		// folding it into `resume_after_reconnect` would make one call mean two things by
 		// volume kind. Why, in the audit doc below under "A drive whose mount point moved".
 		//
+		// Raised on 2026-10-26, `HandleMethods` 41 -> 42, for ONE method and no root promise:
+		// `Index::scan_skips`, the scanner's own exclusion policy for a path, so Ask Cmdr's
+		// live `list_dir` never shows ground the index skipped on purpose (#749). Copying the
+		// lists would fork the policy. Why, in the audit doc below under "Ground the scanner
+		// skips".
+		//
 		// ⚠️ WHICH BUCKET a grant lands in is not a choice, so read the right counter
 		// before assuming you have headroom. A value an event carries always spends a
 		// ROOT PROMISE, never `SubsystemItems`. Why, in the audit doc below, under
@@ -125,7 +131,7 @@ var surfaceGuardedCrates = []struct {
 		HandleType: "Index",
 		Ceilings: surfaceCeilings{
 			RootPromises:   53,
-			HandleMethods:  41,
+			HandleMethods:  42,
 			PublicModules:  17,
 			SubsystemItems: 156,
 		},
@@ -144,11 +150,13 @@ var surfaceGuardedCrates = []struct {
 		// argument item by item: the crate DETAILS section above.
 		// Root 15 -> 16 and items 21 -> 22 for `try_open_share` (ERR-SHUSC): why, in
 		// that same DETAILS section.
+		// Items 22 -> 23 for `connection::probe_server_guid` (one NAS by two
+		// addresses proven one share): why, in that same DETAILS section.
 		Name: "cmdr-smb",
 		Ceilings: surfaceCeilings{
 			RootPromises:   16,
 			PublicModules:  4,
-			SubsystemItems: 22,
+			SubsystemItems: 23,
 		},
 	},
 	{
@@ -293,11 +301,15 @@ var surfaceGuardedCrates = []struct {
 		// fixture and is deliberate: the fake phone sits behind `virtual-device` rather
 		// than `testing`, so the E2E build ships it and the counter measures it.
 		//
+		// 21st root promise (2026-10-28, David's OK): `MAX_NAME_UNITS`, re-exported
+		// from `mtp-rs` 0.36.0, so the app's proposal-time phone-name check reads the
+		// one limit the device layer refuses past instead of its own copy of 254.
+		//
 		// Item-by-item, and which of the four audiences each one serves:
 		// `crates/cmdr-mtp/DETAILS.md` § "The public surface is capped".
 		Name: "cmdr-mtp",
 		Ceilings: surfaceCeilings{
-			RootPromises:   20,
+			RootPromises:   21,
 			PublicModules:  2,
 			SubsystemItems: 12,
 		},
@@ -350,10 +362,15 @@ var surfaceGuardedCrates = []struct {
 		// 36th root promise, 2026-10-23: `EffectiveSort`, the only thing
 		// `entry_comparator` and `sort_entries` take, built only by `resolve`, so a
 		// sort outside a listing (search results) can't skip the date fallback.
+		//
+		// 37th root promise, 2026-10-26: `entries_as_stored`, the pane's open of a
+		// typed path (stored-spelling fallback included) for Ask Cmdr's live
+		// `list_dir`, which keeps no listing. Copying the fallback into the app
+		// would fork the one foreign-path seam.
 		Name:       "cmdr-listing",
 		HandleType: "Listings",
 		Ceilings: surfaceCeilings{
-			RootPromises:   36,
+			RootPromises:   37,
 			HandleMethods:  47,
 			PublicModules:  1,
 			SubsystemItems: 20,
@@ -430,6 +447,10 @@ var surfaceGuardedCrates = []struct {
 		// to exactly what the crate exposes, with no headroom (David approved the
 		// rule in the #415 plan).
 		//
+		// Raised to 89 on 2026-10-27 for `LandingClash`, the typed answer of
+		// `TransferLeaves::check_landings`: the agent's proposal asks the start's
+		// per-source name rules ahead of time rather than keeping a second copy.
+		//
 		// Raised to 86 on 2026-10-20 for `move_to_trash_sync`: the open-with reaper
 		// moves a copy an app changed to the Trash, unjournaled (no undo should list
 		// Cmdr's own leftovers), and a second objc trash call in the app would fork
@@ -451,7 +472,7 @@ var surfaceGuardedCrates = []struct {
 		Name:       "cmdr-operations",
 		HandleType: "Operations",
 		Ceilings: surfaceCeilings{
-			RootPromises:   87,
+			RootPromises:   89,
 			HandleMethods:  58,
 			PublicModules:  1,
 			SubsystemItems: 25,

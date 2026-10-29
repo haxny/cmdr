@@ -7,18 +7,39 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, unmount, flushSync } from 'svelte'
-import type { ManagedAiRefusal, SettingLock } from '#lib/ipc/bindings.js'
+import type { AiEffortOptions, AiModelLimits, ManagedAiRefusal, SettingLock } from '#lib/ipc/bindings.js'
 
-const stubs = vi.hoisted(() => ({
-  settings: Object.create(null) as Record<string, unknown>,
-  // Several subscribers per id (the section AND each `SettingRow`'s reset affordance).
-  listeners: new Map<string, Set<(value: unknown) => void>>(),
-  consent: { accepted: false },
-  locks: new Map<string, SettingLock>(),
-  managedConsent: null as ManagedAiRefusal | null,
-  refusedUrls: new Set<string>(),
-  localAiSupported: true,
+// A model known not to reason: no Effort picker. Hoisted with the stubs that use it.
+const { NO_EFFORT } = vi.hoisted(() => ({
+  NO_EFFORT: {
+    reasons: false,
+    levels: [],
+    canTurnOff: false,
+    recommended: null,
+    source: null,
+  } satisfies AiEffortOptions,
 }))
+
+const stubs = vi.hoisted(() => {
+  // Annotated, not `satisfies`: the tests reassign it to real limits, so it needs the wide type.
+  const modelLimits: AiModelLimits = {
+    contextWindowTokens: null,
+    maxOutputTokens: null,
+    source: null,
+    effort: NO_EFFORT,
+  }
+  return {
+    settings: Object.create(null) as Record<string, unknown>,
+    // Several subscribers per id (the section AND each `SettingRow`'s reset affordance).
+    listeners: new Map<string, Set<(value: unknown) => void>>(),
+    consent: { accepted: false },
+    locks: new Map<string, SettingLock>(),
+    managedConsent: null as ManagedAiRefusal | null,
+    refusedUrls: new Set<string>(),
+    localAiSupported: true,
+    modelLimits,
+  }
+})
 
 vi.mock('#lib/settings/index.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
@@ -88,10 +109,17 @@ vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   }),
   cloudAiConsentRevokePendingChanged: vi.fn(() => Promise.resolve()),
   onCloudAiConsentChanged: vi.fn(() => Promise.resolve(() => undefined)),
+  getAiModelLimits: vi.fn(() => Promise.resolve(stubs.modelLimits)),
+  onAiModelCapabilitiesChanged: vi.fn(() => Promise.resolve(() => undefined)),
 }))
 
 import AiSection from './AiSection.svelte'
-import { acceptCloudAiConsent, checkAiConnection, revokeCloudAiConsent } from '#lib/tauri-commands/index.js'
+import {
+  acceptCloudAiConsent,
+  checkAiConnection,
+  getAiModelLimits,
+  revokeCloudAiConsent,
+} from '#lib/tauri-commands/index.js'
 import { setSetting } from '#lib/settings/index.js'
 import { _resetCloudConsentForTests } from '#lib/ai/cloud-consent.svelte.js'
 
@@ -136,6 +164,7 @@ beforeEach(() => {
   stubs.settings['ai.cloudProvider'] = 'openai'
   stubs.settings['ai.cloudProviderConfigs'] = '{}'
   stubs.settings['askCmdr.interactiveModel'] = ''
+  stubs.modelLimits = { contextWindowTokens: null, maxOutputTokens: null, source: null, effort: NO_EFFORT }
 })
 
 afterEach(() => {
@@ -275,5 +304,132 @@ describe("the organization's AI policy in Settings > AI > Provider", () => {
 
     expect(consentSwitch(target)?.disabled).toBe(true)
     expect(target.textContent).toContain('Your organization allows only on-device AI.')
+  })
+})
+
+describe('the model’s context window in Settings > AI > Provider', () => {
+  it('shows the window and longest reply the service reports', async () => {
+    stubs.consent.accepted = true
+    stubs.modelLimits = {
+      contextWindowTokens: 1_000_000,
+      maxOutputTokens: 128_000,
+      source: 'provider',
+      effort: NO_EFFORT,
+    }
+    const target = await mountSection()
+
+    const note = target.querySelector('.model-limits')?.textContent ?? ''
+    expect(note).toContain('Context window: 1,000,000 tokens')
+    expect(note).toContain('Longest reply: 128,000 tokens')
+  })
+
+  it('marks a window from the built-in list as an estimate', async () => {
+    stubs.consent.accepted = true
+    stubs.modelLimits = {
+      contextWindowTokens: 128_000,
+      maxOutputTokens: null,
+      source: 'builtInTable',
+      effort: NO_EFFORT,
+    }
+    const target = await mountSection()
+
+    const note = target.querySelector('.model-limits')?.textContent ?? ''
+    expect(note).toContain('about 128,000 tokens (from Cmdr’s built-in list)')
+    expect(note).not.toContain('Longest reply')
+  })
+
+  it('says nothing when no source knows the window', async () => {
+    stubs.consent.accepted = true
+    const target = await mountSection()
+    expect(target.querySelector('.model-limits')).toBeNull()
+  })
+
+  it('asks nothing while cloud AI is off', async () => {
+    const target = await mountSection()
+    expect(target.querySelector('.model-limits')).toBeNull()
+    expect(getAiModelLimits).not.toHaveBeenCalled()
+  })
+})
+
+describe('the Effort picker in Settings > AI > Provider', () => {
+  const reasoning: AiEffortOptions = {
+    reasons: true,
+    levels: ['low', 'medium', 'high'],
+    canTurnOff: false,
+    recommended: 'medium',
+    source: 'builtInTable',
+  }
+
+  function optionLabels(target: HTMLElement): string[] {
+    const select = target.querySelector('[id="setting-ai.reasoningEfforts"] select')
+    return Array.from(select?.querySelectorAll('option') ?? []).map((o) => o.textContent.trim())
+  }
+
+  it('offers Recommended, naming what it amounts to, then the levels the model takes', async () => {
+    stubs.consent.accepted = true
+    stubs.modelLimits = {
+      contextWindowTokens: 400_000,
+      maxOutputTokens: null,
+      source: 'builtInTable',
+      effort: reasoning,
+    }
+    const target = await mountSection()
+
+    expect(optionLabels(target)).toEqual(['Recommended (Medium)', 'Low', 'Medium', 'High'])
+    expect(target.textContent).toContain('the thinking is billed as output')
+  })
+
+  it('names the picker in the provider’s own words', async () => {
+    stubs.consent.accepted = true
+    stubs.modelLimits = { contextWindowTokens: null, maxOutputTokens: null, source: null, effort: reasoning }
+    const label = (target: HTMLElement) =>
+      target.querySelector('[id="setting-ai.reasoningEfforts"] .setting-label')?.textContent.trim()
+
+    expect(label(await mountSection())).toBe('Reasoning effort')
+    stubs.settings['ai.cloudProvider'] = 'anthropic'
+    expect(label(await mountSection())).toBe('Effort')
+    stubs.settings['ai.cloudProvider'] = 'google-gemini'
+    expect(label(await mountSection())).toBe('Thinking level')
+  })
+
+  it('offers Recommended alone, and says why, when nothing knows the levels', async () => {
+    stubs.consent.accepted = true
+    stubs.modelLimits = {
+      contextWindowTokens: null,
+      maxOutputTokens: null,
+      source: null,
+      effort: { reasons: null, levels: [], canTurnOff: false, recommended: null, source: null },
+    }
+    const target = await mountSection()
+
+    expect(optionLabels(target)).toEqual(['Recommended'])
+    expect(target.textContent).toContain('doesn’t say which levels this model takes')
+  })
+
+  it('hides for a model known not to reason', async () => {
+    stubs.consent.accepted = true
+    stubs.modelLimits = {
+      contextWindowTokens: 1_000_000,
+      maxOutputTokens: null,
+      source: 'builtInTable',
+      effort: NO_EFFORT,
+    }
+    const target = await mountSection()
+    expect(target.querySelector('[id="setting-ai.reasoningEfforts"]')).toBeNull()
+  })
+
+  it('sets the effort of the model Ask Cmdr actually uses when it has its own, and says so', async () => {
+    stubs.consent.accepted = true
+    stubs.settings['askCmdr.interactiveModel'] = 'gpt-5.5'
+    stubs.modelLimits = {
+      contextWindowTokens: 400_000,
+      maxOutputTokens: null,
+      source: 'builtInTable',
+      effort: reasoning,
+    }
+    const target = await mountSection()
+
+    expect(vi.mocked(getAiModelLimits).mock.calls.some(([, , model]) => model === 'gpt-5.5')).toBe(true)
+    expect(target.textContent).toContain('Ask Cmdr uses its own model, gpt-5.5, so this applies to that model.')
   })
 })

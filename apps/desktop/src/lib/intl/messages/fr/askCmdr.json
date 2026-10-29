@@ -168,6 +168,14 @@
   "@askCmdr.tool.proposeSuggestions.done": {
     "sourceHash": "42457d2"
   },
+  "askCmdr.tool.proposeServer.doing": "Préparation d’une suggestion de serveur",
+  "@askCmdr.tool.proposeServer.doing": {
+    "sourceHash": "cf8e5f0"
+  },
+  "askCmdr.tool.proposeServer.done": "A préparé une suggestion de serveur",
+  "@askCmdr.tool.proposeServer.done": {
+    "sourceHash": "b075032"
+  },
   "askCmdr.tool.nothingToSuggest.doing": "Évaluation de l’intérêt d’en parler",
   "@askCmdr.tool.nothingToSuggest.doing": {
     "sourceHash": "51ef519"
@@ -192,6 +200,18 @@
   "@askCmdr.tool.memoryEdit.done": {
     "sourceHash": "5fdfbdc"
   },
+  "askCmdr.tool.connectVolume.doing": "Connexion à votre serveur",
+  "@askCmdr.tool.connectVolume.doing": {
+    "sourceHash": "5f24f83"
+  },
+  "askCmdr.tool.connectVolume.done": "S’est connecté à votre serveur",
+  "@askCmdr.tool.connectVolume.done": {
+    "sourceHash": "8f89103"
+  },
+  "askCmdr.tool.connectVolume.tried": "A essayé de se connecter à votre serveur",
+  "@askCmdr.tool.connectVolume.tried": {
+    "sourceHash": "b6d7bcf"
+  },
   "askCmdr.tool.unknown.doing": "Travail en cours",
   "@askCmdr.tool.unknown.doing": {
     "sourceHash": "a92f044"
@@ -200,9 +220,452 @@
   "@askCmdr.tool.unknown.done": {
     "sourceHash": "05cc2be"
   },
-  "askCmdr.tool.refused": "Cette demande n’était pas disponible",
-  "@askCmdr.tool.refused": {
-    "sourceHash": "f5e6dcc"
+  "askCmdr.tool.listDir.folder.doing": "Consultation du dossier <place>{name}</place>",
+  "@askCmdr.tool.listDir.folder.doing": {
+    "sourceHash": "d9a6c6c"
+  },
+  "askCmdr.tool.listDir.folder.done": "A consulté le dossier <place>{name}</place>",
+  "@askCmdr.tool.listDir.folder.done": {
+    "sourceHash": "f079af1"
+  },
+  "askCmdr.tool.listPaneFiles.selection.doing": "Consultation de votre sélection dans <place>{name}</place>",
+  "@askCmdr.tool.listPaneFiles.selection.doing": {
+    "sourceHash": "7beaf97"
+  },
+  "askCmdr.tool.listPaneFiles.selection.done": "A consulté votre sélection dans <place>{name}</place>",
+  "@askCmdr.tool.listPaneFiles.selection.done": {
+    "sourceHash": "497e22a"
+  },
+  "askCmdr.tool.folderImportance.folder.doing": "Vérification de l’importance du dossier <place>{name}</place>",
+  "@askCmdr.tool.folderImportance.folder.doing": {
+    "sourceHash": "59d84ca"
+  },
+  "askCmdr.tool.folderImportance.folder.done": "A vérifié l’importance du dossier <place>{name}</place>",
+  "@askCmdr.tool.folderImportance.folder.done": {
+    "sourceHash": "f167904"
+  },
+  "askCmdr.tool.inspectFile.files.doing": "{others, plural, =0 {Lecture du contenu du fichier <place>{name}</place>} one {Lecture du contenu du fichier <place>{name}</place> et de {othersText} autre} many {Lecture du contenu du fichier <place>{name}</place> et de {othersText} autres} other {Lecture du contenu du fichier <place>{name}</place> et de {othersText} autres}}",
+  "@askCmdr.tool.inspectFile.files.doing": {
+    "sourceHash": "2038d00"
+  },
+  "askCmdr.tool.inspectFile.files.done": "{others, plural, =0 {A lu le contenu du fichier <place>{name}</place>} one {A lu le contenu du fichier <place>{name}</place> et de {othersText} autre} many {A lu le contenu du fichier <place>{name}</place> et de {othersText} autres} other {A lu le contenu du fichier <place>{name}</place> et de {othersText} autres}}",
+  "@askCmdr.tool.inspectFile.files.done": {
+    "sourceHash": "63018e2"
+  },
+  "askCmdr.tool.imageFacts.files.doing": "{others, plural, =0 {Lecture du contenu de la photo <place>{name}</place>} one {Lecture du contenu de la photo <place>{name}</place> et de {othersText} autre} many {Lecture du contenu de la photo <place>{name}</place> et de {othersText} autres} other {Lecture du contenu de la photo <place>{name}</place> et de {othersText} autres}}",
+  "@askCmdr.tool.imageFacts.files.doing": {
+    "sourceHash": "5e7fbe6"
+  },
+  "askCmdr.tool.imageFacts.files.done": "{others, plural, =0 {A lu le contenu de la photo <place>{name}</place>} one {A lu le contenu de la photo <place>{name}</place> et de {othersText} autre} many {A lu le contenu de la photo <place>{name}</place> et de {othersText} autres} other {A lu le contenu de la photo <place>{name}</place> et de {othersText} autres}}",
+  "@askCmdr.tool.imageFacts.files.done": {
+    "sourceHash": "b3df6a5"
+  },
+  "askCmdr.tool.search.queryInFolders.doing": "{folders, plural, one {Recherche de « {query} » dans le dossier <places>{placesText}</places>} many {Recherche de « {query} » dans les dossiers <places>{placesText}</places>} other {Recherche de « {query} » dans les dossiers <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.doing": {
+    "sourceHash": "61bd031"
+  },
+  "askCmdr.tool.search.queryInFolders.done": "{folders, plural, one {A cherché « {query} » dans le dossier <places>{placesText}</places>} many {A cherché « {query} » dans les dossiers <places>{placesText}</places>} other {A cherché « {query} » dans les dossiers <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.done": {
+    "sourceHash": "188f225"
+  },
+  "askCmdr.tool.search.query.doing": "Recherche de « {query} »",
+  "@askCmdr.tool.search.query.doing": {
+    "sourceHash": "5b0939b"
+  },
+  "askCmdr.tool.search.query.done": "A cherché « {query} »",
+  "@askCmdr.tool.search.query.done": {
+    "sourceHash": "04e348f"
+  },
+  "askCmdr.tool.search.inFolders.doing": "{folders, plural, one {Recherche dans le dossier <places>{placesText}</places>} many {Recherche dans les dossiers <places>{placesText}</places>} other {Recherche dans les dossiers <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.doing": {
+    "sourceHash": "0989f2a"
+  },
+  "askCmdr.tool.search.inFolders.done": "{folders, plural, one {A cherché dans le dossier <places>{placesText}</places>} many {A cherché dans les dossiers <places>{placesText}</places>} other {A cherché dans les dossiers <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.done": {
+    "sourceHash": "017aef4"
+  },
+  "askCmdr.tool.searchPhotos.query.doing": "Recherche de « {query} » dans vos photos",
+  "@askCmdr.tool.searchPhotos.query.doing": {
+    "sourceHash": "b2e0e1f"
+  },
+  "askCmdr.tool.searchPhotos.query.done": "A cherché « {query} » dans vos photos",
+  "@askCmdr.tool.searchPhotos.query.done": {
+    "sourceHash": "5b60316"
+  },
+  "askCmdr.tool.proposeRenamePlan.count.doing": "{count, plural, one {Préparation d’un plan pour renommer {countText} fichier} many {Préparation d’un plan pour renommer {countText} fichiers} other {Préparation d’un plan pour renommer {countText} fichiers}}",
+  "@askCmdr.tool.proposeRenamePlan.count.doing": {
+    "sourceHash": "30c839d"
+  },
+  "askCmdr.tool.proposeRenamePlan.count.done": "{count, plural, one {A préparé un plan pour renommer {countText} fichier} many {A préparé un plan pour renommer {countText} fichiers} other {A préparé un plan pour renommer {countText} fichiers}}",
+  "@askCmdr.tool.proposeRenamePlan.count.done": {
+    "sourceHash": "2e2e790"
+  },
+  "askCmdr.tool.proposeSuggestions.count.doing": "{count, plural, one {Préparation de {countText} suggestion} many {Préparation de {countText} suggestions} other {Préparation de {countText} suggestions}}",
+  "@askCmdr.tool.proposeSuggestions.count.doing": {
+    "sourceHash": "971e695"
+  },
+  "askCmdr.tool.proposeSuggestions.count.done": "{count, plural, one {A préparé {countText} suggestion} many {A préparé {countText} suggestions} other {A préparé {countText} suggestions}}",
+  "@askCmdr.tool.proposeSuggestions.count.done": {
+    "sourceHash": "cbb1273"
+  },
+  "askCmdr.tool.memoryWrite.file.doing": "Enregistrement d’une note dans <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.doing": {
+    "sourceHash": "364c7ec"
+  },
+  "askCmdr.tool.memoryWrite.file.done": "A enregistré une note dans <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.done": {
+    "sourceHash": "8e7a923"
+  },
+  "askCmdr.tool.memoryWrite.file.tried": "A essayé d’enregistrer une note dans <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.tried": {
+    "sourceHash": "16921ce"
+  },
+  "askCmdr.tool.memoryWrite.tried": "A essayé d’enregistrer une note",
+  "@askCmdr.tool.memoryWrite.tried": {
+    "sourceHash": "25f76fa"
+  },
+  "askCmdr.tool.memoryEdit.file.doing": "Mise à jour de la note <place>{name}</place>",
+  "@askCmdr.tool.memoryEdit.file.doing": {
+    "sourceHash": "17b6898"
+  },
+  "askCmdr.tool.memoryEdit.file.done": "A mis à jour la note <place>{name}</place>",
+  "@askCmdr.tool.memoryEdit.file.done": {
+    "sourceHash": "9dc9f76"
+  },
+  "askCmdr.tool.memoryEdit.file.tried": "A essayé de mettre à jour la note <place>{name}</place>",
+  "@askCmdr.tool.memoryEdit.file.tried": {
+    "sourceHash": "aeb94cd"
+  },
+  "askCmdr.tool.memoryEdit.tried": "A essayé de mettre à jour ses propres notes",
+  "@askCmdr.tool.memoryEdit.tried": {
+    "sourceHash": "015f12a"
+  },
+  "askCmdr.tool.unknown.named.doing": "Demande de l’outil « {name} »",
+  "@askCmdr.tool.unknown.named.doing": {
+    "sourceHash": "e220c3b"
+  },
+  "askCmdr.tool.unknown.named.done": "A demandé l’outil « {name} »",
+  "@askCmdr.tool.unknown.named.done": {
+    "sourceHash": "2a9ce37"
+  },
+  "askCmdr.tool.showInPane": "Afficher {path} dans un panneau",
+  "@askCmdr.tool.showInPane": {
+    "sourceHash": "98180ea"
+  },
+  "askCmdr.tool.repeat": "Comme ci-dessus",
+  "@askCmdr.tool.repeat": {
+    "sourceHash": "87115ee"
+  },
+  "askCmdr.tool.outcomeSeparator": ", ",
+  "@askCmdr.tool.outcomeSeparator": {
+    "sourceHash": "0a07f65",
+    "sameAsSourceJustification": "Ponctuation seule : le français sépare deux parties d’une ligne par une virgule suivie d’une espace simple, comme l’anglais (pas d’espace insécable avant la virgule)."
+  },
+  "askCmdr.tool.outcome.items": "{count, plural, one {{countText} élément} many {{countText} éléments} other {{countText} éléments}}",
+  "@askCmdr.tool.outcome.items": {
+    "sourceHash": "5fbad7e"
+  },
+  "askCmdr.tool.outcome.itemsShown": "a montré {shownText} sur {totalText}",
+  "@askCmdr.tool.outcome.itemsShown": {
+    "sourceHash": "87b4f4b"
+  },
+  "askCmdr.tool.outcome.itemsShownAtLeast": "a montré {shownText} sur au moins {totalText}",
+  "@askCmdr.tool.outcome.itemsShownAtLeast": {
+    "sourceHash": "e57786f"
+  },
+  "askCmdr.tool.outcome.matches": "{count, plural, one {{countText} résultat} many {{countText} résultats} other {{countText} résultats}}",
+  "@askCmdr.tool.outcome.matches": {
+    "sourceHash": "8804edf"
+  },
+  "askCmdr.tool.outcome.matchesSoFar": "{count, plural, one {{countText} résultat pour l’instant} many {{countText} résultats pour l’instant} other {{countText} résultats pour l’instant}}",
+  "@askCmdr.tool.outcome.matchesSoFar": {
+    "sourceHash": "712f992"
+  },
+  "askCmdr.tool.outcome.nothingFound": "aucun résultat",
+  "@askCmdr.tool.outcome.nothingFound": {
+    "sourceHash": "9772cc8"
+  },
+  "askCmdr.tool.outcome.nothingFoundYet": "aucun résultat pour l’instant",
+  "@askCmdr.tool.outcome.nothingFoundYet": {
+    "sourceHash": "0d0778e"
+  },
+  "askCmdr.tool.outcome.imageIndexingOff": "l’indexation des images est désactivée",
+  "@askCmdr.tool.outcome.imageIndexingOff": {
+    "sourceHash": "5e9e5f6"
+  },
+  "askCmdr.tool.outcome.semanticModelNotInstalled": "le modèle de recherche sémantique n’est pas installé",
+  "@askCmdr.tool.outcome.semanticModelNotInstalled": {
+    "sourceHash": "54dc9af"
+  },
+  "askCmdr.tool.outcome.staged": "{count, plural, one {{countText} à vérifier} many {{countText} à vérifier} other {{countText} à vérifier}}",
+  "@askCmdr.tool.outcome.staged": {
+    "sourceHash": "b0aba27"
+  },
+  "askCmdr.tool.outcome.notStaged": "rien à vérifier",
+  "@askCmdr.tool.outcome.notStaged": {
+    "sourceHash": "40a1608"
+  },
+  "askCmdr.tool.outcome.toolUnavailable": "outil non disponible",
+  "@askCmdr.tool.outcome.toolUnavailable": {
+    "sourceHash": "9d46d4e"
+  },
+  "askCmdr.tool.outcome.repeatedCall": "ignoré : déjà essayé",
+  "@askCmdr.tool.outcome.repeatedCall": {
+    "sourceHash": "059d9db"
+  },
+  "askCmdr.tool.outcome.problem": "la demande n’a pas abouti",
+  "@askCmdr.tool.outcome.problem": {
+    "sourceHash": "05a940f"
+  },
+  "askCmdr.tool.outcome.miss.unknownVolume": "aucun disque de ce nom",
+  "@askCmdr.tool.outcome.miss.unknownVolume": {
+    "sourceHash": "94aa69b"
+  },
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "pas sur le disque indiqué",
+  "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
+    "sourceHash": "5a87cd6"
+  },
+  "askCmdr.tool.outcome.miss.noVolumeAtPath": "aucun disque connecté à cet endroit",
+  "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
+    "sourceHash": "8ce9e0e"
+  },
+  "askCmdr.tool.outcome.miss.volumeNotConnected": "ce disque n’est pas connecté",
+  "@askCmdr.tool.outcome.miss.volumeNotConnected": {
+    "sourceHash": "d7b4614"
+  },
+  "askCmdr.tool.outcome.miss.needsDiskAccess": "nécessite l’accès complet au disque",
+  "@askCmdr.tool.outcome.miss.needsDiskAccess": {
+    "sourceHash": "a0a6a84"
+  },
+  "askCmdr.tool.outcome.miss.unreachable": "le disque n’a pas répondu",
+  "@askCmdr.tool.outcome.miss.unreachable": {
+    "sourceHash": "f39fad7"
+  },
+  "askCmdr.tool.outcome.miss.notFound": "n’existe pas",
+  "@askCmdr.tool.outcome.miss.notFound": {
+    "sourceHash": "56ee722"
+  },
+  "askCmdr.tool.outcome.miss.excluded": "un dossier système ignoré",
+  "@askCmdr.tool.outcome.miss.excluded": {
+    "sourceHash": "8198768"
+  },
+  "askCmdr.tool.outcome.miss.permissionDenied": "pas d’autorisation de lecture",
+  "@askCmdr.tool.outcome.miss.permissionDenied": {
+    "sourceHash": "75756a9"
+  },
+  "askCmdr.tool.outcome.miss.cancelled": "réponse arrêtée pendant la lecture",
+  "@askCmdr.tool.outcome.miss.cancelled": {
+    "sourceHash": "4389728"
+  },
+  "askCmdr.tool.outcome.connection.alreadyConnected": "déjà connecté",
+  "@askCmdr.tool.outcome.connection.alreadyConnected": {
+    "sourceHash": "168827a"
+  },
+  "askCmdr.tool.outcome.connection.stillReconnecting": "reconnexion toujours en cours",
+  "@askCmdr.tool.outcome.connection.stillReconnecting": {
+    "sourceHash": "078929e"
+  },
+  "askCmdr.tool.outcome.connection.needsCredentials": "vous devez vous identifier",
+  "@askCmdr.tool.outcome.connection.needsCredentials": {
+    "sourceHash": "1833a39"
+  },
+  "askCmdr.tool.outcome.connection.needsApproval": "nécessite votre approbation",
+  "@askCmdr.tool.outcome.connection.needsApproval": {
+    "sourceHash": "80288d6"
+  },
+  "askCmdr.tool.outcome.connection.rejected": "le serveur a refusé",
+  "@askCmdr.tool.outcome.connection.rejected": {
+    "sourceHash": "53878fc"
+  },
+  "askCmdr.tool.outcome.connection.unreachable": "le serveur n’a pas répondu",
+  "@askCmdr.tool.outcome.connection.unreachable": {
+    "sourceHash": "80aae90"
+  },
+  "askCmdr.tool.outcome.connection.notSaved": "ce serveur n’est pas enregistré",
+  "@askCmdr.tool.outcome.connection.notSaved": {
+    "sourceHash": "1ac6950"
+  },
+  "askCmdr.tool.outcome.connection.cancelled": "réponse arrêtée pendant la connexion",
+  "@askCmdr.tool.outcome.connection.cancelled": {
+    "sourceHash": "2934c58"
+  },
+  "askCmdr.tool.outcome.memory.outsideMemory": "en dehors du dossier de notes",
+  "@askCmdr.tool.outcome.memory.outsideMemory": {
+    "sourceHash": "c320cc4"
+  },
+  "askCmdr.tool.outcome.memory.notMarkdown": "les notes doivent être des fichiers Markdown",
+  "@askCmdr.tool.outcome.memory.notMarkdown": {
+    "sourceHash": "a75dc2f"
+  },
+  "askCmdr.tool.outcome.memory.noPath": "aucune note indiquée",
+  "@askCmdr.tool.outcome.memory.noPath": {
+    "sourceHash": "6392377"
+  },
+  "askCmdr.tool.outcome.memory.directoryFull": "le dossier de notes est plein",
+  "@askCmdr.tool.outcome.memory.directoryFull": {
+    "sourceHash": "330a5d9"
+  },
+  "askCmdr.tool.outcome.memory.noSuchFile": "cette note n’existe pas",
+  "@askCmdr.tool.outcome.memory.noSuchFile": {
+    "sourceHash": "e11b4e5"
+  },
+  "askCmdr.tool.outcome.memory.noMatch": "le texte à modifier n’est pas dans la note",
+  "@askCmdr.tool.outcome.memory.noMatch": {
+    "sourceHash": "ed063fe"
+  },
+  "askCmdr.tool.outcome.memory.notUnique": "le texte à modifier apparaît plusieurs fois dans la note",
+  "@askCmdr.tool.outcome.memory.notUnique": {
+    "sourceHash": "1527ba7"
+  },
+  "askCmdr.tool.outcome.memory.unwritable": "écriture de la note impossible",
+  "@askCmdr.tool.outcome.memory.unwritable": {
+    "sourceHash": "4edf07b"
+  },
+  "askCmdr.tool.outcome.memory.unavailable": "le dossier de notes n’est pas disponible",
+  "@askCmdr.tool.outcome.memory.unavailable": {
+    "sourceHash": "bcf32e3"
+  },
+  "askCmdr.tool.outcome.memory.other": "la note n’a pas été modifiée",
+  "@askCmdr.tool.outcome.memory.other": {
+    "sourceHash": "00d5f3c"
+  },
+  "askCmdr.tool.outcome.noAnswer": "aucune réponse enregistrée",
+  "@askCmdr.tool.outcome.noAnswer": {
+    "sourceHash": "43eb550"
+  },
+  "askCmdr.tool.details": "Ce que l’outil a renvoyé",
+  "@askCmdr.tool.details": {
+    "sourceHash": "79665b6"
+  },
+  "askCmdr.tool.preview.loading": "Récupération de ce que l’outil a renvoyé",
+  "@askCmdr.tool.preview.loading": {
+    "sourceHash": "99e2019"
+  },
+  "askCmdr.tool.preview.given": "Transmis au modèle : {givenText} sur {totalText}",
+  "@askCmdr.tool.preview.given": {
+    "sourceHash": "8384012"
+  },
+  "askCmdr.tool.preview.givenSoFar": "Transmis au modèle : {givenText} sur {totalText} trouvés pour l’instant",
+  "@askCmdr.tool.preview.givenSoFar": {
+    "sourceHash": "2235a21"
+  },
+  "askCmdr.tool.preview.firstRows": "{count, plural, one {Voici la première ligne. Copier fournit le résultat complet.} many {Voici les {countText} premières lignes. Copier fournit le résultat complet.} other {Voici les {countText} premières lignes. Copier fournit le résultat complet.}}",
+  "@askCmdr.tool.preview.firstRows": {
+    "sourceHash": "1b695fc"
+  },
+  "askCmdr.tool.preview.noRows": "Aucune liste à afficher ici. Copier fournit le résultat complet.",
+  "@askCmdr.tool.preview.noRows": {
+    "sourceHash": "d80bc30"
+  },
+  "askCmdr.tool.preview.problemLabel": "Ce que Cmdr a dit au modèle :",
+  "@askCmdr.tool.preview.problemLabel": {
+    "sourceHash": "edf1200"
+  },
+  "askCmdr.tool.preview.setAside": "Ce résultat a été mis de côté pour faire de la place, il n’en reste donc rien à afficher.",
+  "@askCmdr.tool.preview.setAside": {
+    "sourceHash": "2b7a0ee"
+  },
+  "askCmdr.tool.preview.notFound": "Ce résultat n’est plus là.",
+  "@askCmdr.tool.preview.notFound": {
+    "sourceHash": "eaa5a2c"
+  },
+  "askCmdr.tool.preview.unavailable": "Cmdr ne peut pas lire ce résultat pour le moment.",
+  "@askCmdr.tool.preview.unavailable": {
+    "sourceHash": "5649f24"
+  },
+  "askCmdr.tool.preview.line": "ligne {lineText}",
+  "@askCmdr.tool.preview.line": {
+    "sourceHash": "7d8370c"
+  },
+  "askCmdr.tool.preview.status.missing": "n’existe pas",
+  "@askCmdr.tool.preview.status.missing": {
+    "sourceHash": "56ee722"
+  },
+  "askCmdr.tool.preview.status.unreadable": "lecture impossible",
+  "@askCmdr.tool.preview.status.unreadable": {
+    "sourceHash": "1e9c923"
+  },
+  "askCmdr.tool.preview.status.unreachable": "injoignable",
+  "@askCmdr.tool.preview.status.unreachable": {
+    "sourceHash": "86f57c8"
+  },
+  "askCmdr.tool.preview.status.unsupportedVolume": "sur un disque où l’IA ne peut pas regarder",
+  "@askCmdr.tool.preview.status.unsupportedVolume": {
+    "sourceHash": "945bf7c"
+  },
+  "askCmdr.tool.preview.status.noVolumeAtPath": "sur un disque qui n’est pas connecté",
+  "@askCmdr.tool.preview.status.noVolumeAtPath": {
+    "sourceHash": "3b32abe"
+  },
+  "askCmdr.tool.preview.status.notIndexed": "pas encore indexée",
+  "@askCmdr.tool.preview.status.notIndexed": {
+    "sourceHash": "c0da718"
+  },
+  "askCmdr.tool.preview.copy": "Copier",
+  "@askCmdr.tool.preview.copy": {
+    "sourceHash": "e21f935"
+  },
+  "askCmdr.tool.preview.copyLabel": "Copier tout le résultat en JSON",
+  "@askCmdr.tool.preview.copyLabel": {
+    "sourceHash": "91a0434"
+  },
+  "askCmdr.tool.preview.copied": "Copié",
+  "@askCmdr.tool.preview.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "askCmdr.tool.preview.copyRefused": "Le presse-papiers a refusé le texte. Réessayer ?",
+  "@askCmdr.tool.preview.copyRefused": {
+    "sourceHash": "5b856ff"
+  },
+  "askCmdr.toolGroup.summary": "A exploré : {parts}",
+  "@askCmdr.toolGroup.summary": {
+    "sourceHash": "2808d11"
+  },
+  "askCmdr.toolGroup.summaryRunning": "Exploration en cours : {parts}",
+  "@askCmdr.toolGroup.summaryRunning": {
+    "sourceHash": "db287ea"
+  },
+  "askCmdr.toolGroup.folders": "{count, plural, one {{countText} dossier} many {{countText} dossiers} other {{countText} dossiers}}",
+  "@askCmdr.toolGroup.folders": {
+    "sourceHash": "3c46f04"
+  },
+  "askCmdr.toolGroup.files": "{count, plural, one {{countText} fichier} many {{countText} fichiers} other {{countText} fichiers}}",
+  "@askCmdr.toolGroup.files": {
+    "sourceHash": "3c08428"
+  },
+  "askCmdr.toolGroup.searches": "{count, plural, one {{countText} recherche} many {{countText} recherches} other {{countText} recherches}}",
+  "@askCmdr.toolGroup.searches": {
+    "sourceHash": "f280511"
+  },
+  "askCmdr.toolGroup.checks": "{count, plural, one {{countText} vérification} many {{countText} vérifications} other {{countText} vérifications}}",
+  "@askCmdr.toolGroup.checks": {
+    "sourceHash": "a09f7fb"
+  },
+  "askCmdr.toolGroup.plans": "{count, plural, one {{countText} plan} many {{countText} plans} other {{countText} plans}}",
+  "@askCmdr.toolGroup.plans": {
+    "sourceHash": "bd332c0",
+    "sameAsSourceJustification": "Mot partagé : « plan » est le même mot en français (comme askCmdr.tool.proposeRenamePlan.doing, « plan de renommage »), et les branches many/other suivent la règle française."
+  },
+  "askCmdr.toolGroup.notes": "{count, plural, one {{countText} note} many {{countText} notes} other {{countText} notes}}",
+  "@askCmdr.toolGroup.notes": {
+    "sourceHash": "2623802",
+    "sameAsSourceJustification": "Mot partagé : « note » est le même mot en français (terms.json note → note, féminin), et les branches many/other suivent la règle française."
+  },
+  "askCmdr.toolGroup.other": "{count, plural, one {{countText} autre étape} many {{countText} autres étapes} other {{countText} autres étapes}}",
+  "@askCmdr.toolGroup.other": {
+    "sourceHash": "6108287"
+  },
+  "askCmdr.turnStats.summary": "{calls, plural, one {{callsText} appel d’outil} many {{callsText} appels d’outils} other {{callsText} appels d’outils}} · {duration} · {tokens, plural, one {{tokensText} jeton} many {{tokensText} jetons} other {{tokensText} jetons}}",
+  "@askCmdr.turnStats.summary": {
+    "sourceHash": "a7d484d"
+  },
+  "askCmdr.turnStats.summaryNoDuration": "{calls, plural, one {{callsText} appel d’outil} many {{callsText} appels d’outils} other {{callsText} appels d’outils}} · {tokens, plural, one {{tokensText} jeton} many {{tokensText} jetons} other {{tokensText} jetons}}",
+  "@askCmdr.turnStats.summaryNoDuration": {
+    "sourceHash": "d768ba2"
+  },
+  "askCmdr.turnStats.stopped": "Réponse arrêtée · {summary}",
+  "@askCmdr.turnStats.stopped": {
+    "sourceHash": "0f6ea99"
   },
   "askCmdr.error.noKey": "Ajoutez votre clé d’API dans les réglages pour commencer à discuter.",
   "@askCmdr.error.noKey": {
@@ -247,6 +710,66 @@
   "askCmdr.error.budgetExhausted": "Celle-ci a atteint sa limite avant de terminer. Essayez de poser une question plus précise.",
   "@askCmdr.error.budgetExhausted": {
     "sourceHash": "ea2beb2"
+  },
+  "askCmdr.limit.toolRounds.answered": "Cette réponse a atteint la limite de {maxText} {max, plural, one {série} many {séries} other {séries}} de consultations prévue par Cmdr. Elle a donc arrêté de chercher et répondu avec ce qu’elle avait trouvé.",
+  "@askCmdr.limit.toolRounds.answered": {
+    "sourceHash": "3e45f64"
+  },
+  "askCmdr.limit.toolRounds.unfinished": "Cette réponse a atteint la limite de {maxText} {max, plural, one {série} many {séries} other {séries}} de consultations prévue par Cmdr avant de pouvoir se terminer.",
+  "@askCmdr.limit.toolRounds.unfinished": {
+    "sourceHash": "ee13e2d"
+  },
+  "askCmdr.limit.wallTime": "Cette réponse a atteint la limite de {minutesText} {minutes, plural, one {minute} many {minutes} other {minutes}} par réponse prévue par Cmdr avant de pouvoir se terminer.",
+  "@askCmdr.limit.wallTime": {
+    "sourceHash": "fc47e07"
+  },
+  "askCmdr.limit.repeatedCall.answered": "Cette réponse répétait sans cesse la même consultation. Cmdr lui a donc fait arrêter de chercher et répondre avec ce qu’elle avait trouvé.",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "sourceHash": "884a9ae"
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "Cette réponse répétait sans cesse la même consultation. Cmdr l’a donc arrêtée avant qu’elle puisse se terminer.",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "sourceHash": "c21dbe9"
+  },
+  "askCmdr.limit.noProgress.answered": "Au cours de {max, plural, one {sa dernière série} many {ses {maxText} dernières séries} other {ses {maxText} dernières séries}} de consultations, cette réponse n’a rien trouvé de nouveau. Cmdr lui a donc fait arrêter de chercher et répondre avec ce qu’elle avait trouvé.",
+  "@askCmdr.limit.noProgress.answered": {
+    "sourceHash": "6dc1bc0"
+  },
+  "askCmdr.limit.noProgress.unfinished": "Au cours de {max, plural, one {sa dernière série} many {ses {maxText} dernières séries} other {ses {maxText} dernières séries}} de consultations, cette réponse n’a rien trouvé de nouveau. Cmdr l’a donc arrêtée avant qu’elle puisse se terminer.",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "sourceHash": "30c3354"
+  },
+  "askCmdr.limit.stalled": "Le fournisseur d’IA n’a rien envoyé pendant {maxText} {max, plural, one {seconde} many {secondes} other {secondes}}. Cmdr a donc mis fin à cette réponse.",
+  "@askCmdr.limit.stalled": {
+    "sourceHash": "6b72ac1"
+  },
+  "askCmdr.spendPause.question": "Cette réponse a coûté environ {cost} jusqu’ici. Continuer ?",
+  "@askCmdr.spendPause.question": {
+    "sourceHash": "a59f9e2"
+  },
+  "askCmdr.spendPause.estimateNote": "Estimation au prix catalogue. Grâce à la mise en cache chez votre fournisseur, le coût réel est généralement plus bas.",
+  "@askCmdr.spendPause.estimateNote": {
+    "sourceHash": "0ca2362"
+  },
+  "askCmdr.spendPause.keepGoing": "Continuer",
+  "@askCmdr.spendPause.keepGoing": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.spendPause.stop": "Arrêter",
+  "@askCmdr.spendPause.stop": {
+    "sourceHash": "cae7d57"
+  },
+  "askCmdr.limit.fixed": "Cette limite est fixe et aucun réglage ne permet de la modifier. Si elle vous gêne, <feedback>dites-le-nous</feedback>.",
+  "@askCmdr.limit.fixed": {
+    "sourceHash": "d0c4bc7"
+  },
+  "askCmdr.limit.continue": "Continuer",
+  "@askCmdr.limit.continue": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.limit.continueMessage": "Reprenez là où vous en étiez, s’il vous plaît.",
+  "@askCmdr.limit.continueMessage": {
+    "sourceHash": "8c7a012"
   },
   "askCmdr.error.repeatedToolCall": "Celle-ci a répété la même consultation sans avancer. Essayez de poser la question autrement.",
   "@askCmdr.error.repeatedToolCall": {
@@ -356,9 +879,33 @@
   "@askCmdr.composer.dropHint": {
     "sourceHash": "34a7a63"
   },
-  "askCmdr.composer.providerOff": "Activez un fournisseur d’IA dans les réglages pour commencer à discuter.",
-  "@askCmdr.composer.providerOff": {
-    "sourceHash": "e466415"
+  "askCmdr.composer.sendNeedsProvider": "Configurez un fournisseur d’IA pour envoyer",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Ask Cmdr a besoin d’un fournisseur d’IA pour discuter. Choisissez-en un dans les Réglages.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Votre fournisseur d’IA dans le cloud a besoin d’une clé d’API pour qu’Ask Cmdr puisse discuter. Ajoutez-la dans les Réglages.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Votre fournisseur d’IA dans le cloud a besoin d’une adresse pour qu’Ask Cmdr puisse discuter. Ajoutez-la dans les Réglages.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "L’IA locale n’est pas encore téléchargée, donc Ask Cmdr ne peut pas discuter. Configurez-la dans les Réglages.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "L’IA locale n’est pas lancée, donc Ask Cmdr ne peut pas discuter. Lancez-la dans les Réglages.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "Ouvrir les réglages d’IA",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
   },
   "askCmdr.attachment.remove": "Retirer la pièce jointe",
   "@askCmdr.attachment.remove": {
@@ -386,7 +933,7 @@
   },
   "askCmdr.gate.cloudOff.openSettings": "Ouvrir les réglages d’IA",
   "@askCmdr.gate.cloudOff.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "askCmdr.forget.title": "Oublier tout ce dont Cmdr se souvient à votre sujet ?",
   "@askCmdr.forget.title": {
@@ -415,6 +962,14 @@
   "askCmdr.cost.estimate": "environ {amount}",
   "@askCmdr.cost.estimate": {
     "sourceHash": "e448a4a"
+  },
+  "askCmdr.cost.underAmount": "moins de {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "Le montant est en USD et ne tient pas compte de la mise en cache chez votre fournisseur. Votre facture réelle n’en représente sans doute qu’une fraction, car le contexte partagé entre nos appels est mis en cache.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
   },
   "askCmdr.cost.unknown": "coût inconnu",
   "@askCmdr.cost.unknown": {
@@ -690,6 +1245,10 @@
   "@askCmdr.context.tooltip": {
     "sourceHash": "81cc75a"
   },
+  "askCmdr.context.baselineTooltip": "Chaque message commence avec {usedText} sur {budgetText} {budget, plural, one {jeton} many {jetons} other {jetons}} (estimation) pour les instructions et les outils de Cmdr",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
+  },
   "askCmdr.wake.thinking": "Cmdr regarde ce qui a changé. Ouvrir la conversation.",
   "@askCmdr.wake.thinking": {
     "sourceHash": "772ca6e"
@@ -797,6 +1356,30 @@
   "askCmdr.decision.verbExtract": "extraire",
   "@askCmdr.decision.verbExtract": {
     "sourceHash": "c924f71"
+  },
+  "askCmdr.decision.serverRejected": "Vous avez refusé {verbName}",
+  "@askCmdr.decision.serverRejected": {
+    "sourceHash": "b9797ee"
+  },
+  "askCmdr.decision.serverApproved": "Vous avez approuvé {verbName}",
+  "@askCmdr.decision.serverApproved": {
+    "sourceHash": "5ed18c2"
+  },
+  "askCmdr.decision.verbAddServer": "l’ajout d’un serveur",
+  "@askCmdr.decision.verbAddServer": {
+    "sourceHash": "0304bc5"
+  },
+  "askCmdr.decision.verbEditServer": "la modification des réglages d’un serveur",
+  "@askCmdr.decision.verbEditServer": {
+    "sourceHash": "155d3fd"
+  },
+  "askCmdr.decision.saved": "Enregistré",
+  "@askCmdr.decision.saved": {
+    "sourceHash": "b5c120b"
+  },
+  "askCmdr.decision.savedNotShare": "Serveur enregistré, mais pas son partage",
+  "@askCmdr.decision.savedNotShare": {
+    "sourceHash": "e93a7bc"
   },
   "askCmdr.railBoundary.closedToast": "Ask Cmdr a rencontré un problème et s’est fermé. Rouvrez-le pour continuer.",
   "@askCmdr.railBoundary.closedToast": {

@@ -45,10 +45,12 @@ into a connection per saved host per launch. Three places hold the found-host li
   re-read.
 
 "Saved" is one question with one answer: `servers-hub-rows.ts::savedSmbHostIds`, the match the hub's merge makes, so a
-host that gets no prefetch is exactly a host the hub puts in its nearby group. The store reads `listSavedServers()`
-fresh per decision (`readSavedServers`, one read shared by every host that asks while it's out), because a host becomes
-the person's the moment they add it or mount one of its shares, and nothing tells the store when. A read that breaks
-answers "none saved": not knowing whose a host is must never be what signs Cmdr in to it. Pinned by
+host that gets no prefetch is exactly a host the hub puts in its nearby group, plus a saved host still
+`awaitingFirstConnect` (saved without contact by "Add anyway" or an approved Ask Cmdr card): it's the person's, but
+nothing contacts it until they connect, so it's listed only when they open it (#777). The store reads
+`listSavedServers()` fresh per decision (`readSavedServers`, one read shared by every host that asks while it's out),
+because a host becomes the person's the moment they add it or mount one of its shares, and nothing tells the store when.
+A read that breaks answers "none saved": not knowing whose a host is must never be what signs Cmdr in to it. Pinned by
 `network-store.prefetch.test.ts`. The backend has no other caller: `smb_client::list_shares` is reached only through the
 three listing commands, all frontend-invoked (verified by reading its call sites, 2026-09-30).
 
@@ -148,6 +150,10 @@ unit-tested:
   ❌ never because of its own manual entry in the discovery list: Cmdr injects every typed-in host there at startup,
   reachable or not. The Address column carries the port off 445 (`localhost:11482`), and `savedHostFor` reads it back
   when mDNS sees nothing.
+
+  ❗ **A saved SMB host still `awaitingFirstConnect` reads `not_connected_yet`** ("Not connected yet"), even when mDNS
+  sees it, ranked with `saved`: "Saved" with no shares under it read like an add that didn't work (#777). Enter opens
+  its places list like any host's, which is the user connecting; its first mount clears the flag.
 
   ❗ **A many-place server's places are rows right under it** (`hasManyPlaces`: an SMB host's saved shares, an S3
   account's saved buckets and root; `kind: 'place'`, id `share:<volume id>`), placed AFTER the sort so they never drift
@@ -361,6 +367,7 @@ User activates a one-place server → onVolumeChange → the pane lands on a `sa
 User activates the "Add server…" row → the sign-in sheet opens in add mode
        ├─ SFTP / WebDAV → connectServer(target) → the pane lands on the volume
        └─ SMB → connectToServer(address, name) → TCP check → save + inject host
+            │   ("Add anyway": no check, saved without contact, nothing injected)
             └─ the sheet answers `handed_off`
                  ├─ PlacesBrowser mounts (host set)
                  └─ if sharePath → autoMountShare triggers mount
@@ -562,7 +569,9 @@ When a direct-SMB session drops mid-use, four pieces coordinate to recover:
    and `signIn` are `$state.raw` fields that each transition REASSIGNS, ❌ never through `map.set` of the same entry:
    `SvelteMap.set` stays silent on an identical value, and that froze the view on its first read (`ERR-VZ4CV`: Retry now
    disabled over a cycle that had long given up, Cancel and Disconnect leaving the view up). A Cancel bumps the entry's
-   `cycle`, so an attempt in flight when it lands drops its answer rather than scheduling the next tick.
+   `cycle`, so an attempt in flight when it lands drops its answer rather than scheduling the next tick. Besides a pane,
+   the backend can start a cycle: `volume-reconnect-requested` (Ask Cmdr's `connect_volume` on a dropped volume) calls
+   the same `startCycle` a pane landing on it does, so recovery keeps this one owner.
 4. **`FilePane.svelte`** subscribes via `$effect` whenever the pane is on an SMB volume. Subscription is refcounted
    (both panes on one share share a cycle), and on success the `onSuccess` callback re-runs `loadDirectory`.
    `../pane/smb-view-state.svelte.ts` turns the manager's status into the ONE `RemoteConnectState` the pane renders, in

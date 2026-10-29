@@ -6,7 +6,7 @@ use tokio_util::sync::CancellationToken;
 
 use super::super::*;
 use crate::agent::chat::context::ContextEnvelope;
-use crate::agent::chat::runtime::{ToolDispatchOutcome, ToolDispatcher, TurnResult};
+use crate::agent::chat::runtime::{CallContext, ToolDispatchOutcome, ToolDispatcher, TurnResult};
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::fake::{FakeAgentLlm, ScriptedTurn};
 use crate::agent::llm::types::{AgentPart, AgentToolCall, AgentToolResult, ProviderTag, ToolId};
@@ -24,7 +24,7 @@ fn migrated_conn() -> Connection {
 struct NoTools;
 
 impl ToolDispatcher for NoTools {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, _turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         Box::pin(async move {
             ToolDispatchOutcome {
                 result: AgentToolResult {
@@ -62,7 +62,9 @@ fn params(readiness: WakeReadiness, now: i64, envelope: &ContextEnvelope) -> Wak
         provider: ProviderTag::Anthropic,
         model: "test-model".to_string(),
         prompt_budget: 16_000,
-        memory: None,
+        chat_memory_tokens: 16_000,
+        call: crate::agent::llm::CallSettings::default(),
+        memory: &[],
     }
 }
 
@@ -75,7 +77,9 @@ fn run_params<'a>(now: i64, envelope: &'a ContextEnvelope) -> RunWakeParams<'a> 
         provider: ProviderTag::Anthropic,
         model: "test-model".to_string(),
         prompt_budget: 16_000,
-        memory: None,
+        chat_memory_tokens: 16_000,
+        call: crate::agent::llm::CallSettings::default(),
+        memory: &[],
     }
 }
 
@@ -208,8 +212,9 @@ async fn a_wakes_first_message_is_persisted_as_structure_not_as_english() {
         .expect("the wake persisted a user-role row");
 
     let parts: Vec<AgentPart> = serde_json::from_str(&blocks).expect("the row decodes");
-    let [AgentPart::WakeDigest(digest)] = parts.as_slice() else {
-        panic!("expected one structured digest part, got {parts:?}");
+    // The envelope the wake was sent with rides ahead of it (replayed verbatim for the prompt cache).
+    let [AgentPart::Envelope(_), AgentPart::WakeDigest(digest)] = parts.as_slice() else {
+        panic!("expected the envelope then one structured digest part, got {parts:?}");
     };
     assert_eq!(digest.folders.len(), 1);
     assert_eq!(digest.folders[0].folder, "/Users/someone/Downloads");
@@ -722,15 +727,19 @@ async fn a_rail_turn_calling_nothing_to_suggest_deletes_nothing() {
         &[],
         &TurnParams {
             conversation_id: id,
+            origin: crate::agent::types::TurnOrigin::Text,
             user: Some(UserTurn::Text("are we good?")),
             cmdr_md: None,
-            memory: None,
+            memory: &[],
             envelope: &env,
             offset: chrono::FixedOffset::east_opt(0).expect("utc"),
             now_secs: 1_000,
             provider: ProviderTag::Anthropic,
             model: "test-model".to_string(),
             prompt_budget: 16_000,
+            chat_memory_tokens: 16_000,
+            call: crate::agent::llm::CallSettings::default(),
+            spend_pause: None,
         },
         &sink,
         &CancellationToken::new(),

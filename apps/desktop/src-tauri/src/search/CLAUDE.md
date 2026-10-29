@@ -1,7 +1,7 @@
 # Search module
 
 In-memory filename search + AI query translation. **One volume per search, enforced at the API** (`resolve_target`):
-❌ no fan-out, the only way a search can silently omit a drive. Scope routes the volume; unscoped means boot volume.
+❌ no fan-out, the only way a search can silently omit a drive. Scope routes the volume (or the caller placed it: `run_live_collected`'s `on_volume`); unscoped means boot volume.
 
 `execute.rs` routes index/live search over `execute/coverage.rs`; `live.rs` owns runs and `ResultStream`
 (`live/CLAUDE.md`). `engine.rs` scans `index.rs`'s per-volume arena; matcher/excludes/ranking judge rows; types/query
@@ -22,7 +22,7 @@ hold data/operations; `history.rs` owns recents; `ai/` translates NL (`ai/CLAUDE
 - **Superseding a run ≠ cancelling it**: events stop, the walk runs on. Cancel is the dialog close (which SPARES
   `keep_run_id`), Escape, or quit — ❌ never the arena idle-drop, `RunOrigin::Dialog` only.
 - **Non-root indices are mount-relative**: PREFIX the mount root onto read paths, STRIP it from scopes. Mount root is
-  the `volume_path` meta OR the live registry, ❌ never assume the meta is set.
+  `location::resolve::volume_root`'s (live registry first, else the `volume_path` meta), ❌ never assume the meta is set.
 - **Honesty is TYPED, diagnostics are structural**: `uncovered_scopes`, `unresolved_scopes`, and `SearchRunCoverage`.
   `summarize_query_for_diagnostics` logs the pattern's shape only, and scope roots / exclusions as keyed
   `path=` / `dir=` fields a report tokenizes; `summarize_query` stays literal for MCP `interpreted_query`. A resolved scope can't distinguish a typo from not-yet-walked ground.

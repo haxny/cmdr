@@ -44,7 +44,7 @@ use super::Operations;
 use super::event_sinks::OperationEventSink;
 use super::state::WriteOperationState;
 use super::types::{
-    CancelRollback, LockedKept, LockedSourcesAnswer, LockedSourcesAnswerOutcome, WriteCancelledEvent,
+    CancelRollback, LockedKept, LockedSourcesAnswer, LockedSourcesAnswerOutcome, TransferLeaves, WriteCancelledEvent,
     WriteLockedSourcesEvent, WriteOperationType,
 };
 use super::validation::is_real_directory;
@@ -139,12 +139,11 @@ impl LockedScan {
     /// own, level by level, the way `merge_move_directory` walks them. A folder
     /// that lands by one rename takes its contents along untouched, so nothing
     /// inside it is asked about.
-    pub(crate) fn of_renames(sources: &[PathBuf], destination: &Path, destination_name: Option<&str>) -> Self {
+    pub(crate) fn of_renames(sources: &[PathBuf], destination: &Path, leaves: &TransferLeaves) -> Self {
         let mut scan = Self::default();
         for source in sources {
             scan.note(source);
-            let Some(name) = source.file_name() else { continue };
-            let leaf = destination_name.map(Path::new).unwrap_or_else(|| Path::new(name));
+            let Some(leaf) = leaves.leaf_of(source) else { continue };
             scan.note_merge(source, &destination.join(leaf));
         }
         scan

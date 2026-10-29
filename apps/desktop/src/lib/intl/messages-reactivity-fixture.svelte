@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
     import { tString } from './messages.svelte'
+    import { formatInteger } from './number-format'
     import type { MessageKey } from './keys.gen'
 
     interface Props {
@@ -16,3 +17,4 @@
 </script>
 
 <span data-test="trans-text">{tString(messageKey, { countText: '1', count: 1 })}</span>
+<span data-test="number-text">{formatInteger(1234567)}</span>

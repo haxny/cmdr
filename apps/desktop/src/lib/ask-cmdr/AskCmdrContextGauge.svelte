@@ -5,8 +5,9 @@
   in use, so the two numbers differ and each says which it is.
 
   Both numbers are `chars/4` estimates, not a tokenizer's count, and the tooltip says so.
-  Hidden until a turn has actually been measured: an empty bar would read as "plenty of room"
-  for a thread nobody measured yet.
+  Before any call is measured it shows the BASELINE (`baseline`): the prefix every call of the
+  chat carries, which is the honest floor, and the tooltip says that's what it is. With
+  neither reading (AI off) it renders nothing: an empty bar would read as "plenty of room".
 -->
 <script lang="ts">
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -14,15 +15,19 @@
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { contextUsagePercent, contextUsageState, type ContextUsage } from './ask-cmdr-context-usage'
 
-    type Props = { usage: ContextUsage | null }
+    type Props = {
+        usage: ContextUsage | null
+        /** True when `usage` is the slot's baseline rather than a measured call. */
+        baseline?: boolean
+    }
 
-    const { usage }: Props = $props()
+    const { usage, baseline = false }: Props = $props()
 
     const state = $derived(contextUsageState(usage))
     const percent = $derived(contextUsagePercent(usage))
     const tooltipText = $derived(
         usage
-            ? tString('askCmdr.context.tooltip', {
+            ? tString(baseline ? 'askCmdr.context.baselineTooltip' : 'askCmdr.context.tooltip', {
                   usedText: formatInteger(usage.estimatedTokens),
                   budgetText: formatInteger(usage.budgetTokens),
                   budget: usage.budgetTokens,

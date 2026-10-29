@@ -28,18 +28,6 @@ pub fn get_automated_run() -> crate::test_mode::AutomatedRun {
     crate::test_mode::automated_run()
 }
 
-/// Returns `true` when the Ask Cmdr send path is served by the deterministic
-/// scripted fake LLM (`CMDR_E2E_ASK_CMDR_FAKE`). The composer reads this to treat
-/// the fake as an active provider, so send isn't gated off during E2E even though
-/// `ai.provider` is `off`. Consults the same accessor `agent::resolve_agent_llm`
-/// uses, so the send-allowed and send-answered decisions share one source of truth.
-/// Always compiled in; reading an unset env var is a no-op in production.
-#[tauri::command]
-#[specta::specta]
-pub fn ask_cmdr_fake_active() -> bool {
-    crate::test_mode::ask_cmdr_fake_active()
-}
-
 /// Returns `true` when `CMDR_FORCE_ONBOARDING` is set, regardless of value.
 ///
 /// The frontend uses this to bypass the `isOnboarded` gate and force the
@@ -196,6 +184,47 @@ pub fn force_agent_wake(folder: Option<String>, script: Option<String>) -> Resul
 pub fn stage_agent_rollup(folder: String) -> Result<(), String> {
     stage_rollup(&folder);
     Ok(())
+}
+
+/// Stages a suggestion the way the agent's `propose_suggestions` call does, and answers what
+/// the tool would: the report, or the typed refusal.
+///
+/// A spec that reviews a specific group (a move that renames, say) needs THAT group in the
+/// store, and the fake assistant's scripts stage only their own. This runs the real handler
+/// (place, check, freeze, write) over `params`, so what lands is exactly what a model's call
+/// would have staged, and nothing about it is seeded by hand.
+///
+/// Feature-gated to `playwright-e2e`, like every other hook here.
+#[cfg(feature = "playwright-e2e")]
+#[tauri::command]
+pub async fn e2e_propose_suggestions(
+    app: tauri::AppHandle,
+    params: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    crate::agent::tools::suggestions::execute_propose_suggestions(&app, &params)
+        .await
+        .map_err(|e| format!("{e:?}"))
+}
+
+/// Stages a server suggestion the way the agent's `propose_server` call does on a turn the user
+/// started, and answers what the tool would: the report, or the typed refusal.
+///
+/// The fake assistant's scripts don't propose servers, so a spec reviewing a server card stages
+/// it here, through the real handler and its every check: what lands is exactly what a model's
+/// call would have staged.
+///
+/// Feature-gated to `playwright-e2e`, like every other hook here.
+#[cfg(feature = "playwright-e2e")]
+#[tauri::command]
+pub async fn e2e_propose_server(app: tauri::AppHandle, params: serde_json::Value) -> Result<serde_json::Value, String> {
+    crate::agent::tools::suggestions::propose_server_in_thread(
+        &app,
+        None,
+        &params,
+        crate::agent::types::TurnOrigin::Text,
+    )
+    .await
+    .map_err(|e| format!("{e:?}"))
 }
 
 /// Hand one folder's activity to the wake loop the way the indexer's tap does: through

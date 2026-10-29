@@ -90,7 +90,7 @@
   },
   "queryUi.ai.openSettings": "KI-Einstellungen öffnen",
   "@queryUi.ai.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "queryUi.empty.indexReady": "Index bereit · {countText} {count, plural, one {Eintrag} other {Einträge}}",
   "@queryUi.empty.indexReady": {

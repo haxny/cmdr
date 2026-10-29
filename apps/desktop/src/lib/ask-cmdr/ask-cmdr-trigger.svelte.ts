@@ -16,12 +16,17 @@
 import { saveAppStatus } from '#lib/app-status-store.js'
 import { explorerState } from '#lib/file-explorer/pane/explorer-state.svelte.js'
 import { getAppLogger } from '#lib/logging/logger.js'
+import { getEffectiveShortcuts, toDisplayShortcut } from '#lib/shortcuts/index.js'
 import { focusHome } from '#lib/ui/focus-restore.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
 import { buildRailMessages } from './ask-cmdr-history'
 import { discardRenameReview } from './ask-cmdr-rename-review.svelte'
+import { mergeAtSeam } from './ask-cmdr-rounds'
+import { refreshSlotStatus } from './ask-cmdr-slot-status.svelte'
+import { carryGroupStateAcrossSeam, forgetToolDetails } from './ask-cmdr-tool-groups.svelte'
 import { askCmdrState, hasOlderMessages, MESSAGE_PAGE, RAIL_MAX_WIDTH, RAIL_MIN_WIDTH } from './ask-cmdr-state.svelte'
-import { settleDecisionsHeardWhileLoading, stopStreaming } from './ask-cmdr-stream.svelte'
+import { followJoinedBubble, leaveChat, resumeThread, stopStreaming } from './ask-cmdr-stream.svelte'
+import { settleDecisionsHeardWhileLoading } from './ask-cmdr-decisions'
 import { growMainWindowForRail, shrinkMainWindowForRail } from './rail-window'
 import {
   getAskCmdrConversation,
@@ -43,7 +48,7 @@ export {
   RAIL_MIN_WIDTH,
   THREAD_SOFT_CAP_MESSAGES,
 } from './ask-cmdr-state.svelte'
-export { sendMessage, stopStreaming } from './ask-cmdr-stream.svelte'
+export { keepGoingPastSpend, sendMessage, stopStreaming } from './ask-cmdr-stream.svelte'
 export {
   allowAllRenameRows,
   applyRenameReview,
@@ -69,7 +74,8 @@ export function hydrateRail(open: boolean, width: number): void {
  * main window so the panes keep their size (see `rail-window.ts`), except at startup hydration.
  * Also refreshes the rail's gate (`ask-cmdr-gate.svelte.ts`): while Ask Cmdr is off, or Cloud
  * waits for "Allow cloud AI", the rail shows the gate and loads no history. When the gate later
- * opens, the rail calls {@link ensureThreadLoaded} itself. */
+ * opens, the rail calls {@link ensureThreadLoaded} itself. A new chat the user asked for
+ * ({@link openNewChat}) is never bootstrapped over (`askCmdrState.freshChat`). */
 export async function openRail(opts: { resizeWindow?: boolean } = {}): Promise<void> {
   const wasOpen = askCmdrState.open
   askCmdrState.open = true
@@ -82,10 +88,36 @@ export async function openRail(opts: { resizeWindow?: boolean } = {}): Promise<v
   if (!wasOpen) await ensureThreadLoaded()
 }
 
+/** Ask the composer to take focus (it listens on `composerFocusRequest`). A no-op while no
+ * composer is mounted: the rail is closed or behind a gate. */
+export function requestComposerFocus(): void {
+  askCmdrState.composerFocusRequest++
+}
+
+/**
+ * The New chat action (the header button, the getting-long nudge, and ⌘N): start a fresh chat,
+ * open the rail if it's closed, and put the cursor in the prompt box so typing starts at once.
+ */
+export function openNewChat(): void {
+  newChat()
+  askCmdrState.freshChat = true
+  if (!askCmdrState.open) void openRail()
+  requestComposerFocus()
+}
+
+/** The New chat shortcut as the tooltip shows it (`⌘N` by default, or the user's rebind), or
+ * `undefined` when it's unbound. Read at render, so a rebind shows on the next one. */
+export function newChatShortcutText(): string | undefined {
+  // `.at(0)`, not `[0]`: an unbound command has no shortcuts, and `[0]` would type that away.
+  const shortcut = getEffectiveShortcuts('askCmdr.newChat').at(0)
+  return shortcut === undefined ? undefined : toDisplayShortcut(shortcut)
+}
+
 /** Load the most recent thread into an empty rail. A no-op once a thread (or a fresh chat's
- * first message) is showing, or while a load is already running. */
+ * first message) is showing, on a new chat the user asked for, or while a load is already
+ * running. */
 export async function ensureThreadLoaded(): Promise<void> {
-  if (askCmdrState.loadingHistory) return
+  if (askCmdrState.loadingHistory || askCmdrState.freshChat) return
   if (askCmdrState.conversationId !== null || askCmdrState.messages.length > 0) return
   await bootstrapActiveThread()
 }
@@ -130,14 +162,18 @@ function clampWidth(width: number): number {
 
 // ── Threads ────────────────────────────────────────────────────────────────────
 
-/** Start a fresh, unsaved chat (a new thread is created lazily on the first send). */
+/** Start a fresh, unsaved chat (a new thread is created lazily on the first send). A send
+ * still waiting for its thread id stays with the chat it was typed in ({@link leaveChat}). */
 export function newChat(): void {
   if (askCmdrState.streaming) stopStreaming()
+  leaveChat()
   askCmdrState.conversationId = null
+  askCmdrState.freshChat = false
   askCmdrState.messages = []
   askCmdrState.messageTotal = 0
   askCmdrState.historyCount = 0
   askCmdrState.attachments = []
+  forgetToolDetails()
   // A fresh chat has measured nothing, so the gauge must not carry the previous thread's fill.
   askCmdrState.contextUsage = null
   askCmdrState.deniedNames = []
@@ -148,6 +184,7 @@ export function newChat(): void {
 /** Switch the rail to an existing thread and load its most recent page. */
 export async function switchToThread(id: number): Promise<void> {
   if (askCmdrState.streaming) stopStreaming()
+  leaveChat()
   askCmdrState.attachments = []
   discardRenameReview()
   await loadConversation(id)
@@ -217,10 +254,13 @@ async function loadConversation(id: number): Promise<void> {
       detail = (await getAskCmdrConversation(id, MESSAGE_PAGE, tailOffset)) ?? probe
     }
     if (load !== latestThreadLoad) return
+    if (askCmdrState.conversationId !== id) forgetToolDetails()
     askCmdrState.conversationId = id
+    askCmdrState.freshChat = false
     askCmdrState.messageTotal = detail.totalMessages
     askCmdrState.historyCount = detail.messages.length
     askCmdrState.messages = buildRailMessages(detail)
+    resumeThread(id, detail.turnInFlightSinceSeq !== null, detail.spendPausedMicros)
     // The gauge shows the thread's last measured turn, so reopening a chat reports what it
     // really cost instead of an empty bar. `elidedResults` is 0 here on purpose: whether THAT
     // turn set anything aside isn't persisted, and inventing a count would be a false claim.
@@ -252,7 +292,13 @@ export async function loadOlderMessages(): Promise<void> {
     const offset = remaining - limit
     const detail = await getAskCmdrConversation(id, limit, offset)
     if (!detail || shownBy !== latestThreadLoad) return
-    askCmdrState.messages = [...buildRailMessages(detail), ...askCmdrState.messages]
+    // A turn longer than the page boundary arrives in two halves; they fold back into one bubble,
+    // and a group the seam joined keeps the open state it had, a stop waiting there its bubble.
+    const head = askCmdrState.messages.find((item) => item.kind === 'assistant')
+    askCmdrState.messages = mergeAtSeam(buildRailMessages(detail), askCmdrState.messages)
+    carryGroupStateAcrossSeam(head, askCmdrState.messages)
+    const joined = askCmdrState.messages.find((item) => item.kind === 'assistant' && item.turnId === head?.turnId)
+    if (head?.turnId != null && joined?.kind === 'assistant') followJoinedBubble(head, joined)
     askCmdrState.historyCount += detail.messages.length
   } catch (e) {
     log.warn('loading earlier messages failed: {error}', { error: e })
@@ -294,6 +340,8 @@ export function noteSlotSettingChanged(): void {
   if (slotChangeTimer) clearTimeout(slotChangeTimer)
   slotChangeTimer = setTimeout(() => {
     slotChangeTimer = null
+    // The same move changes the rail's baseline (budget, memory slice) and pricing.
+    void refreshSlotStatus()
     void recordSlotChangeForActiveThread()
   }, SLOT_CHANGE_DEBOUNCE_MS)
 }

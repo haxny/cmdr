@@ -14,7 +14,8 @@
  */
 
 import type { ContextUsage } from './ask-cmdr-context-usage'
-import type { RailMessage } from './ask-cmdr-messages'
+import type { AssistantItem, RailMessage } from './ask-cmdr-messages'
+import { settleRounds, softCapCount } from './ask-cmdr-rounds'
 import type { AttachmentRef, RenameEvidence, RenameEvidenceCoverage } from '#lib/tauri-commands/index.js'
 
 /** Past this many thread messages the rail nudges "start a fresh one?" (mirrors the Rust
@@ -82,6 +83,10 @@ interface AskCmdrState {
   width: number
   /** The active thread, or `null` for an unsaved new chat. */
   conversationId: number | null
+  /** The user asked for a new chat (New chat, ⌘N) and it's what the rail shows, so loading
+   * the last thread must never replace it: not on open, and not when a gate opens or cloud
+   * consent finishes loading. A thread load ends it. */
+  freshChat: boolean
   messages: RailMessage[]
   streaming: boolean
   loadingHistory: boolean
@@ -94,13 +99,23 @@ interface AskCmdrState {
   /** Files/folders staged in the composer for the next send (path + kind only). */
   attachments: AttachmentRef[]
   renameReview: BulkRenameReview | null
-  /** How full the model's view got on the thread's last measured turn, for the footer gauge.
-   * `null` means no turn has been measured, which the gauge shows as nothing at all. */
+  /** How full the model's view got on the thread's last measured call, for the footer gauge.
+   * `null` means no call has been measured, and the gauge shows the slot's baseline instead. */
   contextUsage: ContextUsage | null
+  /** Bumped on each `costMetered` event (one per completed model call), so the footer re-reads
+   * the meter mid-turn. A counter, never a total: the meter stays the one source of the cost. */
+  costRevision: number
+  /** The estimated spend (micro-USD) the running turn is paused at, waiting for Keep going or Stop
+   * (`AskCmdrSpendPause`), or `null` while no turn is paused. Set by `spendPaused` and by a thread
+   * load that finds its turn paused, cleared by Keep going, `spendResumed`, and the turn ending. */
+  spendPausedMicros: number | null
   /** Destination names the user turned down in the last review, newest first, waiting to ride
    * the NEXT send so a retry doesn't propose the same style again. Cleared once sent: they're
    * feedback on one decision, not a permanent denylist. */
   deniedNames: string[]
+  /** Bumped to ask the composer to take focus (a new chat, the sessions panel closing). A
+   * counter so the same request twice still lands; the composer also focuses on mount. */
+  composerFocusRequest: number
 }
 
 export const RAIL_MIN_WIDTH = 280
@@ -111,6 +126,7 @@ export const askCmdrState = $state<AskCmdrState>({
   open: false,
   width: RAIL_DEFAULT_WIDTH,
   conversationId: null,
+  freshChat: false,
   messages: [],
   streaming: false,
   loadingHistory: false,
@@ -120,12 +136,16 @@ export const askCmdrState = $state<AskCmdrState>({
   attachments: [],
   renameReview: null,
   contextUsage: null,
+  costRevision: 0,
+  spendPausedMicros: null,
   deniedNames: [],
+  composerFocusRequest: 0,
 })
 
-/** True once the thread grows past the soft cap (drives the "start a fresh one?" nudge). */
+/** True once the thread grows past the soft cap (drives the "start a fresh one?" nudge). Each
+ * round counts, as each assistant row did when it was its own bubble (`softCapCount`). */
 export function isOverSoftCap(): boolean {
-  return askCmdrState.messages.length > THREAD_SOFT_CAP_MESSAGES
+  return softCapCount(askCmdrState.messages) > THREAD_SOFT_CAP_MESSAGES
 }
 
 /** True when older history pages exist beyond what's loaded (drives "load earlier"). */
@@ -133,30 +153,41 @@ export function hasOlderMessages(): boolean {
   return askCmdrState.historyCount < askCmdrState.messageTotal
 }
 
-export function currentAssistant(): Extract<RailMessage, { kind: 'assistant' }> | null {
+/**
+ * The bubble the running turn writes into: the last item, while it streams. An ended turn's
+ * bubble is never written into again, so the next turn (a wake, or one a reload caught before
+ * its first row landed) opens its own.
+ */
+export function streamingAssistant(): AssistantItem | null {
   const last = askCmdrState.messages.at(-1)
-  return last?.kind === 'assistant' ? last : null
+  return last?.kind === 'assistant' && last.streaming ? last : null
 }
 
-export function lastUserMessage(): Extract<RailMessage, { kind: 'user' }> | null {
-  for (let i = askCmdrState.messages.length - 1; i >= 0; i--) {
-    const message = askCmdrState.messages[i]
-    if (message.kind === 'user') return message
-  }
-  return null
+/** Add `item` just above the streaming bubble, which has to stay last for the next chunk to
+ * find, or at the end when no turn is streaming. */
+export function insertAboveBubble(item: RailMessage): void {
+  const assistant = streamingAssistant()
+  if (assistant) askCmdrState.messages.splice(askCmdrState.messages.indexOf(assistant), 0, item)
+  else askCmdrState.messages.push(item)
 }
 
-/** Finalize the streaming assistant bubble: retire unfinished activity, stop its cursor,
- * and drop it if it never produced anything. Finished tool history stays visible. */
-export function finalizeAssistant(messageId?: number): void {
-  const assistant = currentAssistant()
-  if (!assistant) return
+/**
+ * Settle a turn's bubble the way a reload would read its stored rows: stop its cursor, keep only
+ * the rounds that persisted (`settleRounds`: a round that never reached `End` goes, a call still
+ * running settles with no outcome), take the last persisted round's id, and drop the bubble if
+ * nothing of it was stored.
+ *
+ * ⚠️ So a turn that ends without an answer loses the text of the round it was streaming: it was
+ * never stored, and a reload wouldn't show it either.
+ */
+export function settleAssistant(assistant: AssistantItem): void {
   assistant.streaming = false
   assistant.thinking = false
   assistant.stalled = false
-  assistant.tools = assistant.tools.filter((tool) => !tool.running)
-  if (messageId !== undefined) assistant.id = messageId
-  if (assistant.text.length === 0 && assistant.tools.length === 0) {
-    askCmdrState.messages.pop()
-  }
+  const lastPersisted = assistant.rounds.findLast((round) => round.messageId !== null)
+  if (lastPersisted) assistant.id = lastPersisted.messageId
+  assistant.rounds = settleRounds(assistant.rounds)
+  if (assistant.rounds.length > 0) return
+  const at = askCmdrState.messages.indexOf(assistant)
+  if (at !== -1) askCmdrState.messages.splice(at, 1)
 }

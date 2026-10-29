@@ -281,7 +281,8 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
   buckets. Counts every wake OUTCOME, including wakes that never opened a turn, so it is a WIDER population than
   `ask_cmdr_turn`'s `origin: "wake"`; the gap between them is the point.
 - `suggestion_group_proposed` / `suggestion_group_approved` / `suggestion_group_rejected` (backend,
-  `agent/suggested_ops/analytics.rs`): `verb` (the `ProposalVerb` token) + `op_count` bucket. Acceptance rate is the
+  `agent/suggested_ops/analytics.rs`): `verb` (the `ProposalVerb` token, `add_server` / `edit_server` included) +
+  `op_count` bucket (`0` for a server group, which has no ops; never a host or name). Acceptance rate is the
   agent's north-star metric, which is why the proposal and both outcomes are all counted; `approved` counts a group
   whose operation STARTED, not a claim (`agent/suggested_ops/DETAILS.md` § The metric). Never a path, file name,
   rationale, or selector pattern.

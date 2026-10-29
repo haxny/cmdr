@@ -247,7 +247,7 @@ pub(super) struct AgentAnswer {
 pub(super) fn agent_search(scope: &str, budget: std::time::Duration) -> AgentAnswer {
     let mut query = query_for(scope);
     query.include_paths = Some(vec![scope.to_string()]);
-    let answer = run_live_collected(query, budget).expect("routing resolves to the one fake volume");
+    let answer = run_live_collected(query, None, budget).expect("routing resolves to the one fake volume");
     let mut paths: Vec<String> = answer.entries.iter().map(|entry| entry.path.clone()).collect();
     paths.sort();
     AgentAnswer {

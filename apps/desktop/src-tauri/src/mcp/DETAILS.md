@@ -61,7 +61,7 @@ splits changed no wire bytes — the snapshot passes unmodified.
 
 `validate_params(name, params)` checks a call against the tool's OWN declared schema before a handler reads a field off
 it, at both dispatch entries: `execute_tool` for everything routed through the registry, and `agent/tools/view.rs`
-ahead of its branch, because `propose_rename_plan` and `propose_suggestions` need the thread's scope and never reach
+ahead of its branch, because `propose_rename_plan`, `propose_suggestions`, and `propose_server` need the thread's scope and never reach
 `execute_tool`. Both run for an agent call; one small object checked twice costs nothing against a provider round trip,
 and neither path has to know what the other does.
 
@@ -97,11 +97,14 @@ agent-only table**). Two per-entry dimensions express the split:
   `list_pane_files`, `important_folders`, `folder_importance`, `list_volumes`) plus `list_dir`, `operations_list` /
   `operations_get`, `search_photos`, and `image_facts`, shared into `[AiClient, Agent]` because their read schemas fit
   both readers unchanged. Agent handlers/schemas live under `../agent/tools/CLAUDE.md`, named by path from the entry.
-- **`access`** (`Read` / `Propose` / `Memory` / `Write`): whether the tool reads, asks, remembers, or mutates. `Write`
-  covers any mutation of the filesystem OR app state — nav, cursor, selection, tabs, dialogs, settings, connect/eject,
-  file ops, rollback-cancel; when in doubt, `Write`. Only genuine read surfaces (`search`, `ai_search`, `await`,
-  `operations_list`, `operations_get`) are `Read`. `Propose` is the third tier, described below; `Memory` is the
-  fourth, and the only one that writes anything at all.
+- **`access`** (`Read` / `Propose` / `Memory` / `Session` / `Write`): whether the tool reads, asks, remembers,
+  connects, or mutates. `Write` covers any mutation of the filesystem OR app state — nav, cursor, selection, tabs,
+  dialogs, settings, connect/eject, file ops, rollback-cancel; when in doubt, `Write`. Only genuine read surfaces
+  (`search`, `ai_search`, `await`, `operations_list`, `operations_get`) are `Read`. `Propose` is the third tier,
+  described below; `Memory` is the fourth, and the only one that writes anything at all. `Session` is the fifth: it
+  opens a session to a place the user saved, with stored credentials, and the agent's gate admits it only on a turn the
+  user started (agent invariant 7, `../agent/tools/DETAILS.md` § The dispatch gate). It's hand-allowlisted in
+  `EXPECTED_SESSION_TOOL_NAMES` (§ The `Session` tier).
 
 ⚠️ **`Access::Memory` was a deliberate widening of the app's central agent-safety invariant.** "The agent never changes
 anything" became "the agent writes only into `<data-dir>/ai/memory/`". Three things hold the narrowed promise: the jail
@@ -111,6 +114,15 @@ canonicalized parent); the hand-authored `EXPECTED_MEMORY_TOOL_NAMES` allowlist,
 read it); and `consumers: [Agent]` on both entries, pinned by a test — a `Memory` tool must never reach the HTTP
 transport, whose security story is "no filesystem access". Depth: `../agent/memory/DETAILS.md`.
 
+### The `Session` tier
+
+`connect_volume` is its one tool, and it's `consumers: [Agent]`. **Decision: AI clients don't get it, because they
+already have the power.** `select_volume` on a saved place (a pinned server or share in `cmdr://state`) switches a pane
+to it, and the pane brings it to life itself (`place-connect.svelte.ts`, through `servers/connect-flow.ts`), with the
+sign-in sheet for anything missing. Parity holds, and the HTTP transport takes on no new access class. The agent needs
+its own tool because it has no pane to steer and must not take one over to connect. Handler and rules:
+`../agent/tools/DETAILS.md` § Connecting a saved place.
+
 **Consumer-gated dispatch.** `execute_tool` takes a `Consumer` and refuses a name outside that consumer's view before
 dispatch (via `tool_available_to`, a typed `Consumer`-set check — not a string). So the HTTP server (constructed as
 `Consumer::AiClient`) can't dispatch an agent-only name, and the agent runtime can't dispatch an ai_client-only one.
@@ -119,10 +131,11 @@ equals its list view (`test_dispatch_view_equals_list_view_per_consumer`).
 
 **Why `access` is independent of HTTP authentication.** Authenticating an external client says who may reach the MCP
 surface, not what the in-process Ask Cmdr agent may do. The explicit `access` dimension is the capability guarantee:
-the agent view must equal exactly its authored `[agent]` entries **and** every one must be `Access::Read` or
-`Access::Propose`, never `Access::Write`. The two structural tests (`test_agent_tool_view_is_exactly_expected_set` +
-`test_agent_tool_view_never_writes`) pin both halves against `EXPECTED_AGENT_TOOL_NAMES`. This is the line the plan
-calls the effort's most safety-critical invariant; the runtime side (`agent::tools::view::access_is_dispatchable`) adds
+the agent view must equal exactly its authored `[agent]` entries **and** every one must be `Access::Read`,
+`Access::Propose`, `Access::Memory`, or `Access::Session`, never `Access::Write`. The two structural tests
+(`test_agent_tool_view_is_exactly_expected_set` + `test_agent_tool_view_never_writes`) pin both halves against
+`EXPECTED_AGENT_TOOL_NAMES`. This is the line the plan calls the effort's most safety-critical invariant; the runtime
+side (`agent::tools::view::admit`) adds
 a matching check before dispatch so a mis-tagged entry is refused at runtime too.
 
 ### The `Propose` tier
@@ -137,7 +150,8 @@ Three things make it hold rather than merely be intended:
 - **A hand-authored allowlist, not inference.** No structural check can prove a handler doesn't mutate, so
   `EXPECTED_PROPOSE_TOOL_NAMES` (in `tests/tool_registry_tests/access.rs`) lists every `Propose` tool by name, and
   `test_propose_tools_are_an_explicit_allowlist` fails if a registry entry in EITHER view is tagged `Propose` without
-  being listed: the agent's `propose_rename_plan` and `propose_suggestions`, and the ai-client's `multi_rename`.
+  being listed: the agent's `propose_rename_plan`, `propose_suggestions`, and `propose_server`, and the ai-client's
+  `multi_rename`.
   Widening that power remains a deliberate act a human signs off, having read the handler.
 - **No proposal reaches the confirmation bypass.** `autoConfirm` and `queue`'s `rollback` let an external MCP client
   skip the user's confirmation dialog — exactly the approval a proposal must never grant itself.
@@ -390,6 +404,14 @@ synchronously before returning, so the first poll already differs and the handle
 enable-first-scan path (a not-yet-active volume, especially async SMB via `start_indexing_for_smb`) can lag the flip,
 and that's exactly where the wait earns its keep. This replaces a generation counter for the new `await` condition (the
 tool contract sequences it instead), which is cheaper and honest.
+
+### Favorites aren't volumes, in `cmdr://state` too
+
+Decision (#749): `cmdr://state`'s `volumes:` lists volumes only; favorites ride their own `favorites:` section, which
+already listed every one of them. As `volumes:` rows they read as `kind: local` (the Pixel's MTP storage, saved as a
+favorite, included), so an AI client met each favorite twice and one phone as a local disk. The change is an ai-client
+contract change, deliberately: every other `volumes:` row renders byte for byte as before (`mountPath` included). The
+mechanism and its test: the `cmdr://state` entry in `resources/DETAILS.md` § "The module".
 
 ### Why the TS parse layer stays separate from the registry
 

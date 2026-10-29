@@ -263,4 +263,97 @@ describe('focus watchdog', () => {
 
     expect(warnSpy).not.toHaveBeenCalled()
   })
+
+  it('does not warn when focus is in the status corner', () => {
+    const corner = document.createElement('div')
+    corner.className = 'status-corner'
+    const chip = document.createElement('button')
+    corner.appendChild(chip)
+    document.body.appendChild(corner)
+    chip.focus()
+
+    initFocusWatchdog()
+    vi.advanceTimersByTime(2000)
+
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
+  describe('says what took focus away', () => {
+    function railWith(child: HTMLElement): HTMLElement {
+      const rail = document.createElement('aside')
+      rail.className = 'ask-cmdr-rail'
+      rail.appendChild(child)
+      document.body.appendChild(rail)
+      return rail
+    }
+
+    it('names a focused element that left the page', () => {
+      const button = document.createElement('button')
+      button.className = 'load-earlier'
+      railWith(button)
+      initFocusWatchdog()
+      button.focus()
+      vi.advanceTimersByTime(150)
+
+      // The thread's last page took the button away while it held focus.
+      button.remove()
+      document.body.dispatchEvent(new FocusEvent('focusin'))
+      vi.advanceTimersByTime(600)
+
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+      const [message, ctx] = warnSpy.mock.calls[0]
+      expect(message).toContain('{cause}')
+      expect(ctx).toMatchObject({ ae: 'body', cause: 'button.load-earlier left the page while it had focus' })
+    })
+
+    it('names a focused element that got disabled', () => {
+      const button = document.createElement('button')
+      button.className = 'send'
+      railWith(button)
+      initFocusWatchdog()
+      button.focus()
+      vi.advanceTimersByTime(150)
+
+      // WebKit drops focus from a button that gets disabled; jsdom keeps it there, so the test
+      // blurs it by hand first (the cause is read at warn time, so the order doesn't matter).
+      button.blur()
+      button.disabled = true
+      vi.advanceTimersByTime(600)
+
+      expect(warnSpy.mock.calls[0][1]).toMatchObject({ cause: 'button.send was disabled while it had focus' })
+    })
+
+    it('names a click that put focus nowhere (WebKit doesn’t focus a clicked button)', () => {
+      const input = document.createElement('textarea')
+      railWith(input)
+      const stray = document.createElement('button')
+      stray.className = 'fkey'
+      document.body.appendChild(stray)
+      initFocusWatchdog()
+      input.focus()
+      vi.advanceTimersByTime(150)
+
+      // jsdom has no PointerEvent constructor; the watchdog reads only the target.
+      stray.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+      input.blur()
+      vi.advanceTimersByTime(600)
+
+      expect(warnSpy.mock.calls[0][1]).toMatchObject({
+        cause: 'a click on button.fkey took it from textarea',
+      })
+    })
+
+    it('falls back to naming what last had focus', () => {
+      const input = document.createElement('textarea')
+      railWith(input)
+      initFocusWatchdog()
+      input.focus()
+      vi.advanceTimersByTime(150)
+
+      input.blur()
+      vi.advanceTimersByTime(600)
+
+      expect(warnSpy.mock.calls[0][1]).toMatchObject({ cause: 'textarea lost it' })
+    })
+  })
 })

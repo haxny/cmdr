@@ -26,8 +26,15 @@ pub(crate) struct FavoriteSummary {
     pub reach: Option<&'static str>,
 }
 
+/// Each favorite with its volume and reach, off the same listing the app shows, or the
+/// store's own list when that listing's discovery came up short (`timed_out`). What
+/// `cmdr://state` and `list_volumes` both list.
+pub(crate) fn of_listing(rows: &[LocationInfo], timed_out: bool) -> Vec<FavoriteSummary> {
+    if timed_out { from_store() } else { from_listing(rows) }
+}
+
 /// The favorite rows of a completed listing, in the store's order (which the listing keeps).
-pub(crate) fn from_listing(rows: &[LocationInfo]) -> Vec<FavoriteSummary> {
+fn from_listing(rows: &[LocationInfo]) -> Vec<FavoriteSummary> {
     rows.iter()
         .filter(|row| row.category == LocationCategory::Favorite)
         .map(|row| summary_of_row(&row.id, &row.name, &row.path, row.favorite_target.as_ref()))
@@ -35,7 +42,7 @@ pub(crate) fn from_listing(rows: &[LocationInfo]) -> Vec<FavoriteSummary> {
 }
 
 /// The store's own list: what the section says when the listing came up short.
-pub(crate) fn from_store() -> Vec<FavoriteSummary> {
+fn from_store() -> Vec<FavoriteSummary> {
     crate::favorites::store::list()
         .into_iter()
         .map(|favorite| FavoriteSummary {

@@ -5,6 +5,7 @@ import { type UnlistenFn } from '@tauri-apps/api/event'
 import type {
   AiApiKeyError,
   AiConnectionCheckResult,
+  AiModelLimits,
   ManagedAiRefusal,
   RevealSecurityLogError,
 } from '#lib/ipc/bindings.js'
@@ -492,6 +493,25 @@ export type { AiConnectionCheckResult } from '#lib/ipc/bindings.js'
  */
 export async function checkAiConnection(baseUrl: string, providerId: string): Promise<AiConnectionCheckResult> {
   return commands.checkAiConnection(baseUrl, providerId)
+}
+
+export type { AiModelLimits } from '#lib/ipc/bindings.js'
+
+/**
+ * A model's context window and longest reply, for Settings › AI: the provider's own figures
+ * when its model list reported them, else Cmdr's built-in guess for the window (`source`
+ * says which), else nothing. Reads a cache, never waits on the network; a missing catalog
+ * starts a background fetch, and `onAiModelCapabilitiesChanged` says when to ask again.
+ */
+export async function getAiModelLimits(providerId: string, baseUrl: string, model: string): Promise<AiModelLimits> {
+  return commands.getAiModelLimits(providerId, baseUrl, model)
+}
+
+/** A provider's model list arrived with new windows: re-read `getAiModelLimits`. No payload. */
+export function onAiModelCapabilitiesChanged(handler: () => void): Promise<UnlistenFn> {
+  return events.aiModelCapabilitiesChanged.listen(() => {
+    handler()
+  })
 }
 
 /**

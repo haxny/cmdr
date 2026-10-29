@@ -24,6 +24,13 @@ Four leaf layers carry no `IndexStore` methods at all:
   `reconstruct_path_from_map`.
 - `collation.rs`: `register_platform_case_collation`, `platform_case_compare`, `normalize_for_comparison`.
 
+One more file sits outside the split: `stored.rs`, `StoredIndex`, a volume's database opened read-only with no live
+instance (a saved share that isn't connected, an ejected drive). It never creates, stamps, or rebuilds: a missing file,
+another schema, or a file that isn't an index is refused typed (`StoredIndexRefusal`) and left as it was, the opposite
+of `IndexStore::open`'s delete-and-recreate, because a reader asking what a drive held must never throw its index away.
+One connection per `StoredIndex`, closed on drop, ❌ never cached per thread. The handle reaches it through
+`Index::status` (`../handle/DETAILS.md` § "A stopped volume's last scan").
+
 The `impl IndexStore` block is divided into four more sibling files (each `impl IndexStore { … }` over the struct in
 `mod.rs`, pulling shared items via `use super::*`):
 
@@ -445,10 +452,10 @@ pages, so `pcache1FetchStage2`'s "abort when nearly full" step (which tests `nMa
 `mxPmaSize = MAX(SQLITE_SORTER_PMASZ x page_size, cache_size)`, and `SQLITE_SORTER_PMASZ` defaults to 250 pages, so the
 floor is 1 MiB. A read connection running a big `ORDER BY` now sorts against that floor rather than against 8 MiB: more
 PMAs written to the temp file, more runs to merge. No read today sorts a big result: `ImportanceIndex::above_threshold`
-reads every scored folder unordered, and the ranked importance reads (`top_n`, `top_above_threshold`) carry a `LIMIT`.
-❌ Don't add an `ORDER BY` over a whole table on a read connection without weighing this. Any read budget at or below 1
-MiB gives the identical sorter budget, so this is the price of a per-connection number small enough to bound at all, not
-of 128 KiB specifically.
+reads every scored folder unordered, and the ranked importance reads (`top_n`, `top_under`) carry a `LIMIT`. ❌ Don't
+add an `ORDER BY` over a whole table on a read connection without weighing this. Any read budget at or below 1 MiB gives
+the identical sorter budget, so this is the price of a per-connection number small enough to bound at all, not of 128
+KiB specifically.
 
 **Measured** (`crates/cmdr-fs/src/sqlite_util/page_cache_probe.rs`'s `page_cache_probe`, release build, M1 Max,
 2026-08-21), 132 read connections — the profiled prod count — scanning a 16 MB database continuously:

@@ -63,10 +63,10 @@ All under `apps/desktop/src/lib/`.
   `crates/cmdr-operations/src/transfer_tree/`. See `apps/desktop/src/lib/file-operations/transfer-tree/CLAUDE.md`
 - `file-viewer/`: Read-only file viewer (separate window, virtual scrolling)
 - `settings/`: Settings UI + registry-based architecture, reactive state
-- `intl/`: The two locale sources (`getUiLocale` for catalog text, `getFormatLocale` for the OS's number/date
-  conventions) + memoized locale-aware number/size formatters; counts, file sizes, and the `'system'` date read the
-  formatting one (dates formatted in `settings/format-utils.ts`). `os-locales.ts` fetches both from the backend: the
-  `'system'` UI language and the composed formatting tag
+- `intl/`: The two locale sources (`getUiLocale` for catalog text and, via `getCatalogLocale`, every number;
+  `getFormatLocale` for the OS's date conventions) + memoized locale-aware number/size formatters; the `'system'` date
+  reads the formatting one (dates formatted in `settings/format-utils.ts`). `os-locales.ts` fetches both from the
+  backend: the `'system'` UI language and the composed formatting tag
 - `shortcuts/`: Keyboard shortcut customization, scope hierarchy, conflict detection, plus the read-only Help > Keyboard
   shortcuts window (`shortcuts-window.ts` + `ShortcutsList.svelte` + pure `shortcut-diff.ts`, route at
   `routes/shortcuts/`)
@@ -188,6 +188,9 @@ All under `apps/desktop/src-tauri/src/`.
 - `file_viewer/`: Three-backend file viewer (FullLoad, ByteSeek, LineIndex)
 - `network/`: SMB's app-side half: mDNS discovery, share listing (smb2 + smbutil/smbclient fallback), mounting,
   Keychain, the auto-upgrade passes, and the frontend's connection events. The backend under it is `crates/cmdr-smb/`
+- `saved_servers/`: the servers and shares the user saved: the hub's listing, an add without a dial, an edit (in place
+  or a move, `server_move.rs`), and dialing one (one flight per place), plus the wire vocabulary. Below
+  `commands/servers.rs` and Ask Cmdr, which both go through it. See `apps/desktop/src-tauri/src/saved_servers/CLAUDE.md`
 - `clipboard/`: File clipboard (Cmd+C/X/V) with NSPasteboard interop; tracks cut state and validates at paste
 - `secrets/`: Pluggable secret storage: Keychain (macOS), Secret Service (Linux), encrypted-file fallback. Server
   passwords, AI keys, and the license key
@@ -267,9 +270,12 @@ All under `apps/desktop/src-tauri/src/`.
   plus the thread that owns the inbox, the timer, and the wakes it hands off. Its `agent/memory/` is the one place the
   agent writes: a jailed, capped Markdown folder under the app data dir, fed back into every turn's prefix. Its
   `agent/outcomes.rs` closes the loop, recording what the user did with each proposal on the two channels that reach
-  them and the agent. Its `agent/tools/` is the in-process toolset the chat dispatches; `agent/tools/read/inspect/` is
-  the one tool that reads file contents, through `file_viewer`'s headless seam. See its
-  `apps/desktop/src-tauri/src/agent/CLAUDE.md`
+  them and the agent. Its `agent/tools/` is the in-process toolset the chat dispatches, gated by access tier (`Read`,
+  `Propose`, `Memory`, and `Session`, whose one tool, `connect_volume`, connects a saved place only on a turn the user
+  started, in one flight with the pane's own dial (`saved_servers/`), and `propose_server` stages a server for the user
+  to save, contacting nothing, which the user's click saves through the hub's own cores (`agent/suggested_ops/server/`);
+  invariant 7 in `apps/desktop/src-tauri/src/agent/DETAILS.md`); `agent/tools/read/inspect/` is the one tool that reads
+  file contents, through `file_viewer`'s headless seam. See its `apps/desktop/src-tauri/src/agent/CLAUDE.md`
 - `downloads/`: `notify`-based `~/Downloads` watcher, FDA-gated, browser-rename-aware filter, Cmdr-own-write ignore set
 - `search/`: In-memory search index (lazy load, rayon parallel scan, glob/regex) + AI query translation (`search/ai/`)
 - `selection/`: Selection dialog backend: recent-selections store + cloud AI translation (`selection/ai/`); the matcher
@@ -312,6 +318,11 @@ All under `apps/desktop/src-tauri/src/`.
   a timeout, appends every device provider's storages (`device_volumes.rs`), and enriches from the registry;
   `commands/volumes.rs` and `volume_broadcast.rs` both publish what it returns. See
   `apps/desktop/src-tauri/src/volumes/CLAUDE.md`
+- `location/`: the `Location` pair, plus the tools' location resolver: a pure core that places a `path` + optional
+  `volumeId` on one volume or answers a typed miss with `nearby` candidates, the one volume-root function, and the
+  in-memory volume facts and earlier-roots record it reads, plus the same-share proof (server GUID + share name) that
+  lets one NAS's two ids answer for each other, and the app-path ↔ importance-store-path seam (`store_path.rs`).
+  Contract: `agent/tools/DETAILS.md` § The location contract
 - `space_poller/`: Live disk-space polling (per-volume-type intervals, emitting only what the readout would draw
   differently, paused while the main window is hidden) plus the low-disk-space hysteresis warning
 - `main_window_visibility.rs`: whether the main window can be seen, as its webview reports it; the idle redraw work

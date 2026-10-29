@@ -11,10 +11,13 @@
 //! claim path deliberately doesn't call it (`claim.rs` streams instead), and a test pins
 //! that.
 
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
 
 use super::super::AgentStoreError;
+use super::super::ServerDraftProblem;
+use super::draft::{ServerDraft, ServerEdit, ServerProposal};
 use super::{ProposalGroup, decode_token};
+use crate::agent::types::ServerSaveNote;
 use crate::agent::types::{OpStatus, ProposalStatus, ProposalVerb, Reversibility};
 
 /// One op as stored.
@@ -24,7 +27,8 @@ pub struct ProposalOp {
     pub group_id: i64,
     pub seq: i64,
     pub source_path: String,
-    /// The name this source becomes. `Some` only under a rename group.
+    /// The name this source becomes: always under a rename group, and under a move or copy
+    /// when it lands under a new one. `None` everywhere else.
     pub destination: Option<String>,
     pub status: OpStatus,
     pub snapshot_size: Option<u64>,
@@ -55,6 +59,9 @@ pub struct GroupSummary {
     pub live_op_count: u64,
     /// Every op row the group has, whatever its status.
     pub total_op_count: u64,
+    /// What a server group proposes; `None` for a file group. A server group whose draft is
+    /// missing fails the read rather than arriving without one.
+    pub server: Option<ServerProposal>,
 }
 
 const GROUP_COLUMNS: &str = "id, set_id, seq, verb, status, source_volume_id, destination, destination_volume_id,
@@ -138,7 +145,14 @@ pub fn list_groups(conn: &Connection, status: Option<ProposalStatus>) -> Result<
             group: map_group_row(row)?,
             live_op_count: row.get(16)?,
             total_op_count: row.get(17)?,
+            server: None,
         });
+    }
+    // One sidecar read per SERVER group only: those are few, and a file group costs nothing.
+    for summary in &mut out {
+        if summary.group.verb.is_server() {
+            summary.server = Some(read_sidecar(conn, summary.group.id)?);
+        }
     }
     Ok(out)
 }
@@ -200,6 +214,55 @@ pub fn page_ops(conn: &Connection, group_id: i64, limit: u32, offset: u32) -> Re
         });
     }
     Ok(out)
+}
+
+/// The server proposal a group holds: `Ok(None)` for a file group or no group at all, and a
+/// typed [`AgentStoreError::ServerDraft`] for a server group whose draft is missing or won't
+/// decode. ❌ Never a default draft: a card with invented fields is one the user could approve.
+pub fn read_server_proposal(conn: &Connection, group_id: i64) -> Result<Option<ServerProposal>, AgentStoreError> {
+    match get_group(conn, group_id)? {
+        Some(group) if group.verb.is_server() => read_sidecar(conn, group_id).map(Some),
+        _ => Ok(None),
+    }
+}
+
+/// A draft row as stored: `draft`, `editing_id`, `previous`, `completion_note`.
+type DraftRow = (String, Option<String>, Option<String>, Option<String>);
+
+/// The draft row of a group KNOWN to be a server group, decoded, or the typed failure.
+pub(super) fn read_sidecar(conn: &Connection, group_id: i64) -> Result<ServerProposal, AgentStoreError> {
+    let row: Option<DraftRow> = conn
+        .prepare_cached(
+            "SELECT draft, editing_id, previous, completion_note FROM proposal_server_drafts WHERE group_id = ?1",
+        )?
+        .query_row(params![group_id], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+        })
+        .optional()?;
+    let fail = |problem| AgentStoreError::ServerDraft { group_id, problem };
+    let Some((draft, editing, previous, note)) = row else {
+        return Err(fail(ServerDraftProblem::Missing));
+    };
+    let decode =
+        |json: &str| serde_json::from_str::<ServerDraft>(json).map_err(|_| fail(ServerDraftProblem::Undecodable));
+    let edit = match (editing, previous) {
+        (Some(editing), Some(previous)) => Some(ServerEdit {
+            editing,
+            previous: decode(&previous)?,
+        }),
+        (None, None) => None,
+        // The table's CHECK holds them together; a hand-edited file is the only way here.
+        _ => return Err(fail(ServerDraftProblem::Undecodable)),
+    };
+    let note = match note {
+        Some(token) => Some(ServerSaveNote::from_token(&token).ok_or_else(|| fail(ServerDraftProblem::UnknownNote))?),
+        None => None,
+    };
+    Ok(ServerProposal {
+        draft: decode(&draft)?,
+        edit,
+        note,
+    })
 }
 
 fn map_group_row(row: &rusqlite::Row<'_>) -> Result<ProposalGroup, AgentStoreError> {

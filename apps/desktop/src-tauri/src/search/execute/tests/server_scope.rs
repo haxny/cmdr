@@ -102,7 +102,8 @@ fn a_live_search_on_a_server_walks_nothing_and_says_it_is_not_covered() {
     let _search_data = volumes::install_data_dir_for_test(data.path());
     let server = a_connected_sftp_server("ada-live");
 
-    let answer = run_live_collected(pattern_query_for(&server.root, "report"), ANSWER_BUDGET).expect("the live search");
+    let answer =
+        run_live_collected(pattern_query_for(&server.root, "report"), None, ANSWER_BUDGET).expect("the live search");
 
     assert_eq!(answer.target_volume_id, server.volume_id);
     assert!(

@@ -68,7 +68,7 @@ tokio = { version = "1", features = ["rt", "sync", "time", "macros", "fs", "io-u
 # `CancellationToken`, one per operation, which every backend call hears.
 tokio-util = { version = "0.7.18", features = ["rt"] }
 # Operation and preview ids.
-uuid = { version = "1.19.0", features = ["v4", "v7"] }
+uuid = { version = "1.29.0", features = ["v4", "v7"] }
 # The home directory a summary tildifies and a cloud trash lives under.
 dirs = "7"
 # Walking a local tree for the compress estimate.
@@ -117,7 +117,7 @@ criterion = { version = "0.8.1", features = ["html_reports"] }
 # Ageing fixture files.
 filetime = "0.2"
 # Reading a journal's rows back.
-rusqlite = { version = "0.40", features = ["bundled", "collation", "fallible_uint"] }
+rusqlite = { version = "0.41", features = ["bundled", "collation", "fallible_uint"] }
 # Tarball fixtures for the read-only archive cells.
 tar = "0.4"
 # Scratch directories.

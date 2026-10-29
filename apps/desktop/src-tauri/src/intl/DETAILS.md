@@ -2,7 +2,8 @@
 
 Depth behind `CLAUDE.md`. This module answers the two questions macOS asks its users separately: given the message
 catalogs we ship and the user's language preferences, which catalog should the app open, and whose conventions should
-it format dates and numbers in?
+it format dates in? (Numbers follow the UI language on the frontend, not this tag:
+`apps/desktop/src/lib/intl/DETAILS.md` § Language and region are two settings.)
 
 ## Why the resolvers live in Rust
 
@@ -257,7 +258,7 @@ exercise it, write the preference and then post the distributed notification the
 
 A region-only change is exactly what `NSCurrentLocaleDidChangeNotification` is for, and it reaches the app: the watcher
 compares the whole `OsLocales` pair, so a moved formatting tag announces even though the language half is untouched.
-Nothing in the copy changes; every date and grouped number in the window does.
+Nothing in the copy or the numbers changes; every date in the window does.
 
 Overlap between the two costs nothing, because the watcher applies two filters in order:
 

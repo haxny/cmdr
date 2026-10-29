@@ -17,6 +17,7 @@
  * settings UI all reach for. `sections/` is reserved for UI subcomponents.
  */
 
+import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getSetting, resolveCloudConfig, getCloudProvider } from '#lib/settings/index.js'
 import { configureAi } from '#lib/tauri-commands/index.js'
 import { getAppLogger } from '#lib/logging/logger.js'
@@ -27,6 +28,21 @@ const logger = getAppLogger('ai-settings')
 
 /** Stable id so the same toast replaces in place across consecutive failed startup attempts. */
 const secretErrorToastId = 'ai-secret-store-error'
+
+/** Emitted to every window after a push lands, from whichever window pushed. */
+export const AI_CONFIG_PUSHED_EVENT = 'ai-config:pushed'
+
+/**
+ * Run `listener` after each push lands in the backend, from ANY window, so a reader of the
+ * backend's AI state (Ask Cmdr's provider readiness) re-reads it after the change, never before.
+ * Cross-window on purpose: an API key saved in the Settings window pushes from there, and the
+ * main window's rail is what has to hear it.
+ */
+export function onAiConfigPushed(listener: () => void): Promise<UnlistenFn> {
+  return listen(AI_CONFIG_PUSHED_EVENT, () => {
+    listener()
+  })
+}
 
 /**
  * Push current AI config (provider, context size, cloud endpoint) to the Rust backend. Everything
@@ -69,6 +85,9 @@ export async function pushConfigToBackend(): Promise<void> {
         id: secretErrorToastId,
       })
     }
+    void emit(AI_CONFIG_PUSHED_EVENT).catch((e: unknown) => {
+      logger.debug("Couldn't announce the AI config push: {error}", { error: e })
+    })
   } catch (e) {
     logger.error("Couldn't push AI config to backend: {error}", { error: e })
   }

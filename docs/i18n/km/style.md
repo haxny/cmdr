@@ -1,7 +1,7 @@
 # Khmer (km) translation style guide
 
-Working notes for translating Cmdr into Khmer (ខ្មែរ). Read `../README.md` for how this fits the translation process,
-and the app-wide `docs/style-guide.md` for the English voice these notes carry into Khmer.
+Working notes for translating Cmdr into Khmer (ខ្មែរ). Read `../README.md` for how this fits the translation process, and
+the app-wide `docs/style-guide.md` for the English voice these notes carry into Khmer.
 
 Sourced: the pile has MS terminology and MS style guide (under `km-KH`), plus a small/dated GNOME Nautilus catalog
 (under `km`); no macOS folder for Khmer (`_ignored/i18n/km*`). Evidence verified against the pile on 2026-06-20. The

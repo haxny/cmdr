@@ -25,7 +25,11 @@ The exact schema is in `migrations.rs`. The non-obvious choices:
   token; v1 never writes a non-null origin.
 - **`messages.content_blocks` is typed JSON**, the serialized `Vec<AgentPart>` from the `AgentLlm` seam. The opaque provider
   reasoning blob rides inside it and is backend-only — it must never reach the frontend. `text_for_search` is the plain
-  user+assistant prose extracted at insert (never tool blobs), the only thing the FTS index sees.
+  user+assistant prose extracted at insert (never tool blobs), the only thing the FTS index sees. A user row opens with
+  an `Envelope` part (the context it was sent with, rendered; `../chat/DETAILS.md` § Anatomy of one call), never
+  indexed or shown. No migration: the column is schemaless JSON. **The downgrade cost** (accepted, as for the event
+  kinds below): `AgentPart` has no tolerant parse, so a build from before the `Envelope` part can't load, or send into,
+  a thread holding one.
 - **`prompt_tokens` / `completion_tokens` are nullable** (assistant turns only).
 - **`messages_fts` is external-content FTS5** (`content='messages'`, `content_rowid='id'`): the index stores the term
   data but not a copy of the text, pointing back at `messages.id`. Three triggers keep it in sync — insert indexes,
@@ -48,6 +52,46 @@ merge. The reader (`map_message_row`) branches on the role token into `StoredCon
 (`Message { role, parts }` vs `Event`); the token deliberately lives outside `AgentRole`
 so the transcript loader can't feed an event to a provider. `text_for_search` stays empty
 — a model name is not conversation content and never matches search.
+
+### An event kind this build doesn't know
+
+A new event kind is a forward-compat hazard with no schema bump to refuse it: the row lands in a `main.db` an older
+build may open after a downgrade. `list_messages` feeds BOTH the history page and the transcript loader, so before the
+tolerant parse, one unknown row made the thread impossible to open AND to send into.
+
+- **Decision/Why**: `ConversationEvent` carries `#[serde(other)] Unknown`. An unknown `kind` parses to it and the ROW
+  IS KEPT (paging counts rows, so dropping it would shift every offset); the views project it to an event view with no
+  blocks, and the transcript loader skips it like any event. Only an unknown `kind` is tolerated: a known kind with a
+  body that doesn't parse is still `ContentBlocks` corruption.
+- `Unknown` is read-only: `append_event` debug-asserts it never gets written.
+- **The accepted downgrade gap**: a build from BEFORE this tolerant parse still refuses such a thread whole (it can't
+  load it or send into it). Open beta, auto-update, and rare downgrades make that acceptable; every build from this one
+  on reads a newer kind as `Unknown`.
+
+### What a turn spent (`TurnFinished`)
+
+`run_turn` appends `ConversationEvent::TurnFinished { stats: TurnStats }` after the last row of every turn that ran at
+least one tool, answered, failed, or stopped alike. `TurnStats` holds the tool-call count, the wall time, and the turn's
+summed per-row `prompt_tokens` / `completion_tokens` (the cost meter's figures, so per-turn footers add up to the
+thread's cost), plus `stopped` (the turn ended on a cancel, so the footer can say "Stopped" after a reload).
+
+- **Decision/Why an event row, not a column**: the wall time can't be derived on reload (every row of a turn carries
+  the same `now_secs`), so it must be stored, and an event row needs no migration. A missing row (an older turn, or a
+  crash before it) loses the wall time and `stopped` (`#[serde(default)]`: an older row reads as not stopped); the
+  rest is derivable from the rows.
+- **The downgrade cost** (accepted): a build from before the `Unknown` tolerant parse can't load, or send into, a thread
+  holding this row. A tolerant build reads it as `Unknown` and shows nothing for it.
+- A persist problem writing it is logged and dropped: a footer is worth no turn.
+- It projects to an empty event view: the history page reads its stats onto the turn's last assistant view instead
+  (`../chat/DETAILS.md` § What a reloaded page says).
+
+### Turn-scoped reads (`turns.rs`)
+
+A turn is every row from one user-role row (its opener) to the next. What a tool line says is turn-scoped while the
+history pages by rows, so `turn_context` reads the rows completing a page's first and last turns, and `turn_opener_at`
+a row's opener. `row_and_rest_of_turn` reads one assistant row plus the rest of its turn (the rows holding its results)
+for the expanded line, and it is the ownership check: a `message_id` of another thread reads as `None`. They return
+rows; what the rows mean is `agent::chat::message_view`'s.
 
 ## FTS5 comes from `bundled`, not a feature
 
@@ -140,6 +184,12 @@ Bumped by every amend, so an approval binds the version of a group the user read
 ## v12: `proposals.source_folder`
 
 The folder every op of a group sits directly in, NULL when they span folders, written with the op list. The step backfills existing groups once by streaming their paths, with the rule COPIED into the step so it keeps doing what it shipped doing. Why a column: `../suggested_ops/DETAILS.md` § Header facts.
+
+## v13: `proposal_server_drafts`
+
+The server a zero-op `add_server` / `edit_server` group proposes, one row per group, cascading with it and written in
+the group's own transaction. Rationale, the claim it feeds, and why the spine writes it when rename's producer writes its
+own sidecar: `proposals/DETAILS.md` § A server group.
 
 ## No auto-retention in v1
 

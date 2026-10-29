@@ -26,8 +26,8 @@ or earlier is always mimalloc, so say which build a reading came from.
 ## The trap, macOS mimalloc builds: `vmmap` reports the Rust heap as `IOAccelerator`
 
 `vmmap` names VM regions by their VM tag. macOS defines `VM_MEMORY_IOACCELERATOR = 100`
-(`$(xcrun --show-sdk-path)/usr/include/mach/vm_statistics.h`), and **mimalloc tags every arena it `mmap`s with `os_tag`
-= 100 by default**. The tag is a Mach concept, so `os_tag` does nothing on Linux. In a macOS mimalloc build:
+(`$(xcrun --show-sdk-path)/usr/include/mach/vm_statistics.h`), and **mimalloc tags every arena it `mmap`s with
+`os_tag` = 100 by default**. The tag is a Mach concept, so `os_tag` does nothing on Linux. In a macOS mimalloc build:
 
 > **The `IOAccelerator` rows in Cmdr's `vmmap` / `footprint` output ARE the Rust heap** — not GPU memory, not WebKit,
 > not the compositor. Arenas are reserved in 128 MB chunks, so the region COUNT grows in 128 MB steps.

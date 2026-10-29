@@ -1,15 +1,15 @@
 /**
  * Behavior tests for `AskCmdrComposer.svelte`: Enter sends, the button flips to Stop while
- * streaming, Escape returns focus to the panes, and the AI-provider gate (provider off ⇒
- * Send disabled + inline hint, live across a settings flip). The trigger store and the
- * settings module are mocked so the composer mounts without the full app chain.
+ * streaming, Escape returns focus to the panes, and the AI-provider gate (a setup gap in the
+ * slot status ⇒ Send disabled, live as the status changes). The trigger store is mocked so the
+ * composer mounts without the full app chain; the slot status is the real `$state`.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, tick } from 'svelte'
 
 const { state, spies } = vi.hoisted(() => ({
-  state: { streaming: false, attachments: [] as unknown[] },
+  state: { streaming: false, attachments: [] as unknown[], composerFocusRequest: 0 },
   spies: {
     sendMessage: vi.fn(),
     stopStreaming: vi.fn(),
@@ -19,28 +19,6 @@ const { state, spies } = vi.hoisted(() => ({
     removeAttachment: vi.fn(),
   },
 }))
-
-// Controllable `ai.provider` setting: `setProvider` mutates the value AND notifies the
-// live listeners the composer registers, so a test can flip the provider with no remount.
-const settings = vi.hoisted(() => {
-  const store = { provider: 'cloud' as string }
-  const listeners = new Set<(v: unknown) => void>()
-  return {
-    getSetting: (id: string) => (id === 'ai.provider' ? store.provider : undefined),
-    onSpecificSettingChange: (id: string, cb: (v: unknown) => void) => {
-      if (id === 'ai.provider') listeners.add(cb)
-      return () => listeners.delete(cb)
-    },
-    setProvider(v: string): void {
-      store.provider = v
-      for (const cb of listeners) cb(v)
-    },
-    reset(provider: string): void {
-      listeners.clear()
-      store.provider = provider
-    },
-  }
-})
 
 vi.mock('./ask-cmdr-trigger.svelte', () => ({
   askCmdrState: state,
@@ -52,20 +30,18 @@ vi.mock('./ask-cmdr-trigger.svelte', () => ({
   removeAttachment: spies.removeAttachment,
 }))
 
-vi.mock('#lib/settings/index.js', () => ({
-  getSetting: settings.getSetting,
-  onSpecificSettingChange: settings.onSpecificSettingChange,
-}))
-
-const { ipc, addToast } = vi.hoisted(() => ({
-  ipc: { askCmdrFakeActive: vi.fn(() => Promise.resolve(false)) },
-  addToast: vi.fn(),
-}))
-vi.mock('#lib/tauri-commands/index.js', () => ipc)
+const { addToast } = vi.hoisted(() => ({ addToast: vi.fn() }))
+vi.mock('#lib/tauri-commands/index.js', () => ({}))
 vi.mock('#lib/ui/toast/index.js', () => ({ addToast }))
 
 import AskCmdrComposer from './AskCmdrComposer.svelte'
+import { slotStatusState } from './ask-cmdr-slot-status.svelte'
 import type { SelectionAttachmentsRead } from '#lib/file-explorer/pane/selection-attachments-read.js'
+import type { ProviderReadiness, SlotStatus } from '#lib/tauri-commands/index.js'
+
+function statusWith(readiness: ProviderReadiness): SlotStatus {
+  return { readiness, nextCall: null, baseline: null }
+}
 
 function mountComposer(props: { readSelection?: () => Promise<SelectionAttachmentsRead> } = {}): HTMLElement {
   const target = document.createElement('div')
@@ -103,7 +79,7 @@ async function typeInto(ta: HTMLTextAreaElement, value: string): Promise<void> {
 
 beforeEach(() => {
   state.streaming = false
-  settings.reset('cloud')
+  slotStatusState.status = statusWith('ready')
   spies.sendMessage.mockReset()
   spies.stopStreaming.mockReset()
   spies.returnFocusToPane.mockReset()
@@ -143,6 +119,31 @@ describe('AskCmdrComposer', () => {
     if (stop === null) throw new Error('expected a stop button while streaming')
     stop.click()
     expect(spies.stopStreaming).toHaveBeenCalled()
+  })
+
+  // Send and Stop swap as a turn starts and ends: a focused one leaving the page would drop
+  // focus to <body> (the focus watchdog's "activeElement=body" lines).
+  it('Stop hands focus back to the prompt box', async () => {
+    state.streaming = true
+    const target = mountComposer()
+    await tick()
+    const stop = target.querySelector<HTMLButtonElement>('.composer-button.stop')
+    if (stop === null) throw new Error('expected a stop button while streaming')
+    stop.focus()
+    stop.click()
+    expect(document.activeElement).toBe(textareaOf(target))
+  })
+
+  it('a send from the Send button hands focus back to the prompt box', async () => {
+    const target = mountComposer()
+    await tick()
+    const ta = textareaOf(target)
+    await typeInto(ta, 'hello')
+    const send = sendButtonOf(target)
+    send.focus()
+    send.click()
+    expect(spies.sendMessage).toHaveBeenCalledWith('hello')
+    expect(document.activeElement).toBe(ta)
   })
 
   describe('Ask about selection', () => {
@@ -189,42 +190,42 @@ describe('AskCmdrComposer', () => {
   })
 
   describe('AI-provider gate', () => {
-    it('with a provider on, typing enables Send and shows no hint', async () => {
+    it('with a provider ready, typing enables Send', async () => {
       const target = mountComposer()
       await tick()
       await typeInto(textareaOf(target), 'hi')
       expect(sendButtonOf(target).disabled).toBe(false)
-      expect(target.querySelector('.provider-off-hint')).toBeNull()
     })
 
-    it('with the provider off, Send stays disabled, Enter does nothing, and the hint shows', async () => {
-      settings.reset('off')
+    it('with a setup gap, Send stays disabled and Enter does nothing', async () => {
+      slotStatusState.status = statusWith('cloudNeedsKey')
       const target = mountComposer()
       await tick()
       const ta = textareaOf(target)
       await typeInto(ta, 'hi')
       expect(sendButtonOf(target).disabled).toBe(true)
-      expect(target.querySelector('.provider-off-hint')).not.toBeNull()
       ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
       expect(spies.sendMessage).not.toHaveBeenCalled()
     })
 
-    it('flipping the provider off then on updates Send and the hint live, without remount', async () => {
+    it('before the slot status is read, Send is allowed (the backend refuses an unset provider itself)', async () => {
+      slotStatusState.status = null
       const target = mountComposer()
       await tick()
       await typeInto(textareaOf(target), 'hi')
       expect(sendButtonOf(target).disabled).toBe(false)
-      expect(target.querySelector('.provider-off-hint')).toBeNull()
+    })
 
-      settings.setProvider('off')
+    it('a provider set up while the rail is open enables Send live, without remount', async () => {
+      slotStatusState.status = statusWith('off')
+      const target = mountComposer()
       await tick()
+      await typeInto(textareaOf(target), 'hi')
       expect(sendButtonOf(target).disabled).toBe(true)
-      expect(target.querySelector('.provider-off-hint')).not.toBeNull()
 
-      settings.setProvider('local')
+      slotStatusState.status = statusWith('ready')
       await tick()
       expect(sendButtonOf(target).disabled).toBe(false)
-      expect(target.querySelector('.provider-off-hint')).toBeNull()
     })
   })
 })

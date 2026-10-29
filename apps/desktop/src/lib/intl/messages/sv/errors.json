@@ -2444,5 +2444,49 @@
   "errors.write.duplicateSourceNames.suggestion.move": "Flytta dem ett i taget, eller byt namn på ett först.",
   "@errors.write.duplicateSourceNames.suggestion.move": {
     "sourceHash": "8af755e"
+  },
+  "errors.write.namedLeavesRefused.title": "De här nya namnen kan inte användas",
+  "@errors.write.namedLeavesRefused.title": {
+    "sourceHash": "08c8600"
+  },
+  "errors.write.namedLeavesRefused.message.notASource": "Ett av de nya namnen gäller {path}, som inte ingår i det här förslaget, så inget startade.",
+  "@errors.write.namedLeavesRefused.message.notASource": {
+    "sourceHash": "12b2cb4"
+  },
+  "errors.write.namedLeavesRefused.message.sameName": "Två objekt skulle hamna som {path}. Många diskar ser dem som samma namn, så det ena skulle ersätta det andra.",
+  "@errors.write.namedLeavesRefused.message.sameName": {
+    "sourceHash": "95e02b9"
+  },
+  "errors.write.namedLeavesRefused.message.ontoASource": "Ett objekt skulle hamna som {path} och ersätta ett annat objekt i samma förslag.",
+  "@errors.write.namedLeavesRefused.message.ontoASource": {
+    "sourceHash": "724f9c3"
+  },
+  "errors.write.namedLeavesRefused.message.alreadyInDestination": "Objektet {path} ligger redan i målmappen, så ett nytt namn där blir ett namnbyte.",
+  "@errors.write.namedLeavesRefused.message.alreadyInDestination": {
+    "sourceHash": "06a0593"
+  },
+  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr kan inte ge varje objekt ett eget namn på väg in i eller ut ur ett zip-arkiv, så inget hamnade i {path}.",
+  "@errors.write.namedLeavesRefused.message.routeCannotName": {
+    "sourceHash": "f2e48ca"
+  },
+  "errors.write.namedLeavesRefused.suggestion.notASource": "Be Cmdr att föreslå det igen.",
+  "@errors.write.namedLeavesRefused.suggestion.notASource": {
+    "sourceHash": "c1dbe85"
+  },
+  "errors.write.namedLeavesRefused.suggestion.sameName": "Be Cmdr om ett eget namn för varje objekt.",
+  "@errors.write.namedLeavesRefused.suggestion.sameName": {
+    "sourceHash": "76257a9"
+  },
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Be Cmdr om namn som inte krockar med objekten som flyttas eller kopieras.",
+  "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
+    "sourceHash": "9ab88ec"
+  },
+  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Byt namn på objekten som redan ligger i den mappen och flytta eller kopiera sedan resten.",
+  "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {
+    "sourceHash": "8917a8e"
+  },
+  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Flytta eller kopiera dem med sina egna namn och byt namn på dem där efteråt.",
+  "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
+    "sourceHash": "b1e881c"
   }
 }

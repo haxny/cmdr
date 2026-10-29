@@ -299,11 +299,12 @@ async fn a_cancel_mid_copy_leaves_no_upload_and_the_source_intact(service: Fixtu
     };
     let outcome = copy(&volume, &volume, &from, &to, WriteMode::CreateNew, &watch).await;
     assert!(matches!(outcome, Err(VolumeError::Cancelled(_))), "got {outcome:?}");
+    // Only a confirmed abort clears the record, so the server listing is clean once it settles.
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert!(
         unfinished_uploads(service, FIXTURE_BUCKET, &prefix).await.is_empty(),
         "a cancelled copy must be aborted on the server"
     );
-    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert!(!volume.exists(&at(&volume, &to)).await, "nothing was published");
     assert!(
         read_back(&volume, &at(&volume, &from)).await == bytes,

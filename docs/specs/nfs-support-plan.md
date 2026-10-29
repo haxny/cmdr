@@ -246,8 +246,8 @@ box (last commit there 2026-09-26). The QNAP manual pass needs the laptop's copy
   `listing_host/backends.rs` (`AppListings`), ❗ not this crate; the trait method gets a default (`Vec::new()`) so
   `NoListings`, `ListingRecorder`, and `crates/cmdr-operations/src/host/testing.rs` need no change. ❗ The existing
   `volumes_with_open_listings` answers volume ids, not paths, so it can't drive the poller.
-- App: `network/nfs_volume_wiring.rs`, `network/nfs_known_places.rs`, `commands/servers/wire.rs` (`ServerTarget::Nfs`,
-  new outcomes), `commands/servers.rs` dispatch, `commands/nfs.rs` (`list_nfs_exports`, `guess_nfs_identity`),
+- App: `network/nfs_volume_wiring.rs`, `network/nfs_known_places.rs`, `saved_servers/wire.rs` (`ServerTarget::Nfs`, new
+  outcomes), `commands/servers.rs` dispatch, `commands/nfs.rs` (`list_nfs_exports`, `guess_nfs_identity`),
   `server_volumes.rs` rows, `commands/network.rs` (the sign-in shape arm), `network/manual_servers.rs` (stops refusing
   `nfs://`), `file_system/backend_settings.rs` (an `"nfs"` row in `MAX_CONCURRENT_OPERATIONS_SOURCES`),
   `operations_host/backend_suites/nfs_*`.

@@ -1220,6 +1220,26 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label.reasoningEffort": "推理強度",
+  "@settings.ai.reasoningEfforts.label.reasoningEffort": {
+    "sourceHash": "3236aee"
+  },
+  "settings.ai.reasoningEfforts.label.effort": "投入程度",
+  "@settings.ai.reasoningEfforts.label.effort": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.label.thinkingLevel": "思考層級",
+  "@settings.ai.reasoningEfforts.label.thinkingLevel": {
+    "sourceHash": "96f115b"
+  },
+  "settings.ai.reasoningEfforts.description": "模型在回答前要思考多久。強度越高越能處理棘手的任務，但回覆會比較慢，思考過程也會按輸出計費。",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "推理強度, 投入程度, 推理, 思考, 強度, 深度, 速度, 費用, 成本, 品質",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "3bbb127"
+  },
   "settings.ai.localContextSize.label": "上下文視窗",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2281,7 +2301,7 @@
   },
   "settings.askCmdr.openAiSettings": "開啟 AI 設定",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "提供者和模型",
   "@settings.askCmdr.provider.title": {
@@ -2299,9 +2319,9 @@
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "對話使用的模型。留空則使用和 Cmdr 其他 AI 功能相同的模型。例如：claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "對話使用的模型。留空則使用和 Cmdr 其他 AI 功能相同的模型。例如：claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
-    "sourceHash": "881f8a4"
+    "sourceHash": "e301e99"
   },
   "settings.askCmdr.interactiveModel.placeholder": "和 Cmdr 的 AI 相同",
   "@settings.askCmdr.interactiveModel.placeholder": {
@@ -2315,9 +2335,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Cmdr 會把多少對話內容傳給模型。自動會跟隨你的模型的已知上限。",
+  "settings.askCmdr.chatMemorySize.description": "Cmdr 會把多少對話內容傳給模型。自動會用上你的模型的整個上下文視窗；選一個大小則會設下較低的上限，花費更少。",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "自動（建議）",
   "@settings.askCmdr.chatMemorySize.opt.auto": {
@@ -2326,6 +2346,22 @@
   "settings.askCmdr.chatMemorySize.overWindow": "你的模型可能會拒絕這麼長的訊息。Cmdr 會保留你設定的值。",
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
+  },
+  "settings.askCmdr.spendPause.label": "單次回答費用超過以下金額時詢問",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "一次回答可能會進行很多次查詢。預估費用超過這個金額時，Cmdr 會暫停回答，先問你再繼續花費。估算依定價計算，快取通常會讓實際費用更低。",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "從不",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "費用, 花費, 錢, 價格, 預算, 限額, 暫停, 美元, 貴, 帳單",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
   },
   "settings.askCmdr.chatMemorySize.keywords": "聊天, 記憶, 上下文, 視窗, 詞元, 大小, 預算, 歷史記錄",
   "@settings.askCmdr.chatMemorySize.keywords": {
@@ -2929,6 +2965,31 @@
   "settings.advanced.card.updates": "更新",
   "@settings.advanced.card.updates": {
     "sourceHash": "22e2bad"
+  },
+  "settings.advanced.card.askCmdr": "Ask Cmdr",
+  "@settings.advanced.card.askCmdr": {
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Product name of the built-in AI panel, kept verbatim like `settings.section.askCmdr`, `settings.askCmdr.enabled.label`, and `askCmdr.title`, which carry the same justification."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.label": "收到回覆後的工具群組",
+  "@settings.askCmdr.toolGroupsOnAnswer.label": {
+    "sourceHash": "e5e922b"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr 會顯示 AI 處理時正在查看什麼。選擇收到回覆之後，要不要把這些行收起來。",
+  "@settings.askCmdr.toolGroupsOnAnswer.description": {
+    "sourceHash": "785da0a"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "收起來",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
+    "sourceHash": "01052be"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "維持我原本的樣子",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
+    "sourceHash": "0aa6718"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "助理, 聊天, 對話, 收合, 展開, 摺疊, 收起, 工具, 步驟, 回答, 回覆",
+  "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
+    "sourceHash": "6a9f055"
   },
   "settings.updates.card.updates": "更新",
   "@settings.updates.card.updates": {

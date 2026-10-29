@@ -492,8 +492,9 @@ pub fn configure_ai<R: Runtime>(
 
         m.provider = provider.clone();
         m.context_size = context_size;
+        m.cloud_provider_id = cloud_provider_id.clone();
         m.cloud_api_key = cloud_api_key;
-        m.cloud_base_url = cloud_base_url;
+        m.cloud_base_url = cloud_base_url.clone();
         m.cloud_model = cloud_model;
         m.cloud_requires_api_key = cloud_requires_api_key;
 
@@ -522,6 +523,11 @@ pub fn configure_ai<R: Runtime>(
     // The wake loop gates on whether a provider can answer, and it caches that rather than
     // asking per live batch. This is the one place the answer can move.
     crate::agent::wake::refresh_readiness(&app);
+
+    // The endpoint Cmdr starts with is committed (read from `settings.json`), so its windows are
+    // fetched in the background; a later one (maybe a base URL mid-typing) waits for a connection
+    // check to vouch for it. Gated on policy and consent there.
+    super::model_capabilities::configured(&app, &cloud_provider_id, &cloud_base_url, provider == "cloud");
 
     // Health check asynchronously (the slow part, up to 60s)
     if let Some((pid, port, cancel)) = spawn_result {

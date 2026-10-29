@@ -65,6 +65,10 @@ pub enum AcceptanceOutcome {
     /// have, or `AllExcept` every op). Refused and rolled back, so the rows keep the last
     /// review's statuses and nothing records an acceptance of an empty set.
     NothingSelected,
+    /// A server group: it has no ops to accept, and takes `claim_server_group` instead. With no
+    /// acceptance recorded, the file claim refuses it too, so neither path takes the other's
+    /// kind.
+    NotAFileGroup,
 }
 
 /// A group the claim transaction moved into `approved`, with the binding it ran against.
@@ -126,6 +130,9 @@ pub fn record_acceptance(
     let Some(group) = get_group(&tx, group_id)? else {
         return Ok(AcceptanceOutcome::Unknown);
     };
+    if group.verb.is_server() {
+        return Ok(AcceptanceOutcome::NotAFileGroup);
+    }
     if group.status != ProposalStatus::Pending {
         return Ok(AcceptanceOutcome::NotPending { found: group.status });
     }

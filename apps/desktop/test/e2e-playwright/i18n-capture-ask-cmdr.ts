@@ -6,13 +6,15 @@
  * reachable from a dialog trigger: the rail is a panel inside the main window
  * whose content depends on Ask Cmdr's switch, on a provider being willing to answer,
  * and on there being threads to list. So this module walks the rail the way
- * `ask-cmdr.spec.ts` does, capturing four states in the order the user meets them:
+ * `ask-cmdr.spec.ts` does, capturing five states in the order the user meets them:
  *
  *  1. `ask-cmdr-gate-off`: the "Ask Cmdr is off" gate a fresh profile opens to.
  *  2. `ask-cmdr-empty`: switched on, a new chat with no messages yet.
  *  3. `ask-cmdr-chat`: one exchange, so the message chrome, the thinking line, and
  *     the cost footer render.
- *  4. `ask-cmdr-sessions`: the threads panel over a thread that exists.
+ *  4. `ask-cmdr-tools`: a turn that ran tools, with its groups open and one line
+ *     expanded, so tool lines, group headers, the preview, and the stats line render.
+ *  5. `ask-cmdr-sessions`: the threads panel over a thread that exists.
  *
  * The replies come from the scripted fake LLM, not a real provider: the capture
  * launch sets `CMDR_E2E_ASK_CMDR_FAKE=1`, which is the single source of truth for
@@ -109,9 +111,9 @@ async function unlockChat(main: TauriPage): Promise<void> {
 }
 
 /**
- * Captures the four Ask Cmdr rail states, in the order a user meets them.
+ * Captures the five Ask Cmdr rail states, in the order a user meets them.
  *
- * Each is a main-window panel, so all four share the main sink and follow the
+ * Each is a main-window panel, so all five share the main sink and follow the
  * usual rhythm: reset + label + enable BEFORE the state renders (the gate copy
  * and the empty state both resolve at mount), stage, capture.
  *
@@ -187,6 +189,44 @@ export async function captureAskCmdrSurfaces(
       ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     })()`)
     await expect.poll(() => replyCount(main), { timeout: waitBudget(15000) }).toBeGreaterThan(before)
+    return { page: main }
+  })
+  await captureCall(main, 'disable').catch(() => {})
+
+  // ── A turn that ran tools ──────────────────────────────────────────────────
+  // The fake's `[tools]` script (`chat/session.rs`, `rail_fake_turn`) narrates three rounds of
+  // tool calls, including a refused one and two repeats, so its bubble shows tool lines with
+  // their outcomes and repeat tags, group headers, and the turn's stats line. Both groups are
+  // opened (the turn's end closed them) and one line is expanded, so its preview, truncation
+  // note, and Copy render too.
+  await captureSurface('ask-cmdr-tools', report, failed, async () => {
+    await captureCall(main, 'reset')
+    await captureCall(main, 'setSurface', 'ask-cmdr-tools')
+    await captureCall<boolean>(main, 'enable')
+    await main.evaluate(`document.querySelector('${RAIL} .header-actions [aria-label="New chat"]')?.click()`)
+    await main.evaluate(`(function(){
+      var ta = document.querySelector('${RAIL} textarea');
+      if (!ta) throw new Error('no composer');
+      ta.focus();
+      ta.value = '[tools] Which of my drives has the most room?';
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    })()`)
+    await main.waitForSelector(`${RAIL} .msg .turn-stats`, waitBudget(15000))
+    await expect
+      .poll(
+        () =>
+          main.evaluate<number>(`(function(){
+            var closed = document.querySelectorAll('${RAIL} .group-toggle[aria-expanded="false"]');
+            closed.forEach(function(toggle){ toggle.click(); });
+            return document.querySelectorAll('${RAIL} .group-toggle[aria-expanded="false"]').length;
+          })()`),
+        { timeout: waitBudget(3000) },
+      )
+      .toBe(0)
+    // The drives line: a list, so its preview has rows and a note.
+    await main.evaluate(`document.querySelectorAll('${RAIL} .tool-line')[1]?.querySelector('button.expand')?.click()`)
+    await main.waitForSelector(`${RAIL} .preview .copy`, waitBudget(5000))
     return { page: main }
   })
   await captureCall(main, 'disable').catch(() => {})

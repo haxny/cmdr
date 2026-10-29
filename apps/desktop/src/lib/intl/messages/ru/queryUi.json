@@ -90,7 +90,7 @@
   },
   "queryUi.ai.openSettings": "Открыть настройки ИИ",
   "@queryUi.ai.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "queryUi.empty.indexReady": "Индекс готов · {countText} {count, plural, one {запись} few {записи} many {записей} other {записи}}",
   "@queryUi.empty.indexReady": {

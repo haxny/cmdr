@@ -12,9 +12,8 @@ use std::time::{Duration, Instant};
 
 use tokio_util::sync::CancellationToken;
 
-use super::{BeginOutcome, FinishOutcome, ImportanceScheduler, ScoringPolicy};
+use super::{BeginOutcome, FinishOutcome, ImportanceScheduler, Scoring, ScoringPolicy};
 use crate::IndexVolumeKind;
-use crate::importance::scorer::SignalSet;
 use crate::importance::stop::PassError;
 use crate::indexing::host::runtime::spawn_until_stopped;
 use crate::indexing::lifecycle::lifecycle_bus;
@@ -133,8 +132,8 @@ pub(super) fn enqueue_full_pass_if_needed(
     volume_id: String,
     kind: IndexVolumeKind,
 ) {
-    let available = match ScoringPolicy::for_kind(kind) {
-        ScoringPolicy::Scored { available } => available,
+    let scoring = match ScoringPolicy::for_kind(kind) {
+        ScoringPolicy::Scored(scoring) => scoring,
         // MTP: on-demand only, never background-scored.
         ScoringPolicy::Excluded => return,
     };
@@ -150,7 +149,7 @@ pub(super) fn enqueue_full_pass_if_needed(
                     target: "importance",
                     "volume '{volume_id}' has no generation, a superseded scoring policy, or scores older than its index's last scan; enqueuing a full recompute"
                 );
-                spawn_recompute(scheduler, volume_id, available);
+                spawn_recompute(scheduler, volume_id, scoring);
             }
             Ok(Ok(false)) => {} // already scored under the current policy — leave it.
             Ok(Err(e)) => log::warn!(target: "importance", "full-pass probe for '{volume_id}' failed: {e}"),
@@ -226,8 +225,8 @@ pub(super) fn wire_volume(
     kind: IndexVolumeKind,
     stop: CancellationToken,
 ) {
-    let available = match ScoringPolicy::for_kind(kind) {
-        ScoringPolicy::Scored { available } => available,
+    let scoring = match ScoringPolicy::for_kind(kind) {
+        ScoringPolicy::Scored(scoring) => scoring,
         // MTP: on-demand only, never background-scored (a typed exclusion).
         ScoringPolicy::Excluded => {
             log::debug!(target: "importance", "importance skips '{volume_id}' ({kind:?}): on-demand only");
@@ -247,11 +246,11 @@ pub(super) fn wire_volume(
     // Incremental recompute: rescore only the touched subtrees + capped ancestor
     // chains as live listing changes land. Full-volume recompute
     // stays the scan-completion default below.
-    start_incremental(Arc::clone(&scheduler), volume_id.clone(), available, &stop);
+    start_incremental(Arc::clone(&scheduler), volume_id.clone(), scoring, &stop);
 
     // And a slow full pass, which is what BOUNDS the staleness the incremental path
     // deliberately accepts (see below).
-    start_periodic_full_refresh(Arc::clone(&scheduler), volume_id.clone(), available, &stop);
+    start_periodic_full_refresh(Arc::clone(&scheduler), volume_id.clone(), scoring, &stop);
 
     // Subscribe to the scan bus for this volume; a subscription retains the last
     // state, so a ScanCompleted fired before this line is still observed
@@ -270,7 +269,7 @@ pub(super) fn wire_volume(
         // and a sweep-ready volume that already loaded Completed).
         if matches!(*rx.borrow_and_update(), lifecycle_bus::ScanState::Completed { .. }) || *home_rx.borrow_and_update()
         {
-            spawn_recompute(Arc::clone(&sub_scheduler), sub_volume.clone(), available);
+            spawn_recompute(Arc::clone(&sub_scheduler), sub_volume.clone(), scoring);
         }
         loop {
             let woken = tokio::select! {
@@ -282,7 +281,7 @@ pub(super) fn wire_volume(
             match woken {
                 // A sender is gone, which for a process-global bus means shutdown.
                 None => break,
-                Some(true) => spawn_recompute(Arc::clone(&sub_scheduler), sub_volume.clone(), available),
+                Some(true) => spawn_recompute(Arc::clone(&sub_scheduler), sub_volume.clone(), scoring),
                 Some(false) => {}
             }
         }
@@ -297,7 +296,7 @@ pub(super) fn wire_volume(
 /// - A row whose SIGNALS didn't move isn't rewritten, so its score keeps the
 ///   `now_secs` it was last written at and its recency decay pauses
 ///   (`../writer.rs`, `fate_of_stored_row`).
-/// - A demoted origin seeds `has_marker_below` from its stored row, which can only
+/// - A demoted origin seeds `nearest_marker_below` from its stored row, which can only
 ///   ADD marker presence, so the last marker LEAVING a big subtree reads stale
 ///   (`scoped_walk.rs`, § "The accepted lossiness").
 ///
@@ -325,14 +324,14 @@ const FULL_REFRESH_INTERVAL: Duration = Duration::from_secs(60 * 60);
 fn start_periodic_full_refresh(
     scheduler: Arc<ImportanceScheduler>,
     volume_id: String,
-    available: SignalSet,
+    scoring: Scoring,
     stop: &CancellationToken,
 ) {
     spawn_until_stopped(stop, async move {
         loop {
             tokio::time::sleep(FULL_REFRESH_INTERVAL).await;
             log::debug!(target: "importance", "periodic full refresh for '{volume_id}'");
-            spawn_recompute(Arc::clone(&scheduler), volume_id.clone(), available);
+            spawn_recompute(Arc::clone(&scheduler), volume_id.clone(), scoring);
         }
     });
 }
@@ -344,7 +343,7 @@ fn start_periodic_full_refresh(
 fn start_incremental(
     scheduler: Arc<ImportanceScheduler>,
     volume_id: String,
-    available: SignalSet,
+    scoring: Scoring,
     stop: &CancellationToken,
 ) {
     let mut rx = lifecycle_bus::subscribe_dirs_changed(&volume_id);
@@ -360,7 +359,7 @@ fn start_incremental(
             if origins.is_empty() {
                 continue;
             }
-            spawn_incremental(Arc::clone(&scheduler), volume_id.clone(), available, origins);
+            spawn_incremental(Arc::clone(&scheduler), volume_id.clone(), scoring, origins);
         }
     });
 }
@@ -411,7 +410,7 @@ pub(super) fn incremental_debounce_wait(last_started: Option<Instant>, now: Inst
 /// Request a coalesced incremental rescore, accumulating `paths` into the pending
 /// set. If this request starts the pass, drive it (plus any coalesced re-run,
 /// draining whatever accumulated meanwhile) on a blocking background task.
-fn spawn_incremental(scheduler: Arc<ImportanceScheduler>, volume_id: String, available: SignalSet, paths: Vec<String>) {
+fn spawn_incremental(scheduler: Arc<ImportanceScheduler>, volume_id: String, scoring: Scoring, paths: Vec<String>) {
     let key = incremental_key(&volume_id);
     scheduler.pending_incremental_paths(&volume_id, paths);
     if scheduler.coordinator.request(&key) == BeginOutcome::Coalesced {
@@ -439,7 +438,7 @@ fn spawn_incremental(scheduler: Arc<ImportanceScheduler>, volume_id: String, ava
                         .duration_since(std::time::UNIX_EPOCH)
                         .map(|d| d.as_secs())
                         .unwrap_or(0);
-                    sched.run_incremental_under_current_stop(&vid, available, batch, now)
+                    sched.run_incremental_under_current_stop(&vid, scoring, batch, now)
                 })
                 .await;
                 match result {
@@ -494,7 +493,7 @@ fn spawn_incremental(scheduler: Arc<ImportanceScheduler>, volume_id: String, ava
 
 /// Request a coalesced recompute for a volume and, if this request starts the
 /// pass, drive it (plus any coalesced re-run) on a blocking background task.
-fn spawn_recompute(scheduler: Arc<ImportanceScheduler>, volume_id: String, available: SignalSet) {
+fn spawn_recompute(scheduler: Arc<ImportanceScheduler>, volume_id: String, scoring: Scoring) {
     if scheduler.coordinator.request(&volume_id) == BeginOutcome::Coalesced {
         // A pass is already running for this volume; it will re-run once when it
         // finishes (the coordinator set the flag). Nothing to spawn.
@@ -511,7 +510,7 @@ fn spawn_recompute(scheduler: Arc<ImportanceScheduler>, volume_id: String, avail
                     .duration_since(std::time::UNIX_EPOCH)
                     .map(|d| d.as_secs())
                     .unwrap_or(0);
-                sched.run_pass_under_current_stop(&vid, available, now)
+                sched.run_pass_under_current_stop(&vid, scoring, now)
             })
             .await;
             match result {

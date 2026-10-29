@@ -3,8 +3,8 @@
 //! [`crate::agent`]; these commands only bridge the frontend to them.
 //!
 //! One file per command family, plus the wire shapes they share:
-//! - [`views`]: the wire event enum and the specta-typed display projections, with the
-//!   pure mappings that build them.
+//! - [`views`]: the specta-typed DTOs the commands share, with the pure mappings that build
+//!   them (one row's `MessageView` is `agent::chat::message_view`'s, re-exported).
 //! - [`chat`]: send + cancel — the send gate (Ask Cmdr's switch, then the slot), the envelope
 //!   snapshot, the cancel registry, and the `Channel` bridge.
 //! - [`attachments`]: resolving what the user attached, by reference only.
@@ -16,6 +16,7 @@
 //! - [`memory`]: the settings section's two memory controls (where the notes are, wipe them).
 //! - [`suggested_ops`]: what the Suggested ops dialog reads, and the rejection it records.
 //! - [`suggested_ops_live`]: the dialog's live per-file facts, a window at a time.
+//! - [`suggested_ops_server`]: a server card's approve.
 //! - [`wake`]: the live-apply pushes that tell the proactive loop its settings (or the Ask Cmdr
 //!   switch) moved.
 //!
@@ -32,6 +33,7 @@ mod legacy_opt_in;
 mod memory;
 mod suggested_ops;
 mod suggested_ops_live;
+mod suggested_ops_server;
 mod views;
 mod wake;
 
@@ -49,6 +51,7 @@ pub use legacy_opt_in::*;
 pub use memory::*;
 pub use suggested_ops::*;
 pub use suggested_ops_live::*;
+pub use suggested_ops_server::*;
 pub use views::*;
 pub use wake::*;
 

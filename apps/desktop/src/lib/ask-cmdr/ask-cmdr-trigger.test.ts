@@ -1,18 +1,19 @@
 /**
  * The rail's streaming state machine: sending appends a user message and streams the
- * answer into the last assistant bubble; stop cancels and finalizes locally (the runtime
- * sends no terminal event on cancel); width persists; the soft-cap nudge trips past the
- * constant.
+ * answer into the last assistant bubble; width persists; the soft-cap nudge trips past the
+ * constant. Stop and a reload mid-turn: `ask-cmdr-stop-and-reload.test.ts`.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { AskCmdrSendOutcome, AskCmdrStreamEvent } from '#lib/tauri-commands/index.js'
+import type { AskCmdrSendOutcome, AskCmdrStreamEvent, MessageView } from '#lib/tauri-commands/index.js'
+import type { CancelOutcomeView, ResolvedCall, ToolOutcome, ToolSubject, TurnStats } from '#lib/ipc/bindings.js'
 
 const sendMock = vi.fn<(c: number | null, t: string, a: unknown[], d: string[]) => Promise<AskCmdrSendOutcome>>()
-const cancelMock = vi.fn<(id: number) => Promise<void>>()
+const cancelMock = vi.fn<(id: number) => Promise<CancelOutcomeView>>()
 const listMock = vi.fn<(...a: unknown[]) => Promise<unknown>>()
 const getMock = vi.fn<(...a: unknown[]) => Promise<unknown>>()
 const recordMock = vi.fn<(id: number) => Promise<unknown>>()
+const slotStatusMock = vi.fn<() => Promise<unknown>>(() => Promise.resolve(null))
 const saveMock = vi.fn()
 const growWindowMock = vi.fn<(w: number) => Promise<void>>()
 const shrinkWindowMock = vi.fn<(w: number) => Promise<void>>()
@@ -26,6 +27,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   listAskCmdrConversations: (...a: unknown[]) => listMock(...a),
   getAskCmdrConversation: (...a: unknown[]) => getMock(...a),
   recordAskCmdrSlotChange: (id: number) => recordMock(id),
+  askCmdrSlotStatus: () => slotStatusMock(),
   preflightBulkRename: (...args: unknown[]) => preflightRenameMock(...args),
   cancelBulkRenameProposal: vi.fn(() => Promise.resolve()),
   applyBulkRename: (...args: unknown[]) => applyRenameMock(...args),
@@ -63,7 +65,9 @@ import {
   MESSAGE_PAGE,
   closeRail,
   newChat,
+  newChatShortcutText,
   noteSlotSettingChanged,
+  openNewChat,
   openRail,
   ensureThreadLoaded,
   RAIL_MAX_WIDTH,
@@ -75,23 +79,39 @@ import {
   switchToThread,
   THREAD_SOFT_CAP_MESSAGES,
   type RailMessage,
+  type RailToolCall,
 } from './ask-cmdr-trigger.svelte'
-import { handleTurnEvent, resetStoppedTurns } from './ask-cmdr-stream.svelte'
+import { handleTurnEvent, resetTurnBookkeeping } from './ask-cmdr-stream.svelte'
+import { toDisplayShortcut } from '#lib/shortcuts/index.js'
+import { toPlatformShortcut } from '#lib/shortcuts/key-capture.js'
 
 /** The thread a fired event belongs to when the test doesn't name one. */
 const THREAD_ID = 1
 
+/** What most tool-line tests need off `toolCallFinished`: a plain answer, and a refusal. */
+const ANSWERED: ToolOutcome = { kind: 'answered' }
+const REFUSED: ToolOutcome = { kind: 'refused', reason: { kind: 'problem' } }
+const UNPARSED: ToolSubject = { kind: 'unparsed' }
+const PANES: ToolSubject = { kind: 'panes' }
+const STATS: TurnStats = { toolCalls: 2, wallMs: 1200, promptTokens: 10, completionTokens: 2 }
+
+/** One call of a `toolCallsResolved` batch. */
+function resolved(callId: string, tool: string): ResolvedCall {
+  return { callId, tool, subject: UNPARSED, repeatOf: null }
+}
+
 /** Feed one stream event in as the backend emits it, for the thread the rail is on. A rail with
- * no thread yet is put on the named one first: production gets there through `started`, which
- * `adopts a new thread's id from its own started event` covers on its own. */
+ * no thread yet is put on the named one first: production gets there through its send's answer,
+ * which `ask-cmdr-send-before-id.test.ts` covers on its own. */
 function fire(event: AskCmdrStreamEvent, conversationId: number = askCmdrState.conversationId ?? THREAD_ID): void {
   askCmdrState.conversationId = conversationId
-  handleTurnEvent({ conversationId, event })
+  handleTurnEvent({ conversationId, run: null, event })
 }
 
 beforeEach(() => {
   sendMock.mockReset()
   cancelMock.mockReset()
+  cancelMock.mockResolvedValue({ tripped: 1, live: 1 })
   saveMock.mockReset()
   listMock.mockReset()
   getMock.mockReset()
@@ -106,9 +126,9 @@ beforeEach(() => {
   growWindowMock.mockResolvedValue()
   shrinkWindowMock.mockResolvedValue()
   listMock.mockResolvedValue([])
-  sendMock.mockImplementation((c) => Promise.resolve({ accepted: true, conversationId: c ?? THREAD_ID }))
+  sendMock.mockImplementation((c) => Promise.resolve({ accepted: true, conversationId: c ?? THREAD_ID, run: 1 }))
   newChat()
-  resetStoppedTurns()
+  resetTurnBookkeeping()
   askCmdrState.messages = []
   askCmdrState.conversationId = null
   askCmdrState.open = false
@@ -124,6 +144,16 @@ function assistantAt(index: number): Extract<RailMessage, { kind: 'assistant' }>
   return message
 }
 
+/** A bubble's narration across its rounds. */
+function textOf(item: Extract<RailMessage, { kind: 'assistant' }>): string {
+  return item.rounds.map((round) => round.text).join('')
+}
+
+/** A bubble's tool lines across its rounds. */
+function linesOf(item: Extract<RailMessage, { kind: 'assistant' }>): RailToolCall[] {
+  return item.rounds.flatMap((round) => round.calls)
+}
+
 describe('sendMessage + streaming', () => {
   it('appends a user message and streams the answer into an assistant bubble', () => {
     sendMessage('hello')
@@ -135,7 +165,7 @@ describe('sendMessage + streaming', () => {
     fire({ type: 'assistantStarted' })
     fire({ type: 'textDelta', text: 'Hi ' })
     fire({ type: 'textDelta', text: 'there' })
-    expect(assistantAt(1).text).toBe('Hi there')
+    expect(textOf(assistantAt(1))).toBe('Hi there')
     expect(assistantAt(1).streaming).toBe(true)
 
     fire({
@@ -144,6 +174,7 @@ describe('sendMessage + streaming', () => {
       seq: 2,
       stop: 'completed',
       usage: { promptTokens: 1, completionTokens: 2 },
+      turn: null,
     })
     expect(assistantAt(1).streaming).toBe(false)
     expect(assistantAt(1).id).toBe(42)
@@ -155,9 +186,19 @@ describe('sendMessage + streaming', () => {
     sendMessage('what am I looking at?')
     fire({ type: 'assistantStarted' })
     fire({ type: 'toolCallStarted', callId: 'c1', tool: 'app_state' })
-    expect(assistantAt(1).tools[0]).toMatchObject({ callId: 'c1', tool: 'app_state', running: true })
-    fire({ type: 'toolCallFinished', callId: 'c1', ok: true })
-    expect(assistantAt(1).tools[0]).toMatchObject({ running: false, ok: true })
+    expect(linesOf(assistantAt(1))[0]).toMatchObject({ callId: 'c1', tool: 'app_state', running: true })
+    fire({ type: 'toolCallsResolved', messageId: 2, calls: [resolved('c1', 'app_state')] })
+    fire({ type: 'toolCallFinished', messageId: 2, callId: 'c1', outcome: ANSWERED, subject: PANES })
+    expect(linesOf(assistantAt(1))[0]).toMatchObject({ running: false, outcome: ANSWERED, subject: PANES })
+  })
+
+  it('a refused outcome settles its line with that outcome', () => {
+    sendMessage('look')
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'toolCallStarted', callId: 'c1', tool: 'delete' })
+    fire({ type: 'toolCallsResolved', messageId: 2, calls: [resolved('c1', 'delete')] })
+    fire({ type: 'toolCallFinished', messageId: 2, callId: 'c1', outcome: REFUSED, subject: UNPARSED })
+    expect(linesOf(assistantAt(1))[0]).toMatchObject({ running: false, outcome: REFUSED })
   })
 
   it('a repeated start for a call already on screen adds no second tool line', () => {
@@ -169,54 +210,98 @@ describe('sendMessage + streaming', () => {
     fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
     fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
     fire({ type: 'toolCallStarted', callId: 'c2', tool: 'app_state' })
-    expect(assistantAt(1).tools.map((tool) => tool.callId)).toEqual(['c1', 'c2'])
+    expect(linesOf(assistantAt(1)).map((tool) => tool.callId)).toEqual(['c1', 'c2'])
   })
 
-  it('a successful turn retires unfinished activity while keeping completed tool history', () => {
+  it("a turn's end settles a call that never reported back, keeping it with no outcome", () => {
     sendMessage('inspect this folder')
     fire({ type: 'assistantStarted' })
     fire({ type: 'toolCallStarted', callId: 'finished', tool: 'list_dir' })
-    fire({ type: 'toolCallFinished', callId: 'finished', ok: true })
     fire({ type: 'toolCallStarted', callId: 'unfinished', tool: 'list_volumes' })
+    fire({
+      type: 'toolCallsResolved',
+      messageId: 2,
+      calls: [resolved('finished', 'list_dir'), resolved('unfinished', 'list_volumes')],
+    })
+    fire({ type: 'toolCallFinished', messageId: 2, callId: 'finished', outcome: ANSWERED, subject: UNPARSED })
+    fire({ type: 'assistantStarted' })
     fire({ type: 'reasoningTick' })
+    fire({ type: 'textDelta', text: 'Here it is.' })
 
     fire({
       type: 'done',
-      messageId: 42,
-      seq: 2,
+      messageId: 6,
+      seq: 6,
       stop: 'completed',
       usage: { promptTokens: 1, completionTokens: 2 },
+      turn: null,
     })
 
-    expect(assistantAt(1).tools.map((tool) => tool.callId)).toEqual(['finished'])
-    expect(assistantAt(1)).toMatchObject({ thinking: false, stalled: false, streaming: false })
+    expect(linesOf(assistantAt(1)).map((tool) => [tool.callId, tool.running, tool.outcome])).toEqual([
+      ['finished', false, ANSWERED],
+      ['unfinished', false, null],
+    ])
+    expect(assistantAt(1)).toMatchObject({ id: 6, thinking: false, stalled: false, streaming: false })
+    expect(textOf(assistantAt(1))).toBe('Here it is.')
   })
 
   it('a typed failure ends streaming and shows an honest notice', () => {
     sendMessage('hi')
     fire({ type: 'assistantStarted' })
-    fire({ type: 'failed', kind: 'rateLimited', detail: null, managed: null })
+    fire({ type: 'failed', kind: 'rateLimited', detail: null, managed: null, turn: null })
     expect(askCmdrState.streaming).toBe(false)
     // The empty assistant bubble is dropped; an error item takes its place.
     const last = askCmdrState.messages.at(-1)
     expect(last).toEqual({ kind: 'error', errorKind: 'rateLimited', detail: undefined })
   })
 
-  it('a typed failure retires unfinished tool activity', () => {
+  /** What wasn't stored goes, as a reload wouldn't show it: the round that never reached `End`.
+   *  The rounds that did stay, with what the turn spent. */
+  it('a typed failure keeps what persisted and drops the round that never did', () => {
     sendMessage('inspect this folder')
     fire({ type: 'assistantStarted' })
     fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
+    fire({ type: 'toolCallsResolved', messageId: 2, calls: [resolved('c1', 'list_dir')] })
+    fire({ type: 'toolCallFinished', messageId: 2, callId: 'c1', outcome: ANSWERED, subject: UNPARSED })
+    fire({ type: 'assistantStarted' })
     fire({ type: 'textDelta', text: 'I found part of it.' })
 
-    fire({ type: 'failed', kind: 'budgetExhausted', detail: null, managed: null })
+    fire({ type: 'failed', kind: 'budgetExhausted', detail: null, managed: null, turn: STATS })
 
-    expect(assistantAt(1).tools).toEqual([])
-    expect(assistantAt(1)).toMatchObject({ thinking: false, streaming: false })
+    expect(assistantAt(1).rounds.map((round) => round.messageId)).toEqual([2])
+    expect(assistantAt(1)).toMatchObject({ id: 2, thinking: false, streaming: false, stats: STATS })
     expect(askCmdrState.messages.at(-1)).toEqual({
       kind: 'error',
       errorKind: 'budgetExhausted',
       detail: undefined,
     })
+  })
+
+  /** A turn that reached a per-answer ceiling says so once, in its own bubble from its stats
+   *  (the way a reload shows it), so no vaguer error line joins it. */
+  it('a turn that reached a limit adds no error line beside its own notice', () => {
+    const limited = { ...STATS, limit: { kind: 'toolRounds' as const, max: 25, answered: false } }
+    sendMessage('sort my downloads')
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
+    fire({ type: 'toolCallsResolved', messageId: 2, calls: [resolved('c1', 'list_dir')] })
+    fire({ type: 'toolCallFinished', messageId: 2, callId: 'c1', outcome: ANSWERED, subject: UNPARSED })
+
+    fire({ type: 'failed', kind: 'budgetExhausted', detail: null, managed: null, turn: limited })
+
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'assistant'])
+    expect(assistantAt(1)).toMatchObject({ stats: limited })
+  })
+
+  it('a typed failure before anything persisted leaves no bubble', () => {
+    sendMessage('inspect this folder')
+    fire({ type: 'assistantStarted' })
+    fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
+    fire({ type: 'textDelta', text: 'I found part of it.' })
+
+    fire({ type: 'failed', kind: 'budgetExhausted', detail: null, managed: null, turn: null })
+
+    expect(askCmdrState.messages.map((m) => m.kind)).toEqual(['user', 'error'])
   })
 
   it('a rejected send settles the turn without blaming the provider or showing raw IPC text', async () => {
@@ -253,7 +338,13 @@ describe('sendMessage + streaming', () => {
   it("a failure with provider detail keeps the provider's wording for display", () => {
     sendMessage('hi')
     fire({ type: 'assistantStarted' })
-    fire({ type: 'failed', kind: 'provider', detail: 'HTTP 404: This model is unavailable for free.', managed: null })
+    fire({
+      type: 'failed',
+      kind: 'provider',
+      detail: 'HTTP 404: This model is unavailable for free.',
+      managed: null,
+      turn: null,
+    })
     const last = askCmdrState.messages.at(-1)
     expect(last).toEqual({
       kind: 'error',
@@ -327,6 +418,22 @@ describe('slot settings changes', () => {
     }
   })
 
+  it('re-reads the slot status once the debounce outlasts the settings flush, even with no thread', async () => {
+    vi.useFakeTimers()
+    try {
+      askCmdrState.conversationId = null
+      slotStatusMock.mockClear()
+      noteSlotSettingChanged()
+      await vi.advanceTimersByTimeAsync(500)
+      // Not yet: the backend reads `settings.json`, which may not hold the change yet.
+      expect(slotStatusMock).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(slotStatusMock).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('appends only the chat-memory line when that is all that moved', async () => {
     vi.useFakeTimers()
     try {
@@ -381,58 +488,14 @@ describe('slot settings changes', () => {
   })
 })
 
-describe('stopStreaming', () => {
-  it('cancels the active turn and finalizes locally (no terminal event arrives)', () => {
-    sendMessage('long one')
-    fire({ type: 'started' }, 3)
-    fire({ type: 'assistantStarted' })
-    fire({ type: 'textDelta', text: 'partial' })
-    stopStreaming()
-    expect(cancelMock).toHaveBeenCalledWith(3)
-    expect(askCmdrState.streaming).toBe(false)
-    expect(assistantAt(1).streaming).toBe(false)
-    expect(assistantAt(1).text).toBe('partial')
-  })
-
-  it('removes unfinished tool activity when the user cancels', () => {
-    sendMessage('long one')
-    fire({ type: 'started' }, 3)
-    fire({ type: 'assistantStarted' })
-    fire({ type: 'textDelta', text: 'partial' })
-    fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
-
-    stopStreaming()
-
-    expect(assistantAt(1).tools).toEqual([])
-    expect(assistantAt(1)).toMatchObject({ thinking: false, streaming: false })
-  })
-
-  it('removes unfinished tool activity when the progress watchdog times out', async () => {
-    vi.useFakeTimers()
-    try {
-      sendMessage('long one')
-      fire({ type: 'started' }, 3)
-      fire({ type: 'assistantStarted' })
-      fire({ type: 'textDelta', text: 'partial' })
-      fire({ type: 'toolCallStarted', callId: 'c1', tool: 'list_dir' })
-
-      await vi.advanceTimersByTimeAsync(90_000)
-
-      expect(assistantAt(1).tools).toEqual([])
-      expect(assistantAt(1)).toMatchObject({ thinking: false, stalled: false, streaming: false })
-      expect(askCmdrState.messages.at(-1)).toEqual({ kind: 'error', errorKind: 'timeout' })
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-})
-
 describe('openRail bootstrap + newChat + hydrate', () => {
   it('opens, bootstraps the most recent thread, and folds tool results into their lines', async () => {
     listMock.mockResolvedValue([conversationRow(9)])
     getMock.mockResolvedValue({
       conversation: conversationRow(9),
       totalMessages: 3,
+      turnInFlightSinceSeq: null,
+      spendPausedMicros: null,
       messages: [
         {
           id: 1,
@@ -442,6 +505,9 @@ describe('openRail bootstrap + newChat + hydrate', () => {
           promptTokens: null,
           completionTokens: null,
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
         },
         {
           id: 2,
@@ -449,20 +515,33 @@ describe('openRail bootstrap + newChat + hydrate', () => {
           role: 'assistant',
           blocks: [
             { type: 'text', text: 'hello' },
-            { type: 'toolCall', callId: 'c1', tool: 'list_dir', arguments: '{"path":"/x"}' },
+            {
+              type: 'toolCall',
+              callId: 'c1',
+              tool: 'list_dir',
+              subject: { kind: 'folder', path: { text: '/x', linkable: true } },
+              outcome: { kind: 'items', returned: 1, total: 1, lowerBound: false },
+              repeatOf: null,
+            },
           ],
           promptTokens: null,
           completionTokens: null,
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
         },
         {
           id: 3,
           seq: 2,
           role: 'tool',
-          blocks: [{ type: 'toolResult', callId: 'c1', ok: true, elided: false }],
+          blocks: [],
           promptTokens: null,
           completionTokens: null,
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
         },
       ],
     })
@@ -470,11 +549,16 @@ describe('openRail bootstrap + newChat + hydrate', () => {
     expect(askCmdrState.open).toBe(true)
     expect(askCmdrState.conversationId).toBe(9)
     expect(saveMock).toHaveBeenCalledWith({ askCmdrRailOpen: true })
-    // The user + assistant items; the tool-result row folds into the assistant's tool line.
+    // The user + assistant items; the tool row draws nothing, its result rides the call's line.
     expect(askCmdrState.messages).toHaveLength(2)
     const assistant = assistantAt(1)
-    expect(assistant.text).toBe('hello')
-    expect(assistant.tools[0]).toMatchObject({ callId: 'c1', tool: 'list_dir', ok: true, path: '/x' })
+    expect(textOf(assistant)).toBe('hello')
+    expect(linesOf(assistant)[0]).toMatchObject({
+      callId: 'c1',
+      tool: 'list_dir',
+      subject: { kind: 'folder', path: { text: '/x', linkable: true } },
+      outcome: { kind: 'items', returned: 1, total: 1, lowerBound: false },
+    })
   })
 
   it('folds persisted event rows into model-change timeline lines', async () => {
@@ -482,6 +566,8 @@ describe('openRail bootstrap + newChat + hydrate', () => {
     getMock.mockResolvedValue({
       conversation: conversationRow(9),
       totalMessages: 2,
+      turnInFlightSinceSeq: null,
+      spendPausedMicros: null,
       messages: [
         {
           id: 1,
@@ -491,6 +577,9 @@ describe('openRail bootstrap + newChat + hydrate', () => {
           promptTokens: null,
           completionTokens: null,
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
         },
         {
           id: 2,
@@ -500,6 +589,9 @@ describe('openRail bootstrap + newChat + hydrate', () => {
           promptTokens: null,
           completionTokens: null,
           createdAt: 0,
+          turnId: null,
+          duringTurn: false,
+          turnStats: null,
         },
       ],
     })
@@ -522,7 +614,13 @@ describe('openRail bootstrap + newChat + hydrate', () => {
     // Ask Cmdr off, or Cloud without consent: there's no chat to show, so nothing is fetched.
     gateMock.gate = 'cloudOff'
     listMock.mockResolvedValue([conversationRow(9)])
-    getMock.mockResolvedValue({ conversation: conversationRow(9), totalMessages: 0, messages: [] })
+    getMock.mockResolvedValue({
+      conversation: conversationRow(9),
+      totalMessages: 0,
+      messages: [],
+      turnInFlightSinceSeq: null,
+      spendPausedMicros: null,
+    })
     try {
       await openRail()
       expect(askCmdrState.open).toBe(true)
@@ -542,6 +640,74 @@ describe('openRail bootstrap + newChat + hydrate', () => {
     newChat()
     expect(askCmdrState.conversationId).toBeNull()
     expect(askCmdrState.messages).toHaveLength(0)
+  })
+
+  it('openNewChat on a closed rail opens it on a fresh chat, not the last thread, and asks for the composer', async () => {
+    askCmdrState.conversationId = 5
+    askCmdrState.messages.push({ kind: 'user', id: null, text: 'x', attachments: [] })
+    listMock.mockResolvedValue([conversationRow(9)])
+    const focusBefore = askCmdrState.composerFocusRequest
+    openNewChat()
+    await vi.waitFor(() => {
+      expect(askCmdrState.open).toBe(true)
+    })
+    await Promise.resolve()
+    expect(askCmdrState.conversationId).toBeNull()
+    expect(askCmdrState.messages).toHaveLength(0)
+    // The most recent thread is NOT bootstrapped over the fresh chat.
+    expect(listMock).not.toHaveBeenCalled()
+    expect(askCmdrState.composerFocusRequest).toBe(focusBefore + 1)
+  })
+
+  /** ⚠️ On the very first open, cloud consent is still loading, so `openRail` stops at the gate
+   *  and the rail loads the last thread when the gate turns into the chat. That load used to
+   *  replace the new chat the user had just asked for. */
+  it('keeps a new chat opened while consent loads when the gate then opens', async () => {
+    gateMock.gate = 'loading'
+    listMock.mockResolvedValue([conversationRow(9)])
+    try {
+      openNewChat()
+      await vi.waitFor(() => {
+        expect(askCmdrState.open).toBe(true)
+      })
+
+      // What the rail does when its gate turns into the chat.
+      await ensureThreadLoaded()
+
+      expect(listMock).not.toHaveBeenCalled()
+      expect(askCmdrState.conversationId).toBeNull()
+    } finally {
+      gateMock.gate = 'chat'
+    }
+  })
+
+  it('a thread load ends the new chat', async () => {
+    openNewChat()
+    getMock.mockResolvedValue({
+      conversation: conversationRow(9),
+      totalMessages: 0,
+      messages: [],
+      turnInFlightSinceSeq: null,
+      spendPausedMicros: null,
+    })
+    await switchToThread(9)
+    expect(askCmdrState.freshChat).toBe(false)
+  })
+
+  it('openNewChat on an open rail clears the thread and asks for the composer again', async () => {
+    await openRail()
+    askCmdrState.conversationId = 5
+    growWindowMock.mockClear()
+    const focusBefore = askCmdrState.composerFocusRequest
+    openNewChat()
+    expect(askCmdrState.conversationId).toBeNull()
+    expect(askCmdrState.composerFocusRequest).toBe(focusBefore + 1)
+    expect(growWindowMock).not.toHaveBeenCalled()
+  })
+
+  it('names the New chat shortcut for its tooltip, in the platform display form', () => {
+    // ⌘N on macOS; this suite's navigator isn't a Mac, so the platform form is Ctrl+N.
+    expect(newChatShortcutText()).toBe(toDisplayShortcut(toPlatformShortcut('⌘N')))
   })
 
   it('hydrateRail applies a persisted width and opens when the flag is set', () => {
@@ -597,6 +763,30 @@ describe('isOverSoftCap', () => {
     expect(askCmdrState.messages.length).toBe(THREAD_SOFT_CAP_MESSAGES + 1)
     expect(isOverSoftCap()).toBe(true)
   })
+
+  /** A turn is one bubble, but each of its rounds counts, as each assistant row did when it was
+   *  its own bubble: a long tool-heavy thread still gets the nudge on time. */
+  it("counts a bubble's rounds, not the bubble", () => {
+    const rounds = Array.from({ length: THREAD_SOFT_CAP_MESSAGES }, (_, i) => ({
+      messageId: i + 2,
+      text: 'x',
+      calls: [],
+    }))
+    askCmdrState.messages = [
+      { kind: 'user', id: 1, text: 'hi', attachments: [] },
+      {
+        kind: 'assistant',
+        id: null,
+        turnId: 1,
+        rounds,
+        thinking: false,
+        stalled: false,
+        streaming: false,
+        stats: null,
+      },
+    ]
+    expect(isOverSoftCap()).toBe(true)
+  })
 })
 
 /** A minimal user-role MessageView for paging fixtures. */
@@ -609,7 +799,15 @@ function userMessage(id: number, seq: number) {
     promptTokens: null,
     completionTokens: null,
     createdAt: 0,
+    turnId: null,
+    duringTurn: false,
+    turnStats: null,
   }
+}
+
+/** A minimal text-only assistant-role MessageView. */
+function assistantRow(id: number, seq: number, text: string) {
+  return { ...userMessage(id, seq), role: 'assistant' as const, blocks: [{ type: 'text' as const, text }] }
 }
 
 /** A detail page covering seqs [offset, offset+limit) out of `total`. */
@@ -617,7 +815,13 @@ function detailPage(total: number, limit: number, offset: number) {
   const upper = Math.min(offset + limit, total)
   const messages = []
   for (let seq = offset; seq < upper; seq++) messages.push(userMessage(seq + 1, seq))
-  return { conversation: conversationRow(9), totalMessages: total, messages }
+  return {
+    conversation: conversationRow(9),
+    totalMessages: total,
+    messages,
+    turnInFlightSinceSeq: null,
+    spendPausedMicros: null,
+  }
 }
 
 describe('message paging (tail-first, load older)', () => {
@@ -677,6 +881,64 @@ describe('message paging (tail-first, load older)', () => {
     expect(askCmdrState.messages).toHaveLength(2)
     expect(askCmdrState.historyCount).toBe(2)
     expect(askCmdrState.loadingOlder).toBe(false)
+  })
+
+  /** A tool-heavy turn is many rows, so page boundaries cut turns routinely. Loading the older
+   *  half joins it back into the one bubble a whole-thread load would show. */
+  it('load-older folds a turn the page boundary split back into one bubble', async () => {
+    const total = MESSAGE_PAGE + 2
+    const rows: MessageView[] = Array.from({ length: total }, (_, seq) => userMessage(seq + 1, seq))
+    // Rows 0–2 are one turn: its opener, then two rounds; the tail page starts at its second round.
+    rows[0] = { ...rows[0], turnId: 1 }
+    rows[1] = { ...assistantRow(2, 1, 'first half'), turnId: 1 }
+    rows[2] = { ...assistantRow(3, 2, 'second half'), turnId: 1 }
+    getMock.mockImplementation((...args: unknown[]) => {
+      const [, limit, offset] = args as [number, number, number]
+      return Promise.resolve({
+        conversation: conversationRow(9),
+        totalMessages: total,
+        turnInFlightSinceSeq: null,
+        spendPausedMicros: null,
+        messages: rows.slice(offset, offset + limit),
+      })
+    })
+    await switchToThread(9)
+    expect(askCmdrState.messages[0]).toMatchObject({ kind: 'assistant', id: 3 })
+
+    await loadOlderMessages()
+
+    expect(askCmdrState.messages.slice(0, 3).map((m) => m.kind)).toEqual(['user', 'assistant', 'user'])
+    expect(assistantAt(1)).toMatchObject({ id: 3, turnId: 1 })
+    expect(assistantAt(1).rounds.map((round) => round.text)).toEqual(['first half', 'second half'])
+  })
+
+  /** ⚠️ The fold builds the joined bubble anew, so a stop still waiting on the newer half held a
+   *  bubble no longer on screen, and its terminal settled that one instead. */
+  it("settles a stopped turn's bubble on its terminal after load-older joined it", async () => {
+    const total = MESSAGE_PAGE + 2
+    // One running turn the whole thread long: its opener, then a round per row.
+    const rows: MessageView[] = Array.from({ length: total }, (_, seq) => ({
+      ...assistantRow(seq + 1, seq, `round ${String(seq)}`),
+      turnId: 1,
+    }))
+    rows[0] = { ...userMessage(1, 0), turnId: 1 }
+    getMock.mockImplementation((...args: unknown[]) => {
+      const [, limit, offset] = args as [number, number, number]
+      return Promise.resolve({
+        conversation: conversationRow(9),
+        totalMessages: total,
+        turnInFlightSinceSeq: 0,
+        spendPausedMicros: null,
+        messages: rows.slice(offset, offset + limit),
+      })
+    })
+    await switchToThread(9)
+    stopStreaming()
+
+    await loadOlderMessages()
+    fire({ type: 'stopped', turn: STATS })
+
+    expect(assistantAt(1)).toMatchObject({ turnId: 1, streaming: false, stats: STATS })
   })
 
   it('a short thread loads in one page with nothing older', async () => {

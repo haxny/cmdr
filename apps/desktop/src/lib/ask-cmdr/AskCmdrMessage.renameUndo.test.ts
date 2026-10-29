@@ -22,7 +22,7 @@ let component: Record<string, unknown> | null = null
 function render(message: RailMessage): HTMLElement {
   host = document.createElement('div')
   document.body.appendChild(host)
-  component = mount(AskCmdrMessage, { target: host, props: { message } })
+  component = mount(AskCmdrMessage, { target: host, props: { message, revealPath: () => Promise.resolve() } })
   return host
 }
 

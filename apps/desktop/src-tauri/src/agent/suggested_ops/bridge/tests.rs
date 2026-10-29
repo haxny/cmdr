@@ -385,6 +385,7 @@ async fn an_approval_the_engine_refuses_returns_the_group_to_pending() {
         group_id,
         0,
         &crate::agent::store::proposals::OpSelection::all_except(&[]),
+        None,
         200,
         None,
     )
@@ -484,6 +485,16 @@ fn trash_group_on(dir: &TestDir, volume_id: &str) -> (Connection, Connection, i6
 }
 
 async fn approve(conn: &Connection, reporting: Connection, group_id: i64) -> super::ApprovalOutcome {
+    approve_as(conn, reporting, group_id, None).await
+}
+
+/// [`approve`], naming the fallback the review showed the user.
+async fn approve_as(
+    conn: &Connection,
+    reporting: Connection,
+    group_id: i64,
+    shown: Option<super::RunsAs>,
+) -> super::ApprovalOutcome {
     super::approve_and_execute(
         conn,
         reporting,
@@ -491,11 +502,122 @@ async fn approve(conn: &Connection, reporting: Connection, group_id: i64) -> sup
         group_id,
         0,
         &crate::agent::store::proposals::OpSelection::all_except(&[]),
+        shown,
         200,
         None,
     )
     .await
     .expect("the store answers")
+}
+
+/// A trash group on a drive with no Trash, approved against the red "Delete" button the review
+/// showed, deletes its files: trashing there can't work, and the user approved the delete
+/// (David's call, 2026-10-28).
+#[tokio::test(flavor = "multi_thread")]
+async fn a_trash_group_approved_as_a_permanent_delete_on_a_drive_with_no_trash_deletes_its_files() {
+    use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
+    use crate::file_system::volume::{InMemoryVolume, Volume};
+    let volume_id = "bridge-no-trash-delete-test";
+    let volume = Arc::new(InMemoryVolume::new("naspi"));
+    volume
+        .create_directory(std::path::Path::new("/public"))
+        .await
+        .expect("seed dir");
+    volume
+        .create_file(std::path::Path::new("/public/old.iso"), b"an old image")
+        .await
+        .expect("seed file");
+    let _registration = TestVolumeRegistration::install(volume_id, volume.clone() as Arc<dyn Volume>);
+    let dir = TestDir::new("bridge_no_trash_delete");
+    let (conn, reporting, group_id) = trash_group_on(&dir, volume_id);
+
+    let outcome = approve_as(&conn, reporting, group_id, Some(super::RunsAs::PermanentDelete)).await;
+
+    assert!(matches!(outcome, super::ApprovalOutcome::Started(_)), "{outcome:?}");
+    let gone = || {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current()
+                .block_on(volume.get_metadata(std::path::Path::new("/public/old.iso")))
+                .is_err()
+        })
+    };
+    crate::test_support::wait_until_async(std::time::Duration::from_secs(5), "the file is deleted", gone).await;
+    wait_for_op_status(&conn, group_id, OpStatus::Done).await;
+}
+
+/// Waits until the group's one op reads `status`: the decorator writes it as its source settles.
+async fn wait_for_op_status(conn: &Connection, group_id: i64, status: OpStatus) {
+    crate::test_support::wait_until_async(
+        std::time::Duration::from_secs(5),
+        "the op's outcome is recorded",
+        || page_ops(conn, group_id, 10, 0).expect("ops")[0].status == status,
+    )
+    .await;
+}
+
+/// ❗ **A deleted op reads `done`, not `pending`.** The agent hears what happened from these
+/// rows, and the next launch's recovery reads them: an op left `pending` after its file was
+/// deleted says nothing reached it.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_approved_delete_group_on_the_local_disk_records_its_op_done() {
+    ensure_root_volume();
+    let dir = TestDir::new("bridge_root_delete_status");
+    let file = dir.join("old.iso");
+    std::fs::write(&file, b"an old image").expect("seed");
+    let db_path = dir.join("main.db");
+    let conn = open_write_connection(&db_path).expect("open");
+    let set_id = create_sweep(&conn, &NewSweep::default(), 100).expect("sweep");
+    let group_id = create_group(
+        &conn,
+        set_id,
+        &NewGroup {
+            intent: GroupIntent::Delete {
+                sources: vec![NewOp {
+                    source_path: file.display().to_string(),
+                    snapshot: None,
+                }],
+            },
+            source_volume_id: "root".to_string(),
+            display_name: "one disk image".to_string(),
+            rationale: None,
+            selector: None,
+        },
+        100,
+    )
+    .expect("group");
+    let reporting = open_write_connection(&db_path).expect("second connection");
+
+    let outcome = approve(&conn, reporting, group_id).await;
+
+    assert!(matches!(outcome, super::ApprovalOutcome::Started(_)), "{outcome:?}");
+    crate::test_support::wait_until_async(std::time::Duration::from_secs(5), "the file is deleted", || {
+        !file.exists()
+    })
+    .await;
+    wait_for_op_status(&conn, group_id, OpStatus::Done).await;
+}
+
+/// The fallback runs only when the review showed it AND the drive still calls for it, so a
+/// stale review can't turn a trash into a permanent delete nobody saw, and a drive that gained
+/// a Trash since takes the trash the verb asked for.
+#[test]
+fn a_fallback_runs_only_when_the_review_showed_it_and_the_drive_still_needs_it() {
+    use super::RunsAs::PermanentDelete;
+    assert_eq!(
+        super::approved_runs_as(Some(PermanentDelete), Some(PermanentDelete)),
+        Some(PermanentDelete)
+    );
+    assert_eq!(
+        super::approved_runs_as(None, Some(PermanentDelete)),
+        None,
+        "the review offered a trash: never delete for good"
+    );
+    assert_eq!(
+        super::approved_runs_as(Some(PermanentDelete), None),
+        None,
+        "the drive has a Trash now: trash, as the verb asked"
+    );
+    assert_eq!(super::approved_runs_as(None, None), None);
 }
 
 /// A suggestion about a saved share nobody has mounted is refused as NOT CONNECTED, the
@@ -518,6 +640,8 @@ async fn approving_a_group_on_a_share_nobody_connected_is_refused_as_not_connect
         volume_id: Some(volume_id.to_string()),
         mount_path: Some("/Volumes/public-bridge-test".to_string()),
         pinned: true,
+        server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     });
     let dir = TestDir::new("bridge_not_connected");
     let (conn, reporting, group_id) = trash_group_on(&dir, volume_id);
@@ -661,4 +785,101 @@ async fn a_rename_the_review_started_settles_its_group_and_its_thread_line() {
         }],
         "one line, saying what ran"
     );
+}
+
+/// A move or copy op that lands under a new name carries it into the engine, keyed by exactly
+/// the sources the binding keeps: one preflight couldn't read is dropped from the names too,
+/// and an op keeping its own name sends none.
+#[tokio::test]
+async fn the_names_a_move_carries_are_keyed_by_the_sources_the_binding_keeps() {
+    let dir = TestDir::new("bridge_named_leaves");
+    let renamed = dir.join("Invoice-X.pdf");
+    let kept = dir.join("receipt.pdf");
+    let gone = dir.join("gone.pdf");
+    std::fs::write(&renamed, b"invoice").expect("seed");
+    std::fs::write(&kept, b"receipt").expect("seed");
+
+    let volume = cmdr_local::LocalPosixVolume::local_folder("Root", "/", crate::volume_host::host());
+    let sources = vec![renamed.clone(), kept.clone(), gone.clone()];
+    let expected = super::capture_expected_sources(&volume, &sources).await;
+    let op = |id: i64, path: &std::path::Path, name: Option<&str>| ProposalOp {
+        id,
+        group_id: 1,
+        seq: id,
+        source_path: path.display().to_string(),
+        destination: name.map(str::to_string),
+        status: OpStatus::Pending,
+        snapshot_size: None,
+        snapshot_mtime: None,
+        snapshot_inode: None,
+    };
+    let ops = [
+        op(1, &renamed, Some("2026 OpenAI.pdf")),
+        op(2, &kept, None),
+        op(3, &gone, Some("gone renamed.pdf")),
+    ];
+
+    assert_eq!(
+        super::transfer_names(&ops, &expected),
+        vec![(renamed, "2026 OpenAI.pdf".to_string())]
+    );
+}
+
+/// The whole hand-off for a named move: approved, it lands each file under its name in ONE
+/// operation, and the file that kept its name keeps it.
+#[tokio::test]
+async fn an_approved_named_move_lands_each_file_under_its_name() {
+    ensure_root_volume();
+    let dir = TestDir::new("bridge_named_move_runs");
+    let inbox = dir.join("inbox");
+    let paid = dir.join("paid");
+    std::fs::create_dir_all(&inbox).expect("inbox");
+    std::fs::create_dir_all(&paid).expect("paid");
+    std::fs::write(inbox.join("Invoice-X.pdf"), b"invoice").expect("seed");
+    std::fs::write(inbox.join("receipt.pdf"), b"receipt").expect("seed");
+
+    let db_path = dir.join("main.db");
+    let conn = open_write_connection(&db_path).expect("open");
+    let set_id = create_sweep(&conn, &NewSweep::default(), 100).expect("sweep");
+    let transfer = |file: &str, name: Option<&str>| crate::agent::store::proposals::TransferOp {
+        source_path: inbox.join(file).display().to_string(),
+        new_name: name.map(str::to_string),
+        snapshot: None,
+    };
+    let group_id = create_group(
+        &conn,
+        set_id,
+        &NewGroup {
+            intent: GroupIntent::Move {
+                destination: crate::agent::store::proposals::WritableDestination::new(crate::location::Location {
+                    volume_id: "root".to_string(),
+                    path: paid.display().to_string(),
+                })
+                .expect("an ordinary folder"),
+                sources: vec![
+                    transfer("Invoice-X.pdf", Some("2026-09-27 OpenAI invoice Rymd.pdf")),
+                    transfer("receipt.pdf", None),
+                ],
+            },
+            source_volume_id: "root".to_string(),
+            display_name: "two invoices".to_string(),
+            rationale: None,
+            selector: None,
+        },
+        100,
+    )
+    .expect("group");
+    let reporting = open_write_connection(&db_path).expect("second connection");
+
+    let outcome = approve(&conn, reporting, group_id).await;
+
+    assert!(matches!(outcome, super::ApprovalOutcome::Started(_)), "{outcome:?}");
+    let named = paid.join("2026-09-27 OpenAI invoice Rymd.pdf");
+    let kept = paid.join("receipt.pdf");
+    crate::test_support::wait_until_async(std::time::Duration::from_secs(5), "both files land", || {
+        named.exists() && kept.exists()
+    })
+    .await;
+    assert!(!inbox.join("Invoice-X.pdf").exists(), "moved, not copied");
+    assert!(!paid.join("Invoice-X.pdf").exists(), "landed under its new name only");
 }

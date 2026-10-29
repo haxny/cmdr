@@ -25,12 +25,13 @@
         askCmdrForgetMemory,
         askCmdrMemoryFolder,
         askCmdrModelWindow,
+        onAiModelCapabilitiesChanged,
         requestRevealPath,
         type CostSummary,
     } from '#lib/tauri-commands/index.js'
     import { cloudAiBlocked, openCloudConsentSettings, refreshCloudConsent } from '#lib/ai/cloud-consent.svelte.js'
     import { getManagedPolicyView } from '#lib/managed-policy/managed-policy.svelte.js'
-    import { formatUsdMicros } from '#lib/ask-cmdr/ask-cmdr-cost.js'
+    import { costEstimateText } from '#lib/ask-cmdr/ask-cmdr-cost.js'
     import ForgetMemoryDialog from './ForgetMemoryDialog.svelte'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import { dependOn } from '#lib/utils/reactivity.js'
@@ -78,18 +79,39 @@
     let chatMemorySize = $state(getSetting('askCmdr.chatMemorySize'))
     $effect(() => onSpecificSettingChange('askCmdr.chatMemorySize', (v) => { chatMemorySize = v }))
     let knownWindowTokens = $state<number | null>(null)
+    // The provider's own report may land after mount (fetched in the background), and it beats
+    // the table, so its arrival re-reads the window too.
+    let capabilitiesVersion = $state(0)
     $effect(() => {
-        dependOn(provider, model) // a provider or model change moves the window this compares against
+        const unlisten = onAiModelCapabilitiesChanged(() => { capabilitiesVersion += 1 })
+        return () => { void unlisten.then((fn) => { fn() }) }
+    })
+    // The reply's ceiling comes out of the same window, and the Effort pick moves it.
+    let replyTokens = $state(0)
+    let reasoningEfforts = $state(getSetting('ai.reasoningEfforts'))
+    $effect(() => onSpecificSettingChange('ai.reasoningEfforts', (v) => { reasoningEfforts = v }))
+    $effect(() => {
+        dependOn(provider, model, capabilitiesVersion, reasoningEfforts) // each one can move what this compares against
         void askCmdrModelWindow().then(
-            (w) => { knownWindowTokens = w.knownWindowTokens },
+            (w) => {
+                knownWindowTokens = w.knownWindowTokens
+                replyTokens = w.replyTokens
+            },
             (e: unknown) => { log.warn('reading the model window failed: {error}', { error: e }) },
         )
     })
     // Only an explicit size can exceed a window; "Automatic" follows it by construction. An
-    // unknown window (a model Cmdr has no row for) stays quiet rather than guessing.
+    // unknown window (a model Cmdr has no row for) stays quiet rather than guessing. The reply
+    // counts: a provider refuses a prompt plus its `max_tokens` past the window.
     const overKnownWindow = $derived(
-        chatMemorySize !== 'auto' && knownWindowTokens !== null && Number(chatMemorySize) > knownWindowTokens,
+        chatMemorySize !== 'auto' &&
+            knownWindowTokens !== null &&
+            Number(chatMemorySize) + replyTokens > knownWindowTokens,
     )
+
+    // Where one answer pauses on its estimated spend. Read fresh by the backend per send, so the
+    // row only renders the registry's presets.
+    const spendPauseDef = getSettingDefinition('askCmdr.spendPause') ?? { label: '', description: '' }
 
     // The "On its own" group: whether Ask Cmdr may start conversations, how soon it looks, and
     // whether a staged suggestion raises a notice. All three drive a SLEEPING timer in Rust, so
@@ -172,7 +194,7 @@
     // fully-priced day is local/on-device).
     function dayCostText(day: CostSummary['days'][number]): string {
         if (!day.fullyPriced) return tString('askCmdr.cost.unknown')
-        if (day.costMicros > 0) return tString('askCmdr.cost.estimate', { amount: formatUsdMicros(day.costMicros) })
+        if (day.costMicros > 0) return costEstimateText(day.costMicros)
         return tString('askCmdr.cost.free')
     }
 
@@ -247,6 +269,18 @@
         {#if overKnownWindow}
             <p class="memory-warning" role="status">{tString('settings.askCmdr.chatMemorySize.overWindow')}</p>
         {/if}
+    {/if}
+
+    {#if shouldShow('askCmdr.spendPause')}
+        <SettingRow
+            id="askCmdr.spendPause"
+            label={spendPauseDef.label}
+            description={spendPauseDef.description}
+            split
+            {searchQuery}
+        >
+            <SettingSelect id="askCmdr.spendPause" />
+        </SettingRow>
     {/if}
 
     <!-- On its own: the proactive loop's three knobs -->

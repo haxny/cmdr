@@ -1,0 +1,26 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "accounts/fireworks/models/qwen3p8-max",
+      "object": "model",
+      "owned_by": "fireworks",
+      "created": 1785949040,
+      "kind": "HF_BASE_MODEL",
+      "supports_chat": true,
+      "supports_image_input": true,
+      "supports_tools": true
+    },
+    {
+      "id": "accounts/fireworks/models/glm-5p3",
+      "object": "model",
+      "owned_by": "fireworks",
+      "created": 1787895551,
+      "kind": "HF_BASE_MODEL",
+      "supports_chat": true,
+      "supports_image_input": false,
+      "supports_tools": true,
+      "context_length": 1048576
+    }
+  ]
+}

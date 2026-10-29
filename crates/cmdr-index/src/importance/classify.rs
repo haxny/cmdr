@@ -12,6 +12,67 @@
 //! [`FolderSignals`]: super::scorer::FolderSignals
 
 use super::scorer::PathClass;
+use crate::IndexVolumeKind;
+
+/// Whose absolute paths a volume's index stores, which decides whether the boot
+/// disk's own layout rules ([`SYSTEM_ROOTS`], [`TEMP_ROOTS`]) apply. Typed from the
+/// volume's kind ([`Disk::of`]), ❌ never from its id string.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Disk {
+    /// The boot disk: index paths ARE the machine's paths, so `/Library` is the OS's.
+    Boot,
+    /// Any other volume (an external drive, a share): index paths are relative to
+    /// the volume's root, so a top-level `Library` is the user's own folder.
+    Other,
+}
+
+impl Disk {
+    /// The disk a volume of this kind is. Only [`IndexVolumeKind::Local`] is the
+    /// boot disk.
+    pub fn of(kind: IndexVolumeKind) -> Self {
+        match kind {
+            IndexVolumeKind::Local => Disk::Boot,
+            IndexVolumeKind::LocalExternal | IndexVolumeKind::Smb | IndexVolumeKind::Mtp | IndexVolumeKind::Adb => {
+                Disk::Other
+            }
+        }
+    }
+}
+
+/// What a path is classified against: the user's home (for the home-relative
+/// rules) and the [`Disk`] the path lives on (for the boot disk's own roots).
+#[derive(Debug, Clone, Copy)]
+pub struct PathSpace<'a> {
+    /// The user's home directory; empty when unresolved (no home-relative rule fires).
+    pub home: &'a str,
+    /// Whether the volume's paths are the boot disk's.
+    pub disk: Disk,
+}
+
+impl<'a> PathSpace<'a> {
+    /// A path space for `home` on `disk`.
+    pub fn new(home: &'a str, disk: Disk) -> Self {
+        Self { home, disk }
+    }
+}
+
+/// Tests classify boot-disk paths almost everywhere, so a bare home reads as the
+/// boot disk there. Test-only on purpose: production code has to say which disk a
+/// path is on, or a share's `Library` would floor.
+#[cfg(test)]
+impl<'a> From<&'a str> for PathSpace<'a> {
+    fn from(home: &'a str) -> Self {
+        Self::new(home, Disk::Boot)
+    }
+}
+
+/// See the `&str` conversion.
+#[cfg(test)]
+impl<'a> From<&'a String> for PathSpace<'a> {
+    fn from(home: &'a String) -> Self {
+        Self::new(home, Disk::Boot)
+    }
+}
 
 /// The last path component (folder name). A path with no final component (the
 /// root `/`) folds back to the whole string.
@@ -50,8 +111,8 @@ static DENYLIST_FOLDED: std::sync::LazyLock<Vec<String>> =
 
 /// Whether a folder is hidden or system-owned: a dotfile name, or a path that
 /// classifies as [`PathClass::SystemOrCache`]. A FLOOR override in the scorer.
-pub fn is_hidden_or_system(path: &str, name: &str, home: &str) -> bool {
-    name.starts_with('.') || matches!(path_class(path, home), PathClass::SystemOrCache)
+pub fn is_hidden_or_system<'a>(path: &str, name: &str, space: impl Into<PathSpace<'a>>) -> bool {
+    name.starts_with('.') || matches!(path_class(path, space), PathClass::SystemOrCache)
 }
 
 /// Whether a folder floors ON ITS OWN — a denylisted name OR hidden/system. This
@@ -59,8 +120,8 @@ pub fn is_hidden_or_system(path: &str, name: &str, home: &str) -> bool {
 /// floors every folder below it too (`under_floored_ancestor`). Kept here, shared
 /// by the production walk and the fixtures/evals derivation, so the two agree on
 /// exactly which folders anchor a floored subtree.
-pub fn self_floors(path: &str, name: &str, home: &str) -> bool {
-    is_denylisted(name) || is_hidden_or_system(path, name, home)
+pub fn self_floors<'a>(path: &str, name: &str, space: impl Into<PathSpace<'a>>) -> bool {
+    is_denylisted(name) || is_hidden_or_system(path, name, space)
 }
 
 /// Given every folder path (in any order) and the home root, return the subset
@@ -79,13 +140,14 @@ pub fn self_floors(path: &str, name: &str, home: &str) -> bool {
 /// Only the corpus scenarios and the test fixtures need this: the app applies the
 /// floor per folder as it scores, rather than pre-computing the set.
 #[cfg(any(test, feature = "tooling"))]
-pub fn under_floored_paths<'a>(
+pub fn under_floored_paths<'a, 'h>(
     paths: impl IntoIterator<Item = &'a str>,
-    home: &str,
+    space: impl Into<PathSpace<'h>>,
 ) -> std::collections::HashSet<String> {
+    let space = space.into();
     let mut under = std::collections::HashSet::new();
     for path in paths {
-        if under_floored_ancestor(path, home) {
+        if under_floored_ancestor(path, space) {
             under.insert(path.to_string());
         }
     }
@@ -100,8 +162,8 @@ pub fn under_floored_paths<'a>(
 /// needs neither the folder set nor the index. That is what lets an incremental
 /// rescore compute the signal for a subtree it reads in isolation: the flooring
 /// ancestor can sit far above the subtree root and still be seen.
-pub fn under_floored_ancestor(path: &str, home: &str) -> bool {
-    any_ancestor_self_floors(path, home)
+pub fn under_floored_ancestor<'a>(path: &str, space: impl Into<PathSpace<'a>>) -> bool {
+    any_ancestor_self_floors(path, space.into())
 }
 
 /// Whether a folder floors purely by its PATH — it self-floors (denylisted /
@@ -111,15 +173,16 @@ pub fn under_floored_ancestor(path: &str, home: &str) -> bool {
 /// this, rather than storing a `0.0` blob. Pure string + name classification, no
 /// index or listing data — the exact rule the recompute walk applies when deciding
 /// to skip a row, so read and write agree by construction.
-pub fn floors_by_path(path: &str, home: &str) -> bool {
+pub fn floors_by_path<'a>(path: &str, space: impl Into<PathSpace<'a>>) -> bool {
+    let space = space.into();
     let name = leaf_name(path);
-    self_floors(path, &name, home) || any_ancestor_self_floors(path, home)
+    self_floors(path, &name, space) || any_ancestor_self_floors(path, space)
 }
 
 /// Whether any PROPER ancestor directory of `path` self-floors. Walks the path's
 /// own components from the second-to-last up, classifying each ancestor by its own
 /// name + full ancestor path. The folder itself is excluded (start above it).
-fn any_ancestor_self_floors(path: &str, home: &str) -> bool {
+fn any_ancestor_self_floors(path: &str, space: PathSpace<'_>) -> bool {
     let mut current = path;
     while let Some(pos) = current.rfind('/') {
         if pos == 0 {
@@ -127,7 +190,7 @@ fn any_ancestor_self_floors(path: &str, home: &str) -> bool {
         }
         let ancestor = &current[..pos];
         let name = leaf_name(ancestor);
-        if self_floors(ancestor, &name, home) {
+        if self_floors(ancestor, &name, space) {
             return true;
         }
         current = ancestor;
@@ -158,14 +221,29 @@ pub fn is_project_marker(folded_child_name: &str) -> bool {
 
 /// Classify a path into its [`PathClass`] prior, relative to the user's home.
 ///
-/// A `~/Library` subtree and the system temp roots ([`TEMP_ROOTS`]) are
-/// `SystemOrCache` (they stay low, and they FLOOR through
-/// [`is_hidden_or_system`]); `Downloads`/`Desktop`/`Documents` and their subtrees
-/// are `UserContent`; everything else is `Neutral`. `ProjectRoot` is NOT decided
-/// here — it's the marker promotion [`path_class_with_marker`] layers on at
-/// assembly time, since it depends on directory contents, not the path alone.
-pub fn path_class(path: &str, home: &str) -> PathClass {
-    if is_at_or_under_any(path, TEMP_ROOTS) {
+/// These are `SystemOrCache` (they stay low, and they FLOOR through
+/// [`is_hidden_or_system`]): the system temp roots ([`TEMP_ROOTS`]), the OS and
+/// package-manager roots ([`SYSTEM_ROOTS`]), the home's own caches and package
+/// stores ([`HOME_CACHE_FOLDERS`]), and the insides of an app bundle or library package
+/// ([`BUNDLE_SUFFIXES`], [`LIBRARY_PACKAGE_SUFFIXES`]). `Downloads`/`Desktop`/`Documents` and their subtrees are
+/// `UserContent`; everything else is `Neutral`. `ProjectRoot` is NOT decided here —
+/// it's the marker promotion [`path_class_with_marker`] layers on at assembly time,
+/// since it depends on directory contents, not the path alone.
+///
+/// The absolute roots are the boot disk's own layout, so they apply only on
+/// [`Disk::Boot`]: on a share, `/Library` is a top-level folder of the user's.
+/// ❌ They also never classify `$HOME`, anything under it, or an ancestor of it: a
+/// home living under one (Fedora Silverblue's `/var/home/x`) would otherwise floor,
+/// and the floor would switch the whole feature off.
+pub fn path_class<'a>(path: &str, space: impl Into<PathSpace<'a>>) -> PathClass {
+    let PathSpace { home, disk } = space.into();
+    if disk == Disk::Boot
+        && !is_on_home_branch(path, home)
+        && (is_at_or_under_any(path, TEMP_ROOTS) || is_at_or_under_any(path, SYSTEM_ROOTS))
+    {
+        return PathClass::SystemOrCache;
+    }
+    if is_inside_package(path) {
         return PathClass::SystemOrCache;
     }
     for cache in HOME_CACHE_FOLDERS {
@@ -181,8 +259,93 @@ pub fn path_class(path: &str, home: &str) -> PathClass {
     PathClass::Neutral
 }
 
-/// Home-relative folders whose subtrees are `SystemOrCache` (so they also FLOOR).
-const HOME_CACHE_FOLDERS: &[&str] = &["Library"];
+/// Home-relative folders whose subtrees are `SystemOrCache` (so they also FLOOR):
+/// the per-user Library, and package stores the user never files into (`go/pkg`
+/// held 59,199 of the root volume's 193,861 scored rows on 2026-10-26, its module
+/// cache at 0.84). Dot-prefixed stores (`.cargo`, `.npm`, `.rustup`) already floor
+/// as hidden.
+const HOME_CACHE_FOLDERS: &[&str] = &["Library", "go/pkg"];
+
+/// Absolute roots whose subtrees are machine-owned: the OS (`/System`, `/Library`,
+/// `/usr`, `/bin`, `/sbin`, `/private/etc`, `/private/var`, and their firmlinked
+/// spellings) and the package managers (`/opt/homebrew`, MacPorts' `/opt/local`,
+/// `/nix`). Homebrew on Intel lives under `/usr/local`, which `/usr` covers.
+///
+/// Evidence (live `importance-root.db`, 2026-10-26): `/opt/homebrew/lib` stored at
+/// 0.85, `/Library/User Template/Non_localized/Downloads` at 0.42, and `/usr/share`
+/// at 0.77, crowding real folders out of the agent's top list.
+///
+/// Boot disk only ([`Disk::Boot`]): an external or network volume's index stores
+/// volume-relative paths, where a top-level `Library` is the user's.
+const SYSTEM_ROOTS: &[&str] = &[
+    "/System",
+    "/Library",
+    "/usr",
+    "/bin",
+    "/sbin",
+    "/cores",
+    "/etc",
+    "/private/etc",
+    "/var",
+    "/private/var",
+    "/opt/homebrew",
+    "/opt/local",
+    "/nix",
+];
+
+/// Folder-name suffixes of an app bundle, whose `Contents` (and everything under it)
+/// is the app's own machinery, never somewhere to file things. The bundle folder
+/// itself keeps its ordinary class, and a project merely NAMED like one
+/// (`getcmdr.app/src`) has no `Contents` and stays untouched. Evidence: the
+/// LibreOffice, Xcode, and IntelliJ bundles held 56,655 scored rows (2026-10-26).
+const BUNDLE_SUFFIXES: &[&str] = &[".app"];
+
+/// The folder a bundle's machinery lives in, directly under the bundle.
+const BUNDLE_CONTENTS: &str = "Contents";
+
+/// Folder-name suffixes of a library package: the package is the user's (it shows
+/// as one item in Finder), but everything INSIDE it is the owning app's database.
+/// No `Contents` layer, so any descendant counts. Evidence: with the other rules in
+/// place, `Photos Library.photoslibrary/database/search/...` and
+/// `Music Library.musiclibrary` internals were the next junk in the folded top 15 of
+/// the live root volume (2026-10-26).
+const LIBRARY_PACKAGE_SUFFIXES: &[&str] = &[".photoslibrary", ".musiclibrary", ".tvlibrary"];
+
+/// Whether `path` sits inside an app's machinery: at or under a `<name>.app/Contents`
+/// folder, or strictly under a library package. Walks the path's components with no
+/// allocation (it runs per folder in every pass).
+fn is_inside_package(path: &str) -> bool {
+    let has_suffix =
+        |name: &str, suffixes: &[&str]| suffixes.iter().any(|suffix| ends_with_ignore_ascii_case(name, suffix));
+    let mut previous: Option<&str> = None;
+    for component in path.split('/') {
+        if let Some(parent) = previous
+            && ((component == BUNDLE_CONTENTS && has_suffix(parent, BUNDLE_SUFFIXES))
+                || (!component.is_empty() && has_suffix(parent, LIBRARY_PACKAGE_SUFFIXES)))
+        {
+            return true;
+        }
+        previous = Some(component);
+    }
+    false
+}
+
+/// `name.ends_with(suffix)`, ASCII-case-insensitively (`Foo.APP` is a bundle too).
+fn ends_with_ignore_ascii_case(name: &str, suffix: &str) -> bool {
+    name.len() >= suffix.len()
+        && name.is_char_boundary(name.len() - suffix.len())
+        && name[name.len() - suffix.len()..].eq_ignore_ascii_case(suffix)
+}
+
+/// Whether `path` is `$HOME`, under it, or one of its ancestors: the paths the
+/// absolute [`SYSTEM_ROOTS`] and [`TEMP_ROOTS`] must never claim.
+fn is_on_home_branch(path: &str, home: &str) -> bool {
+    let home = home.trim_end_matches('/');
+    if home.is_empty() {
+        return false;
+    }
+    is_at_or_above_home(path, home) || path.strip_prefix(home).is_some_and(|rest| rest.starts_with('/'))
+}
 
 /// Home-relative folders whose subtrees are `UserContent`.
 const HOME_CONTENT_FOLDERS: &[&str] = &["Downloads", "Desktop", "Documents"];
@@ -235,18 +398,44 @@ pub fn is_volume_root(path: &str) -> bool {
     })
 }
 
-/// A folder's [`PathClass`] once the project-marker promotion is applied: a folder
-/// holding a marker (here or below) normally takes `ProjectRoot`, the strongest
-/// prior.
+/// How far below a folder a project marker still counts for it: `0` is a marker
+/// directly in the folder (a repo root, or a monorepo member with its own
+/// `package.json`), `1` is a direct child that is a project root (a folder of
+/// projects like `~/projects/`, which is where the user picks one).
+///
+/// Two levels up is already a generic container (`~/Desktop`, `/Users`,
+/// `~/go/pkg/mod/github.com`), where a marker says nothing about the folder. With no
+/// reach limit, one buried `go.mod` promoted every ancestor to `ProjectRoot`
+/// (live `importance-root.db`, 2026-10-26: `/Users` 0.87, `~/go/pkg/mod` 0.84).
+///
+/// ❌ Changing it changes stored signals: bump [`SCORING_RULES_VERSION`].
+pub const MARKER_REACH: u8 = 1;
+
+/// A folder's marker depth as the signals carry it: `Some(0)` for a direct marker,
+/// otherwise the nearest marker below (`nearest_below`, a distance of at least `1`)
+/// when it's within [`MARKER_REACH`], else `None`. The ONE place the reach applies,
+/// shared by production assembly, the incremental's marker guard, and the fixtures.
+pub fn marker_depth(has_direct_marker: bool, nearest_below: Option<u8>) -> Option<u8> {
+    if has_direct_marker {
+        return Some(0);
+    }
+    nearest_below.filter(|depth| *depth <= MARKER_REACH)
+}
+
+/// A folder's [`PathClass`] once the project-marker promotion is applied.
+/// `marker_depth` is [`marker_depth`]'s output: a direct marker (`Some(0)`) takes
+/// `ProjectRoot`, the strongest prior; a marker one level below promotes only a
+/// `Neutral` folder (a folder of projects), so a repo dropped on the Desktop doesn't
+/// relabel `~/Desktop`.
 ///
 /// Three kinds of path are exempt, because a marker there says nothing about the
 /// folder being a place the user works:
 ///
-/// - **`$HOME` itself.** A `.git` or `Makefile` sitting directly in the home
-///   directory means dotfiles. The exemption only drops the promotion; `$HOME`
-///   still scores on its ordinary signals. ❌ Never make `$HOME` FLOOR instead: the
-///   floor propagates through [`under_floored_ancestor`] to every folder below it
-///   and switches the whole feature off.
+/// - **`$HOME` and every ancestor of it** (`/Users`). A `.git` or `Makefile`
+///   sitting directly in the home directory means dotfiles. The exemption only drops
+///   the promotion; these still score on their ordinary signals. ❌ Never make
+///   `$HOME` FLOOR instead: the floor propagates through [`under_floored_ancestor`]
+///   to every folder below it and switches the whole feature off.
 /// - **A volume root** ([`is_volume_root`]). A marker at `/` or at a mount point
 ///   would promote a whole disk.
 /// - **A `SystemOrCache` path.** Machine scratch stays machine scratch; a
@@ -256,9 +445,15 @@ pub fn is_volume_root(path: &str) -> bool {
 ///
 /// An ordinary project directory is untouched: `~/projects/thing` with a `.git`
 /// still promotes, and so does a project sitting UNDER a volume root.
-pub fn path_class_with_marker(path: &str, home: &str, has_project_marker: bool) -> PathClass {
-    let class = path_class(path, home);
-    if !has_project_marker || !marker_can_promote(path, home, class) {
+pub fn path_class_with_marker<'a>(path: &str, space: impl Into<PathSpace<'a>>, marker_depth: Option<u8>) -> PathClass {
+    let space = space.into();
+    let class = path_class(path, space);
+    let promotes = match marker_depth {
+        Some(0) => true,
+        Some(depth) if depth <= MARKER_REACH => matches!(class, PathClass::Neutral),
+        _ => false,
+    };
+    if !promotes || !marker_can_promote(path, space.home, class) {
         return class;
     }
     PathClass::ProjectRoot
@@ -267,7 +462,19 @@ pub fn path_class_with_marker(path: &str, home: &str, has_project_marker: bool) 
 /// Whether a project marker found at `path` may raise it to `ProjectRoot`. The
 /// exemptions are documented on [`path_class_with_marker`].
 fn marker_can_promote(path: &str, home: &str, class: PathClass) -> bool {
-    !matches!(class, PathClass::SystemOrCache) && path.trim_end_matches('/') != home && !is_volume_root(path)
+    !matches!(class, PathClass::SystemOrCache) && !is_at_or_above_home(path, home) && !is_volume_root(path)
+}
+
+/// Whether `path` IS `$HOME` or one of its ancestors (`/Users`, `/`). An empty
+/// `home` (unresolved) has no ancestors.
+fn is_at_or_above_home(path: &str, home: &str) -> bool {
+    let path = path.trim_end_matches('/');
+    let home = home.trim_end_matches('/');
+    if home.is_empty() {
+        return false;
+    }
+    home.strip_prefix(path)
+        .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
 }
 
 // ── The scoring policy a store's rows were computed under ────────────
@@ -282,7 +489,15 @@ fn marker_can_promote(path: &str, home: &str, class: PathClass) -> bool {
 ///
 /// `2`: the temp roots became `SystemOrCache`, and the project-marker promotion
 /// stopped firing at `$HOME`, at a volume root, and on a `SystemOrCache` path.
-const SCORING_RULES_VERSION: &str = "2";
+///
+/// `3`: a project marker reaches only [`MARKER_REACH`] levels up (the signal became
+/// `marker_depth`), a marker below promotes only a `Neutral` folder, the promotion
+/// skips every ancestor of `$HOME`, an app bundle's `Contents` and a library package's insides are `SystemOrCache`,
+/// and the absolute roots never claim the home branch.
+///
+/// `4`: the absolute roots (system and temp) apply only on the boot disk ([`Disk::Boot`]); a
+/// share or external drive stores volume-relative paths.
+const SCORING_RULES_VERSION: &str = "4";
 
 /// A stable fingerprint of the classification policy a store's weights were
 /// computed under, persisted per volume under `store::SCORING_POLICY_KEY`.
@@ -313,6 +528,12 @@ fn scoring_policy_parts() -> Vec<&'static str> {
     parts.extend_from_slice(TEMP_ROOTS);
     parts.push("mount_prefixes");
     parts.extend_from_slice(MOUNT_PREFIXES);
+    parts.push("system_roots");
+    parts.extend_from_slice(SYSTEM_ROOTS);
+    parts.push("bundle_suffixes");
+    parts.extend_from_slice(BUNDLE_SUFFIXES);
+    parts.push("library_package_suffixes");
+    parts.extend_from_slice(LIBRARY_PACKAGE_SUFFIXES);
     parts.push("home_cache");
     parts.extend_from_slice(HOME_CACHE_FOLDERS);
     parts.push("home_content");
@@ -350,254 +571,4 @@ fn is_at_or_under(path: &str, home: &str, folder: &str) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn denylist_is_folded_set_membership() {
-        assert!(is_denylisted("node_modules"));
-        assert!(is_denylisted("NODE_MODULES"), "folded, so case doesn't matter");
-        assert!(is_denylisted(".git"));
-        assert!(!is_denylisted("my_project"));
-        // Set-membership, not substring: a name CONTAINING a denylisted word isn't denylisted.
-        assert!(!is_denylisted("node_modules_backup"));
-    }
-
-    #[test]
-    fn path_class_matches_the_fixture_rules() {
-        let home = "/Users/test";
-        assert_eq!(path_class("/Users/test/Downloads", home), PathClass::UserContent);
-        assert_eq!(
-            path_class("/Users/test/Documents/invoices", home),
-            PathClass::UserContent
-        );
-        assert_eq!(path_class("/Users/test/Library/Caches", home), PathClass::SystemOrCache);
-        assert_eq!(path_class("/Users/test/projects/webapp", home), PathClass::Neutral);
-    }
-
-    #[test]
-    fn hidden_or_system_covers_dotfiles_and_library() {
-        let home = "/Users/test";
-        assert!(is_hidden_or_system("/Users/test/.config", ".config", home));
-        assert!(is_hidden_or_system("/Users/test/Library/Caches", "Caches", home));
-        assert!(!is_hidden_or_system("/Users/test/Downloads", "Downloads", home));
-    }
-
-    #[test]
-    fn project_markers_are_folded_membership() {
-        assert!(is_project_marker(".git"));
-        assert!(is_project_marker("cargo.toml"));
-        assert!(is_project_marker("package.json"));
-        assert!(!is_project_marker("readme.md"));
-    }
-
-    #[test]
-    fn self_floors_covers_denylist_and_hidden_system() {
-        let home = "/Users/test";
-        assert!(
-            self_floors("/Users/test/proj/node_modules", "node_modules", home),
-            "a denylisted folder self-floors"
-        );
-        assert!(
-            self_floors("/Users/test/.config", ".config", home),
-            "a dotfile self-floors"
-        );
-        assert!(
-            self_floors("/Users/test/Library/Caches", "Caches", home),
-            "a system/cache folder self-floors"
-        );
-        assert!(
-            !self_floors("/Users/test/projects/webapp", "webapp", home),
-            "an ordinary folder doesn't self-floor"
-        );
-    }
-
-    #[test]
-    fn under_floored_paths_marks_descendants_of_a_floored_ancestor() {
-        let home = "/Users/test";
-        let paths = [
-            "/Users/test/projects/webapp",
-            "/Users/test/projects/webapp/node_modules",
-            "/Users/test/projects/webapp/node_modules/react",
-            "/Users/test/projects/webapp/node_modules/react/cjs",
-            "/Users/test/projects/webapp/.git",
-            "/Users/test/projects/webapp/.git/refs/heads",
-            "/Users/test/Documents/invoices",
-        ];
-        let under = under_floored_paths(paths.iter().copied(), home);
-
-        // Descendants of node_modules and .git are under-floored.
-        assert!(under.contains("/Users/test/projects/webapp/node_modules/react"));
-        assert!(under.contains("/Users/test/projects/webapp/node_modules/react/cjs"));
-        assert!(under.contains("/Users/test/projects/webapp/.git/refs/heads"));
-
-        // The self-flooring anchors themselves are NOT in the set (they floor via
-        // their own flag, not this one).
-        assert!(!under.contains("/Users/test/projects/webapp/node_modules"));
-        assert!(!under.contains("/Users/test/projects/webapp/.git"));
-
-        // Folders outside any floored subtree are untouched.
-        assert!(!under.contains("/Users/test/projects/webapp"));
-        assert!(!under.contains("/Users/test/Documents/invoices"));
-    }
-
-    #[test]
-    fn temp_roots_classify_as_system_or_cache() {
-        let home = "/Users/test";
-        for root in TEMP_ROOTS {
-            assert_eq!(
-                path_class(root, home),
-                PathClass::SystemOrCache,
-                "{root} is a temp root"
-            );
-        }
-        assert_eq!(
-            path_class("/private/tmp/claude-501/session", home),
-            PathClass::SystemOrCache,
-            "anything under a temp root is system/cache too"
-        );
-        assert_eq!(
-            path_class("/private/var/folders/xx/yy/T", home),
-            PathClass::SystemOrCache,
-            "the macOS per-user $TMPDIR lives under /private/var/folders"
-        );
-    }
-
-    #[test]
-    fn a_temp_root_floors_itself_and_its_whole_subtree() {
-        let home = "/Users/test";
-        assert!(self_floors("/private/tmp", "tmp", home), "a temp root self-floors");
-        assert!(
-            under_floored_ancestor("/private/tmp/claude-501/scratchpad", home),
-            "a folder under a temp root floors via the ancestor rule"
-        );
-        assert!(floors_by_path("/private/tmp/claude-501/scratchpad", home));
-        assert!(floors_by_path("/private/var/folders/xx/yy/T/build", home));
-    }
-
-    #[test]
-    fn a_temp_root_prefix_doesnt_capture_a_lookalike_sibling() {
-        let home = "/Users/test";
-        assert_eq!(
-            path_class("/var/tmpfoo", home),
-            PathClass::Neutral,
-            "/var/tmpfoo is not /var/tmp"
-        );
-        assert!(!floors_by_path("/var/tmpfoo/project", home));
-        assert_eq!(path_class("/tmpfoo", home), PathClass::Neutral);
-        assert_eq!(path_class("/private/tmpfoo", home), PathClass::Neutral);
-    }
-
-    #[test]
-    fn a_marker_doesnt_promote_home_or_a_volume_root() {
-        let home = "/Users/test";
-        assert_eq!(
-            path_class_with_marker(home, home, true),
-            PathClass::Neutral,
-            "a .git in $HOME means dotfiles, not a project the user works in"
-        );
-        assert_eq!(
-            path_class_with_marker("/", home, true),
-            PathClass::Neutral,
-            "a marker at the boot volume root doesn't promote the whole disk"
-        );
-        for root in MOUNT_PREFIXES {
-            let mount = format!("{root}backup");
-            assert_eq!(
-                path_class_with_marker(&mount, home, true),
-                PathClass::Neutral,
-                "{mount} is a volume root"
-            );
-        }
-    }
-
-    #[test]
-    fn home_does_not_floor_even_when_its_promotion_is_suppressed() {
-        // Flooring $HOME would propagate through `under_floored_ancestor` to the
-        // whole home directory and disable the feature.
-        let home = "/Users/test";
-        assert!(!self_floors(home, "test", home));
-        assert!(!floors_by_path(home, home));
-        assert!(!floors_by_path("/Users/test/projects/webapp", home));
-    }
-
-    #[test]
-    fn a_marker_still_promotes_a_real_project_dir() {
-        let home = "/Users/test";
-        assert_eq!(
-            path_class_with_marker("/Users/test/projects-git/vdavid/cmdr", home, true),
-            PathClass::ProjectRoot,
-            "an ordinary project dir keeps the strongest prior"
-        );
-        assert_eq!(
-            path_class_with_marker("/Volumes/backup/repos/thing", home, true),
-            PathClass::ProjectRoot,
-            "a project UNDER a volume root still promotes"
-        );
-    }
-
-    #[test]
-    fn volume_roots_are_the_disk_root_and_one_level_under_a_mount_prefix() {
-        assert!(is_volume_root("/"));
-        for prefix in MOUNT_PREFIXES {
-            assert!(is_volume_root(&format!("{prefix}backup")), "{prefix}backup");
-            assert!(
-                !is_volume_root(&format!("{prefix}backup/photos")),
-                "one level under a mount prefix only"
-            );
-        }
-        assert!(!is_volume_root("/Users/test"));
-        assert!(!is_volume_root("/Users"));
-    }
-
-    /// The stamp is stable within a build. An unstable one would rescore every
-    /// volume on every launch, which is the expensive direction of this mechanism
-    /// failing.
-    #[test]
-    fn the_scoring_policy_fingerprint_is_stable() {
-        assert_eq!(scoring_policy_fingerprint(), scoring_policy_fingerprint());
-        assert_eq!(scoring_policy_fingerprint().len(), 16, "a 64-bit FNV-1a in hex");
-    }
-
-    /// Editing any list the classifiers read moves the fingerprint, which is the
-    /// whole mechanism: a store scored under the old list re-arms with no version
-    /// constant for anyone to forget to bump. Simulated over the real `parts`
-    /// shape, since the constants themselves can't be mutated at runtime.
-    #[test]
-    fn adding_a_name_to_any_policy_list_moves_the_fingerprint() {
-        let baseline = scoring_policy_fingerprint();
-        for label in [
-            "temp_roots",
-            "mount_prefixes",
-            "home_cache",
-            "home_content",
-            "project_markers",
-            "denylist",
-        ] {
-            let mut parts = scoring_policy_parts();
-            // Insert a new name right after the perturbed list's own label.
-            let at = parts.iter().position(|p| *p == label).expect("label present") + 1;
-            parts.insert(at, "/a-newly-listed-name");
-            assert_ne!(
-                crate::fingerprint::fingerprint_of(&parts),
-                baseline,
-                "a name added to {label} has to change the stamp"
-            );
-        }
-        // And so does a rules change that no list can see.
-        let mut parts = scoring_policy_parts();
-        parts[1] = "a-later-rules-version";
-        assert_ne!(crate::fingerprint::fingerprint_of(&parts), baseline);
-    }
-
-    #[test]
-    fn under_floored_detects_an_ancestor_absent_from_the_path_set() {
-        // The ancestor `node_modules` isn't in the input list (say the index pruned
-        // it), but its descendant still floors — detection walks the path's own
-        // components, not the sibling set.
-        let home = "/Users/test";
-        let paths = ["/Users/test/x/node_modules/pkg/dist"];
-        let under = under_floored_paths(paths.iter().copied(), home);
-        assert!(under.contains("/Users/test/x/node_modules/pkg/dist"));
-    }
-}
+mod tests;

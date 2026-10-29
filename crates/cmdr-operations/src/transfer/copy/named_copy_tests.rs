@@ -1,4 +1,5 @@
-//! Named local copies: landing, conflicts, source preservation, and input boundaries.
+//! Named local copies: landing, conflicts, and source preservation. A leaf the
+//! engine must never see is refused at the start: `../../named_leaf_entry_tests.rs`.
 
 use super::*;
 use crate::event_sinks::CollectorEventSink;
@@ -16,7 +17,7 @@ fn named_copy_lands_beside_source_without_changing_it() {
     fs::write(&source, b"keep the original").unwrap();
     let events = CollectorEventSink::new();
     let config = WriteOperationConfig {
-        destination_name: Some("backup.txt".to_string()),
+        leaves: crate::types::TransferLeaves::single("backup.txt"),
         ..Default::default()
     };
     copy_files_with_progress_inner(
@@ -41,7 +42,7 @@ fn named_folder_copy_maps_children_and_empty_directories() {
     fs::create_dir_all(source.join("empty/nested")).unwrap();
     fs::write(source.join("notes.txt"), b"notes").unwrap();
     let config = WriteOperationConfig {
-        destination_name: Some("backup".to_string()),
+        leaves: crate::types::TransferLeaves::single("backup"),
         ..Default::default()
     };
     copy_files_with_progress_inner(
@@ -68,7 +69,7 @@ fn named_copy_honors_skip_and_overwrite_at_the_requested_name() {
         fs::write(&source, b"source").unwrap();
         fs::write(&target, b"existing").unwrap();
         let config = WriteOperationConfig {
-            destination_name: Some("backup.txt".to_string()),
+            leaves: crate::types::TransferLeaves::single("backup.txt"),
             conflict_resolution: resolution,
             ..Default::default()
         };
@@ -98,7 +99,7 @@ fn named_copy_of_itself_duplicates_instead_of_overwriting() {
     let source = tmp.as_ref().join("original.txt");
     fs::write(&source, b"source").unwrap();
     let config = WriteOperationConfig {
-        destination_name: Some("original.txt".to_string()),
+        leaves: crate::types::TransferLeaves::single("original.txt"),
         conflict_resolution: ConflictResolution::Overwrite,
         ..Default::default()
     };
@@ -113,43 +114,4 @@ fn named_copy_of_itself_duplicates_instead_of_overwriting() {
     .unwrap();
     assert_eq!(fs::read(&source).unwrap(), b"source");
     assert_eq!(fs::read(tmp.as_ref().join("original (1).txt")).unwrap(), b"source");
-}
-
-#[test]
-fn named_copy_rejects_path_components_and_batches() {
-    let engine = TestOperations::new();
-    let tmp = cmdr_fs::testing::TestDir::new("named_copy_invalid");
-    let source = tmp.as_ref().join("original.txt");
-    fs::write(&source, b"source").unwrap();
-    for name in ["", ".", "..", "../escape.txt", "/absolute", "bad\0name"] {
-        let config = WriteOperationConfig {
-            destination_name: Some(name.to_string()),
-            ..Default::default()
-        };
-        let result = copy_files_with_progress_inner(
-            &CollectorEventSink::new(),
-            "named-copy-invalid",
-            &make_state(&engine),
-            std::slice::from_ref(&source),
-            tmp.as_ref(),
-            &config,
-        );
-        assert!(matches!(result, Err(WriteOperationError::InvalidName { .. })));
-    }
-    let other = tmp.as_ref().join("other.txt");
-    fs::write(&other, b"other").unwrap();
-    let config = WriteOperationConfig {
-        destination_name: Some("backup.txt".to_string()),
-        ..Default::default()
-    };
-    let result = copy_files_with_progress_inner(
-        &CollectorEventSink::new(),
-        "named-copy-batch",
-        &make_state(&engine),
-        &[source, other],
-        tmp.as_ref(),
-        &config,
-    );
-    assert!(matches!(result, Err(WriteOperationError::InvalidName { .. })));
-    assert!(!tmp.as_ref().join("backup.txt").exists());
 }

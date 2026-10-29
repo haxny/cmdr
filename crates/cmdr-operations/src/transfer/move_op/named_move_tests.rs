@@ -18,7 +18,7 @@ fn named_local_moves_use_the_requested_leaf_and_preserve_skipped_originals() {
             fs::write(&source, b"new bytes").unwrap();
             fs::write(dest.join("renamed.txt"), b"old bytes").unwrap();
             let config = WriteOperationConfig {
-                destination_name: Some("renamed.txt".into()),
+                leaves: crate::types::TransferLeaves::single("renamed.txt"),
                 conflict_resolution: policy,
                 ..Default::default()
             };
@@ -50,7 +50,7 @@ fn named_local_folder_moves_preserve_children_and_empty_directories() {
         let dest = tmp.as_ref().join("dest");
         fs::create_dir(&dest).unwrap();
         let config = WriteOperationConfig {
-            destination_name: Some("renamed".into()),
+            leaves: crate::types::TransferLeaves::single("renamed"),
             ..Default::default()
         };
         let events = CollectorEventSink::new();

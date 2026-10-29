@@ -27,8 +27,11 @@
 use serde::Serialize;
 use tauri_specta::Event;
 
-use super::runtime::{AgentChatEvent, AgentErrorKind};
+use super::message_view::MessageView;
+use super::runtime::{AgentChatEvent, AgentErrorKind, ResolvedCall};
 use crate::agent::llm::types::{AgentStopReason, AgentUsage};
+use crate::agent::store::TurnStats;
+use crate::agent::tools::line::{ToolOutcome, ToolSubject};
 
 const LOG_TARGET: &str = "agent::chat";
 
@@ -46,6 +49,10 @@ pub struct AskCmdrTurn {
     /// The thread this event belongs to. A subscriber not showing this thread ignores the
     /// event; one that is applies it, whenever it started listening.
     pub conversation_id: i64,
+    /// The turn this event belongs to (`cancel::TurnRun`), so a terminal can only end its own
+    /// turn: a late one of a turn the rail already ended would otherwise end a turn sent since.
+    /// `None` for an event no turn owns (a suggestion's decision).
+    pub run: Option<crate::agent::chat::cancel::TurnRun>,
     pub event: AskCmdrStreamEvent,
 }
 
@@ -60,8 +67,14 @@ pub enum AskCmdrStreamEvent {
     Started,
     /// The send queued behind this thread's running turn (drives "working… stop?").
     Queued,
-    /// The user's message was persisted (on the first `respond` `End`).
-    UserPersisted { message_id: i64, seq: i64 },
+    /// The turn's opener was persisted (on the first `respond` `End`). `opener` is the row as
+    /// history shows it (its `id` and `seq` are `message_id` and `seq`), so a rail that reloaded
+    /// before it landed can insert it.
+    UserPersisted {
+        message_id: i64,
+        seq: i64,
+        opener: MessageView,
+    },
     /// A new assistant turn began streaming (no id yet — the row lands on `Done`).
     AssistantStarted,
     /// A chunk of assistant text.
@@ -71,19 +84,31 @@ pub enum AskCmdrStreamEvent {
     /// The model started a tool call (a collapsible "looked at X" line; the label is
     /// built frontend-side from `tool`, never a backend string).
     ToolCallStarted { call_id: String, tool: String },
-    /// A tool call finished dispatching (`ok = false` for a refusal or handler problem).
-    ToolCallFinished { call_id: String, ok: bool },
+    /// A round's assistant row persisted: every call of its final message, in order, with what
+    /// each looks at and the earlier call of the turn it repeats. One per round, before any call
+    /// runs.
+    ToolCallsResolved { message_id: i64, calls: Vec<ResolvedCall> },
+    /// A tool call's result row persisted. The line is `(message_id, call_id)`, never the call
+    /// id alone: ids collide across rounds. `subject` is refined by the result.
+    ToolCallFinished {
+        message_id: i64,
+        call_id: String,
+        outcome: ToolOutcome,
+        subject: ToolSubject,
+    },
     /// Display-only rename rows for the review surface. The frontend must send
     /// only opaque ids back when a later user action approves them.
     ProposalReady {
         proposal: crate::agent::tools::propose::rename::RenameProposalSnapshot,
     },
-    /// The turn produced its final answer, carrying the persisted assistant id.
+    /// The turn produced its final answer, carrying the persisted assistant id. `usage` is the
+    /// last model call's; `turn` is what the whole turn spent, `None` when it ran no tool.
     Done {
         message_id: i64,
         seq: i64,
         stop: StopReasonView,
         usage: UsageView,
+        turn: Option<TurnStats>,
     },
     /// The turn ended without an answer, typed and honest (rendered without the words
     /// "error"/"failed" — the frontend owns the copy). `detail` is the source error's own
@@ -95,7 +120,11 @@ pub enum AskCmdrStreamEvent {
         /// Which rule of the organization's policy stopped the turn, exactly when `kind` is
         /// `managedByOrganization`, so the rail words that rule.
         managed: Option<crate::managed_policy::ManagedAiRefusal>,
+        /// What the turn spent, when it ran a tool. `None` too for a refusal from outside a turn.
+        turn: Option<TurnStats>,
     },
+    /// The turn was stopped (the rail's Stop, or the status corner stopping a wake). Terminal.
+    Stopped { turn: Option<TurnStats> },
     /// The conversation's effective model changed since its previous turn; the persisted
     /// event row's identity rides along. The rail inserts the line BEFORE this turn's
     /// user bubble (the change happened between the turns).
@@ -116,13 +145,24 @@ pub enum AskCmdrStreamEvent {
         elided_results: usize,
         approx_tokens: usize,
     },
-    /// What this turn's prompt cost against its budget, once per answered turn, for the rail's
-    /// usage gauge. Both figures are `chars/4` estimates and the UI labels them so.
+    /// What one completed model call's prompt cost against its budget, for the rail's usage
+    /// gauge, so the gauge moves round by round. Both figures are `chars/4` estimates and the UI
+    /// labels them so.
     ContextUsage {
         estimated_tokens: usize,
         budget_tokens: usize,
         elided_results: usize,
     },
+    /// A completed model call was just metered; the rail re-reads the thread's cost so the
+    /// footer moves during the turn. No figures ride along: the meter is the one source.
+    CostMetered,
+    /// The turn's estimated spend passed the user's threshold (Settings › AI), so it waits
+    /// between rounds for Keep going (`ask_cmdr_keep_going`) or Stop. `cost_micros` is what the
+    /// turn has spent so far, estimated at list prices (prompt caching usually makes it less). A
+    /// reloaded rail reads the same question off `ConversationDetailView::spend_paused_micros`.
+    SpendPaused { cost_micros: i64 },
+    /// Keep going was pressed: the turn runs on, and the question leaves the screen.
+    SpendResumed,
     /// The user answered a suggestion this thread made, and the line saying so just landed in
     /// its timeline. The persisted event row's identity rides along, so a subscriber that also
     /// loaded the row shows it once.
@@ -273,7 +313,11 @@ impl From<AgentUsage> for UsageView {
 pub fn to_wire_event(event: AgentChatEvent) -> AskCmdrStreamEvent {
     match event {
         AgentChatEvent::Queued => AskCmdrStreamEvent::Queued,
-        AgentChatEvent::UserPersisted { message_id, seq } => AskCmdrStreamEvent::UserPersisted { message_id, seq },
+        AgentChatEvent::UserPersisted { opener } => AskCmdrStreamEvent::UserPersisted {
+            message_id: opener.id,
+            seq: opener.seq,
+            opener,
+        },
         AgentChatEvent::AssistantStarted => AskCmdrStreamEvent::AssistantStarted,
         AgentChatEvent::TextDelta { text } => AskCmdrStreamEvent::TextDelta { text },
         AgentChatEvent::ReasoningTick => AskCmdrStreamEvent::ReasoningTick,
@@ -281,24 +325,41 @@ pub fn to_wire_event(event: AgentChatEvent) -> AskCmdrStreamEvent {
             call_id,
             tool: tool.as_wire_name().to_string(),
         },
-        AgentChatEvent::ToolCallFinished { call_id, ok } => AskCmdrStreamEvent::ToolCallFinished { call_id, ok },
+        AgentChatEvent::ToolCallsResolved { message_id, calls } => {
+            AskCmdrStreamEvent::ToolCallsResolved { message_id, calls }
+        }
+        AgentChatEvent::ToolCallFinished {
+            message_id,
+            call_id,
+            outcome,
+            subject,
+        } => AskCmdrStreamEvent::ToolCallFinished {
+            message_id,
+            call_id,
+            outcome,
+            subject,
+        },
         AgentChatEvent::ProposalReady { proposal } => AskCmdrStreamEvent::ProposalReady { proposal },
         AgentChatEvent::Done {
             message_id,
             seq,
             stop,
             usage,
+            turn,
         } => AskCmdrStreamEvent::Done {
             message_id,
             seq,
             stop: stop.into(),
             usage: usage.into(),
+            turn,
         },
-        AgentChatEvent::Failed { kind, detail } => AskCmdrStreamEvent::Failed {
+        AgentChatEvent::Failed { kind, detail, turn } => AskCmdrStreamEvent::Failed {
             kind: kind.into(),
             detail,
             managed: kind.managed(),
+            turn,
         },
+        AgentChatEvent::Stopped { turn } => AskCmdrStreamEvent::Stopped { turn },
         AgentChatEvent::ModelChanged { message_id, seq, model } => {
             AskCmdrStreamEvent::ModelChanged { message_id, seq, model }
         }
@@ -327,6 +388,9 @@ pub fn to_wire_event(event: AgentChatEvent) -> AskCmdrStreamEvent {
             budget_tokens,
             elided_results,
         },
+        AgentChatEvent::CostMetered => AskCmdrStreamEvent::CostMetered,
+        AgentChatEvent::SpendPaused { cost_micros } => AskCmdrStreamEvent::SpendPaused { cost_micros },
+        AgentChatEvent::SpendResumed => AskCmdrStreamEvent::SpendResumed,
     }
 }
 
@@ -345,8 +409,16 @@ pub fn init_turn_event_emitter(app: &tauri::AppHandle) {
 ///
 /// Fire-and-forget on purpose: nobody listening is the ordinary case (the rail is closed, or
 /// the turn is a wake nobody has opened yet), and the turn persists itself either way.
-pub fn emit_turn_event(conversation_id: i64, event: AskCmdrStreamEvent) {
-    let turn = AskCmdrTurn { conversation_id, event };
+pub fn emit_turn_event(
+    conversation_id: i64,
+    run: Option<crate::agent::chat::cancel::TurnRun>,
+    event: AskCmdrStreamEvent,
+) {
+    let turn = AskCmdrTurn {
+        conversation_id,
+        run,
+        event,
+    };
     #[cfg(test)]
     EMITTED_TURNS.with(|emitted| emitted.borrow_mut().push(turn.clone()));
     let Some(app) = TURN_APP.get() else {
@@ -383,10 +455,11 @@ pub(crate) fn take_emitted_turns() -> Vec<AskCmdrTurn> {
 /// `agent/wake/watch.rs` counts the tool CALLS instead.
 pub async fn forward_to_windows(
     conversation_id: i64,
+    run: crate::agent::chat::cancel::TurnRun,
     events: &mut tokio::sync::mpsc::UnboundedReceiver<AgentChatEvent>,
 ) {
     while let Some(event) = events.recv().await {
-        emit_turn_event(conversation_id, to_wire_event(event));
+        emit_turn_event(conversation_id, Some(run), to_wire_event(event));
     }
 }
 

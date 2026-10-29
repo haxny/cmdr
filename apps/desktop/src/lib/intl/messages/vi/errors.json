@@ -2444,5 +2444,49 @@
   "errors.write.duplicateSourceNames.suggestion.move": "Hãy di chuyển từng mục một, hoặc đổi tên một mục trước.",
   "@errors.write.duplicateSourceNames.suggestion.move": {
     "sourceHash": "8af755e"
+  },
+  "errors.write.namedLeavesRefused.title": "Không dùng được các tên mới này",
+  "@errors.write.namedLeavesRefused.title": {
+    "sourceHash": "08c8600"
+  },
+  "errors.write.namedLeavesRefused.message.notASource": "Một trong các tên mới được đặt cho {path}, nhưng mục đó không thuộc đề xuất này, nên chưa có gì bắt đầu.",
+  "@errors.write.namedLeavesRefused.message.notASource": {
+    "sourceHash": "12b2cb4"
+  },
+  "errors.write.namedLeavesRefused.message.sameName": "Hai mục sẽ cùng trở thành {path}. Nhiều ổ đĩa coi đó là một tên, nên mục này sẽ thay thế mục kia.",
+  "@errors.write.namedLeavesRefused.message.sameName": {
+    "sourceHash": "95e02b9"
+  },
+  "errors.write.namedLeavesRefused.message.ontoASource": "Một mục sẽ nằm ở {path}, chỗ của một mục khác trong cùng đề xuất này, và thay thế mục đó.",
+  "@errors.write.namedLeavesRefused.message.ontoASource": {
+    "sourceHash": "724f9c3"
+  },
+  "errors.write.namedLeavesRefused.message.alreadyInDestination": "{path} đã nằm trong thư mục đích, nên đặt tên mới cho mục này ở đó là một lần đổi tên.",
+  "@errors.write.namedLeavesRefused.message.alreadyInDestination": {
+    "sourceHash": "06a0593"
+  },
+  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr không thể đặt tên riêng cho từng mục khi đưa vào hoặc lấy ra khỏi tệp nén zip, nên chưa có gì được đưa tới {path}.",
+  "@errors.write.namedLeavesRefused.message.routeCannotName": {
+    "sourceHash": "f2e48ca"
+  },
+  "errors.write.namedLeavesRefused.suggestion.notASource": "Hãy nhờ Cmdr đề xuất lại.",
+  "@errors.write.namedLeavesRefused.suggestion.notASource": {
+    "sourceHash": "c1dbe85"
+  },
+  "errors.write.namedLeavesRefused.suggestion.sameName": "Hãy nhờ Cmdr đặt một tên khác cho từng mục.",
+  "@errors.write.namedLeavesRefused.suggestion.sameName": {
+    "sourceHash": "76257a9"
+  },
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Hãy nhờ Cmdr đặt những tên không trùng với các mục đang được di chuyển hoặc sao chép.",
+  "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
+    "sourceHash": "9ab88ec"
+  },
+  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Hãy đổi tên các mục đã nằm trong thư mục đó, rồi di chuyển hoặc sao chép các mục còn lại.",
+  "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {
+    "sourceHash": "8917a8e"
+  },
+  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Hãy di chuyển hoặc sao chép các mục với tên hiện tại, rồi đổi tên chúng ở nơi mới.",
+  "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
+    "sourceHash": "b1e881c"
   }
 }

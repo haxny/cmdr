@@ -218,8 +218,8 @@ The full design (the four write paths, the read-side derivation, the decisions) 
 lives in `src/lib/indexing/DETAILS.md` § "Honest size rendering". The data model splits the overloaded "0 bytes" into
 two orthogonal facts, one stored integer each (columns defined in `../store/DETAILS.md`):
 
-- **`entries.listed_epoch`** (per dir): the epoch at which this dir's direct contents were last successfully listed. `0`
-  = never listed. This distinguishes a genuinely empty `0 bytes` folder (`listed_epoch > 0`, no children) from an
+- **`entries.listed_epoch`** (per dir): the epoch at which this dir's direct contents were last successfully listed.
+  `0` = never listed. This distinguishes a genuinely empty `0 bytes` folder (`listed_epoch > 0`, no children) from an
   unknown `—` folder (`listed_epoch == 0`).
 - **`dir_stats.min_subtree_epoch`** (rolled up by the aggregator): `min` over the dir's own `listed_epoch` and every
   child dir's `min_subtree_epoch`, with `0` absorbing. `> 0` ⇒ subtree fully covered (size exact); `0` ⇒ some descendant

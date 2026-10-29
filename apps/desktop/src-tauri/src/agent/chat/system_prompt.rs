@@ -4,13 +4,13 @@
 //! on the next turn), and this module keeps what it must carry and the tests that pin it.
 //!
 //! This string is part of the byte-identical prefix (context assembly builds the full
-//! `system` from the agent's fenced memory, then this, then `CMDR.md` if present), so it must
+//! `system` from this, then `CMDR.md` if present; memory rides the user turn), so it must
 //! not vary per call. It is our OWN authored asset, not provider output, so the tests that
 //! assert it contains the read-only self-description and the coverage-honesty rule
 //! are guarding our prompt text, NOT classifying an error or provider state.
 //!
 //! Labelled sections, in the order the model reads them: identity, what you can do,
-//! coverage, reading files, memory, renaming, suggesting operations, evidence, style. The labels are there so a
+//! coverage, reading files, memory, renaming, suggesting operations, filing and cleanup, evidence, style. The labels are there so a
 //! rule can be found and edited without re-reading the whole block.
 //!
 //! What it must always carry (the tests pin each one):
@@ -21,10 +21,10 @@
 //!   that reads the contents of a file", which `inspect_file` made false; a test fails if
 //!   either phrase comes back,
 //! - **the memory write instruction**: notes record facts about the user and their
-//!   preferences, ❌ never instructions to itself. Memory is fed back at the TOP of every
-//!   later prompt, so a self-directed note would steer every conversation after the one that
-//!   saved it. This is the prompt half of the injection defence; `chat/context.rs`'s fence is
-//!   the other half,
+//!   preferences, ❌ never instructions to itself. Memory is fed back into every later
+//!   conversation, so a self-directed note would steer every one after the one that saved it.
+//!   This is the prompt half of the injection defence; the fence in
+//!   `chat/context/memory_notes.rs` is the other half,
 //! - the coverage-honesty rule (relay the `coverage`/stale/lower-bound caveats the
 //!   tools attach, never answer confidently past them — spec §2.4, load-bearing),
 //! - **how to read a `search` answer's coverage block**, field by field: a walk still
@@ -51,6 +51,11 @@
 //!   time, so a model told only "propose the installers you've opened" would state a fact
 //!   it cannot have. The prompt names what it CAN say instead (when the file last changed),
 //!   the same shape as the fallback rule above,
+//! - **filing by precedent**: look inside a destination before filing into it, prefer where
+//!   the same kind of file already lives, match its naming, treat a trailing status word as
+//!   a step to ask about, name only destinations it has seen, and save the "where things
+//!   live" map to memory afterwards. A Downloads cleanup without these filed by folder NAME,
+//!   guessed an unseen photo destination, and saved nothing (#749),
 //! - **how to read an elided result again**, so a set-aside result is a re-fetch rather
 //!   than a gap the model fills in,
 //! - a short style note so replies match the app's friendly, concise voice.
@@ -174,9 +179,23 @@ mod tests {
         );
     }
 
-    /// The write instruction is half the injection defence: memory is fed back at the TOP of
-    /// every later prompt, so a note that reads as an order would steer every conversation
-    /// after the one that saved it. The fence in `chat/context.rs` is the other half.
+    /// The write instruction is half the injection defence: memory is fed back into every
+    /// later conversation, so a note that reads as an order would steer every one after the one
+    /// that saved it. The fence in `chat/context/memory_notes.rs` is the other half.
+    /// Memory arrives in a user message now, and again each time a file changes, so the model
+    /// has to know the newest copy wins and that the block isn't the user talking.
+    #[test]
+    fn prompt_says_where_memory_arrives_and_which_copy_is_current() {
+        assert!(
+            SYSTEM_PROMPT.contains("again whenever a file changes"),
+            "the model must expect a fresh copy after a write"
+        );
+        assert!(
+            SYSTEM_PROMPT.contains("The newest copy of a file is the current one"),
+            "and know which of several copies to believe"
+        );
+    }
+
     #[test]
     fn prompt_says_memory_records_facts_never_instructions_to_itself() {
         assert!(
@@ -456,6 +475,77 @@ mod tests {
         assert!(
             SYSTEM_PROMPT.contains("rather than proposing the same files"),
             "the reason has to be stated, or the rule reads as optional bookkeeping"
+        );
+    }
+
+    /// The Downloads cleanup that motivated this section (conversation 179, 2026-10-26) filed
+    /// an invoice by folder NAME into `accountants/` while every earlier invoice from that
+    /// vendor sat in `invoices paid/`, and suggested a photo destination it had never seen.
+    /// Precedent beats a fitting name, and an unseen destination is a guess.
+    #[test]
+    fn prompt_files_by_precedent_and_names_only_seen_destinations() {
+        assert!(
+            SYSTEM_PROMPT.contains("Before you suggest moving files into a folder, list it"),
+            "the model must look inside a destination before filing into it"
+        );
+        assert!(
+            SYSTEM_PROMPT.contains("where the same kind of file already lives"),
+            "precedent must beat a folder whose name merely fits"
+        );
+        assert!(
+            SYSTEM_PROMPT.contains("Name a destination only when you have seen"),
+            "an unseen destination must be named as unknown, not guessed"
+        );
+    }
+
+    /// Without the naming rule the model files `Invoice-DOF2FXWT-0005.pdf` as-is into a folder
+    /// whose every file reads `YYYY-MM-DD Vendor amount Rymd-sent.pdf`; without the status-word
+    /// rule it files an invoice the user hasn't forwarded yet out of their inbox.
+    #[test]
+    fn prompt_matches_destination_naming_and_asks_about_status_words() {
+        assert!(
+            SYSTEM_PROMPT.contains("match the folder's naming"),
+            "a filed file should take the destination's naming"
+        );
+        assert!(
+            SYSTEM_PROMPT.contains("a step the user takes before filing"),
+            "a status suffix like -sent must read as a workflow step to ask about"
+        );
+        assert!(
+            SYSTEM_PROMPT.contains("an inbox"),
+            "ambiguous items need a default home other than staying put"
+        );
+    }
+
+    /// Memory exists for exactly this, and the cleanup that motivated it saved nothing: the
+    /// prompt has to say WHEN to save the filing map, not only that saving is allowed.
+    #[test]
+    fn prompt_says_to_save_where_things_live_after_filing() {
+        assert!(
+            SYSTEM_PROMPT.contains("where things live"),
+            "a filing conversation must end with the learned map saved"
+        );
+    }
+
+    /// A guessed mount path once came back as an empty listing and read as "the folder is
+    /// empty". The tools now say so themselves; the prompt keeps the model from concluding it
+    /// on its own when a result is merely empty.
+    #[test]
+    fn prompt_says_an_empty_result_for_a_guessed_path_is_not_proof() {
+        assert!(
+            SYSTEM_PROMPT.contains("isn't proof the folder is empty"),
+            "an empty listing for a guessed path must not read as an empty folder"
+        );
+    }
+
+    #[test]
+    fn prompt_asks_for_a_sentence_before_each_batch_of_tool_calls() {
+        // The rail shows a turn's narration between the tool lines it explains. Without this
+        // ask, a live Sonnet narrated nothing, and a softer "before a batch" wording didn't
+        // move it either (`agent/prompts/DETAILS.md`).
+        assert!(
+            SYSTEM_PROMPT.contains("Every time you call tools, first write one short sentence"),
+            "must ask the model to say what it's checking before it calls tools"
         );
     }
 

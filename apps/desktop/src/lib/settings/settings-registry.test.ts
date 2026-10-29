@@ -139,6 +139,7 @@ describe('getAdvancedSettings', () => {
       boolean: 'switch',
       number: 'number-input',
       duration: 'duration',
+      enum: 'radio',
     } as const
 
     for (const setting of getAdvancedSettings()) {
@@ -689,6 +690,25 @@ describe('askCmdr.chatMemorySize (how much of a chat one message carries)', () =
     // Presets are the whole point: no free number field means no bounds to misstate.
     expect(() => {
       validateSettingValue('askCmdr.chatMemorySize', '8000')
+    }).toThrow()
+  })
+})
+
+describe('askCmdr.spendPause (where one answer stops to ask about its cost)', () => {
+  it('registers a select in AI > Ask Cmdr that defaults to $2, which the Rust loader mirrors', () => {
+    const def = getSettingDefinition('askCmdr.spendPause')
+    expect(def?.component).toBe('select')
+    expect(def?.section).toEqual(['AI', 'Ask Cmdr'])
+    // `settings::DEFAULT_ASK_CMDR_SPEND_PAUSE_MICROS` is 2,000,000: change the two together.
+    expect(getDefaultValue('askCmdr.spendPause')).toBe('2')
+  })
+
+  it('offers dollar amounts as money, smallest first, then Never', () => {
+    const options = getSettingDefinition('askCmdr.spendPause')?.constraints?.options ?? []
+    expect(options.map((o) => o.value)).toEqual(['0.5', '1', '2', '5', '10', 'never'])
+    expect(options.slice(0, 3).map((o) => o.label)).toEqual(['$0.50', '$1.00', '$2.00'])
+    expect(() => {
+      validateSettingValue('askCmdr.spendPause', '3')
     }).toThrow()
   })
 })

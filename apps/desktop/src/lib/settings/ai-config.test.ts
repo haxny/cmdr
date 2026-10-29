@@ -77,8 +77,14 @@ vi.mock('#lib/logging/logger.js', () => ({
   }),
 }))
 
+const emitMock = vi.fn<(event: string) => Promise<void>>(() => Promise.resolve())
+vi.mock('@tauri-apps/api/event', () => ({
+  emit: (event: string) => emitMock(event),
+  listen: vi.fn(() => Promise.resolve(() => {})),
+}))
+
 // Import AFTER mocks are wired so the module captures the mocked references.
-import { pushConfigToBackend } from './ai-config'
+import { AI_CONFIG_PUSHED_EVENT, pushConfigToBackend } from './ai-config'
 
 function resetState(): void {
   for (const k of Object.keys(settingsMap)) {
@@ -92,6 +98,7 @@ function resetState(): void {
   loggerWarn.mockReset()
   loggerInfo.mockReset()
   loggerError.mockReset()
+  emitMock.mockClear()
 }
 
 describe('pushConfigToBackend', () => {
@@ -200,5 +207,23 @@ describe('pushConfigToBackend', () => {
     await pushConfigToBackend()
 
     expect(getAiApiKeyStatus).not.toHaveBeenCalled()
+  })
+
+  it('tells every window once the push landed, so a reader of the backend AI state re-reads it', async () => {
+    settingsMap['ai.provider'] = 'cloud'
+    settingsMap['ai.cloudProvider'] = 'openai'
+
+    await pushConfigToBackend()
+
+    // A key saved in the Settings window pushes from there; the main window's rail hears it.
+    expect(emitMock).toHaveBeenCalledWith(AI_CONFIG_PUSHED_EVENT)
+  })
+
+  it('stays quiet when the push itself broke: nothing new reached the backend', async () => {
+    configureAi.mockRejectedValue(new Error('ipc down'))
+
+    await pushConfigToBackend()
+
+    expect(emitMock).not.toHaveBeenCalled()
   })
 })

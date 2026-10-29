@@ -59,7 +59,7 @@ pub(super) fn move_with_rename(
         operation_id,
         WriteOperationType::Move,
         state,
-        LockedScan::of_renames(sources, destination, config.destination_name.as_deref()),
+        LockedScan::of_renames(sources, destination, &config.leaves),
     ) else {
         return Err(WriteOperationError::Cancelled {
             message: "Operation cancelled by user".into(),
@@ -77,7 +77,7 @@ pub(super) fn move_with_rename(
     // rename takes a folder whole and walks nothing (`from_sources`).
     state.transfer_tree.install(
         from_sources(sources, is_real_directory, &TreeOrder::active(state.scope().host())),
-        TreeLanding::under(destination, config.destination_name.as_deref()),
+        TreeLanding::under(destination, &config.leaves),
     );
     let tree = state.transfer_tree.reporter();
     state.scope().status().update(
@@ -105,11 +105,7 @@ pub(super) fn move_with_rename(
                 path: source.display().to_string(),
                 message: "Invalid source path".into(),
             })?;
-            let leaf = config
-                .destination_name
-                .as_deref()
-                .map(Path::new)
-                .unwrap_or_else(|| Path::new(file_name));
+            let leaf = config.leaves.chosen_for(source).unwrap_or(file_name);
             let dest_path = destination.join(leaf);
 
             // Locked, and the person said to leave it (or the system locked it):

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contextUsageState, contextUsagePercent, type ContextUsage } from './ask-cmdr-context-usage'
+import { contextUsageState, contextUsagePercent, gaugeReading, type ContextUsage } from './ask-cmdr-context-usage'
 
 const usage = (estimatedTokens: number, budgetTokens: number, elidedResults = 0): ContextUsage => ({
   estimatedTokens,
@@ -58,5 +58,22 @@ describe('contextUsagePercent', () => {
 
   it('is 0 when there is nothing to report', () => {
     expect(contextUsagePercent(null)).toBe(0)
+  })
+})
+
+describe('gaugeReading', () => {
+  const baseline = { estimatedTokens: 6_300, budgetTokens: 16_000 }
+
+  it('shows the measured reading when the thread has one', () => {
+    expect(gaugeReading(usage(9_000, 16_000, 1), baseline)).toEqual({ usage: usage(9_000, 16_000, 1), baseline: false })
+  })
+
+  it('falls back to the baseline for a chat nothing has measured yet', () => {
+    // The baseline is honest: every call of this chat carries at least the prefix.
+    expect(gaugeReading(null, baseline)).toEqual({ usage: usage(6_300, 16_000), baseline: true })
+  })
+
+  it('has nothing to show with neither, so the gauge renders nothing', () => {
+    expect(gaugeReading(null, null)).toBeNull()
   })
 })

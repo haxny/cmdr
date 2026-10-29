@@ -16,8 +16,10 @@ cargo-fuzz = true
 
 # The root workspace's `[patch.crates-io]` doesn't reach a separate workspace, so
 # the patched crates under test link against repeats it here. `cmdr-archive` calls
-# the vendored `zip`'s `central_directory_len()`, which upstream doesn't have.
+# the vendored `zip`'s `central_directory_len()`, which upstream doesn't have, and the
+# vendored `rc-zip` keeps its `zstd` off the advisory-hit 0.13 line.
 [patch.crates-io]
+rc-zip = { path = "../vendor/rc-zip" }
 zip = { path = "../vendor/zip" }
 
 [dependencies]

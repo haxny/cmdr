@@ -45,8 +45,8 @@ phrase what happened and the next step (Bengali has neutral framings around `ক
   addresses the user politely with `আপনি`. Always use `আপনি`; never `তুই`/`তুমি` in UI. Keep verb endings in the `আপনি`
   register (the polite `-উন`/`-ন` imperative) consistently.
 - **Buttons and menu items: polite imperative.** GNOME labels actions in the polite imperative: `মুছে ফেলুন` (delete),
-  `খুলুন` (open), `বাতিল` (cancel), `বের করে আনা` (eject). Keep these concise polite-imperative forms; don't expand to
-  full request sentences on buttons.
+  `খুলুন` (open), `বাতিল` (cancel), `বের করে আনা` (eject). Keep these concise polite-imperative forms; don't expand to full
+  request sentences on buttons.
 
 ## Decision points
 
@@ -85,9 +85,9 @@ phrase what happened and the next step (Bengali has neutral framings around `ক
   trash split, lean GNOME's native `আবর্জনা…` form for a file-manager-native, less-corporate register; Microsoft's
   transliteration is the alternative if David prefers Windows-familiar wording. `tentative` on the trash split (flagged
   above); the agreed terms are `high`.
-- **Watch Microsoft's wrong-sense terms:** Microsoft's BANGLA terminology maps "volume" → `স্বর প্রাবল্য`, which is
-  AUDIO loudness, not a mounted disk volume. Don't use it for Cmdr's disk-volume sense; pick a disk-volume term during
-  the first pass and record it.
+- **Watch Microsoft's wrong-sense terms:** Microsoft's BANGLA terminology maps "volume" → `স্বর প্রাবল্য`, which is AUDIO
+  loudness, not a mounted disk volume. Don't use it for Cmdr's disk-volume sense; pick a disk-volume term during the
+  first pass and record it.
 
 ### Gender: grammatically light; keep UI gender-neutral
 
@@ -114,14 +114,13 @@ the file-manager authority). Evidence verified against the reference pile (`_ign
 
 - **file: `ফাইল`** · Microsoft, GNOME agree. Naturalized loan, standard. `high`.
 - **folder: `ফোল্ডার`** · Microsoft, GNOME agree. Naturalized loan, standard. `high`.
-- **copy: `অনুলিপি করুন`** (verb) · Microsoft (`অনুলিপি করা`), GNOME uses `অনুলিপি`. Polite imperative on buttons.
-  `high`.
+- **copy: `অনুলিপি করুন`** (verb) · Microsoft (`অনুলিপি করা`), GNOME uses `অনুলিপি`. Polite imperative on buttons. `high`.
 - **move: `সরান`** / `স্থানান্তর করুন` · GNOME (`স্থানান্তর` = transfer/move). `high`.
 - **delete: `মুছে ফেলুন`** · GNOME. Native Bengali, polite imperative. `high`.
 - **open: `খুলুন`** · GNOME. `high`.
 - **cancel: `বাতিল`** · GNOME, Microsoft. `high`.
-- **Trash: `আবর্জনার বাক্স`** · GNOME (native "rubbish box"); Microsoft's `রিসাইকেল বিন` (transliterated) is the
-  alternative. Pick one, keep consistent. `tentative` (real source split, flagged above).
+- **Trash: `আবর্জনার বাক্স`** · GNOME (native "rubbish box"); Microsoft's `রিসাইকেল বিন` (transliterated) is the alternative.
+  Pick one, keep consistent. `tentative` (real source split, flagged above).
 - **eject: `বের করে আনা`** · GNOME. Verify against Cmdr's eject context. `high`.
 - **search: `অনুসন্ধান`** · GNOME, Microsoft (`সন্ধান`). `high`.
 - **settings: `সেটিংস`** · Microsoft. `high`.

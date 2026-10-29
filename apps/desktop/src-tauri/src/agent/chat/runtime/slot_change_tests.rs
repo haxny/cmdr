@@ -105,6 +105,22 @@ async fn a_failed_first_attempt_records_no_event_and_leaves_last_model_untouched
     );
 }
 
+/// A thread holding an event row a newer build wrote still SENDS after a downgrade: the
+/// transcript loader reads every row, so an unparseable kind would fail every later turn.
+#[tokio::test]
+async fn a_thread_holding_an_unknown_event_kind_still_sends() {
+    let conn = migrated_conn();
+    let id = conversation(&conn);
+    run_answer_turn(&conn, id, "model-one", "hello").await;
+    store::append_raw_event_row(&conn, id, r#"{"kind":"fromTheFuture"}"#, 1_780_000_100).expect("append raw");
+
+    run_answer_turn(&conn, id, "model-one", "again").await;
+
+    let rows = store::list_messages(&conn, id, 100, 0).expect("list");
+    let shapes: Vec<&str> = rows.iter().map(row_shape).collect();
+    assert_eq!(shapes, vec!["user", "assistant", "unknown", "user", "assistant"]);
+}
+
 // ── Chat-memory-size events ───────────────────────────────────────────────────
 
 #[tokio::test]
@@ -157,6 +173,25 @@ async fn a_smaller_chat_memory_between_turns_logs_an_event_row_before_the_user_m
     );
 }
 
+/// A higher effort reserves more reply, and a late provider report can move the window: both move
+/// the prompt budget, neither is the user changing their chat memory, so no line says they did.
+#[tokio::test]
+async fn a_budget_moved_by_effort_or_a_report_logs_no_chat_memory_event() {
+    let conn = migrated_conn();
+    let id = conversation(&conn);
+    run_answer_turn_budgeted(&conn, id, "model-one", 839_800, 839_800, "hello").await;
+    let events = run_answer_turn_budgeted(&conn, id, "model-one", 795_600, 839_800, "think harder").await;
+
+    assert!(
+        !events
+            .iter()
+            .any(|e| matches!(e, AgentChatEvent::ChatMemoryChanged { .. })),
+        "only the reply reservation moved"
+    );
+    let rows = store::list_messages(&conn, id, 100, 0).expect("list");
+    assert!(!rows.iter().any(|m| matches!(m.content, store::StoredContent::Event(_))));
+}
+
 #[tokio::test]
 async fn the_same_chat_memory_between_turns_logs_no_event() {
     let conn = migrated_conn();
@@ -204,6 +239,8 @@ fn row_shape(message: &store::StoredMessage) -> &'static str {
         store::StoredContent::Event(store::ConversationEvent::ModelChanged { .. }) => "model",
         store::StoredContent::Event(store::ConversationEvent::ChatMemoryChanged { .. }) => "memory",
         store::StoredContent::Event(store::ConversationEvent::ProposalDecided { .. }) => "decision",
+        store::StoredContent::Event(store::ConversationEvent::TurnFinished { .. }) => "turn",
+        store::StoredContent::Event(store::ConversationEvent::Unknown) => "unknown",
     }
 }
 

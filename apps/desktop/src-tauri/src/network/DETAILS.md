@@ -18,7 +18,7 @@ of the app build.
 
 - **Discovery**: `mdns_discovery.rs`: Pure Rust mDNS using `mdns-sd` crate. Cross-platform. `discovery_gate.rs` decides
   when it browses and `discovery_cache.rs` holds what it found (§ "Discovery runs only while something needs it").
-- **Manual servers**: `manual_servers.rs`: User-added servers via the "Add server" sheet. Parses addresses, checks TCP reachability (`manual_servers_reachability.rs`), persists to `manual-servers.json`, and injects synthetic `NetworkHost` entries with `source: Manual` into the discovery cache as pinned hosts. Loaded at startup. An entry's `displayName` is a name a person typed, read through `label()` / `is_named()` (§ "A manual server's name").
+- **Manual servers**: `manual_servers.rs`: User-added servers via the "Add server" sheet. Parses addresses, checks TCP reachability (`manual_servers_reachability.rs`), persists to `manual-servers.json`, and injects synthetic `NetworkHost` entries with `source: Manual` into the discovery cache as pinned hosts, except one saved without contact until its first mount (§ "A manual server saved without contact"). Loaded at startup. An entry's `displayName` is a name a person typed, read through `label()` / `is_named()` (§ "A manual server's name").
 - **E2E testing**: `virtual_smb_hosts.rs`: Injects 14 synthetic `NetworkHost` entries for smb2's consumer Docker containers. Hosts come from `SMB_E2E_{SVC}_HOST` (default `localhost`). Ports come from `SMB_E2E_{SVC}_PORT` when set, else `smb2::testing::*_port()` (which reads `SMB_CONSUMER_*_PORT`, default 10480+). `SMB_E2E_*_PORT` is the test-suite contract (same var the frontend fixture reads), so backend and fixture agree on which port to connect to. This matters inside Docker where containers listen on `:445` internally but `SMB_CONSUMER_*_PORT` would point at the host-side mapping. Gated behind `smb-e2e` Cargo feature. Never enabled in production.
 - **Share listing**: Split across multiple files:
   - `smb_client.rs`: Top-level share-listing entry point; orchestrates guest -> keychain -> prompt auth flow; tries smb2 first, falls back to smbutil (macOS only)
@@ -48,8 +48,9 @@ of the app build.
 - **Server identity**: `server_identity.rs`: `SmbServer` (host + port, compared with `SmbServer::is`) is the one answer to "which SMB server is this"; `same_machine` is the name equivalence under it (mDNS service name, `.local` hostname, IP, enriched from the discovery state) and only answers "which MACHINE": one machine can run several servers, so a port-blind caller is a bug. Callers that still compare machines alone, because no port exists there: the Finder system-keychain aliases, the direct-connection opt-out list (`ShareRef` has no port), the OS-mount notice ledger, and the Linux GVFS mount check. Used by the mount-path disambiguation and the already-mounted short-circuit so string-shape differences can't split one server into two.
 - **Auth** (platform-agnostic):
   - `keychain.rs`: SMB credential management. Delegates storage to `crate::secrets::store()` (see `secrets/CLAUDE.md` for backend details)
-- **Events**: `events.rs`: every `tauri_specta::Event` payload the module emits (discovery, the host context menu, `volume-connection-changed`, the OS-mount fallback notice) plus the wire enums only they carry, re-exported from `mod.rs`. Always compiled, because `ipc.rs`'s `collect_events!` can't cfg-gate inline and names each one on every platform.
-- **State**: `known_shares.rs`: Connection history in `known-shares.json` (usernames, last auth mode, timestamps), the saved SMB share places (rows with a share name, § "Saved SMB shares"), plus the shares switched off Cmdr's direct connection (`direct_connection_opt_outs`). `smb_saved_shares.rs` is the wiring around the share rows.
+- **Dialing a saved place**: `dial_flights.rs`: one dial per place, however many callers ask (the core is `apps/desktop/src-tauri/src/saved_servers/mod.rs`, under both the `connect_saved_place` command and Ask Cmdr's `connect_volume`). A caller with no typed secret joins a dial already out; one carrying a secret waits it out, then dials its own; each caller's cancel lets only that caller go, and the dial is called off once nobody waits. Why: a saved place registers only when its dial lands, so "already registered?" can't guard the 30 s a dial is out, and two dials register two volumes. The flight dials under an attempt id of its own, so a call-off can arrive before an SFTP or S3 dial (which reads the Keychain first) has filed it: `connect_wiring::call_off_early` marks the id so the attempt registers already cancelled.
+- **Events**: `events.rs`: every `tauri_specta::Event` payload the module emits (discovery, the host context menu, `volume-connection-changed`, `volume-reconnect-requested` (Ask Cmdr handing a dropped volume to the frontend's reconnect manager), the OS-mount fallback notice) plus the wire enums only they carry, re-exported from `mod.rs`. Always compiled, because `ipc.rs`'s `collect_events!` can't cfg-gate inline and names each one on every platform.
+- **State**: `known_shares.rs`: Connection history in `known-shares.json` (usernames, last auth mode, timestamps), the saved SMB share places (rows with a share name, § "Saved SMB shares"), plus the shares switched off Cmdr's direct connection (`direct_connection_opt_outs`). `smb_saved_shares.rs` is the wiring around the share rows. `server_guid.rs` + `smb_server_guid.rs` record which server each share row is on (§ "Which server a share is on").
 
 ## Platform strategy
 
@@ -308,6 +309,28 @@ only for a named entry, so a Bonjour name still outranks an address nobody chose
 ### TCP reachability check runs in the dialog, before the host is added
 
 `add_manual_server` does a TCP connect to `host:port` and fails up front if the port is closed, so the dialog shows the error inline and the host is never added on an unreachable address (with a Local Network hint when the kernel refused the route to a LAN address: § "This Mac refusing the route"). Discovered hosts can sit in a "Resolving…" state because mDNS guarantees they exist; a typed address has no such guarantee, so without the up-front check a typo or dead host would clutter the list with an entry that never works. The check proves only that the port is open, not that SMB is healthy: protocol/auth failures still surface later through the normal share-listing pipeline once the host is in the list.
+
+### A manual server saved without contact
+
+`save_manual_server_without_contact` (`manual_servers_contact.rs`) is the SMB save behind an approved Ask Cmdr
+suggestion, and the add sheet's "Add anyway" saves the same way (`add_manual_server` with `Reachability::Skip`): the
+entry and the share its address names, and NO network contact. No reachability check; no
+`on_host_found`, since a host in the discovery list is one the servers view may list shares of (signing in, as a guest
+where it can) while it's on screen; and no GUID probe, which skips a share no mount went through (§ "Which server a share
+SMB share is on"). The entry carries `awaitingFirstConnect: true` (absent reads `false`), so `load_manual_servers` (at
+launch and on every network action) leaves it out of the list too.
+
+- **Its first mount makes it ordinary** (`note_first_connect`, from `smb_saved_shares::remember_mount`, every Cmdr
+  mount): the flag clears, and the next load lists it. The hub needs no discovery entry to show or open it: a saved host
+  mDNS isn't seeing is drawn from the saved listing (`servers-hub-rows.ts::savedHostFor`).
+- **A contact-free save never hides an ordinary host**, and a checked add of a waiting host (the probe reached it) makes
+  it ordinary: a re-save keeps the flag only while both saves say so (`add_server_entry_to_path`).
+- **The hub says "Not connected yet"** for it: the listing carries `SavedServer.awaitingFirstConnect`, and the frontend
+  keeps its shares out of the prefetch (`apps/desktop/src/lib/file-explorer/network/DETAILS.md`).
+- **Decision: "Add anyway" saves contact-free too** (David, 2026-10-28, #777). **Why**: one rule everywhere, saving a
+  server is a store write and contact starts when the user connects. An approved card is as user-initiated as the
+  sheet (`docs/design-principles.md`, "An approved action is the user's own"), so the two must not differ. The cost: a user's unchecked add
+  no longer shows the host's shares right away; they appear once the user opens it.
 
 ### Mount path disambiguation for same-name shares
 
@@ -719,6 +742,13 @@ the migration, and what Forget does). What the code has to defend:
   mount watcher, the adopter pass, the pane-open upgrade, or "Connect directly": they see mounts nobody asked Cmdr to
   save, and a row for one would invent history. That split is also why nothing dedupes by hand: every path keys the
   volume by the same `statfs` id (`smb_upgrade::mounted_volume_id`), so a saved row and a live mount meet on the id.
+- **❗ `lastConnectedAt` means a connection happened, in every saved-server store.** A save that connected nothing (an
+  Add naming a share, "Add anyway", an edit of an unconnected place, an approved Ask Cmdr card) files it EMPTY, and each
+  store's `remember` (`upsert_share_row` for SMB) keeps the stored time when the incoming one is empty. Why: it's
+  "Last used" and the hub's recency order, and `connect_volume` dials the most recently connected member of a share
+  (`location/same_share.rs` `connect_target`), so a stamped save would steer a dial to a place nobody connected.
+  Empty already reads as "never used" everywhere (`servers-hub-rows.ts`, the recency sorts). An SMB host's "saved at"
+  is the manual entry's own `added_at`.
 - **One row per share, keyed by server identity + folded share name, ❌ never by account**: an SMB volume id carries no
   username (`known_shares::upsert_share_row`). A replace keeps the pin, except that the FIRST mount pins it (rule 1 of
   the servers model). ❗ Two rows that both know their port (a mount filed each) are one share only on the same port:
@@ -733,7 +763,7 @@ the migration, and what Forget does). What the code has to defend:
   Forget server, the one row a place id found for Forget share. ❌ Never "whatever this name matches", which reached
   rows on other ports of the same machine.
 - **The volume id is stored as the mount reported it, ❌ never re-derived** from `server_name`: only the mount knows
-  which spelling of the server it got. `commands/servers.rs::saved_by_id` looks SMB ids up in the store for that reason.
+  which spelling of the server it got. `saved_servers::saved_by_id` looks SMB ids up in the store for that reason.
   So a host that MOVED keeps each share's old id until a mount at the new address reports the real one
   (`pending_moves`, § "Moving a saved server to a new address").
 - **The volume list** (`server_volumes::fold_saved_smb_shares`) gives an unmounted share a `saved` row at its last
@@ -750,6 +780,48 @@ the migration, and what Forget does). What the code has to defend:
 - **A restored tab on an unmounted saved share keeps its folder**: launch leaves the path unprobed and keeps the
   share's id (`pane/initialization.ts::restoreShareTab`), the `saved` row dials, and the pane enters that folder or the
   nearest one still there (`pane/DETAILS.md` § "A pane on a saved place").
+
+## Which server a share is on
+
+One NAS reached by its LAN IP and by Tailscale mounts as two volumes with two ids. The only proof they're one share is
+the GUID the server answers NEGOTIATE with, paired with the share name (the GUID names the BOX, so it never groups
+alone). `server_guid.rs` holds it as `ServerGuid`, which can't be all zeros (smb2 fills `Guid::ZERO` before a negotiate
+lands); `smb_server_guid.rs` records it, as a saved row's `serverGuid` (`docs/specs/saved-smb-shares.md` § The store),
+with how it was learned beside it as `serverGuidProof` (`GuidProof`: `authenticated` or `unauthenticated`). Ask Cmdr's
+tools read both to treat the two ids as one (`../location/same_share.rs`): any GUID makes a `sameShareAs` hint, and only
+an `authenticated` one on BOTH rows lets one id answer for the other.
+
+- **The proof that won is the one recorded** (`known_shares::record_guid_in`): a fill by the probe or a guest session
+  records `unauthenticated`; a session signed in as the ROW'S OWN account records `authenticated`, whether it
+  overwrote the GUID or confirmed the one a probe filled. ❗ `record_guid_in` decides the proof itself, from the row's
+  account and the session's (`signed_in_as`), so no writer can hand one in: a session signed in as someone else only
+  fills. Its three callers are `record_negotiated_guid` (a session), `adopt_live_guid`, and `record_probed_guid`, one
+  test each in `smb_server_guid_test.rs`. A row saved before the field reads `unauthenticated` until a signed-in session records its GUID
+  again, and every refresh of a row (a remount, a share-list reconnect) keeps the GUID and its proof together
+  (`keep_recorded_guid`).
+- ❗ **Except across accounts: the one thing that moves a proof down.** A save that changes the share's account
+  (`known_shares::share_account`, folded, a guest counting as none) keeps the GUID as a hint but demotes it to
+  `unauthenticated`: proof earned signed in as one account must not let `same_share` answer a read with a session that
+  opens the share as another. An add naming no account keeps the saved one, so it demotes nothing.
+
+- **A direct session coming up records its GUID** (`record_session_guid`, from both `smb_upgrade` install paths, read
+  off `SmbVolume::diagnostics` with no I/O). Signed in as an account it OVERWRITES the row's (a NAS restored or
+  replaced mints a new one, and the latest authenticated answer is the truth), when that account is the row's; as a
+  guest or another account it only fills. A live share with no saved row keeps it in memory (`live_share`, where the
+  session vouches for itself), and the row a mount saves later adopts it (`adopt_live_guid`) under the same rule: the
+  upgrade can land before `remember_mount`'s row does.
+- **The probe fills the rest**: a NEGOTIATE-only dial of the saved address (`cmdr_smb::connection::probe_server_guid`,
+  no session, no credentials, 3 s per step), only for rows with no GUID whose share name another row shares, one pass
+  at a time, 20 s after startup and whenever a mount saves a share row. ❗ It only ever FILLS: whatever answers on a
+  saved LAN IP from a hotel network isn't proven to be the share's server, so it can't replace a recorded GUID.
+- ❗ **Only rows a mount went through count** (`volume_id` set), as a target or as a twin (`rows_to_probe`): a share an
+  add named (`smb://host/share`, or an approved Ask Cmdr suggestion) is on a host nobody connected, and Cmdr doesn't
+  dial one on its own initiative. Its first mount makes it count (`smb_server_guid_test.rs`).
+- ❌ **Never from a tool handler**: a model's read must not dial a host. Nothing under `agent/`, `mcp/`, or `location/`
+  names the recorder or the probe (`smb_server_guid_test.rs::no_tool_handler_reaches_the_probe`).
+- The Docker SMB fixtures answer distinct GUIDs per container (verified on smb2 0.35.0 with the `guest` and `auth`
+  fixtures, `smb_integration_probe_reads_the_server_guid_without_credentials`, 2026-10-26): each image's Samba mints its
+  own on first start, so a two-server test over them is sound.
 
 ## Telling the user about a kernel-mount fallback
 
@@ -973,7 +1045,7 @@ rather than a fact about a secret, so the saved-server list is its home. ❗ It 
 doesn't name it: SFTP has always come back on its own, and a missing field must not switch that off under servers saved
 before the setting existed.
 
-`sftp_volume_wiring::save_without_connecting` (behind `update_saved_server`, through `commands/servers/saves.rs` and, for an edit that keeps its address, `server_move.rs`)
+`sftp_volume_wiring::save_without_connecting` (behind `update_saved_server`, through `saved_servers/saves.rs` and, for an edit that keeps its address, `server_move.rs`)
 moves both copies: the saved entry, and on a connected place the live volume's switch, so it takes effect now rather
 than on the next connect. The row menus' checkbox takes the narrow twin, `apply_auto_reconnect` (behind
 `set_place_auto_reconnect`): the same two copies, one field, through the store's own in-place writer
@@ -1031,8 +1103,8 @@ id, never by comparing fields. The provider preset rides as `S3ProviderChoice` (
 `s3+<scheme>://<host>:<port>`, scope the key id), so every bucket under one key reads one Keychain entry, and forgetting
 one place's secret forgets it for its siblings. `s3_volume_wiring.rs` is WebDAV's three steps (dial, register retiring the
 incumbent, remember). A place's edit changes only its switch, since provider, key id, and bucket ARE the place; the
-switch reaches a live volume at once. `commands/servers.rs` groups the places back under one hub row per account
-(`servers/s3_accounts.rs`), and `server_volumes::server_volume_for_path` picks the MOST specific saved root, because the
+switch reaches a live volume at once. `saved_servers/` groups the places back under one hub row per account
+(`saved_servers/s3_accounts.rs`), and `server_volumes::server_volume_for_path` picks the MOST specific saved root, because the
 account root and a bucket place spell one object the same way.
 
 ❗ **The name is the ACCOUNT's, ❌ never a place's**, the SMB host-and-shares shape: the account row shows the name a
@@ -1062,7 +1134,7 @@ leaves no volume, no saved server, and no secret.
 `nfs_known_places.rs` is the S3 store's shape (`nfs_known_places.json`): one entry per EXPORT, each its own volume with
 its own id (`cmdr_fs::volume::nfs_volume_id`, from host, the canonical port, and the export), pin, start folder, and
 switch, found by that id. The name is the SERVER's (one `KnownNfsServer` record per named host plus port, written by
-`adopt_typed_name`, the S3 account rule), and an export reads as its own path. `commands/servers/nfs_places.rs` groups
+`adopt_typed_name`, the S3 account rule), and an export reads as its own path. `saved_servers/nfs_places.rs` groups
 the exports back under one hub row per server, whose id is its root export's place id.
 
 - **Decision (revisit in review): the uid and gid live in the entry, in plain JSON, ❌ not the Keychain.** `AUTH_SYS`
@@ -1076,7 +1148,7 @@ the exports back under one hub row per server, whose id is its root export's pla
   (`live_server_edit.rs`, below). A changed uid or gid is a NEW connection, since every call's credential carries them:
   it dials its own, confirms the start folder through it, and replaces the live volume through
   `install_retiring_incumbent`, so transfers on the old connection finish there. A refusal at any step moves nothing.
-- **No address move.** The host, port, and export ARE the place, so `commands/servers/saves.rs` answers an edit naming
+- **No address move.** The host, port, and export ARE the place, so `saved_servers/saves.rs` answers an edit naming
   another one `AccountChanged`; `server_move.rs` only calls off and drops NFS dials to the old ids.
 - **No sign-in, anywhere.** The volume's `sign_in_prompt` is `Nothing`, and `commands/volume_sign_in.rs` answers
   `Nothing` for a saved export that isn't connected (its fallback would be `Password`). Refusals are typed

@@ -1,12 +1,56 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { _setLocaleForTests } from './locale'
+import { _setCatalogForTests } from './messages.svelte'
 import {
   _clearListFormatCacheForTests,
+  conjunctionListParts,
   formatConjunctionList,
   formatDisjunctionList,
   formatUnitList,
 } from './list-format'
+
+// Joins follow the resolved CATALOG tag, and Cmdr ships no Japanese, so `ja` would read
+// English. A synthetic catalog keeps the Japanese rules (tight joins, `、`) covered for the
+// day one ships.
+beforeAll(() => {
+  _setCatalogForTests('ja', {})
+})
+afterAll(() => {
+  _setCatalogForTests('ja', null)
+})
+
+describe('conjunctionListParts', () => {
+  afterEach(() => {
+    _setLocaleForTests(null)
+  })
+
+  /** Joining the parts back gives exactly the string join, so a list of links reads the same. */
+  function joined(items: string[]): string {
+    return conjunctionListParts(items)
+      .map((part) => (part.kind === 'item' ? items[part.index] : part.text))
+      .join('')
+  }
+
+  it('hands back each item by index between the language’s own connectives', () => {
+    _setLocaleForTests('en-US')
+    expect(conjunctionListParts([])).toEqual([])
+    expect(conjunctionListParts(['Documents'])).toEqual([{ kind: 'item', index: 0 }])
+    expect(conjunctionListParts(['Documents', 'Desktop'])).toEqual([
+      { kind: 'item', index: 0 },
+      { kind: 'literal', text: ' and ' },
+      { kind: 'item', index: 1 },
+    ])
+  })
+
+  it('reads the same as the string join, in any language', () => {
+    for (const locale of ['en-US', 'de-DE', 'zh', 'ja']) {
+      _setLocaleForTests(locale)
+      const items = ['Documents', 'Desktop', '写真']
+      expect(joined(items)).toBe(formatConjunctionList(items))
+    }
+  })
+})
 
 describe('formatDisjunctionList', () => {
   afterEach(() => {
@@ -38,6 +82,13 @@ describe('formatConjunctionList', () => {
     expect(formatConjunctionList(['Preview'])).toBe('Preview')
     expect(formatConjunctionList(['Preview', 'Warp'])).toBe('Preview and Warp')
     expect(formatConjunctionList(['Preview', 'Warp', 'Photos'])).toBe('Preview, Warp, and Photos')
+  })
+
+  it('joins in the language the sentence is written in, not the raw UI tag', () => {
+    // A Korean Mac with no `ko` catalog reads English text, so the list joins in English.
+    _setLocaleForTests('ko-KR')
+    expect(formatConjunctionList(['Preview', 'Warp', 'Photos'])).toBe('Preview, Warp, and Photos')
+    expect(formatDisjunctionList(['Preview', 'Warp'])).toBe('Preview or Warp')
   })
 
   it('joins in the UI language, so a German toast never reads an English "and"', () => {
@@ -113,10 +164,10 @@ describe('formatConjunctionList (memoization)', () => {
 
     _setLocaleForTests('en-US')
     for (let i = 0; i < 20; i++) formatConjunctionList(['Preview', 'Warp'])
-    expect(builtFor).toEqual(['en-US'])
+    expect(builtFor).toEqual(['en'])
 
     _setLocaleForTests('de-DE')
     formatConjunctionList(['Preview', 'Warp'])
-    expect(builtFor).toEqual(['en-US', 'de-DE'])
+    expect(builtFor).toEqual(['en', 'de'])
   })
 })

@@ -6,8 +6,8 @@ use crate::mcp::tool_registry::{Access, Consumer, agent_tool_view, get_all_tools
 //
 // One authored registry, two consumer views (agent decisions D49/D59). `consumers` is the exposure
 // axis; `access` is the capability axis. These tests pin the agent view to exactly its authored
-// `[agent]` entries AND require every one to be `Access::Read`, `Access::Propose`, or
-// `Access::Memory`, never `Access::Write`.
+// `[agent]` entries AND require every one to be `Access::Read`, `Access::Propose`, `Access::Memory`,
+// or `Access::Session`, never `Access::Write`.
 //
 // The agent can propose; only the user can approve. `Propose` widens what the agent may ASK for,
 // never what it may DO — so these tests also pin the hand-authored Propose allowlist and the
@@ -39,9 +39,11 @@ const EXPECTED_AGENT_TOOL_NAMES: &[&str] = &[
     "list_suggestions",
     "get_suggestion_group",
     "propose_suggestions",
+    "propose_server",
     "nothing_to_suggest",
     "memory_write",
     "memory_edit",
+    "connect_volume",
 ];
 
 /// Set-equality: the agent view equals exactly its authored `consumers:[agent]` entries. This is
@@ -67,7 +69,16 @@ fn test_agent_tool_view_is_exactly_expected_set() {
 /// `multi_rename` is the one external-client entry: it stages its ready rows as a rename group
 /// on the same spine, and its handler (`executor/multi_rename.rs`) only reads the pane's cached
 /// listing and writes the proposal rows.
-const EXPECTED_PROPOSE_TOOL_NAMES: &[&str] = &["multi_rename", "propose_rename_plan", "propose_suggestions"];
+///
+/// `propose_server` (`agent/tools/suggestions/server.rs`) stages one zero-op server group: it
+/// reads the saved-server stores in memory, writes the proposal rows, takes no secret, contacts no
+/// server, and refuses on a turn the user didn't start. The user's click is what saves.
+const EXPECTED_PROPOSE_TOOL_NAMES: &[&str] = &[
+    "multi_rename",
+    "propose_rename_plan",
+    "propose_suggestions",
+    "propose_server",
+];
 
 /// The agent's `Memory` tools, authored by hand for the same reason the `Propose` list is.
 ///
@@ -78,10 +89,47 @@ const EXPECTED_PROPOSE_TOOL_NAMES: &[&str] = &["multi_rename", "propose_rename_p
 /// read the handler. Tagging an entry `access: Memory` without listing it here fails.
 const EXPECTED_MEMORY_TOOL_NAMES: &[&str] = &["memory_write", "memory_edit"];
 
-/// The agent can propose; only the user can approve; and the only thing it writes is its own
-/// notes. Structurally: every tool in the agent's view is `Access::Read`, `Access::Propose`, or
-/// `Access::Memory`, and NEVER `Access::Write`. The regression anchor for "the agent still can't
-/// touch the user's files, and can now ask and remember".
+/// The `Session` tools, authored by hand: each opens a session to a place the user saved, with
+/// credentials the user stored, and only on a turn the user started (agent invariant 7).
+///
+/// ⚠️ **The third widening.** "Ask Cmdr changes nothing outside its memory folder" gains "and may
+/// connect a place you saved". No structural check can prove a handler dials only a saved place
+/// and edits no server, credential, pin, or setting, so a human puts each name here on purpose,
+/// having read the handler.
+///
+/// `connect_volume` (`agent/tools/connect.rs`): dials only a saved, unregistered place through
+/// `saved_servers::connect_saved_place` with no secret and no account, hands a dropped one to the
+/// frontend's reconnect manager, and takes no address, secret, or account parameter.
+const EXPECTED_SESSION_TOOL_NAMES: &[&str] = &["connect_volume"];
+
+/// Every registry entry in either view, with its access class.
+fn shipped_tools() -> Vec<(String, Option<Access>)> {
+    agent_tool_view()
+        .into_iter()
+        .chain(get_all_tools())
+        .map(|tool| {
+            let access = tool_access(&tool.name);
+            (tool.name, access)
+        })
+        .collect()
+}
+
+/// Whether the entries classified `access` are exactly `allowlist`. Over a plain list, so the
+/// check is testable against an entry the shipped registry doesn't carry.
+fn matches_allowlist(tools: &[(String, Option<Access>)], access: Access, allowlist: &[&str]) -> bool {
+    use std::collections::BTreeSet;
+    let actual: BTreeSet<&str> = tools
+        .iter()
+        .filter(|(_, class)| *class == Some(access))
+        .map(|(name, _)| name.as_str())
+        .collect();
+    actual == allowlist.iter().copied().collect()
+}
+
+/// The agent can propose; only the user can approve; it writes only its own notes; and it
+/// connects only places the user saved. Structurally: every tool in the agent's view is
+/// `Access::Read`, `Access::Propose`, `Access::Memory`, or `Access::Session`, and NEVER
+/// `Access::Write`. The regression anchor for "the agent still can't touch the user's files".
 #[test]
 fn test_agent_tool_view_never_writes() {
     for tool in agent_tool_view() {
@@ -89,12 +137,34 @@ fn test_agent_tool_view_never_writes() {
         assert!(
             matches!(
                 access,
-                Some(Access::Read) | Some(Access::Propose) | Some(Access::Memory)
+                Some(Access::Read) | Some(Access::Propose) | Some(Access::Memory) | Some(Access::Session)
             ),
-            "agent-visible tool '{}' is {access:?} — the agent view admits Read, Propose, and Memory, never Write",
+            "agent-visible tool '{}' is {access:?} — the agent view admits Read, Propose, Memory, and Session, never Write",
             tool.name
         );
     }
+}
+
+/// A `Session` tool only exists if a human authored it into `EXPECTED_SESSION_TOOL_NAMES`, in
+/// either view.
+#[test]
+fn test_session_tools_are_an_explicit_allowlist() {
+    assert!(
+        matches_allowlist(&shipped_tools(), Access::Session, EXPECTED_SESSION_TOOL_NAMES),
+        "the registry's Session tools differ from the hand-authored allowlist"
+    );
+}
+
+/// The allowlist check has teeth: a `Session` entry nobody listed fails it. A test-only entry,
+/// never in the shipped registry.
+#[test]
+fn test_an_unlisted_session_tool_fails_the_allowlist() {
+    let mut tools = shipped_tools();
+    tools.push(("connect_anything".to_owned(), Some(Access::Session)));
+    assert!(
+        !matches_allowlist(&tools, Access::Session, EXPECTED_SESSION_TOOL_NAMES),
+        "an unlisted Session entry must fail the allowlist"
+    );
 }
 
 /// A `Memory` tool only exists if a human authored it into `EXPECTED_MEMORY_TOOL_NAMES`. The

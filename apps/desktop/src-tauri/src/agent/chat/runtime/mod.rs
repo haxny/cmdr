@@ -47,24 +47,28 @@ use tokio_util::sync::CancellationToken;
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::types::ProviderTag;
 use crate::agent::store::{self, AgentStoreError};
+use crate::agent::types::TurnOrigin;
 use crate::ignore_poison::IgnorePoison;
 
+use super::cancel;
 use super::context::{self, ContextEnvelope};
 use cmdr_md::read_cmdr_md;
 
 mod analytics;
 mod cmdr_md;
+mod consume;
 mod cost;
 mod dispatch;
 mod events;
+mod limits;
 mod repeats;
 mod turn;
 mod types;
 
 pub(crate) use analytics::send_refused;
 pub(crate) use cost::day_for;
-pub use dispatch::{AppHandleDispatcher, ToolDispatchOutcome, ToolDispatcher, dispatch_ok};
-pub use events::{AgentChatEvent, AgentErrorKind, ChatEventSink};
+pub use dispatch::{AppHandleDispatcher, CallContext, ToolDispatchOutcome, ToolDispatcher, dispatch_ok};
+pub use events::{AgentChatEvent, AgentErrorKind, ChatEventSink, ResolvedCall};
 pub use turn::run_turn;
 pub use types::{TurnParams, TurnResult, UserTurn};
 
@@ -145,6 +149,10 @@ impl ChatRuntime {
         provider: ProviderTag,
         model: String,
         prompt_budget: usize,
+        chat_memory_tokens: usize,
+        call: crate::agent::llm::CallSettings,
+        // Where this turn pauses on spend, `None` for "Never" (resolved at send, like the budget).
+        spend_pause: Option<crate::agent::chat::spend_pause::SpendPause>,
         conversation_id: Option<i64>,
         text: String,
         envelope: ContextEnvelope,
@@ -161,22 +169,25 @@ impl ChatRuntime {
 
         // Single-flight: a concurrent send for this thread queues behind this guard.
         let _guard = self.locks.acquire(conversation_id, &sink).await;
+        let _in_flight = mark_in_flight(&conn, conversation_id);
 
-        let cmdr_md = read_cmdr_md();
-        let memory = crate::agent::memory::read_for_turn(app, prompt_budget);
-        let tools = crate::agent::tools::agent_tool_declarations();
+        let PrefixParts { cmdr_md, memory, tools } = PrefixParts::read(app, prompt_budget);
         let dispatcher = AppHandleDispatcher::new(app.clone(), conversation_id);
         let params = TurnParams {
             conversation_id,
+            origin: TurnOrigin::Text,
             user: Some(UserTurn::Text(&text)),
             cmdr_md: cmdr_md.as_deref(),
-            memory: memory.as_deref(),
+            memory: &memory,
             envelope: &envelope,
             offset,
             now_secs: now,
             provider,
             model,
             prompt_budget,
+            chat_memory_tokens,
+            call,
+            spend_pause,
         };
         run_turn(llm, &dispatcher, &conn, &tools, &params, &sink, &cancel).await;
         Ok(conversation_id)
@@ -208,6 +219,7 @@ impl ChatRuntime {
     ) -> Result<TurnResult, AgentStoreError> {
         let conn = store::open_write_connection(&self.db_path)?;
         let _guard = self.locks.acquire(params.conversation_id, sink).await;
+        let _in_flight = mark_in_flight(&conn, params.conversation_id);
         Ok(run_turn(llm, dispatcher, &conn, tools, params, sink, cancel).await)
     }
 
@@ -270,6 +282,55 @@ impl ChatRuntime {
     }
 }
 
+/// What a rail turn reads fresh from disk: the user's `CMDR.md`, the memory slice for this
+/// budget, and the tool declarations. One reader for the send and the rail's baseline gauge, so
+/// the baseline can't drift from what a call actually carries. Memory is read here but rides the
+/// user turn, never the prefix (`context::memory_notes_for_turn`).
+struct PrefixParts {
+    cmdr_md: Option<String>,
+    memory: Vec<crate::agent::llm::types::MemoryNote>,
+    tools: Vec<crate::agent::llm::types::ToolDeclaration>,
+}
+
+impl PrefixParts {
+    fn read<R: Runtime>(app: &AppHandle<R>, prompt_budget: usize) -> Self {
+        Self {
+            cmdr_md: read_cmdr_md(),
+            memory: crate::agent::memory::read_for_turn(app, prompt_budget),
+            tools: crate::agent::tools::agent_tool_declarations(),
+        }
+    }
+}
+
+/// What a fresh thread's first call costs before the user has said a word, at this budget: the
+/// prefix plus the memory notes that first turn carries (`context::fresh_thread_tokens`), read
+/// the way a send reads them. The gauge's baseline.
+pub fn baseline_prompt_tokens<R: Runtime>(app: &AppHandle<R>, prompt_budget: usize) -> usize {
+    let parts = PrefixParts::read(app, prompt_budget);
+    let system_prompt = super::system_prompt::system_prompt();
+    let prefix = context::PrefixInputs {
+        system_prompt: &system_prompt,
+        cmdr_md: parts.cmdr_md.as_deref(),
+        tools: &parts.tools,
+    };
+    context::fresh_thread_tokens(&prefix, &parts.memory)
+}
+
+/// Mark the thread's turn as running since its last row, for a reload to tell this turn's
+/// result-less calls from a crashed turn's. Taken only while holding the single-flight lock, so
+/// the mark is this turn's and no other's; it drops (before the lock does) when the turn ends.
+/// A store that can't say its last row leaves the turn unmarked: a reload then reads it as
+/// settled, which only loses the running spinner.
+fn mark_in_flight(conn: &rusqlite::Connection, conversation_id: i64) -> Option<cancel::InFlightMark> {
+    match store::last_seq(conn, conversation_id) {
+        Ok(since_seq) => Some(cancel::mark_in_flight(conversation_id, since_seq)),
+        Err(e) => {
+            log::warn!(target: LOG_TARGET, "couldn't mark the running turn: {e}");
+            None
+        }
+    }
+}
+
 /// One timeline row [`ChatRuntime::record_slot_change`] wrote: its identity, its clock, and
 /// what it says. The IPC layer projects it into the rail's `MessageView`; keeping the typed
 /// event here rather than a rendered block is what keeps the runtime free of display copy.
@@ -278,6 +339,8 @@ pub struct RecordedSlotEvent {
     pub message_id: i64,
     pub seq: i64,
     pub created_at: i64,
+    /// The turn the row sits after (slot changes land between turns), as history reads it.
+    pub turn_id: Option<i64>,
     pub event: store::ConversationEvent,
 }
 
@@ -293,6 +356,7 @@ fn append_slot_event(
         message_id,
         seq,
         created_at,
+        turn_id: store::turn_opener_at(conn, conversation_id, seq)?,
         event,
     })
 }
@@ -334,6 +398,12 @@ mod test_support;
 
 #[cfg(test)]
 mod context_budget_tests;
+#[cfg(test)]
+mod limit_tests;
+#[cfg(test)]
+mod line_events_tests;
+#[cfg(test)]
+mod memory_cache_tests;
 #[cfg(test)]
 mod repeat_tests;
 #[cfg(test)]

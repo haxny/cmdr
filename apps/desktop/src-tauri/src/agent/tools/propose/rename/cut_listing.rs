@@ -34,12 +34,18 @@ pub struct PaneListingCuts {
     latest: Mutex<HashMap<i64, ListingSeen>>,
 }
 
-/// The three numbers of a `list_pane_files` result this counter reads, by their wire names.
+/// What this counter reads off a `list_pane_files` result, by their wire names.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 struct ListingSeen {
-    path: String,
+    location: SeenFolder,
     total: usize,
     returned: usize,
+}
+
+/// The listed folder's half of its `location`.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+struct SeenFolder {
+    path: String,
 }
 
 impl PaneListingCuts {
@@ -66,7 +72,7 @@ impl PaneListingCuts {
         if seen.returned >= seen.total {
             return None;
         }
-        let folder = Path::new(&seen.path);
+        let folder = Path::new(&seen.location.path);
         let rows = plan
             .rows
             .iter()
@@ -134,8 +140,7 @@ mod tests {
             call_id: "list-1".to_string(),
             content: json!({
                 "pane": "left",
-                "path": path,
-                "volumeId": "root",
+                "location": { "volumeId": "root", "path": path },
                 "scope": "folder",
                 "total": total,
                 "returned": returned,

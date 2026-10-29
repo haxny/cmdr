@@ -7,7 +7,12 @@ const { resolveLocationMock, addToastMock } = vi.hoisted(() => ({
 vi.mock('./resolve-location', () => ({ resolveLocation: resolveLocationMock }))
 vi.mock('#lib/ui/toast/index.js', () => ({ addToast: addToastMock }))
 
-import { navigateToDirInPane, navigateToFileInPane, revealSearchResultInPane } from './navigate-and-select'
+import {
+  navigateToDirInPane,
+  navigateToFileInPane,
+  revealPathInBestPane,
+  revealSearchResultInPane,
+} from './navigate-and-select'
 import type { ExplorerAPI } from '../../../routes/(main)/explorer-api'
 import type { NavigateResult } from '../pane/navigate'
 import type { Location } from '#lib/tauri-commands/index.js'
@@ -132,5 +137,64 @@ describe('revealSearchResultInPane (the search "Go to file" edge)', () => {
     expect(addToastMock).toHaveBeenCalledWith('Couldn’t reach that location’s drive. It might be disconnected.', {
       level: 'info',
     })
+  })
+})
+
+describe('revealPathInBestPane (the Ask Cmdr tool line’s path links)', () => {
+  beforeEach(() => {
+    resolveLocationMock.mockReset()
+    addToastMock.mockReset().mockReturnValue('toast-id')
+  })
+
+  /** An explorer whose focused left pane shows `/elsewhere`, so every reveal navigates. */
+  function bestPaneExplorer(moveCursor = vi.fn(() => Promise.resolve())) {
+    const navigate = vi.fn(() => started())
+    const explorer = {
+      navigate,
+      moveCursor,
+      getFocusedPane: () => 'left' as const,
+      setFocusedPane: vi.fn(),
+      getPaneLocation: () => ({ volumeId: 'root', volumePath: '/', path: '/elsewhere' }),
+    } as unknown as ExplorerAPI
+    return { explorer, navigate, moveCursor }
+  }
+
+  it('opens a folder in the focused pane', async () => {
+    resolveLocationMock.mockResolvedValue({ ok: true, location: loc('/Users/me/Downloads') })
+    const { explorer, navigate, moveCursor } = bestPaneExplorer()
+
+    await revealPathInBestPane(explorer, { path: '/Users/me/Downloads', kind: 'folder' })
+
+    expect(resolveLocationMock).toHaveBeenCalledWith('/Users/me/Downloads')
+    expect(navigate).toHaveBeenCalledWith({ pane: 'left', to: { goTo: loc('/Users/me/Downloads') }, source: 'user' })
+    expect(moveCursor).not.toHaveBeenCalled()
+  })
+
+  it('opens a file’s folder and lands on the file', async () => {
+    resolveLocationMock.mockResolvedValue({ ok: true, location: loc('/Users/me') })
+    const { explorer, moveCursor } = bestPaneExplorer()
+
+    await revealPathInBestPane(explorer, { path: '/Users/me/notes.txt', kind: 'file' })
+
+    expect(resolveLocationMock).toHaveBeenCalledWith('/Users/me')
+    expect(moveCursor).toHaveBeenCalledWith('left', 'notes.txt')
+  })
+
+  it('stays in the folder when the file isn’t in the listing (a hidden dotfile), never throwing', async () => {
+    resolveLocationMock.mockResolvedValue({ ok: true, location: loc('/Users/me') })
+    const { explorer, navigate } = bestPaneExplorer(vi.fn(() => Promise.reject(new Error('no such entry'))))
+
+    await expect(revealPathInBestPane(explorer, { path: '/Users/me/.env', kind: 'file' })).resolves.toBeUndefined()
+    expect(navigate).toHaveBeenCalled()
+  })
+
+  it('shows the friendly toast and goes nowhere when the drive can’t be reached', async () => {
+    resolveLocationMock.mockResolvedValue({ ok: false, reason: 'no-volume' })
+    const { explorer, navigate } = bestPaneExplorer()
+
+    await revealPathInBestPane(explorer, { path: '/Volumes/Gone/x', kind: 'folder' })
+
+    expect(navigate).not.toHaveBeenCalled()
+    expect(addToastMock).toHaveBeenCalled()
   })
 })

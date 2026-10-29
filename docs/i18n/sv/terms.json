@@ -44,6 +44,17 @@
     "forms": "ett konto, kontot; Apple Account → Apple-konto",
     "sources": "MS terminology (account → konto); catalog (servers.sheet.identityLocked, errors.json)"
   },
+  "action": {
+    "chosen": "åtgärd",
+    "exceptions": {
+      "onboarding.stepAi.comparisonIntro": "common actions → vanliga saker: everyday prose, no named control"
+    },
+    "accept": ["åtgärder"],
+    "forms": "Dialog actions → Dialogåtgärder; the actions below → åtgärderna nedan",
+    "confidence": "high",
+    "sources": "macOS Finder LocalizableMerged SP95/TL26 (Action → Åtgärd); catalog (queryUi.dialog.actionsAria)",
+    "note": "Shares its Swedish word with operation (åtgärd)."
+  },
   "activate": {
     "chosen": "aktivera",
     "confidence": "high",
@@ -91,6 +102,17 @@
     "forms": "Cmdr Settings section → Avancerat; quote settings.section.advanced exactly in navigation paths",
     "sources": "Network.appex Localizable (ADVANCED); catalog settings.section.advanced (macOS 26.6.2 build 25G83, live loctable key cross-reference, 2026-10-02)"
   },
+  "ai-context": {
+    "chosen": "kontext",
+    "confidence": "tentative",
+    "sources": "MS terminology says sammanhang (the general sense); kontext is the AI-context word; askCmdr.cost.estimateTooltip"
+  },
+  "ai-agent": {
+    "chosen": "agent",
+    "forms": "definite agenten",
+    "confidence": "high",
+    "sources": "Microsoft terminology (agent → agent); catalog (queryUi.ai.lead); macOS has no AI-agent sense"
+  },
   "ai-feature": {
     "accept": ["AI:n", "AI-"],
     "chosen": "AI-funktioner",
@@ -112,6 +134,13 @@
     "confidence": "high",
     "forms": "neuter ett svar, svaret; a server's reply takes the same word (Serverns svar)",
     "sources": "MS terminology (reply → svar); catalog (Serverns svar, svaret)"
+  },
+  "ai-lookup": {
+    "accept": ["sökningar", "sökomgång"],
+    "chosen": "sökning",
+    "confidence": "high",
+    "forms": "a round of lookups → sökomgång / sökomgångar",
+    "sources": "catalog precedent: `askCmdr.error.repeatedToolCall`, `askCmdr.event.contextTrimmed`"
   },
   "ai-tool": {
     "accept": ["platform tools"],
@@ -701,11 +730,23 @@
     "forms": "ansluta, Anslut, Ansluter till {name}…, anslutning, ansluten; Connect as guest → Anslut som gäst",
     "sources": "macOS Finder (Anslut till server, Ansluter till ^0…)"
   },
+  "conversation": {
+    "chosen": "samtal",
+    "confidence": "high",
+    "accept": ["konversation", "chatt"],
+    "sources": "shipped settings.askCmdr.chatMemorySize.description and the chat ruling's note (conversation → samtal); MS terminology says konversation"
+  },
   "learn-more": {
     "chosen": "Mer om",
     "confidence": "high",
     "forms": "More about “X” → Mer om ”X”",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "nivå",
+    "confidence": "high",
+    "sources": "MS terminology (nivå); shipped settings.archives.compressionLevel.label",
+    "accept": ["nivåer", "zoom"]
   },
   "link": {
     "chosen": "länk",
@@ -1827,6 +1868,13 @@
     "confidence": "high",
     "forms": "listan; compound stem list- (Listfärgläggning); a named list by apposition: listan Servrar; compounds serverlista, värdlista, volymlista",
     "sources": "catalog (Uppdatera listan, Läser in listan…, Tillbaka till värdlistan); standard Swedish"
+  },
+  "listing": {
+    "accept": ["listar", "listade", "Lista"],
+    "chosen": "lista",
+    "confidence": "high",
+    "forms": "Ask Cmdr tool line → Listar <place>{name}</place> / Listade <place>{name}</place>; a transfer listing files → Listar filerna…; the Settings section Listing → Lista (settings.section.listing)",
+    "sources": "KDE Dolphin sv (ett kompakt visningsläge som listar kataloger och filer); catalog (askCmdr.tool.listDir.doing Listar en mapp, fileOperations.transferTree.preparing Listar filerna…)"
   },
   "local": {
     "accept": ["lokalt", "lokala"],
@@ -3012,7 +3060,7 @@
     "sources": "catalog common.sizeUnit.tebibyte; IEC 80000-13 (binary) / SI (decimal)"
   },
   "skip": {
-    "accept": ["hoppar över", "hoppade över", "hoppas över", "överhoppad", "hoppas"],
+    "accept": ["hoppar över", "hoppade över", "hoppas över", "överhoppad", "hoppas", "hoppades över"],
     "chosen": "hoppa över",
     "confidence": "high",
     "forms": "outcome chip Överhoppad (tentative)",
@@ -3228,7 +3276,8 @@
   "thinking": {
     "chosen": "Tänker…",
     "confidence": "high",
-    "sources": "plain Swedish"
+    "sources": "plain Swedish",
+    "proseAccept": ["tänk"]
   },
   "this-mac": {
     "accept": ["den här datorn", "din Mac"],
@@ -3691,5 +3740,34 @@
     "confidence": "high",
     "forms": "an option or field label → Reguljärt uttryck; the short mode name Regex stays (queryUi.mode.regex.label, viewer.search.regex) and compounds with a hyphen (Regex-läge, regex-sökningar)",
     "sources": "catalog (queryUi.bar.placeholder.regex Reguljärt uttryck, queryUi.mode.regex.label Regex); Double Commander sv (Regular expressions → Reguljära uttryck, unverified: the pile has no sv Double Commander catalog); Total Commander sv (6626 RegE&x); MS terminology (regular expression → reguljärt uttryck)"
+  },
+  "start": {
+    "chosen": "starta",
+    "accept": ["startade", "startar", "startat", "startas", "börja", "börjar", "påbörjad"],
+    "confidence": "high",
+    "forms": "so nothing started → så inget startade; Why this didn’t start → Varför det här inte startade; a task about to begin → börja / börjar (Det gick inte att börja byta namn, Bildindexeringen börjar …); a step's pending chip → Inte påbörjad",
+    "sources": "catalog (suggestedOps.refusal.label Varför det här inte startade, errors.write.namedLeavesRefused.message.notASource så inget startade); Total Commander sv (Filen kan inte startas)"
+  },
+  "zip": {
+    "chosen": "zip",
+    "accept": ["zip-arkiv", "zip-arkivet", "zip-fil", "zip-filen", "zip-filer"],
+    "confidence": "high",
+    "forms": "a bare zip in prose → en zip; zip archive → zip-arkiv; the file itself → zip-filen; lowercase in running text (catalog: 17 zip-filen, four zip-arkiv) even though Finder writes Zip-arkiv",
+    "sources": "macOS Finder sv (Zip-arkiv, ZIP-fil in CompressWithOptions); catalog (errors.write.archiveEntryNameRefused.title Det här namnet kan inte ligga i en zip, errors.write.namedLeavesRefused.message.routeCannotName zip-arkiv)"
+  },
+  "reasoning-effort": {
+    "chosen": "Ansträngning för resonemang",
+    "confidence": "tentative",
+    "sources": "OpenAI docs are English-only; no established rendering, so built from the locale’s reasoning wording"
+  },
+  "reasoning-effort-anthropic": {
+    "chosen": "Ansträngning",
+    "confidence": "tentative",
+    "sources": "Anthropic localized docs, platform.claude.com/docs/<lang>/build-with-claude/effort, read 2026-10-28: no sv docs; the catalog already says ansträngning"
+  },
+  "thinking-level": {
+    "chosen": "Tankenivå",
+    "confidence": "tentative",
+    "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
   }
 }

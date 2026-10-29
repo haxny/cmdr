@@ -104,19 +104,56 @@ fn above_threshold_is_inclusive_at_the_edge() {
     );
 }
 
-/// `top_above_threshold` keeps the ranking `above_threshold` drops: score desc and
+/// `top_under` with a threshold keeps the ranking `above_threshold` drops: score desc and
 /// inclusive at the bound.
 #[test]
-fn top_above_threshold_ranks_by_score() {
+fn top_under_with_a_threshold_ranks_by_score() {
     let (index, _dir) = populated_index(&[
         ("/exactly", 0.50, PathClass::Neutral),
         ("/above", 0.51, PathClass::UserContent),
         ("/top", 0.90, PathClass::ProjectRoot),
         ("/below", 0.49, PathClass::Neutral),
     ]);
-    let hits = index.top_above_threshold(10, 0.50).expect("top_above_threshold");
+    let hits = index.top_under(10, Some(0.50), "/").expect("top_under");
     let paths: Vec<&str> = hits.iter().map(|w| w.path.as_str()).collect();
     assert_eq!(paths, vec!["/top", "/above", "/exactly"]);
+}
+
+/// `top_under` keeps the folder itself and its descendants, never a sibling that
+/// merely shares the prefix, and folds case the way the store keys paths (on macOS).
+#[test]
+fn top_under_reads_one_subtree_ranked() {
+    let (index, _dir) = populated_index(&[
+        ("/home/docs", 0.40, PathClass::UserContent),
+        ("/home/docs/tax", 0.70, PathClass::UserContent),
+        ("/home/docs/tax/2026", 0.60, PathClass::UserContent),
+        ("/home/docsish", 0.95, PathClass::Neutral),
+        ("/home/other", 0.90, PathClass::Neutral),
+    ]);
+    let paths = |hits: Vec<ScoredWeight>| hits.into_iter().map(|w| w.path).collect::<Vec<_>>();
+
+    assert_eq!(
+        paths(index.top_under(10, None, "/home/docs/").expect("read")),
+        vec!["/home/docs/tax", "/home/docs/tax/2026", "/home/docs"]
+    );
+    // The store keys on `normalize_for_comparison`, which folds case only where the
+    // filesystem does (macOS); Linux keys are case-sensitive.
+    if cfg!(target_os = "macos") {
+        assert_eq!(
+            paths(index.top_under(10, None, "/HOME/Docs").expect("read")),
+            vec!["/home/docs/tax", "/home/docs/tax/2026", "/home/docs"],
+            "matched by the folded key"
+        );
+    }
+    assert_eq!(
+        paths(index.top_under(1, Some(0.65), "/home/docs").expect("read")),
+        vec!["/home/docs/tax"]
+    );
+    assert_eq!(
+        index.top_under(10, None, "/").expect("read").len(),
+        5,
+        "`/` is the volume"
+    );
 }
 
 /// `explain` recomputes the per-signal breakdown from the STORED signals via the
@@ -219,12 +256,29 @@ fn for_each_nonzero_weight_missing_db_visits_nothing() {
 /// `Unscored`. This is the distinction the compacted store leans on — a floored
 /// folder has no row, so the read side re-derives its floored-ness from the path.
 #[test]
+fn a_share_derives_no_os_root_floor() {
+    use super::{FloorReason, WeightLookup};
+    let (index, _dir) = populated_index(&[("/Users/me/proj", 0.8, PathClass::ProjectRoot)]);
+    let boot = index.with_path_space("/Users/me", IndexVolumeKind::Local);
+    assert_eq!(
+        boot.lookup("/Library/x").expect("lookup"),
+        WeightLookup::Floored(FloorReason::HiddenOrSystem)
+    );
+    let share = boot.with_path_space("/Users/me", IndexVolumeKind::Smb);
+    assert_eq!(
+        share.lookup("/Library/x").expect("lookup"),
+        WeightLookup::Unscored,
+        "a share's top-level Library is the user's folder"
+    );
+}
+
+#[test]
 fn lookup_distinguishes_scored_floored_and_unscored() {
     use super::{FloorReason, WeightLookup};
     // A scored folder under the home. Give the index a real home so the classifiers
     // agree with production.
     let (index, dir) = populated_index(&[("/Users/me/proj", 0.8, PathClass::ProjectRoot)]);
-    let index = index.with_home("/Users/me");
+    let index = index.with_path_space("/Users/me", IndexVolumeKind::Local);
     let _ = dir; // keep the temp dir alive
 
     // Scored: a stored row.
@@ -265,7 +319,7 @@ fn lookup_distinguishes_scored_floored_and_unscored() {
 #[test]
 fn explain_derives_a_floored_breakdown_for_a_rowless_floored_path() {
     let (index, dir) = populated_index(&[("/Users/me/proj", 0.8, PathClass::ProjectRoot)]);
-    let index = index.with_home("/Users/me");
+    let index = index.with_path_space("/Users/me", IndexVolumeKind::Local);
     let _ = dir;
 
     let node_modules = index

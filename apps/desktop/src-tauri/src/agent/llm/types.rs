@@ -1,13 +1,13 @@
 //! The typed message-part model the `AgentLlm` seam speaks.
 //!
-//! The genai spike proved the make-or-break invariant this file encodes: an
+//! The make-or-break invariant this file encodes: an
 //! assistant turn is an ordered list of **typed parts** (text, tool call,
 //! tool result, reasoning), and opaque reasoning state is **provider-tagged and
 //! rides on the part that owns it** — never flattened to `content: String +
 //! reasoning: String`. That lossy shape is exactly what breaks a multi-step tool
-//! loop on step 3 (spike Gaps A/B): the provider blob has to be re-attached to
+//! loop: the provider blob has to be re-attached to
 //! the right structural position, so it cannot be concatenated into a text field.
-//! See `DETAILS.md` for the mapping table and the spike-gap rationale.
+//! See `DETAILS.md` for the mapping table and the per-provider reasoning round-trip.
 //!
 //! These types carry `serde` for DB persistence (`main.db` `content_blocks`)
 //! and are pure data — no dependency on `genai` or `crate::ai`. The genai
@@ -59,7 +59,7 @@ impl AgentRole {
 /// where the opaque `blob` originated so a replay re-attaches it in the shape that
 /// provider expects. Distinguishes the two OpenAI surfaces because their reasoning
 /// round-trip differs (chat-completions is stateless; Responses carries encrypted
-/// items — spike Gap B).
+/// items).
 ///
 /// Two-way split, like the operation log's `token_enum!` types: the serde/specta
 /// wire form is camelCase (for IPC + `bindings.ts` — the `cost_meter` provider on
@@ -109,6 +109,59 @@ impl ProviderTag {
             "gemini" => Some(ProviderTag::Gemini),
             "local" => Some(ProviderTag::Local),
             _ => None,
+        }
+    }
+}
+
+/// How hard the model should think before it answers: a per-call input to
+/// [`AgentLlm::respond`](super::AgentLlm::respond), mapped onto each provider's own knob in
+/// `genai_impl.rs` (Anthropic `output_config.effort`, OpenAI `reasoning.effort` /
+/// `reasoning_effort`, Gemini `thinkingLevel` / `thinkingBudget`, DeepSeek `thinking.type`).
+/// The mapping table and its caveats: `DETAILS.md` § Reasoning effort.
+///
+/// An explicit level sent to a model that doesn't reason (OpenAI `gpt-4.1`, most local models) is
+/// a 400 there, so whatever offers the other levels must know the model reasons first. For a
+/// model known not to reason, [`CallSettings::model_reasons`] overrides even `ProviderDefault`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ReasoningEffort {
+    /// Send no effort and let the provider decide, except on the OpenAI Responses API, where
+    /// it means `medium` (OpenAI's documented default; `crate::ai` would otherwise pick `low`).
+    #[default]
+    ProviderDefault,
+    /// Ask for no reasoning. Models that can't stop thinking (Gemini Pro, Claude Fable) keep
+    /// their default.
+    Off,
+    Low,
+    Medium,
+    High,
+    /// The provider's highest level; where there is none above `high`, `high`.
+    Max,
+}
+
+/// What one [`AgentLlm::respond`](super::AgentLlm::respond) call asks of the model beyond the
+/// prompt: how hard to think, and the output ceiling that thinking shares with the reply and
+/// its tool calls. Resolved per slot by `chat::effort::resolve_effort`, which never pairs a
+/// level with a model that can't take it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CallSettings {
+    pub effort: ReasoningEffort,
+    pub max_output_tokens: u32,
+    /// Whether the model reasons, when something knows (`chat::effort::EffortOptions::reasons`).
+    /// `Some(false)` makes the call ask for no reasoning at all, whatever `effort` says: no
+    /// effort, and no reasoning summary or encrypted items back. On the OpenAI Responses API a
+    /// model that doesn't reason 400s on either ("Unsupported parameter: 'reasoning.effort'" /
+    /// "'reasoning.summary'", verified on `gpt-4.1-mini` and `gpt-4o`, `curl`, 2026-10-27).
+    pub model_reasons: Option<bool>,
+}
+
+impl Default for CallSettings {
+    /// The provider decides, inside the base reply slot.
+    fn default() -> Self {
+        Self {
+            effort: ReasoningEffort::ProviderDefault,
+            max_output_tokens: crate::agent::chat::budget::AGENT_MAX_OUTPUT_TOKENS,
+            model_reasons: None,
         }
     }
 }
@@ -185,6 +238,9 @@ pub enum ToolId {
     /// Stages a sweep of proposed file operations, or amends a pending group of
     /// one. It changes no file and cannot approve anything.
     ProposeSuggestions,
+    /// Stages a server to save, or a change to a saved one, for the user to approve. It saves
+    /// nothing, contacts no server, and refuses on a turn the user didn't start.
+    ProposeServer,
     /// A wake's typed way of saying it looked and found nothing worth raising. A pure
     /// signal: the handler changes nothing, and only the wake path acts on the call.
     NothingToSuggest,
@@ -193,6 +249,9 @@ pub enum ToolId {
     MemoryWrite,
     /// Changes or drops one exact, unique passage inside one memory file.
     MemoryEdit,
+    /// Brings a place the user saved to life with stored credentials, on a turn the user
+    /// started. The one `Session` tool: it dials only a saved place and asks for nothing.
+    ConnectVolume,
     /// A tool name the agent does not recognize (hallucinated, a typo, or a
     /// write/non-view tool). Carries the raw name for the transparent UI and the
     /// typed "tool not available" result; always refused by dispatch.
@@ -203,7 +262,7 @@ impl ToolId {
     /// Every known read-only variant, in wire order. Excludes [`ToolId::Unrecognized`]
     /// by design (it's the refusal case, never a view entry). The 1:1 structural test
     /// asserts these map exactly onto `agent_tool_view()`.
-    pub const KNOWN: [ToolId; 19] = [
+    pub const KNOWN: [ToolId; 21] = [
         ToolId::AppState,
         ToolId::ListDir,
         ToolId::ListPaneFiles,
@@ -220,9 +279,11 @@ impl ToolId {
         ToolId::ListSuggestions,
         ToolId::GetSuggestionGroup,
         ToolId::ProposeSuggestions,
+        ToolId::ProposeServer,
         ToolId::NothingToSuggest,
         ToolId::MemoryWrite,
         ToolId::MemoryEdit,
+        ToolId::ConnectVolume,
     ];
 
     /// The wire name for this tool: the genai `fn_name`, the DB token, and the IPC
@@ -245,9 +306,11 @@ impl ToolId {
             ToolId::ListSuggestions => "list_suggestions",
             ToolId::GetSuggestionGroup => "get_suggestion_group",
             ToolId::ProposeSuggestions => "propose_suggestions",
+            ToolId::ProposeServer => "propose_server",
             ToolId::NothingToSuggest => "nothing_to_suggest",
             ToolId::MemoryWrite => "memory_write",
             ToolId::MemoryEdit => "memory_edit",
+            ToolId::ConnectVolume => "connect_volume",
             ToolId::Unrecognized(name) => name.as_str(),
         }
     }
@@ -274,9 +337,11 @@ impl ToolId {
             "list_suggestions" => ToolId::ListSuggestions,
             "get_suggestion_group" => ToolId::GetSuggestionGroup,
             "propose_suggestions" => ToolId::ProposeSuggestions,
+            "propose_server" => ToolId::ProposeServer,
             "nothing_to_suggest" => ToolId::NothingToSuggest,
             "memory_write" => ToolId::MemoryWrite,
             "memory_edit" => ToolId::MemoryEdit,
+            "connect_volume" => ToolId::ConnectVolume,
             other => ToolId::Unrecognized(other.to_string()),
         }
     }
@@ -319,6 +384,37 @@ pub struct AgentToolCall {
     pub arguments: serde_json::Value,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub reasoning: Option<ReasoningState>,
+}
+
+impl AgentToolCall {
+    /// What makes two calls "the same call": the tool's wire name plus its whole arguments
+    /// object, keys sorted at every depth ([`canonical_json`]), so two calls that mean the same
+    /// thing render the same bytes whatever order the provider emitted their keys in. The call id
+    /// is NOT part of it (ids collide across rounds). One definition for the repeat breaker
+    /// (`chat/runtime/repeats.rs`) and the rail's repeat mark (`agent/tools/line/`).
+    pub fn identity_key(&self) -> String {
+        // A unit separator, so no tool name plus arguments can collide with another pair.
+        format!("{}\u{1f}{}", self.tool.as_wire_name(), canonical_json(&self.arguments))
+    }
+}
+
+/// `value` with every object's keys sorted, at every depth. Not `serde_json`'s own order: genai
+/// turns on `preserve_order` for the whole build, so a `Map` iterates as it was filled.
+fn canonical_json(value: &serde_json::Value) -> serde_json::Value {
+    match value {
+        serde_json::Value::Object(map) => {
+            let mut entries: Vec<_> = map.iter().collect();
+            entries.sort_by(|a, b| a.0.cmp(b.0));
+            serde_json::Value::Object(
+                entries
+                    .into_iter()
+                    .map(|(key, value)| (key.clone(), canonical_json(value)))
+                    .collect(),
+            )
+        }
+        serde_json::Value::Array(items) => serde_json::Value::Array(items.iter().map(canonical_json).collect()),
+        other => other.clone(),
+    }
 }
 
 /// The result of executing a tool, fed back to the model. `elided` records that
@@ -469,7 +565,21 @@ pub enum AgentPart {
     /// same way a digest opens a wake, and for the same reason: a rendered English sentence
     /// would freeze one locale's copy in `main.db` where no later locale pass can reach it.
     ProposalOutcomes(crate::agent::types::ProposalOutcomes),
+    /// The context envelope a user turn was sent with, rendered once at send
+    /// (`chat::context::render_envelope`) and replayed verbatim on every later call, so the
+    /// thread's earlier messages stay byte-identical and the provider's prompt cache holds.
+    /// The provider reads it as text; the rail never shows it and search never indexes it.
+    Envelope(String),
+    /// The agent's memory files that changed since the thread last carried them, captured at
+    /// send and persisted with the user turn. The provider reads [`MemoryNotes::render`] (the
+    /// fenced, announced block, `chat::context::memory_notes`); the rail never shows it and
+    /// search never indexes it.
+    MemoryNotes(MemoryNotes),
 }
+
+// The agent's memory part: see the module's own header.
+mod memory_notes;
+pub use memory_notes::{MemoryNote, MemoryNotes};
 
 /// A full message: a role, its ordered typed parts, and its timestamp. Every
 /// message carries `at` (unix secs) so the model can reason about gaps ("this
@@ -482,7 +592,7 @@ pub struct AgentMessage {
 }
 
 /// A tool the agent declares to the provider. Built from a [`ToolId`] plus its
-/// description and JSON schema. NEVER emitted with `strict: true` (spike Gap D:
+/// description and JSON schema. NEVER emitted with `strict: true` (
 /// OpenAI strict mode also demands all-required, which genai does not enforce, so
 /// an optional prop 400s); the genai mapping leaves strict unset.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -523,6 +633,11 @@ pub enum AgentDelta {
     Text(String),
     /// Opaque reasoning progressed; the UI shows "thinking…", content never surfaced.
     ReasoningTick,
+    /// The provider said it's still working without saying anything yet (Anthropic's `ping`, a
+    /// Gemini status update, the stream opening). Never shown; it only proves the call isn't
+    /// stalled (`chat::context::STREAM_STALL_TIMEOUT`), so a model thinking quietly between its
+    /// provider's keep-alives isn't ended as one.
+    KeepAlive,
     ToolCallStarted {
         call_id: String,
         tool: ToolId,

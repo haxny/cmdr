@@ -1220,6 +1220,26 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label.reasoningEffort": "Érvelés mértéke",
+  "@settings.ai.reasoningEfforts.label.reasoningEffort": {
+    "sourceHash": "3236aee"
+  },
+  "settings.ai.reasoningEfforts.label.effort": "Erőfeszítés",
+  "@settings.ai.reasoningEfforts.label.effort": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.label.thinkingLevel": "Gondolkodási szint",
+  "@settings.ai.reasoningEfforts.label.thinkingLevel": {
+    "sourceHash": "96f115b"
+  },
+  "settings.ai.reasoningEfforts.description": "Mennyi ideig gondolkodik a modell, mielőtt válaszol. Több gondolkodás segít a trükkös feladatoknál, de a válaszok lassabban érkeznek, és a gondolkodást kimenetként számlázzák.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "érvelés mértéke, erőfeszítés, ráfordítás, érvelés, gondolkodás, gondolkodik, mélység, sebesség, költség, minőség",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "3bbb127"
+  },
   "settings.ai.localContextSize.label": "Kontextusablak",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2282,7 +2302,7 @@
   },
   "settings.askCmdr.openAiSettings": "AI-beállítások megnyitása",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Szolgáltató és modell",
   "@settings.askCmdr.provider.title": {
@@ -2300,9 +2320,9 @@
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "Az a modell, amit a csevegés használ. Hagyd üresen, hogy ugyanazt a modellt használja, mint a Cmdr többi AI-funkciója. Példa: claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "Az a modell, amit a csevegés használ. Hagyd üresen, hogy ugyanazt a modellt használja, mint a Cmdr többi AI-funkciója. Példa: claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
-    "sourceHash": "881f8a4"
+    "sourceHash": "e301e99"
   },
   "settings.askCmdr.interactiveModel.placeholder": "Mint a Cmdr más AI-funkciói",
   "@settings.askCmdr.interactiveModel.placeholder": {
@@ -2316,9 +2336,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "A beszélgetésből ennyit küld el a Cmdr a modellnek. Az automatikus a modell ismert korlátját követi.",
+  "settings.askCmdr.chatMemorySize.description": "A beszélgetésből ennyit küld el a Cmdr a modellnek. Az automatikus a modell teljes kontextusablakát használja; egy megadott méret alacsonyabb korlátot szab, így kevesebbet költesz.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automatikus (ajánlott)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {
@@ -2327,6 +2347,22 @@
   "settings.askCmdr.chatMemorySize.overWindow": "Lehet, hogy a modelled visszautasít egy ilyen hosszú üzenetet. A Cmdr megtartja a beállított értéket.",
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
+  },
+  "settings.askCmdr.spendPause.label": "Rákérdezés, ha egy válasz többe kerül, mint",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Egy válasz sok keresést futtathat. Ha átlépi ezt a becsült költséget, a Cmdr szünetelteti, és megkérdez, mielőtt többet költene. A becslés listaárakkal számol, így a gyorsítótárazás miatt a valódi költség általában alacsonyabb.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Soha",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "ár, pénz, költés, kiadás, keret, limit, szünet, dollár, drága, számla",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
   },
   "settings.askCmdr.chatMemorySize.keywords": "csevegés, memória, kontextus, ablak, token, méret, keret, előzmények",
   "@settings.askCmdr.chatMemorySize.keywords": {
@@ -2931,6 +2967,31 @@
   "settings.advanced.card.updates": "Frissítések",
   "@settings.advanced.card.updates": {
     "sourceHash": "22e2bad"
+  },
+  "settings.advanced.card.askCmdr": "Ask Cmdr",
+  "@settings.advanced.card.askCmdr": {
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Product name of the in-app assistant, kept verbatim in every locale per the en @key note; matches settings.section.askCmdr and settings.askCmdr.enabled.label."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Eszközcsoportok a válasz megérkezésekor",
+  "@settings.askCmdr.toolGroupsOnAnswer.label": {
+    "sourceHash": "e5e922b"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Az Ask Cmdr megmutatja, mit néz az AI munka közben. Válaszd ki, hogy ezek a sorok összecsukódjanak-e, amikor megérkezik a válasz.",
+  "@settings.askCmdr.toolGroupsOnAnswer.description": {
+    "sourceHash": "785da0a"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Csukódjanak össze",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
+    "sourceHash": "01052be"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Maradjanak úgy, ahogy hagytam",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
+    "sourceHash": "0aa6718"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "asszisztens, segéd, csevegés, összecsukás, kinyitás, lenyitás, eszközök, lépések, válasz, sorok, elrejtés",
+  "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
+    "sourceHash": "6a9f055"
   },
   "settings.updates.card.updates": "Frissítések",
   "@settings.updates.card.updates": {

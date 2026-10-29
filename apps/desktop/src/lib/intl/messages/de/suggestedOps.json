@@ -3,9 +3,9 @@
   "@suggestedOps.title": {
     "sourceHash": "1a1f5b9"
   },
-  "suggestedOps.description": "Die KI hat das vorgeschlagen. Nichts läuft, bevor du zustimmst.",
+  "suggestedOps.description": "Der Agent hat die Aktionen unten vorgeschlagen. Wende sie nur an, wenn du einverstanden bist.",
   "@suggestedOps.description": {
-    "sourceHash": "73255a0"
+    "sourceHash": "4d98280"
   },
   "suggestedOps.approvalNoticeDismiss": "Nicht mehr anzeigen",
   "@suggestedOps.approvalNoticeDismiss": {
@@ -35,9 +35,9 @@
   "@suggestedOps.empty": {
     "sourceHash": "b93eccd"
   },
-  "suggestedOps.loadFailed": "Cmdr konnte die Vorschläge nicht lesen. Schließ das und öffne es noch mal.",
+  "suggestedOps.loadFailed": "Cmdr konnte die Vorschläge nicht lesen. Schließ diesen Dialog und öffne ihn noch mal.",
   "@suggestedOps.loadFailed": {
-    "sourceHash": "ef0da3e"
+    "sourceHash": "139450e"
   },
   "suggestedOps.agentReason": "Warum:",
   "@suggestedOps.agentReason": {
@@ -54,6 +54,34 @@
   "suggestedOps.fileCount": "{countText} {count, plural, one {Datei} other {Dateien}}",
   "@suggestedOps.fileCount": {
     "sourceHash": "76ef0a6"
+  },
+  "suggestedOps.action.move": "Bewegen",
+  "@suggestedOps.action.move": {
+    "sourceHash": "6ecc3df"
+  },
+  "suggestedOps.action.copy": "Kopieren",
+  "@suggestedOps.action.copy": {
+    "sourceHash": "e21f935"
+  },
+  "suggestedOps.action.trash": "In den Papierkorb bewegen",
+  "@suggestedOps.action.trash": {
+    "sourceHash": "9adcdf3"
+  },
+  "suggestedOps.action.delete": "Löschen",
+  "@suggestedOps.action.delete": {
+    "sourceHash": "e2d0a54"
+  },
+  "suggestedOps.action.rename": "Umbenennen",
+  "@suggestedOps.action.rename": {
+    "sourceHash": "3064d79"
+  },
+  "suggestedOps.action.compress": "Komprimieren",
+  "@suggestedOps.action.compress": {
+    "sourceHash": "033fc04"
+  },
+  "suggestedOps.action.extract": "Entpacken",
+  "@suggestedOps.action.extract": {
+    "sourceHash": "c15301c"
   },
   "suggestedOps.approve.move": "{countText} {count, plural, one {Datei} other {Dateien}} bewegen",
   "@suggestedOps.approve.move": {
@@ -82,6 +110,14 @@
   "suggestedOps.approve.extract": "{countText} {count, plural, one {Archiv} other {Archive}} entpacken",
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
+  },
+  "suggestedOps.approve.addServer": "Server sichern",
+  "@suggestedOps.approve.addServer": {
+    "sourceHash": "726b9af"
+  },
+  "suggestedOps.approve.editServer": "Änderungen sichern",
+  "@suggestedOps.approve.editServer": {
+    "sourceHash": "dd0ae7a"
   },
   "suggestedOps.reject": "Ablehnen",
   "@suggestedOps.reject": {
@@ -139,13 +175,13 @@
   "@suggestedOps.irreversible.delete": {
     "sourceHash": "e32da9a"
   },
-  "suggestedOps.blocked.noTrash": "Ausführen nicht möglich: Dieses Laufwerk hat keinen Papierkorb",
-  "@suggestedOps.blocked.noTrash": {
-    "sourceHash": "f08e038"
+  "suggestedOps.noTrash": "Dieses Laufwerk hat keinen Papierkorb",
+  "@suggestedOps.noTrash": {
+    "sourceHash": "38a6adc"
   },
-  "suggestedOps.blocked.noTrashTooltip": "Das Laufwerk, auf dem diese Dateien liegen, hat keinen Papierkorb. Das Bewegen dorthin kann also nicht klappen, und es würde nichts passieren. Lehne den Vorschlag ab, oder lösche die Dateien selbst, wenn du das möchtest.",
-  "@suggestedOps.blocked.noTrashTooltip": {
-    "sourceHash": "f2a5d5f"
+  "suggestedOps.noTrashTooltip": "Das Laufwerk, auf dem diese Dateien liegen, hat keinen Papierkorb, deshalb werden sie nach deiner Zustimmung endgültig gelöscht.",
+  "@suggestedOps.noTrashTooltip": {
+    "sourceHash": "4327cb2"
   },
   "suggestedOps.irreversible.overwrite": "Das lässt sich nicht widerrufen: Ein vorhandenes Archiv wird ersetzt",
   "@suggestedOps.irreversible.overwrite": {
@@ -154,6 +190,14 @@
   "suggestedOps.irreversible.other": "Das lässt sich nicht widerrufen",
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
+  },
+  "suggestedOps.reversible.forgetServer": "Du kannst das widerrufen: den Server in der Liste „Server“ vergessen",
+  "@suggestedOps.reversible.forgetServer": {
+    "sourceHash": "892c381"
+  },
+  "suggestedOps.reversible.changeServerBack": "Du kannst das widerrufen: die Servereinstellungen in der Liste „Server“ zurücksetzen",
+  "@suggestedOps.reversible.changeServerBack": {
+    "sourceHash": "ff1ea36"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr legt diesen Ordner an",
   "@suggestedOps.folderWillBeCreated": {
@@ -308,12 +352,94 @@
   "@suggestedOps.refusal.couldNotStart.message": {
     "sourceHash": "77ef48b"
   },
-  "suggestedOps.refusal.couldNotStart.suggestion": "Lehne den Vorschlag ab und bitte die KI, das noch einmal vorzuschlagen.",
+  "suggestedOps.refusal.couldNotStart.suggestion": "Lehne den Vorschlag ab und bitte Cmdr, das noch einmal vorzuschlagen.",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
-    "sourceHash": "5b5b779"
+    "sourceHash": "1d2b1bd"
+  },
+  "suggestedOps.refusal.serverLabel": "Warum nichts gesichert wurde",
+  "@suggestedOps.refusal.serverLabel": {
+    "sourceHash": "c1958af"
+  },
+  "suggestedOps.refusal.serverChanged.message": "Dieser Server wurde geändert, nachdem die KI das vorgeschlagen hat, deshalb hat Cmdr nichts gesichert.",
+  "@suggestedOps.refusal.serverChanged.message": {
+    "sourceHash": "a346372"
+  },
+  "suggestedOps.refusal.serverChanged.suggestion": "Bitte Cmdr, das noch einmal vorzuschlagen, oder bearbeite den Server in der Liste „Server“.",
+  "@suggestedOps.refusal.serverChanged.suggestion": {
+    "sourceHash": "cab1352"
+  },
+  "suggestedOps.refusal.alreadySaved.message": "Dieser Server ist schon in deiner Liste „Server“, deshalb hat Cmdr nichts gesichert.",
+  "@suggestedOps.refusal.alreadySaved.message": {
+    "sourceHash": "111276b"
+  },
+  "suggestedOps.refusal.alreadySaved.suggestion": "Öffne den Server über die Liste „Server“ oder bitte Cmdr stattdessen, eine Änderung daran vorzuschlagen.",
+  "@suggestedOps.refusal.alreadySaved.suggestion": {
+    "sourceHash": "6ec8bdc"
+  },
+  "suggestedOps.refusal.nameTaken.message": "Ein anderer gespeicherter Server heißt schon {name}, deshalb hat Cmdr nichts gesichert.",
+  "@suggestedOps.refusal.nameTaken.message": {
+    "sourceHash": "1d0c01c"
+  },
+  "suggestedOps.refusal.nameTaken.suggestion": "Bitte Cmdr, einen anderen Namen vorzuschlagen.",
+  "@suggestedOps.refusal.nameTaken.suggestion": {
+    "sourceHash": "e366b0c"
+  },
+  "suggestedOps.server.add": "Server hinzufügen",
+  "@suggestedOps.server.add": {
+    "sourceHash": "8667e21"
+  },
+  "suggestedOps.server.change": "Servereinstellungen ändern",
+  "@suggestedOps.server.change": {
+    "sourceHash": "187a941"
+  },
+  "suggestedOps.server.field.port": "Port",
+  "@suggestedOps.server.field.port": {
+    "sourceHash": "72e9a59",
+    "sameAsSourceJustification": "Port is the German network term too (MS terminology, catalog settings.developer.mcpPort.label)."
+  },
+  "suggestedOps.server.field.account": "Konto",
+  "@suggestedOps.server.field.account": {
+    "sourceHash": "7e1b0d5"
+  },
+  "suggestedOps.server.field.share": "Freigabe",
+  "@suggestedOps.server.field.share": {
+    "sourceHash": "4268344"
+  },
+  "suggestedOps.server.field.bucket": "Bucket",
+  "@suggestedOps.server.field.bucket": {
+    "sourceHash": "c83b657",
+    "sameAsSourceJustification": "S3 providers keep Bucket in German (terms.json bucket; catalog servers.sheet.s3Bucket)."
+  },
+  "suggestedOps.server.notSet": "Nicht festgelegt",
+  "@suggestedOps.server.notSet": {
+    "sourceHash": "4895f73"
+  },
+  "suggestedOps.server.changesTo": "wird geändert in",
+  "@suggestedOps.server.changesTo": {
+    "sourceHash": "8c0db20"
+  },
+  "suggestedOps.server.newAddress": "Neue Adresse",
+  "@suggestedOps.server.newAddress": {
+    "sourceHash": "5fc5498"
+  },
+  "suggestedOps.server.newAddressTooltip": "Keiner deiner gespeicherten Server hat diese Adresse. Prüfe, ob du diese Adresse meinst.",
+  "@suggestedOps.server.newAddressTooltip": {
+    "sourceHash": "16d851c"
+  },
+  "suggestedOps.server.sharesAffected": "Das ändert {countText} gespeicherte {count, plural, one {Freigabe} other {Freigaben}} auf diesem Server.",
+  "@suggestedOps.server.sharesAffected": {
+    "sourceHash": "390f931"
   },
   "suggestedOps.indicatorTooltip": "KI-Vorschläge warten auf dich. Zum Ansehen klicken.",
   "@suggestedOps.indicatorTooltip": {
     "sourceHash": "4508b0b"
+  },
+  "suggestedOps.newNameTaken": "Name bereits belegt",
+  "@suggestedOps.newNameTaken": {
+    "sourceHash": "58e9841"
+  },
+  "suggestedOps.newNameTakenTooltip": "Dort gibt es schon etwas namens „{name}“.",
+  "@suggestedOps.newNameTakenTooltip": {
+    "sourceHash": "b18f96a"
   }
 }

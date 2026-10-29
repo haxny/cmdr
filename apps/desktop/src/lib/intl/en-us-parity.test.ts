@@ -4,17 +4,17 @@
  * Pins the EXACT strings the four formatter families produced for an en-US
  * runtime BEFORE this work, so the reviewer can trust "current users see no
  * change". Every literal below was captured against the pre-change code. After
- * counts, sizes, and the `system` date are routed through `getFormatLocale()`, these
- * assertions must still hold byte-for-byte under en-US; localization only shows
- * up for other regions (covered by the de-DE behavior tests next to each
- * formatter).
+ * counts and sizes are routed through `getCatalogLocale()` (the app language) and
+ * the `system` date through `getFormatLocale()` (the region), these assertions
+ * must still hold byte-for-byte under en-US; localization only shows up for
+ * other languages (covered by the de-DE behavior tests next to each formatter).
  *
  * The locale is pinned via the `lib/intl` chokepoint, not by mutating `Intl`
  * globals.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { _setLocaleForTests } from './locale'
+import { _setFormatLocaleForTests, _setLocaleForTests } from './locale'
 import { formatDateForDisplay } from '#lib/settings/format-utils.js'
 import { formatFileSizeWithFormat } from '#lib/units/index.js'
 import { formatNumber, formatSizeTriads } from '#lib/file-explorer/selection/selection-info-utils.js'
@@ -75,7 +75,7 @@ describe('en-US parity: raw-byte triads (formatSizeTriads)', () => {
 describe('en-US parity: human-friendly sizes (formatFileSizeWithFormat)', () => {
   // No locale stub here on purpose: pre-change this function hardcoded `.` and
   // produced these literals regardless of locale. Post-change it reads
-  // `getFormatLocale()`; en-US must reproduce these EXACT strings (no grouping on the
+  // `getCatalogLocale()`; en-US must reproduce these EXACT strings (no grouping on the
   // 1073.21 / 1000000.00 cases, `.` decimal).
   beforeEach(() => {
     _setLocaleForTests('en-US')
@@ -108,6 +108,24 @@ describe('en-US parity: human-friendly sizes (formatFileSizeWithFormat)', () => 
     expect(formatFileSizeWithFormat(1_073_208, 'si', 'kB')).toBe('1073.21 kB')
     expect(formatFileSizeWithFormat(10 * 1000 ** 3, 'si', 'MB')).toBe('10000.00 MB')
     expect(formatFileSizeWithFormat(1024 ** 4, 'si', 'kB')).toBe('1099511627.78 kB')
+  })
+})
+
+describe('en-US parity holds on any region under an English UI', () => {
+  // Numbers follow the app language, so an English Mac set to a Swedish region (`en-SE`)
+  // writes the same digits as the US one; only its dates move.
+  beforeEach(() => {
+    _setLocaleForTests('en')
+    _setFormatLocaleForTests('en-SE')
+  })
+  afterEach(() => {
+    _setLocaleForTests(null)
+  })
+
+  it('writes sizes and counts byte-for-byte like en-US', () => {
+    expect(formatFileSizeWithFormat(1536, 'binary')).toBe('1.50 KiB')
+    expect(formatFileSizeWithFormat(10 * 1000 ** 3, 'si', 'MB')).toBe('10000.00 MB')
+    expect(formatNumber(1234567)).toBe('1,234,567')
   })
 })
 

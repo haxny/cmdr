@@ -4,7 +4,7 @@
 //! Three strategies, decided by the volume relationship:
 //! - Same volume (same Arc): `volume.rename()` per file (instant for MTP MoveObject) — `move_same`,
 //!   which copies then deletes instead where the volume's renames copy (S3)
-//! - Both local: delegates to `move_files_start` (handles same-fs rename optimization)
+//! - Both local: delegates to `local_move_start` (handles same-fs rename optimization)
 //! - Cross-volume: copy to destination then delete sources — `move_cross`
 //!
 //! ❗ The dependency runs ONE way: this module names both engines, and neither
@@ -43,7 +43,7 @@ impl crate::Operations {
     ///
     /// Determines the best strategy based on volume relationship:
     /// - Same volume (same Arc): `volume.rename()` per file (instant for MTP MoveObject)
-    /// - Both local: delegates to `move_files_start` (handles same-fs rename optimization)
+    /// - Both local: delegates to `local_move_start` (handles same-fs rename optimization)
     /// - Cross-volume: copy to destination then delete sources
     ///
     /// Emits the standard write events (`write-progress`, `write-complete`, `write-error`).
@@ -65,11 +65,6 @@ impl crate::Operations {
         initiator: cmdr_operation_log::types::Initiator,
         expected_sources: Option<ExpectedSources>,
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
-        super::super::super::validation::validate_transfer_destination_name(
-            &source_paths,
-            &dest_path,
-            config.destination_name.as_deref(),
-        )?;
         // Same volume: use native rename/move (instant for MTP), or copy then
         // delete where the volume's renames copy (`move_same.rs`).
         if Arc::ptr_eq(&source_volume, &dest_volume) {
@@ -98,14 +93,17 @@ impl crate::Operations {
         }
 
         // Both local: delegate to the battle-tested move implementation
-        if let (Some(src_root), Some(dest_root)) = (source_volume.local_path(), dest_volume.local_path()) {
+        if let Some((src_root, dest_root)) = super::native_roots(source_volume.as_ref(), dest_volume.as_ref()) {
             log::debug!(
                 "move_between_volumes: both volumes are local, delegating to native move (src={}, dest={})",
                 LogPrivate::dir_path(&src_root),
                 LogPrivate::dir_path(&dest_root)
             );
 
-            let absolute_sources: Vec<PathBuf> = source_paths.iter().map(|p| src_root.join(p)).collect();
+            let absolute_sources: Vec<PathBuf> = source_paths
+                .iter()
+                .map(|p| super::on_local_root(&src_root, p))
+                .collect();
             // Anchored, not joined: the IPC boundary already anchors what the
             // transfer dialog sends, and a raw join would re-root an absolute dest
             // under itself (`/Volumes/USB/sub` → `/Volumes/USB/Volumes/USB/sub`).
@@ -117,7 +115,8 @@ impl crate::Operations {
                 max_conflicts_to_show: config.max_conflicts_to_show,
                 preview_id: config.preview_id,
                 pre_known_conflicts: config.pre_known_conflicts,
-                destination_name: config.destination_name,
+                // Keyed by the re-rooted paths, in the same step as the sources.
+                leaves: config.leaves.rebased(|p| super::on_local_root(&src_root, p)),
                 source_kinds: config.source_kinds,
                 ..Default::default()
             };
@@ -144,7 +143,7 @@ impl crate::Operations {
                 ),
             );
             return self
-                .move_files_start(
+                .local_move_start(
                     events,
                     absolute_sources,
                     absolute_dest,

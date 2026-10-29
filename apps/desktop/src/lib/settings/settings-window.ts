@@ -105,6 +105,8 @@ export type SettingsSurface =
   | 'reveal-toast'
   /** Ask Cmdr's rail, while cloud AI isn't allowed, deep-linking to the Allow cloud AI switch. */
   | 'ask-cmdr-cloud-gate'
+  /** Ask Cmdr's rail, while no AI provider is set up, deep-linking to AI > Provider. */
+  | 'ask-cmdr-provider-notice'
   /** Settings > AI > Ask Cmdr's "cloud AI is off" hint, deep-linking to the same switch. */
   | 'ask-cmdr-settings-hint'
   /** The Search or Select dialog's AI mode, while cloud AI isn't allowed. */

@@ -21,9 +21,7 @@ use std::time::{Duration, Instant};
 
 use futures_util::stream::{BoxStream, StreamExt};
 use genai::adapter::AdapterKind;
-use genai::chat::{
-    ChatMessage, ChatOptions, ChatRequest, ChatRole, ChatStreamEvent, ReasoningEffort, StopReason, StreamEnd,
-};
+use genai::chat::{ChatMessage, ChatOptions, ChatRequest, ChatRole, ChatStreamEvent, StopReason, StreamEnd};
 use genai::resolver::{AuthData, Endpoint, ServiceTargetResolver};
 use genai::{Client, ModelIden, ServiceTarget};
 use serde_json::{Value, json};
@@ -33,6 +31,16 @@ use crate::managed_policy::AiDestination;
 
 /// A configured AI backend ready to receive [`chat_completion`] calls.
 ///
+/// genai's `ClientBuilder::build` fails only while building its own reqwest client; both
+/// backends hand it one, so the build can't fail.
+mod routing;
+
+#[cfg(test)]
+use routing::is_openai_chat_reasoning_model;
+use routing::{adjust_for_model, remote_model_iden, replays_chat_reasoning_for_host};
+
+const GENAI_BUILD_WITH_REQWEST: &str = "genai builds without error when handed a reqwest client";
+
 /// Bundles a long-lived [`genai::Client`] with the model name to pass it. Build once
 /// (cheap, but still a few allocations + one resolver-closure box) and reuse for the
 /// lifetime of the configured provider.
@@ -42,6 +50,9 @@ pub struct AiBackend {
     /// Where `client` sends, parsed once from the same endpoint `genai` calls, so the per-request
     /// policy check judges the exact URL.
     destination: AiDestination,
+    /// Whether this endpoint takes a chat-completions turn's reasoning text back
+    /// ([`replays_chat_reasoning_for_host`]). Native protocols ignore it.
+    replays_chat_reasoning: bool,
     /// The logging context for this backend's calls, or `None` to skip logging (the default;
     /// unit-test backends and any path that hasn't opted in). Set by the caller via
     /// [`AiBackend::with_log_context`] once it knows which feature (and session) the call
@@ -62,6 +73,13 @@ impl AiBackend {
     pub(crate) fn local_for_tests(port: u16) -> Self {
         Self::local(port)
     }
+
+    /// Overrides the host-derived [`replays_chat_reasoning`](Self::replays_chat_reasoning), for a
+    /// loopback fixture server standing in for a host that takes reasoning back.
+    pub(crate) fn with_chat_reasoning_replay(mut self, replays: bool) -> Self {
+        self.replays_chat_reasoning = replays;
+        self
+    }
 }
 
 impl AiBackend {
@@ -78,7 +96,8 @@ impl AiBackend {
         let client = Client::builder()
             .with_reqwest(local_http_client())
             .with_service_target_resolver(resolver)
-            .build();
+            .build()
+            .expect(GENAI_BUILD_WITH_REQWEST);
         // Force the `openai::` namespace so `genai`'s adapter inference doesn't fall
         // back to Ollama for the bare `local-model` name. The resolver replaces the
         // rest, but adapter dispatch happens before the resolver runs.
@@ -86,6 +105,9 @@ impl AiBackend {
             client,
             model: String::from("openai::local-model"),
             destination: AiDestination::LocalServer,
+            // Unverified: llama-server reads `reasoning_content` back for some chat templates,
+            // but no local model has been run through a reasoning tool loop yet.
+            replays_chat_reasoning: false,
             log_ctx: None,
         }
     }
@@ -99,18 +121,23 @@ impl AiBackend {
     /// would skip the cloud consent gate. Tests elsewhere use `remote_for_tests`.
     pub(in crate::ai) fn remote(api_key: String, base_url: String, model: String) -> Self {
         let endpoint = remote_endpoint(base_url);
-        let destination = AiDestination::Remote(parse_endpoint(&endpoint));
+        let endpoint_url = parse_endpoint(&endpoint);
+        let model = remote_model_iden(&model, endpoint_url.host_str());
+        let replays_chat_reasoning = endpoint_url.host_str().is_some_and(replays_chat_reasoning_for_host);
+        let destination = AiDestination::Remote(endpoint_url);
         let resolver = make_resolver(endpoint, AuthData::from_single(api_key), ForceAdapter::None);
         let client = Client::builder()
             .with_reqwest(policy_guarded_http_client())
             .with_service_target_resolver(resolver)
-            .build();
+            .build()
+            .expect(GENAI_BUILD_WITH_REQWEST);
         // The resolver only overrides endpoint + auth; adapter dispatch happens from the model
         // name BEFORE the resolver runs (same reason `local` uses the `openai::` namespace).
         Self {
             client,
-            model: remote_model_iden(&model),
+            model,
             destination,
+            replays_chat_reasoning,
             log_ctx: None,
         }
     }
@@ -137,16 +164,23 @@ impl AiBackend {
         self
     }
 
-    /// Resolves the provider adapter for this backend's configured model, without a
-    /// network call. The agent LLM (`crate::agent::llm`) uses it to pick a
-    /// per-provider reasoning posture before building request options.
-    pub(crate) async fn resolve_adapter(&self) -> Result<AdapterKind, AiError> {
+    /// Whether the agent may send a chat-completions turn's reasoning text back to this endpoint
+    /// ([`replays_chat_reasoning_for_host`]). The native protocols don't read it.
+    pub(crate) fn replays_chat_reasoning(&self) -> bool {
+        self.replays_chat_reasoning
+    }
+
+    /// Resolves the adapter and the bare model name this backend sends, without a network call.
+    /// The agent LLM (`crate::agent::llm`) picks its per-provider reasoning posture from it, and
+    /// stamps reasoning it captures with it, so a thread that switches model never replays one
+    /// model's reasoning to another.
+    pub(crate) async fn resolve_model(&self) -> Result<ModelIden, AiError> {
         let target = self
             .client
             .resolve_service_target(&self.model)
             .await
             .map_err(map_genai_error)?;
-        Ok(target.model.adapter_kind)
+        Ok(target.model)
     }
 
     /// Runs a full tool-capable streaming chat request and returns the raw `genai`
@@ -318,37 +352,6 @@ fn clamp_u32(count: i32) -> u32 {
 
 // endregion: --- LLM call logging helpers
 
-/// Maps a BYOK model name to the `genai` model identifier whose namespace picks the right adapter.
-///
-/// `genai` infers the adapter from the model name and falls back to **Ollama** for anything it
-/// doesn't recognize — so a bare `openai/gpt-oss-20b` (Groq), `deepseek-chat`, or
-/// `google/gemma-…:free` (OpenRouter) would POST to Ollama's `/api/chat` against an OpenAI endpoint
-/// and 404. Every cloud provider we support except Anthropic and Gemini speaks the OpenAI
-/// chat-completions wire format, so we force the `openai::` namespace for all of them. Anthropic
-/// (`claude-*`) and Gemini (`gemini-*`) keep their native adapters; real OpenAI model families
-/// (`gpt-*` / `o1*` / `o3*` / `o4*` / `chatgpt-*`) are left alone so `genai` can auto-route the
-/// `gpt-5*` / `*-codex` / `*-pro` Responses-API models.
-fn remote_model_iden(model: &str) -> String {
-    // Google's OpenAI-compatible model list names its models `models/gemini-…`, which an earlier
-    // key check offered verbatim. The bare id is what the native adapter routes on.
-    let model = match model.strip_prefix("models/") {
-        Some(bare) if bare.starts_with("gemini-") => bare,
-        _ => model,
-    };
-    let native_or_openai = model.starts_with("claude-")
-        || model.starts_with("gemini-")
-        || model.starts_with("gpt-")
-        || model.starts_with("o1")
-        || model.starts_with("o3")
-        || model.starts_with("o4")
-        || model.starts_with("chatgpt-");
-    if native_or_openai {
-        model.to_string()
-    } else {
-        format!("openai::{model}")
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum AiError {
     /// Server is unreachable (DNS / connect refused / no route).
@@ -396,7 +399,7 @@ impl Display for AiError {
 ///
 /// `options` are the caller-supplied generation knobs, fixed up per adapter by
 /// [`adjust_for_model`]: reasoning-class models lose `temperature`/`top_p` and gain
-/// [`ReasoningEffort::Low`] (see [`is_openai_chat_reasoning_model`]); Anthropic keeps
+/// `ReasoningEffort::Low` (see `routing::is_openai_chat_reasoning_model`); Anthropic keeps
 /// `temperature` but loses `top_p`, which it rejects alongside it.
 pub async fn chat_completion(
     backend: &AiBackend,
@@ -551,7 +554,7 @@ pub async fn chat_completion_stream(
     let stream = wrap_stream_with_response_log(res.stream, logged).filter_map(|item| async move {
         match item {
             Ok(ChatStreamEvent::Chunk(chunk)) => Some(Ok(chunk.content)),
-            Ok(ChatStreamEvent::Start | ChatStreamEvent::End(_)) => None,
+            Ok(ChatStreamEvent::Start | ChatStreamEvent::Heartbeat | ChatStreamEvent::End(_)) => None,
             Ok(ChatStreamEvent::ReasoningChunk(_) | ChatStreamEvent::ThoughtSignatureChunk(_)) => None,
             Ok(ChatStreamEvent::ToolCallChunk(_)) => None,
             Err(e) => Some(Err(map_genai_error(e))),
@@ -559,53 +562,6 @@ pub async fn chat_completion_stream(
     });
 
     Ok(stream.boxed())
-}
-
-/// Per-model option fixup: reasoning-class models reject `temperature`. Returns a
-/// modified clone of `options` when needed; otherwise hands back a clone unchanged.
-fn adjust_for_model(options: &ChatOptions, target: &ServiceTarget) -> ChatOptions {
-    let model_name = &*target.model.model_name;
-    let adapter = target.model.adapter_kind;
-
-    // Anthropic gets no sampling knobs at all. Every Claude from 4.7 on answers 400
-    // "`temperature` is deprecated for this model" to a non-default `temperature` or `top_p`
-    // (verified 2026-10-26, `curl` against `claude-{opus,sonnet,haiku}-5-5`), older ones 400 on
-    // the pair, and API version `2026-10-21` drops both for every model. Older Claude models
-    // lose a lower temperature, which is the trade Anthropic's own migration guide makes.
-    if matches!(adapter, AdapterKind::Anthropic) {
-        let mut opts = options.clone();
-        opts.temperature = None;
-        opts.top_p = None;
-        return opts;
-    }
-
-    let needs_reasoning_swap = matches!(adapter, AdapterKind::OpenAIResp)
-        || (matches!(adapter, AdapterKind::OpenAI) && is_openai_chat_reasoning_model(model_name));
-
-    if !needs_reasoning_swap {
-        return options.clone();
-    }
-
-    let mut opts = options.clone();
-    opts.temperature = None;
-    opts.top_p = None;
-    if opts.reasoning_effort.is_none() {
-        opts.reasoning_effort = Some(ReasoningEffort::Low);
-    }
-    opts
-}
-
-/// `genai 0.6` already auto-routes `gpt-5*`, `*-codex`, `*-pro` to the Responses API
-/// adapter, where temperature is omitted by [`adjust_for_model`]. This heuristic
-/// catches the *remaining* OpenAI chat-completions models that reject custom
-/// `temperature`: `o1*`, `o3*`, `o4*`, `chatgpt-*` (plus `gpt-5*` as defense in depth
-/// in case `genai` ever changes its routing).
-fn is_openai_chat_reasoning_model(model_name: &str) -> bool {
-    model_name.starts_with("o1")
-        || model_name.starts_with("o3")
-        || model_name.starts_with("o4")
-        || model_name.starts_with("chatgpt-")
-        || model_name.starts_with("gpt-5")
 }
 
 /// The endpoint [`AiBackend::remote`] hands `genai` for `base_url`. Without a trailing `/` the

@@ -91,10 +91,11 @@ File rows STREAM (`IndexStore::for_each_file_child_by_parent`), grouped by paren
 directory's distinct extensions, file count, and marker flag and closes at the group boundary. Directory children still
 come from the directory set (a `.git`/`.hg`/`.svn` marker is a directory), so `has_direct_marker` folds both the
 streamed file children and the sibling directory children. `signals_for_dir` takes the `ChildAggregate` and the mtime,
-not child rows and not an `EntryRow`. `has_marker_below` is one upward propagation after the walk (a `.git` deep in a
-tree raises its ancestors); `under_floored_ancestor` is its downward twin, a second pass over the same tree that floors
-every folder below a self-flooring one (`../DETAILS.md` § The floor propagates to descendants). The floor seed set is a
-flag per TREE row, so an ancestor check is a binary search plus a byte, never a hash lookup.
+not child rows and not an `EntryRow`. `nearest_marker_below` is one upward propagation after the walk (a `.git` raises
+the ancestors within `MARKER_REACH`, and a folder that floors raises none); `under_floored_ancestor` is its downward
+twin, a second pass over the same tree that floors every folder below a self-flooring one (`../DETAILS.md` § The floor
+propagates to descendants). The floor seed set is a flag per TREE row, so an ancestor check is a binary search plus a
+byte, never a hash lookup.
 
 **Every part of that shape is load-bearing, and each was measured.** Against the shape that materialized a full
 `EntryRow` plus a reconstructed path per folder plus a per-folder `HashSet<String>` of extensions, a full pass over a
@@ -355,12 +356,10 @@ continuously), so without it every 60-second window found a non-empty batch and 
 a machine whose only activity is machine output does no importance work at all.
 
 The gate calls `classify::floors_by_path`, the SAME predicate the writer applies when deciding to skip a row, so the two
-can't disagree about what scores. **Decision/Why the accepted lossiness:** filtering a floored path also drops the
-unfloored ancestors `touched_folder_set` would have pulled in from it, and the one signal that can move for such an
-ancestor is `has_marker_below` (a project marker appearing inside a floored subtree — `propagate_marker_to_ancestors`
-doesn't stop at a floor). We accept it: a marker buried in machine output is the weakest reason to raise a folder,
-importance is advisory, and the next full pass heals it. The rationale and the test
-(`a_batch_of_only_floored_churn_is_dropped_whole`) live with the function.
+can't disagree about what scores. Filtering a floored path also drops the unfloored ancestors `touched_folder_set` would
+have pulled in from it, and nothing moves for them: a deep write changes no ancestor's mtime or direct-child aggregate,
+and a marker inside a floored folder raises nothing (`propagate_marker_to_ancestors` skips a seed that floors). The test
+(`a_batch_of_only_floored_churn_is_dropped_whole`) lives with the function.
 
 ### The incremental never escalates on `/`
 
@@ -388,16 +387,19 @@ against 6.4 s / 5.5 s for a full walk.
   each one's name is that prefix's last component, so `classify::under_floored_ancestor` (pure path math, shared with
   `floors_by_path`) sees a flooring ancestor far above the subtree root. It matches `propagate_floor_to_descendants` by
   construction: same seeds, same root boundary, same names.
-- **`has_marker_below` is exact inside a subtree**, which is downward-closed, so `propagate_marker_to_ancestors` runs
-  unchanged over the scoped tree. Ancestor-chain rows are in the tree (paths reconstruct through them) but are NOT
+- **`nearest_marker_below` is exact inside a subtree**, which is downward-closed, so `propagate_marker_to_ancestors`
+  runs unchanged over the scoped tree. Ancestor-chain rows are in the tree (paths reconstruct through them) but are NOT
   folders, so the climb simply stops being recorded once it leaves the subtree.
-- **The cross-boundary case has an exact test.** For a strict ancestor `A` of origin `C`,
-  `has_marker_below(A) = markerOutside(A) OR M(C)` where `M(C) = has_direct_marker(C) OR has_marker_below(C)` — and
-  `M(C)` is precisely the `has_project_marker` the store persists for `C`. `markerOutside` can't move from inside the
-  subtree, so `A` can only move when `M(C)` does. `load_previous_markers` reads the stored side, the scoped walk
-  produces the fresh side, and a flip (or an origin with no stored row to compare) takes the full walk this pass. One
-  carve-out: an origin with NEITHER a stored row nor an index row never scored and still doesn't, so it rules its own
-  ancestors out without a fallback. `only_a_marker_transition_costs_the_full_walk` pins both halves.
+- **The cross-boundary case has an exact test.** For a strict ancestor `A` at distance `d >= 1` above origin `C`, `A`'s
+  marker distance is `min(markerOutside(A), d + D(C))` capped at `MARKER_REACH`, where `D(C)` is `C`'s own marker depth
+  — precisely the `marker_depth` the store persists for `C`, capped the same way (a `D(C)` past the reach puts
+  `d + D(C)` past it too). `markerOutside` can't move from inside the subtree, so `A` can only move when `D(C)` does. A
+  presence-only comparison isn't enough: a marker moving from `C`'s child into `C` itself keeps `C` project-adjacent but
+  brings `A` into reach (`a_marker_moving_closer_raises_the_ancestor_now_in_reach`). `load_previous_markers` reads the
+  stored side, the scoped walk produces the fresh side, and a flip (or an origin with no stored row to compare) takes
+  the full walk this pass. One carve-out: an origin with NEITHER a stored row nor an index row never scored and still
+  doesn't, so it rules its own ancestors out without a fallback. `only_a_marker_transition_costs_the_full_walk` pins
+  both halves.
 
 Nothing else can move for such an ancestor: a deep write changes neither its mtime nor its direct-child aggregate (both
 are direct-listing facts, and a listing change makes the folder an origin itself), and a rename above it reaches it
@@ -412,9 +414,8 @@ of an origin no longer get a rewritten row every pass. Two things go with that, 
 - A **visit** recorded since the row was written folds in at the next pass that covers the folder. Visits already lag a
   pass.
 
-`has_project_marker`, the one signal that genuinely propagates upward, is covered by the guard above, so it is never
-silently wrong. This extends the batch gate's floor-filter decision (below) rather than contradicting it: both accept a
-bounded staleness in a derived, advisory signal that the next full pass heals.
+`marker_depth`, the one signal that genuinely propagates upward, is covered by the guard above, so it is never silently
+wrong.
 
 **Reading the subtree.** Each surviving origin is read SEPARATELY, into one shared scoped `DirTree`. ❌ Don't collapse a
 batch into a single walk over the origins' common ancestor: unrelated origins share only `/`, so that re-walks the
@@ -423,8 +424,8 @@ queries, O(depth)); read the ancestor chain upward so paths reconstruct from the
 spelled in another case — see the known gap below); then descend level by level with
 `IndexStore::for_each_child_directory_of` and fold the file children with `for_each_child_file_of`, which keeps
 `for_each_file_child_by_parent`'s `ORDER BY parent_id` group contract so ONE reusable extension accumulator serves the
-whole scan. Floored subtrees ARE descended: a marker inside a `node_modules` still raises the folders above it, so
-pruning them would make the two walks disagree.
+whole scan. Floored subtrees are still descended, mirroring the full walk; a marker inside one raises nothing now, so
+pruning them would be safe and cheaper (not done yet).
 
 **❌ Don't add a `folders.is_empty()` early return to `run_incremental_blocking`.** A batch whose origins were all
 deleted between the publish and the pass produces an EMPTY scoped walk, and that batch is exactly the one whose rows
@@ -455,9 +456,10 @@ rescore subset through `rescore_subset`'s `touched` set). ❌ Never fold them to
 list deletes its whole subtree's weights and re-inserts one row. Its own row is still written, through
 `apply_incremental`'s outside-the-subtree PK probe, which never REMOVES.
 
-**Decision/Why a demoted origin's `has_marker_below` comes from its stored row.** Nothing below it was read, so the
-propagation can't produce the flag, and `carry_marker_below_for_demoted` seeds the stored `has_project_marker` instead.
-Three cases, and how each resolves:
+**Decision/Why a demoted origin's `nearest_marker_below` comes from its stored row.** Nothing below it was read, so the
+propagation can't produce it, and `carry_marker_below_for_demoted` seeds a stored `marker_depth` of `1` or more instead
+(a stored `0` came from a direct marker and says nothing about below, so it seeds nothing; if that marker left, the
+fresh depth differs and the guard takes the full walk). Three cases, and how each resolves:
 
 - **A direct child that IS a marker appears.** `read_origin_alone` reads the direct children, so `has_direct_marker`
   moves, the origin's marker presence flips against its stored value, and the guard takes the FULL walk — exactly what
@@ -550,8 +552,9 @@ purpose, and nothing else corrects them:
 
 - A row whose SIGNALS didn't move isn't rewritten (`../writer.rs`, `fate_of_stored_row`), so its score keeps the
   `now_secs` it was last written at and its recency decay pauses.
-- A demoted origin seeds `has_marker_below` from its stored row, which can only ADD marker presence, so the last marker
-  LEAVING a big subtree reads stale until a full pass (see § "An over-budget origin is DEMOTED, not descended").
+- A demoted origin seeds `nearest_marker_below` from its stored row, which can only ADD marker presence, so the last
+  marker LEAVING a big origin's child reads stale until a full pass (see § "An over-budget origin is DEMOTED, not
+  descended").
 
 Both are ranking nuances rather than correctness bugs, which is why an hour is enough and why nothing more elaborate (a
 dirty set, a watermark) is warranted.
@@ -587,6 +590,9 @@ The scheduler scores **any** background-scored volume, not just the local `root`
 - **MTP** — an explicit **exclusion**, not an accident of gating: a phone or camera is on-demand only, never
   background-scored. The scheduler skips it at every entry point (sweep, registration, bus subscription), and
   `record_visit` skips it too.
+
+The policy also carries the volume's `Disk` (`Scoring { available, disk }`): only `Local` is the boot disk, whose OS
+roots floor; every other kind's paths are volume-relative (`../DETAILS.md` § OS roots, package stores, and app bundles).
 
 `signal_availability(kind)` single-sources the kind→availability mask so a read consumer's `explain` redistributes
 exactly as the recompute that wrote the weights did; it returns `None` for a kind that isn't background-scored, and

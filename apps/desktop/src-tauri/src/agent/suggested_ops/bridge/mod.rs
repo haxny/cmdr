@@ -36,12 +36,14 @@ use super::super::store::proposals::{
     page_ops, record_acceptance,
 };
 use super::super::types::{OpStatus, ProposalVerb};
+use super::facts::{RunsAs, runs_as};
 use crate::file_system::volume::Volume;
 use crate::operations_host::{operations, refuse_not_installed};
 use cmdr_operation_log::types::Initiator;
 use cmdr_operations::{
     BulkRenameRow, ExpectedSources, OperationEventSink, Operations, RenameStartError, RenamesStarted,
-    SourceFingerprint, VolumeCopyConfig, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
+    SourceFingerprint, TransferLeaves, VolumeCopyConfig, WriteOperationConfig, WriteOperationError,
+    WriteOperationStartResult,
 };
 
 /// A group whose operation is running, and the operation it became.
@@ -54,7 +56,8 @@ pub struct ApprovedGroup {
 /// Why an approval did not become a running operation.
 #[derive(Debug, Clone)]
 pub enum ApprovalRefusal {
-    /// Preflight would not accept: the group had already left `pending`, or is unknown.
+    /// Preflight would not accept: the group had already left `pending`, is unknown, or is a
+    /// server group, which this path never approves (`AcceptanceOutcome::NotAFileGroup`).
     NotAccepted(AcceptanceOutcome),
     /// The claim transaction refused. Its two variants mean different recoveries.
     Claim(ClaimRefusal),
@@ -111,6 +114,7 @@ pub async fn approve_and_execute(
     group_id: i64,
     shown_revision: i64,
     selection: &OpSelection,
+    shown_runs_as: Option<RunsAs>,
     now: i64,
     memory: Option<MemoryStore>,
 ) -> Result<ApprovalOutcome, AgentStoreError> {
@@ -160,7 +164,11 @@ pub async fn approve_and_execute(
         memory,
     ));
 
-    match start_for(engine, &claimed.group, sources, &ops, expected, sink).await {
+    // The fallback runs only when the review showed it AND the volume still calls for it: a
+    // drive that gained a Trash since takes the trash the verb asked for, and one that lost it
+    // under a review that offered a trash refuses each item, as a clicked trash there would.
+    let runs = approved_runs_as(shown_runs_as, runs_as(claimed.group.verb, Some(source_volume.as_ref())));
+    match start_for(engine, &claimed.group, runs, sources, &ops, expected, sink).await {
         Ok(operation) => {
             super::started(&claimed);
             // The thread says "running" now, and the decorator's settle rewrites that line.
@@ -289,7 +297,14 @@ fn live_ops(conn: &Connection, group_id: i64) -> Result<Vec<ProposalOp>, AgentSt
     }
 }
 
-/// Turn a claimed group into the executor call its verb describes.
+/// What an approved group runs as: the fallback the review showed, but only while the volume
+/// still calls for it (`now`). Pure, so the two ways a stale review can be wrong are pinned.
+fn approved_runs_as(shown: Option<RunsAs>, now: Option<RunsAs>) -> Option<RunsAs> {
+    if shown == now { now } else { None }
+}
+
+/// Turn a claimed group into the executor call its verb describes, or into the fallback the
+/// user approved instead (`runs`).
 ///
 /// Every cross-volume verb goes through the ROUTED entry points, the same ones the transfer
 /// commands use, so an approved transfer resolves its volumes and its destination path the
@@ -299,14 +314,31 @@ fn live_ops(conn: &Connection, group_id: i64) -> Result<Vec<ProposalOp>, AgentSt
 async fn start_for(
     engine: &Operations,
     group: &ProposalGroup,
+    runs: Option<RunsAs>,
     sources: Vec<PathBuf>,
     ops: &[ProposalOp],
     expected: ExpectedSources,
     events: Arc<dyn OperationEventSink>,
 ) -> Result<WriteOperationStartResult, ApprovalRefusal> {
+    // A trash group on a drive with no Trash, approved as the permanent delete the review
+    // offered: the same delete a user gets there, through the same entry point as `Delete`.
+    if runs == Some(RunsAs::PermanentDelete) {
+        return engine
+            .delete_files_start(
+                events,
+                sources,
+                WriteOperationConfig::default(),
+                Some(group.source_volume_id.clone()),
+                Initiator::Agent,
+                Some(expected),
+            )
+            .await
+            .map_err(ApprovalRefusal::Engine);
+    }
     match group.verb {
         ProposalVerb::Move => {
             let (path, volume) = target_of(group)?;
+            let config = named_config(ops, &expected);
             engine
                 .start_volume_move(
                     events,
@@ -314,7 +346,7 @@ async fn start_for(
                     sources,
                     volume,
                     path,
-                    VolumeCopyConfig::default(),
+                    config,
                     Initiator::Agent,
                     Some(expected),
                 )
@@ -323,6 +355,9 @@ async fn start_for(
         }
         ProposalVerb::Copy | ProposalVerb::Extract => {
             let (path, volume) = target_of(group)?;
+            // An extract's ops never carry a name (`GroupIntent::Extract` can't hold one), so
+            // this is the default config there.
+            let config = named_config(ops, &expected);
             engine
                 .start_volume_copy(
                     events,
@@ -330,7 +365,7 @@ async fn start_for(
                     sources,
                     volume,
                     path,
-                    VolumeCopyConfig::default(),
+                    config,
                     Initiator::Agent,
                     Some(expected),
                 )
@@ -392,6 +427,11 @@ async fn start_for(
                 .map(|started| started.operation)
                 .map_err(ApprovalRefusal::Rename)
         }
+        // Unreachable: preflight refuses a server group before any claim. Named so a server
+        // group can never fall into a file executor's arm.
+        ProposalVerb::AddServer | ProposalVerb::EditServer => {
+            Err(ApprovalRefusal::NotAccepted(AcceptanceOutcome::NotAFileGroup))
+        }
     }
 }
 
@@ -426,6 +466,29 @@ fn rename_rows(
         });
     }
     Ok(rows)
+}
+
+/// The default config a clicked transfer gets, plus the name each op lands under: the ONE
+/// thing a proposal adds, and the user saw every one in the review. No name means the default.
+fn named_config(ops: &[ProposalOp], expected: &ExpectedSources) -> VolumeCopyConfig {
+    VolumeCopyConfig {
+        leaves: TransferLeaves::per_source(transfer_names(ops, expected)),
+        ..VolumeCopyConfig::default()
+    }
+}
+
+/// The names a move's or copy's ops land under, as the engine's per-source leaves take them:
+/// keyed by EXACTLY the sources the binding keeps, so a source preflight couldn't read (which
+/// the binding drops) takes its name with it. An op keeping its own name sends none.
+fn transfer_names(ops: &[ProposalOp], expected: &ExpectedSources) -> Vec<(PathBuf, String)> {
+    ops.iter()
+        .filter_map(|op| {
+            let name = op.destination.clone()?;
+            let source = PathBuf::from(&op.source_path);
+            expected.fingerprint_of(&source)?;
+            Some((source, name))
+        })
+        .collect()
 }
 
 /// Stat every source as it is RIGHT NOW, and bind the operation to what it finds.

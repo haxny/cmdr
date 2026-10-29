@@ -4,21 +4,26 @@
   - **Cost**: what the whole thread has SPENT (cumulative tokens + estimated money), read from
     the backend meter (plan §5). Honest miss-path: a local-only chat reads "free, on-device",
     an unpriced model reads "cost unknown", and only a fully-priced chat shows an estimated
-    amount — never a silent $0.
-  - **The gauge**: how much of ONE prompt's room the last turn used. It goes down when history
-    is set aside; the cost only ever goes up.
+    amount — never a silent $0. A chat with nothing metered yet reads zero, priced the way its
+    first call would be (`costReading`).
+  - **The gauge**: how much of ONE prompt's room the last call used. It goes down when history
+    is set aside; the cost only ever goes up. Before any call it shows the baseline: the prefix
+    every call carries.
 
   So the two figures differ on purpose and each says which it is (the gauge's tooltip spells
-  out "N of M tokens used"). Each half hides independently until it has something true to say.
+  out "N of M tokens used"). Shown whenever the chat is; both move after every model call.
 -->
 <script lang="ts">
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
     import { getAppLogger } from '#lib/logging/logger.js'
     import { askCmdrConversationCost, type ConversationCost } from '#lib/tauri-commands/index.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import AskCmdrContextGauge from './AskCmdrContextGauge.svelte'
-    import { contextUsageState } from './ask-cmdr-context-usage'
-    import { formatUsdMicros, isLocalOnly, totalTokens } from './ask-cmdr-cost'
+    import { gaugeReading } from './ask-cmdr-context-usage'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { costEstimateText, costReading, formatTokenCount } from './ask-cmdr-cost'
+    import { slotStatusState } from './ask-cmdr-slot-status.svelte'
     import { askCmdrState } from './ask-cmdr-trigger.svelte'
 
     const log = getAppLogger('askCmdr')
@@ -26,24 +31,26 @@
     // Keyed by the thread it was read for, so a thread switch hides the old total at once
     // instead of showing it under the new thread until the new read lands.
     let fetched = $state<{ conversationId: number; cost: ConversationCost } | null>(null)
-    const cost = $derived(
+    const threadCost = $derived(
         fetched !== null && fetched.conversationId === askCmdrState.conversationId ? fetched.cost : null,
     )
 
-    // Refetch when the active thread changes or a turn finishes streaming (the meter is
-    // updated per completed turn), so the footer tracks the newest total. A brand-new,
-    // unsaved thread (id null) has no metered turn yet.
+    // Each read is numbered, so only the newest one lands: an older read of the same thread
+    // answering last would show a lower total, and one for a thread already left the wrong one.
+    let readSeq = 0
+
+    // Refetch when the active thread changes, after each metered call (`costRevision`, so the
+    // total moves mid-turn), and when a turn ends (the backstop for a turn whose events this
+    // window missed). A brand-new, unsaved thread (id null) has nothing metered.
     $effect(() => {
         const id = askCmdrState.conversationId
-        const streaming = askCmdrState.streaming
+        dependOn(askCmdrState.costRevision)
+        dependOn(askCmdrState.streaming)
+        const seq = ++readSeq
         if (id === null) return
-        // Read after streaming ends (the `done` event flipped `streaming` false and the
-        // meter row is written by then).
-        if (streaming) return
         void askCmdrConversationCost(id).then(
             (c) => {
-                // A slow read for a thread the user already left must not replace the newer one.
-                if (askCmdrState.conversationId === id) fetched = { conversationId: id, cost: c }
+                if (seq === readSeq) fetched = { conversationId: id, cost: c }
             },
             (e: unknown) => {
                 log.warn('reading chat cost failed: {error}', { error: e })
@@ -51,35 +58,41 @@
         )
     })
 
-    const tokens = $derived(cost ? totalTokens(cost) : 0)
-    const hasUsage = $derived(cost !== null && tokens > 0)
-    // The gauge appears the moment a turn has been measured, independently of the cost meter:
-    // a local-only thread has a real context reading and no money to report.
-    const hasGauge = $derived(contextUsageState(askCmdrState.contextUsage) !== 'unmeasured')
+    const reading = $derived(costReading(threadCost, slotStatusState.status?.nextCall ?? null))
+    const gauge = $derived(gaugeReading(askCmdrState.contextUsage, slotStatusState.status?.baseline ?? null))
 
     // The cost half of the footer, honest about the miss-path.
-    const costText = $derived.by(() => {
-        if (!cost) return ''
-        if (isLocalOnly(cost.providers)) return tString('askCmdr.cost.free')
-        if (!cost.fullyPriced) return tString('askCmdr.cost.unknown')
-        return tString('askCmdr.cost.estimate', { amount: formatUsdMicros(cost.costMicros) })
+    const priceText = $derived.by(() => {
+        const price = reading.price
+        if (!price) return ''
+        if (price.kind === 'free') return tString('askCmdr.cost.free')
+        if (price.kind === 'unknown') return tString('askCmdr.cost.unknown')
+        return costEstimateText(price.micros)
     })
+    // Only an estimate carries the "USD, before caching" caveat; free and unknown say it all.
+    const priceTooltip = $derived(reading.price?.kind === 'estimate' ? tString('askCmdr.cost.estimateTooltip') : undefined)
+
+    // Compact from 2,000 up ("194.8K tokens"); the exact count waits in the tooltip.
+    const tokensText = $derived(
+        tString('askCmdr.cost.tokens', { count: reading.tokens, countText: formatTokenCount(reading.tokens) }),
+    )
+    const exactTokensText = $derived(
+        tString('askCmdr.cost.tokens', { count: reading.tokens, countText: formatInteger(reading.tokens) }),
+    )
 </script>
 
-{#if hasUsage || hasGauge}
-    <div class="cost-footer">
-        {#if hasUsage}
-            <span class="cost" aria-label={tString('askCmdr.cost.label')}>
-                <span>{tString('askCmdr.cost.tokens', { count: tokens, countText: formatInteger(tokens) })}</span>
-                <span class="dot" aria-hidden="true">·</span>
-                <span>{costText}</span>
-            </span>
+<div class="cost-footer">
+    <span class="cost" aria-label={tString('askCmdr.cost.label')}>
+        <span use:tooltip={exactTokensText !== tokensText ? exactTokensText : undefined}>{tokensText}</span>
+        {#if priceText}
+            <span class="dot" aria-hidden="true">·</span>
+            <span use:tooltip={priceTooltip}>{priceText}</span>
         {/if}
-        {#if hasGauge}
-            <AskCmdrContextGauge usage={askCmdrState.contextUsage} />
-        {/if}
-    </div>
-{/if}
+    </span>
+    {#if gauge}
+        <AskCmdrContextGauge usage={gauge.usage} baseline={gauge.baseline} />
+    {/if}
+</div>
 
 <style>
     .cost-footer {

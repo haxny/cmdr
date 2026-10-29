@@ -41,6 +41,17 @@
     "confidence": "high",
     "sources": "catalog (six times in errors.json, onboarding.json); macOS Tài khoản Apple"
   },
+  "action": {
+    "chosen": "tác vụ",
+    "exceptions": {
+      "fileOperations.transferDialog.operationAria": "names the Copy / Move / Compress choice, a file operation, so thao tác",
+      "shortcuts.section.searchByNamePlaceholder": "a command’s name in the shortcut list → hành động, the Microsoft form the shortcut list already uses"
+    },
+    "proseAccept": ["thao tác"],
+    "forms": "Dialog actions → Tác vụ hộp thoại; file actions the AI suggested, in prose → các thao tác",
+    "confidence": "high",
+    "sources": "macOS Finder LocalizableMerged SP95/TL26 (Action → Tác vụ); catalog (queryUi.dialog.actionsAria; suggestedOps.description says thao tác, since those actions are file operations)"
+  },
   "activate": {
     "chosen": "kích hoạt",
     "confidence": "high",
@@ -60,6 +71,17 @@
     "forms": "Cmdr Settings section → Nâng cao; quote settings.section.advanced exactly in navigation paths",
     "sources": "Network.appex Localizable (ADVANCED); catalog settings.section.advanced (macOS 26.6.2 build 25G83, live loctable key cross-reference, 2026-10-02)"
   },
+  "ai-context": {
+    "chosen": "ngữ cảnh",
+    "confidence": "high",
+    "sources": "MS terminology (context → ngữ cảnh); askCmdr.cost.estimateTooltip"
+  },
+  "ai-agent": {
+    "chosen": "tác nhân",
+    "forms": "the agent → tác nhân",
+    "confidence": "high",
+    "sources": "Microsoft terminology (agent → tác nhân); catalog (queryUi.ai.lead); macOS has no AI-agent sense"
+  },
   "ai-feature": {
     "accept": ["tính năng AI"],
     "chosen": "AI",
@@ -73,10 +95,17 @@
     "forms": "AI provider → nhà cung cấp AI",
     "sources": "MS terminology (provider → nhà cung cấp)"
   },
+  "ai-lookup": {
+    "accept": ["lần tra cứu", "vòng tra cứu"],
+    "chosen": "tra cứu",
+    "confidence": "high",
+    "forms": "one lookup → lần tra cứu; a round of lookups → vòng tra cứu",
+    "sources": "catalog precedent: `askCmdr.error.repeatedToolCall`, `askCmdr.event.contextTrimmed`"
+  },
   "ai-tool": {
     "chosen": "công cụ",
     "confidence": "high",
-    "forms": "tool status lines Đang … / Đã … (Đang liệt kê một thư mục, Đã xem bên trong tệp)",
+    "forms": "tool status lines Đang … / Đã … (Đang liệt kê một thư mục, Đã xem bên trong tệp); tool calls → lần gọi công cụ; shown to the AI → cho xem / cho mô hình xem (hiển thị is on screen), N of M → N trên M; outcome notes stay pronoun-free (không có công cụ này), never nó",
     "sources": "MS terminology (tool → công cụ); catalog"
   },
   "allow": {
@@ -613,11 +642,23 @@
     "forms": "connect to a server → kết nối tới (prose) but the label Kết nối với máy chủ… (Finder N84); reconnect → kết nối lại; the connection dropped → Đã mất kết nối",
     "sources": "Xfce Thunar (kết nối mạng), macOS Finder (Kết nối với máy chủ), CFNetwork (Đã mất kết nối mạng)"
   },
+  "conversation": {
+    "chosen": "cuộc trò chuyện",
+    "confidence": "high",
+    "accept": ["trò chuyện"],
+    "sources": "MS terminology (cuộc trò chuyện); shipped settings.askCmdr.chatMemorySize.description"
+  },
   "learn-more": {
     "chosen": "Tìm hiểu thêm về",
     "confidence": "high",
     "forms": "More about “X” → Tìm hiểu thêm về “X”",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "mức",
+    "confidence": "high",
+    "sources": "MS terminology (mức); shipped settings.archives.compressionLevel.label",
+    "accept": ["thu phóng"]
   },
   "link": {
     "chosen": "liên kết",
@@ -1691,6 +1732,15 @@
     "forms": "the noun → danh sách (the Servers list → danh sách Máy chủ); the verb (Cmdr lists X) → liệt kê",
     "sources": "macOS Finder and AppKit (List → Danh sách, 29 hits); MS terminology (list → danh sách)"
   },
+  "listing": {
+    "chosen": "liệt kê",
+    "confidence": "high",
+    "exceptions": {
+      "settings.section.listing": "A Settings section name (a noun for the listing options), so the noun Danh sách fits; liệt kê is the verb on tool lines."
+    },
+    "forms": "tool lines Đang liệt kê / Đã liệt kê <name>; the Settings section name stays Danh sách (settings.section.listing)",
+    "sources": "GNOME Nautilus and Xfce Thunar (Xem kiểu liệt kê, Chỉ liệt kê tập tin); catalog askCmdr.tool.listDir.* (Đang liệt kê một thư mục)"
+  },
   "local": {
     "chosen": "cục bộ",
     "confidence": "high",
@@ -2714,7 +2764,7 @@
   "server": {
     "chosen": "máy chủ",
     "confidence": "high",
-    "forms": "the switcher row and scope Máy chủ; connect to a server → kết nối tới (prose)",
+    "forms": "the switcher row and scope Máy chủ; \"in/from Servers\" (the view) → trong/từ danh sách Máy chủ (servers.sheet.addedToast); connect to a server → kết nối tới (prose); the AI-suggestion kind tags Add a server / Change server settings → Thêm một máy chủ / Sửa cài đặt máy chủ (Sửa, as Sửa máy chủ…, never đổi, which reads as swapping servers)",
     "sources": "macOS AppKit (Servers → Máy chủ), Finder N84, GNOME"
   },
   "server-address": {
@@ -2839,6 +2889,13 @@
     "confidence": "high",
     "forms": "the From heading → Từ",
     "sources": "GNOME (thư mục nguồn), Total Commander"
+  },
+  "start": {
+    "chosen": "bắt đầu",
+    "confidence": "high",
+    "accept": ["khởi động"],
+    "forms": "nothing started → chưa có gì bắt đầu; Not started → Chưa bắt đầu; launching a machine-like process (a watcher, a rollback run) → khởi động",
+    "sources": "macOS Finder (Đang bắt đầu nén đến “^0”, Bắt đầu); catalog (65 bắt đầu, indexing.step.statusPending, suggestedOps.refusal.label)"
   },
   "start-up": {
     "chosen": "khởi động",
@@ -3360,6 +3417,13 @@
     "forms": "partly written → đã được ghi một phần (predicative); half-written file → tệp ghi dở (attributive)",
     "sources": "macOS Finder (ghi đè)"
   },
+  "zip": {
+    "chosen": "tệp zip",
+    "confidence": "high",
+    "accept": ["zip"],
+    "forms": "inside the zip → bên trong tệp zip; a zip archive → tệp nén zip (archive ruling); Finder's kind name → Tệp lưu trữ Zip",
+    "sources": "macOS Finder (Tệp Zip, Tệp lưu trữ Zip); catalog (23 tệp zip, errors.write.archiveEntryNameRefused.*)"
+  },
   "zoom": {
     "accept": ["phóng to", "thu nhỏ", "mức phóng"],
     "chosen": "thu phóng",
@@ -3565,5 +3629,20 @@
     "exceptions": {
       "securityNotices.smbSignatureRefused.body": "English-sense: the reply is an SMB server's signed response (respond concept, phản hồi), not an AI reply"
     }
+  },
+  "reasoning-effort": {
+    "chosen": "Mức nỗ lực suy luận",
+    "confidence": "tentative",
+    "sources": "OpenAI docs are English-only; no established rendering, so built from the locale’s reasoning wording; Gemini vi MT: mức độ nỗ lực suy luận"
+  },
+  "reasoning-effort-anthropic": {
+    "chosen": "Mức nỗ lực",
+    "confidence": "tentative",
+    "sources": "Anthropic localized docs, platform.claude.com/docs/<lang>/build-with-claude/effort, read 2026-10-28: no vi docs; the catalog already says nỗ lực"
+  },
+  "thinking-level": {
+    "chosen": "Mức suy nghĩ",
+    "confidence": "tentative",
+    "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
   }
 }

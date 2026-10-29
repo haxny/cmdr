@@ -403,8 +403,7 @@ fn build_draft<R: Runtime>(
             return Err(invalid_params("A source file can appear only once in a rename plan."));
         }
         validate_destination_name(&rename.destination_name)?;
-        let destination_key = cmdr_index::store::normalize_for_comparison(&rename.destination_name);
-        if !destination_names.insert(destination_key) {
+        if !destination_names.insert(destination_key(&rename.destination_name)) {
             return Err(invalid_params("Destination names must be unique on this volume."));
         }
         if let Some(entry) = scope.get(rename.source_path.as_str()) {
@@ -554,6 +553,14 @@ pub(super) fn scoped_files(state: &PaneState) -> Result<HashMap<&str, &PaneFileE
         files.insert(entry.path.as_str(), entry);
     }
     Ok(files)
+}
+
+/// The key two destination names share when a filesystem may consider them one: the same fold
+/// every proposal's names and the transfer engine use, on every platform. ❌ Not
+/// `normalize_for_comparison`, which follows THIS machine's disk (identity off macOS), so a
+/// Linux run would miss a case-only duplicate bound for a case-insensitive share.
+pub(super) fn destination_key(name: &str) -> String {
+    cmdr_fs::name_fold::fold_name(name).into_owned()
 }
 
 pub(super) fn validate_destination_name(name: &str) -> Result<(), ToolError> {

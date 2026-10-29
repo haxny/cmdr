@@ -194,7 +194,8 @@ pub(crate) fn exclusion_scope_for_volume(volume_id: &str) -> ExclusionScope {
 /// Without stripping the mount root first, `resolve_path` tries to walk
 /// `Volumes` / `share` as children of the share root and always misses, so an
 /// indexed SMB folder shows no sizes. (Pure over `mount_root`; the live mount
-/// lookup is in [`index_read_path`].)
+/// lookup is in [`index_read_path`]; a stopped volume's reader passes the root
+/// its database recorded instead.)
 ///
 /// - `root` (local disk): the index is rooted at `/`, so the firmlink-normalized
 ///   absolute path is already index-rooted — return it as-is (`mount_root` is
@@ -204,7 +205,7 @@ pub(crate) fn exclusion_scope_for_volume(volume_id: &str) -> ExclusionScope {
 ///   mount-relative path via the shared [`index_relative_path`](crate::indexing::transports::smb::watch::index_relative_path). A
 ///   path that isn't under the mount root yields `None` (drop it rather than
 ///   mis-root it at `ROOT_ID`).
-fn index_read_path_pure(volume_id: &str, normalized_abs: &str, mount_root: Option<&str>) -> Option<String> {
+pub(crate) fn index_read_path_pure(volume_id: &str, normalized_abs: &str, mount_root: Option<&str>) -> Option<String> {
     if volume_id == ROOT_VOLUME_ID {
         return Some(normalized_abs.to_string());
     }

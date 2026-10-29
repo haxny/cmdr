@@ -3,9 +3,9 @@
   "@suggestedOps.title": {
     "sourceHash": "1a1f5b9"
   },
-  "suggestedOps.description": "Ezeket az AI javasolta. Semmi nem indul el, amíg jóvá nem hagyod.",
+  "suggestedOps.description": "Az ágens javasolta az alábbi műveleteket. Csak akkor alkalmazd őket, ha egyetértesz velük.",
   "@suggestedOps.description": {
-    "sourceHash": "73255a0"
+    "sourceHash": "4d98280"
   },
   "suggestedOps.approvalNoticeDismiss": "Ne jelenjen meg többé",
   "@suggestedOps.approvalNoticeDismiss": {
@@ -35,9 +35,9 @@
   "@suggestedOps.empty": {
     "sourceHash": "b93eccd"
   },
-  "suggestedOps.loadFailed": "A Cmdr nem tudta beolvasni a javaslatokat. Zárd be, és nyisd meg újra.",
+  "suggestedOps.loadFailed": "A Cmdr nem tudta beolvasni a javaslatokat. Zárd be ezt az ablakot, és nyisd meg újra.",
   "@suggestedOps.loadFailed": {
-    "sourceHash": "ef0da3e"
+    "sourceHash": "139450e"
   },
   "suggestedOps.agentReason": "Miért:",
   "@suggestedOps.agentReason": {
@@ -54,6 +54,34 @@
   "suggestedOps.fileCount": "{countText} {count, plural, one {fájl} other {fájl}}",
   "@suggestedOps.fileCount": {
     "sourceHash": "76ef0a6"
+  },
+  "suggestedOps.action.move": "Áthelyezés",
+  "@suggestedOps.action.move": {
+    "sourceHash": "6ecc3df"
+  },
+  "suggestedOps.action.copy": "Másolás",
+  "@suggestedOps.action.copy": {
+    "sourceHash": "e21f935"
+  },
+  "suggestedOps.action.trash": "Áthelyezés a Kukába",
+  "@suggestedOps.action.trash": {
+    "sourceHash": "9adcdf3"
+  },
+  "suggestedOps.action.delete": "Törlés",
+  "@suggestedOps.action.delete": {
+    "sourceHash": "e2d0a54"
+  },
+  "suggestedOps.action.rename": "Átnevezés",
+  "@suggestedOps.action.rename": {
+    "sourceHash": "3064d79"
+  },
+  "suggestedOps.action.compress": "Tömörítés",
+  "@suggestedOps.action.compress": {
+    "sourceHash": "033fc04"
+  },
+  "suggestedOps.action.extract": "Kicsomagolás",
+  "@suggestedOps.action.extract": {
+    "sourceHash": "c15301c"
   },
   "suggestedOps.approve.move": "{countText} {count, plural, one {fájl} other {fájl}} áthelyezése",
   "@suggestedOps.approve.move": {
@@ -82,6 +110,14 @@
   "suggestedOps.approve.extract": "{countText} {count, plural, one {archívum} other {archívum}} kicsomagolása",
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
+  },
+  "suggestedOps.approve.addServer": "Szerver mentése",
+  "@suggestedOps.approve.addServer": {
+    "sourceHash": "726b9af"
+  },
+  "suggestedOps.approve.editServer": "Módosítások mentése",
+  "@suggestedOps.approve.editServer": {
+    "sourceHash": "dd0ae7a"
   },
   "suggestedOps.reject": "Elutasítás",
   "@suggestedOps.reject": {
@@ -139,13 +175,13 @@
   "@suggestedOps.irreversible.delete": {
     "sourceHash": "e32da9a"
   },
-  "suggestedOps.blocked.noTrash": "Nem indítható: ezen a meghajtón nincs Kuka",
-  "@suggestedOps.blocked.noTrash": {
-    "sourceHash": "f08e038"
+  "suggestedOps.noTrash": "Ezen a meghajtón nincs Kuka",
+  "@suggestedOps.noTrash": {
+    "sourceHash": "38a6adc"
   },
-  "suggestedOps.blocked.noTrashTooltip": "Azon a meghajtón, amelyen ezek a fájlok vannak, nincs Kuka, így nem lehet oda áthelyezni őket, és semmi sem történne. Utasítsd el, vagy töröld magad a fájlokat, ha ezt szeretnéd.",
-  "@suggestedOps.blocked.noTrashTooltip": {
-    "sourceHash": "f2a5d5f"
+  "suggestedOps.noTrashTooltip": "Azon a meghajtón, amelyen ezek a fájlok vannak, nincs Kuka, ezért ha jóváhagyod, véglegesen törlődnek.",
+  "@suggestedOps.noTrashTooltip": {
+    "sourceHash": "4327cb2"
   },
   "suggestedOps.irreversible.overwrite": "Ezt nem lehet visszavonni: lecserél egy meglévő archívumot",
   "@suggestedOps.irreversible.overwrite": {
@@ -154,6 +190,14 @@
   "suggestedOps.irreversible.other": "Ezt nem lehet visszavonni",
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
+  },
+  "suggestedOps.reversible.forgetServer": "Ezt vissza tudod vonni: felejtsd el a szervert a Szerverek listában",
+  "@suggestedOps.reversible.forgetServer": {
+    "sourceHash": "892c381"
+  },
+  "suggestedOps.reversible.changeServerBack": "Ezt vissza tudod vonni: állítsd vissza a szerver beállításait a Szerverek listában",
+  "@suggestedOps.reversible.changeServerBack": {
+    "sourceHash": "ff1ea36"
   },
   "suggestedOps.folderWillBeCreated": "A Cmdr létrehozza ezt a mappát",
   "@suggestedOps.folderWillBeCreated": {
@@ -307,12 +351,94 @@
   "@suggestedOps.refusal.couldNotStart.message": {
     "sourceHash": "77ef48b"
   },
-  "suggestedOps.refusal.couldNotStart.suggestion": "Utasítsd el, és kérd meg az AI-t, hogy javasolja újra.",
+  "suggestedOps.refusal.couldNotStart.suggestion": "Utasítsd el, és kérd meg a Cmdrt, hogy javasolja újra.",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
-    "sourceHash": "5b5b779"
+    "sourceHash": "1d2b1bd"
+  },
+  "suggestedOps.refusal.serverLabel": "Miért nem mentette a Cmdr",
+  "@suggestedOps.refusal.serverLabel": {
+    "sourceHash": "c1958af"
+  },
+  "suggestedOps.refusal.serverChanged.message": "Ez a szerver megváltozott, mióta az AI ezt javasolta, ezért a Cmdr nem mentett semmit.",
+  "@suggestedOps.refusal.serverChanged.message": {
+    "sourceHash": "a346372"
+  },
+  "suggestedOps.refusal.serverChanged.suggestion": "Kérd meg a Cmdrt, hogy javasolja újra, vagy szerkeszd a szervert a Szerverek listában.",
+  "@suggestedOps.refusal.serverChanged.suggestion": {
+    "sourceHash": "cab1352"
+  },
+  "suggestedOps.refusal.alreadySaved.message": "Ez a szerver már szerepel a Szerverek listádban, ezért a Cmdr nem mentett semmit.",
+  "@suggestedOps.refusal.alreadySaved.message": {
+    "sourceHash": "111276b"
+  },
+  "suggestedOps.refusal.alreadySaved.suggestion": "Nyisd meg a Szerverek listából, vagy kérd meg inkább a Cmdrt, hogy javasoljon hozzá módosítást.",
+  "@suggestedOps.refusal.alreadySaved.suggestion": {
+    "sourceHash": "6ec8bdc"
+  },
+  "suggestedOps.refusal.nameTaken.message": "Már van egy másik mentett szerver ezen a néven: {name}, ezért a Cmdr nem mentett semmit.",
+  "@suggestedOps.refusal.nameTaken.message": {
+    "sourceHash": "1d0c01c"
+  },
+  "suggestedOps.refusal.nameTaken.suggestion": "Kérd meg a Cmdrt, hogy javasoljon másik nevet.",
+  "@suggestedOps.refusal.nameTaken.suggestion": {
+    "sourceHash": "e366b0c"
+  },
+  "suggestedOps.server.add": "Szerver hozzáadása",
+  "@suggestedOps.server.add": {
+    "sourceHash": "8667e21"
+  },
+  "suggestedOps.server.change": "Szerverbeállítások módosítása",
+  "@suggestedOps.server.change": {
+    "sourceHash": "187a941"
+  },
+  "suggestedOps.server.field.port": "Port",
+  "@suggestedOps.server.field.port": {
+    "sourceHash": "72e9a59",
+    "sameAsSourceJustification": "A „Port” hálózati szakszó, a magyar UI is változatlanul használja (MS: port); ugyanígy `settings.developer.mcpPort.label`."
+  },
+  "suggestedOps.server.field.account": "Fiók",
+  "@suggestedOps.server.field.account": {
+    "sourceHash": "7e1b0d5"
+  },
+  "suggestedOps.server.field.share": "Megosztott mappa",
+  "@suggestedOps.server.field.share": {
+    "sourceHash": "4268344"
+  },
+  "suggestedOps.server.field.bucket": "Bucket",
+  "@suggestedOps.server.field.bucket": {
+    "sourceHash": "c83b657",
+    "sameAsSourceJustification": "A „bucket” az S3 szakszava; ugyanaz a mező, mint `servers.sheet.s3Bucket`, indoklás: `docs/i18n/hu/decisions.md` § S3."
+  },
+  "suggestedOps.server.notSet": "Nincs beállítva",
+  "@suggestedOps.server.notSet": {
+    "sourceHash": "4895f73"
+  },
+  "suggestedOps.server.changesTo": "erre változik",
+  "@suggestedOps.server.changesTo": {
+    "sourceHash": "8c0db20"
+  },
+  "suggestedOps.server.newAddress": "Új cím",
+  "@suggestedOps.server.newAddress": {
+    "sourceHash": "5fc5498"
+  },
+  "suggestedOps.server.newAddressTooltip": "Egyik mentett szervered sincs ezen a címen. Ellenőrizd, hogy erre gondolsz-e.",
+  "@suggestedOps.server.newAddressTooltip": {
+    "sourceHash": "16d851c"
+  },
+  "suggestedOps.server.sharesAffected": "Ez a módosítás {countText} mentett {count, plural, one {megosztást} other {megosztást}} érint ezen a szerveren.",
+  "@suggestedOps.server.sharesAffected": {
+    "sourceHash": "390f931"
   },
   "suggestedOps.indicatorTooltip": "AI-javaslatok várnak rád. Kattints az áttekintésükhöz.",
   "@suggestedOps.indicatorTooltip": {
     "sourceHash": "4508b0b"
+  },
+  "suggestedOps.newNameTaken": "A név már foglalt",
+  "@suggestedOps.newNameTaken": {
+    "sourceHash": "58e9841"
+  },
+  "suggestedOps.newNameTakenTooltip": "Ott már van valami ezzel a névvel: „{name}”.",
+  "@suggestedOps.newNameTakenTooltip": {
+    "sourceHash": "b18f96a"
   }
 }

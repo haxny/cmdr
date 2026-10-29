@@ -1454,6 +1454,26 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "description": "Help text for the per-provider AI configurations. \"API\" = application programming interface; keep the term."
   },
+  "settings.ai.reasoningEfforts.label.reasoningEffort": "Reasoning effort",
+  "@settings.ai.reasoningEfforts.label.reasoningEffort": {
+    "description": "Label for the picker that sets how hard the chosen cloud AI model thinks before it answers. Shown under the model in Settings > AI > Provider when the AI service is OpenAI, Azure OpenAI, xAI, Groq, OpenRouter, Together AI, Fireworks AI, Mistral AI, DeepSeek, or LM Studio: that is these services' own name for the setting in their docs, so the label matches what their users already know. The same picker reads “Effort” for Anthropic and “Thinking level” elsewhere (settings.ai.reasoningEfforts.label.effort, settings.ai.reasoningEfforts.label.thinkingLevel). If the target language has an established rendering of OpenAI’s “reasoning effort”, use it. A noun phrase. Sentence case."
+  },
+  "settings.ai.reasoningEfforts.label.effort": "Effort",
+  "@settings.ai.reasoningEfforts.label.effort": {
+    "description": "Label for the picker that sets how hard the chosen cloud AI model thinks before it answers. Shown under the model in Settings > AI > Provider when the AI service is Anthropic (Claude): Anthropic calls this setting “effort” in its docs, so the label matches what Claude users already know. The same picker reads “Reasoning effort” or “Thinking level” for other services (settings.ai.reasoningEfforts.label.reasoningEffort, settings.ai.reasoningEfforts.label.thinkingLevel). Means how much work the model puts into thinking, not physical effort. A noun. Sentence case."
+  },
+  "settings.ai.reasoningEfforts.label.thinkingLevel": "Thinking level",
+  "@settings.ai.reasoningEfforts.label.thinkingLevel": {
+    "description": "Label for the picker that sets how hard the chosen cloud AI model thinks before it answers. Shown under the model in Settings > AI > Provider when the AI service is Google Gemini (Google calls this setting “thinking level” in its docs), and as the general name for services with no name of their own for it (Qwen, Perplexity, Ollama, a custom service). Also this setting’s name in settings search. The same picker reads “Reasoning effort” or “Effort” for other services (settings.ai.reasoningEfforts.label.reasoningEffort, settings.ai.reasoningEfforts.label.effort). Level as in how much, like a dial. A noun phrase. Sentence case."
+  },
+  "settings.ai.reasoningEfforts.description": "How long the model thinks before it answers. More effort helps with tricky tasks, but replies come slower and the thinking is billed as output.",
+  "@settings.ai.reasoningEfforts.description": {
+    "description": "Help text under the reasoning picker in Settings > AI > Provider (labeled Reasoning effort, Effort, or Thinking level depending on the AI service; see settings.ai.reasoningEfforts.label.*). “effort” here is the plain word, how much work the model puts in. Says what effort does, and its cost and speed tradeoff: thinking longer gives better answers on hard tasks, but takes longer, and the AI service charges for the thinking like it charges for the answer (as output). Sentence case."
+  },
+  "settings.ai.reasoningEfforts.keywords": "reasoning effort, effort, reasoning, thinking, think, speed, cost, quality",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "description": "Search keywords for the reasoning setting (named settings.ai.reasoningEfforts.label.thinkingLevel in search; its row reads Reasoning effort, Effort, or Thinking level depending on the AI service) in Settings > AI > Provider. What it does: sets how long the AI model thinks before answering. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats. Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
   "settings.ai.localContextSize.label": "Context window",
   "@settings.ai.localContextSize.label": {
     "description": "Label for the local-model context-window-size picker. Shown when AI provider is Local LLM. \"context window\" is the model's token capacity per request; keep the standard term for it."
@@ -2684,7 +2704,7 @@
     "screenshot": "settings-ai-ask-cmdr.png",
     "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
-  "settings.askCmdr.openAiSettings": "Open AI settings",
+  "settings.askCmdr.openAiSettings": "Go to AI settings",
   "@settings.askCmdr.openAiSettings": {
     "description": "Button under settings.askCmdr.cloudOffHint that jumps to Settings > AI > Provider, where the Allow cloud AI switch is. Starts with a verb. Sentence case.",
     "screenshot": "settings-ai-ask-cmdr.png",
@@ -2714,7 +2734,7 @@
     "description": "Label for the text field where the user picks a dedicated model for Ask Cmdr. Sentence case.",
     "screenshot": "settings-ai-ask-cmdr.png"
   },
-  "settings.askCmdr.interactiveModel.description": "The model the chat uses. Leave blank to use the same model as Cmdr’s other AI features. Example: claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "The model the chat uses. Leave blank to use the same model as Cmdr’s other AI features. Example: claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
     "description": "Help text under the Ask Cmdr model field. Explains that blank falls back to the shared AI model, and gives an example model id. The example id and the apostrophe (U+2019) stay as written; do not translate the example id.",
     "screenshot": "settings-ai-ask-cmdr.png"
@@ -2735,19 +2755,43 @@
     "description": "Label for the picker that sets how much of an Ask Cmdr conversation is sent to the model with each message. Sentence case.",
     "screenshot": "settings-ai-ask-cmdr.png"
   },
-  "settings.askCmdr.chatMemorySize.description": "How much of the conversation Cmdr sends to the model. Automatic follows your model’s known limit.",
+  "settings.askCmdr.chatMemorySize.description": "How much of the conversation Cmdr sends to the model. Automatic uses your model’s whole context window; a size caps it lower to spend less.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "description": "Help text under the chat memory size picker. Explains what the setting does and that the Automatic option follows the context window Cmdr knows the chosen model to have. \"Automatic\" here refers to the first option in the same picker, so use the same wording as that option. The apostrophe is U+2019.",
+    "description": "Help text under the chat memory size picker. Explains what the setting does, that the Automatic option uses all of the context window Cmdr knows the chosen model to have, and that picking a size sets a lower limit, which costs less per message. \"Automatic\" here refers to the first option in the same picker, so use the same wording as that option. The apostrophe is U+2019.",
     "screenshot": "settings-ai-ask-cmdr.png"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automatic (recommended)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {
-    "description": "First option in the chat memory size picker: let Cmdr follow the context window it knows the chosen model to have, instead of a fixed number of tokens. The other options are plain token counts. Sentence case.",
+    "description": "First option in the chat memory size picker: let Cmdr use all of the context window it knows the chosen model to have, instead of a fixed number of tokens. The other options are plain token counts. Sentence case.",
     "screenshot": "settings-ai-ask-cmdr.png"
   },
   "settings.askCmdr.chatMemorySize.overWindow": "Your model may refuse a message this long. Cmdr keeps the value you set.",
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "description": "Warning under the chat memory size picker, shown when the chosen size is larger than the context window Cmdr believes the model has. Cmdr does not overrule the choice: what Cmdr knows about a model can be out of date, and the user may be right. So name the consequence and confirm the value stands. Never says error or failed. Sentence case.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+  },
+  "settings.askCmdr.spendPause.label": "Check in when an answer costs over",
+  "@settings.askCmdr.spendPause.label": {
+    "description": "Label for the picker in Settings > AI > Ask Cmdr that sets an amount of money: once one answer's estimated cost passes it, the assistant pauses and asks whether to keep going. The options are money amounts (like $2.00) plus Never. Sentence case.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+  },
+  "settings.askCmdr.spendPause.description": "One answer can run many lookups. Past this estimated cost, Cmdr pauses it and asks before it spends more. Estimates use list prices, so caching usually makes the real cost lower.",
+  "@settings.askCmdr.spendPause.description": {
+    "description": "Help text under the picker that sets when a running Ask Cmdr answer pauses over its cost. Explains that a single answer may look things up many times, that once its estimated cost passes the chosen amount the assistant stops and asks the user whether to continue, and that the estimate uses the AI provider's published prices, while the provider's prompt caching (reusing parts of the chat it already read) usually makes the actual bill smaller. \"Lookup\" is the word the chat already uses for a tool call.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+  },
+  "settings.askCmdr.spendPause.opt.never": "Never",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "description": "Last option in the picker that sets when a running Ask Cmdr answer pauses over its cost: never pause, however much one answer costs. The other options are money amounts. Sentence case.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+  },
+  "settings.askCmdr.spendPause.keywords": "cost, spend, money, price, budget, limit, pause, dollars, expensive",
+  "@settings.askCmdr.spendPause.keywords": {
+    "description": "Search keywords for the “Check in when an answer costs over” setting (settings.askCmdr.spendPause.label) in Settings > AI > Ask Cmdr. What it does: sets how much one answer may cost before the assistant pauses and asks to keep going. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
     "screenshot": "settings-ai-ask-cmdr.png",
     "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
@@ -3495,6 +3539,40 @@
   "settings.advanced.card.updates": "Updates",
   "@settings.advanced.card.updates": {
     "description": "Heading of the updates card (update-check interval) in Settings > Advanced."
+  },
+  "settings.advanced.card.askCmdr": "Ask Cmdr",
+  "@settings.advanced.card.askCmdr": {
+    "description": "Heading of the Ask Cmdr card (what happens to the assistant’s tool groups when an answer arrives) in Settings > Advanced. “Ask Cmdr” is the product name of the in-app assistant; keep it untranslated."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Tool groups when the answer arrives",
+  "@settings.askCmdr.toolGroupsOnAnswer.label": {
+    "description": "Label for a choice in Settings > Advanced > Ask Cmdr. In the Ask Cmdr chat, the assistant’s requests to look at files show as a group of short lines that opens while it works; this picks what that group does once the answer is in.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr shows what the AI looks at while it works. Pick whether those lines fold away once the answer arrives.",
+  "@settings.askCmdr.toolGroupsOnAnswer.description": {
+    "description": "Help text under the tool-groups choice in Settings > Advanced > Ask Cmdr. “Ask Cmdr” is the product name of the chat panel; keep it untranslated. It names only the panel: the AI is the one that looks at files and answers. “Those lines” are the short lines in the chat naming each folder, file, or search the AI checked.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
+    "description": "Radio-button option for the tool-groups choice in Settings > Advanced > Ask Cmdr: when the answer arrives, every group of tool lines closes to a one-line summary.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Leave them as I had them",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
+    "description": "Radio-button option for the tool-groups choice in Settings > Advanced > Ask Cmdr: when the answer arrives, each group of tool lines stays open or closed, whichever the person left it.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistant, chat, collapse, expand, fold, tools, steps, answer",
+  "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
+    "description": "Search keywords for the “Tool groups when the answer arrives” setting (settings.askCmdr.toolGroupsOnAnswer.label) in Settings > Advanced > Ask Cmdr. What it does: picks whether the assistant’s groups of tool lines close once it answers. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance.",
+    "screenshot": "settings-ai-ask-cmdr.png",
+    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
   },
   "settings.updates.card.updates": "Updates",
   "@settings.updates.card.updates": {

@@ -276,8 +276,10 @@ fn refresh_blocking(
         return unchanged(lit, last_current);
     };
     let mut paths: Vec<String> = rows.iter().map(|(path, _)| path.clone()).collect();
+    // The rows are the listed folder's children, so its volume is theirs.
+    let volume_id = index().volume_id_for_path(&dir_path);
     paths.push(dir_path);
-    let Ok(mut stats) = index().dir_stats_batch(&paths) else {
+    let Ok(mut stats) = index().dir_stats_batch(&volume_id, &paths) else {
         return unchanged(lit, last_current);
     };
     paths.pop();

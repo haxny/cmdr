@@ -1222,6 +1222,26 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label.reasoningEffort": "Denkaufwand",
+  "@settings.ai.reasoningEfforts.label.reasoningEffort": {
+    "sourceHash": "3236aee"
+  },
+  "settings.ai.reasoningEfforts.label.effort": "Aufwand",
+  "@settings.ai.reasoningEfforts.label.effort": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.label.thinkingLevel": "Denkstufe",
+  "@settings.ai.reasoningEfforts.label.thinkingLevel": {
+    "sourceHash": "96f115b"
+  },
+  "settings.ai.reasoningEfforts.description": "Wie lange das Modell nachdenkt, bevor es antwortet. Mehr Aufwand hilft bei kniffligen Aufgaben, aber Antworten kommen langsamer, und das Nachdenken wird als Ausgabe berechnet.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "Denkaufwand, Aufwand, Denken, Nachdenken, Überlegen, Reasoning, Denkzeit, Tiefe, Geschwindigkeit, Kosten, Qualität",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "3bbb127"
+  },
   "settings.ai.localContextSize.label": "Kontextfenster",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2289,7 +2309,7 @@
   },
   "settings.askCmdr.openAiSettings": "KI-Einstellungen öffnen",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Anbieter und Modell",
   "@settings.askCmdr.provider.title": {
@@ -2307,9 +2327,9 @@
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "Das Modell, das der Chat nutzt. Leer lassen, um dasselbe Modell wie bei den anderen KI-Funktionen von Cmdr zu verwenden. Beispiel: claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "Das Modell, das der Chat nutzt. Leer lassen, um dasselbe Modell wie bei den anderen KI-Funktionen von Cmdr zu verwenden. Beispiel: claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
-    "sourceHash": "881f8a4"
+    "sourceHash": "e301e99"
   },
   "settings.askCmdr.interactiveModel.placeholder": "Wie die KI von Cmdr",
   "@settings.askCmdr.interactiveModel.placeholder": {
@@ -2323,9 +2343,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Wie viel der Unterhaltung Cmdr an das Modell sendet. Automatisch richtet sich nach dem bekannten Limit deines Modells.",
+  "settings.askCmdr.chatMemorySize.description": "Wie viel der Unterhaltung Cmdr an das Modell sendet. Automatisch nutzt das ganze Kontextfenster deines Modells; mit einer festen Größe setzt du eine niedrigere Grenze und sparst Kosten.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automatisch (empfohlen)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {
@@ -2334,6 +2354,22 @@
   "settings.askCmdr.chatMemorySize.overWindow": "Dein Modell lehnt eine so lange Nachricht möglicherweise ab. Cmdr behält den Wert, den du gesetzt hast.",
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
+  },
+  "settings.askCmdr.spendPause.label": "Nachfragen, wenn eine Antwort mehr kostet als",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Eine Antwort kann viele Abfragen ausführen. Sobald die geschätzten Kosten diesen Betrag übersteigen, hält Cmdr sie an und fragt nach, bevor mehr ausgegeben wird. Schätzungen beruhen auf Listenpreisen, durch Zwischenspeichern sind die echten Kosten meist niedriger.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Nie",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "Geld, Ausgaben, Preis, Budget, Limit, Grenze, teuer, Dollar, Euro, Rückfrage, Pause, Rechnung",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
   },
   "settings.askCmdr.chatMemorySize.keywords": "Chat, Gedächtnis, Speicher, Kontext, Kontextfenster, Token, Größe, Budget, Verlauf",
   "@settings.askCmdr.chatMemorySize.keywords": {
@@ -2940,6 +2976,31 @@
   "@settings.advanced.card.updates": {
     "sourceHash": "22e2bad",
     "sameAsSourceJustification": "'Updates' is the kept loanword (standard DE UI, as in settings.section.updatesAndPrivacy 'Updates & Datenschutz'); spelled identically."
+  },
+  "settings.advanced.card.askCmdr": "Ask Cmdr",
+  "@settings.advanced.card.askCmdr": {
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Produktname: Die Karte trägt den Namen des Chat-Panels, „Ask Cmdr“ bleibt in jeder Sprache unübersetzt (wie settings.askCmdr.enabled.label)."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Werkzeuggruppen, wenn die Antwort da ist",
+  "@settings.askCmdr.toolGroupsOnAnswer.label": {
+    "sourceHash": "e5e922b"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr zeigt, was sich die KI bei der Arbeit ansieht. Wähle, ob diese Zeilen eingeklappt werden, sobald die Antwort da ist.",
+  "@settings.askCmdr.toolGroupsOnAnswer.description": {
+    "sourceHash": "785da0a"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Einklappen",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
+    "sourceHash": "01052be"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "So lassen, wie ich sie hatte",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
+    "sourceHash": "0aa6718"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "Assistent, KI, Chat, einklappen, ausklappen, zuklappen, aufklappen, Werkzeuge, Schritte, Zeilen, Verlauf",
+  "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
+    "sourceHash": "6a9f055"
   },
   "settings.updates.card.updates": "Updates",
   "@settings.updates.card.updates": {

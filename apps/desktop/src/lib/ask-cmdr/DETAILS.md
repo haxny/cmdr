@@ -17,6 +17,9 @@ Wrappers in `../tauri-commands/ask-cmdr.ts`:
   indicator.
 - `cancelAskCmdr(id)`, `getAskCmdrConversation(id, limit, offset)`, `listAskCmdrConversations(...)` — plain specta
   commands.
+- `askCmdrToolResult(conversationId, messageId, callId, occurrence)` — what one line's call returned (the preview plus
+  the raw JSON for Copy), fetched on the user's expand: the one door a raw result crosses by. § Groups and the expanded
+  line.
 - `preflightBulkRename` / `reviseBulkRenameRow` / `applyBulkRename` / `cancelBulkRenameProposal` — the review dialog's
   four actions. Only opaque ids cross, plus the one name the user typed.
 
@@ -40,34 +43,72 @@ Three things follow from the subscription being conversation-keyed rather than p
 - **A reload keeps the answer.** The webview goes away mid-turn and the backend keeps writing into `main.db`; the
   reloaded rail lands on the same thread and the rest of the turn renders. There is no second `assistantStarted` to
   hear, so `adoptLiveTurn` treats ANY live event for the thread on screen as proof a turn is running, and the reducer
-  creates the streaming bubble if there isn't one (`ensureAssistant`).
+  creates the streaming bubble if there isn't one (`ensureAssistant`). The load itself adopts too when the backend says
+  a turn runs there (`turnInFlightSinceSeq`, `resumeThread`), so a turn sitting in a long tool call doesn't look idle
+  until its next event.
+- **Only a STREAMING bubble is written into** (`streamingAssistant`). An ended turn's bubble stays closed, so a turn the
+  rail never typed (a wake, or one a reload caught before its first row landed) opens its own. A reload that caught rows
+  of the running turn folds that bubble still streaming, which is how the rest of the turn lands in it.
 - **A thread can disappear under the rail.** A quiet wake opens a thread, thinks in it, and deletes it seconds later;
   `discarded` is the only way a subscriber can learn that, since there is nothing left to re-read. The rail steps off
   into an empty chat and the session list drops the row.
-- **A stopped turn stays stopped.** A cancel gets no terminal event back, so the backend dribbles a chunk or two more.
-  Those would otherwise read as a live turn and re-enter "working…" with nothing coming to clear it, so the thread goes
-  on a stopped list until it is sent to again.
+- **A stopped turn stays stopped.** After a cancel the backend dribbles a chunk or two more (and the round's remaining
+  tool calls still run) before its terminal arrives. Those would otherwise read as a live turn and re-enter "working…",
+  so the thread holds a pending stop until that terminal: § Stop is local first, settled by the backend.
+
+**The progress watchdog is a backstop.** Quiet for `STALL_AFTER_MS` (30 s), the bubble says it's taking a while; quiet
+for `STOP_AFTER_MS` (150 s), the rail stops the turn with a `timeout` item. 150 s sits past the backend's own stall
+window (120 s, which counts the provider's keep-alives the rail never sees), so a live turn always ends with the
+backend's typed terminal first and the watchdog only catches a backend that went away. A turn paused on spend has no
+watchdog (§ Spend pause).
+
+**One bubble per turn, made of rounds.** An assistant item (`AssistantItem`, `ask-cmdr-messages.ts`) is one turn:
+`rounds` (one per model call: `{ messageId, text, calls }`), `turnId` (the opener row's id), and `stats`. A round's text
+renders BEFORE its calls whatever order the wire interleaved them in, because that is the order the stored row holds
+(genai's `StreamEnd` yields one text, then all calls). `displaySegments` (`ask-cmdr-rounds.ts`) turns rounds into what
+the bubble renders: each round's text, then its calls, with consecutive tool runs merged when the round between them
+said nothing. Only the last round's prose is a live region. A line is `(messageId, callId)` everywhere, `each` keys
+included (`r<index>:<callId>` while the round has no id, plus an occurrence suffix for an id repeated within one round),
+because call ids collide across rounds as the norm.
 
 `sendMessage` optimistically appends a `{ kind: 'user' }` item and flips `streaming` on, then calls
 `sendAskCmdrMessage`. Events drive the render (`applyStreamEvent`), each delegating to a tiny mutator so the switch
 stays simple:
 
-- `started` → the thread exists and is being worked on. A fresh chat has no id until this arrives (or until the send's
-  promise resolves, whichever is first); a wake emits it too, which is what tells the session list.
-- `assistantStarted` → push a streaming `{ kind: 'assistant', text: '', tools: [] }`.
-- `textDelta` → append to the last assistant's `text`; clear its `thinking`.
-- `reasoningTick` → set the last assistant's `thinking` (a subtle "thinking…" line; the reasoning content itself never
-  crosses).
-- `toolCallStarted` / `toolCallFinished` → push / update a `RailToolCall` (the collapsible "looked at X" line;
-  `ok = false` is a refusal or handler problem).
-- `done` → finalize the bubble, stamp its persisted id, `streaming = false`.
-- `failed` → drop an empty bubble, push a typed `{ kind: 'error' }` item, `streaming = false`. The item carries the
-  source error's own wording (`detail`, when the backend has one — a retired model slug, a quota reset time) under the
-  friendly headline, rendered as escaped plain text (never `{@html}`), so the user sees what to fix. Display only: the
-  UI branches on `errorKind`, never on `detail`. `managedByOrganization` (the organization's MDM policy refused the
-  turn, nothing sent) words the rule that refused through `managedAiRefusalMessage`: the send refusal and the `failed`
-  event carry it as `managed` beside the unit kind. `askCmdr.error.managedByOrganization` is the fallback when none
-  came.
+- `started` → the thread exists and is being worked on; a wake emits it too, which is what tells the session list. It
+  never hands a fresh chat its id: § A send waiting for its thread id.
+- `assistantStarted` → open a round in the current bubble (creating the bubble if needed).
+- **A round with a `messageId` is SEALED** (its row is stored): `textDelta`, `reasoningTick`, and `toolCallStarted`
+  arriving on a sealed round open a new one first (`openRound`). That is what makes a reload mid-turn come out right:
+  every folded round is sealed, so the live chunks that follow get a round of their own.
+- `textDelta` → append to the current round's text, even after its calls started; clear `thinking`.
+- `reasoningTick` → set the bubble's `thinking` (a subtle "thinking…" line; the reasoning content itself never crosses).
+- `userPersisted` → the user item `sendMessage` typed for this turn (held by reference, never "the last user item") gets
+  its id, and the streaming bubble its `turnId` (it arrives after round 1 streamed, on the first `End`). A turn nobody
+  typed here (a wake, a rejected sweep's follow-up, a send from before a reload) has no such item, so the event's
+  `opener` view goes in above the streaming bubble as the item the fold would make of it (`openerItem`), unless the
+  thread already shows that row. Patching the last user item instead gave an EARLIER turn's bubble this turn's id.
+- `toolCallStarted` → add a running line to the current round, idempotent by `callId` within the round (ERR-FRMAR).
+- `toolCallsResolved` → the round's stored truth, once per tool round: stamp its `messageId` (sealing it), set each
+  line's subject and `repeatOf` (and the tool's wire name), add a line whose start never came, and drop a started line
+  the batch doesn't list (a nameless call the backend discarded). The k-th call with an id takes the k-th started line
+  with it.
+- `toolCallFinished` → find the line by `(messageId, callId)` across the thread (newest bubble first) and set its
+  outcome and refined subject. `ok` derives from the outcome through `outcomeOk` (`ask-cmdr-tool-line.ts`, an exhaustive
+  `Record` mirroring the backend's `ToolOutcome::ok`, plus the `connection` arm, ok only for a live volume); a settled
+  line with no outcome reads as done.
+- `done` → stamp the current round with its `messageId` FIRST (the answer round is text-only, so no `toolCallsResolved`
+  stamped it, and settling would drop it as never stored), attach `turn` as `stats`, finalize, `streaming = false`.
+- `failed` → attach `turn` as `stats`, finalize, push a typed `{ kind: 'error' }` item, `streaming = false`. The item
+  carries the source error's own wording (`detail`, when the backend has one — a retired model slug, a quota reset time)
+  under the friendly headline, rendered as escaped plain text (never `{@html}`), so the user sees what to fix. Display
+  only: the UI branches on `errorKind`, never on `detail`. `managedByOrganization` (the organization's MDM policy
+  refused the turn, nothing sent) words the rule that refused through `managedAiRefusalMessage`: the send refusal and
+  the `failed` event carry it as `managed` beside the unit kind. `askCmdr.error.managedByOrganization` is the fallback
+  when none came.
+- `stopped` → the backend's terminal for a cancelled turn. After the rail's own Stop it settles the stopped bubble (§
+  Stop is local first). With no stop pending here (the status corner stopped a wake) it ends the turn like `done`
+  (`endTurn`: stats, finalize, `streaming = false`, the review), so the watchdog never calls an ended turn a timeout.
 - `modelChanged` / `chatMemoryChanged` → insert a `{ kind: 'modelChange' }` / `{ kind: 'chatMemoryChange' }` timeline
   line BEFORE the current user bubble (the change happened between the turns; the backend already persisted the event
   row). Both go through the one `insertBeforeCurrentTurn` helper. `chatMemoryChanged` carries a token COUNT and the rail
@@ -79,9 +120,15 @@ stays simple:
   `src-tauri/src/agent/chat/DETAILS.md` § Budget enforcement.
 - `proposalDecided` → not a turn event at all, and handled before the reducer: § How an open thread stays current.
 
-Every terminal path uses the same assistant finalizer. It clears thinking/stalled state and removes tool rows that never
-received `toolCallFinished`, while retaining completed tool history. This also covers local cancellation, the
-progress-watchdog timeout, and a send invocation that rejects before stream events can report a typed failure.
+**Every terminal path uses the same finalizer, and it settles the bubble the way a reload reads the stored rows**
+(`settleAssistant` + `settleRounds`): rounds without a `messageId` are dropped (they never reached `End`, so nothing was
+stored: crash case a), calls still running settle with no outcome (no result row exists), empty rounds go, the bubble
+takes its last persisted round's id, and a bubble with nothing left is removed. This covers `done`, `failed`, `stopped`,
+a stopped turn's terminal, and a send invocation that rejects before stream events can report a typed failure. Tradeoff,
+chosen for live-equals-reload: a turn that ends without an answer loses the text of the round it was streaming, because
+a reload wouldn't show it either. A Stop defers that loss to the terminal: the round may still reach `End` and be
+stored. Every terminal also settles the turn's tool groups per the setting (`settleTurnGroups`, § Groups and the
+expanded line).
 
 **Slot-change events, live path.** `settings-applier.ts` calls the trigger's `noteSlotSettingChanged()` on the five
 slot-affecting settings (`ai.provider` / `ai.cloudProvider` / `ai.cloudProviderConfigs` / `askCmdr.interactiveModel` /
@@ -93,12 +140,181 @@ same model and size, or the interactive override masks the changed shared model)
 user switched threads is dropped locally (the rows still show on revisit). History renders the same lines via the
 `event`-role fold in `buildRailMessages`. Backend mechanics: `src-tauri/src/agent/chat/DETAILS.md` § Slot-change events.
 
-**Cancel finalizes locally.** The runtime returns `Cancelled` with no terminal event, so `stopStreaming` cancels the
-backend AND finalizes the current bubble itself, then puts the thread on the stopped list so the chunks still in flight
-are ignored rather than re-adopted as a live turn.
+**Stop is local first, settled by the backend** (`stopStreaming`, `PendingStop`). The click cancels the backend and ends
+the turn ON SCREEN at once: `streaming = false`, the bubble's cursor and "thinking…" off, the watchdog cleared, the
+review opened over what was staged. The bubble itself keeps everything, the round still streaming and its running lines
+included, because dispatch isn't cancellable: the round's calls run on and store their results, and the round may still
+reach `End`. The thread holds a pending stop (oldest first, per thread) carrying the bubble, the user item typed for the
+turn, and the send that started it. Until the stopped turn's terminal:
 
-History loads through `getAskCmdrConversation` on rail open (bootstrapping the most recent thread) and folds `tool`-role
-result rows into their assistant tool line by `callId`, so the thread shows one line per call.
+- `toolCallsResolved` resolves the stopped bubble's last round, `toolCallFinished` settles its line by
+  `(messageId, callId)`, and `userPersisted` patches the stopped turn's own user item (or inserts its opener above its
+  bubble). None of them adopts the turn.
+- `proposalReady` stages AND opens the review at once: the turn is over on screen, so no turn end is coming to show it.
+- Everything else is dropped. That holds after a new send too: the new turn queues behind the stopped one on the
+  backend's single-flight lock, so until the stopped turn's terminal, every event of the thread is still its.
+
+The FIRST terminal of any kind (`done`, `failed`, `stopped`) consumes the oldest pending stop of its thread, wherever
+the rail is now: `done` stamps the last round as the answer and keeps it, `failed` and `stopped` drop a round that never
+reached `End`, and all three attach `turn` and settle the bubble. No error item for a `failed`: the user stopped it. It
+never touches `streaming`, the watchdog, or the review (they ended at the click, and a send since may own them).
+`discarded` drops the thread's pending stops and goes on to the reducer. A send the backend refused ran no turn, so no
+terminal will come: the refusal withdraws its own stop. A thread load forgets the thread's pending stops: if that turn
+still runs, the fold shows it running and the load adopts it, and its terminal ends it like any other. The progress
+watchdog's timeout is a Stop too (`stopStreaming`, then a `timeout` item).
+
+**The thread waits for exactly the terminals still coming** (`matchStopsToTerminals`). `cancelAskCmdr` answers what the
+Stop reached (`CancelOutcomeView`: `tripped`, the turns it newly stopped; `live`, the turns still registered).
+
+- `live: 0`: no terminal is coming (the turn had ended, or a load adopted one that already finished), so every stop the
+  thread holds settles now, as a reload reads it. ⚠️ Waiting anyway took the thread's NEXT turn for the stopped one: its
+  events were dropped, its answer landed on the old bubble, and the watchdog fired a bogus timeout.
+- `tripped` above one: the Stop also reached a turn nobody here waits for (a send queued behind a wake), so a
+  placeholder stop (no bubble) takes each extra terminal, which would otherwise end a turn sent since.
+- A turn thread that panics still emits a terminal (`Failed`, `unfinishedReply`) before it unregisters.
+- **A terminal ends only its own turn.** Every event carries its turn's `run` (`AskCmdrTurn.run`, the backend's cancel
+  registration generation), and the send answers it too, so the rail knows the run of the turn it streams (`liveRun`:
+  from the send's answer, or a picked-up turn's first event) and each stop holds its own. A terminal settles the stop of
+  its run, else the oldest of its thread whose run is unknown. A terminal emitted just before the Stop can reach the
+  rail AFTER the `live: 0` answer: that stop's run goes to `settledRuns`, and its terminal is swallowed on arrival.
+  Regression anchor: it used to end whatever turn the user had sent since (`ask-cmdr-stop-and-reload.test.ts`, "a
+  stopped turn's late terminal"). Residual: a turn a reload adopted that said nothing before its Stop has no known run.
+
+A "load earlier" that joins a stopped bubble with its older half builds a new object, so the stop follows it
+(`followJoinedBubble`).
+
+**A send waiting for its thread id** (`ask-cmdr-send-before-id.test.ts`). A brand-new chat has no thread until the send
+command answers (the backend creates it, registers the turn's cancel token, emits `started`, then answers), but the turn
+runs from that moment. Regression anchor #760: Stop sent no cancel in that window (no id to send it to), so the turn ran
+on and spent behind a rail that said it had stopped, and the answer set the thread unconditionally, so a New chat opened
+meanwhile was taken over by the old thread.
+
+- **The id comes from the send's answer alone** (`claimThread`), ❌ never from an event: a wake's `started` in the same
+  moment would hand the fresh chat the wrong thread. Events that arrive while a fresh chat's send waits
+  (`sendsAwaitingId
+  > 0`) and find no thread on screen queue in `unclaimedEvents`; the answer replays its own thread's, in order, and the
+  > rest are dropped once no send waits.
+- **A Stop before the id waits for it** (`stopsAwaitingId`, keyed by send): the answer turns it into an ordinary pending
+  stop and calls `cancelAskCmdr` at once. The backend registers the token before it answers, so that cancel always finds
+  the turn (or `live: 0` if it already ended). A refusal withdraws it like any other stop. The watchdog's timeout takes
+  the same path.
+- **Leaving the chat** (`leaveChat`, from New chat, a thread switch, and `discarded`) clears `activeSend`: a send still
+  in flight keeps its turn and its Stop, but its answer no longer puts its thread on screen, and its refusal paints into
+  nothing (it used to fail whatever turn the new chat had started).
+
+**Terminal events carry the turn's stats.** `done`, `failed`, and `stopped` carry `turn: TurnStats | null` (tool calls,
+wall time, summed tokens), `null` for a turn that ran no tool or a refusal from outside a turn. Each puts it on the
+bubble's `stats`, a stopped turn's included, and the bubble renders it as its stats line (§ The tool line).
+
+**History folds into the same bubbles** (`buildRailMessages`, `ask-cmdr-history.ts`), loaded through
+`getAskCmdrConversation` on rail open. Rows group by the backend's `turnId` (never a frontend guess at turn edges): each
+assistant row is one round (its text blocks joined, its `toolCall` blocks as lines carrying their own subject, outcome,
+and repeat mark), the bubble's id is the turn's last assistant row, and its stats ride that row's `turnStats`. An event
+row with `duringTurn` is hoisted above its turn's bubble (where the live rail's `showDecision` put it); the rest stay in
+place. An event row with no blocks (a turn's `TurnFinished` record, an unknown kind) draws nothing. Result-less calls
+fold settled with no outcome (their turn ended without one), except in the turn still running: rows after the backend's
+`turnInFlightSinceSeq` are that turn's, so their result-less calls fold `running`, their bubble folds `streaming`, and
+an event row among them is hoisted above it (the turn is still going, so it is mid-turn). With no row after the mark
+yet, every bubble folds closed and the first live event opens a new one. `ask-cmdr-turn-parity.test.ts` pins that the
+live reducer and the fold build EQUAL items for one scripted turn (interleaved deltas, two rounds reusing `fake-call-0`,
+a mid-turn and a post-turn decision).
+
+## The tool line
+
+`AskCmdrToolLine.svelte` is one calm row: a glyph, the label naming what the call looked at, a "Same as above" tag, and
+a quieter note saying what came back. Every word is ours: the backend sends typed facts (`ToolSubject`, `ToolOutcome`,
+`repeatOf`, `TurnStats`) and `ask-cmdr-labels.ts` picks the catalog message per variant.
+
+- **The label** (`toolLineLabel`): keys stay per TOOL (doing while running, done after), and a subject that names
+  something swaps in a key with params (`SUBJECT_WORDS`, a `Record` over every subject kind, so a new kind is a compile
+  error). `null` or `unparsed` subjects keep the tool's param-less words, an unknown name keeps "Working" / "Used a
+  tool", and a named `unknownTool` says what it asked for. Search has four shapes: pattern plus folders, pattern only,
+  folders only, neither. A count rides as `{countText}` plus `{count}`.
+- **Decision: a refused note says "Tried to…".** The memory tools' done words ("Saved a note") claim the very thing a
+  refusal denies, so those two tools carry a `tried` key the label uses when the outcome isn't ok; so does
+  `connect_volume` ("Connected to your server" vs "Tried connecting…", its outcome note saying why). Every other tool's
+  done words describe the activity, and its outcome note says it was turned down. A `volume` subject keeps the tool's
+  own words: its id is a token, not a name a person knows the server by.
+- **Paths are links.** A message names its paths with tags (`<place>` one, `<places>` a list), rendered through
+  `<Trans>` snippets as `LinkButton`s; `<places>` joins its links with `conjunctionListParts` (`#lib/intl/list-format`),
+  the language's own "and". A link shows the path's last segment (`placeName`), its full path in a tooltip and in its
+  accessible name ("Show {path} in a pane"). The backend decides what's a place: a subject path is a `LinePath`
+  (`{ text, linkable }`), linkable only when absolute and whole (a relative or cut path stays plain text), a preview
+  row's `path` is set only then, and a note path is linked only when the backend resolved it inside the notes folder
+  (`absolute`). Click → `revealPath({ path, kind })`, a prop handed down from `routes/(main)/+page.svelte`
+  (`revealPathInBestPane`, over the `navigate-and-select` primitives), then `returnFocusToPane()`. Only subject paths
+  reach it, ❌ never a raw search scope string.
+- **Gotcha: a path link can't be ellipsized from outside.** A `LinkButton` is a `<button>`, an atomic inline box, so the
+  label's `text-overflow` replaced the whole link and every word after it: a long PDF name rendered as "Looked inside …"
+  (seen live, 2026-10-26). A label holding a path (`with-places`) is a flex row instead, where only the path shrinks and
+  truncates itself; `white-space: pre` keeps the spaces a flex row would drop at its pieces' edges. The preview's linked
+  row names truncate themselves the same way, beside a size that stays on their line.
+- **What came back** (`toolOutcomeText`): a `Record` over every outcome kind. Counts, "showed N of M" when the model got
+  part of a list, "so far" / "yet" for a lower bound (❌ never "nothing found" while ground is uncovered), one note per
+  refusal reason and per `MemoryRefusalKind`, and nothing for `answered` / `saved` (the label and glyph say it), nor for
+  a `files` subject's `items` count that answered every path the label names (`restatesSubject`: "Looked inside X and 1
+  more" never adds "2 items"; a partial answer still says "showed 1 of 2"). A settled call with no outcome says no
+  answer was recorded. A muted `·` (`aria-hidden`) sets the note apart on screen, and a visually hidden
+  `askCmdr.tool.outcomeSeparator` (a comma) does it for a screen reader, so the two never read as one sentence.
+- **The repeat tag** (`showsRepeatTag`) marks a call with `repeatOf`, and the link's `aria-describedby` points at it.
+  The breaker's own `refused: repeatedCall` already says so in its note, so it gets no tag.
+- **Not a live region.** Lines carry no `role="status"` / `aria-busy`: a 12-call turn would chatter. The last round's
+  prose is the bubble's one live region.
+- **The stats line** (`AskCmdrTurnStats.svelte`, `turnStatsText`) sits under any bubble whose `stats` ran a tool,
+  answered, failed, or stopped: calls, wall time (`formatMilliseconds`, left out for an old turn with `wallMs: null`),
+  and tokens. Tokens are the cost meter's (`totalTokens`: prompt plus completion per row), so the turns add up to the
+  thread's `AskCmdrCostFooter`. A stopped turn leads with "Stopped" (`TurnStats.stopped`, set by `run_turn` on a cancel
+  and stored in the `TurnFinished` row, so live and reload agree). A turn stored before that field existed reads as not
+  stopped, and a stopped turn that ran no tool has no stats line, so it gets no marker either.
+
+## Groups and the expanded line
+
+A `tools` display segment of two or more lines renders as `AskCmdrToolGroup.svelte`: one quiet header ("Looked around: 6
+folders, 2 searches", `groupSummaryText` in `ask-cmdr-tool-group-summary.ts`) over its lines. A single line renders
+alone, with no group chrome.
+
+- **The header counts per category** (`SUBJECT_CATEGORY`, a `Record` over every subject kind): folders, files (every
+  path an `inspect_file` call asked about counts, so "3 files" stays true for one call), searches, checks (panes,
+  drives, the operation log, suggestions), plans, notes, and "other" (an unknown tool, and a line with no subject yet,
+  so an unresolved call never breaks the header). Categories join with `formatUnitList`. "Looking around" while any line
+  runs.
+- **Open state lives outside the message list** (`ask-cmdr-tool-groups.svelte.ts`): `AskCmdrRail.svelte` keys messages
+  by index, so component state would jump on a prepend. A group is keyed by its first line's key once that round has a
+  row (`groupKey`; calls only append, so it holds for the turn), a line by its display key. A group with no key yet
+  can't be toggled. Nothing is persisted.
+- **Lifecycle.** Live, an undecided group is open, and a toggle the person makes sticks. The turn's terminal (any kind,
+  a pending stop's included) applies `askCmdr.toolGroupsOnAnswer` (Settings > Advanced > Ask Cmdr): `'collapse'` closes
+  the turn's groups, `'keep'` freezes each as it stands (an untouched one stays open). A local Stop holds each untouched
+  group open until that terminal (`holdTurnGroupsOpen`, again for a round the stopped turn resolves after the click,
+  whose group gets a new key), since the bubble stops streaming at the click. Reloaded groups start closed under both
+  values (decision: "as you left it" has nothing to remember across a reload), except one with a running line after a
+  reload mid-turn. A thread switch forgets every group's state (`forgetToolDetails`), so reopening a thread in the same
+  session matches a cold reload. Before a collapse drops a focused line, `$effect.pre` moves focus to the group's
+  toggle.
+- **The seam.** When "load earlier" folds a turn back together, the newer half's first group may now continue an older
+  group under that group's key; `carryGroupStateAcrossSeam` moves its entry there.
+- **a11y.** The header is a plain `aria-expanded` button, never a live region. Each bubble has ONE visually hidden
+  polite status that says a live group's summary once, when all its lines settled (`claimGroupAnnouncement`); a reloaded
+  bubble announces nothing.
+
+**The expanded line.** Each line ends in its own expand control (a path link can't nest in a button), enabled only when
+a stored result exists: not while running, not before the round has a row, not on a settled `outcome: null` line
+(disabled, it's hidden but keeps its place so the row doesn't shift). The first expand calls `askCmdrToolResult` with
+the line's `(messageId, callId)`, its `occurrence` (which of the round's calls with that id it is, so a provider naming
+one id twice in a round still fetches each line's own result, the way the backend pairs the page), and the conversation
+on screen.
+
+- **The cache is private**: a `SvelteMap` keyed by line key (it never proxies its values), never inside the deep
+  `askCmdrState` message list, and ❌ never logged (the raw result can hold file text and EXIF incl. GPS). An answer
+  arriving after the person switched threads is dropped, and a thread switch forgets every fetched result
+  (`forgetToolDetails`).
+- **The preview** (`AskCmdrToolPreview.svelte`, notes from `ask-cmdr-tool-preview.ts`): the first rows (name, its path a
+  `LinkButton` through `revealPath` then `returnFocusToPane`, size, `find` line and snippet, a per-path status), "Showed
+  the model N of M" (or "found so far" for a lower bound), "Here are the first N" when the preview holds fewer than the
+  model got, the verbatim `problem` labeled as what the model was told, the set-aside note, or "no list" for a
+  facts-only tool. `notFound` (a thread deleted underneath) and `unavailable` each get one calm line.
+- **Copy** (`Button variant="secondary" size="mini"`, `copyToClipboard`) copies the raw JSON, which renders nowhere.
+  "Copied" for two seconds; a clipboard that refuses says so.
 
 ## What a wake's thread opens with
 
@@ -114,9 +330,10 @@ Two things the block owes the reader: the collapsed summary counts the rolled-up
 with what expanding shows), and the rollup line stays, because admitting how many folders the digest had no room for is
 the point of having one.
 
-**Live, the digest arrives on the next load, not mid-turn.** `userPersisted` carries an id and no content, so a rail
-opened onto a wake already in flight shows the answer streaming above an empty spot until the thread is re-read.
-Widening that event to carry the block is the fix if it ever matters.
+**Live, the digest arrives on the next load, not mid-turn.** `userPersisted` carries the persisted opener as a
+`MessageView` (`opener`), but the reducer only stamps the id today, so a rail opened onto a wake already in flight shows
+the answer streaming above an empty spot until the thread is re-read. Inserting `opener` when the rail lacks it is the
+fix.
 
 ## What the user answered about a suggestion
 
@@ -141,8 +358,8 @@ dynamic-prefix allowlist, and seven literals are cheaper than an allowlist entry
 
 The single-decision row is announced as it is written: `agent/outcomes.rs` emits `proposalDecided` on the turn
 transport, under the conversation the row went into, carrying the row's id and the decision. `handleTurnEvent` takes it
-before any turn rule applies and `showDecision` adds ONE line to the thread on screen. Each case has a test in
-`ask-cmdr-turn-stream.test.ts`.
+before any turn rule applies and hands it to `ask-cmdr-decisions.ts`, whose `showDecision` adds ONE line to the thread
+on screen. Each case has a test in `ask-cmdr-turn-stream.test.ts`.
 
 **Decision: the rail patches from the event's payload, it doesn't re-read the thread.** **Why**: a re-read replaces the
 whole message list. That throws away an answer that is mid-stream (its text isn't persisted until `done`) and the older
@@ -172,8 +389,8 @@ What the reducer has to get right:
   `settleDecisionsHeardWhileLoading`). The load's read can be a moment older than the decision, and it replaces the list
   the line was shown in, or the rail isn't on that thread yet.
 
-The sweep-wide `user`-role row still arrives on the next load, exactly like the digest: it opens a turn, and
-`userPersisted` carries no content.
+The sweep-wide `user`-role row still arrives on the next load, exactly like the digest: it opens a turn, and the reducer
+doesn't insert `userPersisted`'s `opener` yet.
 
 ## The staged-proposal toast
 
@@ -266,9 +483,17 @@ registry lives below `commands/` rather than inside the chat command.
   from `messageTotal - historyCount` so pages tile without overlap and live-streamed rows (newer than the load-time
   total) are never disturbed. The rail preserves the scroll position across a prepend (capture `scrollHeight` before,
   restore after) and its auto-scroll-to-bottom only fires when the user was already near the bottom (`wasNearBottom`,
-  tracked on scroll), so streaming follows but loading older doesn't jump. Page-boundary caveat: `buildRailMessages`
-  folds each loaded page independently, so a tool result split across a page seam may render unfolded — negligible in
-  practice (threads sit under the ~40 soft cap, well below a 50-message page, so paging rarely fires at all).
+  tracked on scroll), so streaming follows but loading older doesn't jump. The backend pairs each call with its result
+  across a page seam (`src-tauri/src/agent/chat/DETAILS.md` § What a reloaded page says), so a history line reads its
+  `outcome` and `subject` off its own `toolCall` block; tool rows carry no blocks. A 12-call turn is about 20 rows
+  against a 50-row page, so seams cut turns routinely: `loadOlderMessages` joins the halves with `mergeAtSeam`
+  (`ask-cmdr-rounds.ts`), which merges the older page's last bubble with the newer list's first bubble exactly when
+  their `turnId`s match (rounds concatenated, the newer half's id and flags, the stats that exist), keeping any event
+  the newer page hoisted above it.
+- **The "start a fresh one?" nudge counts user items + ROUNDS + every other item** (`softCapCount`) against
+  `THREAD_SOFT_CAP_MESSAGES` (40, mirroring the Rust constant). Each round counts, as each assistant row did when it was
+  its own bubble, so folding a turn into one bubble didn't make the nudge fire far later. A `TurnFinished` row draws no
+  item, so it doesn't count.
 - **Only the latest thread load may touch the rail** (`latestThreadLoad` in `ask-cmdr-trigger.svelte.ts`). Every read is
   its own command, so the first one asked can be the last one answered: picking thread A and then B must leave B on
   screen whichever answers second, and a late answer must not repaint a chat the user cleared with "new chat". An
@@ -314,6 +539,26 @@ registry lives below `commands/` rather than inside the chat command.
   above the `{#if}`, and the lint rule (`cmdr/dialog-inside-boundary` covers `*Rail`): `apps/desktop/src/DETAILS.md` §
   Error boundaries. Regression anchor: cmdr-reports#78 (`each_key_duplicate` in the rail blanked the main window). Test:
   `rail-boundary.svelte.test.ts`.
+- **Focus never falls to `<body>` from the rail** (what the focus watchdog's `activeElement=body` lines were). Four ways
+  it did, each closed where it happens:
+  - A click on rail text or a button: WebKit doesn't focus a clicked button, and with no focusable ancestor it CLEARS
+    focus. The `<aside>` is `tabindex="-1"` (out of the tab order, no ring), so a click lands focus on the rail, and its
+    `focusin` sets the rail-focused flag.
+  - Send and Stop swap as a turn starts and ends, so a focused one leaves the page: both hand focus to the prompt box. A
+    swap nobody clicked (the turn ended by itself, or a running one was picked up) too: a `$effect.pre` on `streaming`
+    notes whether the button had focus before the swap removes it, and the effect after hands focus to the prompt box
+    (`AskCmdrComposer.swap-focus.test.ts`).
+  - The sessions panel unmounts with its focused control: `closeSessions` asks for the composer; a keyboard rename hands
+    focus to its row.
+  - "Load earlier" vanishes with the last page: the rail takes focus back. The watchdog's log names the cause of any
+    leak ("… left the page while it had focus"), so a new one points at its component.
+- **New chat** (`openNewChat`: the header button, the getting-long nudge, the sessions panel, and `askCmdr.newChat`,
+  default ⌘N) resets the thread, marks it `freshChat`, opens a closed rail on it, and bumps `composerFocusRequest`,
+  which the composer's focus effect follows. `ensureThreadLoaded` never bootstraps the last thread over a `freshChat`
+  (only a thread load clears it), whichever path asks: the open, a gate opening, or the rail's first open while cloud
+  consent is still `loading`, whose `loading` → `chat` transition used to load the last thread over the new chat. ⌘N was
+  free: Cmdr has one main window (macOS's "New window" meaning has nothing to claim), tabs are ⌘T, and the search
+  dialog's own ⌘N runs only while that dialog is up. Not a menu item, so it lives in the registry and handlers only.
 
 ## The toggle wiring
 
@@ -563,18 +808,57 @@ move it: the highlight marks the row Space acts on.
 - `source_path` + `volume_id` ride the row snapshot for this, and they are DISPLAY data. Apply still sends opaque row
   ids only, and the backend resolves every path from its own stored proposal.
 
+## Limit notice
+
+A turn that reached a per-answer limit carries `stats.limit` (`TurnLimit`: kind, the value that applied, `answered`),
+and `AskCmdrMessage` renders `AskCmdrLimitNotice` from it above the stats line. The kinds: a background turn's round cap
+(`toolRounds`), the loop guard (`repeatedCall`, `noProgress`), a stall (`stalled`), and `wallTime`, which only turns
+recorded before the stall check carry. It names the limit and its value (`limitNoticeText`); for the fixed ceilings only
+(`limitIsFixedCeiling`) it adds that no setting moves it and links Send feedback (`openFeedbackDialog`), since the loop
+guard and a stall need no apology. On the thread's latest turn, with nothing running, it offers "Keep going", which
+sends `askCmdr.limit.continueMessage` as an ordinary message: the next turn starts fresh with the whole history. Reading
+it from the stats is what makes live equal reload, since the `TurnFinished` row stores them. A live `failed` with a
+limit adds no separate error line (`applyFailed`), whatever its kind (`budgetExhausted`, `repeatedToolCall`, a stall's
+`timeout`): the notice already says it, better. Backend side: `src-tauri/src/agent/chat/DETAILS.md` § Budgets and
+cancellation.
+
+## Spend pause
+
+A user-started turn whose estimated spend passed `askCmdr.spendPause` (Settings › AI › Ask Cmdr, default $2) stops
+between rounds and emits `spendPaused { costMicros }`. The rail holds it in `askCmdrState.spendPausedMicros` and renders
+`AskCmdrSpendPause` under the thread while the turn streams: "This answer has used about $X so far. Keep going?", the
+list-price caveat, Keep going (`keepGoingPastSpend` → `keepGoingAskCmdr`) and Stop (the ordinary `stopStreaming`). The
+turn is quiet on purpose while it waits, so the pause clears the progress watchdog and the thinking/stalled labels; Keep
+going or `spendResumed` re-arms it. A paused turn emits nothing to re-adopt, so a thread load reads the question back
+from `ConversationDetailView.spendPausedMicros` (`resumeThread`). The turn ending, Stop, and a discard clear it. Backend
+side: `src-tauri/src/agent/chat/DETAILS.md` § Budgets and cancellation.
+
 ## The context gauge (how full the chat is)
 
 `AskCmdrContextGauge.svelte` sits in the footer row beside the cost line, and the two answer different questions on
 purpose: **cost is what the whole thread has SPENT** (cumulative, only ever rising), the **gauge is how much of ONE
-prompt's room the last turn used** (it drops when history is set aside). The gauge's tooltip spells out "N of M tokens
-used (estimated)" so the two numbers can't read as a contradiction. Each half hides independently — a local-only thread
-has a real context reading and no money to report.
+prompt's room the last call used** (it drops when history is set aside). The gauge's tooltip spells out "N of M tokens
+used (estimated)" so the two numbers can't read as a contradiction.
+
+**The footer shows whenever the chat does, and both halves move after every model call**, not only at the turn's end:
+the backend emits `contextUsage` and `costMetered` after each completed call (`agent/chat/DETAILS.md` § Reporting what a
+turn cost). `contextUsage` replaces the figure; `costMetered` bumps `askCmdrState.costRevision`, and the footer re-reads
+`ask_cmdr_conversation_cost` on each bump (the meter stays the one source of the total, so the rail never adds figures
+up itself).
+
+**Before anything is measured, the footer reads the slot status** (`ask-cmdr-slot-status.svelte.ts`):
+
+- The gauge shows the **baseline** (`gaugeReading`): the prefix every call carries against the next send's budget. It's
+  honest, not a placeholder: no call of this chat can cost less. Its tooltip says so
+  (`askCmdr.context.baselineTooltip`).
+- The cost line reads "0 tokens", priced the way the first call would be (`costReading` over `nextCall`): "free,
+  on-device" for local, "about $0.00" for a priced cloud model, "cost unknown" for an unpriced one, and no price at all
+  while AI is off. A thread whose turns all failed has nothing metered either, so it reads the same way.
 
 State lives in `ask-cmdr-context-usage.ts`, pure and unit-tested, as four named states:
 
-- `unmeasured` — no turn finished yet, so the gauge renders NOTHING. Deliberately not 0%: an empty bar reads as "plenty
-  of room" for a thread nobody measured.
+- `unmeasured` — no reading at all: neither a measured call nor a baseline (AI is off, or the slot status hasn't been
+  read yet), so the gauge renders NOTHING. Deliberately not 0%: an empty bar reads as "plenty of room".
 - `calm` — under `FILLING_THRESHOLD_PERCENT` (80).
 - `filling` — at or over the threshold, nothing dropped yet.
 - `setAside` — history left the model's view this turn. **Going over budget lands here too**, not in a fifth state: the
@@ -586,18 +870,26 @@ Two rules the tests pin: the state follows the percentage the gauge SHOWS (79.99
 The figure survives a restart: the backend stores it per conversation and `ConversationDetailView.lastContextUsage`
 returns it, so reopening a thread shows its last real reading. A restored reading reports `elidedResults: 0` because
 whether THAT turn set anything aside isn't persisted, and inventing a count would be a false claim. A fresh chat clears
-it, so no thread inherits another's fill.
+it, so no thread inherits another's fill, and falls back to the baseline.
 
 ## The E2E fake-LLM path
 
 The app has no real AI provider under E2E, so `commands/agent/chat.rs::resolve_agent_llm` routes the send through a
 scripted `FakeAgentLlm` when `CMDR_E2E_ASK_CMDR_FAKE=1` (set for the whole E2E run by the
 `desktop-svelte-e2e-playwright` check). It streams a fixed "Hi! I'm the test assistant." so `ask-cmdr.spec.ts` can
-assert send-and-render deterministically, zero network. The scripted turn is Say-only (no tools), so no tool dispatch
-runs. `ask-cmdr-trigger.test.ts` covers the full event model (tool lines, stop, soft cap, message paging, attachments)
-with mocked events; `ask-cmdr-sessions.test.ts` covers list paging/search/rename/archive. The E2E spec also drives the
-sessions path end-to-end (create two threads, search finds the right one via real FTS over the persisted messages,
-switch works) — it seeds a per-run nonce into the message text so search never matches a thread left by an earlier run.
+assert send-and-render deterministically, zero network. A message starting with `[tools]` plays a three-round
+tool-running turn instead (`chat/session.rs`, `rail_fake_turn`: narration plus `app_state`, `list_volumes`, and a
+refused `delete`; narration plus `list_volumes` twice, reusing the first round's call ids; then the answer), which the
+spec reads live and again after reopening the thread, and asserts equal: the end-to-end half of live-equals-reload. The
+fake picks each round from the prompt it's handed (`FakeAgentLlm::by_prompt`), so a retry or a second thread can't
+desync it. `app_state` and `list_volumes` read the E2E machine's real state, so the spec asserts their shape, never
+their values, and never token counts (the fake reports none). `i18n-capture-ask-cmdr.ts` photographs the same turn
+(`ask-cmdr-tools`) with its groups open and one line expanded. `ask-cmdr-trigger.test.ts` covers the full event model
+(tool lines, soft cap, message paging, attachments) with mocked events, `ask-cmdr-stop-and-reload.test.ts` a Stop and a
+reload mid-turn, and `ask-cmdr-turn-parity.test.ts` the round reducer and live-equals-reload;
+`ask-cmdr-sessions.test.ts` covers list paging/search/rename/archive. The E2E spec also drives the sessions path
+end-to-end (create two threads, search finds the right one via real FTS over the persisted messages, switch works) — it
+seeds a per-run nonce into the message text so search never matches a thread left by an earlier run.
 
 **The fake gets its own prompt budget.** It answers as a LOCAL provider with no local server behind it, so the real
 resolution would size its budget from `ai.localContextSize` — a setting the harness has no reason to touch, and whose
@@ -605,11 +897,10 @@ value would then decide what the gauge shows in every E2E run. `resolve_prompt_b
 `DEFAULT_PROMPT_TOKEN_BUDGET` (16,000) for the fake instead, so the harness keeps mirroring a real user's settings and
 an E2E run's gauge reads as a normal calm chat rather than pinned.
 
-The composer's Send gate (`AskCmdrComposer.svelte`) disables sending when `ai.provider` is `off` (its default), so the
-fake path — which never sets a real provider — needs the gate to treat the fake as an active provider. It reads
-`ask_cmdr_fake_active()` (the `commands/e2e.rs` command over `test_mode::ask_cmdr_fake_active`, the SAME accessor
-`resolve_agent_llm` gates on), so "send is allowed" and "send is answered" can't drift. Off E2E the command returns
-`false` and the gate behaves normally.
+The composer's Send gate (`AskCmdrComposer.svelte`) disables sending while no provider is set up, and `ai.provider` is
+`off` by default, so the fake path (which never sets a real provider) needs the gate to treat the fake as ready. The
+backend's slot status does that (`ask_cmdr_slot_status` reads `test_mode::ask_cmdr_fake_active`, the SAME accessor
+`resolve_agent_llm` gates on), so "send is allowed" and "send is answered" can't drift.
 
 ## Gates, cost, and settings
 
@@ -617,9 +908,9 @@ fake path — which never sets a real provider — needs the gate to treat the f
   order: `askCmdr.enabled` off → `off` (a "Turn on Ask Cmdr" button that sets the setting); Cloud with consent unknown →
   `loading` (the rail renders nothing, so nothing flashes); Cloud without consent → `cloudOff` (an "Open AI settings"
   button to the Allow cloud AI switch, `openCloudConsentSettings('ask-cmdr-cloud-gate')`); otherwise `chat`. Local and
-  "off" need no consent (nothing leaves the Mac; the composer says when no provider is set up). The rail reads both
-  settings reactively and `cloudConsentState` from `#lib/ai/cloud-consent.svelte.ts` (`lib/ai/DETAILS.md` § Cloud AI
-  consent owns consent itself).
+  "off" need no consent (nothing leaves the Mac; the provider notice below says when no provider is set up). The rail
+  reads both settings reactively and `cloudConsentState` from `#lib/ai/cloud-consent.svelte.ts` (`lib/ai/DETAILS.md` §
+  Cloud AI consent owns consent itself).
   - `openRail` awaits `refreshRailGate()` and bootstraps history only when the gate reads `chat`; when a gate opens
     later with the rail up, the rail calls `ensureThreadLoaded()` on the transition.
   - The backend enforces both gates on every send, before a thread exists (`AskCmdrOff` / `NoCloudConsent` refusals). A
@@ -632,11 +923,33 @@ fake path — which never sets a real provider — needs the gate to treat the f
     step): a recorded legacy opt-in (any copy version, no held "no") maps to on, anything else to off, an unreadable
     store to nothing (next launch asks again). It runs only after onboarding finished and only while the switch was
     never set explicitly; fresh installs get it from the onboarding AI pick.
+- **The provider notice** (`AskCmdrProviderNotice.svelte`, over `ask-cmdr-slot-status.svelte.ts`): a yellow,
+  non-dismissable strip at the top of the rail body whenever the slot status reads a setup gap (`off`, `cloudNeedsKey`,
+  `cloudNeedsEndpoint`, `localNotSetUp`, `localNotRunning`), one sentence per gap plus "Open AI settings" (Settings >
+  AI > Provider). It sits ABOVE whichever gate or chat follows, so with Ask Cmdr off the user sees both steps. It's
+  independent of the gates: readiness is setup only, consent stays `cloudOff`'s. The composer's Send is disabled on the
+  same gap (`providerGap`), with the reason as a tooltip on a wrapper (a disabled button gets no hover). An unread
+  status counts as no gap, so Send never flashes disabled on open; the backend refuses an unset provider on its own.
+  - **When the status is re-read**, each time on an event (`watchSlotStatus`, live while the rail is mounted): on mount;
+    after ANY window's `pushConfigToBackend` lands (`onAiConfigPushed`, a cross-window `ai-config:pushed` emit, so a key
+    saved in the Settings window reaches the main window's rail, never before the backend has it); after the trigger's
+    `noteSlotSettingChanged` debounce for `askCmdr.interactiveModel` / `askCmdr.chatMemorySize` (1 s, outlasting the
+    settings file flush the backend reads); on `ai-server-ready`, `ai-install-complete`, and
+    `ai-model-capabilities-changed` (Automatic sizes the budget from the catalog); and on a thread switch or a turn's
+    end (memory and budget may have moved). Window focus stays only as the backstop for a local server that stops on its
+    own, which announces nothing. Each read is numbered, so a slow one can't overwrite a newer answer.
 - **Cost footer** (`AskCmdrCostFooter.svelte` + pure `ask-cmdr-cost.ts`): the active thread's cumulative tokens + cost,
-  refetched (`ask_cmdr_conversation_cost`) when the thread changes or a turn finishes streaming. Honest miss-path: a
-  local-only thread reads "free, on-device", an unpriced model reads "cost unknown", a priced thread shows "about
-  {amount}" — never a silent $0. Hidden until a metered turn exists. A fetched total is keyed by the thread it was read
-  for: a thread switch hides it at once, and a slow read for a thread the user already left is dropped.
+  refetched (`ask_cmdr_conversation_cost`) when the thread changes, after each metered call (`costRevision`), and when a
+  turn finishes streaming. Honest miss-path (`costReading`): a local-only thread reads "free, on-device", an unpriced
+  model reads "cost unknown", a priced thread shows "about {amount}" — never a silent $0. The amount rounds to cents
+  ("about $0.83", `costEstimateText`), and a real cost below half a cent reads "under $0.01" so it never looks free. The
+  money is written wholly in the UI language (`getNumberFormatter`, so an English app on a Swedish-formatted Mac reads
+  "$0.83"; `#lib/intl/number-format.ts`). Its tooltip says it's USD and ignores provider-side prompt caching (the meter
+  prices every prompt token at the full rate, `src-tauri/src/agent/pricing.rs`). Token counts (here and in the per-turn
+  stats line) go compact from 2,000 up through `formatTokenCount` (`Intl` compact notation in the UI language: "2.2K",
+  "1.3M", zh "2.2万", one decimal at most), with the exact count in a tooltip. Always shown with the chat; a thread with
+  nothing metered reads zero (§ The context gauge). A fetched total is keyed by the thread it was read for: a thread
+  switch drops it at once, and a slow read for a thread the user already left is dropped.
 - **Settings section** (`settings/sections/AskCmdrSection.svelte`, top-level `Ask Cmdr`): the `askCmdr.enabled` switch,
   a "cloud AI is off" hint plus an "Open AI settings" button when it's on over Cloud without consent, the provider hint
   (reads `ai.provider`) + the interactive-model row (`askCmdr.interactiveModel`), the two memory controls, and the
@@ -648,12 +961,12 @@ fake path — which never sets a real provider — needs the gate to treat the f
 
 Copy lives in `intl/messages/en/askCmdr.json` (`askCmdr.*`, including the `askCmdr.sessions.*`,
 `askCmdr.composer.attach`/`dropHint`, `askCmdr.attachment.*`, `askCmdr.loadEarlier`, `askCmdr.wake.*`,
-`askCmdr.wakeDigest.*`, `askCmdr.gate.*`, and `askCmdr.cost.*` keys; the "what Ask Cmdr sends" list moved to
-`ai.cloudConsent.askCmdr.*` in `ai.json`), the settings copy in `settings.json` (`settings.askCmdr.*`,
-`settings.section.askCmdr`), and the command label in `commands.json` (`commands.askCmdrToggle.*`), each with an `@key`
-translator description. Translated across all 10 locales, so `desktop-i18n-coverage` is green. The name and the gate
-copy are the re-translation surface if David adjusts the product calls. Tool + error labels are literal-keyed records in
-`ask-cmdr-labels.ts` (a computed prefix would trip the unused-key check).
+`askCmdr.wakeDigest.*`, `askCmdr.gate.*`, `askCmdr.providerNotice.*`, and `askCmdr.cost.*` keys; the "what Ask Cmdr
+sends" list moved to `ai.cloudConsent.askCmdr.*` in `ai.json`), the settings copy in `settings.json`
+(`settings.askCmdr.*`, `settings.section.askCmdr`), and the command label in `commands.json`
+(`commands.askCmdrToggle.*`, `commands.askCmdrNewChat.*`), each with an `@key` translator description. The name, the
+gate, and the provider-notice copy are the re-translation surface if David adjusts the product calls. Tool + error
+labels are literal-keyed records in `ask-cmdr-labels.ts` (a computed prefix would trip the unused-key check).
 
 ## Decisions
 

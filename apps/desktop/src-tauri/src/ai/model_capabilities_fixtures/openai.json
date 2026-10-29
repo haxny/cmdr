@@ -1,0 +1,19 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "gpt-4-turbo-2024-04-09",
+      "object": "model",
+      "created": 1712601677,
+      "owned_by": "system",
+      "shutdown_date": "2026-10-23"
+    },
+    {
+      "id": "omni-moderation-2024-09-26",
+      "object": "model",
+      "created": 1732734466,
+      "owned_by": "system",
+      "shutdown_date": null
+    }
+  ]
+}

@@ -218,24 +218,25 @@ The full top-level inventory is here:
   the one boundary that words a stop; tests in `transfer_sides_tests.rs`), `target_names.rs` (the new NAME a renamed
   source takes in a move, § "Renames that run as moves"), `mutation_error.rs` (the typed refusal an instant mutation
   returns), `mutation_reply.rs` (its reply within the deadline, and the late settle, § "A slow instant mutation says it
-  is still running"), `validation.rs`, `free_space.rs` (the copy's free-space pre-flight, § "The free-space
-  pre-flight"), `eta.rs`. Journaling: `journal.rs`, `journal_search.rs`. The scratch dir archive edits stage local bytes
-  in: `scratch_dir.rs` (the remote edit itself is `archive_edit/remote.rs`). Entry points: `create/` + `create.rs`,
-  `rename/` + `rename.rs`, `create_numbered.rs` (paste-as-file's numbered create), `routing.rs` (the one routing every
-  cross-volume transfer takes: `start_volume_{copy,move,compress}`, plus `start_rename_by_move`; `routing/retry.rs` is
-  the Retry recipe a copy or move leaves with the manager), `routed_writes.rs` (the refusal every drive-only entry point
-  asks first for an in-zip or `.git/<category>/` path, `host/DETAILS.md`). `source_binding.rs` is the optional set of
-  sources an op may touch. `queued_sources.rs` is the check an op that waited in the queue runs on its sources when
-  admitted, parking on `sources_gone_slot.rs` (a leaf the state owns, like `outage_slot.rs`). Layering, so the three
-  stay out of a cycle: `source_binding` → `queued_sources` → `state` → `sources_gone_slot`, and the empty batch's
-  terminal shape is `WriteCompleteEvent::all_skipped` in `types`. `locked_sources.rs` is a move's question about Locked
-  items and the plan its answer makes, parking on `locked_sources_slot.rs` the same way (§ "Moving Locked items").
-  Fixtures: `testing/` (an engine a test owns, and what test cells outside the engine reach beyond its public list) and
-  `test_support.rs` (the placeholder conflict, the park-window wait, and the queued-operation fixture). Every backend's
-  cells through this pipeline live app-side, in `operations_host/backend_suites/`, because they need the app around the
-  engine (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is the
-  Criterion bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state on
-  an engine the bench owns (`crates/cmdr-operations/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` §
+  is still running"), `validation.rs`, `leaf_validation.rs` (the one check of a transfer's `TransferLeaves`,
+  `src/transfer/DETAILS.md` § "Named destinations"), `free_space.rs` (the copy's free-space pre-flight, § "The
+  free-space pre-flight"), `eta.rs`. Journaling: `journal.rs`, `journal_search.rs`. The scratch dir archive edits stage
+  local bytes in: `scratch_dir.rs` (the remote edit itself is `archive_edit/remote.rs`). Entry points: `create/` +
+  `create.rs`, `rename/` + `rename.rs`, `create_numbered.rs` (paste-as-file's numbered create), `routing.rs` (the one
+  routing every cross-volume transfer takes: `start_volume_{copy,move,compress}`, plus `start_rename_by_move`;
+  `routing/retry.rs` is the Retry recipe a copy or move leaves with the manager), `routed_writes.rs` (the refusal every
+  drive-only entry point asks first for an in-zip or `.git/<category>/` path, `host/DETAILS.md`). `source_binding.rs` is
+  the optional set of sources an op may touch. `queued_sources.rs` is the check an op that waited in the queue runs on
+  its sources when admitted, parking on `sources_gone_slot.rs` (a leaf the state owns, like `outage_slot.rs`). Layering,
+  so the three stay out of a cycle: `source_binding` → `queued_sources` → `state` → `sources_gone_slot`, and the empty
+  batch's terminal shape is `WriteCompleteEvent::all_skipped` in `types`. `locked_sources.rs` is a move's question about
+  Locked items and the plan its answer makes, parking on `locked_sources_slot.rs` the same way (§ "Moving Locked
+  items"). Fixtures: `testing/` (an engine a test owns, and what test cells outside the engine reach beyond its public
+  list) and `test_support.rs` (the placeholder conflict, the park-window wait, and the queued-operation fixture). Every
+  backend's cells through this pipeline live app-side, in `operations_host/backend_suites/`, because they need the app
+  around the engine (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is
+  the Criterion bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state
+  on an engine the bench owns (`crates/cmdr-operations/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` §
   `criterion`).
 
 What the mechanisms DO is in the sections below: the registry, lanes, and `run_instant` in § "Operation manager"; the
@@ -298,7 +299,7 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
   legitimate transfer onto a case-sensitive volume. (Two sources differing only in Unicode form onto a share that
   composes new names both want the one composed name; the second one's landing refuses the occupied name with
   `DestinationExists`, never overwrites it.) Runs right after `validate_sources` in both `copy_files_start` and
-  `move_files_start`. Pinned by
+  `local_move_start`. Pinned by
   `validation_integration_test.rs::{two_sources_sharing_a_name_are_refused, sources_differing_only_in_case_are_allowed, distinct_source_names_are_allowed}`.
 - **`unique_name.rs::numbered_name(stem, ext, counter)` is the ONE ` (N)` formatter** (`counter 0` = bare, `1..` =
   ` (N)`). `find_unique_name`, `next_available_name`, `create_numbered.rs`, and the volume namer
@@ -1200,12 +1201,12 @@ the optional seams), what each seam's contract is, and where Cmdr answers it: `s
 
 ## The public surface is capped
 
-`index-crate-isolation` holds this crate to 87 root promises, 58 `Operations` methods, one public module (`host`), and
+`index-crate-isolation` holds this crate to 89 root promises, 58 `Operations` methods, one public module (`host`), and
 25 public items inside it (`scripts/check/checks/index-crate-isolation-ceilings.go`). The numbers are exactly what the
 crate exposes, measured with no headroom, so an addition has to be argued for. Everything counted exists for a named
 caller.
 
-Root promises (87), by who needs them:
+Root promises (89), by who needs them:
 
 - **The handle** (3): `Operations`, `OperationsBuilder` (from `Operations::builder`), and `AlreadyClaimed` (a second
   `claim_ledger`'s refusal).
@@ -1225,20 +1226,26 @@ Root promises (87), by who needs them:
   conflict check), `ScanCostFacts` (the S3 estimate prices a preview's counts), the source binding a reviewed batch
   supplies (`ExpectedSources`, `LocalContent`, `RemoteContent`, `SourceFingerprint`, for the agent's approved ops), and
   `UndoReport` (`undo_operations`' answer).
-- **Engine-free helpers the IPC edge asks** (7): `trash_routing_for_selection` and its `TrashRoutingAnswer` (F8's
+- **Engine-free helpers the IPC edge asks** (8): `trash_routing_for_selection` and its `TrashRoutingAnswer` (F8's
   trash-or-delete question), `trash_dir_for_path`, `move_to_trash_sync` (the bare, unjournaled trash move, for the
   open-with reaper's changed copies, which no undo should list; a second objc trash call app-side would fork the refusal
   classification), `held_in_another_spelling` (`destination_exists`'s look-alike half), `same_local_file` (rename's
-  case-only check), and `resolve_dest_path` (anchoring a volume-relative destination).
-- **The wire vocabulary** (41): the payloads, configs, and typed outcomes from `types` that cross IPC unchanged
+  case-only check), `resolve_dest_path` (anchoring a volume-relative destination), and `LandingClash`, the typed answer
+  of `TransferLeaves::check_landings`: the start's per-source name rules, asked AHEAD by the agent's proposal so a bad
+  name refuses while the model can still fix the call. The alternative was a second copy of the rules app-side, which is
+  how a proposal and the start would come to disagree; the function itself is an associated fn on the already-public
+  `TransferLeaves`, so it costs no promise.
+- **The wire vocabulary** (42): the payloads, configs, and typed outcomes from `types` that cross IPC unchanged
   (`WriteOperationConfig`, `VolumeCopyConfig`, `WriteOperationError`, the `Write*Event` and `ScanPreview*Event`
   payloads, `ConflictResolution`, `LifecycleStatus`, `OperationStatus`, …). The Locked-items question added three (its
   event, `LockedSourcesAnswer`, and `LockedSourcesAnswerOutcome`), the same shape as the sources-gone question's.
   `KnownSize` (exact, or only a floor) is `WriteConflictEvent`'s two sizes and `OperationIndex::recursive_size`'s
   answer, so the app's index adapter and the MCP state resource name it; a bare `u64` plus a flag would let a reader
   take a partly counted folder's floor for its size, which is how a 40 GB folder read as 12 KB on the replace prompt
-  (#528). `ipc.rs` registers them; `bindings.ts` is generated from them, so none can go private without the frontend
-  losing a type.
+  (#528). `TransferLeaves` is the type of both transfer configs' `leaves` field: on the wire it's the single
+  `destinationName`, and the per-source map only Rust builds (the agent's approval bridge, and the app's SMB and MTP
+  filing cells) needs its constructor named. `ipc.rs` registers them; `bindings.ts` is generated from them, so none can
+  go private without the frontend losing a type.
 - **`host`** (1): the public module below.
 
 `Operations` methods (58), grouped by caller below. The two `testing`-gated ones (`render_live_transfer_dump` and
@@ -1351,7 +1358,7 @@ so every storage on a device shares its lane); `SmbVolume` → its `volume_id` (
 defaulting to root so the ~169 existing `new(...)` sites are untouched and tests opt into same-lane vs different-lane.
 
 The both-local branches of `copy_between_volumes` / `move_between_volumes` compute the two lane keys from the live
-volume handles and pass them into `copy_files_start` / `move_files_start` as `Some(lanes)`. The plain local commands
+volume handles and pass them into `copy_files_start` / `local_move_start` as `Some(lanes)`. The plain local commands
 pass `None`, so the entry point derives a lane from `volume_ids` (`local_lanes`): empty → the `root` lane, else one lane
 per id. This is a faithful proxy for `lane_key()` on the path where no `Volume` handle is threaded through — it uses
 each id as an opaque whole, with no substring parsing.
@@ -2359,7 +2366,7 @@ indexing, and the panic-safe unregister paths below cover both signals. Don't ad
 - **Where `volume_ids` come from**: the `OperationDescriptor` each spawn site hands the manager. The cross-volume entry
   points (`copy_between_volumes`, `move_between_volumes`, `move_within_same_volume`) and the volume-aware delete carry
   the IDs; the both-local branch of `copy_between_volumes` (a local→USB / DMG copy) passes both IDs through
-  `copy_files_start` / `move_files_start` so the ejectable destination is still marked. The plain `move_files` / `trash`
+  `copy_files_start` / `local_move_start` so the ejectable destination is still marked. The plain `move_files` / `trash`
   commands pass an empty list — the unified transfer dialog only routes through them for same-`root` ops, where no
   ejectable volume is involved.
 - **Consumers**: `busy_volume_ids()` backs the `get_busy_volume_ids` bootstrap command, the `eject_volume` server-side

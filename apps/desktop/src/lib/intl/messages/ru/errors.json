@@ -2444,5 +2444,49 @@
   "errors.write.duplicateSourceNames.suggestion.move": "Перемещайте по одному или сначала переименуйте один объект.",
   "@errors.write.duplicateSourceNames.suggestion.move": {
     "sourceHash": "8af755e"
+  },
+  "errors.write.namedLeavesRefused.title": "Эти новые имена нельзя использовать",
+  "@errors.write.namedLeavesRefused.title": {
+    "sourceHash": "08c8600"
+  },
+  "errors.write.namedLeavesRefused.message.notASource": "Одно из новых имен предназначено для объекта {path}, но этого объекта нет в предложении, поэтому ничего не запустилось.",
+  "@errors.write.namedLeavesRefused.message.notASource": {
+    "sourceHash": "12b2cb4"
+  },
+  "errors.write.namedLeavesRefused.message.sameName": "Два объекта оказались бы в одном месте: {path}. Многие диски считают такие имена одним и тем же, поэтому один объект заменил бы другой.",
+  "@errors.write.namedLeavesRefused.message.sameName": {
+    "sourceHash": "95e02b9"
+  },
+  "errors.write.namedLeavesRefused.message.ontoASource": "Объект попал бы по пути {path}, где уже лежит другой объект из этого же предложения, и заменил бы его.",
+  "@errors.write.namedLeavesRefused.message.ontoASource": {
+    "sourceHash": "724f9c3"
+  },
+  "errors.write.namedLeavesRefused.message.alreadyInDestination": "Объект {path} уже лежит в папке назначения, поэтому новое имя для него там означало бы переименование.",
+  "@errors.write.namedLeavesRefused.message.alreadyInDestination": {
+    "sourceHash": "06a0593"
+  },
+  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr не может дать каждому объекту собственное имя при переносе в zip-архив или из него, поэтому в папку {path} ничего не попало.",
+  "@errors.write.namedLeavesRefused.message.routeCannotName": {
+    "sourceHash": "f2e48ca"
+  },
+  "errors.write.namedLeavesRefused.suggestion.notASource": "Попросите Cmdr сделать новое предложение.",
+  "@errors.write.namedLeavesRefused.suggestion.notASource": {
+    "sourceHash": "c1dbe85"
+  },
+  "errors.write.namedLeavesRefused.suggestion.sameName": "Попросите Cmdr дать каждому объекту свое имя.",
+  "@errors.write.namedLeavesRefused.suggestion.sameName": {
+    "sourceHash": "76257a9"
+  },
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Попросите Cmdr подобрать имена, которые не совпадают с именами перемещаемых или копируемых объектов.",
+  "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
+    "sourceHash": "9ab88ec"
+  },
+  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Переименуйте объекты, которые уже лежат в этой папке, а затем переместите или скопируйте остальные.",
+  "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {
+    "sourceHash": "8917a8e"
+  },
+  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Переместите или скопируйте объекты под их собственными именами, а затем переименуйте их на новом месте.",
+  "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
+    "sourceHash": "b1e881c"
   }
 }

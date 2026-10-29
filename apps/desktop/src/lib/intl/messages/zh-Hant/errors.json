@@ -2444,5 +2444,49 @@
   "errors.write.duplicateSourceNames.suggestion.move": "一個一個地移動，或者先幫其中一個改名。",
   "@errors.write.duplicateSourceNames.suggestion.move": {
     "sourceHash": "8af755e"
+  },
+  "errors.write.namedLeavesRefused.title": "這些新名稱無法使用",
+  "@errors.write.namedLeavesRefused.title": {
+    "sourceHash": "08c8600"
+  },
+  "errors.write.namedLeavesRefused.message.notASource": "有一個新名稱對應的是 {path}，但這個項目不在這項建議裡，所以什麼都沒有開始。",
+  "@errors.write.namedLeavesRefused.message.notASource": {
+    "sourceHash": "12b2cb4"
+  },
+  "errors.write.namedLeavesRefused.message.sameName": "有兩個項目最後都會變成 {path}。很多磁碟會把這兩個名稱當成同一個，所以其中一個會取代另一個。",
+  "@errors.write.namedLeavesRefused.message.sameName": {
+    "sourceHash": "95e02b9"
+  },
+  "errors.write.namedLeavesRefused.message.ontoASource": "有一個項目會變成 {path}，而那正是這項建議裡的另一個項目，那個項目會被取代。",
+  "@errors.write.namedLeavesRefused.message.ontoASource": {
+    "sourceHash": "724f9c3"
+  },
+  "errors.write.namedLeavesRefused.message.alreadyInDestination": "{path} 已經在目標資料夾裡了，所以在那裡給它取新名稱就等於重新命名。",
+  "@errors.write.namedLeavesRefused.message.alreadyInDestination": {
+    "sourceHash": "06a0593"
+  },
+  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr 無法在項目移入或移出 zip 壓縮檔時分別給每一項取名稱，所以什麼都沒有進入 {path}。",
+  "@errors.write.namedLeavesRefused.message.routeCannotName": {
+    "sourceHash": "f2e48ca"
+  },
+  "errors.write.namedLeavesRefused.suggestion.notASource": "請讓 Ask Cmdr 再建議一次。",
+  "@errors.write.namedLeavesRefused.suggestion.notASource": {
+    "sourceHash": "c1dbe85"
+  },
+  "errors.write.namedLeavesRefused.suggestion.sameName": "請讓 Ask Cmdr 給每個項目取不同的名稱。",
+  "@errors.write.namedLeavesRefused.suggestion.sameName": {
+    "sourceHash": "76257a9"
+  },
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "請讓 Ask Cmdr 取一些和要移動或複製的項目不重名的名稱。",
+  "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
+    "sourceHash": "9ab88ec"
+  },
+  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "先把已經在那個資料夾裡的項目重新命名，再移動或複製其餘的項目。",
+  "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {
+    "sourceHash": "8917a8e"
+  },
+  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "先用原本的名稱移動或複製它們，再到那裡重新命名。",
+  "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
+    "sourceHash": "b1e881c"
   }
 }

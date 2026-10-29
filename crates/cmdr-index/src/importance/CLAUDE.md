@@ -35,9 +35,9 @@ Top-level leaves this file owns: `classify.rs` (the shared categorical classifie
   `node_modules` stays floored. **A floored folder gets NO row** — every read derives `Floored` from the path
   (`classify::floors_by_path`); ❌ don't reintroduce a `0.0` row.
 - **Categorical signals come from `classify.rs`**, shared by production, fixtures, and evals — ❌ never re-derive them.
-  Classification is typed (`PathClass` / `SignalKind`), never a string branch, and the denylist reuses
-  `indexing::SYSTEM_DIR_EXCLUDES`. Marker promotion lives in `path_class_with_marker` alone; it declines at `$HOME`, a
-  volume root, and a `SystemOrCache` path. ❌ Never floor `$HOME`: that propagates home-wide and disables the feature.
+  Typed (`PathClass` / `SignalKind`), never a string branch. A marker reaches `MARKER_REACH` levels up, never from a
+  floored folder. OS roots floor on the boot disk only (`Disk::of(kind)`). ❌ Never floor `$HOME` (nor let a root claim
+  it): that disables the feature.
 - **A classifier change is INERT until `store::SCORING_POLICY_KEY` re-arms stores** (a full pass runs once, an
   incremental only touches changed folders). It hashes the lists plus `SCORING_RULES_VERSION`; bump the latter by hand
   for a rule no list can see.

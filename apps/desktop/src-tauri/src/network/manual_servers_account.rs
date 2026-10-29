@@ -44,6 +44,7 @@ pub(super) fn set_account_at_path(
             port: server.port(),
             added_at: chrono::Utc::now().to_rfc3339(),
             username: typed_account(username),
+            awaiting_first_connect: false,
         };
         store.servers.push(entry.clone());
         entry

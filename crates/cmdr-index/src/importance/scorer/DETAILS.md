@@ -28,8 +28,9 @@ The coefficients are untuned defaults, and the loop that would tune them is `../
   files (one extension) reads as a monoculture. Zero files is neutral (`0.0`).
 - **mtime recency** (`mtime_secs`): exponential half-life decay (`0.5 ^ (age / half_life)`), default half-life 30 days.
   `None` is neutral; a future timestamp (clock skew) clamps to `1.0`.
-- **project markers** (`has_project_marker`): `1.0` when a `.git`/`Cargo.toml`/`package.json`/… sits in the folder or a
-  descendant, raising the whole subtree.
+- **project markers** (`marker_depth`, read through `has_project_marker()`): `1.0` when a
+  `.git`/`Cargo.toml`/`package.json`/… sits in the folder or a direct child (`classify::MARKER_REACH`), `0.0` past that.
+  `../DETAILS.md` § Marker reach.
 - **path-class prior** (`path_class`): a typed `PathClass` — `ProjectRoot` (1.0) > `UserContent` (0.8) > `Neutral` (0.4)
   > `SystemOrCache` (0.0). The caller classifies the path once; the scorer reads the variant (no path-substring branch
   > in the scorer).

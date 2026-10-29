@@ -56,8 +56,8 @@ fn twelve_file_batch(ocr: &str) -> (Value, Value) {
     (arguments, json!({ "status": "ok", "coverage": [], "facts": facts }))
 }
 
-/// Assemble a thread whose FIRST turn's tool result is old enough to elide, and hand back
-/// that stub. Four turns, so age alone (not budget pressure) does the eliding.
+/// Assemble a thread whose FIRST turn's tool result is history, on a budget too small to hold
+/// anything, and hand back that stub. Only budget pressure elides, and this one is total.
 fn stub_of_an_aged_out_call(tool: ToolId, arguments: Value, content: Value) -> Value {
     let transcript = [
         user("turn 0", 1_000),
@@ -70,7 +70,7 @@ fn stub_of_an_aged_out_call(tool: ToolId, arguments: Value, content: Value) -> V
         assistant_text("answer 2", 3_010),
         user("turn 3 (latest)", 4_000),
     ];
-    let assembled = assemble_prompt(&prefix(None, &[]), &transcript, &envelope_at(4_000), offset(), BUDGET);
+    let assembled = assemble_prompt(&prefix(None, &[]), &transcript, &envelope_at(4_000), offset(), 1);
     let stub = tool_result_part(&assembled.messages[2]);
     assert!(stub.elided, "the fixture's whole point is that this result elided");
     stub.content.clone()
@@ -191,7 +191,8 @@ fn a_plan_citing_an_elided_results_digest_is_refused() {
         "teeth: while the result was in the prompt, quoting it checked out"
     );
 
-    // ...and then assembly dropped it, so the runtime revokes what the model never read.
+    // ...and then budget pressure dropped it (a budget nothing fits), so the runtime revokes
+    // what the model never read.
     let transcript = [
         user("turn 0", 1_000),
         assistant_tool_call("aged-out", ToolId::ImageFacts, arguments, 1_010),
@@ -202,7 +203,7 @@ fn a_plan_citing_an_elided_results_digest_is_refused() {
         assistant_text("answer 2", 3_010),
         user("turn 3 (latest)", 4_000),
     ];
-    let assembled = assemble_prompt(&prefix(None, &[]), &transcript, &envelope_at(4_000), offset(), BUDGET);
+    let assembled = assemble_prompt(&prefix(None, &[]), &transcript, &envelope_at(4_000), offset(), 1);
     assert_eq!(assembled.elision.elided_call_ids, vec!["aged-out".to_string()]);
     for call_id in &assembled.elision.elided_call_ids {
         ledger.revoke_call(call_id);

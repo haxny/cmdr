@@ -64,11 +64,6 @@ pub(super) fn move_with_staging(
     config: &WriteOperationConfig,
     already_in_place: usize,
 ) -> Result<(), WriteOperationError> {
-    super::super::super::validation::validate_transfer_destination_name(
-        sources,
-        destination,
-        config.destination_name.as_deref(),
-    )?;
     // A source that is or holds a mount point would have the drive's files
     // copied off it and then deleted there. Refused before Phase 1, so neither
     // a fresh scan nor a cached preview's file list gets the chance.
@@ -107,7 +102,7 @@ pub(super) fn move_with_staging(
     let staging_dir = destination.join(format!("{}{}", cmdr_fs::staging::STAGING_DIR_PREFIX, operation_id));
     state.transfer_tree.install(
         scan_result.order_by_transfer_tree(sources, &TreeOrder::active(state.scope().host())),
-        TreeLanding::under(destination, config.destination_name.as_deref()).and_first_under(staging_dir.clone()),
+        TreeLanding::under(destination, &config.leaves).and_first_under(staging_dir.clone()),
     );
     let tree = state.transfer_tree.reporter();
 
@@ -153,8 +148,7 @@ pub(super) fn move_with_staging(
     let mut files_skipped = 0usize;
     let mut apply_to_all_resolution = ApplyToAll::default();
     let mut created_dirs: HashSet<PathBuf> = HashSet::new();
-    let mut dir_remap =
-        super::super::named_destination::initial_remap(sources, &staging_dir, config.destination_name.as_deref())?;
+    let mut dir_remap = super::super::named_destination::initial_remap(sources, &staging_dir, &config.leaves);
     // A Locked item the person said to leave stays out of the copy whole, the
     // way a folder→file Skip keeps a subtree out (`copy_single_item`).
     let mut skipped_subtrees: HashSet<PathBuf> = locked
@@ -390,16 +384,13 @@ pub(super) fn move_with_staging(
             // on the same promise. The recursive merge below carries its own.
             state.pause_gate.wait_while_paused_sync(state.intent());
 
-            let file_name = source.file_name().ok_or_else(|| WriteOperationError::IoError {
-                path: source.display().to_string(),
-                message: "Invalid source path".into(),
-            })?;
-
             let leaf = config
-                .destination_name
-                .as_deref()
-                .map(Path::new)
-                .unwrap_or_else(|| Path::new(file_name));
+                .leaves
+                .leaf_of(source)
+                .ok_or_else(|| WriteOperationError::IoError {
+                    path: source.display().to_string(),
+                    message: "Invalid source path".into(),
+                })?;
             let staged_path = staging_dir.join(leaf);
             let final_path = destination.join(leaf);
 

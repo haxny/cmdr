@@ -12,6 +12,7 @@ import type {
   ArchiveNameRefusal,
   ItemKinds,
   MountedVolumeAction,
+  NamedLeavesRefusal,
   StagedLeftovers,
   TrashRefusalKind,
 } from '#lib/ipc/bindings.js'
@@ -205,6 +206,10 @@ export type WriteOperationError =
   | { type: 'destination_full'; path: string }
   | { type: 'destination_inside_source'; source: string; destination: string }
   | { type: 'duplicate_source_names'; name: string; first: string; second: string }
+  // A transfer that named each item (an approved suggestion) can't honour those
+  // names: `reason` says which rule, `path` the item, landing path, or destination
+  // it's about. Refused before anything is admitted or written.
+  | { type: 'named_leaves_refused'; path: string; reason: NamedLeavesRefusal }
   // The selection straddles a read-only view and the drive it sits on (a repo's
   // `Browse snapshots` beside the repo's files), and one transfer reads through
   // one volume. Refused before anything is read. `path` is the first item a

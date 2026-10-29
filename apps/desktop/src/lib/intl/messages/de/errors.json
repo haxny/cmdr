@@ -2444,5 +2444,49 @@
   "errors.write.duplicateSourceNames.suggestion.move": "Bewege sie nacheinander, oder benenne eines vorher um.",
   "@errors.write.duplicateSourceNames.suggestion.move": {
     "sourceHash": "8af755e"
+  },
+  "errors.write.namedLeavesRefused.title": "Diese neuen Namen lassen sich nicht verwenden",
+  "@errors.write.namedLeavesRefused.title": {
+    "sourceHash": "08c8600"
+  },
+  "errors.write.namedLeavesRefused.message.notASource": "Einer der neuen Namen gilt für {path}, aber dieses Objekt gehört nicht zu diesem Vorschlag, deshalb wurde nichts gestartet.",
+  "@errors.write.namedLeavesRefused.message.notASource": {
+    "sourceHash": "12b2cb4"
+  },
+  "errors.write.namedLeavesRefused.message.sameName": "Zwei Objekte würden beide unter {path} landen. Viele Laufwerke halten beide Namen für denselben, also würde ein Objekt das andere ersetzen.",
+  "@errors.write.namedLeavesRefused.message.sameName": {
+    "sourceHash": "95e02b9"
+  },
+  "errors.write.namedLeavesRefused.message.ontoASource": "Ein Objekt würde unter {path} landen und dort ein anderes Objekt aus demselben Vorschlag ersetzen.",
+  "@errors.write.namedLeavesRefused.message.ontoASource": {
+    "sourceHash": "724f9c3"
+  },
+  "errors.write.namedLeavesRefused.message.alreadyInDestination": "{path} liegt schon im Zielordner, ein neuer Name dort wäre also eine Umbenennung.",
+  "@errors.write.namedLeavesRefused.message.alreadyInDestination": {
+    "sourceHash": "06a0593"
+  },
+  "errors.write.namedLeavesRefused.message.routeCannotName": "Auf dem Weg in ein Zip-Archiv oder aus einem heraus kann Cmdr nicht jedem Objekt einen eigenen Namen geben, deshalb ist nichts in {path} gelandet.",
+  "@errors.write.namedLeavesRefused.message.routeCannotName": {
+    "sourceHash": "f2e48ca"
+  },
+  "errors.write.namedLeavesRefused.suggestion.notASource": "Bitte Cmdr, das noch einmal vorzuschlagen.",
+  "@errors.write.namedLeavesRefused.suggestion.notASource": {
+    "sourceHash": "c1dbe85"
+  },
+  "errors.write.namedLeavesRefused.suggestion.sameName": "Bitte Cmdr um einen eigenen Namen für jedes Objekt.",
+  "@errors.write.namedLeavesRefused.suggestion.sameName": {
+    "sourceHash": "76257a9"
+  },
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Bitte Cmdr um Namen, die sich mit keinem der bewegten oder kopierten Objekte decken.",
+  "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
+    "sourceHash": "9ab88ec"
+  },
+  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Benenne die Objekte, die schon in diesem Ordner liegen, um und bewege oder kopiere dann den Rest.",
+  "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {
+    "sourceHash": "8917a8e"
+  },
+  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Bewege oder kopiere die Objekte unter ihren eigenen Namen und benenne sie dann dort um.",
+  "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
+    "sourceHash": "b1e881c"
   }
 }

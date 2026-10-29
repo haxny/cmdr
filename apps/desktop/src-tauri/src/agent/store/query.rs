@@ -313,10 +313,10 @@ pub fn get_conversation(
 
 // ── Messages ─────────────────────────────────────────────────────────────────
 
-const MESSAGE_COLUMNS: &str =
+pub(super) const MESSAGE_COLUMNS: &str =
     "id, seq, role, content_blocks, text_for_search, prompt_tokens, completion_tokens, created_at";
 
-fn map_message_row(row: &rusqlite::Row<'_>) -> Result<StoredMessage, AgentStoreError> {
+pub(super) fn map_message_row(row: &rusqlite::Row<'_>) -> Result<StoredMessage, AgentStoreError> {
     let role_token: String = row.get(2)?;
     let content_blocks: String = row.get(3)?;
     let content = if role_token == EVENT_ROLE_TOKEN {
@@ -359,6 +359,16 @@ pub fn list_messages(
         out.push(map_message_row(row)?);
     }
     Ok(out)
+}
+
+/// The conversation's highest `seq` so far, or `-1` for a thread with no rows yet, so "rows
+/// after it" is every row either way.
+pub fn last_seq(conn: &Connection, conversation_id: i64) -> Result<i64, AgentStoreError> {
+    Ok(conn.query_row(
+        "SELECT COALESCE(MAX(seq), -1) FROM messages WHERE conversation_id = ?1",
+        rusqlite::params![conversation_id],
+        |row| row.get(0),
+    )?)
 }
 
 /// Append a message to a conversation, returning `(message_id, seq)`. The per-conversation

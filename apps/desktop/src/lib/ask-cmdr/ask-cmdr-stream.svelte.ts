@@ -14,28 +14,41 @@
  * rendering. `adoptLiveTurn` is the other half — after a reload there is no `assistantStarted`
  * left to hear, so any live event is taken as proof a turn is running.
  *
- * **Cancel finalizes locally.** The runtime returns `Cancelled` with NO terminal event, so a
- * stop won't be echoed back — `stopStreaming` finalizes the bubble itself, and the thread
- * goes on the stopped list so a late chunk can't resurrect the "working…" state.
+ * **Stop is local first, settled by the backend.** `stopStreaming` ends the turn on screen at
+ * once, but dispatch isn't cancellable: the round's calls still run and store their results. So
+ * the stopped bubble waits, as a {@link PendingStop}, for the backend's terminal, which settles it
+ * the way a reload would read it. See `DETAILS.md` § The streaming model.
  */
 
 import { getAppLogger } from '#lib/logging/logger.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
-import type { RailMessage } from './ask-cmdr-messages'
-import type { ManagedAiRefusal } from '#lib/ipc/bindings.js'
+import { openerItem } from './ask-cmdr-history'
+import type { AssistantItem, RailMessage, RailToolCall, Round } from './ask-cmdr-messages'
+import type {
+  CancelOutcomeView,
+  LineRef,
+  ManagedAiRefusal,
+  ResolvedCall,
+  ToolOutcome,
+  ToolSubject,
+  TurnStats,
+} from '#lib/ipc/bindings.js'
 import {
   discardStagedRenameProposals,
   openStagedRenameReview,
   stageRenameProposal,
 } from './ask-cmdr-rename-review.svelte'
-import { askCmdrState, currentAssistant, finalizeAssistant, lastUserMessage } from './ask-cmdr-state.svelte'
+import { noteProposalDecided } from './ask-cmdr-decisions'
+import { askCmdrState, insertAboveBubble, settleAssistant, streamingAssistant } from './ask-cmdr-state.svelte'
+import { holdTurnGroupsOpen, settleTurnGroups } from './ask-cmdr-tool-groups.svelte'
 import {
   cancelAskCmdr,
+  keepGoingAskCmdr,
   sendAskCmdrMessage,
   type AskCmdrErrorKind,
   type AskCmdrStreamEvent,
   type AskCmdrTurn,
-  type ProposalDecision,
+  type MessageView,
 } from '#lib/tauri-commands/index.js'
 
 const log = getAppLogger('askCmdr')
@@ -44,25 +57,162 @@ const log = getAppLogger('askCmdr')
 type TurnEvent = Exclude<AskCmdrStreamEvent, { type: 'proposalDecided' }>
 
 /** How long a turn may go without any event before its bubble says so, and before the rail
- * gives up on it entirely. */
+ * gives up on it entirely. The give-up is a backstop for a backend that went away: it sits past
+ * the backend's own stall window (`STREAM_STALL_TIMEOUT`, 120 s, which also counts the provider's
+ * keep-alives the rail never sees), so a live turn always ends with the backend's terminal first.
+ * A turn paused on spend has no watchdog at all: it waits on the user. */
 const STALL_AFTER_MS = 30_000
-const STOP_AFTER_MS = 90_000
+const STOP_AFTER_MS = 150_000
 let stallTimer: ReturnType<typeof setTimeout> | null = null
 let stopTimer: ReturnType<typeof setTimeout> | null = null
 
 /**
- * Threads whose in-flight turn the user stopped. A cancel produces no terminal event, so the
- * backend keeps dribbling for a chunk or two; without this, one of those late events would
- * read as "a turn is live here" and put the rail back into working state with no `done`
- * coming to clear it. Cleared when the thread is sent to again.
+ * A turn the user stopped here, waiting for the backend to say how it ended. Until then every
+ * event of its thread is still that turn's (a new send queues behind it), so they apply to the
+ * stopped bubble, or are dropped, and never re-enter the working state.
  */
-// eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping only; nothing renders from it
-let stoppedTurns = new Set<number>()
+interface PendingStop {
+  conversationId: number
+  /** The stopped turn's bubble, `null` when it hadn't opened one yet. */
+  bubble: AssistantItem | null
+  /** The user bubble this rail typed for the stopped turn, still waiting for its id. */
+  opener: TypedOpener | null
+  /** The send that started the turn, so a send the backend refused (no turn, so no terminal
+   * coming) takes its stop back. `null` for a turn this rail didn't send (a wake, or one a
+   * reload adopted). */
+  send: symbol | null
+  /** The stopped turn's run, which its terminal carries; `null` while the rail hadn't learned it
+   * (a turn adopted on reload that has said nothing since). */
+  run: number | null
+}
 
-/** Forget every stopped turn. Test isolation only; production clears per thread. */
-export function resetStoppedTurns(): void {
-  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- see `stoppedTurns`
-  stoppedTurns = new Set<number>()
+/** Oldest first. A terminal settles the stop of its own run, else the oldest of its thread whose
+ * run is unknown. */
+let pendingStops: PendingStop[] = []
+
+/** The run of the turn the rail is streaming, `null` until it is known: from the send's answer,
+ * or from the first event of a turn the rail picked up. */
+let liveRun: number | null = null
+
+/**
+ * Runs whose turn the rail already settled before their terminal arrived (a Stop answered
+ * `live: 0`: the turn had ended, its terminal still on the way). That terminal is swallowed when
+ * it comes, so it can only end its own turn, never one sent since. Capped: a terminal that never
+ * comes (lost to a reload) leaves its run here.
+ */
+let settledRuns: number[] = []
+const SETTLED_RUNS_KEPT = 32
+
+type TypedOpener = Extract<RailMessage, { kind: 'user' }>
+
+/**
+ * The user bubble `sendMessage` put up for the turn now starting, waiting for `userPersisted` to
+ * give it its id. Kept by reference because a turn can also open with no bubble typed here, and
+ * then the last user bubble on screen belongs to an EARLIER turn.
+ */
+let typedOpener: TypedOpener | null = null
+
+/** The latest send of the chat on screen: the token its {@link PendingStop} carries. `null` once
+ * the user leaves that chat ({@link leaveChat}), so a send still in flight can't write into the
+ * chat they went to. */
+let activeSend: symbol | null = null
+
+/**
+ * Stops pressed before their send's thread id came back, by send. A brand-new chat has no thread
+ * until the send command answers, but its turn runs all the same, so the stop waits here and
+ * sends its cancel the moment the id arrives.
+ */
+let stopsAwaitingId: Omit<PendingStop, 'conversationId'>[] = []
+
+/** Sends from a chat with no thread yet, still waiting for the id. */
+let sendsAwaitingId = 0
+
+/**
+ * Turn events that arrived while a send waited for its thread id, with no thread on screen to
+ * apply them to. The backend may announce a turn before the command's answer lands; the answer
+ * then claims its own events from here. The rest (another thread's, a wake's) are dropped once no
+ * send waits any more. An id comes from the command's answer alone, ❌ never from an event: a
+ * wake's `started` in the same moment would hand the fresh chat the wrong thread.
+ */
+let unclaimedEvents: AskCmdrTurn[] = []
+
+/** Forget every stopped turn and typed opener. Test isolation only; production clears per
+ * thread. */
+export function resetTurnBookkeeping(): void {
+  pendingStops = []
+  typedOpener = null
+  activeSend = null
+  stopsAwaitingId = []
+  sendsAwaitingId = 0
+  unclaimedEvents = []
+  liveRun = null
+  settledRuns = []
+}
+
+/**
+ * The user left the chat on screen (New chat, another thread). A send still in flight from it
+ * keeps its turn, and its Stop, but no longer owns what the rail shows: its answer won't put its
+ * thread on screen, and a refusal won't paint into the chat they went to.
+ */
+export function leaveChat(): void {
+  activeSend = null
+  typedOpener = null
+  liveRun = null
+}
+
+/**
+ * A thread load put `conversationId` on screen, showing what its rows say. A stop still waiting
+ * there is forgotten: if its turn still runs, the load folded it as running and adopts it here,
+ * and its terminal ends it like any other.
+ *
+ * When the backend says a turn runs there, the rail is in that turn now: the load replays no
+ * `assistantStarted`, and the turn may stay quiet for a while (a long tool call), so waiting for
+ * its next event to adopt it would leave a running turn looking idle.
+ */
+export function resumeThread(conversationId: number, turnRunning: boolean, spendPausedMicros: number | null): void {
+  pendingStops = pendingStops.filter((stop) => stop.conversationId !== conversationId)
+  liveRun = null
+  askCmdrState.spendPausedMicros = null
+  if (turnRunning) adoptLiveTurn()
+  // A turn paused on spend emits nothing until the user answers, so the load is the only way the
+  // question gets back on screen after a reload.
+  if (turnRunning && spendPausedMicros !== null) applySpendPaused(spendPausedMicros)
+}
+
+/**
+ * Answer the spend pause with Keep going. The question leaves the screen now and the watchdog
+ * resumes; the backend runs the turn on. A click the backend finds stale (the turn already went on
+ * or ended) changes nothing there, and the turn's own events say where it stands.
+ */
+export function keepGoingPastSpend(): void {
+  const conversationId = askCmdrState.conversationId
+  if (conversationId === null || askCmdrState.spendPausedMicros === null) return
+  askCmdrState.spendPausedMicros = null
+  resetProgressWatchdog()
+  void keepGoingAskCmdr(conversationId).catch((e: unknown) => {
+    log.warn('Keep going in thread {conversationId} broke: {error}', { conversationId, error: e })
+  })
+}
+
+/** The running turn waits on the user's word, so it's quiet on purpose: no stall label, no
+ * watchdog timeout over a question the user hasn't answered yet. */
+function applySpendPaused(costMicros: number): void {
+  askCmdrState.spendPausedMicros = costMicros
+  const assistant = streamingAssistant()
+  if (assistant) {
+    assistant.thinking = false
+    assistant.stalled = false
+  }
+  clearProgressWatchdog()
+}
+
+/**
+ * A "load earlier" page joined the bubble `from` with its turn's older half into `to`, a new
+ * object. A stop still waiting there follows it, or its terminal would settle a bubble no longer
+ * on screen.
+ */
+export function followJoinedBubble(from: AssistantItem, to: AssistantItem): void {
+  for (const stop of pendingStops) if (stop.bubble === from) stop.bubble = to
 }
 
 // ── Sending + streaming ──────────────────────────────────────────────────────────
@@ -74,45 +224,118 @@ export function sendMessage(text: string): void {
   if (!trimmed || askCmdrState.streaming) return
   const attachments = askCmdrState.attachments
   askCmdrState.messages.push({ kind: 'user', id: null, text: trimmed, attachments })
+  // Through the state proxy, so `userPersisted` can find it in the list and patch it reactively.
+  typedOpener = askCmdrState.messages.at(-1) as TypedOpener
+  const send = Symbol('send')
+  activeSend = send
+  liveRun = null
   askCmdrState.streaming = true
   resetProgressWatchdog()
   askCmdrState.attachments = []
-  if (askCmdrState.conversationId !== null) stoppedTurns.delete(askCmdrState.conversationId)
   // The names the user turned down ride this turn only. Clearing them here (not on the
   // response) keeps a retry from re-sending feedback the model already acted on.
   const deniedNames = askCmdrState.deniedNames
   askCmdrState.deniedNames = []
+  const fresh = askCmdrState.conversationId === null
+  if (fresh) sendsAwaitingId++
   void sendAskCmdrMessage(askCmdrState.conversationId, trimmed, attachments, deniedNames).then(
     (outcome) => {
+      if (fresh) sendsAwaitingId--
       if (outcome.accepted) {
-        askCmdrState.conversationId = outcome.conversationId
-        stoppedTurns.delete(outcome.conversationId)
+        claimThread(send, outcome, fresh)
       } else {
-        if (askCmdrState.streaming) applyFailed(outcome.kind, outcome.detail, outcome.managed)
+        withdrawStop(send)
+        // Only the chat that sent it hears the refusal; one the user left shows nothing.
+        if (activeSend === send && askCmdrState.streaming) applyFailed(outcome.kind, outcome.detail, outcome.managed)
         // A switch moved since the rail last looked (in Settings, or in another window).
         // Re-reading turns the rail back into its gate, which carries the way out.
         if (outcome.kind === 'askCmdrOff' || outcome.kind === 'noCloudConsent') void refreshRailGate()
       }
+      if (sendsAwaitingId === 0) unclaimedEvents = []
     },
     (e: unknown) => {
       // `sendAskCmdrMessage` turns every Rust refusal into an outcome, so landing here means the
       // invoke itself broke (a missing command, an argument shape that drifted): a Cmdr bug, not
       // the provider. The turn ends as unfinished, with no raw IPC text in front of the person.
       log.error('The send command itself broke, before any provider was involved: {error}', { error: e })
-      if (askCmdrState.streaming) applyFailed('unfinishedReply', null)
+      if (fresh) sendsAwaitingId--
+      withdrawStop(send)
+      if (activeSend === send && askCmdrState.streaming) applyFailed('unfinishedReply', null)
+      if (sendsAwaitingId === 0) unclaimedEvents = []
     },
   )
 }
 
-/** Stop the in-flight turn. The runtime sends no terminal event on cancel, so finalize the
- * current bubble locally and stop listening to what the backend is still finishing. */
+/**
+ * The backend took `send` into thread `conversationId`. The chat it was typed in takes that
+ * thread, unless the user has left it; a Stop pressed before the id was known sends its cancel
+ * now; and a fresh chat's events that beat the answer are applied, in order, as if they had
+ * arrived just now. The answer also names the turn's run, which its stop (if any) waits on.
+ */
+function claimThread(
+  send: symbol,
+  { conversationId, run }: { conversationId: number; run: number },
+  fresh: boolean,
+): void {
+  if (activeSend === send) {
+    askCmdrState.conversationId = conversationId
+    if (askCmdrState.streaming) liveRun = run
+  }
+  for (const pending of pendingStops) if (pending.send === send) pending.run = run
+  const stop = stopsAwaitingId.find((candidate) => candidate.send === send)
+  if (stop) {
+    stopsAwaitingId = stopsAwaitingId.filter((candidate) => candidate !== stop)
+    pendingStops.push({ conversationId, ...stop, run })
+    requestCancel(conversationId)
+  }
+  if (!fresh) return
+  const claimed = unclaimedEvents.filter((turn) => turn.conversationId === conversationId)
+  unclaimedEvents = unclaimedEvents.filter((turn) => turn.conversationId !== conversationId)
+  for (const turn of claimed) handleTurnEvent(turn)
+}
+
+/** Ask the backend to stop the thread's turns; its answer says which terminals are still coming. */
+function requestCancel(conversationId: number): void {
+  void cancelAskCmdr(conversationId).then(
+    (reach) => {
+      matchStopsToTerminals(conversationId, reach)
+    },
+    (e: unknown) => {
+      log.warn('Stopping the turn in thread {conversationId} broke: {error}', { conversationId, error: e })
+    },
+  )
+}
+
+/**
+ * Stop the in-flight turn. The turn ends on screen now: no cursor, no watchdog, and the review
+ * opens over what it staged. Its bubble keeps everything the backend may still store, because the
+ * round's calls run on after a cancel; the backend's terminal settles it ({@link PendingStop}).
+ * A brand-new chat's turn has no thread id yet: its stop waits for the send's answer and cancels
+ * then ({@link stopsAwaitingId}), so it reaches the turn all the same.
+ */
 export function stopStreaming(): void {
   if (!askCmdrState.streaming) return
-  if (askCmdrState.conversationId !== null) {
-    stoppedTurns.add(askCmdrState.conversationId)
-    void cancelAskCmdr(askCmdrState.conversationId)
+  const bubble = streamingAssistant()
+  const conversationId = askCmdrState.conversationId
+  if (conversationId !== null) {
+    pendingStops.push({ conversationId, bubble, opener: typedOpener, send: activeSend, run: liveRun })
+    requestCancel(conversationId)
+  } else if (activeSend !== null) {
+    stopsAwaitingId.push({ bubble, opener: typedOpener, send: activeSend, run: liveRun })
+  } else {
+    // Streaming with no thread is a fresh chat's send, which always has a token: reaching this
+    // means a turn the rail can't name, so it can't be stopped from here.
+    log.warn('Stop found a running turn with no thread and no send to wait on')
   }
-  finalizeAssistant()
+  typedOpener = null
+  liveRun = null
+  askCmdrState.spendPausedMicros = null
+  if (bubble) {
+    bubble.streaming = false
+    bubble.thinking = false
+    bubble.stalled = false
+    holdTurnGroupsOpen(bubble)
+  }
   askCmdrState.streaming = false
   clearProgressWatchdog()
   // A stopped turn may still have staged plans, and a staged plan the user never sees is one
@@ -125,92 +348,135 @@ export function stopStreaming(): void {
  * drops it otherwise — a wake thinking in another thread must not write into what the user is
  * reading.
  *
- * A fresh chat is the one case where the rail has no id yet, so a `started` arriving while it
- * waits adopts the id. That can in principle catch a wake's `started` in the same tick; the
- * send's own promise assigns the real id right after and corrects it.
+ * A fresh chat has no id until its send answers, so what arrives meanwhile waits for that answer
+ * to claim it ({@link unclaimedEvents}).
  */
 export function handleTurnEvent(turn: AskCmdrTurn): void {
-  const { conversationId, event } = turn
+  const { conversationId, run, event } = turn
   if (event.type === 'proposalDecided') {
-    // Not part of a turn, so it takes none of the turn rules below: it adopts no id for a
-    // fresh chat, and a stopped thread still shows it.
+    // Not part of a turn, so it takes none of the turn rules below: it never waits for a fresh
+    // chat's id, and a stopped thread still shows it.
     noteProposalDecided({ conversationId, messageId: event.messageId, decision: event.decision })
     return
   }
+  // Wherever the rail is now: a stop left behind on another thread still needs its terminal.
+  if (settlePendingStop(conversationId, run, event)) return
   if (askCmdrState.conversationId === null) {
-    if (event.type === 'started' && askCmdrState.streaming) askCmdrState.conversationId = conversationId
+    if (sendsAwaitingId > 0) unclaimedEvents.push(turn)
     return
   }
   if (conversationId !== askCmdrState.conversationId) return
-  if (isTerminal(event)) stoppedTurns.delete(conversationId)
-  else if (stoppedTurns.has(conversationId)) return
+  const stop = pendingStops.find((candidate) => candidate.conversationId === conversationId)
+  if (stop) {
+    applyToStoppedTurn(stop, event)
+    return
+  }
+  // A turn picked up mid-way (a reload, a wake) names its run with its first event.
+  if (liveRun === null) liveRun = run
   applyStreamEvent(event)
 }
 
-/** The events that end a turn. They're allowed through on a stopped thread so a `discarded`
- * can still take the thread away. */
-function isTerminal(event: TurnEvent): boolean {
-  return event.type === 'done' || event.type === 'failed' || event.type === 'discarded'
-}
-
-/** One answer the user gave to a suggestion, and the thread whose timeline it was written to. */
-interface HeardDecision {
-  conversationId: number
-  /** The decision's timeline row, which is what makes a line heard twice one line. */
-  messageId: number
-  decision: ProposalDecision
-}
-
 /**
- * Decisions heard while a thread load was in flight, for {@link settleDecisionsHeardWhileLoading}
- * to put back. A load replaces the whole message list with what the backend read, and that read
- * can be a moment older than a decision the rail has already heard.
+ * The backend said what a Stop reached, so the thread waits for exactly the terminals still
+ * coming. With no turn live there, none is: every stop it holds settles now, the way a reload
+ * would read it, or it would take the thread's NEXT turn's terminal for its own (a watchdog
+ * timeout over a turn that had already ended, or one that died). A Stop that also tripped a turn
+ * nobody here waits for (a send queued behind a wake) owes one more terminal per such turn; a
+ * placeholder takes each, or it would end a turn sent since. A terminal the backend emitted just
+ * before the Stop can still arrive after a `live: 0`: its run goes to {@link settledRuns}, so it
+ * ends nothing when it comes.
  */
-let heardWhileLoading: HeardDecision[] = []
-
-/**
- * The user answered a suggestion: show the line in the thread that made it, and only there.
- *
- * The event carries the decision itself, so the rail adds ONE line instead of re-reading the
- * thread. That is not only cheaper: a re-read replaces the message list, which would throw
- * away an answer that is mid-stream, and its reply could arrive after the user moved to
- * another thread. Nothing here waits on anything, so neither can happen.
- */
-function noteProposalDecided(heard: HeardDecision): void {
-  if (askCmdrState.loadingHistory) heardWhileLoading.push(heard)
-  if (heard.conversationId === askCmdrState.conversationId) showDecision(heard)
-}
-
-/**
- * Put back what a thread load may have missed. The trigger calls this when a load ends, however
- * it ended: whatever was heard for the thread now on screen is shown (once), and the rest was
- * about threads the rail isn't showing.
- */
-export function settleDecisionsHeardWhileLoading(): void {
-  const heard = heardWhileLoading
-  heardWhileLoading = []
-  for (const decision of heard) {
-    if (decision.conversationId === askCmdrState.conversationId) showDecision(decision)
-  }
-}
-
-/** Add a decision's line, or patch it where it stands when the thread already shows that row.
- * An approval's row is announced twice: "running" at the start, then rewritten with its outcome
- * when it settles. The two come off different threads, and a load can deliver the settled row
- * first, so a late "running" never replaces an outcome. A new line goes above a bubble that is
- * still streaming, which has to stay last for the next chunk to find. */
-function showDecision({ messageId, decision }: HeardDecision): void {
-  const line: RailMessage = { kind: 'proposalDecisions', id: messageId, decisions: [decision] }
-  const at = askCmdrState.messages.findIndex((m) => m.kind === 'proposalDecisions' && m.id === messageId)
-  if (at !== -1) {
-    if (decision.outcome.kind !== 'running') askCmdrState.messages[at] = line
+function matchStopsToTerminals(conversationId: number, reach: CancelOutcomeView): void {
+  if (reach.live === 0) {
+    const settled = pendingStops.filter((stop) => stop.conversationId === conversationId)
+    pendingStops = pendingStops.filter((stop) => stop.conversationId !== conversationId)
+    for (const { bubble, run } of settled) {
+      if (run !== null) settledRuns = [...settledRuns, run].slice(-SETTLED_RUNS_KEPT)
+      if (!bubble) continue
+      settleAssistant(bubble)
+      settleTurnGroups(bubble)
+    }
     return
   }
-  const assistant = currentAssistant()
-  if (assistant?.streaming) {
-    askCmdrState.messages.splice(askCmdrState.messages.indexOf(assistant), 0, line)
-  } else {
-    askCmdrState.messages.push(line)
+  for (let extra = 1; extra < reach.tripped; extra++) {
+    pendingStops.push({ conversationId, bubble: null, opener: null, send: null, run: null })
+  }
+}
+
+/** Which pending stop a terminal of `run` in `conversationId` settles, or -1 for none. */
+function findStopFor(conversationId: number, run: number | null): number {
+  const ofThread = (stop: PendingStop) => stop.conversationId === conversationId
+  if (run === null) return pendingStops.findIndex(ofThread)
+  const own = pendingStops.findIndex((stop) => ofThread(stop) && stop.run === run)
+  return own !== -1 ? own : pendingStops.findIndex((stop) => ofThread(stop) && stop.run === null)
+}
+
+/** A send the backend refused ran no turn, so no terminal will come for a stop the user gave it. */
+function withdrawStop(send: symbol): void {
+  pendingStops = pendingStops.filter((stop) => stop.send !== send)
+  stopsAwaitingId = stopsAwaitingId.filter((stop) => stop.send !== send)
+}
+
+/**
+ * The first terminal after a stop is the stopped turn's: it settles that bubble the way a reload
+ * reads its rows, and attaches what the turn spent. It touches nothing else (`streaming`, the
+ * watchdog, the review): those ended at the click, and a send since may own them. A `discarded`
+ * takes the thread, stops and all, and goes on to the reducer. Returns whether it consumed the
+ * event.
+ *
+ * A terminal ends only its own turn: one of a run the rail already settled is swallowed, a stop
+ * waiting on its run takes it, and only then the oldest stop of the thread whose run is unknown.
+ * An event with no run (a caller that names none) takes the oldest stop of its thread.
+ */
+function settlePendingStop(conversationId: number, run: number | null, event: TurnEvent): boolean {
+  if (event.type === 'discarded') {
+    pendingStops = pendingStops.filter((stop) => stop.conversationId !== conversationId)
+    return false
+  }
+  if (event.type !== 'done' && event.type !== 'failed' && event.type !== 'stopped') return false
+  if (run !== null && settledRuns.includes(run)) {
+    settledRuns = settledRuns.filter((settled) => settled !== run)
+    return true
+  }
+  const at = findStopFor(conversationId, run)
+  if (at === -1) return false
+  const [{ bubble }] = pendingStops.splice(at, 1)
+  if (!bubble) return true
+  // A stopped turn that answered anyway keeps its answer; one that didn't loses the round it was
+  // streaming, which was never stored.
+  if (event.type === 'done') stampAnswer(bubble, event.messageId)
+  bubble.stats = event.turn
+  settleAssistant(bubble)
+  settleTurnGroups(bubble)
+  return true
+}
+
+/**
+ * An event of a turn the user stopped, before its terminal. What its calls still store settles
+ * the stopped bubble's lines, a plan it still stages opens at once (the turn is over on screen,
+ * so no turn end is coming to show it), and the rest is dropped: none of it may put the rail
+ * back into a working state.
+ */
+function applyToStoppedTurn(stop: PendingStop, event: TurnEvent): void {
+  switch (event.type) {
+    case 'toolCallsResolved':
+      if (!stop.bubble) return
+      resolveRound(stop.bubble, event.messageId, event.calls)
+      // The resolved round's group has a new key; it holds open like the rest until the terminal.
+      holdTurnGroupsOpen(stop.bubble)
+      return
+    case 'toolCallFinished':
+      applyToolFinished({ messageId: event.messageId, callId: event.callId }, event.outcome, event.subject)
+      return
+    case 'userPersisted':
+      applyUserPersisted(event.messageId, event.opener, { typed: stop.opener, bubble: stop.bubble })
+      stop.opener = null
+      return
+    case 'proposalReady':
+      stageRenameProposal(event.proposal)
+      openStagedRenameReview()
+      return
+    default:
   }
 }
 
@@ -223,11 +489,11 @@ function applyStreamEvent(event: TurnEvent): void {
       return
     case 'userPersisted':
       adoptLiveTurn()
-      applyUserPersisted(event.messageId)
+      applyUserPersisted(event.messageId, event.opener)
       return
     case 'assistantStarted':
       adoptLiveTurn()
-      ensureAssistant()
+      openRound()
       return
     case 'textDelta':
       adoptLiveTurn()
@@ -237,24 +503,20 @@ function applyStreamEvent(event: TurnEvent): void {
       adoptLiveTurn()
       applyThinking()
       return
-    case 'toolCallStarted':
-      adoptLiveTurn()
-      applyToolStarted(event.callId, event.tool)
-      return
-    case 'toolCallFinished':
-      adoptLiveTurn()
-      applyToolFinished(event.callId, event.ok)
-      return
     case 'proposalReady':
       // Staged, not shown: a big rename arrives as a run of plans, and the review opens over
       // all of them when the turn ends. See `ask-cmdr-rename-review.svelte.ts`.
       stageRenameProposal(event.proposal)
       return
     case 'done':
-      applyDone(event.messageId)
+      applyDone(event.messageId, event.turn)
       return
     case 'failed':
-      applyFailed(event.kind, event.detail, event.managed)
+      applyFailed(event.kind, event.detail, event.managed, event.turn)
+      return
+    case 'stopped':
+      // Stopped from elsewhere (the rail's own Stop settles through `settlePendingStop`).
+      endTurn(event.turn)
       return
     case 'modelChanged':
       insertBeforeCurrentTurn({ kind: 'modelChange', model: event.model })
@@ -266,20 +528,60 @@ function applyStreamEvent(event: TurnEvent): void {
       applyDiscarded()
       return
     default:
-      handleContextEvent(event)
+      handleLineContextOrSpendEvent(event)
   }
 }
 
-/** The two events that report on the CONTEXT rather than on the answer: what the assembly set
- * aside, and what it cost. Split out so `applyStreamEvent` stays under the complexity ceiling
- * and both halves stay exhaustive. */
-function handleContextEvent(event: Extract<TurnEvent, { type: 'contextTrimmed' | 'contextUsage' }>): void {
+/** The events about a round's tool lines, the two that report on the CONTEXT (what the
+ * assembly set aside, and what it cost), the meter's per-call nudge, and the spend pause's two
+ * (the turn stopped between rounds to ask, or it runs on). Split out so `applyStreamEvent` stays
+ * under the complexity ceiling and both halves stay exhaustive. */
+function handleLineContextOrSpendEvent(
+  event: Extract<
+    TurnEvent,
+    {
+      type:
+        | 'toolCallStarted'
+        | 'toolCallsResolved'
+        | 'toolCallFinished'
+        | 'contextTrimmed'
+        | 'contextUsage'
+        | 'costMetered'
+        | 'spendPaused'
+        | 'spendResumed'
+    }
+  >,
+): void {
   switch (event.type) {
+    case 'toolCallStarted':
+      adoptLiveTurn()
+      applyToolStarted(event.callId, event.tool)
+      return
+    case 'toolCallsResolved':
+      adoptLiveTurn()
+      resolveRound(ensureAssistant(), event.messageId, event.calls)
+      return
+    case 'toolCallFinished':
+      adoptLiveTurn()
+      applyToolFinished({ messageId: event.messageId, callId: event.callId }, event.outcome, event.subject)
+      return
     case 'contextTrimmed':
       applyContextTrimmed(event.elidedResults)
       return
     case 'contextUsage':
       applyContextUsage(event.estimatedTokens, event.budgetTokens, event.elidedResults)
+      return
+    case 'costMetered':
+      // The footer re-reads the meter (the one source of the total) on each bump.
+      askCmdrState.costRevision += 1
+      return
+    case 'spendPaused':
+      adoptLiveTurn()
+      applySpendPaused(event.costMicros)
+      return
+    case 'spendResumed':
+      askCmdrState.spendPausedMicros = null
+      resetProgressWatchdog()
   }
 }
 
@@ -296,29 +598,48 @@ function adoptLiveTurn(): void {
   resetProgressWatchdog()
 }
 
-/** The streaming bubble this turn writes into, created if the rail wasn't watching when it
- * started (a reload lands on a thread whose `assistantStarted` is already in the past). */
-function ensureAssistant(): Extract<RailMessage, { kind: 'assistant' }> {
-  const assistant = currentAssistant()
-  if (assistant) {
-    assistant.streaming = true
-    return assistant
-  }
-  const fresh: Extract<RailMessage, { kind: 'assistant' }> = {
+/** The streaming bubble this turn writes into, created if there is none: the turn's first
+ * round, or a turn the rail wasn't watching when it started (a wake, or a reload that landed
+ * before the turn's first row). A reload that caught rows of the running turn folds its bubble
+ * still streaming, so the rest of the turn lands there. */
+function ensureAssistant(): AssistantItem {
+  const assistant = streamingAssistant()
+  if (assistant) return assistant
+  const fresh: AssistantItem = {
     kind: 'assistant',
     id: null,
-    text: '',
-    tools: [],
+    // Patched when the opener persists (`userPersisted`), which comes after round 1 streamed.
+    turnId: null,
+    rounds: [],
     thinking: false,
     stalled: false,
     streaming: true,
+    stats: null,
   }
   askCmdrState.messages.push(fresh)
   return fresh
 }
 
-/** Record what this turn's prompt cost, for the footer gauge. One event per answered turn, so
- * this is a straight replace rather than an accumulation. */
+/**
+ * The round this turn is streaming into, opened if there is none. A round with a `messageId` is
+ * SEALED (its row is stored), so a chunk after it starts the next round. That is also what makes
+ * a reload mid-turn come out right: every folded round is sealed, so the live chunks that follow
+ * open a round of their own instead of writing into a stored one.
+ */
+function openRound(): Round {
+  return openRoundIn(ensureAssistant())
+}
+
+function openRoundIn(assistant: AssistantItem): Round {
+  const last = assistant.rounds.at(-1)
+  if (last && last.messageId === null) return last
+  assistant.rounds.push({ messageId: null, text: '', calls: [] })
+  // The pushed object, through the state proxy, so later writes are reactive.
+  return assistant.rounds[assistant.rounds.length - 1]
+}
+
+/** Record what one call's prompt cost, for the footer gauge. Each completed call reports its own
+ * whole assembly, so this is a straight replace rather than an accumulation. */
 function applyContextUsage(estimatedTokens: number, budgetTokens: number, elidedResults: number): void {
   askCmdrState.contextUsage = { estimatedTokens, budgetTokens, elidedResults }
 }
@@ -326,75 +647,178 @@ function applyContextUsage(estimatedTokens: number, budgetTokens: number, elided
 /** Show that the budget pushed older lookups out of this turn's context. It goes before the
  * streaming bubble, where the drop happened. */
 function applyContextTrimmed(elidedResults: number): void {
-  const assistant = currentAssistant()
-  const notice: RailMessage = { kind: 'contextTrimmed', count: elidedResults }
-  if (assistant) {
-    askCmdrState.messages.splice(askCmdrState.messages.indexOf(assistant), 0, notice)
-  } else {
-    askCmdrState.messages.push(notice)
+  insertAboveBubble({ kind: 'contextTrimmed', count: elidedResults })
+}
+
+/** Where an opener's row lands: the user bubble typed for its turn, and the turn's bubble. */
+interface OpenerTargets {
+  typed: TypedOpener | null
+  bubble: AssistantItem | null
+}
+
+/**
+ * The opener persisted: the user bubble this rail typed for the turn gets its id, and the turn's
+ * bubble its turn identity. A turn nobody typed here (a wake, a rejected sweep's follow-up, a
+ * send from before a reload) has no such bubble, so its opener goes in above the turn's bubble,
+ * unless the thread already shows it. The running turn's targets are the live ones; a stopped
+ * turn passes its own.
+ */
+function applyUserPersisted(messageId: number, opener: MessageView, targets?: OpenerTargets): void {
+  const { typed, bubble } = targets ?? { typed: typedOpener, bubble: streamingAssistant() }
+  if (!targets) typedOpener = null
+  const messages = askCmdrState.messages
+  if (typed && messages.includes(typed)) {
+    typed.id = messageId
+  } else if (!messages.some((item) => openerId(item) === messageId)) {
+    const at = bubble ? messages.indexOf(bubble) : -1
+    if (at !== -1) messages.splice(at, 0, openerItem(opener))
+    // A stopped turn with no bubble on screen has no place to show it; a reload will.
+    else if (!targets) messages.push(openerItem(opener))
   }
+  if (bubble) bubble.turnId = messageId
 }
 
-function applyUserPersisted(messageId: number): void {
-  const user = lastUserMessage()
-  if (user) user.id = messageId
+/** The row id of an item that can open a turn, `null` for every other kind. */
+function openerId(item: RailMessage): number | null {
+  return item.kind === 'user' || item.kind === 'wakeDigest' || item.kind === 'proposalDecisions' ? item.id : null
 }
 
+/** Into the current round even when its calls already started: the wire may interleave a
+ * round's text and its `toolCallStarted`s, but the stored row holds the text first, and so does
+ * the round. */
 function applyTextDelta(text: string): void {
+  openRound().text += text
   const assistant = ensureAssistant()
-  assistant.text += text
   assistant.thinking = false
   assistant.stalled = false
   resetProgressWatchdog()
 }
 
 function applyThinking(): void {
+  openRound()
   ensureAssistant().thinking = true
 }
 
-/** Idempotent per call: the tool lines are keyed by call id, and a repeated key crashes the
- * whole window (Svelte's `each_key_duplicate`, ERR-FRMAR). */
+/** Idempotent per call within its round: a repeated line crashes the whole window (Svelte's
+ * `each_key_duplicate`, ERR-FRMAR). */
 function applyToolStarted(callId: string, tool: string): void {
-  const assistant = ensureAssistant()
-  if (!assistant.tools.some((candidate) => candidate.callId === callId)) {
-    assistant.tools.push({ callId, tool, running: true, ok: true, path: null })
+  const round = openRound()
+  if (!round.calls.some((candidate) => candidate.callId === callId)) {
+    round.calls.push({ callId, tool, running: true, subject: null, outcome: null, repeatOf: null })
   }
   resetProgressWatchdog()
 }
 
-function applyToolFinished(callId: string, ok: boolean): void {
-  const tool = askCmdrState.messages
-    .findLast(
-      (message): message is Extract<RailMessage, { kind: 'assistant' }> =>
-        message.kind === 'assistant' && message.tools.some((candidate) => candidate.callId === callId),
-    )
-    ?.tools.find((candidate) => candidate.callId === callId)
-  if (tool) {
-    tool.running = false
-    tool.ok = ok
+/**
+ * A round's row persisted, with every call of its final message. The batch is the round's truth:
+ * it stamps the row id (sealing the round), gives each line its subject and repeat mark, adds a
+ * line whose start never came, and drops a started line the stored message doesn't hold (a
+ * nameless call the provider sent and the backend discarded). The k-th call with an id takes the
+ * k-th started line with it, as the backend pairs them.
+ *
+ * The round is the bubble's last one, the round still streaming; a stopped turn passes its own
+ * bubble, whose last round may still wait for its row.
+ */
+function resolveRound(assistant: AssistantItem, messageId: number, calls: ResolvedCall[]): void {
+  let round = assistant.rounds.at(-1)
+  if (!round || (round.messageId !== null && round.messageId !== messageId)) round = openRoundIn(assistant)
+  const started = round.calls
+  const taken: RailToolCall[] = []
+  round.messageId = messageId
+  round.calls = calls.map((resolved) => {
+    const line = started.find((candidate) => candidate.callId === resolved.callId && !taken.includes(candidate)) ?? {
+      callId: resolved.callId,
+      tool: resolved.tool,
+      running: true,
+      subject: null,
+      outcome: null,
+      repeatOf: null,
+    }
+    taken.push(line)
+    return { ...line, tool: resolved.tool, subject: resolved.subject, repeatOf: resolved.repeatOf }
+  })
+  resetProgressWatchdog()
+}
+
+/** A call's result row persisted. Found by its line, `(messageId, callId)`: call ids collide
+ * across rounds, so the id alone could settle another round's line. */
+function applyToolFinished(line: LineRef, outcome: ToolOutcome, subject: ToolSubject): void {
+  const call = findLine(line)
+  if (call) {
+    call.running = false
+    call.outcome = outcome
+    call.subject = subject
   }
   resetProgressWatchdog()
 }
 
-function applyDone(messageId: number): void {
-  finalizeAssistant(messageId)
-  askCmdrState.streaming = false
-  clearProgressWatchdog()
-  // The turn boundary is what makes a job's batches ONE review.
-  openStagedRenameReview()
+/** The line `ref` names, newest bubble first. Within a round that called one id twice, the first
+ * still waiting for its result is the next to finish (results persist in call order). */
+function findLine({ messageId, callId }: LineRef): RailToolCall | undefined {
+  for (let i = askCmdrState.messages.length - 1; i >= 0; i--) {
+    const item = askCmdrState.messages[i]
+    if (item.kind !== 'assistant') continue
+    const round = item.rounds.find((candidate) => candidate.messageId === messageId)
+    if (!round) continue
+    const withId = round.calls.filter((candidate) => candidate.callId === callId)
+    return withId.find((candidate) => candidate.outcome === null) ?? withId.at(-1)
+  }
+  return undefined
 }
 
-function applyFailed(kind: AskCmdrErrorKind, detail: string | null, managed: ManagedAiRefusal | null = null): void {
-  finalizeAssistant()
+function applyDone(messageId: number, stats: TurnStats | null): void {
+  const assistant = streamingAssistant()
+  if (assistant) stampAnswer(assistant, messageId)
+  endTurn(stats)
+}
+
+/** The answer round is text-only, so no `toolCallsResolved` stamped it: `done` does, BEFORE the
+ * bubble settles, or settling would drop the answer as never stored. */
+function stampAnswer(assistant: AssistantItem, messageId: number): void {
+  const last = assistant.rounds.at(-1)
+  if (last?.messageId === null) last.messageId = messageId
+  else if (last?.messageId !== messageId) assistant.rounds.push({ messageId, text: '', calls: [] })
+}
+
+function applyFailed(
+  kind: AskCmdrErrorKind,
+  detail: string | null,
+  managed: ManagedAiRefusal | null = null,
+  stats: TurnStats | null = null,
+): void {
+  endTurn(stats)
+  // A turn that reached a per-answer limit says so in its own bubble, named and valued from its
+  // stats (`AskCmdrLimitNotice`), the way a reload shows it too; a second, vaguer line under it
+  // (`budgetExhausted`, `repeatedToolCall`, a stall's `timeout`) would only repeat it.
+  if (stats?.limit) return
   askCmdrState.messages.push({
     kind: 'error',
     errorKind: kind,
     detail: detail ?? undefined,
     managed: managed ?? undefined,
   })
+}
+
+/**
+ * The running turn ended: settle its bubble with what it spent, leave the working state, and
+ * show what it staged. Every terminal the rail didn't stop itself ends here, a `stopped` included
+ * (the status corner stopping a wake), so a turn stopped elsewhere never lingers until the
+ * watchdog calls it a timeout.
+ */
+function endTurn(stats: TurnStats | null): void {
+  liveRun = null
+  askCmdrState.spendPausedMicros = null
+  const assistant = streamingAssistant()
+  if (assistant) {
+    assistant.stats = stats
+    settleAssistant(assistant)
+    // The answer is in: the turn's groups close, or keep what they show, per the setting.
+    settleTurnGroups(assistant)
+  }
   askCmdrState.streaming = false
   clearProgressWatchdog()
-  // Whatever got staged before the failure is real and still the user's to answer.
+  // The turn boundary is what makes a job's batches ONE review, and whatever got staged before
+  // a failure or a stop is real and still the user's to answer.
   openStagedRenameReview()
 }
 
@@ -404,12 +828,14 @@ function applyFailed(kind: AskCmdrErrorKind, detail: string | null, managed: Man
  * off it into an empty chat rather than showing a thread that no longer exists.
  */
 function applyDiscarded(): void {
+  leaveChat()
   askCmdrState.conversationId = null
   askCmdrState.messages = []
   askCmdrState.messageTotal = 0
   askCmdrState.historyCount = 0
   askCmdrState.contextUsage = null
   askCmdrState.streaming = false
+  askCmdrState.spendPausedMicros = null
   clearProgressWatchdog()
   // There is no thread left to review against, so this turn's plans go back rather than
   // opening a dialog for a conversation that no longer exists.
@@ -420,7 +846,7 @@ function resetProgressWatchdog(): void {
   clearProgressWatchdog()
   if (!askCmdrState.streaming) return
   stallTimer = setTimeout(() => {
-    const assistant = currentAssistant()
+    const assistant = streamingAssistant()
     if (assistant?.streaming) assistant.stalled = true
   }, STALL_AFTER_MS)
   stopTimer = setTimeout(() => {

@@ -7,15 +7,19 @@
 //! walks exactly like a person's, and the only thing the transport changes is
 //! that the answer arrives once instead of in batches (`search/live/collect.rs`).
 //!
-//! This file parses the call and runs it. The typed JSON both tools answer with,
-//! and every rule about its counts and its coverage, live in `search/result.rs`.
+//! This file parses the call and runs it. Where `search` covers (`volumeId`, and a
+//! scope under a dead mount) is `search/placement.rs`'s, through the one location
+//! resolver. The typed JSON both tools answer with, and every rule about its counts
+//! and its coverage, live in `search/result.rs`.
 
 use std::time::Duration;
 
 use serde_json::Value;
 
+mod placement;
 mod result;
 
+use placement::{Placement, offline_note, place};
 use result::{AiSearchResult, shape_answer};
 
 use super::{ToolError, ToolResult};
@@ -53,9 +57,10 @@ pub fn parse_human_size(s: &str) -> Result<u64, ToolError> {
 /// Shared by `search` and `ai_search`, and the SAME path the dialog takes: an
 /// agent's search walks what the index can't answer for, exactly like a
 /// person's. Waits up to `budget`; past that the walk carries on and the reply
-/// says so.
-async fn run_search(query: SearchQuery, budget: Duration) -> Result<LiveAnswer, ToolError> {
-    let answer = tokio::task::spawn_blocking(move || search::run_live_collected(query, budget))
+/// says so. `on_index` is the index a placement already chose; `None` routes by
+/// the scope.
+async fn run_search(query: SearchQuery, on_index: Option<String>, budget: Duration) -> Result<LiveAnswer, ToolError> {
+    let answer = tokio::task::spawn_blocking(move || search::run_live_collected(query, on_index.as_deref(), budget))
         .await
         .map_err(|e| ToolError::internal(format!("Search couldn't run: {e}")))?
         .map_err(ToolError::invalid_params)?;
@@ -153,6 +158,26 @@ pub async fn execute_search(params: &Value) -> ToolResult {
         (None, None)
     };
 
+    // Placed only when the call names a place: the unscoped boot-disk search reads
+    // no volume facts.
+    let volume_id = params
+        .get("volumeId")
+        .and_then(|v| v.as_str())
+        .filter(|id| !id.is_empty());
+    let placement = if volume_id.is_some() || include_paths.is_some() {
+        let facts = crate::location::resolve::VolumeFacts::now().await;
+        match place(&facts, volume_id, include_paths) {
+            Ok(placement) => placement,
+            Err(miss) => return shape(miss),
+        }
+    } else {
+        Placement {
+            include_paths,
+            on_index: None,
+            offline: None,
+        }
+    };
+
     let case_sensitive = params.get("caseSensitive").and_then(|v| v.as_bool());
     let exclude_system_dirs = params.get("excludeSystemDirs").and_then(|v| v.as_bool());
     let sort_by = match params.get("sortBy").and_then(|v| v.as_str()) {
@@ -177,7 +202,7 @@ pub async fn execute_search(params: &Value) -> ToolResult {
         modified_after,
         modified_before,
         is_directory,
-        include_paths,
+        include_paths: placement.include_paths,
         exclude_dir_names,
         include_path_ids: None,
         count_only,
@@ -187,12 +212,17 @@ pub async fn execute_search(params: &Value) -> ToolResult {
         sort_by,
     };
 
-    let answer = run_search(query, wait_budget(params)).await?;
+    let answer = run_search(query, placement.on_index, wait_budget(params)).await?;
 
     // Count-only needs no branch: the run returns no rows, so `entries` is empty
     // and `matchCount` carries the answer. The coverage still rides along, so the
     // count is never misread as complete.
-    shape(shape_answer(answer, exclude_system_dirs != Some(false)))
+    let mut result = shape_answer(answer, exclude_system_dirs != Some(false));
+    // It leads: every other note is about ground this one says nothing walked.
+    if let Some(offline) = &placement.offline {
+        result.notes.insert(0, offline_note(offline));
+    }
+    shape(result)
 }
 
 /// Serialize a result DTO to the tool's JSON value.
@@ -317,7 +347,7 @@ pub async fn execute_ai_search<R: tauri::Runtime>(app: &tauri::AppHandle<R>, par
 
     log::debug!("MCP ai_search: running search...");
     let t = std::time::Instant::now();
-    let answer = run_search(query.clone(), budget).await.inspect_err(|e| {
+    let answer = run_search(query.clone(), None, budget).await.inspect_err(|e| {
         crate::log_error!("MCP ai_search: the search couldn't run: {}", e.message);
     })?;
     log::info!(
@@ -350,9 +380,11 @@ pub async fn execute_ai_search<R: tauri::Runtime>(app: &tauri::AppHandle<R>, par
         fallback_query.include_paths = None;
         fallback_query.include_path_ids = None;
         let t = std::time::Instant::now();
-        let answer = run_search(fallback_query.clone(), remaining).await.inspect_err(|e| {
-            crate::log_error!("MCP ai_search: the fallback search couldn't run: {}", e.message);
-        })?;
+        let answer = run_search(fallback_query.clone(), None, remaining)
+            .await
+            .inspect_err(|e| {
+                crate::log_error!("MCP ai_search: the fallback search couldn't run: {}", e.message);
+            })?;
         log::info!(
             "MCP ai_search: fallback full-drive search completed in {:.1}s, {} results",
             t.elapsed().as_secs_f64(),

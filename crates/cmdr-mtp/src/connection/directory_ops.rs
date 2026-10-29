@@ -14,6 +14,7 @@ use super::{
     normalize_mtp_path, twins,
 };
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::host::indexing::WatchGap;
@@ -803,6 +804,21 @@ impl MtpConnectionManager {
                 LogPrivate::dir_path(dir_path),
                 device_id
             );
+        }
+    }
+
+    /// Forgets the listings of `old_path` and every folder under it, for a
+    /// folder that moved or was renamed away from there: they describe a place
+    /// that no longer holds those items, and a folder later arriving at that
+    /// path (the same one, moved back by an undo) would otherwise be answered
+    /// from them, with handles the device may no longer know.
+    pub(super) async fn invalidate_listing_subtree(&self, device_id: &str, storage_id: u32, old_path: &Path) {
+        let devices = self.devices.lock().await;
+        let Some(entry) = devices.get(device_id) else { return };
+        // Recover a poisoned cache rather than skip: skipping is exactly the stale
+        // answer this exists to prevent.
+        if let Some(storage_cache) = entry.listing_cache.write_ignore_poison().get_mut(&storage_id) {
+            storage_cache.listings.retain(|dir, _| !dir.starts_with(old_path));
         }
     }
 

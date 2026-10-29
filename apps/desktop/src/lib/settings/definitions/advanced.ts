@@ -560,4 +560,25 @@ export const advancedSettings: SettingDefinitionSource[] = [
     component: 'text-input',
     hidden: true,
   },
+  {
+    // What a finished answer does with its open tool groups. Pure frontend: the rail reads it
+    // at each turn's end (`ask-cmdr-tool-groups.svelte.ts`). A reopened thread starts collapsed
+    // either way, since "as you left it" has nothing to remember across a reload.
+    id: 'askCmdr.toolGroupsOnAnswer',
+    section: ['Advanced'],
+    cardKey: 'settings.advanced.card.askCmdr',
+    labelKey: 'settings.askCmdr.toolGroupsOnAnswer.label',
+    descriptionKey: 'settings.askCmdr.toolGroupsOnAnswer.description',
+    keywordsKey: 'settings.askCmdr.toolGroupsOnAnswer.keywords',
+    terms: ['ask cmdr'],
+    type: 'enum',
+    default: 'collapse',
+    component: 'radio',
+    constraints: {
+      options: [
+        { value: 'collapse', labelKey: 'settings.askCmdr.toolGroupsOnAnswer.opt.collapse' },
+        { value: 'keep', labelKey: 'settings.askCmdr.toolGroupsOnAnswer.opt.keep' },
+      ],
+    },
+  },
 ]

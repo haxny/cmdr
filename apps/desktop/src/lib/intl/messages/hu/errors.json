@@ -2444,5 +2444,49 @@
   "errors.write.duplicateSourceNames.suggestion.move": "Helyezd át őket egyesével, vagy nevezd át az egyiket.",
   "@errors.write.duplicateSourceNames.suggestion.move": {
     "sourceHash": "8af755e"
+  },
+  "errors.write.namedLeavesRefused.title": "Ezek az új nevek nem használhatók",
+  "@errors.write.namedLeavesRefused.title": {
+    "sourceHash": "08c8600"
+  },
+  "errors.write.namedLeavesRefused.message.notASource": "Az egyik új név olyan elemhez tartozik, amely nem része ennek a javaslatnak: {path}. Ezért semmi nem indult el.",
+  "@errors.write.namedLeavesRefused.message.notASource": {
+    "sourceHash": "12b2cb4"
+  },
+  "errors.write.namedLeavesRefused.message.sameName": "Két elem kerülne ide: {path}. Sok lemez a két nevet egynek tekinti, így az egyik lecserélné a másikat.",
+  "@errors.write.namedLeavesRefused.message.sameName": {
+    "sourceHash": "95e02b9"
+  },
+  "errors.write.namedLeavesRefused.message.ontoASource": "Egy elem ide kerülne, és lecserélne egy másik elemet ugyanebből a javaslatból: {path}.",
+  "@errors.write.namedLeavesRefused.message.ontoASource": {
+    "sourceHash": "724f9c3"
+  },
+  "errors.write.namedLeavesRefused.message.alreadyInDestination": "Ez az elem már a célmappában van: {path}. Ha ott új nevet kapna, az már átnevezés lenne.",
+  "@errors.write.namedLeavesRefused.message.alreadyInDestination": {
+    "sourceHash": "06a0593"
+  },
+  "errors.write.namedLeavesRefused.message.routeCannotName": "A Cmdr nem tud minden elemnek saját nevet adni, amikor zip-archívumba viszi vagy onnan hozza ki őket, ezért semmi nem került ide: {path}.",
+  "@errors.write.namedLeavesRefused.message.routeCannotName": {
+    "sourceHash": "f2e48ca"
+  },
+  "errors.write.namedLeavesRefused.suggestion.notASource": "Kérd meg a Cmdrt, hogy javasolja újra.",
+  "@errors.write.namedLeavesRefused.suggestion.notASource": {
+    "sourceHash": "c1dbe85"
+  },
+  "errors.write.namedLeavesRefused.suggestion.sameName": "Kérj a Cmdrtől minden elemnek külön nevet.",
+  "@errors.write.namedLeavesRefused.suggestion.sameName": {
+    "sourceHash": "76257a9"
+  },
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Kérj a Cmdrtől olyan neveket, amelyek eltérnek az áthelyezendő vagy másolandó elemek nevétől.",
+  "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
+    "sourceHash": "9ab88ec"
+  },
+  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Nevezd át azokat az elemeket, amelyek már abban a mappában vannak, aztán helyezd át vagy másold át a többit.",
+  "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {
+    "sourceHash": "8917a8e"
+  },
+  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Helyezd át vagy másold át őket a saját nevükön, aztán ott nevezd át őket.",
+  "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
+    "sourceHash": "b1e881c"
   }
 }

@@ -47,6 +47,7 @@ const { actions, store } = vi.hoisted(() => ({
       deselected: new Set<number>(),
       changedUnderReview: false,
       liveFacts: new Map<number, unknown>(),
+      takenNames: new Set<number>(),
       sourceUnreachable: null as string | null,
       range: { start: 0, end: 10 },
     },
@@ -75,12 +76,21 @@ vi.mock('./suggested-ops-trigger.svelte', () => ({
   suggestedOpsState: store.state,
   approvableCount: (id: number) => store.state.sweeps[0]?.groups.find((g) => g.groupId === id)?.liveOpCount ?? 0,
   approveGroup: actions.approve,
-  canApprove: (id: number) =>
-    !store.review.changedUnderReview &&
-    (store.state.sweeps[0]?.groups.find((g) => g.groupId === id)?.liveOpCount ?? 0) > 0,
+  canApprove: (id: number) => {
+    const found = store.state.sweeps[0]?.groups.find((g) => g.groupId === id) as
+      | { liveOpCount: number; server?: unknown }
+      | undefined
+    return !store.review.changedUnderReview && (Boolean(found?.server) || (found?.liveOpCount ?? 0) > 0)
+  },
   closeSuggestedOps: actions.close,
   ensureOpWindow: (groupId: number, startIndex: number) => actions.ensure({ groupId, startIndex }),
-  isOpSelected: (_groupId: number, opId: number) => !store.review.deselected.has(opId),
+  isOpSelected: (_groupId: number, op: { opId: number }) =>
+    !store.review.deselected.has(op.opId) &&
+    (store.review.liveFacts.get(op.opId) as { kind?: string } | undefined)?.kind !== 'missing',
+  isOpMissing: (_groupId: number, op: { opId: number }) =>
+    (store.review.liveFacts.get(op.opId) as { kind?: string } | undefined)?.kind === 'missing',
+  isNewNameTaken: (_groupId: number, op: { opId: number }) => store.review.takenNames.has(op.opId),
+  pendingGroups: () => store.state.sweeps.flatMap((sweep) => sweep.groups),
   selectionState: () => (store.review.deselected.size === 0 ? 'all' : 'some'),
   toggleAllOps: actions.toggleAll,
   opAt: (_groupId: number, index: number) => store.ops[index] ?? null,
@@ -120,11 +130,12 @@ function group(overrides: Record<string, unknown> = {}) {
     destination: '/backups/Installers',
     destinationVolumeName: 'Naspolya',
     reversible: 'restoreMove',
-    runBlocker: null,
+    runsAs: null,
     destinationState: 'exists',
     liveOpCount: 3,
     totalOpCount: 3,
     fromSelector: false,
+    server: null,
     ...overrides,
   }
 }
@@ -183,6 +194,7 @@ beforeEach(() => {
     deselected: new Set<number>(),
     changedUnderReview: false,
     liveFacts: new Map<number, unknown>(),
+    takenNames: new Set<number>(),
     sourceUnreachable: null,
     range: { start: 0, end: 10 },
   }
@@ -285,16 +297,18 @@ describe('disclosure', () => {
     expect(buttons).toContain('Delete 3 files')
   })
 
-  it('says a trash on a drive with no Trash can’t run, and won’t run it', () => {
-    seed({ verb: 'trash', runBlocker: 'noTrash', destination: null, destinationState: 'notApplicable' })
+  it('offers a trash on a drive with no Trash as the permanent delete it would be', () => {
+    seed({ verb: 'trash', runsAs: 'permanentDelete', destination: null, destinationState: 'notApplicable' })
     const host = mountDialog()
 
-    expect(host.textContent).toContain('Can’t run: this drive has no Trash')
+    expect(host.textContent).toContain('This drive has no Trash')
+    expect(host.textContent).toContain('This can’t be undone')
     expect(host.textContent).not.toContain('You can undo this')
-    const button = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Move 3 files to Trash')
-    expect(button?.getAttribute('aria-disabled')).toBe('true')
+    expect(host.textContent).not.toContain('The Trash')
+    const button = [...host.querySelectorAll('button')].find((b) => b.textContent.includes('Delete 3 files'))
+    expect(button?.className).toContain('danger')
     button?.click()
-    expect(actions.approve).not.toHaveBeenCalled()
+    expect(actions.approve).toHaveBeenCalled()
   })
 
   it('says when approving would create the target folder', () => {
@@ -323,13 +337,13 @@ describe('the approval note and the sweep heading', () => {
   it('closes the note for good from its ×', () => {
     settings.suppressed = false
     const host = mountDialog()
-    expect(host.textContent).toContain('Nothing runs until you approve it.')
+    expect(host.textContent).toContain('Apply them only if you agree.')
 
     host.querySelector<HTMLButtonElement>('[aria-label="Don’t show this again"]')?.click()
     flushSync()
 
     expect(settings.set).toHaveBeenCalledWith('suggestedOps.suppressApprovalNotice', true)
-    expect(host.textContent).not.toContain('Nothing runs until you approve it.')
+    expect(host.textContent).not.toContain('Apply them only if you agree.')
   })
 
   it('keeps the note hidden once the user closed it', () => {
@@ -337,7 +351,7 @@ describe('the approval note and the sweep heading', () => {
     const host = mountDialog()
     settings.suppressed = false
 
-    expect(host.textContent).not.toContain('Nothing runs until you approve it.')
+    expect(host.textContent).not.toContain('Apply them only if you agree.')
   })
 
   it('heads an older sweep with when it was suggested', () => {
@@ -375,6 +389,21 @@ describe('a new name', () => {
 
     expect(host.textContent).toContain('Invoice 2026-01.pdf')
     expect(host.textContent).toContain('New name')
+  })
+
+  // A move that files its sources under new names (the seeded group is a move): only the
+  // renamed row draws the arrow, and a screen reader hears "New name" before the name.
+  it('draws the arrow on a renamed move row only, and reads it as the new name', async () => {
+    ;(store.ops[0] as unknown as { newName: string }).newName = '2026-09-27 OpenAI invoice Rymd.pdf'
+    const host = mountDialog()
+
+    const cells = [...host.querySelectorAll('.name-cell')]
+    const renamed = cells.find((cell) => cell.textContent.includes('2026-09-27 OpenAI invoice Rymd.pdf'))
+    expect(renamed?.textContent).toContain('invoice-jan.pdf')
+    expect(renamed?.querySelector('.arrow')).not.toBeNull()
+    expect(renamed?.querySelector('.sr-only')?.textContent).toBe('New name')
+    expect(cells.filter((cell) => cell.querySelector('.arrow') !== null)).toHaveLength(1)
+    await expectNoA11yViolations(host)
   })
 })
 
@@ -493,6 +522,138 @@ describe('honest absence', () => {
   })
 })
 
+/**
+ * A server card: what the click saves, laid out like every other suggestion, with no files, no
+ * selection, and nothing to type into. The fields are Cmdr's facts; only the reason is the AI's.
+ */
+describe('a server card', () => {
+  const addCard = {
+    verb: 'addServer',
+    displayName: 'Build box',
+    rationale: 'You SSH into this box every day.',
+    reversible: 'serverSettings',
+    destination: null,
+    destinationVolumeName: null,
+    destinationState: 'notApplicable',
+    sourceFolder: null,
+    liveOpCount: 0,
+    totalOpCount: 0,
+    server: {
+      protocol: 'sftp',
+      fields: [
+        { field: 'name', value: 'Build box', changed: false, previous: null },
+        { field: 'address', value: 'build.local', changed: false, previous: null },
+        { field: 'port', value: '22', changed: false, previous: null },
+        { field: 'account', value: 'ada', changed: false, previous: null },
+        { field: 'folder', value: '/srv/builds', changed: false, previous: null },
+      ],
+      addressIsNew: true,
+      sharesAffected: null,
+    },
+  }
+  const editCard = {
+    ...addCard,
+    verb: 'editServer',
+    displayName: 'Naspolya',
+    server: {
+      protocol: 'smb',
+      fields: [
+        { field: 'name', value: 'Naspolya', changed: true, previous: 'naspi' },
+        { field: 'address', value: 'naspi.local', changed: false, previous: null },
+        { field: 'account', value: 'david', changed: true, previous: null },
+      ],
+      addressIsNew: false,
+      sharesAffected: 3,
+    },
+  }
+
+  it('shows the protocol and every field it saves, and the new address it points at', async () => {
+    seed(addCard)
+    const host = mountDialog()
+
+    const facts = host.querySelector('.facts')?.textContent ?? ''
+    for (const text of ['Type', 'SFTP', 'Address', 'build.local', 'Port', '22', 'Account', 'ada', '/srv/builds']) {
+      expect(facts).toContain(text)
+    }
+    expect(facts).toContain('A new address')
+    expect(host.querySelector('.group-head')?.textContent).toContain('Add a server')
+    expect(host.querySelector('.group-title .title-text')?.textContent).toBe('Build box')
+    expect(host.querySelector('.group-title .action')?.textContent).toBe('Add a server')
+    expect(host.textContent).toContain('You can undo this: forget the server in Servers')
+    await expectNoA11yViolations(host)
+  })
+
+  it('takes no input of any kind, and lists no files', () => {
+    seed(addCard)
+    const host = mountDialog()
+
+    const group = host.querySelector('.group')
+    expect(group?.querySelectorAll('input, textarea, select, [contenteditable]')).toHaveLength(0)
+    expect(group?.querySelector('.op-row')).toBeNull()
+    expect(group?.textContent).not.toContain('Password')
+  })
+
+  it('labels the AI’s reason as the AI’s, and nothing else', () => {
+    seed(addCard)
+    const host = mountDialog()
+
+    expect(host.querySelector('.group .agent-reason')?.textContent).toContain('You SSH into this box every day.')
+    expect(host.querySelector('.facts')?.textContent).not.toContain('You SSH into this box')
+  })
+
+  it('approves through the group with the add button', () => {
+    seed(addCard)
+    const host = mountDialog()
+
+    const button = [...host.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Save server')
+    expect(button?.disabled).toBe(false)
+    button?.click()
+    expect(actions.approve).toHaveBeenCalledWith(7)
+  })
+
+  it('shows old → new on the rows an edit changes, plain on the rest, and the shares it reaches', async () => {
+    seed(editCard)
+    const host = mountDialog()
+
+    const rows = [...host.querySelectorAll('.facts dd')].map((dd) => ({
+      text: dd.textContent.replace(/\s+/g, ' ').trim(),
+      arrow: dd.querySelector('.arrow') !== null,
+    }))
+    expect(rows).toContainEqual({ text: 'naspi changes to Naspolya', arrow: true })
+    expect(rows).toContainEqual({ text: 'Not set changes to david', arrow: true })
+    expect(rows).toContainEqual({ text: 'naspi.local', arrow: false })
+    expect(host.textContent).not.toContain('A new address')
+    expect(host.querySelector('.shares')?.textContent).toContain('This changes 3 saved shares on this server.')
+    expect(host.querySelector('.group-head')?.textContent).toContain('Change server settings')
+    const buttons = [...host.querySelectorAll('button')].map((b) => b.textContent.trim())
+    expect(buttons).toContain('Save changes')
+    await expectNoA11yViolations(host)
+  })
+
+  it('shows why a save gave the card back, under the card', async () => {
+    seed(addCard)
+    store.state.refusals = new Map([[7, { kind: 'server', answer: { kind: 'nameTaken', name: 'Naspolya' } }]])
+    const host = mountDialog()
+
+    const refusal = host.querySelector('.group .refusal')
+    expect(refusal?.getAttribute('role')).toBe('alert')
+    expect(refusal?.textContent).toContain('Why this wasn’t saved')
+    expect(refusal?.textContent).toContain('Another saved server is already called Naspolya')
+    await expectNoA11yViolations(host)
+  })
+
+  it('words a refused save in the servers sheet’s own sentence, with no second line', () => {
+    seed(addCard)
+    store.state.refusals = new Map([
+      [7, { kind: 'server', answer: { kind: 'refused', outcome: { outcome: 'start_folder_outside_root' } } }],
+    ])
+    const host = mountDialog()
+
+    expect(host.querySelector('.refusal-message')?.textContent).toContain('The start folder has to be the root folder')
+    expect(host.querySelector('.refusal-suggestion')).toBeNull()
+  })
+})
+
 /** The dialog's parts, each audited on its own as well, so a part reused elsewhere stays clean. */
 describe('the parts on their own', () => {
   function freshHost(): HTMLElement {
@@ -513,7 +674,7 @@ describe('the parts on their own', () => {
   it('SuggestedOpsGroup renders a group with no violations', async () => {
     const SuggestedOpsGroup = (await import('./SuggestedOpsGroup.svelte')).default
     const host = freshHost()
-    mount(SuggestedOpsGroup, { target: host, props: { group: group() as never } })
+    mount(SuggestedOpsGroup, { target: host, props: { group: group() as never, actionLabels: [] } })
     flushSync()
     await expectNoA11yViolations(host)
     expect(host.textContent).toContain('Move 3 files')
@@ -533,7 +694,7 @@ describe('the parts on their own', () => {
     const { createRawSnippet } = await import('svelte')
     const actions = createRawSnippet(() => ({ render: () => '<span></span>' }))
     const host = freshHost()
-    mount(SuggestedOpFiles, { target: host, props: { group: group() as never, actions } })
+    mount(SuggestedOpFiles, { target: host, props: { group: group() as never, undoNote: actions, actions } })
     flushSync()
     await expectNoA11yViolations(host)
     expect(host.textContent).toContain('invoice-jan.pdf')

@@ -18,7 +18,7 @@ import { openAcknowledgements } from '#lib/licensing/acknowledgements-trigger.sv
 import { openWhatsNew } from '#lib/whats-new/whats-new-trigger.svelte.js'
 import { openOperationLog } from '#lib/operation-log/operation-log-trigger.svelte.js'
 import { openSuggestedOps } from '#lib/suggested-ops/suggested-ops-trigger.svelte.js'
-import { toggleRail } from '#lib/ask-cmdr/ask-cmdr-trigger.svelte.js'
+import { openNewChat, toggleRail } from '#lib/ask-cmdr/ask-cmdr-trigger.svelte.js'
 import { runMenuTriggeredCheck } from '#lib/updates/updater.svelte.js'
 import { toggleCliCommand } from '#lib/cli-command/toggle-cli-command.js'
 import { detached } from './detached'
@@ -92,6 +92,10 @@ export const appDialogHandlers = {
 
   'askCmdr.toggle': () => {
     toggleRail()
+  },
+
+  'askCmdr.newChat': () => {
+    openNewChat()
   },
 
   'app.checkForUpdates': () => {

@@ -37,6 +37,13 @@
     "sources": "catalog (servers.sheet.identityLocked, errors.json)",
     "decision": "Servidores"
   },
+  "action": {
+    "chosen": "acción",
+    "accept": ["acciones"],
+    "forms": "Dialog actions → Acciones del diálogo; the actions below → las acciones de abajo",
+    "confidence": "high",
+    "sources": "macOS Finder LocalizableMerged SP95/TL26 (Action → Acción); catalog (queryUi.dialog.actionsAria, onboarding.stepAi.comparisonIntro)"
+  },
   "activate": {
     "chosen": "Activar",
     "accept": ["activ", "actív"],
@@ -77,6 +84,17 @@
     "forms": "Cmdr Settings section → Avanzado; quote settings.section.advanced exactly in navigation paths",
     "sources": "Network.appex Localizable (ADVANCED); catalog settings.section.advanced (macOS 26.6.2 build 25G83, live loctable key cross-reference, 2026-10-02)"
   },
+  "ai-context": {
+    "chosen": "contexto",
+    "confidence": "high",
+    "sources": "MS terminology (context → contexto); askCmdr.cost.estimateTooltip"
+  },
+  "ai-agent": {
+    "chosen": "agente",
+    "forms": "masculine: el agente",
+    "confidence": "high",
+    "sources": "Microsoft terminology (agent → agente); catalog (queryUi.ai.lead); macOS has no AI-agent sense"
+  },
   "ai-feature": {
     "chosen": "funciones de IA",
     "accept": ["la IA", "de IA", "a IA", "IA,", "IA.", "con IA"],
@@ -97,9 +115,20 @@
     "confidence": "high",
     "sources": "macOS es (respuesta); Microsoft (reply → responder); catalog askCmdr.error.unfinishedReply, errors.volume.signatureInvalid"
   },
+  "ai-lookup": {
+    "accept": ["consultas"],
+    "chosen": "consulta",
+    "confidence": "high",
+    "forms": "a round of lookups → ronda de consultas",
+    "sources": "catalog precedent: `askCmdr.error.repeatedToolCall`, `askCmdr.event.contextTrimmed`"
+  },
   "ai-tool": {
     "chosen": "herramienta",
-    "forms": "tool status lines: gerund for doing (Mirando dentro de los archivos), impersonal Se + preterite for done (Se buscó en tus fotos, Se usó una herramienta); Android platform tools → herramientas de plataforma de Android",
+    "forms": "tool status lines: gerund for doing (Mirando dentro de los archivos), impersonal Se + compound perfect for done (Se ha buscado en tus fotos, Se ha usado una herramienta) and Se ha intentado for a tried line, which es-419 forks to the preterite (Se buscó); a counted tool call → consulta (as lookup in askCmdr.event.contextTrimmed); Android platform tools → herramientas de plataforma de Android",
+    "exceptions": {
+      "askCmdr.turnStats.summary": "Counts tool calls, which the chat already calls consultas (askCmdr.event.contextTrimmed, askCmdr.error.repeatedToolCall); herramienta would name the tool, not the request.",
+      "askCmdr.turnStats.summaryNoDuration": "Same line as askCmdr.turnStats.summary without the time: consultas."
+    },
     "confidence": "high",
     "sources": "catalog (askCmdr.tool.*); MS (tool → herramienta)",
     "decision": "Ask Cmdr"
@@ -182,8 +211,8 @@
   },
   "apply": {
     "chosen": "aplicar",
-    "accept": ["aplic"],
-    "forms": "a change that takes effect → aplicarse (es posible que el cambio sí se haya aplicado)",
+    "accept": ["aplic", "aplíc"],
+    "forms": "the tú imperative with an enclitic → Aplícalas; a change that takes effect → aplicarse (es posible que el cambio sí se haya aplicado)",
     "confidence": "high",
     "sources": "macOS es (Estos ajustes se aplicarán…)"
   },
@@ -684,6 +713,12 @@
     "sources": "macOS Finder (Conectar, MN1 Conectándose a ^0…, Conectarse a un servidor), NetAuthAgent (Conectando…)",
     "decision": "Servidores"
   },
+  "conversation": {
+    "chosen": "conversación",
+    "confidence": "high",
+    "sources": "MS terminology (conversación); shipped settings.askCmdr.chatMemorySize.description",
+    "accept": ["conversaciones", "chat"]
+  },
   "key-combination": {
     "chosen": "combinación",
     "accept": ["combinación de teclas", "combinaciones"],
@@ -696,6 +731,12 @@
     "confidence": "high",
     "forms": "More about “X” → Más información sobre “X”",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "nivel",
+    "confidence": "high",
+    "sources": "MS terminology (nivel); shipped settings.archives.compressionLevel.label",
+    "accept": ["niveles", "zoom"]
   },
   "link": {
     "chosen": "enlace",
@@ -1841,6 +1882,13 @@
     "confidence": "high",
     "sources": "macOS Finder (visualización como lista); catalog la lista Servidores / la lista de servidores"
   },
+  "listing": {
+    "chosen": "listar",
+    "accept": ["list", "Lista"],
+    "forms": "progress gerund Listando (Listando los archivos…, Listando {name}); done Se ha listado {name}; the Settings section Listing → Lista (a topic noun)",
+    "confidence": "high",
+    "sources": "Double Commander (Listing → Listando, Listing \"%s\" → Listando «%s»); catalog fileOperations.transferTree.preparing, askCmdr.tool.listDir.*, settings.section.listing"
+  },
   "local": {
     "chosen": "local",
     "accept": ["locales"],
@@ -1878,8 +1926,8 @@
   },
   "look-inside": {
     "chosen": "mirar dentro de",
-    "accept": ["dentro de"],
-    "forms": "tool labels Mirando dentro de los archivos / Se miró dentro de los archivos",
+    "accept": ["dentro de", "mirar dentro"],
+    "forms": "tool labels Mirando dentro de los archivos / Se ha mirado dentro de los archivos (es-419 Se miró); a named file → Mirando dentro de {name}",
     "confidence": "tentative",
     "sources": "composed; macOS es dentro de for inside",
     "decision": "Mirar dentro de un archivo"
@@ -2842,7 +2890,7 @@
   "server": {
     "chosen": "servidor",
     "accept": ["servidores"],
-    "forms": "the chooser row and heading Servidores",
+    "forms": "the chooser row and heading Servidores; changing a saved server's settings → modificar los ajustes de un servidor (❌ cambiar un servidor, which reads as swapping it for another), its save button Guardar cambios",
     "confidence": "high",
     "sources": "macOS (desmontar servidores)"
   },
@@ -3244,7 +3292,8 @@
   "thinking": {
     "chosen": "Pensando",
     "confidence": "high",
-    "sources": "catalog"
+    "sources": "catalog",
+    "proseAccept": ["piens"]
   },
   "this-computer": {
     "chosen": "ordenador",
@@ -3793,5 +3842,37 @@
     "forms": "masculine despite -a: un problema, algún problema",
     "confidence": "high",
     "sources": "shipped catalog (errors.listing.diskReadProblem.title Problema de lectura del disco, errors.listing.deviceProblem.title Problema con el dispositivo)"
+  },
+  "start": {
+    "chosen": "empezar",
+    "accept": ["empez", "empiez", "comenz", "comienz", "inici", "iníci"],
+    "forms": "intransitive, a task starting on its own → empezar (no ha empezado nada, Por qué no ha empezado, empezará en cuanto …); transitive, someone starts a task → iniciar is fine too (Cmdr no ha podido iniciar la reversión, Iníciala sin ventana de progreso)",
+    "exceptions": {
+      "indexing.step.statusPending": "A step status: Not started → Pendiente, the status word, not a verb."
+    },
+    "confidence": "high",
+    "sources": "shipped catalog (suggestedOps.refusal.label Por qué no ha empezado, fileOperations.transferProgress.rowsStillSettlingToast no ha empezado nada, multiRename.error.couldntStart, errors.mutation.archiveEditCouldntStart); macOS es has 4 empez- vs 37 inici- hits, the latter mostly start-up and sign-in (grep over the pile's macOS folder, 2026-10-28)"
+  },
+  "zip": {
+    "chosen": "zip",
+    "accept": ["zip", "zips"],
+    "forms": "lowercase in prose: un zip, en un zip, un archivo zip; the format name in a label may be Zip as macOS writes it (Archivo Zip)",
+    "confidence": "high",
+    "sources": "shipped catalog (errors.write.archiveEntryNameRefused.title Este nombre no puede ir en un zip); macOS es (archivo Zip, comprimido Zip; grep over the pile's macOS folder, 2026-10-28)"
+  },
+  "reasoning-effort": {
+    "chosen": "Esfuerzo de razonamiento",
+    "confidence": "tentative",
+    "sources": "OpenAI docs are English-only; no established rendering, so built from the locale’s reasoning wording"
+  },
+  "reasoning-effort-anthropic": {
+    "chosen": "Esfuerzo",
+    "confidence": "high",
+    "sources": "Anthropic localized docs, platform.claude.com/docs/<lang>/build-with-claude/effort, read 2026-10-28 (title Esfuerzo)"
+  },
+  "thinking-level": {
+    "chosen": "Nivel de pensamiento",
+    "confidence": "tentative",
+    "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (Pensamiento de Gemini)"
   }
 }

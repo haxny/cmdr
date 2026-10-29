@@ -10,9 +10,9 @@ use super::test_support::*;
 use super::*;
 use crate::agent::chat::budget::{
     DEFAULT_PROMPT_TOKEN_BUDGET, FIXED_PROMPT_OVERHEAD_TOKENS, IMAGE_FACTS_TOKENS_PER_FILE, LISTING_TOKENS_PER_FILE,
-    MAX_TOOL_RESULT_TOKENS, PLAN_ROW_TOKENS_PER_FILE, PROMPT_BUDGET_60K, RENAME_TOKENS_PER_FILE, files_per_batch,
+    MAX_TOOL_RESULT_TOKENS, PLAN_ROW_TOKENS_PER_FILE, RENAME_TOKENS_PER_FILE, files_per_batch,
 };
-use crate::agent::llm::types::ToolId;
+use crate::agent::llm::types::{MemoryNote, MemoryNotes, ToolId};
 
 /// Average OCR text per screenshot in the real corpus the fabrication incident came from,
 /// well under `image_facts`' 2,000-char per-file cap. Every per-file number below assumes
@@ -31,10 +31,10 @@ const FILES: usize = 100;
 // them, and divides the reply's own ceiling by the plan row), so they're imported rather than
 // restated: this file is what keeps them honest against the real shapes.
 
-/// Every call: the system prompt plus the 19 tool declarations, before the user has said a word.
+/// Every call: the system prompt plus the 21 tool declarations, before the user has said a word.
 const FIXED_OVERHEAD: usize = FIXED_PROMPT_OVERHEAD_TOKENS;
-const SYSTEM_PROMPT_TOKENS: usize = 1_994;
-const TOOL_DECLARATION_TOKENS: usize = 4_269;
+const SYSTEM_PROMPT_TOKENS: usize = 2_378;
+const TOOL_DECLARATION_TOKENS: usize = 4_729;
 
 /// One `image_facts` row at [`OCR_CHARS`] of recognized text: the dominant per-file cost, and
 /// the reason a window has to be sized for the facts rather than for the plan.
@@ -46,8 +46,17 @@ const PLAN_ROW_PER_FILE: usize = PLAN_ROW_TOKENS_PER_FILE;
 /// One `list_pane_files` entry: name, size, mtime.
 const LISTING_PER_FILE: usize = LISTING_TOKENS_PER_FILE;
 
+/// What the memory block costs beyond the notes themselves (its announcement, fence, and one
+/// file heading), paid on a thread's first turn and on each turn after a memory file changed.
+const MEMORY_BLOCK_WRAPPER: usize = 187;
+
 /// The whole 100-file rename turn, prefix included.
-const HUNDRED_FILE_TURN: usize = 42_845;
+const HUNDRED_FILE_TURN: usize = 43_689;
+
+/// A mid-sized budget, what a 128K window resolved to before Automatic spent the whole window.
+/// Not a production number any more; it pins that a 100-file turn fits a modest window, so a
+/// user who caps "Chat memory size" there can still rename that many.
+const MID_BUDGET: usize = 60_000;
 
 const SHOTS_DIR: &str = "/Users/me/Downloads/shots";
 
@@ -96,16 +105,34 @@ fn assert_near(measured: usize, documented: usize, what: &str) {
 /// prefix half this size, a flat 8k budget left only ~4.9k for the actual work, which is how
 /// an 11-file `image_facts` batch fit and a 12-file one did not.
 #[test]
-fn every_call_pays_about_3_500_tokens_of_fixed_overhead() {
+fn every_call_pays_the_pinned_fixed_overhead() {
     let tools = crate::agent::tools::agent_tool_declarations();
-    assert_eq!(tools.len(), 19, "the overhead below is the cost of THESE declarations");
+    assert_eq!(tools.len(), 21, "the overhead below is the cost of THESE declarations");
 
     let system = estimate_prompt_tokens(&crate::agent::chat::system_prompt::system_prompt(), &[], &[]);
     let declarations = estimate_prompt_tokens("", &tools, &[]);
 
     assert_near(system, SYSTEM_PROMPT_TOKENS, "the system prompt");
-    assert_near(declarations, TOOL_DECLARATION_TOKENS, "the 19 tool declarations");
+    assert_near(declarations, TOOL_DECLARATION_TOKENS, "the 21 tool declarations");
     assert_near(system + declarations, FIXED_OVERHEAD, "the fixed per-call overhead");
+}
+
+/// Memory left the cached prefix for the user turn, so its wrapper is no longer part of the
+/// fixed overhead: it's paid only when the notes change. Pinned so the announcement can't
+/// quietly grow into a second system prompt.
+#[test]
+fn the_memory_block_wrapper_costs_the_pinned_figure() {
+    let notes = MemoryNotes {
+        files: vec![MemoryNote {
+            file: "AGENTS.md".to_string(),
+            text: String::new(),
+        }],
+    };
+    assert_near(
+        estimate_tokens_str(&notes.render()),
+        MEMORY_BLOCK_WRAPPER,
+        "the memory block's wrapper",
+    );
 }
 
 /// The three per-file costs a bulk rename pays. `image_facts` dominates by an order of
@@ -142,7 +169,7 @@ fn a_bulk_rename_pays_about_350_tokens_per_file() {
 /// then the plan call carrying 100 rows of paths, names, and evidence.
 #[test]
 fn a_hundred_file_rename_turn_needs_more_than_the_default_budget() {
-    let (tokens, elided, pages) = assemble_rename_turn(FILES, PROMPT_BUDGET_60K);
+    let (tokens, elided, pages) = assemble_rename_turn(FILES, MID_BUDGET);
 
     assert_near(tokens, HUNDRED_FILE_TURN, "the whole 100-file turn");
     // The per-item costs above have to explain the turn, or one of them is measuring the wrong
@@ -159,8 +186,8 @@ fn a_hundred_file_rename_turn_needs_more_than_the_default_budget() {
          if this ever flips, the numbers below are stale"
     );
     assert!(
-        tokens < PROMPT_BUDGET_60K,
-        "a 100-file rename must fit the 60k budget with room to spare ({tokens} estimated tokens)"
+        tokens < MID_BUDGET,
+        "a 100-file rename must fit a 60k budget with room to spare ({tokens} estimated tokens)"
     );
     // Nothing from this turn may have been dropped to get there: every page of facts is the
     // evidence the plan cites.
@@ -173,7 +200,7 @@ fn a_hundred_file_rename_turn_needs_more_than_the_default_budget() {
 /// take on a batch that overruns the window it was sized for.
 #[test]
 fn a_batch_the_hint_promises_actually_fits_its_budget() {
-    for budget in [DEFAULT_PROMPT_TOKEN_BUDGET, PROMPT_BUDGET_60K] {
+    for budget in [DEFAULT_PROMPT_TOKEN_BUDGET, MID_BUDGET] {
         let files = files_per_batch(budget);
         assert!(files > 0, "a {budget}-token budget has to be able to rename something");
         let (tokens, elided, _) = assemble_rename_turn(files, budget);
@@ -246,7 +273,6 @@ fn assemble_rename_turn(files: usize, budget: usize) -> (usize, usize, usize) {
     let real_prefix = PrefixInputs {
         system_prompt: &system_prompt,
         cmdr_md: None,
-        memory: None,
         tools: &tools,
     };
     let assembled = assemble_prompt(&real_prefix, &transcript, &envelope_at(1_000), offset(), budget);

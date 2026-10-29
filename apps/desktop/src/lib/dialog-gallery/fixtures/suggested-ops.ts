@@ -5,17 +5,24 @@
  * reviews the dialog mutates as the reviewer ticks boxes and shows more rows, so every opening
  * starts from a fresh copy. The reviews arrive with their windows and live facts already held,
  * so every row state renders without a backend, and nothing here is ever re-read
- * (`ensureLiveFacts` skips ops it already holds).
+ * (`ensureLiveFacts` skips ops it already holds). Rows past the held window (the 60,000-file
+ * group) page in through the patch's `rowSource`, answered from the same fixture.
  *
  * Raw copy on purpose: dev-only, outside the i18n-enforced areas.
  */
 
-import type { SuggestedGroupView, SuggestedOpView, SuggestedSweepView } from '#lib/tauri-commands/index.js'
+import type {
+  NewNameState,
+  SuggestedGroupView,
+  SuggestedOpView,
+  SuggestedSweepView,
+} from '#lib/tauri-commands/index.js'
 import {
   newGroupReview,
   suggestedOpsState,
   type GroupReview,
   type LiveFact,
+  type SuggestedOpRowSource,
 } from '#lib/suggested-ops/suggested-ops-trigger.svelte.js'
 import { SvelteMap } from 'svelte/reactivity'
 import { daysAgo, hoursAgo } from './relative-time'
@@ -36,6 +43,8 @@ interface FixtureFile {
   live?: LiveFact
   /** An earlier review turned it off (its approval then refused to start), so it opens unticked. */
   excluded?: boolean
+  /** Something already has its `newName` where it lands (#774). */
+  nameTaken?: boolean
 }
 
 interface FixtureGroup {
@@ -50,12 +59,16 @@ interface FixtureGroup {
    *  connected arrives, so its pill shows the name and the generic icon. */
   destinationVolumeId?: string | null
   reversible?: SuggestedGroupView['reversible']
-  runBlocker?: SuggestedGroupView['runBlocker']
+  runsAs?: SuggestedGroupView['runsAs']
   destinationState?: SuggestedGroupView['destinationState']
   fromSelector?: boolean
   files: FixtureFile[]
   /** The group's real size when it's bigger than the files listed (the 60,000-op case). */
   total?: number
+  /** Makes up file `index` past `files`, for a group of `total` that pages as you scroll. */
+  moreFiles?: (index: number) => FixtureFile
+  /** A server card: no files, and this is what the click saves. */
+  server?: SuggestedGroupView['server']
 }
 
 function view(group: FixtureGroup, sweepId: number): SuggestedGroupView {
@@ -75,29 +88,82 @@ function view(group: FixtureGroup, sweepId: number): SuggestedGroupView {
     destinationVolumeName: group.destinationVolumeName ?? null,
     destinationVolumeId: group.destinationVolumeId ?? null,
     reversible: group.reversible ?? 'restoreMove',
-    runBlocker: group.runBlocker ?? null,
+    runsAs: group.runsAs ?? null,
     destinationState: group.destinationState ?? (group.destination ? 'exists' : 'notApplicable'),
     liveOpCount: total - group.files.filter((file) => file.excluded).length,
     totalOpCount: total,
     fromSelector: group.fromSelector ?? false,
+    server: group.server ?? null,
   }
 }
 
-function review(group: FixtureGroup): GroupReview {
-  const fresh = newGroupReview()
-  fresh.seenRevision = 1
-  const ops: SuggestedOpView[] = group.files.map((file, index) => ({
+/** The op at `index` of a group: a listed file, or one `moreFiles` makes up past them. */
+function opOf(group: FixtureGroup, index: number): SuggestedOpView {
+  const file = fileOf(group, index)
+  return {
     opId: index + 1,
     sourcePath: `${file.folder ?? group.sourceFolder ?? DOWNLOADS}/${file.name}`,
     newName: file.newName ?? null,
     status: file.excluded ? 'excluded' : 'pending',
     snapshotSize: file.size,
     snapshotModified: file.modified,
-  }))
+  }
+}
+
+function fileOf(group: FixtureGroup, index: number): FixtureFile {
+  if (index < group.files.length) return group.files[index]
+  // Only reached below the group's `total`, which is `files.length` unless `moreFiles` makes up the rest.
+  if (!group.moreFiles) throw new Error(`Fixture group ${String(group.groupId)} has no file ${String(index)}`)
+  return group.moreFiles(index)
+}
+
+function liveOf(file: FixtureFile): LiveFact {
+  return file.live ?? { kind: 'present', size: file.size, modified: file.modified ?? hoursAgo(1) }
+}
+
+/**
+ * Answers the trigger's row reads for a patch's groups (`suggestedOpsState.rowSource`), as the
+ * store would: a group bigger than the rows its review holds keeps paging as you scroll. The
+ * store itself has no fixture group and would answer a total of 0, emptying the list.
+ */
+function rowSourceFor(groups: FixtureGroup[]): SuggestedOpRowSource {
+  const byId = new Map(groups.map((group) => [group.groupId, group]))
+  return {
+    page: ({ groupId, offset, limit }) => {
+      const group = byId.get(groupId)
+      if (!group || group.server) return Promise.resolve({ ops: [], offset, total: 0 })
+      const total = group.total ?? group.files.length
+      const end = Math.min(total, offset + limit)
+      const ops = Array.from({ length: Math.max(0, end - offset) }, (_, i) => opOf(group, offset + i))
+      return Promise.resolve({ ops, offset, total })
+    },
+    liveFacts: ({ groupId, offset, limit }) => {
+      const group = byId.get(groupId)
+      if (!group) return Promise.resolve({ kind: 'refused', reason: { type: 'unknownGroup' } })
+      const facts = Array.from({ length: limit }, (_, i) => {
+        const file = fileOf(group, offset + i)
+        // The same answer `review()` seeds, so a re-read never clears a fixture's taken name.
+        const newName: NewNameState | null = file.nameTaken ? 'taken' : file.newName ? 'free' : null
+        return { opId: offset + i + 1, state: liveOf(file), newName }
+      })
+      return Promise.resolve({ kind: 'facts', facts })
+    },
+  }
+}
+
+function review(group: FixtureGroup): GroupReview {
+  const fresh = newGroupReview()
+  fresh.seenRevision = 1
+  // A server card has no files, so no window: the trigger never pages one either.
+  if (group.server) return fresh
+  const ops: SuggestedOpView[] = group.files.map((_, index) => opOf(group, index))
   fresh.window = { offset: 0, ops, total: group.total ?? ops.length }
   group.files.forEach((file, index) => {
-    const live: LiveFact = file.live ?? { kind: 'present', size: file.size, modified: file.modified ?? hoursAgo(1) }
+    const live = liveOf(file)
     fresh.liveFacts.set(index + 1, live)
+    // What the trigger records from the same live answer (`takeLiveAnswer`).
+    if (live.kind === 'missing') fresh.missing.set(index + 1, ops[index])
+    if (file.nameTaken) fresh.takenNames.add(index + 1)
   })
   return fresh
 }
@@ -115,7 +181,8 @@ function patch(
       return view(group, sweep.sweepId)
     }),
   }))
-  return { open: true, loading: false, loadError: false, sweeps: views, reviews }
+  const rowSource = rowSourceFor(sweeps.flatMap((sweep) => sweep.groups))
+  return { open: true, loading: false, loadError: false, sweeps: views, reviews, rowSource }
 }
 
 const MB = 1_000_000
@@ -145,14 +212,28 @@ const DOWNLOADS_CLEANUP: FixtureGroup[] = [
     groupId: 102,
     verb: 'move',
     displayName: 'Invoices from 2026',
-    rationale: 'They all look like invoices, and you keep the others in your finances folder.',
+    rationale:
+      'They all look like invoices, and you keep the others in your finances folder, named by date and sender.',
     destination: '/papers/finances/2026/invoices',
     destinationVolumeName: 'Naspolya',
     destinationState: 'willBeCreated',
+    // A move that files under new names: the renamed rows draw an arrow, the rest keep theirs.
     files: [
-      { name: 'invoice-2026-07.pdf', size: 184_320, modified: daysAgo(80) },
-      { name: 'invoice-2026-08.pdf', size: 190_112, modified: daysAgo(52) },
-      { name: 'invoice-2026-09.pdf', size: 176_004, modified: daysAgo(22) },
+      { name: 'invoice-2026-07.pdf', newName: '2026-07-31 Telia invoice.pdf', size: 184_320, modified: daysAgo(80) },
+      // The NAS already has one under that name, so the row warns before the click (#774).
+      {
+        name: 'invoice-2026-08.pdf',
+        newName: '2026-08-31 Telia invoice.pdf',
+        size: 190_112,
+        modified: daysAgo(52),
+        nameTaken: true,
+      },
+      {
+        name: 'invoice-2026-09.pdf',
+        newName: '2026-09-27 OpenAI invoice Rymd.pdf',
+        size: 176_004,
+        modified: daysAgo(22),
+      },
       { name: 'Számla_Rymdskottkärra_AB_2026_10_végleges.pdf', size: 233_871, modified: daysAgo(3) },
       // Nothing recorded when suggested, so a live value has nothing to have changed from.
       {
@@ -195,7 +276,7 @@ const DOWNLOADS_CLEANUP: FixtureGroup[] = [
     displayName: 'Old exports on the NAS',
     rationale: 'Nobody opened these in over a year.',
     sourceFolder: '/exports/2024',
-    runBlocker: 'noTrash',
+    runsAs: 'permanentDelete',
     files: [
       { name: 'board-deck-2024-q1.key', size: 48 * MB, modified: daysAgo(560) },
       { name: 'board-deck-2024-q2.key', size: 51 * MB, modified: daysAgo(470) },
@@ -228,6 +309,15 @@ const DOWNLOADS_CLEANUP: FixtureGroup[] = [
     ],
   },
 ]
+
+/** Raw file `index` of the 60,000-file group: a year of shots, oldest first. */
+function rawCameraFile(index: number): FixtureFile {
+  return {
+    name: `DSC${String(10_000 + index).padStart(5, '0')}.ARW`,
+    size: 24 * MB + (index % 1_000) * 1_000,
+    modified: daysAgo(365 - (index * 365) / 60_000),
+  }
+}
 
 /** The ones that can't be taken back, and a group of 60,000 that must still open instantly. */
 const HARD_CASES: FixtureGroup[] = [
@@ -264,11 +354,53 @@ const HARD_CASES: FixtureGroup[] = [
     destination: '/media/raw',
     destinationVolumeName: 'Naspolya',
     total: 60_000,
-    files: Array.from({ length: 200 }, (_, i) => ({
-      name: `DSC${String(10_000 + i).padStart(5, '0')}.ARW`,
-      size: 24 * MB + i * 1_000,
-      modified: daysAgo(200 - i / 2),
-    })),
+    // The first page is held, as a real review's would be; the rest page in through `rowSource`.
+    files: Array.from({ length: 200 }, (_, i) => rawCameraFile(i)),
+    moreFiles: rawCameraFile,
+  },
+]
+
+/** Server cards: an SFTP add at an address Cmdr has never saved, and a NAS host's edit. */
+const SERVER_CARDS: FixtureGroup[] = [
+  {
+    groupId: 301,
+    verb: 'addServer',
+    displayName: 'Build box',
+    rationale: 'You open sftp://ada@build.example.com in the terminal every day, and it isn’t in your servers yet.',
+    reversible: 'serverSettings',
+    sourceFolder: null,
+    files: [],
+    server: {
+      protocol: 'sftp',
+      fields: [
+        { field: 'name', value: 'Build box', changed: false, previous: null },
+        { field: 'address', value: 'build.example.com', changed: false, previous: null },
+        { field: 'port', value: '22', changed: false, previous: null },
+        { field: 'account', value: 'ada', changed: false, previous: null },
+        { field: 'folder', value: '/srv/builds', changed: false, previous: null },
+      ],
+      addressIsNew: true,
+      sharesAffected: null,
+    },
+  },
+  {
+    groupId: 302,
+    verb: 'editServer',
+    displayName: 'Naspolya',
+    rationale: 'Your NAS shows as “naspi.local” in Servers. You call it Naspolya everywhere else.',
+    reversible: 'serverSettings',
+    sourceFolder: null,
+    files: [],
+    server: {
+      protocol: 'smb',
+      fields: [
+        { field: 'name', value: 'Naspolya', changed: true, previous: 'naspi.local' },
+        { field: 'address', value: 'naspi.local', changed: false, previous: null },
+        { field: 'account', value: 'sam', changed: true, previous: null },
+      ],
+      addressIsNew: false,
+      sharesAffected: 3,
+    },
   },
 ]
 
@@ -284,6 +416,14 @@ export const suggestedOpsFixtures: Record<string, () => Patch> = {
       },
     ]),
   'hard-cases': () => patch([{ sweepId: 2, createdAt: daysAgo(3), groups: HARD_CASES }]),
+  servers: () => patch([{ sweepId: 3, createdAt: hoursAgo(1), groups: SERVER_CARDS }]),
+  'server-refused': () => ({
+    ...patch([{ sweepId: 3, createdAt: hoursAgo(1), groups: SERVER_CARDS }]),
+    refusals: new SvelteMap([
+      [301, { kind: 'server', answer: { kind: 'nameTaken', name: 'Build box' } }],
+      [302, { kind: 'server', answer: { kind: 'serverChanged' } }],
+    ]),
+  }),
   'changed-and-refused': () => {
     // The refused group's receipt was unticked before that approval, so it reopens unticked.
     const [installers, invoices] = DOWNLOADS_CLEANUP

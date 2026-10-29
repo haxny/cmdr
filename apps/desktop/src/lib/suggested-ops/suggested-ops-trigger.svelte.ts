@@ -18,12 +18,13 @@
  */
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
+import { tick } from 'svelte'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import { getAppLogger } from '#lib/logging/logger.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import {
-  type OpSelection as WireOpSelection,
   approveSuggestedGroup,
+  approveSuggestedServer,
   listSuggestedOps,
   onSuggestionsChanged,
   pageSuggestedOps,
@@ -31,12 +32,15 @@ import {
   liveSuggestedOpFacts,
   type ApprovalResultView,
   type LiveFileState,
+  type ServerApprovalResultView,
   type SuggestedGroupView,
   type SuggestedOpLiveFactsAnswer,
+  type SuggestedOpPage,
   type SuggestedOpView,
   type SuggestedSweepView,
 } from '#lib/tauri-commands/index.js'
 import { asSuggestedOpsError } from './suggested-ops-failure'
+import { type OpSelection, flippedOn, selectionWire, storedSelection } from './suggested-ops-selection.svelte'
 
 const log = getAppLogger('suggestedOps')
 
@@ -80,6 +84,12 @@ export interface GroupReview {
   changedUnderReview: boolean
   /** What the disk says now, per op id, for the rows that have been on screen. */
   liveFacts: SvelteMap<number, LiveFact>
+  /** The ops whose file the disk says is gone, by op id. They can't run, so they read unticked
+   *  and count for nothing, and approve sends them turned off. Holds the op itself, since its
+   *  window may have moved on by the time the user approves. */
+  missing: SvelteMap<number, SuggestedOpView>
+  /** Ops whose NEW name is already taken where the file lands (#774), by op id. */
+  takenNames: SvelteSet<number>
   /** Set when the group's source volume can't be asked at all, so its rows stay on the
    *  snapshot and the dialog says why once, above the list. */
   sourceUnreachable: 'notConnected' | 'gone' | null
@@ -87,42 +97,27 @@ export interface GroupReview {
   range: { start: number; end: number }
 }
 
-/**
- * Which of a group's ops would run, as flips over a base.
- *
- * - `fromStored`: the stored ticks (an op an earlier review turned off arrives `excluded`) with
- *   `exclude` turned off and `include` turned back on. The state a group opens in, so a reopened
- *   review keeps the user's earlier "no"s without loading every op to find them.
- * - `allExcept`: every op but `ids` (after the header's select all).
- * - `only`: just `ids` (after the header's select none).
- *
- * The sets only ever hold rows the user flipped by hand.
- */
-export type OpSelection =
-  | { mode: 'fromStored'; exclude: SvelteSet<number>; include: SvelteSet<number> }
-  | { mode: 'allExcept' | 'only'; ids: SvelteSet<number> }
-
-/** The stored ticks, nothing flipped: the state a group opens in. */
-export function storedSelection(): OpSelection {
-  return { mode: 'fromStored', exclude: new SvelteSet<number>(), include: new SvelteSet<number>() }
-}
-
-/** The selection as approve sends it. */
-function selectionWire(selection: OpSelection): WireOpSelection {
-  if (selection.mode === 'fromStored') {
-    return { mode: 'fromStored', excludeOpIds: [...selection.exclude], includeOpIds: [...selection.include] }
-  }
-  return { mode: selection.mode, opIds: [...selection.ids] }
-}
-
 /** Why the last Approve or Reject didn't happen, as the notice the dialog shows. */
 export type DecisionNotice = Extract<MessageKey, 'suggestedOps.decisionNotRecorded' | 'suggestedOps.approvalUnsure'>
 
-/** Why an approval didn't start. The group is pending again, and the dialog shows this under it. */
-export type GroupRefusal = Extract<
+/** Why a file group's approval didn't start. */
+export type FileGroupRefusal = Extract<
   ApprovalResultView,
   { kind: 'refused' | 'nothingToRun' | 'nothingSelected' | 'couldNotStart' }
 >
+
+/** Why a server card's save gave it back: nothing was written. */
+export type ServerRefusal = Extract<
+  ServerApprovalResultView,
+  { kind: 'refused' | 'addServer' | 'serverChanged' | 'alreadySaved' | 'nameTaken' }
+>
+
+/**
+ * Why an approval didn't start. The group is pending again, and the dialog shows this under it.
+ * A server card's answer rides under its own `kind`: its `refused` carries a saved-server
+ * outcome, not a write error.
+ */
+export type GroupRefusal = FileGroupRefusal | { kind: 'server'; answer: ServerRefusal }
 
 interface SuggestedOpsState {
   open: boolean
@@ -143,6 +138,23 @@ interface SuggestedOpsState {
   /** Groups whose last approval refused to start, keyed by group id. Each one is pending again
    *  and keeps its reason under it until the user answers it again or closes the dialog. */
   refusals: SvelteMap<number, GroupRefusal>
+  /** Where op pages and their live facts come from: `null` reads the suggestion store. The
+   *  dialog gallery seeds its own, so a fixture group bigger than the rows it seeded still pages
+   *  as you scroll (the store has no such group and would answer a total of 0, emptying the list). */
+  rowSource: SuggestedOpRowSource | null
+}
+
+/** One read a `SuggestedOpRowSource` answers: rows `offset` to `offset + limit` of a group. */
+export interface SuggestedOpRowAsk {
+  groupId: number
+  offset: number
+  limit: number
+}
+
+/** A stand-in for the store's two row reads, with the same answers (`suggestedOpsState.rowSource`). */
+export interface SuggestedOpRowSource {
+  page: (ask: SuggestedOpRowAsk) => Promise<SuggestedOpPage>
+  liveFacts: (ask: SuggestedOpRowAsk) => Promise<SuggestedOpLiveFactsAnswer>
 }
 
 export const suggestedOpsState = $state<SuggestedOpsState>({
@@ -154,7 +166,18 @@ export const suggestedOpsState = $state<SuggestedOpsState>({
   busyGroupId: null,
   decisionNotice: null,
   refusals: new SvelteMap<number, GroupRefusal>(),
+  rowSource: null,
 })
+
+function readPage(ask: SuggestedOpRowAsk): Promise<SuggestedOpPage> {
+  const source = suggestedOpsState.rowSource
+  return source ? source.page(ask) : pageSuggestedOps(ask.groupId, ask.offset, ask.limit)
+}
+
+function readLiveFacts(ask: SuggestedOpRowAsk): Promise<SuggestedOpLiveFactsAnswer> {
+  const source = suggestedOpsState.rowSource
+  return source ? source.liveFacts(ask) : liveSuggestedOpFacts(ask.groupId, ask.offset, ask.limit)
+}
 
 /** Op ids whose live facts were already asked for, per group. Not state: nothing renders it,
  *  it only keeps a scroll from asking twice. */
@@ -172,6 +195,8 @@ export function newGroupReview(): GroupReview {
     seenRevision: null,
     changedUnderReview: false,
     liveFacts: new SvelteMap<number, LiveFact>(),
+    missing: new SvelteMap<number, SuggestedOpView>(),
+    takenNames: new SvelteSet<number>(),
     sourceUnreachable: null,
     range: { start: 0, end: INITIAL_ROWS },
   })
@@ -224,37 +249,48 @@ export function showAllRows(groupId: number): void {
  *  backend starts that mode from everything the group offers. */
 export function approvableCount(groupId: number): number {
   const group = groupById(groupId)
-  const selection = reviewOf(groupId)?.selection
+  const review = reviewOf(groupId)
+  const selection = review?.selection
   if (!group) return 0
-  if (!selection) return group.liveOpCount
+  if (!review || !selection) return group.liveOpCount
+  // A file the disk says is gone can't run, so it counts for nothing even where the flips tick it.
+  let gone = 0
+  for (const op of review.missing.values()) if (flippedOn(selection, op)) gone++
   switch (selection.mode) {
     case 'fromStored':
-      return Math.max(0, group.liveOpCount - selection.exclude.size + selection.include.size)
+      return Math.max(0, group.liveOpCount - selection.exclude.size + selection.include.size - gone)
     case 'only':
-      return selection.ids.size
+      return Math.max(0, selection.ids.size - gone)
     case 'allExcept':
-      return Math.max(0, group.totalOpCount - selection.ids.size)
+      return Math.max(0, group.totalOpCount - selection.ids.size - gone)
   }
 }
 
 /** Whether Approve may run: not while the group changed under the review, since the version
  *  on screen isn't the one that would run until the user reads the new one. */
 export function canApprove(groupId: number): boolean {
-  return reviewOf(groupId)?.changedUnderReview !== true && approvableCount(groupId) > 0
+  if (reviewOf(groupId)?.changedUnderReview === true) return false
+  // A server card has no ops to count: the card itself is what the click saves.
+  return Boolean(groupById(groupId)?.server) || approvableCount(groupId) > 0
 }
 
-/** Whether one op is ticked. Under the stored base, an op an earlier review excluded starts off. */
+/** Whether one op is ticked. Under the stored base, an op an earlier review excluded starts off,
+ *  and one whose file is gone is never ticked: it can't run. */
 export function isOpSelected(groupId: number, op: SuggestedOpView): boolean {
-  const selection = reviewOf(groupId)?.selection
-  if (!selection) return op.status !== 'excluded'
-  switch (selection.mode) {
-    case 'fromStored':
-      return op.status === 'excluded' ? selection.include.has(op.opId) : !selection.exclude.has(op.opId)
-    case 'allExcept':
-      return !selection.ids.has(op.opId)
-    case 'only':
-      return selection.ids.has(op.opId)
-  }
+  const review = reviewOf(groupId)
+  if (!review) return op.status !== 'excluded'
+  if (review.missing.has(op.opId)) return false
+  return flippedOn(review.selection, op)
+}
+
+/** Whether the disk says this op's file is gone, so its row can't be ticked at all. */
+export function isOpMissing(groupId: number, op: SuggestedOpView): boolean {
+  return reviewOf(groupId)?.missing.has(op.opId) === true
+}
+
+/** Whether this op's NEW name is already taken where its file lands (#774). */
+export function isNewNameTaken(groupId: number, op: SuggestedOpView): boolean {
+  return reviewOf(groupId)?.takenNames.has(op.opId) === true
 }
 
 /** The header checkbox: every op ticked, none, or a mix. */
@@ -262,7 +298,9 @@ export function selectionState(groupId: number): 'all' | 'none' | 'some' {
   const group = groupById(groupId)
   const count = approvableCount(groupId)
   if (count === 0) return 'none'
-  if (group && count >= group.totalOpCount) return 'all'
+  // A gone file can't be ticked, so "all" is every op that's still there.
+  const gone = reviewOf(groupId)?.missing.size ?? 0
+  if (group && count >= group.totalOpCount - gone) return 'all'
   return 'some'
 }
 
@@ -348,12 +386,16 @@ function listenForChanges(): Promise<UnlistenFn> {
  * Re-read the waiting sweeps, then give every new group its review and first page.
  *
  * A group already under review keeps its rows: when its revision moved past the one on screen,
- * it's announced, never swapped. A group that's gone (answered elsewhere, or withdrawn) drops its review.
+ * it's announced, never swapped. A group that's gone (answered here or elsewhere, or withdrawn)
+ * drops its review, but only after the flush that takes its rows off screen: dropping it in the
+ * same tick pulls each row's op out from under its cells mid-teardown (Ark's checkbox reads
+ * `checked` on the way out), and the throw takes the main window down to its crash panel.
  */
 export async function refreshSuggestions(): Promise<void> {
   suggestedOpsState.loading = true
   suggestedOpsState.loadError = false
   const fresh: number[] = []
+  const gone: number[] = []
   try {
     suggestedOpsState.sweeps = await listSuggestedOps()
     // eslint-disable-next-line svelte/prefer-svelte-reactivity -- transient local for one pass; nothing renders from it
@@ -371,14 +413,19 @@ export async function refreshSuggestions(): Promise<void> {
         review.changedUnderReview = true
       }
     }
-    for (const groupId of [...suggestedOpsState.reviews.keys()]) {
-      if (!live.has(groupId)) dropReview(groupId)
+    for (const groupId of suggestedOpsState.reviews.keys()) {
+      if (!live.has(groupId)) gone.push(groupId)
     }
   } catch (e) {
     suggestedOpsState.loadError = true
     log.warn("Couldn't read the waiting suggestions: {error}", { error: e })
   } finally {
     suggestedOpsState.loading = false
+  }
+  if (gone.length > 0) {
+    await tick()
+    // A re-read that landed during the tick may have brought one back: it keeps its review.
+    for (const groupId of gone) if (!groupById(groupId)) dropReview(groupId)
   }
   // Every list shows right away, so each new group reads its first page now, side by side.
   await Promise.all(fresh.map((groupId) => ensureOpWindow(groupId, 0)))
@@ -400,6 +447,8 @@ export async function reloadGroup(groupId: number): Promise<void> {
   if (!review) return
   review.window = null
   review.liveFacts.clear()
+  review.missing.clear()
+  review.takenNames.clear()
   review.sourceUnreachable = null
   factsRequested.delete(groupId)
   await refreshSuggestions()
@@ -419,38 +468,44 @@ export async function showRange(groupId: number, start: number, end: number): Pr
   const review = reviewOf(groupId)
   if (!review) return
   review.range = { start, end }
-  await ensureOpWindow(groupId, start)
+  await ensureOpWindow(groupId, start, end)
   await ensureLiveFacts(groupId)
 }
 
 /**
- * Make sure the rows around `startIndex` are loaded, fetching a window when they aren't.
+ * Make sure rows `start` to `end` are loaded, fetching a window when any of them isn't.
  *
- * The list's range changes call this, and so does the retry after a failed read.
+ * The WHOLE range, not its first row alone: checking only `start` left the bottom of the drawn
+ * range on blank placeholders whenever it ran past the held window's end, until the top row
+ * crossed too. The list's range changes call this, and so does the retry after a failed read.
  */
-export async function ensureOpWindow(groupId: number, startIndex: number): Promise<void> {
+export async function ensureOpWindow(groupId: number, start: number, end = start + 1): Promise<void> {
   const review = reviewOf(groupId)
-  if (!review) return
-  if (windowHolds(review.window, startIndex)) return
+  // A server card has no ops: nothing to page, and with no window, nothing to check on disk.
+  if (!review || groupById(groupId)?.server) return
+  if (windowHolds(review.window, start, end)) return
   if (review.windowLoading) return
 
-  // Centre the window on what was asked for, so scrolling either way stays inside it.
-  const offset = Math.max(0, startIndex - OP_WINDOW_SIZE / 4)
+  // Centre the window on what was asked for, so scrolling either way stays inside it: a
+  // quarter of the room the range leaves goes above it, the rest below.
+  const slack = Math.max(0, OP_WINDOW_SIZE - (end - start))
+  const offset = Math.max(0, start - Math.floor(slack / 4))
   review.windowLoading = true
   review.windowError = false
-  const rangeAtAsk = review.range.start
+  const rangeAtAsk = { ...review.range }
   try {
-    const page = await pageSuggestedOps(groupId, offset, OP_WINDOW_SIZE)
+    const page = await readPage({ groupId, offset, limit: OP_WINDOW_SIZE })
     // The group may have been answered, or the dialog closed, while this was in flight.
     if (reviewOf(groupId) !== review) return
     review.window = { offset: page.offset, ops: page.ops, total: page.total }
-    // A jump made while this page was in flight was turned away above, and the list won't ask
+    // A scroll made while this page was in flight was turned away above, and the list won't ask
     // for that range again, so follow it. Only a range that MOVED meanwhile: one past the
     // group's end is never held, and must not loop.
-    const now = review.range.start
-    if (now !== rangeAtAsk && !windowHolds(review.window, now)) {
+    const now = review.range
+    const moved = now.start !== rangeAtAsk.start || now.end !== rangeAtAsk.end
+    if (moved && !windowHolds(review.window, now.start, now.end)) {
       review.windowLoading = false
-      await ensureOpWindow(groupId, now)
+      await ensureOpWindow(groupId, now.start, now.end)
       return
     }
   } catch (e) {
@@ -466,8 +521,14 @@ export async function ensureOpWindow(groupId: number, startIndex: number): Promi
   await ensureLiveFacts(groupId)
 }
 
-function windowHolds(held: OpWindow | null, index: number): boolean {
-  return held !== null && index >= held.offset && index < held.offset + held.ops.length
+/**
+ * Whether the held window covers rows `start` to `end`. A range wider than one page can't be
+ * held whole, so only its first `OP_WINDOW_SIZE` rows count; otherwise every scroll would page.
+ */
+function windowHolds(held: OpWindow | null, start: number, end: number): boolean {
+  if (held === null) return false
+  const last = Math.max(start, Math.min(end, start + OP_WINDOW_SIZE) - 1)
+  return start >= held.offset && last < held.offset + held.ops.length
 }
 
 /**
@@ -496,9 +557,9 @@ export async function ensureLiveFacts(groupId: number): Promise<void> {
   if (!span) return
   for (const opId of span.opIds) asked.add(opId)
   try {
-    const answer = await liveSuggestedOpFacts(groupId, span.offset, span.opIds.length)
+    const answer = await readLiveFacts({ groupId, offset: span.offset, limit: span.opIds.length })
     if (reviewOf(groupId) !== review) return
-    if (takeLiveAnswer(review, answer)) return
+    if (takeLiveAnswer(review, held, answer)) return
   } catch (e) {
     log.warn("Couldn't check the suggested files on disk: {error}", { error: e })
   }
@@ -526,9 +587,18 @@ function unaskedSpan(
 }
 
 /** Record an answer. `false` means it held nothing to keep, so the rows should be asked again. */
-function takeLiveAnswer(review: GroupReview, answer: SuggestedOpLiveFactsAnswer): boolean {
+function takeLiveAnswer(review: GroupReview, held: OpWindow, answer: SuggestedOpLiveFactsAnswer): boolean {
   if (answer.kind === 'facts') {
-    for (const { opId, state } of answer.facts) review.liveFacts.set(opId, state)
+    for (const { opId, state, newName } of answer.facts) {
+      review.liveFacts.set(opId, state)
+      // The op itself, from the page the span was cut from, so approve can still turn it off
+      // once the list has scrolled that page away.
+      const op = state.kind === 'missing' ? held.ops.find((candidate) => candidate.opId === opId) : undefined
+      if (op) review.missing.set(opId, op)
+      else review.missing.delete(opId)
+      if (newName === 'taken') review.takenNames.add(opId)
+      else review.takenNames.delete(opId)
+    }
     return true
   }
   switch (answer.reason.type) {
@@ -556,8 +626,10 @@ export function opAt(groupId: number, index: number): SuggestedOpView | null {
 
 /** Turn one op off, or back on: flip its membership in whichever set records it against the base. */
 export function toggleOp(groupId: number, op: SuggestedOpView): void {
-  const selection = reviewOf(groupId)?.selection
-  if (!selection) return
+  const review = reviewOf(groupId)
+  // A gone file's box is disabled: there's nothing to tick back on.
+  if (!review || review.missing.has(op.opId)) return
+  const selection = review.selection
   const flips =
     selection.mode !== 'fromStored' ? selection.ids : op.status === 'excluded' ? selection.include : selection.exclude
   if (flips.has(op.opId)) {
@@ -586,26 +658,15 @@ export async function approveGroup(groupId: number): Promise<void> {
   suggestedOpsState.decisionNotice = null
   suggestedOpsState.refusals.delete(groupId)
   try {
-    const review = reviewOf(groupId)
-    const selection = review?.selection ?? storedSelection()
     // The revision the user read, never the one the store holds now: an amendment that landed
     // since refuses as `listChanged` instead of running rows nobody saw.
-    const revision = review?.seenRevision ?? groupById(groupId)?.revision ?? 0
-    const result = await approveSuggestedGroup(groupId, revision, selectionWire(selection))
-    if (isRefusalToStart(result)) suggestedOpsState.refusals.set(groupId, result)
-    if (result.kind === 'started') {
-      await refreshSuggestions()
-      // Nothing waiting means nothing left to decide, so the dialog closes itself rather than
-      // sitting there empty over the queue that just took over.
-      if (suggestedOpsState.sweeps.length === 0) closeSuggestedOps()
-      return
+    const revision = reviewOf(groupId)?.seenRevision ?? groupById(groupId)?.revision ?? 0
+    // A server card has no ops to select: it saves through its own command.
+    if (groupById(groupId)?.server) {
+      await approveServerGroup(groupId, revision)
+    } else {
+      await approveFileGroup(groupId, revision)
     }
-    log.info('A suggestion group was not approved: {kind}', { kind: result.kind })
-    if (result.kind === 'listChanged') {
-      const review = reviewOf(groupId)
-      if (review) review.changedUnderReview = true
-    }
-    await refreshSuggestions()
   } catch (e) {
     log.warn("Couldn't approve the group: {error}", { error: e })
     await answerFailedDecision(e)
@@ -614,8 +675,65 @@ export async function approveGroup(groupId: number): Promise<void> {
   }
 }
 
+/** Approve a file group with the user's selection, then re-read. */
+async function approveFileGroup(groupId: number, revision: number): Promise<void> {
+  const review = reviewOf(groupId)
+  const selection = review?.selection ?? storedSelection()
+  const wire = selectionWire(selection, review?.missing.values() ?? [])
+  // The fallback the review showed, so a trash on a drive with no Trash deletes only when the
+  // user approved it against the red Delete button.
+  const result = await approveSuggestedGroup(groupId, revision, wire, groupById(groupId)?.runsAs ?? null)
+  if (isRefusalToStart(result)) suggestedOpsState.refusals.set(groupId, result)
+  if (result.kind !== 'started') {
+    log.info('A suggestion group was not approved: {kind}', { kind: result.kind })
+  }
+  if (result.kind === 'listChanged') markChangedUnderReview(groupId)
+  await refreshSuggestions()
+  // Nothing waiting means nothing left to decide, so the dialog closes itself rather than
+  // sitting there empty over the queue that just took over.
+  if (result.kind === 'started' && suggestedOpsState.sweeps.length === 0) closeSuggestedOps()
+}
+
+/**
+ * Approve a server card: save it, then re-read. A refusal gives the card back pending with its
+ * reason under it, so the re-read shows it again; `listChanged` marks it changed under the
+ * review, as for a file group.
+ */
+async function approveServerGroup(groupId: number, revision: number): Promise<void> {
+  const result = await approveSuggestedServer(groupId, revision)
+  if (result.kind !== 'saved') {
+    log.info('A server suggestion was not saved: {kind}', { kind: result.kind })
+  }
+  if (isServerRefusal(result)) suggestedOpsState.refusals.set(groupId, { kind: 'server', answer: result })
+  if (result.kind === 'listChanged') markChangedUnderReview(groupId)
+  await refreshSuggestions()
+  if (result.kind === 'saved' && suggestedOpsState.sweeps.length === 0) closeSuggestedOps()
+}
+
+function markChangedUnderReview(groupId: number): void {
+  const review = reviewOf(groupId)
+  if (review) review.changedUnderReview = true
+}
+
+/** The answers that give a server card back with a reason: the save wrote nothing. */
+function isServerRefusal(result: ServerApprovalResultView): result is ServerRefusal {
+  switch (result.kind) {
+    case 'refused':
+    case 'addServer':
+    case 'serverChanged':
+    case 'alreadySaved':
+    case 'nameTaken':
+      return true
+    case 'saved':
+    case 'listChanged':
+    case 'alreadyAnswered':
+    case 'unknown':
+      return false
+  }
+}
+
 /** The answers that give a group back with a reason, as opposed to closing it or re-reading. */
-function isRefusalToStart(result: ApprovalResultView): result is GroupRefusal {
+function isRefusalToStart(result: ApprovalResultView): result is FileGroupRefusal {
   switch (result.kind) {
     case 'refused':
     case 'nothingToRun':

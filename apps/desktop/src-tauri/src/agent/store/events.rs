@@ -34,6 +34,81 @@ pub enum ConversationEvent {
     /// outlives every locale pass, exactly as a wake's digest does, so the rail says it in the
     /// user's language and nothing English is frozen in `main.db`.
     ProposalDecided { decision: ProposalDecision },
+    /// A turn that ran at least one tool ended (answered, failed, or stopped), and this is what
+    /// it spent. Written after the turn's last row, so its wall time survives a reload: every
+    /// row of a turn carries the same clock, so the time can't be derived from them.
+    TurnFinished { stats: TurnStats },
+    /// A row whose `kind` this build doesn't know: a newer build wrote it, and this one runs on
+    /// the same `main.db` after a downgrade. Read-only. It parses so the thread still loads AND
+    /// sends (the history page and the transcript loader both read every row), and the row is
+    /// kept rather than dropped because paging counts rows. ❌ Never written: [`append_event`]
+    /// refuses it. Only an unknown `kind` lands here; a known kind with a broken body is still
+    /// a decode error.
+    #[serde(other)]
+    Unknown,
+}
+
+/// What one turn spent, summed across its rounds: the turn line's footer. Numbers only, so the
+/// rail words it in the user's language and nothing English is frozen in `main.db`.
+///
+/// Tokens are each assistant row's own `prompt_tokens` / `completion_tokens`, the same figures
+/// the cost meter sums, so a thread's per-turn footers add up to its cost footer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnStats {
+    /// Tool calls that came back with a result row, refusals and repeats included.
+    pub tool_calls: u32,
+    /// Wall time from the turn's start to its end. `None` only for a turn recorded before this
+    /// was measured, whose stats are rebuilt from its rows.
+    pub wall_ms: Option<u64>,
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
+    /// The user (or the progress watchdog) stopped the turn, so the footer says so after a reload
+    /// too. `false` for a turn recorded before this was stored: its rows can't tell a stop apart.
+    #[serde(default)]
+    pub stopped: bool,
+    /// The turn's own ceiling that ended its tool loop, so the rail can name it and its value,
+    /// live and after a reload. `None` for a turn no ceiling touched, and for one recorded
+    /// before this was stored.
+    #[serde(default)]
+    pub limit: Option<TurnLimit>,
+}
+
+/// Which per-answer limit ended a turn's tool loop (`chat::context` § the per-answer limits).
+/// All are fixed in Cmdr: no setting moves them. The spend pause is not one of these: it asks,
+/// and the turn goes on or stops on the user's word.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum TurnLimitKind {
+    /// The rounds of tool calls one BACKGROUND answer (a wake, a follow-up) may run. A turn the
+    /// user started has no round cap.
+    ToolRounds,
+    /// The wall-clock time one answer could take. No build sets it any more; it stays so a
+    /// turn recorded under it still reads after a reload.
+    WallTime,
+    /// The loop guard: the model sent the same tool call again and again.
+    RepeatedCall,
+    /// The loop guard: several rounds in a row found nothing the turn hadn't already seen.
+    NoProgress,
+    /// The provider sent nothing at all for the stall window, so the call was ended.
+    Stalled,
+}
+
+/// A limit a turn reached, with the value that applied to it. The value is stored rather
+/// than read from the constant at render time, so a reloaded thread names the limit that
+/// stopped THAT turn even after a build moves it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnLimit {
+    pub kind: TurnLimitKind,
+    /// Rounds for [`TurnLimitKind::ToolRounds`] and [`TurnLimitKind::NoProgress`], how many
+    /// times the call was sent for [`TurnLimitKind::RepeatedCall`], seconds for
+    /// [`TurnLimitKind::WallTime`] and [`TurnLimitKind::Stalled`].
+    pub max: u32,
+    /// The model answered with what it had: past the round cap or the loop guard the turn makes
+    /// ONE more call with no tool allowed to run. `false` when that call still reached for a
+    /// tool, and always for wall time and a stall, which make no further call.
+    pub answered: bool,
 }
 
 /// The `messages.role` token for event rows. Kept OUTSIDE `AgentRole` on purpose: an
@@ -50,12 +125,37 @@ pub fn append_event(
     event: &ConversationEvent,
     now: i64,
 ) -> Result<(i64, i64), AgentStoreError> {
+    debug_assert!(
+        !matches!(event, ConversationEvent::Unknown),
+        "an Unknown event is read-only: it stands for a kind a newer build wrote"
+    );
     let content_blocks = serde_json::to_string(event).map_err(AgentStoreError::ContentBlocks)?;
     insert_message_row(
         conn,
         conversation_id,
         EVENT_ROLE_TOKEN,
         &content_blocks,
+        "",
+        None,
+        None,
+        now,
+    )
+}
+
+/// Append an event row with arbitrary `content_blocks`, the way a newer build writes a kind
+/// this one doesn't know. Tests only: production writes go through [`append_event`].
+#[cfg(test)]
+pub fn append_raw_event_row(
+    conn: &Connection,
+    conversation_id: i64,
+    content_blocks: &str,
+    now: i64,
+) -> Result<(i64, i64), AgentStoreError> {
+    insert_message_row(
+        conn,
+        conversation_id,
+        EVENT_ROLE_TOKEN,
+        content_blocks,
         "",
         None,
         None,

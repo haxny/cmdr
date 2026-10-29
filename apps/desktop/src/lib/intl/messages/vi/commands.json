@@ -128,6 +128,14 @@
   "@commands.askCmdrToggle.description": {
     "sourceHash": "c520468"
   },
+  "commands.askCmdrNewChat.label": "Trò chuyện mới trong Ask Cmdr",
+  "@commands.askCmdrNewChat.label": {
+    "sourceHash": "54ebf70"
+  },
+  "commands.askCmdrNewChat.description": "Bắt đầu trò chuyện mới trong Ask Cmdr và mở Ask Cmdr nếu đang đóng",
+  "@commands.askCmdrNewChat.description": {
+    "sourceHash": "957741b"
+  },
   "commands.feedbackSend.label": "Gửi phản hồi",
   "@commands.feedbackSend.label": {
     "sourceHash": "8235980"

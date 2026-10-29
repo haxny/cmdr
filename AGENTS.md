@@ -126,9 +126,9 @@ Writing them:
   GitHub issues, ❌ not specs), `docs/notes/README.md`, `style-guide.md`, `design-principles.md`, `security.md`,
   `maintenance.md`.
 - `tools/`: dev tooling outside every workspace and check: `tools/intellij-plugin/`, `tools/privatesize-poc/README.md`.
-- `vendor/`: third-party crates we patch (today `tauri-plugin-store` and `zip`), swapped in via `[patch.crates-io]` and
-  identical to upstream apart from the fix its `CMDR-PATCH.md` lists. Tooling skips it;
-  `desktop-rust-vendor-patch-applied` guards the patch.
+- `vendor/`: third-party crates we patch (today `genai`, `rc-zip`, `rustic_core`, `tauri-plugin-store`, and `zip`),
+  swapped in via `[patch.crates-io]` and identical to upstream apart from the fix its `CMDR-PATCH.md` lists. Tooling
+  skips it; `desktop-rust-vendor-patch-applied` guards the patch.
 - `scripts/check/`: the Go check runner. `.github/workflows/`: CI.
 
 ## Dependencies
@@ -188,8 +188,8 @@ inventory). Desktop-specific test, MCP, and E2E mechanics live in `apps/desktop/
 - An **outside contributor's PR**: land it without asking them for anything, and have GitHub mark it merged.
   `docs/guides/handling-prs.md`.
 - **Landing**: a worktree branch reaches `main` only through `pnpm land`, on green CI. CI takes 25–35 min, so run it in
-  the background (only the lead lands). Push each green milestone with `pnpm land -no-wait` and keep working.
-  `scripts/land/CLAUDE.md`.
+  the background (only the lead lands). Push each green milestone with `pnpm land -no-wait` and keep working. Several
+  ready branches land as one batch (`docs/guides/multi-agent-refactors.md`). `scripts/land/CLAUDE.md`.
 - Commits: nobody reads PRs, so the message explains the change. Conventional-commits style, leading with impact: the
   title says what the change achieves and why, which feeds our release notes. No title length cap, comprehensive bodies
   fine, no wraps, entities in backticks. Never `Co-Authored-By`.

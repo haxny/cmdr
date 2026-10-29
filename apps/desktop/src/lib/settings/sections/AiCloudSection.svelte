@@ -17,6 +17,19 @@
     import type { SecretErrorMessage } from './ai-secret-error'
     import { addToast, dismissToast } from '#lib/ui/toast/index.js'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
+    import { getAiModelLimits, onAiModelCapabilitiesChanged, type AiModelLimits } from '#lib/tauri-commands/index.js'
+    import type { AiEffortLevel } from '#lib/ipc/bindings.js'
+    import {
+        effectiveEffortChoice,
+        effortChoices,
+        effortLabelKey,
+        readEffortChoice,
+        showsEffortPicker,
+        writeEffortChoice,
+        type EffortChoice,
+    } from './ai-effort'
 
     /**
      * Settings › AI › Provider. The service picker, then the SAME numbered setup steps the
@@ -99,6 +112,119 @@
     })
     unlistenFns.push(unsubAskCmdrModel)
 
+    // The chosen model's context window (and longest reply, when the service reports it), read
+    // from the backend's capability cache. A missing catalog starts a background fetch there, and
+    // `onAiModelCapabilitiesChanged` bumps `limitsVersion` so this re-reads when it lands.
+    let modelLimits = $state<AiModelLimits | null>(null)
+    let limitsVersion = $state(0)
+    void onAiModelCapabilitiesChanged(() => {
+        limitsVersion += 1
+    }).then((unlisten) => unlistenFns.push(unlisten))
+    $effect(() => {
+        const providerId = controller.providerId
+        const baseUrl = controller.resolvedBaseUrl
+        const model = controller.model.trim()
+        dependOn(limitsVersion)
+        if (locked || !providerId || !baseUrl || !model) {
+            modelLimits = null
+            return
+        }
+        void getAiModelLimits(providerId, baseUrl, model).then(
+            (limits) => {
+                // A newer pick may have landed while this one was in flight.
+                if (controller.providerId === providerId && controller.model.trim() === model) modelLimits = limits
+            },
+            () => {
+                modelLimits = null
+            },
+        )
+    })
+    const contextWindowText = $derived.by(() => {
+        const window = modelLimits?.contextWindowTokens
+        if (window == null) return ''
+        const params = { windowText: formatInteger(window), window }
+        return modelLimits?.source === 'provider'
+            ? tString('ai.cloud.contextWindow', params)
+            : tString('ai.cloud.contextWindowEstimate', params)
+    })
+    const maxOutputText = $derived.by(() => {
+        const output = modelLimits?.maxOutputTokens
+        return output == null ? '' : tString('ai.cloud.maxOutput', { outputText: formatInteger(output), output })
+    })
+
+    // The Effort picker: its menu comes from the backend (`modelLimits.effort`), its pick lives in
+    // `ai.reasoningEfforts` per provider and model (`./ai-effort.ts`).
+    let reasoningEfforts = $state(getSetting('ai.reasoningEfforts'))
+    unlistenFns.push(
+        onSpecificSettingChange('ai.reasoningEfforts', (newValue) => {
+            reasoningEfforts = newValue
+        }),
+    )
+    // Effort only matters to Ask Cmdr, so the row sets the effort of the model Ask Cmdr uses: its
+    // own model when it has one (`askCmdr.interactiveModel`), else this section's. For its own
+    // model, the menu comes from a second read of the same cache.
+    const effortModel = $derived(askCmdrModelOverride || controller.model.trim())
+    let overrideLimits = $state<AiModelLimits | null>(null)
+    $effect(() => {
+        const providerId = controller.providerId
+        const baseUrl = controller.resolvedBaseUrl
+        const model = askCmdrModelOverride
+        dependOn(limitsVersion)
+        if (locked || !providerId || !baseUrl || !model) {
+            overrideLimits = null
+            return
+        }
+        void getAiModelLimits(providerId, baseUrl, model).then(
+            (limits) => {
+                if (controller.providerId === providerId && askCmdrModelOverride === model) overrideLimits = limits
+            },
+            () => {
+                overrideLimits = null
+            },
+        )
+    })
+    const effortOptions = $derived((askCmdrModelOverride ? overrideLimits : modelLimits)?.effort ?? null)
+    // What the next send will really ask for, so a pick the model can't take shows as what it became.
+    const effortChoice = $derived.by(() => {
+        const stored = readEffortChoice(reasoningEfforts, controller.providerId, effortModel)
+        return effortOptions ? effectiveEffortChoice(effortOptions, stored) : stored
+    })
+    // The provider's own name for the knob, with Thinking level as the fallback.
+    const effortLabelText = $derived(tString(effortLabelKey(controller.providerId)))
+    const effortItems = $derived<SelectItem[]>(
+        effortOptions ? effortChoices(effortOptions).map((choice) => ({ value: choice, label: effortLabel(choice) })) : [],
+    )
+
+    /** One literal key per option, so the i18n checks can see every one. */
+    function levelLabel(level: AiEffortLevel): string {
+        switch (level) {
+            case 'low':
+                return tString('ai.cloud.effort.low')
+            case 'medium':
+                return tString('ai.cloud.effort.medium')
+            case 'high':
+                return tString('ai.cloud.effort.high')
+            case 'max':
+                return tString('ai.cloud.effort.max')
+        }
+    }
+
+    function effortLabel(choice: EffortChoice): string {
+        if (choice === 'off') return tString('ai.cloud.effort.off')
+        if (choice !== 'recommended') return levelLabel(choice)
+        const recommended = effortOptions?.recommended
+        return recommended
+            ? tString('ai.cloud.effort.recommendedWithLevel', { level: levelLabel(recommended) })
+            : tString('ai.cloud.effort.recommended')
+    }
+
+    function pickEffort(choice: string): void {
+        setSetting(
+            'ai.reasoningEfforts',
+            writeEffortChoice(reasoningEfforts, controller.providerId, effortModel, choice as EffortChoice),
+        )
+    }
+
     onDestroy(() => {
         // Flush in-flight typing before teardown: closing Settings (or moving to another
         // section) shouldn't drop a key the user already typed.
@@ -176,6 +302,40 @@
         <div class="setup-steps-block">
             <ProviderSetupSteps {controller} idPrefix="settings-cloud" />
         </div>
+    {/if}
+
+    {#if contextWindowText}
+        <p class="model-limits" role="note">
+            <span>{contextWindowText}</span>
+            {#if maxOutputText}
+                <span>{maxOutputText}</span>
+            {/if}
+        </p>
+    {/if}
+
+    {#if shouldShow('ai.reasoningEfforts') && showsEffortPicker(effortOptions)}
+        <SettingRow
+            id="ai.reasoningEfforts"
+            label={effortLabelText}
+            description={tString('settings.ai.reasoningEfforts.description')}
+            split
+            {searchQuery}
+        >
+            <Select
+                items={effortItems}
+                value={effortChoice}
+                onChange={pickEffort}
+                ariaLabel={effortLabelText}
+            />
+        </SettingRow>
+        {#if askCmdrModelOverride}
+            <p class="model-limits" role="note">
+                {tString('ai.cloud.effort.forAskCmdrModel', { model: askCmdrModelOverride })}
+            </p>
+        {/if}
+        {#if effortOptions && effortOptions.levels.length === 0}
+            <p class="model-limits" role="note">{tString('ai.cloud.effort.levelsUnknown')}</p>
+        {/if}
     {/if}
 
     {#if askCmdrModelOverride}
@@ -262,6 +422,15 @@
        above and below them. */
     .setup-steps-block {
         margin: var(--spacing-sm) 0 var(--spacing-md);
+    }
+
+    .model-limits {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-xxs) var(--spacing-md);
+        font-size: var(--font-size-sm);
+        color: var(--color-text-secondary);
+        margin: calc(-1 * var(--spacing-sm)) 0 var(--spacing-md);
     }
 
     .askcmdr-override-hint {

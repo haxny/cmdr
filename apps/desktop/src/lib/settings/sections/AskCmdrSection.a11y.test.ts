@@ -38,7 +38,10 @@ vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   askCmdrCostSummary: vi.fn(() => Promise.resolve({ days: [] })),
   // A 200,000-token pick against a 128,000-token window, so the over-window warning is part
   // of what axe sees.
-  askCmdrModelWindow: vi.fn(() => Promise.resolve({ model: 'gpt-4o', knownWindowTokens: 128_000 })),
+  askCmdrModelWindow: vi.fn(() =>
+    Promise.resolve({ model: 'gpt-4o', knownWindowTokens: 128_000, replyTokens: 12_000 }),
+  ),
+  onAiModelCapabilitiesChanged: vi.fn(() => Promise.resolve(() => undefined)),
 }))
 
 import AskCmdrSection from './AskCmdrSection.svelte'

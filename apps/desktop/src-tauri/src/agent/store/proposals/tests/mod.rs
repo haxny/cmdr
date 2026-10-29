@@ -6,6 +6,7 @@
 //! - `claim.rs`: the claim transaction — the one place a bug applies ops to real files twice.
 //! - `lifecycle.rs`: re-propose's pending-only guard and the `interrupted` recovery sweep.
 //! - `scale.rs`: a 60 000-op group, which is a legitimate group.
+//! - `server.rs`: a zero-op server group, its draft, and its own claim.
 
 mod claim;
 mod completion;
@@ -13,6 +14,7 @@ mod destination;
 mod lifecycle;
 mod scale;
 mod schema;
+mod server;
 
 use rusqlite::Connection;
 

@@ -18,7 +18,7 @@ const undoOperationsMock = vi.fn<(operationIds: string[]) => Promise<unknown>>()
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
-  cancelAskCmdr: vi.fn(() => Promise.resolve()),
+  cancelAskCmdr: vi.fn(() => Promise.resolve({ tripped: 1, live: 1 })),
   listAskCmdrConversations: vi.fn(() => Promise.resolve([])),
   getAskCmdrConversation: vi.fn(() => Promise.resolve(null)),
   recordAskCmdrSlotChange: vi.fn(() => Promise.resolve([])),
@@ -53,22 +53,22 @@ import {
   sendMessage,
   setRenameRowAllowed,
 } from './ask-cmdr-trigger.svelte'
-import { handleTurnEvent, resetStoppedTurns } from './ask-cmdr-stream.svelte'
+import { handleTurnEvent, resetTurnBookkeeping } from './ask-cmdr-stream.svelte'
 
 /** The thread a fired event belongs to when the test doesn't name one. */
 const THREAD_ID = 1
 
 /** Feed one stream event in as the backend emits it, for the thread the rail is on. A rail with
- * no thread yet is put on the named one first: production gets there through `started`, which
- * `adopts a new thread's id from its own started event` covers on its own. */
+ * no thread yet is put on the named one first: production gets there through its send's answer,
+ * which `ask-cmdr-send-before-id.test.ts` covers on its own. */
 function fire(event: AskCmdrStreamEvent, conversationId: number = askCmdrState.conversationId ?? THREAD_ID): void {
   askCmdrState.conversationId = conversationId
-  handleTurnEvent({ conversationId, event })
+  handleTurnEvent({ conversationId, run: null, event })
 }
 
 beforeEach(() => {
   sendMock.mockReset()
-  sendMock.mockImplementation((c) => Promise.resolve({ accepted: true, conversationId: c ?? THREAD_ID }))
+  sendMock.mockImplementation((c) => Promise.resolve({ accepted: true, conversationId: c ?? THREAD_ID, run: 1 }))
   preflightRenameMock.mockReset()
   preflightRenameMock.mockResolvedValue({ status: 'ready', rows: [] })
   reviseRenameMock.mockReset()
@@ -78,7 +78,7 @@ beforeEach(() => {
   cancelProposalMock.mockResolvedValue()
   undoOperationsMock.mockReset()
   newChat()
-  resetStoppedTurns()
+  resetTurnBookkeeping()
   askCmdrState.messages = []
   askCmdrState.conversationId = null
 })
@@ -106,7 +106,14 @@ const REVISION = 3
 
 /** End the streaming turn, which is what opens the review over everything staged. */
 function finishTurn(): void {
-  fire({ type: 'done', messageId: 1, seq: 1, stop: 'completed', usage: { promptTokens: 1, completionTokens: 1 } })
+  fire({
+    type: 'done',
+    messageId: 1,
+    seq: 1,
+    stop: 'completed',
+    usage: { promptTokens: 1, completionTokens: 1 },
+    turn: null,
+  })
 }
 
 /** The first row on show, whichever batch staged it. */

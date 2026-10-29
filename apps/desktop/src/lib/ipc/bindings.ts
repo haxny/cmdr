@@ -1629,223 +1629,6 @@ export const commands = {
    */
   saveMultiRenameLastSettings: (spec: MultiRenameSpec, presetId: string | null) =>
     __TAURI_INVOKE<void>('save_multi_rename_last_settings', { spec, presetId }),
-  /**
-   *  Starts (or, when `restart` is set, restarts) the tag session of a Multi-Rename session. The
-   *  read may take as long as files keep being read; once none was for `SESSION_IO_TIMEOUT` (a
-   *  stalled share) it's given up as `ReadTimedOut`.
-   */
-  openTagEditor: (sessionId: string, restart: boolean) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('open_tag_editor', { sessionId, restart })),
-  // Applies edits in memory; an unknown track refuses the whole batch.
-  editTags: (sessionId: string, edits: TagEdit_Deserialize[]) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('edit_tags', { sessionId, edits })),
-  /**
-   *  Reverses the last pending edit (an edit batch, a tool run or a cover change); changes nothing
-   *  when there is none.
-   */
-  undoTagEdit: (sessionId: string) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('undo_tag_edit', { sessionId })),
-  // Re-applies the last undone pending edit; changes nothing when there is none.
-  redoTagEdit: (sessionId: string) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('redo_tag_edit', { sessionId })),
-  // Puts the tracks in `sort` order (the rename order moves with them; no file or edit is touched).
-  sortTagTracks: (sessionId: string, sort: TrackSort) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('sort_tag_tracks', { sessionId, sort })),
-  /**
-   *  Narrows the Album pane to the tracks at `paths` (the Tracks pane's selection), or widens it to every
-   *  track for `None`. Not an edit: nothing joins the undo history.
-   */
-  setTagViewScope: (sessionId: string, paths: string[] | null) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_tag_view_scope', { sessionId, paths })),
-  // Runs a tool over the tracks at `scope` (their paths), or over the whole session for `None`.
-  runTagTool: (sessionId: string, tool: TagTool, scope: string[] | null) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_tool', { sessionId, tool, scope })),
-  /**
-   *  Runs find/replace or a field-from-mask format over the tracks at `scope`, or the whole session
-   *  for `None`.
-   */
-  runTagTextTool: (sessionId: string, tool: TagTextTool, scope: string[] | null) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('run_tag_text_tool', { sessionId, tool, scope })),
-  // The saved F4 Replace lists, top to bottom. Built-ins this install hasn't taken yet go in first, once.
-  getTagReplacePresets: () => __TAURI_INVOKE<ReplacePreset[]>('get_tag_replace_presets'),
-  /**
-   *  Saves a Replace list at the end; one with the same name is replaced where it stands. Answers the
-   *  lists after, or why not.
-   */
-  saveTagReplacePreset: (preset: ReplacePreset) =>
-    typedError<ReplacePreset[], ReplacePresetRefusal>(__TAURI_INVOKE('save_tag_replace_preset', { preset })),
-  // Deletes a Replace list by id (a built-in stays gone). Answers the lists after.
-  deleteTagReplacePreset: (id: string) => __TAURI_INVOKE<ReplacePreset[]>('delete_tag_replace_preset', { id }),
-  // What a file-name pattern reads from each track's name at `scope` (or every track), changing nothing.
-  previewTagsFromNames: (sessionId: string, pattern: NamePattern, scope: string[] | null) =>
-    typedError<NamePreviewRow[], TagEditorError>(
-      __TAURI_INVOKE('preview_tags_from_names', { sessionId, pattern, scope }),
-    ),
-  // What a write as `kind` would change, per file, including what the kind removes.
-  getTagChanges: (sessionId: string, kind: ContentKind) =>
-    typedError<FileChangeView[], TagEditorError>(__TAURI_INVOKE('get_tag_changes', { sessionId, kind })),
-  /**
-   *  What a write would do with the book's Audiobookshelf side files (`reader.txt`, `desc.txt`): the
-   *  frontend asks only with `multiRename.tagEditor.absSideFiles` on. None for a read-only session.
-   */
-  getSideFileChanges: (sessionId: string) =>
-    typedError<SideFileChange[], TagEditorError>(__TAURI_INVOKE('get_side_file_changes', { sessionId })),
-  /**
-   *  Writes the changed files. `continues`: this is a "Write anyway" after a press that wrote, so
-   *  Undo reverses both; otherwise a write that writes something is the folder's new last write.
-   *  No deadline on purpose: the files are local (a remote session is refused), and a write cut
-   *  short would leave the book half written; a quit waits for it (`tag_editor/at_quit.rs`).
-   */
-  applyTags: (sessionId: string, request: ApplyRequest, continues: boolean) =>
-    typedError<TagApplyReport, TagEditorError>(__TAURI_INVOKE('apply_tags', { sessionId, request, continues })),
-  /**
-   *  Writes the old tags of an apply back. `session_id` is the sheet asking: its tag session takes
-   *  the restored files as read, edits to them dropped (its user confirmed that); any other keeps
-   *  its unwritten edits.
-   */
-  undoTagApply: (applyId: string, sessionId: string | null) =>
-    typedError<RestoreReport, TagEditorError>(__TAURI_INVOKE('undo_tag_apply', { applyId, sessionId })),
-  /**
-   *  The last tag write of the session's folder, which ⌘Z undoes: kept for the app's lifetime, so a
-   *  Tags window opened later over the same folder still offers it. `None` when there's none.
-   */
-  lastTagApply: (sessionId: string) =>
-    typedError<
-      {
-        // In the order they were written; empty when none kept its old tags.
-        applies: UndoableApply[]
-        // Some files of this write were written without their old tags kept: Undo can't reach them.
-        partial: boolean
-      } | null,
-      TagEditorError
-    >(__TAURI_INVOKE('last_tag_apply', { sessionId })),
-  // Ends the tag session, dropping its edits.
-  closeTagEditor: (sessionId: string) => __TAURI_INVOKE<void>('close_tag_editor', { sessionId }),
-  // The images of the session's folder that can be a cover.
-  listCoverCandidates: (sessionId: string) =>
-    typedError<CoverCandidate[], TagEditorError>(__TAURI_INVOKE('list_cover_candidates', { sessionId })),
-  // Gives every file the cover image `file_name` of the session's folder.
-  setCoverFromFile: (sessionId: string, fileName: string) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_file', { sessionId, fileName })),
-  /**
-   *  A cover of the files as a `data:` URL for a thumbnail or the large view: the one named by
-   *  `key` (a `CoverChoice::key`; `"none"` has no image), or for `None` the cover every file
-   *  shares. `None` comes back when there is none, the files differ, or it isn't a JPEG, PNG, or
-   *  WebP image; a key no file carries any more is `UnknownCover`.
-   */
-  getCoverImage: (sessionId: string, key: string | null) =>
-    typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_image', { sessionId, key })),
-  /**
-   *  Every distinct cover of the session's readable files with how many carry it, the most common
-   *  first, and the files without one last (`key: "none"`).
-   */
-  listTagCovers: (sessionId: string) =>
-    typedError<CoverChoice[], TagEditorError>(__TAURI_INVOKE('list_tag_covers', { sessionId })),
-  // Gives every file the cover `key` names, in memory: a change listed for Write, nothing written.
-  useCoverForAll: (sessionId: string, key: string) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('use_cover_for_all', { sessionId, key })),
-  /**
-   *  Gives every file a pasted picture as its cover, in memory. The bytes come as base64 (a JSON
-   *  number array would make a large TIFF several times its size on both sides), refused unread
-   *  when longer than the largest paste taken could encode to, and decoded off the IPC thread. A
-   *  JPEG, PNG, or WebP image by its first bytes is taken at most 10 MiB (`CoverTooLarge`); a TIFF
-   *  is converted to PNG or JPEG within `PASTE_CONVERT_TIMEOUT` (`PasteTimedOut`); anything else,
-   *  bad base64 included, is `PastedNotAnImage`.
-   */
-  setCoverFromBytes: (sessionId: string, data: string) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_bytes', { sessionId, data })),
-  /**
-   *  Gives every file a dropped picture file as its cover, in memory. Only a regular file is read
-   *  (a folder, FIFO, or symlink is `CoverNotAFile`), with the same type sniff and size cap. A drop
-   *  can come from a NAS: the read may take as long as its bytes keep coming, and is given up once
-   *  they stood still for `COVER_READ_STALL_LIMIT` (`CoverTimedOut`); nothing changes then or later.
-   */
-  setCoverFromPath: (sessionId: string, path: string) =>
-    typedError<TagEditorView, TagEditorError>(__TAURI_INVOKE('set_cover_from_path', { sessionId, path })),
-  /**
-   *  A small PNG `data:` URL of the cover `key` names, for a tile (about twice its size, cached by
-   *  key); `None` for "none" or a cover that doesn't decode. The viewer keeps the full image
-   *  (`get_cover_image`).
-   */
-  getCoverThumbnail: (sessionId: string, key: string) =>
-    typedError<string | null, TagEditorError>(__TAURI_INVOKE('get_cover_thumbnail', { sessionId, key })),
-  /**
-   *  A `cmdr-media://localhost/<token>` URL that plays the track at `path` in an `<audio>` element.
-   *  Only a readable track of the session gets one (`UnknownTrack` otherwise).
-   */
-  tagTrackAudioUrl: (sessionId: string, path: string) =>
-    typedError<string, TagEditorError>(__TAURI_INVOKE('tag_track_audio_url', { sessionId, path })),
-  // Ends a URL `tag_track_audio_url` gave. Closing the tag session ends all of them.
-  releaseTagTrackAudio: (url: string) => __TAURI_INVOKE<void>('release_tag_track_audio', { url }),
-  /**
-   *  Opens tracks of the session in the app `player` names (`"default"`: each in its default app;
-   *  else a bundle id). A chosen app that isn't installed falls back to the default and says so.
-   *  Returns once the launch is asked for, not when the player is up.
-   */
-  openTagsInPlayer: (sessionId: string, paths: string[], player: string) =>
-    typedError<PlayerOpened, TagEditorError>(__TAURI_INVOKE('open_tags_in_player', { sessionId, paths, player })),
-  /**
-   *  The apps that can open the session's tracks (the system default first), plus `player`'s app when
-   *  it is a bundle id that's installed.
-   */
-  tagPlayerChoices: (sessionId: string, player: string) =>
-    typedError<AppChoice[], TagEditorError>(__TAURI_INVOKE('tag_player_choices', { sessionId, player })),
-  // Asks the user for a player app with the system's open panel; `None` when they cancel.
-  chooseTagPlayer: () =>
-    typedError<
-      {
-        bundleId: string
-        name: string
-        // The system's default app for the tracks (the first candidate).
-        isDefault: boolean
-      } | null,
-      TagEditorError
-    >(__TAURI_INVOKE('choose_tag_player')),
-  /**
-   *  Holds the Multi-Rename session a Tags window will own, so no eviction takes it, and says how
-   *  many of its files are tracks and what its folder is called. The main window calls it right
-   *  after opening the session; the window's close (or its `Destroyed`) releases it. It also takes
-   *  down any Tags window left behind with its session no longer held (`window::close_orphans`).
-   */
-  holdTagsSession: (sessionId: string) =>
-    typedError<TagsSessionInfo, MultiRenameError>(__TAURI_INVOKE('hold_tags_session', { sessionId })),
-  /**
-   *  Whether the Tags window of `session_id` may close without the discard question: no unwritten
-   *  edit in its session and no tag write running. Its error boundary asks before it closes the
-   *  window, since the edits live here and a closed window takes them along.
-   */
-  tagsWindowMayClose: (sessionId: string) => __TAURI_INVOKE<boolean>('tags_window_may_close', { sessionId }),
-  // Lets eviction take the session again. No-op when it's already gone.
-  releaseTagsSession: (sessionId: string) => __TAURI_INVOKE<void>('release_tags_session', { sessionId }),
-  /**
-   *  Hands Edit > Cut, Copy or Paste back to the focused Tags window as the native action
-   *  (`cut:`/`copy:`/`paste:` to its first responder). The menu routes the three to the window
-   *  (`TagsClipboard`) so they can act on a field; while a text box or the cover section has focus
-   *  the window sends them here, and the box (or the section's picture paste) keeps its own. Only a
-   *  Tags window that still has focus may: the action goes to whatever window is key.
-   */
-  tagsNativeEdit: (action: TagsClipboardAction) => __TAURI_INVOKE<void>('tags_native_edit', { action }),
-  /**
-   *  A new Multi-Rename session over the files of `session_id` (an open sheet's), in their current
-   *  order, for a Tags window: the sheet closing never ends the window's session.
-   */
-  reopenForTags: (sessionId: string) =>
-    typedError<MultiRenameOpened, MultiRenameError>(__TAURI_INVOKE('reopen_for_tags', { sessionId })),
-  /**
-   *  Opens a Multi-Rename session over the pane's selection for a Tags window, as
-   *  `open_multi_rename` does, but with an empty media cache: no EXIF or tag read is queued, since
-   *  the window reads the tags itself. A selected folder opens into its audio files; that walk gets
-   *  [`TAGS_FOLDER_OPEN_TIMEOUT`] (a share is slow), and one that runs out is stopped and leaves no session.
-   */
-  openTagsSession: (
-    listingId: string,
-    includeHidden: boolean,
-    selectedIndices: number[] | null,
-    expectedSequence: number,
-  ) =>
-    typedError<TagsOpened, MultiRenameError>(
-      __TAURI_INVOKE('open_tags_session', { listingId, includeHidden, selectedIndices, expectedSequence }),
-    ),
   // Moves a file or directory to the macOS Trash via NSFileManager.
   moveToTrash: (path: string) => typedError<null, MutationError>(__TAURI_INVOKE('move_to_trash', { path })),
   /**
@@ -1886,9 +1669,8 @@ export const commands = {
    *  windows need no `core:window:allow-hide` in their capabilities, since nothing calls `hide` from
    *  JavaScript.
    *
-   *  The destroy is unconditional once scheduled: an early return between the hide and the destroy
-   *  (or a close the page could veto) would leak exactly the invisible-but-alive window this is
-   *  meant to prevent.
+   *  The destroy is unconditional once scheduled: an early return between the hide and the close
+   *  would leak exactly the invisible-but-alive window this is meant to prevent.
    */
   closeChildWindow: (label: string) => __TAURI_INVOKE<void>('close_child_window', { label }),
   /**
@@ -2747,6 +2529,14 @@ export const commands = {
   checkAiConnection: (baseUrl: string, providerId: string) =>
     __TAURI_INVOKE<AiConnectionCheckResult>('check_ai_connection', { baseUrl, providerId }),
   /**
+   *  The window and longest reply of `model` on the provider being set up, for Settings › AI.
+   *  Reads the cache, falling back to the budget's family table. A stale catalog for a TRUSTED
+   *  endpoint refreshes in the background; an endpoint being typed waits for the connection check.
+   *  `AiModelCapabilitiesChanged` says when to ask again.
+   */
+  getAiModelLimits: (providerId: string, baseUrl: string, model: string) =>
+    __TAURI_INVOKE<AiModelLimits>('get_ai_model_limits', { providerId, baseUrl, model }),
+  /**
    *  For each base URL, the policy's refusal of cloud AI sending there, or `None` when it may. The
    *  provider picker renders a refused preset disabled with that reason, so the frontend never works
    *  out which rule refused it. A URL, never a key, crosses IPC.
@@ -3245,7 +3035,7 @@ export const commands = {
    *  Record that the user navigated into `location`. Fire-and-forget and
    *  failure-silent: never blocks or breaks navigation.
    *
-   *  Recorded for any background-scored volume — Local and SMB (plan M4). A volume
+   *  Recorded for any background-scored volume — Local and SMB. A volume
    *  that isn't registered, or is MTP (on-demand only, never scored), is silently
    *  ignored: recording a visit no recompute ever reads is dead weight, so the gate
    *  is the volume's TYPED kind, never its id string. The
@@ -3815,17 +3605,27 @@ export const commands = {
     attachments: AttachmentRef[],
     deniedNames: string[],
   ) =>
-    typedError<number, AskCmdrSendRefusal>(
+    typedError<AskCmdrSendAccepted, AskCmdrSendRefusal>(
       __TAURI_INVOKE('ask_cmdr_send_message', { conversationId, text, attachments, deniedNames }),
     ),
   /**
-   *  Stop the in-flight turn for a thread. Idempotent: an unknown id (already finished) is a
-   *  no-op. A clean stop at the next tool boundary or stream chunk, not a hard abort.
+   *  Stop the in-flight turn for a thread. Idempotent: an unknown id (already finished) trips
+   *  nothing. A clean stop at the next tool boundary or stream chunk, not a hard abort.
+   *
+   *  Answers what the Stop reached, so the rail waits for exactly the terminals still coming: a
+   *  Stop that reached no live turn (it ended, or died) gets none, and a turn queued behind
+   *  another owes one more.
    *
    *  One command for both kinds of turn: a wake registers in the same registry, so the status
    *  corner's stop button and the rail's are the same call with a different id.
    */
-  askCmdrCancel: (conversationId: number) => __TAURI_INVOKE<void>('ask_cmdr_cancel', { conversationId }),
+  askCmdrCancel: (conversationId: number) => __TAURI_INVOKE<CancelOutcomeView>('ask_cmdr_cancel', { conversationId }),
+  /**
+   *  Answer a thread's spend pause with Keep going: the paused turn runs on. Answers whether a turn
+   *  was waiting, `false` for a stale click (it already went on, stopped, or never paused). Stop on
+   *  a paused turn is [`ask_cmdr_cancel`], the same as any other.
+   */
+  askCmdrKeepGoing: (conversationId: number) => __TAURI_INVOKE<boolean>('ask_cmdr_keep_going', { conversationId }),
   /**
    *  Revalidates the user-selected subset of a server-owned rename proposal. The
    *  frontend supplies opaque ids only, never source paths or destination names.
@@ -3904,10 +3704,41 @@ export const commands = {
    *  across awaits, which a Tauri command's future can't (it must be `Send`). The result comes
    *  back over a oneshot, so the command still answers the caller directly rather than making the
    *  dialog wait on an event.
+   *
+   *  `runs_as` is the fallback the review showed (`SuggestedGroupView::runs_as`), so a trash group
+   *  on a drive with no Trash deletes permanently only when the user approved it as that delete.
    */
-  suggestedOpsApprove: (groupId: number, revision: number, selection: OpSelection) =>
+  suggestedOpsApprove: (
+    groupId: number,
+    revision: number,
+    selection: OpSelection,
+    runsAs:
+      /**
+       *  A trash group whose source volume keeps no Trash (`Volume::has_trash`). Trashing there
+       *  can't work: the OS refuses every item (`TrashRefusalKind::NoTrashForVolume`) and nothing
+       *  happens. So an approval the user gave against a red "Delete" button deletes the files
+       *  permanently (David's call, 2026-10-28): it's a user-approved action, the same answer the
+       *  delete dialog gives a user on a drive with no Trash.
+       */
+      'permanentDelete' | null,
+  ) =>
     typedError<ApprovalResultView, SuggestedOpsError>(
-      __TAURI_INVOKE('suggested_ops_approve', { groupId, revision, selection }),
+      __TAURI_INVOKE('suggested_ops_approve', { groupId, revision, selection, runsAs }),
+    ),
+  /**
+   *  Approve a server card the user read at `revision`: save it, with no password and no contact
+   *  with the server (an edit of a connected place rides the session the user opened).
+   *
+   *  **On a blocking thread, driving the app's runtime.** `approve_server` holds a `Connection`
+   *  across an await, which a command's future can't (it must be `Send`), and the save it starts
+   *  must run on the app's runtime: a save past its deadline finishes there, detached.
+   *
+   *  ❗ Emits `volumes-changed` on a save, as `update_saved_server` does: the servers hub and the
+   *  switcher re-read the saved list on it.
+   */
+  suggestedOpsApproveServer: (groupId: number, revision: number) =>
+    typedError<ServerApprovalResultView, SuggestedOpsError>(
+      __TAURI_INVOKE('suggested_ops_approve_server', { groupId, revision }),
     ),
   /**
    *  A settings change may have moved an open thread's slot — the model it sends to, the chat
@@ -3922,6 +3753,11 @@ export const commands = {
   /**
    *  One conversation's header plus a page of its display messages (oldest first). `None`
    *  when the thread is absent or the store never opened.
+   *
+   *  Each tool line on the page says what it looked at, what came back, and whether it repeats an
+   *  earlier call; each turn's last assistant view carries what the turn spent. All of that is
+   *  turn-scoped, so the rows completing the page's first and last turns are read too
+   *  (`store::turn_context`), never the whole thread.
    */
   askCmdrGetConversation: (id: number, msgLimit: number, msgOffset: number) =>
     typedError<
@@ -3935,9 +3771,30 @@ export const commands = {
          *  finished: read as "not measured yet", never as zero usage.
          */
         lastContextUsage: ContextUsageView | null
+        /**
+         *  The running turn's seq high-water mark, when a turn runs in this thread right now: rows
+         *  after it are that turn's, still being written, so a result-less call among them is running
+         *  (every other result-less call is settled). `None` when nothing runs.
+         */
+        turnInFlightSinceSeq: number | null
+        /**
+         *  The estimated spend (micro-USD) the running turn is paused at, waiting for Keep going or
+         *  Stop, so a reloaded rail puts the question back on screen. `None` when no turn is paused.
+         */
+        spendPausedMicros: number | null
       } | null,
       string
     >(__TAURI_INVOKE('ask_cmdr_get_conversation', { id, msgLimit, msgOffset })),
+  /**
+   *  What one tool line's call returned, for its expanded view: the curated preview plus the raw
+   *  result for Copy. The line is `(message_id, call_id)`, since call ids collide across rounds, and
+   *  `occurrence` picks among calls one row names with the same id (0 for the first).
+   *  ❌ The content is private (file text, EXIF incl. GPS): only the store's failure is logged.
+   */
+  askCmdrToolResult: (conversationId: number, messageId: number, callId: string, occurrence: number) =>
+    typedError<ToolResultDetailView, AskCmdrToolResultError>(
+      __TAURI_INVOKE('ask_cmdr_tool_result', { conversationId, messageId, callId, occurrence }),
+    ),
   // Conversations newest-activity first, paged. Empty when the store never opened.
   askCmdrListConversations: (limit: number, offset: number, includeArchived: boolean) =>
     typedError<ConversationRow[], string>(
@@ -3978,8 +3835,9 @@ export const commands = {
    *  Tell the gates that `askCmdr.enabled` moved. No value crosses: the send gate reads the
    *  setting fresh per send, but the wake loop's readiness is a cached answer
    *  (`agent::wake::snapshot`), so without this push a switched-off Ask Cmdr would keep storing
-   *  (and a switched-on one keep refusing) until something else refreshed it. Called from
-   *  `settings-applier.ts`.
+   *  (and a switched-on one keep refusing) until something else refreshed it. Switched off, it also
+   *  stops every running turn: the rail's gate replaces the composer, Stop button and all. Called
+   *  from `settings-applier.ts`.
    */
   askCmdrEnabledChanged: () => __TAURI_INVOKE<void>('ask_cmdr_enabled_changed'),
   /**
@@ -4000,6 +3858,27 @@ export const commands = {
    *  warning rather than a guess dressed as one.
    */
   askCmdrModelWindow: () => __TAURI_INVOKE<ModelWindowView>('ask_cmdr_model_window'),
+  /**
+   *  What the rail shows before anything is sent: whether a provider is set up (its warning and
+   *  the Send button's reason), and the floor every call of a new chat costs (the footer's
+   *  baseline). Off the IPC thread: the prefix reads `CMDR.md` and the memory folder from disk.
+   *  `None` only when that read panicked; the rail then keeps what it last knew.
+   */
+  askCmdrSlotStatus: () =>
+    __TAURI_INVOKE<{
+      readiness: ProviderReadiness
+      /**
+       *  The provider and model the next send would meter under, and whether that model has a
+       *  price, so a chat with nothing metered yet can say "free", "about $0", or "cost unknown"
+       *  honestly. `None` while AI is off: there is nothing to price.
+       */
+      nextCall: NextCallPricing | null
+      /**
+       *  What every call of a new chat costs at minimum. `None` when no budget resolves (AI is
+       *  off, or a local window under the floor, which the send refuses on its own).
+       */
+      baseline: BaselineUsage | null
+    } | null>('ask_cmdr_slot_status'),
   /**
    *  Tell the wake loop its settings moved, so it re-reads them and re-arms.
    *
@@ -4111,15 +3990,6 @@ export const commands = {
    *  in; with the env vars unset it answers `None`.
    */
   getAutomatedRun: () => __TAURI_INVOKE<AutomatedRun>('get_automated_run'),
-  /**
-   *  Returns `true` when the Ask Cmdr send path is served by the deterministic
-   *  scripted fake LLM (`CMDR_E2E_ASK_CMDR_FAKE`). The composer reads this to treat
-   *  the fake as an active provider, so send isn't gated off during E2E even though
-   *  `ai.provider` is `off`. Consults the same accessor `agent::resolve_agent_llm`
-   *  uses, so the send-allowed and send-answered decisions share one source of truth.
-   *  Always compiled in; reading an unset env var is a no-op in production.
-   */
-  askCmdrFakeActive: () => __TAURI_INVOKE<boolean>('ask_cmdr_fake_active'),
   /**
    *  Returns `true` when `CMDR_FORCE_ONBOARDING` is set, regardless of value.
    *
@@ -4342,8 +4212,9 @@ export const commands = {
    *  sign-in, and a host with one is never listed as guest.
    *
    *  `check_reachability: false` is the sheet's "Add anyway", offered only after a check
-   *  answered `Unreachable`: it saves without probing. An address that doesn't parse is
-   *  refused either way.
+   *  answered `Unreachable`: it saves without contact, like an approved Ask Cmdr card
+   *  (`awaitingFirstConnect`: no probe, no discovery entry, no share listing until the
+   *  user connects). An address that doesn't parse is refused either way.
    */
   connectToServer: (address: string, name: string | null, username: string | null, checkReachability: boolean) =>
     typedError<ManualConnectResult, AddServerError>(
@@ -4431,6 +4302,21 @@ export const commands = {
        *  its first mount through Cmdr, moved by `set_share_pinned`.
        */
       pinned?: boolean
+      /**
+       *  Share rows: the GUID the share's server answered NEGOTIATE with, in
+       *  `crate::network::server_guid::ServerGuid`'s text form: the proof two rows (one NAS by its LAN
+       *  and its Tailscale address) are one server. Written only through
+       *  [`record_server_guid`], never by a row an add or a mount files.
+       */
+      serverGuid?: string | null
+      /**
+       *  Share rows: how `server_guid` was learned. Only `authenticated` on both rows
+       *  lets one answer for the other (`location::same_share`). Written with the
+       *  GUID, and demoted when a save changes the row's account
+       *  ([`keep_recorded_guid`]); a row saved before the field reads
+       *  `unauthenticated` until a signed-in session records its GUID again.
+       */
+      serverGuidProof?: GuidProof
     } | null>('get_known_share_by_name', { serverName, shareName }),
   // Updates or adds a known network share after successful connection.
   updateKnownShare: (
@@ -5029,6 +4915,10 @@ export const commands = {
    *  share has (its `SignInShape` is `UsernamePassword`): the share is the place and
    *  the account a field on it. SFTP and WebDAV ignore it, since their volume id IS
    *  the account.
+   *
+   *  ❗ **One dial per place** (`saved_servers`): a second caller while a dial
+   *  is out (a pane's Enter and Ask Cmdr's `connect_volume`) shares its outcome
+   *  instead of dialing again, which would register a second volume.
    */
   connectSavedPlace: (
     volumeId: string,
@@ -5669,6 +5559,7 @@ export const events = {
   aiExtracting: makeEvent<AiExtracting>('ai-extracting'),
   aiInstallComplete: makeEvent<AiInstallComplete>('ai-install-complete'),
   aiInstalling: makeEvent<AiInstalling>('ai-installing'),
+  aiModelCapabilitiesChanged: makeEvent<AiModelCapabilitiesChanged>('ai-model-capabilities-changed'),
   aiServerReady: makeEvent<AiServerReady>('ai-server-ready'),
   aiStarting: makeEvent<AiStarting>('ai-starting'),
   aiVerifying: makeEvent<AiVerifying>('ai-verifying'),
@@ -5788,10 +5679,6 @@ export const events = {
   suggestionsChanged: makeEvent<SuggestionsChanged>('suggestions-changed'),
   systemTextSizeChanged: makeEvent<SystemTextSizeChanged>('system-text-size-changed'),
   tabContextAction: makeEvent<TabContextAction>('tab-context-action'),
-  tagsClipboard: makeEvent<TagsClipboard>('tags-clipboard'),
-  tagsDeselectAll: makeEvent<TagsDeselectAll>('tags-deselect-all'),
-  tagsMenuKey: makeEvent<TagsMenuKey>('tags-menu-key'),
-  tagsSelectAll: makeEvent<TagsSelectAll>('tags-select-all'),
   tagsSkipped: makeEvent<TagsSkipped>('tags-skipped'),
   viewModeChanged: makeEvent<ViewModeChanged>('view-mode-changed'),
   viewerContextMenuAction: makeEvent<ViewerContextMenuAction>('viewer-context-menu-action'),
@@ -5802,6 +5689,7 @@ export const events = {
   volumeConnectionChanged: makeEvent<VolumeConnectionChanged>('volume-connection-changed'),
   volumeContextAction: makeEvent<VolumeContextAction>('volume-context-action'),
   volumeMounted: makeEvent<VolumeMounted>('volume-mounted'),
+  volumeReconnectRequested: makeEvent<VolumeReconnectRequested>('volume-reconnect-requested'),
   volumeRootChanged: makeEvent<VolumeRootChanged>('volume-root-changed'),
   volumeSpaceChanged: makeEvent<VolumeSpaceChanged>('volume-space-changed'),
   volumeUnmounted: makeEvent<VolumeUnmounted>('volume-unmounted'),
@@ -6118,11 +6006,39 @@ export type AiConnectionProblem =
   // Any other refusal. `detail` is the provider's `error.message` (or raw body), key scrubbed.
   | { kind: 'providerRefused'; status: number; detail: string }
 
+// One effort level the picker offers, cheapest first.
+export type AiEffortLevel = 'low' | 'medium' | 'high' | 'max'
+
+/**
+ *  The Effort picker's menu for one model. The UI stores the pick in `ai.reasoningEfforts` as
+ *  `"recommended"`, `"off"`, or a level's camelCase name; the backend maps a pick the model
+ *  can't take to the nearest one it can, so this menu is a courtesy, never the guard.
+ */
+export type AiEffortOptions = {
+  /**
+   *  Whether the model reasons: `false` hides the picker, `None` means nothing knows (the
+   *  picker then offers Recommended alone).
+   */
+  reasons: boolean | null
+  levels: AiEffortLevel[]
+  canTurnOff: boolean
+  /**
+   *  What Recommended amounts to, when anything knows; `None` while the provider decides
+   *  per request.
+   */
+  recommended: AiEffortLevel | null
+  // Where the levels came from: the provider's list, or Cmdr's built-in table.
+  source: AiModelLimitsSource | null
+}
+
 export type AiExtracting = null
 
 export type AiInstallComplete = null
 
 export type AiInstalling = null
+
+// Tells the windows a catalog arrived, so Settings › AI re-reads the window it shows.
+export type AiModelCapabilitiesChanged = null
 
 // Model info returned to frontend.
 export type AiModelInfo = {
@@ -6134,6 +6050,24 @@ export type AiModelInfo = {
   // Base memory overhead in bytes (model weights + compute buffers)
   baseOverheadBytes: number
 }
+
+// What Settings › AI shows under the model picker.
+export type AiModelLimits = {
+  // `None` when nothing knows the window, so the UI shows nothing rather than a guess.
+  contextWindowTokens: number | null
+  // Only ever the provider's figure: the table doesn't guess it.
+  maxOutputTokens: number | null
+  source: AiModelLimitsSource | null
+  // What the Effort picker may offer for this model (`agent::chat::effort::effort_options`).
+  effort: AiEffortOptions
+}
+
+// Where the window Settings › AI shows came from.
+export type AiModelLimitsSource =
+  // The provider's own model list.
+  | 'provider'
+  // Cmdr's built-in table: a verified floor that may have aged.
+  | 'builtInTable'
 
 // How much AI the organization allows.
 export type AiPolicy =
@@ -6243,14 +6177,6 @@ export type AmendResult = {
   id: string
 }
 
-// An app the "Open in" menu offers.
-export type AppChoice = {
-  bundleId: string
-  name: string
-  // The system's default app for the tracks (the first candidate).
-  isDefault: boolean
-}
-
 /**
  *  What we know about the app's fate AFTER this report hit disk.
  *
@@ -6329,30 +6255,6 @@ export type AppearedDuringMove = {
    *  FE reads a higher number as "and others" rather than naming them all.
    */
   folderCount: number
-}
-
-// What the user asked to write.
-export type ApplyRequest = {
-  kind: ContentKind
-  // Write files whose write would drop items (the user chose "Write anyway").
-  allowFrameLoss: boolean
-  // Paths the user chose to skip, as the view shows them.
-  skip: string[]
-  /**
-   *  Paths (as the view shows them) whose kind removals the user saw in the change list and
-   *  confirmed: only these may lose a field the kind removes. Absent means none.
-   */
-  allowRemovals?: string[]
-  /**
-   *  Write Audiobookshelf's `reader.txt` and `desc.txt` beside the book too (`side_files.rs`;
-   *  the `multiRename.tagEditor.absSideFiles` setting). Absent means no.
-   */
-  sideFiles?: boolean
-  /**
-   *  The side-file replacements the change list showed, each with the old text it showed: only
-   *  these may replace a side file that says something else. Absent means none.
-   */
-  allowSideFiles?: SideFileSeen[]
 }
 
 /**
@@ -6477,6 +6379,16 @@ export type ArchivePromptMode =
 export type ArchiveSubkind = 'compress' | 'edit' | 'extract'
 
 /**
+ *  What a send the backend took answers: the thread it runs in, and the turn's run, which every
+ *  event of that turn carries (`stream::AskCmdrTurn::run`). The rail keys its Stop on the run, so a
+ *  late terminal of a turn it already ended can't end the one it sent since.
+ */
+export type AskCmdrSendAccepted = {
+  conversationId: number
+  run: number
+}
+
+/**
  *  Why a send never started.
  *
  *  Returned rather than streamed, because every one of these is decided before a turn
@@ -6518,8 +6430,12 @@ export type AskCmdrStreamEvent =
   | { type: 'started' }
   // The send queued behind this thread's running turn (drives "working… stop?").
   | { type: 'queued' }
-  // The user's message was persisted (on the first `respond` `End`).
-  | { type: 'userPersisted'; messageId: number; seq: number }
+  /**
+   *  The turn's opener was persisted (on the first `respond` `End`). `opener` is the row as
+   *  history shows it (its `id` and `seq` are `message_id` and `seq`), so a rail that reloaded
+   *  before it landed can insert it.
+   */
+  | { type: 'userPersisted'; messageId: number; seq: number; opener: MessageView }
   // A new assistant turn began streaming (no id yet — the row lands on `Done`).
   | { type: 'assistantStarted' }
   // A chunk of assistant text.
@@ -6531,15 +6447,27 @@ export type AskCmdrStreamEvent =
    *  built frontend-side from `tool`, never a backend string).
    */
   | { type: 'toolCallStarted'; callId: string; tool: string }
-  // A tool call finished dispatching (`ok = false` for a refusal or handler problem).
-  | { type: 'toolCallFinished'; callId: string; ok: boolean }
+  /**
+   *  A round's assistant row persisted: every call of its final message, in order, with what
+   *  each looks at and the earlier call of the turn it repeats. One per round, before any call
+   *  runs.
+   */
+  | { type: 'toolCallsResolved'; messageId: number; calls: ResolvedCall[] }
+  /**
+   *  A tool call's result row persisted. The line is `(message_id, call_id)`, never the call
+   *  id alone: ids collide across rounds. `subject` is refined by the result.
+   */
+  | { type: 'toolCallFinished'; messageId: number; callId: string; outcome: ToolOutcome; subject: ToolSubject }
   /**
    *  Display-only rename rows for the review surface. The frontend must send
    *  only opaque ids back when a later user action approves them.
    */
   | { type: 'proposalReady'; proposal: RenameProposalSnapshot }
-  // The turn produced its final answer, carrying the persisted assistant id.
-  | { type: 'done'; messageId: number; seq: number; stop: StopReasonView; usage: UsageView }
+  /**
+   *  The turn produced its final answer, carrying the persisted assistant id. `usage` is the
+   *  last model call's; `turn` is what the whole turn spent, `None` when it ran no tool.
+   */
+  | { type: 'done'; messageId: number; seq: number; stop: StopReasonView; usage: UsageView; turn: TurnStats | null }
   /**
    *  The turn ended without an answer, typed and honest (rendered without the words
    *  "error"/"failed" — the frontend owns the copy). `detail` is the source error's own
@@ -6555,7 +6483,11 @@ export type AskCmdrStreamEvent =
        *  `managedByOrganization`, so the rail words that rule.
        */
       managed: ManagedAiRefusal | null
+      // What the turn spent, when it ran a tool. `None` too for a refusal from outside a turn.
+      turn: TurnStats | null
     }
+  // The turn was stopped (the rail's Stop, or the status corner stopping a wake). Terminal.
+  | { type: 'stopped'; turn: TurnStats | null }
   /**
    *  The conversation's effective model changed since its previous turn; the persisted
    *  event row's identity rides along. The rail inserts the line BEFORE this turn's
@@ -6576,10 +6508,25 @@ export type AskCmdrStreamEvent =
    */
   | { type: 'contextTrimmed'; elidedResults: number; approxTokens: number }
   /**
-   *  What this turn's prompt cost against its budget, once per answered turn, for the rail's
-   *  usage gauge. Both figures are `chars/4` estimates and the UI labels them so.
+   *  What one completed model call's prompt cost against its budget, for the rail's usage
+   *  gauge, so the gauge moves round by round. Both figures are `chars/4` estimates and the UI
+   *  labels them so.
    */
   | { type: 'contextUsage'; estimatedTokens: number; budgetTokens: number; elidedResults: number }
+  /**
+   *  A completed model call was just metered; the rail re-reads the thread's cost so the
+   *  footer moves during the turn. No figures ride along: the meter is the one source.
+   */
+  | { type: 'costMetered' }
+  /**
+   *  The turn's estimated spend passed the user's threshold (Settings › AI), so it waits
+   *  between rounds for Keep going (`ask_cmdr_keep_going`) or Stop. `cost_micros` is what the
+   *  turn has spent so far, estimated at list prices (prompt caching usually makes it less). A
+   *  reloaded rail reads the same question off `ConversationDetailView::spend_paused_micros`.
+   */
+  | { type: 'spendPaused'; costMicros: number }
+  // Keep going was pressed: the turn runs on, and the question leaves the screen.
+  | { type: 'spendResumed' }
   /**
    *  The user answered a suggestion this thread made, and the line saying so just landed in
    *  its timeline. The persisted event row's identity rides along, so a subscriber that also
@@ -6605,6 +6552,13 @@ export type AskCmdrStreamEvent =
    */
   | { type: 'discarded' }
 
+// Why an expanded tool line has nothing to show. ❌ Not prose: the rail words each one.
+export type AskCmdrToolResultError =
+  // No such call with a result in this thread (the thread was deleted underneath, say).
+  | 'notFound'
+  // The store never opened, or wouldn't answer.
+  | 'storeUnavailable'
+
 /**
  *  One turn event, and the thread it happened in.
  *
@@ -6618,6 +6572,12 @@ export type AskCmdrTurn = {
    *  event; one that is applies it, whenever it started listening.
    */
   conversationId: number
+  /**
+   *  The turn this event belongs to (`cancel::TurnRun`), so a terminal can only end its own
+   *  turn: a late one of a turn the rail already ended would otherwise end a turn sent since.
+   *  `None` for an event no turn owns (a suggestion's decision).
+   */
+  run: number | null
   event: AskCmdrStreamEvent
 }
 
@@ -6672,6 +6632,15 @@ export type BackendCapabilities = {
 
 // Which backend strategy is active for a session.
 export type BackendType = 'fullLoad' | 'byteSeek' | 'lineIndex'
+
+/**
+ *  The prefix's estimated size against the budget the next send resolves. Both are `chars/4`
+ *  estimates, like every other gauge figure.
+ */
+export type BaselineUsage = {
+  estimatedTokens: number
+  budgetTokens: number
+}
 
 /**
  *  The signup outcome, returned across IPC so the frontend reacts on a typed `kind` discriminant
@@ -6912,6 +6881,17 @@ export type BundleWriteBlocker =
   | 'notWritableStandardUser'
 
 /**
+ *  What a Stop reached, so the rail waits for exactly the terminals still coming
+ *  (`agent::chat::cancel::CancelOutcome`).
+ */
+export type CancelOutcomeView = {
+  // Turns this Stop tripped that no earlier Stop had, each owing a terminal of its own.
+  tripped: number
+  // Turns still registered in the thread, tripped now or earlier. Zero: no terminal is coming.
+  live: number
+}
+
+/**
  *  What the reversal after a cancel managed to undo, and what it left alone.
  *
  *  Reuses [`SkipBreakdown`] so a cancelled transfer and a Roll back from history
@@ -6979,17 +6959,6 @@ export type CaseChange =
   | 'firstUpper'
   // Every word's first letter upper, the rest lower.
   | 'words'
-
-// How [`change_case`] rewrites a value.
-export type CaseTool =
-  // First letter upper, the rest lower.
-  | 'sentence'
-  // Every word starts upper, the rest lower.
-  | 'title'
-  // All lower.
-  | 'lower'
-  // All upper.
-  | 'upper'
 
 /**
  *  A server certificate the OS refused and a person may trust anyway, and what
@@ -7503,6 +7472,20 @@ export type ConflictResolutionOutcome =
    */
   | 'unknown_operation'
 
+// What the tool answers, as `outcome`.
+export type ConnectOutcome =
+  | 'connected'
+  | 'alreadyConnected'
+  | 'stillReconnecting'
+  | 'needsCredentials'
+  // A host key or certificate the user approves in the app.
+  | 'needsApproval'
+  // The server, or the saved place's own settings, said no.
+  | 'rejected'
+  | 'unreachable'
+  | 'notSaved'
+  | 'cancelled'
+
 // Information about a connected device, including its storages.
 export type ConnectedDeviceInfo = {
   // Device information.
@@ -7575,16 +7558,6 @@ export type ConnectionState =
   | 'saved'
 
 /**
- *  What kind of content a batch of files is, which decides how fields map
- *  (audiobooks drop ID3's `TPE3`).
- */
-export type ContentKind =
-  // Spoken-word books.
-  | 'audiobook'
-  // Music.
-  | 'music'
-
-/**
  *  The user's keyboard shortcuts as they stand right now: command-registry id → the
  *  combo in the frontend's canonical spelling (`⌘⇧C`, `F5`, `Space`). The frontend
  *  pushes it with every popup, straight out of the shortcut registry, so a command
@@ -7643,6 +7616,17 @@ export type ConversationDetailView = {
    *  finished: read as "not measured yet", never as zero usage.
    */
   lastContextUsage: ContextUsageView | null
+  /**
+   *  The running turn's seq high-water mark, when a turn runs in this thread right now: rows
+   *  after it are that turn's, still being written, so a result-less call among them is running
+   *  (every other result-less call is settled). `None` when nothing runs.
+   */
+  turnInFlightSinceSeq: number | null
+  /**
+   *  The estimated spend (micro-USD) the running turn is paused at, waiting for Keep going or
+   *  Stop, so a reloaded rail puts the question back on screen. `None` when no turn is paused.
+   */
+  spendPausedMicros: number | null
 }
 
 /**
@@ -7753,97 +7737,6 @@ export type CountFolderSizesError =
   | { type: 'gone'; listingId: string }
   // No volume answers for the listing's folder (unplugged, disconnected).
   | { type: 'notConnected'; volumeId: string }
-
-// A front cover: its MIME type and the encoded image bytes.
-export type Cover = Cover_Serialize | Cover_Deserialize
-
-// An image file of the session's folder that can become the cover.
-export type CoverCandidate = {
-  fileName: string
-  size: number
-}
-
-/**
- *  One distinct cover across the readable files, or (`key: "none"`, empty `mime`, 0 bytes) the
- *  files that have none.
- */
-export type CoverChoice = {
-  // Names the cover in `get_cover_image` and `use_cover_for_all`: a hash of its bytes.
-  key: string
-  mime: string
-  bytes: number
-  // Pixel size, when the image header could be read.
-  width: number | null
-  height: number | null
-  // How many readable files carry it, or one that looks the same.
-  files: number
-  /**
-   *  How many other distinct covers look the same as this one and are counted in it (0 when
-   *  none): this one is the largest of them in pixels.
-   */
-  nearDuplicates: number
-}
-
-// What to do with the front cover of every file.
-export type CoverEdit = CoverEdit_Serialize | CoverEdit_Deserialize
-
-// What to do with the front cover of every file.
-export type CoverEdit_Deserialize =
-  // Leave covers as they are.
-  | 'keep'
-  // Give every file this cover.
-  | { set: Cover_Deserialize }
-  // Remove every cover.
-  | 'remove'
-
-// What to do with the front cover of every file.
-export type CoverEdit_Serialize =
-  // Leave covers as they are.
-  | 'keep'
-  // Give every file this cover.
-  | { set: Cover_Serialize }
-  // Remove every cover.
-  | 'remove'
-
-// The front cover across the files.
-export type CoverSummary =
-  // No file has a cover.
-  | { kind: 'empty' }
-  // The files have different covers, or only some have one.
-  | { kind: 'multiple' }
-  // Every file has this cover.
-  | {
-      kind: 'same'
-      mime: string
-      bytes: number
-      // Pixel size, when the image header could be read.
-      width: number | null
-      height: number | null
-      // A hash of the bytes, so the thumbnail follows a new cover of the same type and size.
-      key: string
-    }
-
-// A front cover: its MIME type and the encoded image bytes.
-export type Cover_Deserialize = {
-  // MIME type, like `image/jpeg`.
-  mime: string
-  /**
-   *  The encoded image. Shared: a clone of the cover (the on-disk and the edited tags of a file,
-   *  every file given the same cover) is a pointer copy. Serialized as a byte array.
-   */
-  data: number[]
-}
-
-// A front cover: its MIME type and the encoded image bytes.
-export type Cover_Serialize = {
-  // MIME type, like `image/jpeg`.
-  mime: string
-  /**
-   *  The encoded image. Shared: a clone of the cover (the on-disk and the edited tags of a file,
-   *  every file given the same cover) is a pointer copy. Serialized as a byte array.
-   */
-  data: number[]
-}
 
 /**
  *  What ground a run's answer was drawn from: the index, a live walk, or both.
@@ -8395,24 +8288,6 @@ export type DirectorySortMode =
    */
   | 'mixedWithFiles'
 
-// What [`auto_number`] does with discs. Absent in [`NumberOptions`] means discs are left alone.
-export type DiscOptions = {
-  // The first disc number.
-  start: number
-  // Write DiscTotal (the number of discs in the run).
-  total: boolean
-  // Pad disc numbers to at least two digits (`01`).
-  pad: boolean
-  // A new disc starts where the folder changes.
-  nextOnFolder: boolean
-  // A new disc starts where this field's first value changes.
-  nextOnField: TagField | null
-  // Track numbers restart at the track start on each new disc.
-  resetTrack: boolean
-  // Disc numbers restart at `start` where this field's first value changes.
-  resetDiscOnField: TagField | null
-}
-
 /**
  *  The volume that left the mount table while a transfer was running.
  *
@@ -8567,6 +8442,9 @@ export type DownloadsWatcherStatus = {
    */
   fdaPending: boolean
 }
+
+// Which kind of server a server proposal describes, stored inside its draft.
+export type DraftProtocol = 'smb' | 'sftp' | 'webdav' | 'nfs' | 's3'
 
 /**
  *  `drag-image-size`: the OS drag image's pixel dimensions, read on drag enter
@@ -9133,11 +9011,6 @@ export type ExecuteCommand = {
  */
 export type ExecutionStatus = 'queued' | 'running' | 'done' | 'failed' | 'canceled'
 
-export type FailedRow = {
-  path: string
-  error: TagError
-}
-
 // Whether a pick of a favorite gets there, and if not, why. One decision site: `favorites/reach.rs`.
 export type FavoriteReach =
   // The volume is live: a pick opens the folder.
@@ -9237,19 +9110,6 @@ export type FieldUsage = {
   missing: number
   // Files still being read.
   reading: number
-}
-
-// What a file's change looks like when the user reviews it before writing.
-export type FileChangeView = {
-  path: string
-  fileName: string
-  fields: TagField[]
-  cover: boolean
-  extras: boolean
-  // What the chosen kind removes beyond the fields (an MP3's conductor under Audiobook).
-  removes: KindRemoval[]
-  // The file couldn't be read to tell what the kind removes: it may lose a field.
-  removesUnknown: boolean
 }
 
 /**
@@ -9586,22 +9446,6 @@ export type FolderSizes = {
   // The reading, or `None` when the index doesn't cover the folder (sizes stay, hourglass clears).
   stats: DirStats | null
 }
-
-/**
- *  Why a foobar pattern doesn't parse. Typed, so the sheet words it; `at` is a byte offset into
- *  the pattern.
- */
-export type FoobarError =
-  // `%name%` names no field Cmdr knows; `name` as typed.
-  | { type: 'unknownField'; name: string; at: number }
-  // `$name(` names no function Cmdr knows; `name` as typed (empty for a bare `$`).
-  | { type: 'unknownFunction'; name: string; at: number }
-  // A known function with the wrong number of arguments, or none at all (`$upper`).
-  | { type: 'badArguments'; function: string; at: number }
-  // An opening `%`, `[`, `'`, `$f(`, or a `(` in an argument's text with no end.
-  | { type: 'unclosed'; what: Unclosed; at: number }
-  // Nested deeper than [`MAX_DEPTH`]; `at` is the first opening past it.
-  | { type: 'tooDeep'; at: number }
 
 /**
  *  `foreground-operation`: the operation queue asks the main window to show one
@@ -9987,6 +9831,27 @@ export type GuessedNfsIdentity = {
   // Why these.
   source: NfsIdentitySourceWire
 }
+
+/**
+ *  How a server GUID was learned. It decides whether the GUID may replace one a
+ *  row already holds, and whether it proves enough to let one member of a share
+ *  answer for another (`location::same_share`). Stored beside the GUID as
+ *  `serverGuidProof`.
+ */
+export type GuidProof =
+  /**
+   *  From a session that signed in as the share's account: the latest truth
+   *  about the box, so it overwrites (a NAS restored or replaced mints a new GUID).
+   */
+  | 'authenticated'
+  /**
+   *  From a credential-free NEGOTIATE probe of a saved address, or a guest
+   *  session: whatever answers there may not be the share's server (a hotel
+   *  network can hand out the saved LAN IP), so it only FILLS a missing GUID,
+   *  and only ever makes a `sameShareAs` hint. The default: a row saved before
+   *  Cmdr kept the proof can't show a sign-in recorded its GUID.
+   */
+  | 'unauthenticated'
 
 // A single recent-search entry, persisted verbatim.
 export type HistoryEntry = {
@@ -10599,6 +10464,9 @@ export type IndexStatusResponse = {
   leftAfterCatchUpMs: number | null
 }
 
+// Why a photo tool's index couldn't answer.
+export type IndexUnavailableReason = 'imageIndexingOff' | 'semanticModelNotInstalled'
+
 /**
  *  Who initiated the operation. `AgentEdited` is mixed provenance: the
  *  in-app agent proposed the batch and the user retyped at least one name while reviewing
@@ -10667,14 +10535,6 @@ export type KeychainError =
   | { type: 'access_denied'; message: string }
   // Other error
   | { type: 'other'; message: string }
-
-/**
- *  What a write as a [`ContentKind`] removes that [`FileTags`] doesn't show, named so the app
- *  can list it before writing ([`crate::removed_by_kind`]).
- */
-export type KindRemoval =
-  // An MP3's conductor (`TPE3`), which an audiobook write removes.
-  'conductor'
 
 /**
  *  A file the dialog's conflict check found at the destination under a name
@@ -10748,6 +10608,21 @@ export type KnownNetworkShare = {
    *  its first mount through Cmdr, moved by `set_share_pinned`.
    */
   pinned?: boolean
+  /**
+   *  Share rows: the GUID the share's server answered NEGOTIATE with, in
+   *  `crate::network::server_guid::ServerGuid`'s text form: the proof two rows (one NAS by its LAN
+   *  and its Tailscale address) are one server. Written only through
+   *  [`record_server_guid`], never by a row an add or a mount files.
+   */
+  serverGuid?: string | null
+  /**
+   *  Share rows: how `server_guid` was learned. Only `authenticated` on both rows
+   *  lets one answer for the other (`location::same_share`). Written with the
+   *  GUID, and demoted when a save changes the row's account
+   *  ([`keep_recorded_guid`]); a row saved before the field reads
+   *  `unauthenticated` until a signed-in session records its GUID again.
+   */
+  serverGuidProof?: GuidProof
 }
 
 // One SFTP server the user has connected to, and how to reach it again.
@@ -10942,14 +10817,6 @@ export type KnownWebdavServer = {
   lastConnectedAt: string
 }
 
-// The last write of a folder.
-export type LastTagApply = {
-  // In the order they were written; empty when none kept its old tags.
-  applies: UndoableApply[]
-  // Some files of this write were written without their old tags kept: Undo can't reach them.
-  partial: boolean
-}
-
 /**
  *  Successful resolution: the path to surface plus the pre-split parent dir +
  *  file name so the frontend doesn't have to parse the path itself.
@@ -11089,6 +10956,27 @@ export type LineChunk = {
   end: ChunkEnd
   totalRows: TotalRows
   totalBytes: number
+}
+
+// A path a line names: its text, and whether it's a place the panes can go.
+export type LinePath = {
+  // `~` expanded, bounded.
+  text: string
+  /**
+   *  Only an absolute path the bound left whole: a relative one (the model's own words) resolves
+   *  against nothing the panes know, and a cut one names no real place.
+   */
+  linkable: boolean
+}
+
+/**
+ *  A line's identity: the assistant row that made the call, plus the call's id. ❌ Never the
+ *  call id alone: ids collide across rounds (the fake mints `fake-call-{index}` per round, and
+ *  Gemini's reset per response).
+ */
+export type LineRef = {
+  messageId: number
+  callId: string
 }
 
 // Cancelled event payload
@@ -12029,13 +11917,6 @@ export type MaskError =
   // A placeholder Cmdr doesn't know, as typed between the brackets.
   | { type: 'unknown'; placeholder: string }
 
-// The name mask's language.
-export type MaskSyntax =
-  // Total Commander's placeholders: `[N]`, `[C]`, `[=tag.title]`.
-  | 'cmdr'
-  // foobar2000 title formatting: `%title%`, `[ … ]`, `$num(…)` (`foobar.rs`).
-  | 'foobar'
-
 /**
  *  `mcp-settings-close`: ask the settings window to close itself. Emitted via a
  *  distinct static `emit_to("settings", …)` (NOT through the generic `mcp-*`
@@ -12150,24 +12031,6 @@ export type MediaField =
   | 'tagGenre'
   // The comment.
   | 'tagComment'
-  // The performer; an audiobook's narrator.
-  | 'tagPerformer'
-  // The composer.
-  | 'tagComposer'
-  // The publisher.
-  | 'tagPublisher'
-  // The date as stored (`2010-09-20`, or just `2010`).
-  | 'tagDate'
-  // The number of tracks on the album.
-  | 'tagTotalTracks'
-  // The number of discs.
-  | 'tagTotalDiscs'
-  // The long description.
-  | 'tagDescription'
-  // The translator.
-  | 'tagTranslator'
-  // The web address.
-  | 'tagWww'
 
 // One field in the picker.
 export type MediaFieldOverview = {
@@ -12360,6 +12223,28 @@ export type MemoryDiagnostics = {
   truncated: boolean
 }
 
+/**
+ *  [`MemoryRefusal`] without its data, plus the two refusals a stored result can carry that
+ *  no `MemoryRefusal` is: the folder being unreachable, and a token this build doesn't know.
+ *
+ *  The token is the contract: a tool result stores `refused: <token>`, and
+ *  [`from_token`](Self::from_token) reads it back, so the rail can say which refusal it was
+ *  without reading the model-facing sentence.
+ */
+export type MemoryRefusalKind =
+  | 'outsideMemory'
+  | 'notMarkdown'
+  | 'noPath'
+  | 'directoryFull'
+  | 'noSuchFile'
+  | 'noMatch'
+  | 'notUnique'
+  | 'unwritable'
+  // The memory folder couldn't be reached this session (the data dir didn't resolve).
+  | 'unavailable'
+  // A token this build doesn't know (a newer build wrote it).
+  | 'other'
+
 // One distinct region size under a tag.
 export type MemoryRegionSize = {
   // The size every region in this group has, in bytes.
@@ -12452,16 +12337,20 @@ export type MessageBlock =
   // Assistant or user prose (rendered markdown-lite, entity-escaped first).
   | { type: 'text'; text: string }
   /**
-   *  A tool the model invoked. `arguments` is the raw JSON call arguments as a string
-   *  (the frontend `JSON.parse`s it to build a localized "looked at X" label); both
-   *  `tool` and any filesystem-derived args render as escaped plain text, never `{@html}`.
+   *  A tool the model invoked, as its line says it: what it looked at, what came back (`None`
+   *  while no result row exists: still running, or a turn that never finished), and the
+   *  turn's earlier identical call it repeats. Typed facts from `tools::line`, never the raw
+   *  arguments or result; the line is `(this row's id, call_id)`. Its result rides this block,
+   *  so a tool-role row projects to no blocks.
    */
-  | { type: 'toolCall'; callId: string; tool: string; arguments: string }
-  /**
-   *  A tool result, reduced to its status (`ok`/`elided`) — the raw content stays
-   *  backend-only.
-   */
-  | { type: 'toolResult'; callId: string; ok: boolean; elided: boolean }
+  | {
+      type: 'toolCall'
+      callId: string
+      tool: string
+      subject: ToolSubject
+      outcome: ToolOutcome | null
+      repeatOf: LineRef | null
+    }
   /**
    *  The conversation's effective model changed between turns; `model` is the new name.
    *  Rendered as a small centered timeline line, escaped plain text (never `{@html}`).
@@ -12510,7 +12399,11 @@ export type MessageRoleView =
   // A UI-facing timeline entry (a model change), not transcript content.
   | 'event'
 
-// A message as the rail displays it: id/seq/role, its display blocks, and token counts.
+/**
+ *  A message as the rail displays it: id/seq/role, its display blocks, and token counts, plus
+ *  where it sits among the thread's turns. Turn edges come from here, never from a frontend
+ *  guess.
+ */
 export type MessageView = {
   id: number
   seq: number
@@ -12519,6 +12412,21 @@ export type MessageView = {
   promptTokens: number | null
   completionTokens: number | null
   createdAt: number
+  /**
+   *  The id of the user-role row that opened this row's turn (a user row's own id). `None` for
+   *  rows before the thread's first user row.
+   */
+  turnId: number | null
+  /**
+   *  An event row recorded while its turn still ran: it sits before the turn's last assistant
+   *  row. Always `false` for a transcript row.
+   */
+  duringTurn: boolean
+  /**
+   *  What the turn spent, on the turn's LAST assistant view only. `None` elsewhere, for a turn
+   *  that ran no tool, and for the turn still running (its stats ride the live terminal event).
+   */
+  turnStats: TurnStats | null
 }
 
 /**
@@ -12620,6 +12528,32 @@ export type MetricsSnapshotDto = {
   reconnects_failed: number
 }
 
+// What kind of miss this is: the token a model branches on.
+export type MissToken =
+  | 'unknownVolume'
+  | 'pathOutsideVolume'
+  | 'noVolumeAtPath'
+  /**
+   *  The volume resolved, but it isn't connected and no source the tool has can
+   *  answer for it.
+   */
+  | 'volumeNotConnected'
+  /**
+   *  Reading the place would raise a macOS privacy prompt (the Full Disk Access
+   *  question is still open), or macOS privacy refused the read.
+   */
+  | 'needsDiskAccess'
+  // The volume didn't answer in time, or an earlier read on it is still stuck.
+  | 'unreachable'
+  // Nothing is at this path on the volume, or it leads off the volume.
+  | 'notFound'
+  // The place is a system, build, or cache folder a default search leaves out.
+  | 'excluded'
+  // The folder's own permissions refuse the read (not macOS privacy).
+  | 'permissionDenied'
+  // The user stopped the turn while the place was being read.
+  | 'cancelled'
+
 /**
  *  What the chat-memory setting needs to warn honestly: the model the next turn would use,
  *  and the context window we believe it has.
@@ -12632,10 +12566,16 @@ export type ModelWindowView = {
   // The model Ask Cmdr would send to right now. Empty when AI is off.
   model: string
   /**
-   *  That model's window in tokens: the local server's configured window, else the family
-   *  table. `None` when nothing here knows it, so the UI stays quiet instead of guessing.
+   *  That model's window in tokens: the local server's configured window, else what the
+   *  provider reports, else the family table. `None` when nothing here knows it, so the UI
+   *  stays quiet instead of guessing.
    */
   knownWindowTokens: number | null
+  /**
+   *  The reply's ceiling the next send would ask for (`session::resolve_call_settings`). It comes
+   *  out of the same window, so a size plus this past the window is what a provider refuses.
+   */
+  replyTokens: number
 }
 
 /**
@@ -12927,6 +12867,19 @@ export type MtpConnectionError =
       dest_folder: string
     }
   /**
+   *  The name is longer than a PTP string holds ([`mtp_rs::MAX_NAME_UNITS`]
+   *  UTF-16 code units), so `mtp-rs` refused it before anything reached the device.
+   *  Nothing was created or changed, and the session is still usable. Only a
+   *  different name can work, so a retry is pointless.
+   */
+  | {
+      type: 'nameTooLong'
+      // The device this is about.
+      device_id: string
+      // The refused name's length in UTF-16 code units.
+      units: number
+    }
+  /**
    *  mtp-rs reset the device in software to recover from a wedged transfer
    *  cancel. The PTP session is gone, but the device is STILL PLUGGED IN and
    *  reopenable with no replug — ❌ never treat this as a disconnect.
@@ -13114,8 +13067,6 @@ export type MultiRenameError =
   | { type: 'stillReading' }
   // The folder, or a row in it, is read-only because a route serves it.
   | { type: 'readOnly'; place: ReadOnlyPlace }
-  // A new order that isn't the session's own files, each exactly once. Nothing was changed.
-  | { type: 'notAPermutation' }
   // Results couldn't write its names file; `detail` is log text only.
   | { type: 'couldntWriteNames'; detail: string }
   /**
@@ -13125,10 +13076,6 @@ export type MultiRenameError =
   | { type: 'namesFileGone'; detail: string }
   // The work didn't finish within its deadline.
   | { type: 'timedOut' }
-  // A Tags window was asked for more audio files than it takes (`limit`) from the folders it was given.
-  | { type: 'tooManyTracks'; limit: number }
-  // A Tags window was asked for the files inside a folder, which only a disk this computer reads can list.
-  | { type: 'foldersNeedLocalDisk' }
   // The worker failed; `detail` is log text only.
   | { type: 'internal'; detail: string }
 
@@ -13200,12 +13147,6 @@ export type MultiRenameSpec = {
    *  over decomposed names. Off, such a name counts as unchanged.
    */
   normalizeUnicode?: boolean
-  /**
-   *  How the name mask reads: Cmdr's placeholders, or a foobar2000 pattern as
-   *  foobar writes it. Cmdr in a preset, a last spec, or an MCP call from
-   *  before it existed. The extension mask is always Cmdr's.
-   */
-  maskSyntax?: MaskSyntax
 }
 
 // A started rename.
@@ -13407,34 +13348,35 @@ export type NameFilterResult = {
   sequence: number | null
 }
 
-// How to read tags from a file name (without its extension).
-export type NamePattern =
-  // Mp3tag-style: literal text with `%field%` placeholders; the last one takes the rest.
-  | {
-      kind: 'format'
-      // The pattern, like `%track% - %title%`.
-      pattern: string
-    }
-  // A regular expression whose named groups are tag fields (`(?<track>\d+)_(?<title>.+)`).
-  | {
-      kind: 'regex'
-      // The expression.
-      pattern: string
-    }
-
-// What a file-name pattern reads from one track's name.
-export type NamePreviewRow = {
-  path: string
-  fileName: string
-  // The fields the name gives, in pattern order; `None` when the name doesn't match.
-  fields: NameValue[] | null
-}
-
-// One field a file name gives.
-export type NameValue = {
-  field: TagField
-  value: string
-}
+/**
+ *  Why a transfer that names its items one by one refused to start, for
+ *  [`WriteOperationError::NamedLeavesRefused`]. Every one is checked before the
+ *  operation is admitted, so nothing was written (`transfer/DETAILS.md` §
+ *  "Named destinations").
+ */
+export type NamedLeavesRefusal =
+  // A name was given for an item the transfer doesn't carry. `path` is that item.
+  | 'notASource'
+  /**
+   *  Two items would land under one name, compared ignoring case and Unicode
+   *  form, so on many disks one would replace the other. `path` is where they'd land.
+   */
+  | 'sameName'
+  /**
+   *  An item would land where another item of the same transfer is, replacing
+   *  it before it's read or moved. `path` is where it would land.
+   */
+  | 'ontoASource'
+  /**
+   *  An item already sits in the destination folder, so naming it there is a
+   *  rename, not a transfer. `path` is that item.
+   */
+  | 'alreadyInDestination'
+  /**
+   *  The route can't take a name per item: an archive changeset (copy or move
+   *  into a zip, move out of one). `path` is the destination.
+   */
+  | 'routeCannotName'
 
 export type NegotiatedSummaryDto = {
   dialect: string
@@ -13538,6 +13480,24 @@ export type NetworkHostLost = {
  */
 export type NetworkHostResolved = NetworkHost
 
+/**
+ *  What's at the path a renamed file would land on, now (#774). The run itself still answers a
+ *  collision with the transfer's conflict prompt, as a clicked move would; this says so before
+ *  the click.
+ */
+export type NewNameState =
+  // Nothing is there (or only the file itself, under a rename that only changes case).
+  | 'free'
+  // Something else already has that name there.
+  | 'taken'
+  // The target volume didn't answer, or isn't connected, so Cmdr can't tell.
+  | 'unknown'
+
+export type NextCallPricing = {
+  provider: ProviderTag
+  priced: boolean
+}
+
 // What asking a server for its exports produced.
 export type NfsExportList =
   // The exports the server lists, each canonical (`/Public`, `/volume1/data`).
@@ -13613,18 +13573,6 @@ export type NotificationPermission =
   | 'notDetermined'
   // No way to tell: not macOS, a dev build, or macOS didn't answer.
   | 'unknown'
-
-// What [`auto_number`] does.
-export type NumberOptions = {
-  // The first track number.
-  trackStart: number
-  // Write TrackTotal.
-  trackTotal: boolean
-  // Pad track numbers to the width of the biggest one (at least two digits).
-  trackPad: boolean
-  // Disc numbering, or none to leave discs alone.
-  disc: DiscOptions | null
-}
 
 /**
  *  One OCR search hit: the matched image's path and a highlighted snippet of the
@@ -14324,19 +14272,6 @@ export type PathVolumeResolution = {
   timedOut: boolean
 }
 
-// Why a pattern can't be used.
-export type PatternError =
-  // The regular expression doesn't compile.
-  | { kind: 'badRegex' }
-  // A placeholder or group names no field.
-  | {
-      kind: 'unknownField'
-      // The unknown name as written.
-      name: string
-    }
-  // The pattern has no placeholder or named group.
-  | { kind: 'noFields' }
-
 export type PatternType = 'glob' | 'regex'
 
 /**
@@ -14467,12 +14402,6 @@ export type PhaseRecord = {
   stats: [string, string][]
 }
 
-// What `open_tags_in_player` answers: the launch was asked for, and whether the chosen app was missing.
-export type PlayerOpened = {
-  // The chosen app isn't installed, so the default app was used.
-  fellBack: boolean
-}
-
 export type PrepareResult = {
   ready: boolean
   entryCount: number
@@ -14500,11 +14429,6 @@ export type PresetSaveRefusal =
  */
 export type PresetSeed = {
   name: string
-  /**
-   *  The Cmdr version that introduced this seed (1: the first four). A list takes
-   *  each seed once: those whose version is above the list's.
-   */
-  version: number
   spec: MultiRenameSpec
 }
 
@@ -14600,16 +14524,21 @@ export type ProgressStep = {
  *  already on disk, not a refactor.
  *
  *  ❌ **No rationale, no file names, no op paths.** A decision line goes into the agent's memory
- *  ring, which rides the prefix of every later turn; the group's own display text (a path or a
+ *  ring, which reaches every later thread; the group's own display text (a path or a
  *  pattern the user already saw) plus a count is the whole of what a lesson needs.
  */
 export type ProposalDecision = {
   verb: ProposalVerb
   // The group's display name: a path or a pattern, so the user's own data rather than copy.
   what: string
-  // The live op count the user was answering about.
+  // The live op count the user was answering about. 0 for a server group, which has none.
   ops: number
   outcome: ProposalOutcomeKind
+  /**
+   *  The kind of server a server group proposed; absent for a file group. Optional on disk
+   *  too, so a line written before servers could be proposed still reads.
+   */
+  protocol?: DraftProtocol | null
 }
 
 /**
@@ -14639,6 +14568,11 @@ export type ProposalOutcomeKind =
    *  next launch, so a line never reads "running" after the run it named is gone.
    */
   | { kind: 'interrupted' }
+  /**
+   *  The user approved a server proposal and Cmdr saved it: all of it, unless `note` says
+   *  what it left undone. A server group has no ops, so there are no tallies.
+   */
+  | { kind: 'saved'; note: ServerSaveNote | null }
 
 /**
  *  Where a group sits in its lifecycle, stored in `proposals.status`.
@@ -14678,7 +14612,21 @@ export type ProposalStatus =
  *  (`agent/store/proposals/`), which pairs the verb with them so a wrong combination can't
  *  be built.
  */
-export type ProposalVerb = 'move' | 'copy' | 'trash' | 'delete' | 'rename' | 'compress' | 'extract'
+export type ProposalVerb =
+  | 'move'
+  | 'copy'
+  | 'trash'
+  | 'delete'
+  | 'rename'
+  | 'compress'
+  | 'extract'
+  /**
+   *  Save a new server. Zero ops: the group's server draft is the whole proposal
+   *  (`agent/store/proposals/DETAILS.md` § A server group).
+   */
+  | 'addServer'
+  // Change a saved server's editable fields. Zero ops, like `AddServer`.
+  | 'editServer'
 
 /**
  *  Known cloud/mount provider. The variant identity crosses IPC (serialized
@@ -14725,11 +14673,28 @@ export type Provider =
   | 'genericCloudStorage'
 
 /**
+ *  Whether a send could reach a model, as far as SETUP goes. The rail warns on every variant
+ *  but `Ready`, and its Send button says why it's disabled.
+ */
+export type ProviderReadiness =
+  | 'ready'
+  // The AI provider is "off" (its default), or not one we recognize.
+  | 'off'
+  // Cloud is picked and its provider needs an API key, but none is stored.
+  | 'cloudNeedsKey'
+  // Cloud is picked with no endpoint (a custom provider left blank).
+  | 'cloudNeedsEndpoint'
+  // Local is picked and its model isn't downloaded yet (or is still downloading).
+  | 'localNotSetUp'
+  // Local is picked, the model is there, and its server is neither running nor starting.
+  | 'localNotRunning'
+
+/**
  *  Which provider a reasoning blob came from. The tag is descriptive: it records
  *  where the opaque `blob` originated so a replay re-attaches it in the shape that
  *  provider expects. Distinguishes the two OpenAI surfaces because their reasoning
  *  round-trip differs (chat-completions is stateless; Responses carries encrypted
- *  items — spike Gap B).
+ *  items).
  *
  *  Two-way split, like the operation log's `token_enum!` types: the serde/specta
  *  wire form is camelCase (for IPC + `bindings.ts` — the `cost_meter` provider on
@@ -14888,13 +14853,6 @@ export type QuitRequested = {
   operations: OperationSnapshot[]
   // Milliseconds from this event to the automatic quit.
   countdownMs: number
-  // The Tags windows' share: unwritten tag edits, and a tag write the quit waits for.
-  tags: TagsAtQuit
-  /**
-   *  Whether the gate quits on its own when `countdown_ms` runs out. `false` when only
-   *  unwritten tag edits hold the quit ([`counts_down`]): the prompt waits for an answer.
-   */
-  countsDown: boolean
 }
 
 /**
@@ -14920,17 +14878,6 @@ export type RangeSample = {
   taken: TakenChars | null
 }
 
-// Why a file has no tags in the list. A stable code, worded by the UI.
-export type ReadErrorCode =
-  // The tag parser gave up on the file, or panicked on it.
-  | 'unreadable'
-  // The file's format isn't one the editor handles.
-  | 'unsupported'
-  // The file couldn't be opened or read.
-  | 'io'
-  // The file's tags couldn't be parsed.
-  | 'parse'
-
 /**
  *  Which route made a folder or a row read-only, so the sheet names it: a repo's
  *  `.git` portal reads as git history, an archive as an archive.
@@ -14942,11 +14889,6 @@ export type ReadOnlyPlace =
   | 'gitPortal'
   // A restic repo's `Browse snapshots` row, or anything inside its snapshots.
   | 'resticSnapshots'
-
-// Why the window can't write. A stable code, worded by the UI.
-export type ReadOnlyReason =
-  // The session's folder isn't on the local disk; v1 writes local files only.
-  'remoteVolume'
 
 /**
  *  Which half of a transfer refused the write, for [`WriteOperationError::ReadOnlyDevice`].
@@ -15069,6 +15011,16 @@ export type RecoveredOriginal = {
    */
   keptAt: string
 }
+
+// Why the call was turned down.
+export type RefusalReason =
+  // `available: false`: not a tool the agent has.
+  | { kind: 'toolUnavailable' }
+  // The repeat breaker: an identical call already failed this turn.
+  | { kind: 'repeatedCall' }
+  // The schema gate or the handler said no (the JSON can't tell those two apart).
+  | { kind: 'problem' }
+  | { kind: 'memory'; refusal: MemoryRefusalKind }
 
 /**
  *  Typed errors from a registration attempt. The FE branches on `kind`;
@@ -15240,33 +15192,6 @@ export type RenameValidityResult = {
   byMove: RenameByMove | null
 }
 
-// One saved list.
-export type ReplacePreset = {
-  id: string
-  name: string
-  steps: ReplaceStep[]
-}
-
-// Why a save didn't change the list.
-export type ReplacePresetRefusal =
-  // The list holds `max` lists already, and this name is a new one.
-  | { type: 'listFull'; max: number }
-  // A list needs a name and at least one step.
-  | { type: 'empty' }
-
-/**
- *  One find/replace of a saved list: `Replace`'s settings. `fields: None` is every field the
- *  track has a value in, so a list saved that way keeps working when a field is added.
- */
-export type ReplaceStep = {
-  fields: TagField[] | null
-  search: string
-  replace: string
-  caseSensitive: boolean
-  firstOnly: boolean
-  regex: boolean
-}
-
 /**
  *  Snapshot of mutable repo state for the breadcrumb chip.
  *
@@ -15358,6 +15283,19 @@ export type ResolveLocationResult = {
   timedOut: boolean
 }
 
+/**
+ *  One call of a round, as [`AgentChatEvent::ToolCallsResolved`] lists it: which tool, what it
+ *  looks at (from its arguments alone), and the earlier identical call of this turn it repeats, if
+ *  any. The tool's wire name rides along so a line whose `ToolCallStarted` never came is still
+ *  added with its label.
+ */
+export type ResolvedCall = {
+  callId: string
+  tool: string
+  subject: ToolSubject
+  repeatOf: LineRef | null
+}
+
 // Result of re-sorting a directory listing.
 export type ResortResult = {
   // The revision the re-sorted rows are at.
@@ -15399,21 +15337,6 @@ export type ResticSnapshotMeta = {
    *  spelled them.
    */
   paths: string[]
-}
-
-// What a restore did, per file, in the order the files were recorded.
-export type RestoreReport = {
-  // Files whose old tags are back.
-  restored: string[]
-  // Files no longer at their (repathed) path.
-  missing: string[]
-  /**
-   *  Files changed since the apply wrote them (written again, or another file renamed onto
-   *  the path): left alone, so one file's old tags never land in another.
-   */
-  changed: string[]
-  // Files the write refused or failed on, unchanged, with why.
-  failed: [string, TagError][]
 }
 
 export type RestrictedPathsChangedPayload = {
@@ -15591,6 +15514,8 @@ export type Reversibility =
    *  existing archive (the seed is unconditional and the prior bytes are gone).
    */
   | 'irreversible'
+  // A saved server's settings: forgotten again, or changed back, in Servers.
+  | 'serverSettings'
 
 /**
  *  What a rollback DISPATCH returns to the FE/MCP: the inverse op's id. The
@@ -15761,19 +15686,22 @@ export type RowText =
   | 'logDisplay'
 
 /**
- *  Why an approved group would refuse to run, known before the user approves it.
+ *  What an approved group would run as when that differs from its verb, known before the user
+ *  approves it.
  *
- *  A fact to DISCLOSE before the click, never an execution-path refusal of our own: the engine
- *  already refuses these exactly as it would a user-started action, and the dialog's job is to
- *  say so up front instead of offering a button that can only fail.
+ *  A fact to DISCLOSE before the click. The review shows the action that would really run (its
+ *  button, its undo note), and the approval names the fallback the user saw, so the bridge runs
+ *  it only when that's what the user approved (`bridge::start_for`).
  */
-export type RunBlocker =
+export type RunsAs =
   /**
-   *  A trash group whose source volume keeps no Trash (`Volume::has_trash`). The OS refuses
-   *  every item there (`TrashRefusalKind::NoTrashForVolume`) and NOTHING is deleted, so the
-   *  group can't run at all; it isn't "irreversible".
+   *  A trash group whose source volume keeps no Trash (`Volume::has_trash`). Trashing there
+   *  can't work: the OS refuses every item (`TrashRefusalKind::NoTrashForVolume`) and nothing
+   *  happens. So an approval the user gave against a red "Delete" button deletes the files
+   *  permanently (David's call, 2026-10-28): it's a user-approved action, the same answer the
+   *  delete dialog gives a user on a drive with no Trash.
    */
-  'noTrash'
+  'permanentDelete'
 
 /**
  *  The mimalloc heap split into live data and allocator slack.
@@ -16129,6 +16057,14 @@ export type SavedServer = {
    *  host's saved shares, possibly none.
    */
   places: SavedPlace[]
+  /**
+   *  An SMB host saved without contact ("Add anyway", an approved Ask Cmdr card)
+   *  that no mount has gone through since: nothing lists its shares until the user
+   *  connects, and the hub says "Not connected yet". Always `false` for the other
+   *  protocols, whose unconnected save contacts nothing anyway. ❗ Absent reads
+   *  `false`, like the store field it mirrors.
+   */
+  awaitingFirstConnect?: boolean
 }
 
 /**
@@ -17088,6 +17024,38 @@ export type SendResult = {
 }
 
 /**
+ *  What approving a server card did, in the terms the dialog acts on.
+ *
+ *  Every refusal but `alreadyAnswered` and `unknown` gives the card back: nothing was written,
+ *  and it's `pending` again with the reason under it.
+ */
+export type ServerApprovalResultView =
+  /**
+   *  Saved, and in the servers list now, not connected. `volumeId` is the saved place's
+   *  (`None` for an SMB host, whose share learns one at its first mount).
+   */
+  | { kind: 'saved'; volumeId: string | null }
+  // The AI changed the card since the user read it. Nothing was saved; re-read it.
+  | { kind: 'listChanged' }
+  // The card left `pending` before this arrived.
+  | { kind: 'alreadyAnswered' }
+  // No card with that id.
+  | { kind: 'unknown' }
+  // The save refused, with the same outcome the servers sheet words.
+  | { kind: 'refused'; outcome: SavedServerOutcome }
+  // The SMB add refused the address, with the same error the add sheet words.
+  | { kind: 'addServer'; error: AddServerError }
+  /**
+   *  The server the card edits changed since the AI suggested this (its address or a field
+   *  the card shows), so saving would overwrite a change the card didn't show.
+   */
+  | { kind: 'serverChanged' }
+  // That server was saved since the AI suggested adding it, as the place with this id.
+  | { kind: 'alreadySaved'; serverId: string }
+  // Another saved server took this name since the AI suggested it.
+  | { kind: 'nameTaken'; name: string }
+
+/**
  *  What a connect attempt produced, across every protocol this family speaks.
  *
  *  ❗ The superset of the two per-protocol enums, so a sign-in UI branches once.
@@ -17211,6 +17179,40 @@ export type ServerConnectOutcome =
   // The user called it off. ❗ Nothing was registered, remembered, or stored.
   | { outcome: 'cancelled' }
 
+// One field a server card shows.
+export type ServerField =
+  // The name the servers list shows (an SMB host's, an S3 account's, an NFS server's).
+  | 'name'
+  // The host, or WebDAV's URL.
+  | 'address'
+  | 'port'
+  // The account it signs in as: SFTP, WebDAV, or SMB's username, or the S3 account's name.
+  | 'account'
+  // SMB: the share saved under the host.
+  | 'share'
+  // SFTP and WebDAV: the remote root.
+  | 'folder'
+  // NFS: the export.
+  | 'export'
+  // S3: the bucket.
+  | 'bucket'
+  // Where a pane opens once connected.
+  | 'startFolder'
+  // NFS: the user and group ids every request acts as.
+  | 'uid'
+  | 'gid'
+
+// One field's row on the card.
+export type ServerFieldView = {
+  field: ServerField
+  // What the click saves. `None` when an edit clears it (a start folder back to the root).
+  value: string | null
+  // Whether an edit changes this field. Always `false` on an add.
+  changed: boolean
+  // The saved value an edit replaces, when it changes one that had a value.
+  previous: string | null
+}
+
 /**
  *  Whether a person NAMED this server, or the label is a stand-in.
  *
@@ -17244,7 +17246,7 @@ export type ServerNameSource =
  *  id follows to the new one instead of being sent home. What the panes do with
  *  it: `apps/desktop/src/lib/file-explorer/pane/server-move-follow.ts`. Why it's
  *  not a `volume-root-changed`: that event keeps the id, and a move is exactly an
- *  id change. The move itself: `commands/servers/moves.rs`.
+ *  id change. The move itself: `server_move.rs`.
  */
 export type ServerPlaceMoved = {
   /**
@@ -17256,6 +17258,24 @@ export type ServerPlaceMoved = {
   newPrefix: string
   // Every place that moved: one for SFTP and WebDAV, each of an account's for S3.
   places: MovedPlace[]
+}
+
+// A server card's whole content, beside the group's own header and rationale.
+export type ServerProposalView = {
+  protocol: DraftProtocol
+  // In the order the card lists them. A field neither side has is left out.
+  fields: ServerFieldView[]
+  /**
+   *  An add at a host no saved server of any protocol is at. ❗ A fact Cmdr read now, so an
+   *  address the AI calls "your NAS" that Cmdr has never saved says so.
+   */
+  addressIsNew: boolean
+  /**
+   *  An SMB edit: how many saved shares on that host it changes, counted NOW (what the click
+   *  changes, not what the AI counted). `None` for every other card, and for a host that's
+   *  gone (approving it then refuses).
+   */
+  sharesAffected: number | null
 }
 
 // Which protocol an account speaks.
@@ -17291,6 +17311,14 @@ export type ServerRequestError =
    *  failure: ❌ never log it at warn or error.
    */
   | { type: 'blockedByPolicy' }
+
+/**
+ *  What an approved server save left undone, stored beside the group's draft when the save
+ *  wrote something but not everything. Absent on a whole save.
+ */
+export type ServerSaveNote =
+  // An SMB add saved the host but not its share row.
+  'shareNotSaved'
 
 /**
  *  Which server to dial, in add mode.
@@ -17667,25 +17695,6 @@ export type ShareListResult = {
   fromCache: boolean
 }
 
-// One shared row: a field and what the files say about it.
-export type SharedRow = {
-  field: TagField
-  value: SharedValue
-  // For a `Multiple` row, the files' distinct values, most common first (at most 50); empty otherwise.
-  choices: ValueCount[]
-  // How many more distinct values the files hold than `choices` lists (the 50 cut-off); 0 when all are listed.
-  choicesMore: number
-}
-
-// What one field looks like across the selected files.
-export type SharedValue =
-  // No file has the field.
-  | 'empty'
-  // Every file has exactly these values.
-  | { same: string[] }
-  // The files differ, or only some have the field.
-  | 'multiple'
-
 /**
  *  `show-search-result-in-folder`: a snapshot context-menu click. The primary
  *  right-clicked path travels with the event so the frontend never rereads a
@@ -17694,43 +17703,6 @@ export type SharedValue =
 export type ShowSearchResultInFolder = {
   path: string
 }
-
-// Which side file.
-export type SideFile =
-  // `reader.txt`: the narrator.
-  | 'reader'
-  // `desc.txt`: the description.
-  | 'desc'
-
-// What a write would do with one side file. A file that already says the same isn't listed.
-export type SideFileChange =
-  | { kind: 'create'; file: SideFile; path: string; text: string }
-  /**
-   *  `old` is the file's text now (read as UTF-8, lossy); the write replaces it only when the
-   *  request names this path with this `old` (`ApplyRequest::allow_side_files`).
-   */
-  | { kind: 'replace'; file: SideFile; path: string; old: string; text: string }
-  | { kind: 'withheld'; file: SideFile; reason: SideFileWithheld }
-
-// A replacement the change list showed: the path and the old text it showed.
-export type SideFileSeen = {
-  path: string
-  old: string
-  text: string
-}
-
-// Why a side file isn't written.
-export type SideFileWithheld =
-  // The tracks don't all name the same narrators (or share one description).
-  | 'tracksDisagree'
-  // The text is longer than a side file may be.
-  | 'tooLong'
-  // Something other than a regular file has the name (a link, a folder).
-  | 'notAFile'
-  // The file there is too large or can't be read, so its content couldn't be kept for undo.
-  | 'unreadable'
-  // The tracks come from more than one book folder, so no folder is the book's.
-  | 'notOneBook'
 
 /**
  *  What a "Sign in" affordance on a volume asks a person for: the FORM the sheet
@@ -17929,6 +17901,22 @@ export type SkipReason =
    *  A user flag or an ACL the copy carried over is cleared, never reported here.
    */
   | 'locked'
+
+// The slot as the rail sees it before a send.
+export type SlotStatus = {
+  readiness: ProviderReadiness
+  /**
+   *  The provider and model the next send would meter under, and whether that model has a
+   *  price, so a chat with nothing metered yet can say "free", "about $0", or "cost unknown"
+   *  honestly. `None` while AI is off: there is nothing to price.
+   */
+  nextCall: NextCallPricing | null
+  /**
+   *  What every call of a new chat costs at minimum. `None` when no budget resolves (AI is
+   *  off, or a local window under the floor, which the send refuses on its own).
+   */
+  baseline: BaselineUsage | null
+}
 
 /**
  *  Which operation a slowness breadcrumb is about. Mirrors the frontend's
@@ -18165,8 +18153,6 @@ export type SpaceShortfall =
 // Why the spec itself can't run (the sheet shows it under the field).
 export type SpecError =
   | { type: 'nameMask'; error: MaskError }
-  // The name mask is a foobar pattern that doesn't parse.
-  | { type: 'pattern'; error: FoobarError }
   | { type: 'extensionMask'; error: MaskError }
   | { type: 'badRegex'; detail: string }
 
@@ -18311,8 +18297,6 @@ export type StateFile =
   | 'selection_history'
   // Saved multi-rename presets.
   | 'multi_rename_presets'
-  // Saved Tags window F4 Replace lists.
-  | 'tag_replace_presets'
   // The multi-rename dialog's last settings.
   | 'multi_rename_last_settings'
   // The multi-rename dialog's per-field history.
@@ -18440,11 +18424,12 @@ export type SuggestedGroupView = {
    */
   reversible: Reversibility
   /**
-   *  What would stop this group from running at all, worked out NOW from its source volume
-   *  (a trash group on a volume with no Trash: the OS refuses every item and deletes
-   *  nothing). `None` when nothing known would. Agrees with the agent's own read.
+   *  What this group would run as when that isn't its verb, worked out NOW from its source
+   *  volume (a trash group on a volume with no Trash runs as a permanent delete). `None` when
+   *  it runs as itself. Send it back with the approval: the fallback runs only when the user
+   *  approved it. Agrees with the agent's own read.
    */
-  runBlocker: RunBlocker | null
+  runsAs: RunsAs | null
   // Whether that destination is already there, and so whether approving creates it.
   destinationState: DestinationState
   // Ops in the live set: what would run.
@@ -18456,12 +18441,23 @@ export type SuggestedGroupView = {
    *  provenance of a list the user didn't watch being built.
    */
   fromSelector: boolean
+  /**
+   *  What a server card saves, present exactly for `addServer` and `editServer`, which have
+   *  no ops: approve those with `suggested_ops_approve_server`.
+   */
+  server: ServerProposalView | null
 }
 
 // What one op's source is like on disk right now, beside its creation snapshot.
 export type SuggestedOpLiveFact = {
   opId: number
   state: LiveFileState
+  /**
+   *  Whether the name this op gives its file is free where the file lands. `None` when the op
+   *  keeps its name: a plain move's collision is the transfer's own conflict prompt, as for a
+   *  clicked move.
+   */
+  newName: NewNameState | null
 }
 
 // One page of a group's ops, plus the counts that place it in the whole.
@@ -18477,7 +18473,7 @@ export type SuggestedOpPage = {
 export type SuggestedOpView = {
   opId: number
   sourcePath: string
-  // The name this source becomes. `Some` only under a rename group.
+  // The name this source becomes: under a rename, or a move or copy that renames it.
   newName: string | null
   /**
    *  `excluded` when an earlier review turned this op off (an approval the engine then refused to
@@ -18699,223 +18695,6 @@ export type TabInfo = {
   active: boolean
 }
 
-// What a write did, per file. Paths are as the view shows them.
-export type TagApplyReport = {
-  // What undoes this write; `None` when nothing was written.
-  applyId: string | null
-  written: string[]
-  // Not written: the write would drop these items. The UI asks.
-  wouldDrop: WouldDropRow[]
-  // Not written: the kind would remove a field the request didn't allow. The UI lists it.
-  wouldRemove: WouldRemoveRow[]
-  // Not written, with why.
-  failed: FailedRow[]
-  // Not written: something else changed the file since the session read it.
-  changedOnDisk: string[]
-  // Files were written, but the undo store couldn't keep their old tags: no undo.
-  undoUnavailable: boolean
-  // Side files written beside the book (`reader.txt`, `desc.txt`), by path.
-  sideFilesWritten: string[]
-  /**
-   *  Side files not replaced: they say something else, and the request didn't name that
-   *  replacement. The UI lists them.
-   */
-  sideFilesHeld: string[]
-  // Side files that couldn't be written.
-  sideFilesFailed: string[]
-}
-
-/**
- *  One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
- *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
- *  the edit to another file.
- */
-export type TagEdit = TagEdit_Serialize | TagEdit_Deserialize
-
-/**
- *  One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
- *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
- *  the edit to another file.
- */
-export type TagEdit_Deserialize =
-  // Set the field on every file. Empty values remove it.
-  | { kind: 'setAll'; field: TagField; values: string[] }
-  // Set the field on the track at `path`.
-  | { kind: 'setOne'; path: string; field: TagField; values: string[] }
-  // Change the cover of every file.
-  | { kind: 'cover'; edit: CoverEdit_Deserialize }
-
-/**
- *  One user edit against the window's tags. Unlike the engine's `Edit`, a single track is named by its
- *  PATH (as `TrackRow::path` shows it), so a reorder between the view and the edit can't send
- *  the edit to another file.
- */
-export type TagEdit_Serialize =
-  // Set the field on every file. Empty values remove it.
-  | { kind: 'setAll'; field: TagField; values: string[] }
-  // Set the field on the track at `path`.
-  | { kind: 'setOne'; path: string; field: TagField; values: string[] }
-  // Change the cover of every file.
-  | { kind: 'cover'; edit: CoverEdit_Serialize }
-
-// Why a tag-editor call didn't answer.
-export type TagEditorError =
-  // The Multi-Rename session is gone.
-  | { kind: 'noSession' }
-  // `open` wasn't called for this session.
-  | { kind: 'notOpen' }
-  // The session's volume is read-only for the tag editor.
-  | { kind: 'readOnly' }
-  // An edit names a path that isn't a readable track of the session. Nothing was applied.
-  | { kind: 'unknownTrack' }
-  // The undo store refused: recording before a write (nothing was written), or an undo.
-  | { kind: 'undo'; error: TagError }
-  // The app's data folder, which holds the undo store, isn't available. Nothing was written.
-  | { kind: 'noAppDataDir' }
-  // A cover file name that isn't a plain file name inside the session's folder.
-  | { kind: 'badCoverName' }
-  // The cover file is over the size limit (10 MiB).
-  | { kind: 'coverTooLarge' }
-  // The cover file couldn't be read (or isn't a regular file, or has an unsupported name).
-  | { kind: 'coverUnreadable' }
-  // The cover file's bytes aren't a JPEG, PNG, or WebP image, whatever its name says.
-  | { kind: 'coverNotAnImage' }
-  // Pasted bytes aren't a JPEG, PNG, WebP, or TIFF image (a TIFF is converted). Nothing was changed.
-  | { kind: 'pastedNotAnImage' }
-  /**
-   *  Reading a dropped picture stalled (its drive stopped answering). Nothing was changed, and the read
-   *  finishing later changes nothing either.
-   */
-  | { kind: 'coverTimedOut' }
-  // Earlier drops' reads are still stuck, so this one wasn't started. Nothing was changed.
-  | { kind: 'coverBusy' }
-  // Converting a pasted picture took too long. Nothing was changed, then or later.
-  | { kind: 'pasteTimedOut' }
-  // A dropped cover is a folder, a FIFO, a symlink, or another non-regular file.
-  | { kind: 'coverNotAFile' }
-  // No readable file carries the cover the key names (any more). Nothing was changed.
-  | { kind: 'unknownCover' }
-  // Reading the files' tags stood still (their drive stopped answering). Nothing was changed.
-  | { kind: 'readTimedOut' }
-  // The background task running the call failed.
-  | { kind: 'taskFailed' }
-  // A file-name pattern that can't be used. Nothing was changed.
-  | { kind: 'badPattern'; error: PatternError }
-  // A find/replace search that isn't a valid regular expression. Nothing was changed.
-  | { kind: 'badRegex' }
-  // A Format mask that doesn't parse. Nothing was changed.
-  | { kind: 'badMask'; error: MaskError }
-  // Neither the chosen player nor the files' default app could be launched.
-  | { kind: 'playerUnavailable' }
-
-// The whole tab.
-export type TagEditorView = {
-  // `false` means read-only (a non-local volume).
-  editable: boolean
-  readOnlyReason: ReadOnlyReason | null
-  // Every field in `TagField::ALL` order except Title and Track, which the track list carries.
-  shared: SharedRow[]
-  // The supported audio files, in the session's current order.
-  tracks: TrackRow[]
-  cover: CoverSummary
-  // The union of the files' unmanaged text keys, sorted.
-  extras: string[]
-  // Edited tags differ from the ones on disk.
-  dirty: boolean
-  // The fields whose edited values still carry diacritics they must not.
-  diacritics: TagField[]
-  /**
-   *  How many files carry a Date the writer would refuse (an MP3 whose TDAT reads as month 20):
-   *  flagged on open, so the user corrects it before writing.
-   */
-  badDates: number
-  // The order the tracks are in. Set by the session; `None` straight out of `build`.
-  sort: TrackSort | null
-  // An edit step can be undone (⌘Z); set by the session.
-  canUndoEdit: boolean
-  // An undone edit step can be redone (⇧⌘Z); set by the session.
-  canRedoEdit: boolean
-  // How many tracks `shared` covers (the Tracks pane's selection, readable or not); `None` for every track.
-  scopeCount: number | null
-  /**
-   *  When the session built this view, under its lock: a later view has a higher number, so the UI keeps the
-   *  newest by the backend's order, never by the order it asked in. Set by the session; 0 straight out of `build`.
-   */
-  viewSeq: number
-}
-
-/**
- *  Why a tag read or write didn't happen. Serialized as `{"type": "<variant>", "data": ...}`
- *  (camelCase variant names), an `Io` kind as its `std::io::ErrorKind` name (`"NotFound"`).
- */
-export type TagError =
-  // The file's format isn't one the editor handles.
-  | { type: 'notSupported' }
-  // A filesystem failure, with its kind and the OS message.
-  | { type: 'io'; data: [string, string] }
-  // The file's tags couldn't be parsed.
-  | { type: 'parse'; data: string }
-  // The tags couldn't be written.
-  | { type: 'write'; data: string }
-  /**
-   *  The Date to write (this value) isn't a date the format can hold: not a date at all, or
-   *  out of range (month 20). The user corrects it in the Date row. Nothing was written.
-   */
-  | { type: 'badDate'; data: string }
-  /**
-   *  The write would lose these items (sorted IDs such as `TSOP`, `TXXX:Comment`, `COMM:ces`,
-   *  `TITLE#2`): values the reader doesn't show that differ from what it shows (a second value
-   *  of a single-value field, a legacy or duplicate frame), or on MP3 frames ID3v2.3 has no
-   *  place for. Nothing was written; `WriteOptions::allow_frame_loss` writes anyway.
-   */
-  | { type: 'wouldDrop'; data: string[] }
-  /**
-   *  `FileTags::extras` asks for an extra (this key) that the file lacks and the write
-   *  can't add: an empty key, no values, or a key the format's reader would take for a
-   *  managed field. Nothing was written.
-   */
-  | { type: 'unwritableExtra'; data: string }
-
-// A text field the editor manages. The order is the editor's display order.
-export type TagField =
-  // Track or book title.
-  | 'title'
-  // Artist; for audiobooks, the author.
-  | 'artist'
-  // Album artist; for audiobooks, the author as well.
-  | 'albumArtist'
-  // Album; for audiobooks, the book.
-  | 'album'
-  // Performer; for audiobooks, the narrator.
-  | 'performer'
-  // Composer; for audiobooks, the author of the music.
-  | 'composer'
-  // Release date or year.
-  | 'date'
-  // Genre.
-  | 'genre'
-  // Publisher.
-  | 'publisher'
-  // Translator.
-  | 'translator'
-  // Track number, as written (`03` stays padded where the format holds text).
-  | 'track'
-  /**
-   *  The number of tracks, written beside the track (`3/12`, `trkn`'s total, `TRACKTOTAL`)
-   *  and only when the track is set.
-   */
-  | 'trackTotal'
-  // Disc number.
-  | 'disc'
-  // The number of discs, written beside the disc and only when the disc is set.
-  | 'discTotal'
-  // Free-form comment.
-  | 'comment'
-  // Longer description.
-  | 'description'
-  // A web address.
-  | 'www'
-
 /**
  *  One tag-filter hit: an image path and the confidence of the matched tag. Crosses
  *  the IPC boundary (tag search is surfaced by a command), so it derives `Serialize`
@@ -18945,164 +18724,6 @@ export type TagRef = {
    *  `5` yellow, `6` red, `7` orange.
    */
   color: number
-}
-
-// A text tool over tag fields.
-export type TagTextTool =
-  /**
-   *  Replaces `search` with `replace` in every value of each listed field. Case-insensitive
-   *  unless `case_sensitive`; plain search takes Multi-Rename's wildcards, `regex` a regular
-   *  expression with `$1` groups. A value that becomes empty is dropped, and a field with no
-   *  value left is removed.
-   */
-  | {
-      kind: 'replace'
-      fields: TagField[]
-      search: string
-      replace: string
-      caseSensitive: boolean
-      firstOnly: boolean
-      regex: boolean
-    }
-  /**
-   *  Runs `steps` one after another over every track, as ONE edit (one undo step). Each step is
-   *  `Replace`; all of them compile first, and one that doesn't is `BadRegex` with nothing changed.
-   */
-  | { kind: 'steps'; steps: ReplaceStep[] }
-  /**
-   *  Rebuilds `field` from a Multi-Rename `mask`. `[N]` is the field's current FIRST value (a
-   *  multi-value field loses its other values: the whole field becomes the one rendered value),
-   *  `[=tag.album]` and the like read the file's other fields. A file whose mask has no value
-   *  for it (a `FieldGap`) is left unchanged; the result is trimmed, and an empty one removes the field.
-   */
-  | { kind: 'format'; field: TagField; mask: string }
-  /**
-   *  Runs the ticked Multi-Rename text options over every value of each listed field, in
-   *  Multi-Rename's order: Greek to Latin, Remove diacritics, Normalize Unicode (NFC), so the
-   *  results match file renames. Fields not listed (Comment and Description by default in the
-   *  UI) are untouched.
-   */
-  | { kind: 'text'; fields: TagField[]; greekToLatin: boolean; removeDiacritics: boolean; normalizeUnicode: boolean }
-
-// Every tool as one serializable value, so the app and the MCP server share one tool set.
-export type TagTool =
-  // [`change_case`] on `fields`.
-  | {
-      kind: 'case'
-      // Fields to change.
-      fields: TagField[]
-      // The case to apply.
-      case: CaseTool
-    }
-  // [`strip_diacritics`] on `fields`.
-  | {
-      kind: 'stripDiacritics'
-      // Fields to strip.
-      fields: TagField[]
-    }
-  // [`strip_track_prefix`].
-  | { kind: 'stripTrackPrefix' }
-  // [`renumber`] from `start`.
-  | {
-      kind: 'renumber'
-      // The first track number.
-      start: number
-    }
-  // [`album_artist_from_artist`].
-  | { kind: 'albumArtistFromArtist' }
-  // [`narrator_from_text`].
-  | { kind: 'narratorFromText' }
-  // [`clear_redundant_titles`].
-  | { kind: 'clearRedundantTitles' }
-  // [`remove_extras`] for `keys`.
-  | {
-      kind: 'removeExtras'
-      // Native keys of the extras to drop.
-      keys: string[]
-    }
-  // [`auto_number`] with these options.
-  | ({ kind: 'autoNumber' } & NumberOptions)
-  // [`from_file_name`] with this pattern.
-  | {
-      kind: 'fromFileName'
-      // How to read the file names.
-      pattern: NamePattern
-    }
-  // [`disc_from_folder`].
-  | { kind: 'discFromFolder' }
-  // [`disc_number_only`].
-  | { kind: 'discNumberOnly' }
-
-// The Tags windows' share of a quit.
-export type TagsAtQuit = {
-  // Tag sessions (one per Tags window) holding edits not yet written.
-  unwritten: number
-  // A tag write or undo is running.
-  writing: boolean
-}
-
-/**
- *  `tags-clipboard`: Edit > Cut, Copy or Paste (⌘X, ⌘C, ⌘V) while a Tags window is focused. The
- *  accelerators fire before the page sees the keys, and the native `cut:`/`copy:`/`paste:` would
- *  reach only a text box, so the window gets the action and decides: the field under the cursor,
- *  or the same native action handed back (`tags_native_edit`) for a text box or the cover section.
- *  Emitted to that window only.
- */
-export type TagsClipboard = {
-  action: TagsClipboardAction
-}
-
-// Which of Edit > Cut, Copy and Paste a focused Tags window was asked for (`TagsClipboard`).
-export type TagsClipboardAction = 'cut' | 'copy' | 'paste'
-
-/**
- *  `tags-deselect-all`: Select > Deselect all (⌘⇧A) while a Tags window is focused: the window
- *  clears its track selection. Payloadless, emitted to that window only (as `TagsSelectAll`).
- */
-export type TagsDeselectAll = null
-
-/**
- *  `tags-menu-key`: a File / Select menu item's key (F2–F8, ⇧F2, ⇧F4, ⇧F8) pressed while a Tags
- *  window is focused. Those accelerators fire before the page's keydown, so this is how the
- *  window learns of the key (`tag_editor::window::menu_key_command_of`). Emitted to that window only.
- */
-export type TagsMenuKey = {
-  // The `Tags window` command the item's default key runs there (`tags.replace` for File > Edit's F4).
-  commandId: string
-  /**
-   *  The main-window command the item runs. The window acts only while this command's first key is
-   *  still one of `command_id`'s keys: a rebound item no longer means the tag tool.
-   */
-  menuCommandId: string
-}
-
-// A Tags window's new session, and how much of the folders it couldn't see.
-export type TagsOpened = {
-  sessionId: string
-  // How many names the session holds.
-  count: number
-  // Places under the selected folders that couldn't be read (or named), so some tracks may be missing.
-  unreadable: number
-}
-
-/**
- *  `tags-select-all`: Edit > Select all (⌘A) while a Tags window (`tags-<id>`) is focused. As
- *  for the queue, the accelerator fires before the page sees ⌘A; the window selects every track,
- *  or the text of the box being typed in. Payloadless, emitted to that window only.
- */
-export type TagsSelectAll = null
-
-// What the main window needs to open a held session's window.
-export type TagsSessionInfo = {
-  // How many of the session's files are audio the engine can tag (by name; none means no window).
-  tracks: number
-  // The session's folder, for the window's title.
-  folderName: string
-  /**
-   *  The session of a Tags window already showing the same files: the main window raises it
-   *  and gives this session back, so one book never has two windows.
-   */
-  alreadyOpen: string | null
 }
 
 /**
@@ -19197,6 +18818,151 @@ export type TimedOut<T> = {
   timedOut: boolean
 }
 
+// What came back. Read off OUR OWN result keys, never wording.
+export type ToolOutcome =
+  // A paged list: `returned` rows of `total` (absent when the tool doesn't know it).
+  | { kind: 'items'; returned: number; total: number | null; lowerBound: boolean }
+  /**
+   *  `search` / `search_photos`. `match_count` counts PAST the row cap, so it is never a
+   *  `total`; `lower_bound` when ground is still uncovered.
+   */
+  | { kind: 'matches'; returned: number; matchCount: number; lowerBound: boolean }
+  /**
+   *  A search that matched nothing. With `lower_bound` that's "none found YET", ❌ never "no
+   *  matches".
+   */
+  | { kind: 'nothingFound'; lowerBound: boolean }
+  // A single-object answer.
+  | { kind: 'answered' }
+  // The index a photo tool reads isn't there to answer.
+  | { kind: 'indexUnavailable'; reason: IndexUnavailableReason }
+  // A propose tool staged `count` operations for the user to review.
+  | { kind: 'staged'; count: number }
+  // A propose tool staged nothing (`readyForReview: false`).
+  | { kind: 'notStaged' }
+  // A memory note landed.
+  | { kind: 'saved' }
+  | { kind: 'refused'; reason: RefusalReason }
+  /**
+   *  The place couldn't be read or resolved: the location contract's typed miss
+   *  (`location/miss.rs`).
+   */
+  | { kind: 'locationMiss'; miss: MissToken }
+  // How `connect_volume` went.
+  | { kind: 'connection'; outcome: ConnectOutcome }
+
+/**
+ *  The expanded line: a curated look at what the model received. ❌ It never claims the model
+ *  saw rows it didn't: `rows` is a prefix of what the result carried.
+ */
+export type ToolPreview = {
+  // The first [`PREVIEW_ROWS`] rows. Empty for a tool with no list.
+  rows: ToolPreviewRow[]
+  // How many rows the result handed the model.
+  rowsGivenToModel: number | null
+  // What those rows were cut from (a search's `matchCount`).
+  total: number | null
+  lowerBound: boolean
+  /**
+   *  The verbatim sentence the model was told, when the call was refused. Model-facing English,
+   *  shown labeled as such.
+   */
+  problem: string | null
+  // The stored result is a set-aside stub, so there's nothing to show of it.
+  setAside: boolean
+}
+
+// One row of a preview. Names, paths, and snippets are file data, so they render as plain text.
+export type ToolPreviewRow = {
+  name: string
+  /**
+   *  Where the row is, only when it's a place to go ([`LinePath::linkable_text`]); `name` is
+   *  the row's text either way.
+   */
+  path: string | null
+  kind: ToolPreviewRowKind
+  sizeBytes: number | null
+  // A `find` hit's line number.
+  line: number | null
+  // A `find` hit's text, or a photo's recognized text.
+  snippet: string | null
+  // Why this path came back without an answer.
+  status: ToolPreviewRowStatus | null
+}
+
+export type ToolPreviewRowKind = 'file' | 'folder' | 'other'
+
+// A per-path answer that isn't one: `inspect_file`'s statuses and `image_facts`' not-indexed.
+export type ToolPreviewRowStatus =
+  | 'missing'
+  | 'unreadable'
+  | 'unreachable'
+  | 'unsupportedVolume'
+  // Under a mount point with nothing mounted there: the volume isn't connected.
+  | 'noVolumeAtPath'
+  | 'notIndexed'
+
+/**
+ *  What an expanded tool line shows: the curated preview, plus the raw result pretty-printed for
+ *  Copy. The raw result is the one door to what a call returned (it can hold file text and EXIF
+ *  incl. GPS), so it crosses only on the user's expand, and ❌ is never logged.
+ */
+export type ToolResultDetailView = {
+  preview: ToolPreview
+  rawJson: string
+}
+
+// What one call looked at. Every string is bounded; every path is a [`LinePath`].
+export type ToolSubject =
+  // `app_state`: both panes.
+  | { kind: 'panes' }
+  /**
+   *  `list_pane_files`, from its RESULT: the folder and whether only the selection was
+   *  listed. Both `None` until the call returns (or when it was refused).
+   */
+  | { kind: 'focusedPane'; folder: LinePath | null; selectionOnly: boolean | null }
+  // `list_dir`, `folder_importance`.
+  | { kind: 'folder'; path: LinePath }
+  // `inspect_file`, `image_facts`: the first path asked about and how many were.
+  | { kind: 'files'; firstPath: LinePath; count: number }
+  // `search`: the name pattern, plus the scope's INCLUDE paths (excludes dropped).
+  | { kind: 'search'; query: string | null; scopePaths: LinePath[] }
+  // `search_photos`.
+  | { kind: 'photoSearch'; query: string }
+  | { kind: 'importantFolders' }
+  // `list_volumes`.
+  | { kind: 'drives' }
+  // `connect_volume`: the volume id the model asked to connect.
+  | { kind: 'volume'; id: string }
+  // `operations_list`.
+  | { kind: 'operationLog' }
+  // `operations_get`.
+  | { kind: 'operation'; id: string }
+  // `propose_rename_plan`: how many renames the plan carries.
+  | { kind: 'renamePlan'; count: number }
+  // `list_suggestions`.
+  | { kind: 'suggestions' }
+  // `get_suggestion_group`.
+  | { kind: 'suggestionGroup' }
+  // `propose_suggestions`: how many groups the sweep carries.
+  | { kind: 'suggestionSweep'; count: number }
+  // `propose_server`. No name: the server's name is the model's text, and the card shows it.
+  | { kind: 'serverSuggestion' }
+  | { kind: 'nothingToSuggest' }
+  /**
+   *  `memory_write`, `memory_edit`: `path` is the model's own, RELATIVE to the memory folder.
+   *  `absolute` is set only when it lands inside the folder (and the bound leaves it whole), and
+   *  only then is it a place to go.
+   */
+  | { kind: 'memoryFile'; path: string; absolute: string | null }
+  /**
+   *  A name outside the agent's view (hallucinated, a typo). An empty `name` is a legacy
+   *  nameless call.
+   */
+  | { kind: 'unknownTool'; name: string }
+  // A known tool whose arguments don't carry what it needs.
+  | { kind: 'unparsed' }
+
 /**
  *  The top-level items an operation landed nothing for, split the way the
  *  user's SELECTION is.
@@ -19229,32 +18995,6 @@ export type TotalRows =
    *  estimate on anything else, exactly as its line count was an estimate before.
    */
   | { kind: 'estimated'; rows: number }
-
-// One audio file in the per-track list.
-export type TrackRow = {
-  path: string
-  fileName: string
-  track: string | null
-  // The Disc tag as written (`1`, `CD2`, `1/2`).
-  disc: string | null
-  title: string | null
-  durationMs: number | null
-  // Edited tags differ from the ones on disk.
-  changed: boolean
-  // Set when the file couldn't be read: the row is shown greyed and never written.
-  readError: ReadErrorCode | null
-}
-
-// The tracks' order: a key and a direction.
-export type TrackSort = {
-  key: TrackSortKey
-  descending: boolean
-}
-
-// What the tracks are ordered by.
-export type TrackSortKey =
-  // Disc number, then track number (`3` or `3/12`); a missing disc counts as disc 1.
-  'discTrack' | 'title' | 'length' | 'fileName'
 
 /**
  *  The live shape of a running transfer, on every progress event AND on
@@ -19684,6 +19424,80 @@ export type TrustedHostKey = {
 }
 
 /**
+ *  A limit a turn reached, with the value that applied to it. The value is stored rather
+ *  than read from the constant at render time, so a reloaded thread names the limit that
+ *  stopped THAT turn even after a build moves it.
+ */
+export type TurnLimit = {
+  kind: TurnLimitKind
+  /**
+   *  Rounds for [`TurnLimitKind::ToolRounds`] and [`TurnLimitKind::NoProgress`], how many
+   *  times the call was sent for [`TurnLimitKind::RepeatedCall`], seconds for
+   *  [`TurnLimitKind::WallTime`] and [`TurnLimitKind::Stalled`].
+   */
+  max: number
+  /**
+   *  The model answered with what it had: past the round cap or the loop guard the turn makes
+   *  ONE more call with no tool allowed to run. `false` when that call still reached for a
+   *  tool, and always for wall time and a stall, which make no further call.
+   */
+  answered: boolean
+}
+
+/**
+ *  Which per-answer limit ended a turn's tool loop (`chat::context` § the per-answer limits).
+ *  All are fixed in Cmdr: no setting moves them. The spend pause is not one of these: it asks,
+ *  and the turn goes on or stops on the user's word.
+ */
+export type TurnLimitKind =
+  /**
+   *  The rounds of tool calls one BACKGROUND answer (a wake, a follow-up) may run. A turn the
+   *  user started has no round cap.
+   */
+  | 'toolRounds'
+  /**
+   *  The wall-clock time one answer could take. No build sets it any more; it stays so a
+   *  turn recorded under it still reads after a reload.
+   */
+  | 'wallTime'
+  // The loop guard: the model sent the same tool call again and again.
+  | 'repeatedCall'
+  // The loop guard: several rounds in a row found nothing the turn hadn't already seen.
+  | 'noProgress'
+  // The provider sent nothing at all for the stall window, so the call was ended.
+  | 'stalled'
+
+/**
+ *  What one turn spent, summed across its rounds: the turn line's footer. Numbers only, so the
+ *  rail words it in the user's language and nothing English is frozen in `main.db`.
+ *
+ *  Tokens are each assistant row's own `prompt_tokens` / `completion_tokens`, the same figures
+ *  the cost meter sums, so a thread's per-turn footers add up to its cost footer.
+ */
+export type TurnStats = {
+  // Tool calls that came back with a result row, refusals and repeats included.
+  toolCalls: number
+  /**
+   *  Wall time from the turn's start to its end. `None` only for a turn recorded before this
+   *  was measured, whose stats are rebuilt from its rows.
+   */
+  wallMs: number | null
+  promptTokens: number
+  completionTokens: number
+  /**
+   *  The user (or the progress watchdog) stopped the turn, so the footer says so after a reload
+   *  too. `false` for a turn recorded before this was stored: its rows can't tell a stop apart.
+   */
+  stopped?: boolean
+  /**
+   *  The turn's own ceiling that ended its tool loop, so the rail can name it and its value,
+   *  live and after a reload. `None` for a turn no ceiling touched, and for one recorded
+   *  before this was stored.
+   */
+  limit?: TurnLimit | null
+}
+
+/**
  *  Snapshot of a pane's type-to-jump state for MCP exposure.
  *
  *  `bufferActive` and `indicatorVisible` track the asymmetric timeout model
@@ -19711,15 +19525,6 @@ export type TypeToJumpInfo = {
   lastMatchedName?: string | null
 }
 
-// What a [`FoobarError::Unclosed`] left open.
-export type Unclosed =
-  | 'field'
-  | 'bracket'
-  | 'quote'
-  | 'function'
-  // A `(` in a function argument's text (`$upper(a (b`).
-  | 'parenthesis'
-
 /**
  *  The whole job's undo result: a per-operation breakdown plus the totals the UI
  *  leads with.
@@ -19732,12 +19537,6 @@ export type UndoReport = {
   operations: OperationUndoOutcome[]
   restored: number
   skipped: number
-}
-
-// One apply Undo can reverse, and how many files it wrote (or still has to put back).
-export type UndoableApply = {
-  applyId: string
-  written: number
 }
 
 /**
@@ -20059,14 +19858,6 @@ export type ValidationError =
   | { kind: 'nameTooLong'; bytes: number; max: number }
   // Full path exceeds the maximum byte length.
   | { kind: 'pathTooLong'; bytes: number; max: number }
-
-// One distinct value set of a field and how many files carry it.
-export type ValueCount = {
-  // The field's values in one file (several for multi-value fields).
-  values: string[]
-  // How many files have exactly these values.
-  files: number
-}
 
 /**
  *  Result of verifying a license key without persisting it.
@@ -20889,6 +20680,17 @@ export type VolumeMounted = {
 }
 
 /**
+ *  Typed `volume-reconnect-requested` Tauri event: the backend asks the frontend's
+ *  reconnect manager to take a registered volume whose session dropped, the move
+ *  `servers/connect-flow.ts`'s arm 1 makes for a pane. Ask Cmdr's `connect_volume`
+ *  emits it, so recovery keeps its one owner and the banner, the switcher dot,
+ *  and the backoff agree. ❌ Never a second reconnect loop in the backend.
+ */
+export type VolumeReconnectRequested = {
+  volumeId: string
+}
+
+/**
  *  Typed `volume-root-changed` Tauri event: a volume's root, its start folder, or
  *  both moved, and the registry already serves the new root. Two causes, named by
  *  [`RootChangeKind`]: saving an edit to a CONNECTED place, or a mounted drive
@@ -21183,20 +20985,6 @@ export type WipeLeftover =
 // The outcome of a wipe. Empty `leftovers` means everything went.
 export type WipeReport = {
   leftovers: WipeLeftover[]
-}
-
-export type WouldDropRow = {
-  path: string
-  items: string[]
-}
-
-// A file held back because writing it as the kind would remove a field (no values, ever).
-export type WouldRemoveRow = {
-  path: string
-  // What the kind would remove; empty when `unknown`.
-  removes: KindRemoval[]
-  // The file couldn't be read to tell: it may lose a field, so it isn't written.
-  unknown: boolean
 }
 
 /**
@@ -21579,6 +21367,13 @@ export type WriteOperationError =
    *  Carries both paths, so the message can show which two clashed.
    */
   | { type: 'duplicate_source_names'; name: string; first: string; second: string }
+  /**
+   *  The names a transfer gave its items one by one can't all be honoured,
+   *  so it refused before anything was admitted or written. `reason` says
+   *  which rule, and `path` is the item, landing path, or destination that
+   *  rule is about.
+   */
+  | { type: 'named_leaves_refused'; path: string; reason: NamedLeavesRefusal }
   /**
    *  The selected items aren't all served by one volume: some sit on the drive
    *  and some inside a read-only view of it (a backup repo's `Browse snapshots`,

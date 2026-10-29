@@ -8,8 +8,9 @@
 //!
 //! ## Nothing is staged until everything checks out
 //!
-//! Validation, selector resolution, and the ownership checks on an amendment all run BEFORE
-//! the first write. A call whose second group names an already-approved group stages
+//! Validation and placement (every place resolved over one volume snapshot: `place.rs`),
+//! selector resolution, and the ownership checks on an amendment all run BEFORE the first
+//! write. A call whose second group names an already-approved group stages
 //! nothing, because a half-applied sweep leaves the user reading a mix of what the agent
 //! meant and what it managed.
 //!
@@ -26,8 +27,9 @@ use tauri::{AppHandle, Manager, Runtime};
 
 use super::input::{
     ExplicitNaming, GroupProblem, MAX_GROUPS, MAX_PATHS, PlanRefusal, PlannedGroup, PlannedOps, PlannedSources,
-    PlannedSweep, plan_sweep,
+    PlannedSweep, check_own_names, plan_sweep,
 };
+use super::problem::PlaceField;
 use crate::agent::AgentDb;
 use crate::agent::store::AgentStoreError;
 use crate::agent::store::proposals::{
@@ -37,6 +39,9 @@ use crate::agent::suggested_ops::{
     DriveIndex, OpSelector, SelectorIndex, SelectorRefusal, resolve_selector_ops, selector_group,
 };
 use crate::agent::types::{ProposalStatus, ProposalVerb};
+use crate::location::miss::LocationMissResult;
+use crate::location::resolve::VolumeFacts;
+use crate::location::same_share::Via;
 use crate::mcp::{ToolError, ToolResult};
 
 // ── The tool boundary ─────────────────────────────────────────────────────────
@@ -55,7 +60,7 @@ pub fn propose_suggestions_schema() -> Value {
                 "volumeId": { "type": "string" },
                 "path": { "type": "string" }
             },
-            "required": ["volumeId", "path"],
+            "required": ["path"],
             "additionalProperties": false
         })
     };
@@ -93,7 +98,7 @@ pub fn propose_suggestions_schema() -> Value {
                         "renames": {
                             "type": "array",
                             "maxItems": MAX_PATHS,
-                            "description": "rename only: each source and the bare name it becomes.",
+                            "description": "rename, move, copy: each source and its new bare name. Move or copy: list every file; its current name keeps it.",
                             "items": {
                                 "type": "object",
                                 "properties": {
@@ -144,15 +149,19 @@ pub(crate) async fn propose_in_thread<R: Runtime>(
     params: &Value,
 ) -> ToolResult {
     let now = now_secs();
-    let mut planned = match plan_sweep(params, now) {
+    // One snapshot per call, in memory only: every place in every group resolves against it,
+    // before the snapshot below stats a single source.
+    let facts = VolumeFacts::now().await;
+    let mut planned = match plan_sweep(params, now, &facts) {
         Ok(planned) => planned,
         Err(refusal) => return Ok(plan_refusal_content(&refusal)),
     };
+    let registered = |volume_id: &str| crate::file_system::volume::manager::get_volume_manager().get(volume_id);
+    if let Err(refusal) = check_own_names(&planned, registered) {
+        return Ok(plan_refusal_content(&refusal));
+    }
     // Off the database thread: it's volume I/O, bounded by its own deadline.
-    super::snapshot::freeze_named_sources(&mut planned, |volume_id| {
-        crate::file_system::volume::manager::get_volume_manager().get(volume_id)
-    })
-    .await;
+    super::snapshot::freeze_named_sources(&mut planned, registered).await;
     let db_path = app
         .try_state::<AgentDb>()
         .ok_or_else(|| ToolError::internal("Cmdr's suggestion store isn't open yet."))?
@@ -174,7 +183,7 @@ pub(crate) async fn propose_in_thread<R: Runtime>(
     }
 }
 
-fn now_secs() -> i64 {
+pub(super) fn now_secs() -> i64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -205,6 +214,9 @@ pub(super) struct GroupReport {
     pub display_name: String,
     pub op_count: usize,
     pub outcome: GroupOutcome,
+    /// The volume the model named, when the group was stored on a live sibling of it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub via: Option<Via>,
 }
 
 /// A staged sweep, as the model reads it back.
@@ -267,7 +279,7 @@ fn refusal_content(token: &str, group: Option<usize>, problem: String) -> Value 
     content
 }
 
-fn plan_refusal_content(refusal: &PlanRefusal) -> Value {
+pub(super) fn plan_refusal_content(refusal: &PlanRefusal) -> Value {
     match refusal {
         PlanRefusal::Malformed => refusal_content(
             "malformed",
@@ -288,6 +300,10 @@ fn plan_refusal_content(refusal: &PlanRefusal) -> Value {
             Some(*group),
             "Amending a group needs the sweepId it belongs to as well.".into(),
         ),
+        PlanRefusal::Group {
+            group,
+            problem: GroupProblem::Location { field, miss },
+        } => location_refusal_content(*group, *field, miss),
         PlanRefusal::Group { group, problem } => {
             let (token, sentence) = group_problem_content(problem);
             refusal_content(token, Some(*group), sentence)
@@ -297,6 +313,12 @@ fn plan_refusal_content(refusal: &PlanRefusal) -> Value {
 
 fn group_problem_content(problem: &GroupProblem) -> (&'static str, String) {
     match problem {
+        GroupProblem::NotAFileVerb => (
+            "notAFileVerb",
+            "This tool suggests what to do with files: move, copy, trash, delete, rename, compress, or extract. A \
+             server isn't proposed here."
+                .into(),
+        ),
         GroupProblem::NoSources => (
             "noSources",
             "This group names nothing to act on. Give paths, renames, or a selector.".into(),
@@ -313,7 +335,7 @@ fn group_problem_content(problem: &GroupProblem) -> (&'static str, String) {
         ),
         GroupProblem::RenamesVerbMismatch => (
             "renamesVerbMismatch",
-            "renames belongs to the rename verb and to no other, and a rename group needs them.".into(),
+            "renames belongs to rename, move, and copy only, and a rename group needs them.".into(),
         ),
         GroupProblem::SelectorCantRename => (
             "selectorCantRename",
@@ -343,18 +365,65 @@ fn group_problem_content(problem: &GroupProblem) -> (&'static str, String) {
             "relativePath",
             format!("{path} isn't an absolute path, and a proposal has no folder to be relative to."),
         ),
-        GroupProblem::NotABareName { name } => (
+        GroupProblem::NotABareName { name, rule } => (
             "notABareName",
-            format!("{name} has to be a bare file name; a rename can't move a file to another folder."),
+            format!("{name} can't be a new name: {}.", rule.reason()),
+        ),
+        GroupProblem::DuplicateLeaf { name } => (
+            "duplicateLeaf",
+            format!(
+                "Two files would land as {name} (names that differ only in case or accents count as one). Give each \
+                 its own name."
+            ),
+        ),
+        GroupProblem::ChainOverwrite { path } => (
+            "chainOverwrite",
+            format!(
+                "A file would land at {path}, which is another file of this group, and replace it. Pick a name no \
+                 file in the group has."
+            ),
+        ),
+        GroupProblem::UseRename => (
+            "useRename",
+            "That's a rename for the files already in that folder: split the group, renaming those with the rename \
+             verb and moving the rest."
+                .into(),
+        ),
+        GroupProblem::SharedName { name, first, second } => (
+            "sharedName",
+            format!(
+                "{first} and {second} are both named {name}, and between these two drives each file lands under its \
+                 own name, so new names don't help. Send them in separate groups, to different folders."
+            ),
         ),
         GroupProblem::ImpossibleWindow => (
             "impossibleWindow",
             "That size or age window can't match anything. Check which bound is which.".into(),
         ),
+        // `plan_refusal_content` answers this one in the read tools' miss shape; the arm
+        // keeps the match total.
+        GroupProblem::Location { miss, .. } => ("location", miss.detail.clone()),
+        GroupProblem::MixedReaddress => (
+            "mixedReaddress",
+            "This group's places would land on two addresses of one share. Name every place in the group on the same \
+             connected volume (list_volumes says which is connected), so it writes through one."
+                .into(),
+        ),
     }
 }
 
-fn apply_refusal_content(refusal: &ApplyRefusal) -> Value {
+/// A place that couldn't be put on a live volume, in the shape every read tool answers a miss
+/// with, plus which group and field it came from.
+fn location_refusal_content(group: usize, field: PlaceField, miss: &LocationMissResult) -> Value {
+    let mut content = serde_json::to_value(miss).unwrap_or_else(|_| json!({}));
+    content["readyForReview"] = json!(false);
+    content["refusal"] = json!("location");
+    content["group"] = json!(group);
+    content["field"] = json!(field.token());
+    content
+}
+
+pub(super) fn apply_refusal_content(refusal: &ApplyRefusal) -> Value {
     match refusal {
         ApplyRefusal::UnknownSweep { sweep_id } => refusal_content(
             "unknownSweep",
@@ -420,9 +489,10 @@ fn apply_refusal_content(refusal: &ApplyRefusal) -> Value {
 
 /// One group with its ops resolved: everything needed to write it, and nothing left to
 /// decide.
-struct ResolvedGroup {
-    group_id: Option<i64>,
-    group: NewGroup,
+pub(super) struct ResolvedGroup {
+    pub group_id: Option<i64>,
+    pub group: NewGroup,
+    pub via: Option<Via>,
 }
 
 /// Resolve, check, then write. The order is the contract: a selector is resolved and an
@@ -443,25 +513,7 @@ pub(super) fn apply_planned_sweep(
         }
         resolved.push(resolve_group(index, index_of, group)?);
     }
-    if let Some(sweep_id) = sweep_id
-        && get_sweep(conn, sweep_id).map_err(ApplyRefusal::Store)?.is_none()
-    {
-        return Err(ApplyRefusal::UnknownSweep { sweep_id });
-    }
-
-    let sweep_id = match sweep_id {
-        Some(existing) => existing,
-        None => create_sweep(
-            conn,
-            &NewSweep {
-                conversation_id,
-                created_by_model: None,
-                rationale: planned.rationale,
-            },
-            now,
-        )
-        .map_err(ApplyRefusal::Store)?,
-    };
+    let sweep_id = sweep_for(conn, sweep_id, conversation_id, planned.rationale, now)?;
 
     let mut groups = Vec::with_capacity(resolved.len());
     for entry in resolved {
@@ -474,9 +526,36 @@ pub(super) fn apply_planned_sweep(
     })
 }
 
+/// The sweep a call writes into: the one it named, which must exist, or a fresh one. The last
+/// step before the first write, so an unknown sweep refuses with nothing written.
+pub(super) fn sweep_for(
+    conn: &Connection,
+    sweep_id: Option<i64>,
+    conversation_id: Option<i64>,
+    rationale: Option<String>,
+    now: i64,
+) -> Result<i64, ApplyRefusal> {
+    match sweep_id {
+        Some(sweep_id) => match get_sweep(conn, sweep_id).map_err(ApplyRefusal::Store)? {
+            Some(_) => Ok(sweep_id),
+            None => Err(ApplyRefusal::UnknownSweep { sweep_id }),
+        },
+        None => create_sweep(
+            conn,
+            &NewSweep {
+                conversation_id,
+                created_by_model: None,
+                rationale,
+            },
+            now,
+        )
+        .map_err(ApplyRefusal::Store),
+    }
+}
+
 /// Whether a group may be rewritten: it exists, it belongs to the named sweep, and it is
 /// still `pending`. `approved`, `interrupted`, `completed`, and `rejected` are the user's.
-fn check_amendable(
+pub(super) fn check_amendable(
     conn: &Connection,
     group_index: usize,
     group_id: i64,
@@ -520,6 +599,7 @@ fn resolve_group(
             renames,
             naming,
         } => new_group(GroupIntent::Rename { parent, renames }, naming, planned.rationale),
+        PlannedOps::Named { shape, ops, naming } => new_group(shape.into_intent(ops), naming, planned.rationale),
         PlannedOps::Sources { shape, sources } => match sources {
             PlannedSources::Paths { ops, naming } => new_group(shape.into_intent(ops), naming, planned.rationale),
             PlannedSources::Selector(selector) => {
@@ -535,6 +615,7 @@ fn resolve_group(
     Ok(ResolvedGroup {
         group_id: planned.group_id,
         group,
+        via: planned.via,
     })
 }
 
@@ -573,10 +654,16 @@ fn new_group(intent: GroupIntent, naming: ExplicitNaming, rationale: Option<Stri
 /// Write one group: a fresh one, or a replacement for a pending one. A group that left
 /// `pending` between the check and this write keeps the answer the user gave it, and the
 /// report says so.
-fn write_group(conn: &Connection, sweep_id: i64, entry: ResolvedGroup, now: i64) -> Result<GroupReport, ApplyRefusal> {
+pub(super) fn write_group(
+    conn: &Connection,
+    sweep_id: i64,
+    entry: ResolvedGroup,
+    now: i64,
+) -> Result<GroupReport, ApplyRefusal> {
     let verb = entry.group.intent.verb();
     let op_count = entry.group.intent.op_count();
     let display_name = entry.group.display_name.clone();
+    let via = entry.via;
     let (group_id, outcome) = match entry.group_id {
         Some(group_id) => {
             let outcome = crate::agent::suggested_ops::repropose(conn, group_id, &entry.group, now)
@@ -598,6 +685,8 @@ fn write_group(conn: &Connection, sweep_id: i64, entry: ResolvedGroup, now: i64)
         verb,
         display_name,
         op_count: op_count_of(&outcome, op_count),
+        // A group the user already answered kept its old rows, wherever those point.
+        via: via.filter(|_| outcome != GroupOutcome::AlreadyAnswered),
         outcome,
     })
 }

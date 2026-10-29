@@ -45,6 +45,13 @@
     "forms": "Apple's own pane is Apple 账户 (see apple-account); the server sign-in account is 账户",
     "sources": "macOS (Apple 账户); catalog errors.json"
   },
+  "action": {
+    "chosen": "操作",
+    "forms": "Dialog actions → 对话框操作; the actions below → 下面这些操作",
+    "confidence": "high",
+    "sources": "macOS zh Finder LocalizableMerged SP95/TL26 (Action → 操作); catalog (queryUi.dialog.actionsAria)",
+    "note": "Shares its Chinese word with operation (操作)."
+  },
   "activate": {
     "accept": ["停用"],
     "chosen": "激活",
@@ -84,6 +91,11 @@
     "forms": "operation-log initiator 代理; `ssh-agent` stays verbatim",
     "sources": "catalog"
   },
+  "ai-context": {
+    "chosen": "上下文",
+    "confidence": "high",
+    "sources": "MS terminology (context → 上下文); askCmdr.cost.estimateTooltip"
+  },
   "ai-feature": {
     "accept": ["AI"],
     "chosen": "AI 功能",
@@ -105,6 +117,12 @@
     "forms": "AI 提供方; the provider's billing page → 仪表板",
     "note": "A cloud-sync company is 云服务商 (cloud-provider), and a generic online service is 服务.",
     "sources": "MS terminology (service provider → 提供方)"
+  },
+  "ai-lookup": {
+    "chosen": "查询",
+    "confidence": "high",
+    "forms": "a lookup → 次查询; a round of lookups → 轮查询",
+    "sources": "catalog precedent: `askCmdr.error.repeatedToolCall`, `askCmdr.event.contextTrimmed`"
   },
   "ai-tool": {
     "chosen": "工具",
@@ -686,11 +704,23 @@
     "forms": "Connecting to X… → 正在连接到 {name}…; Connect to server… → 连接服务器…; Connect as guest → 以来宾身份连接; internet connection → 联网 / 互联网连接",
     "sources": "macOS Finder, NetAuthAgent"
   },
+  "conversation": {
+    "chosen": "对话",
+    "confidence": "high",
+    "accept": ["聊天内容", "聊天"],
+    "sources": "MS terminology (对话); the chat ruling accepts 对话 mid-sentence"
+  },
   "learn-more": {
     "chosen": "进一步了解",
     "confidence": "high",
     "forms": "More about “X” → 进一步了解“X”",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
+  },
+  "level": {
+    "chosen": "级别",
+    "confidence": "high",
+    "sources": "MS terminology (级别); shipped settings.archives.compressionLevel.label",
+    "accept": ["缩放"]
   },
   "link": {
     "chosen": "链接",
@@ -1890,6 +1920,13 @@
     "forms": "the Servers list “服务器”列表 (quoted, 列表 outside the quotes); the verb (Cmdr lists X) 列出",
     "sources": "macOS zh-CN Finder (最近使用的服务器的列表); catalog (43 uses)"
   },
+  "listing": {
+    "accept": ["列表"],
+    "chosen": "列出",
+    "confidence": "high",
+    "forms": "a tool line reading a folder → 正在列出 / 已列出; the settings section noun Listing → 列表",
+    "sources": "catalog (askCmdr.tool.listDir.* 正在列出一个文件夹; the list ruling already accepts 列出 for the verb); Double Commander zh-CN renders Listing as 列表 and \"Listing %s\" as 正在列表, a noun forced into a verb slot, so not reused"
+  },
   "local": {
     "chosen": "本地",
     "confidence": "high",
@@ -2976,7 +3013,7 @@
     "sources": "macOS Finder"
   },
   "send": {
-    "accept": ["发给", "发出", "再发"],
+    "accept": ["发给", "发出", "再发", "发来"],
     "chosen": "发送",
     "confidence": "high",
     "exceptions": {
@@ -3163,6 +3200,14 @@
     "decision": "Trash switch + From/To headings",
     "forms": "the transfer heading and sentences 来源; a rename's source file 源文件",
     "sources": "Total Commander"
+  },
+  "start": {
+    "accept": ["启动"],
+    "chosen": "开始",
+    "confidence": "high",
+    "note": "A background service or monitor starting up takes 启动 (`indexing.rescan.watcherStartFailed` 无法启动文件更改监视器); a task or operation starting takes 开始.",
+    "forms": "nothing started → 什么都没开始 (`fileOperations.transferProgress.rowsStillSettlingToast`); not started 未开始; couldn't start 没能开始",
+    "sources": "macOS Finder (未开始, 正在开始压缩); catalog"
   },
   "start-up": {
     "chosen": "启动",
@@ -3676,6 +3721,12 @@
     "forms": "partly written 可能已经写入了一部分内容; half-written 写了一半的; read and write 读写",
     "sources": "standard"
   },
+  "zip": {
+    "chosen": "zip",
+    "confidence": "high",
+    "forms": "prose keeps the lowercase Latin format word, spaced from Han text (放进 zip, 这个 zip); zip archive → zip 压缩文件 (`fileExplorer.readOnly.archiveMessage`)",
+    "sources": "catalog (`errors.write.archiveEntryNameRefused.title` 这个名称不能放进 zip); macOS Finder's ZIP归档 is the Compress format name, which the archive ruling covers"
+  },
   "zoom": {
     "accept": ["放大", "缩小"],
     "chosen": "缩放",
@@ -3894,5 +3945,20 @@
     "confidence": "high",
     "forms": "unlock the phone → 解锁 (把它连上并解锁; 如果是手机，解锁它)",
     "sources": "MS terminology (unlock → 解锁, \"to enable an object to be modified\"); the catalog's 24 uses"
+  },
+  "reasoning-effort": {
+    "chosen": "推理强度",
+    "confidence": "tentative",
+    "sources": "OpenAI docs are English-only; no established rendering, so built from the locale’s reasoning wording; Gemini zh MT: 推理工作量"
+  },
+  "reasoning-effort-anthropic": {
+    "chosen": "努力程度",
+    "confidence": "high",
+    "sources": "Anthropic localized docs, platform.claude.com/docs/<lang>/build-with-claude/effort, read 2026-10-28 (zh-CN gloss 努力程度)"
+  },
+  "thinking-level": {
+    "chosen": "思考级别",
+    "confidence": "tentative",
+    "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (支持的级别)"
   }
 }

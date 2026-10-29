@@ -225,6 +225,8 @@ pub fn update_known_share(
         volume_id: None,
         mount_path: None,
         pinned: false,
+        server_guid: None,
+        server_guid_proof: crate::network::server_guid::GuidProof::Unauthenticated,
     };
 
     known_shares::update_known_share(share);
@@ -583,8 +585,9 @@ use crate::network::manual_servers::{self, ManualConnectResult};
 /// sign-in, and a host with one is never listed as guest.
 ///
 /// `check_reachability: false` is the sheet's "Add anyway", offered only after a check
-/// answered `Unreachable`: it saves without probing. An address that doesn't parse is
-/// refused either way.
+/// answered `Unreachable`: it saves without contact, like an approved Ask Cmdr card
+/// (`awaitingFirstConnect`: no probe, no discovery entry, no share listing until the
+/// user connects). An address that doesn't parse is refused either way.
 #[tauri::command]
 #[specta::specta]
 pub async fn connect_to_server(

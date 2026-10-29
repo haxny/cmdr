@@ -15,8 +15,9 @@ fn amended_group(source: &str) -> NewGroup {
                 path: "/Users/someone/Documents/Invoices".to_string(),
             })
             .expect("an ordinary folder is a writable destination"),
-            sources: vec![NewOp {
+            sources: vec![TransferOp {
                 source_path: source.to_string(),
+                new_name: None,
                 snapshot: None,
             }],
         },

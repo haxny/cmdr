@@ -710,3 +710,95 @@ fn a_root_the_index_doesnt_hold_refuses_rather_than_matching_nothing() {
         "{resolved:?}"
     );
 }
+
+// ── A server group, through the same lifecycle ────────────────────────────────
+
+/// An SFTP add in a fresh thread, proposed through the service like any group.
+fn a_server_group_in_a_thread(conn: &Connection) -> (i64, i64) {
+    use crate::agent::store::proposals::ServerDraft;
+    use crate::agent::types::DraftProtocol;
+    let conversation_id = crate::agent::store::create_conversation(conn, "Servers", 50, None).expect("thread");
+    let group = NewGroup {
+        intent: GroupIntent::SaveServer {
+            draft: ServerDraft {
+                display_name: Some("build-box".to_string()),
+                host: Some("build.lan".to_string()),
+                ..ServerDraft::new(DraftProtocol::Sftp)
+            },
+            edit: None,
+        },
+        source_volume_id: String::new(),
+        display_name: "build-box".to_string(),
+        rationale: None,
+        selector: None,
+    };
+    let sweep = NewSweep {
+        conversation_id: Some(conversation_id),
+        ..NewSweep::default()
+    };
+    let group_id = propose(conn, &sweep, std::slice::from_ref(&group), 100)
+        .expect("propose")
+        .group_ids[0];
+    (conversation_id, group_id)
+}
+
+/// A server card is a proposal like any other for the metric: proposing one is counted.
+#[test]
+fn proposing_a_server_group_counts_as_a_proposal() {
+    let conn = migrated_conn();
+    analytics::take_captured();
+
+    a_server_group_in_a_thread(&conn);
+
+    assert_eq!(analytics::take_captured(), ["suggestion_group_proposed"]);
+}
+
+/// The agent hears a "no" to a server card, named by protocol and server, with no count.
+#[test]
+fn rejecting_a_server_group_teaches_the_agent_which_server() {
+    let conn = migrated_conn();
+    let (_dir, memory) = memory_store();
+    let (conversation_id, group_id) = a_server_group_in_a_thread(&conn);
+
+    reject(&conn, group_id, 200, RejectSource::Review, Some(&memory)).expect("reject");
+
+    let learned = remembered(&memory);
+    assert!(
+        learned.contains("turned down: add the SFTP server build-box"),
+        "{learned:?}"
+    );
+    let rows = decision_rows(&conn, conversation_id);
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert_eq!(rows[0].1.protocol, Some(crate::agent::types::DraftProtocol::Sftp));
+    assert_eq!(rows[0].1.ops, 0);
+}
+
+/// A saved server's line says it was saved, and a partial save says what it left undone, to
+/// the thread and to the agent alike.
+#[test]
+fn a_completed_server_group_says_what_was_saved() {
+    use crate::agent::store::proposals::{ServerClaimOutcome, claim_server_group, mark_server_group_completed};
+    use crate::agent::types::{ProposalOutcomeKind, ServerSaveNote};
+    let conn = migrated_conn();
+    let (_dir, memory) = memory_store();
+    let (conversation_id, group_id) = a_server_group_in_a_thread(&conn);
+    let claim = claim_server_group(&conn, group_id, 0, 200).expect("claim");
+    assert!(matches!(claim, ServerClaimOutcome::Claimed(_)), "{claim:?}");
+    mark_server_group_completed(&conn, group_id, Some(ServerSaveNote::ShareNotSaved)).expect("complete");
+
+    outcomes::record_completion(&conn, Some(&memory), group_id, 300);
+
+    let rows = decision_rows(&conn, conversation_id);
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert_eq!(
+        rows[0].1.outcome,
+        ProposalOutcomeKind::Saved {
+            note: Some(ServerSaveNote::ShareNotSaved)
+        }
+    );
+    let learned = remembered(&memory);
+    assert!(
+        learned.contains("approved: saved the SFTP server build-box, not its share"),
+        "{learned:?}"
+    );
+}

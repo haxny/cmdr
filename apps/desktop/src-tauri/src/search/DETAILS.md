@@ -106,6 +106,11 @@ pure.
   toasts and MCP returns. The target is `from_scope`.
 - **Unscoped**: the boot volume, whole-volume, not `from_scope`. It's the MCP default (the dialog always sends a scope);
   an agent that wants a different volume names it.
+- **Placed by the caller** (`run_live_collected`'s `on_volume`, through `target_on`): the MCP `search` tool resolved
+  its `volumeId` through `crate::location` and hands over the index to read, so the paths aren't routed again. It's
+  the one way to reach a share that isn't connected: its last root routes to `root` once nothing is mounted there.
+  Nothing walks it (`cover` answers `NotIndexed` for an unmounted volume), so the answer is the on-disk arena's rows
+  and an `Interrupted` walk, a lower bound. Caller side: `mcp/executor/DETAILS.md` § The search result.
 
 **The engine's two diagnostic lines carry the query's SHAPE plus its SCOPE, never the pattern text.**
 `query.rs::summarize_query_for_diagnostics` reports pattern mode and length (character count, plus byte count when they
@@ -222,16 +227,28 @@ investigated and rejected, not overlooked:
 If it's ever worth doing: reconcile AFTER the fact (on a direct SMB session, record the server GUID in the index's
 `meta` and alias the address-keyed ids to it), rather than changing the primary derivation.
 
+The read-time half of that reconciliation exists: the server GUID is recorded on each saved share row (`serverGuid`,
+`../network/smb_server_guid.rs`), and Ask Cmdr's tools treat address-keyed ids proven one share as one
+(`../location/same_share.rs`, `../agent/tools/DETAILS.md` § The location contract). The indexes stay keyed per address.
+
 ### Per-volume load (`volumes.rs`)
 
 `ensure_volume(id)` is cache-aware. Root's pool is the live `get_read_pool()`; a NON-root volume opens a read-only
 `ReadPool` straight from `index-{id}.db` on disk — deliberately NOT via `INDEX_REGISTRY`, because the DB file is the
-source of truth and an ejected/unmounted drive's index is still searchable. The mount root comes from the DB's
-`volume_path` meta, falling back to the LIVE volume registry when that meta is absent — historically SMB index DBs never
-wrote `volume_path` (only the local scan-completion path did), so a real NAS index has none; the fallback recovers the
-mount root while the volume is mounted (the only time a `/Volumes/…` scope even routes to it), and both the SMB
-scan-completion path and `start_indexing_for_smb` now persist it (the latter heals an existing DB on the next
-registration — no rescan). Lifecycle is dialog-scoped, not per-volume: opening the dialog pre-loads
+source of truth and an ejected/unmounted drive's index is still searchable. The mount root is the one root function's
+answer (`location::resolve::volume_root`, the rule every agent tool reads): the LIVE volume registry's root while the
+volume is mounted, else the DB's `volume_path` meta. Live first, because a remounted share (`/Volumes/naspi-1`) still
+carries its last scan's `/Volumes/naspi` in the meta, and stripping that off a live scope matched nothing
+(`a_live_volumes_root_beats_the_root_its_last_scan_recorded`). Historically SMB index DBs never wrote `volume_path`
+(only the local scan-completion path did); both the SMB scan-completion path and `start_indexing_for_smb` now persist
+it (the latter heals an existing DB on the next registration — no rescan).
+
+Decision (#749): the loader keeps its OWN read-only `ReadPool` rather than moving onto the index's read-only opener
+(`Index::status`, `cmdr-index`'s `StoredIndex`). The opener hands out one per-call connection; the arena load reads
+eight rowid ranges in parallel, and the pool stays with the arena for include-path resolution and dir-size enrichment.
+The meta read stays on that pool too: the loader finds its file through its own `SearchDirs` (a test swaps them), so a
+second lookup through the index's configured dir could describe a different file than the arena's. Only the root RULE
+moved. Lifecycle is dialog-scoped, not per-volume: opening the dialog pre-loads
 root and arms the timers; a search lazily loads its scope's volumes; idle/backstop drops ALL arenas at once (RAM
 reclaim). Forgetting an index also drops that volume's arena under its load gate: a replacement database restarts its
 row ids and cannot safely catch the old arena up. A long root pre-load is cancelable (`cancel_active_loads` on dialog

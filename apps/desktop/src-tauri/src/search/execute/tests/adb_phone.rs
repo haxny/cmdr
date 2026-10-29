@@ -126,7 +126,7 @@ async fn a_search_scoped_to_an_indexed_phone_finds_its_files_as_phone_paths() {
     );
 
     let query = pattern_query_for(&sdcard, "IMG_0001");
-    let answer = tokio::task::spawn_blocking(move || run_live_collected(query, WALK_BUDGET))
+    let answer = tokio::task::spawn_blocking(move || run_live_collected(query, None, WALK_BUDGET))
         .await
         .expect("the search thread")
         .expect("the live search");
@@ -158,7 +158,7 @@ async fn a_live_search_over_a_phone_nobody_indexed_walks_it() {
 
     let sdcard = format!("{}/sdcard", adb_app_root(serial));
     let query = pattern_query_for(&sdcard, "notes");
-    let answer = tokio::task::spawn_blocking(move || run_live_collected(query, WALK_BUDGET))
+    let answer = tokio::task::spawn_blocking(move || run_live_collected(query, None, WALK_BUDGET))
         .await
         .expect("the search thread")
         .expect("the live search");

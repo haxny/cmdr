@@ -36,27 +36,67 @@ fn remote_model_iden_forces_openai_for_compatible_providers() {
         "o3-mini",
         "chatgpt-4o-latest",
     ] {
-        assert_eq!(remote_model_iden(m), m, "{m} should keep its inferred adapter");
+        assert_eq!(remote_model_iden(m, None), m, "{m} should keep its inferred adapter");
     }
     // OpenAI-compatible BYOK models genai would mis-route to Ollama: forced to OpenAI.
-    assert_eq!(remote_model_iden("deepseek-chat"), "openai::deepseek-chat");
+    assert_eq!(remote_model_iden("deepseek-chat", None), "openai::deepseek-chat");
     assert_eq!(
-        remote_model_iden("google/gemma-4-31b-it:free"),
+        remote_model_iden("google/gemma-4-31b-it:free", None),
         "openai::google/gemma-4-31b-it:free"
     );
     assert_eq!(
-        remote_model_iden("mistral-small-latest"),
+        remote_model_iden("mistral-small-latest", None),
         "openai::mistral-small-latest"
     );
+}
+
+/// DeepSeek and Mistral speak chat-completions but carry reasoning their own way: DeepSeek
+/// toggles thinking with a `thinking` body field and wants `reasoning_content` back, while
+/// Mistral 422s on that field and wants a leading `thinking` chunk instead. genai's dedicated
+/// adapters know this, so their hosts route there; the model name alone can't tell.
+#[test]
+fn deepseek_and_mistral_hosts_route_to_their_own_chat_dialects() {
+    assert_eq!(
+        remote_model_iden("deepseek-v4-pro", Some("api.deepseek.com")),
+        "deepseek::deepseek-v4-pro"
+    );
+    assert_eq!(
+        remote_model_iden("magistral-medium-latest", Some("api.mistral.ai")),
+        "mistral::magistral-medium-latest"
+    );
+    // The same model id elsewhere (an aggregator) stays plain chat-completions.
+    assert_eq!(
+        remote_model_iden("deepseek-v4-pro", Some("api.together.xyz")),
+        "openai::deepseek-v4-pro"
+    );
+    // A native family keeps its adapter on any host.
+    assert_eq!(remote_model_iden("gpt-5.5", Some("api.mistral.ai")), "gpt-5.5");
+}
+
+/// Reasoning text goes back only to chat-completions hosts verified to take it: Groq 400s on
+/// the field, and an unknown host keeps the no-reasoning replay it always had.
+#[test]
+fn only_verified_hosts_take_chat_reasoning_back() {
+    for host in [
+        "api.deepseek.com",
+        "api.mistral.ai",
+        "api.fireworks.ai",
+        "openrouter.ai",
+    ] {
+        assert!(replays_chat_reasoning_for_host(host), "{host}");
+    }
+    for host in ["api.groq.com", "api.together.xyz", "127.0.0.1"] {
+        assert!(!replays_chat_reasoning_for_host(host), "{host}");
+    }
 }
 
 /// A Gemini user who picked `models/gemini-…` from the old OpenAI-compatible list keeps a
 /// working model once the preset moves to Google's native API.
 #[test]
 fn a_models_prefixed_gemini_id_routes_natively_as_its_bare_id() {
-    assert_eq!(remote_model_iden("models/gemini-3.8-flash"), "gemini-3.8-flash");
+    assert_eq!(remote_model_iden("models/gemini-3.8-flash", None), "gemini-3.8-flash");
     assert_eq!(
-        remote_model_iden("models/text-bison"),
+        remote_model_iden("models/text-bison", None),
         "openai::models/text-bison",
         "only a Gemini id is unwrapped"
     );
@@ -72,8 +112,8 @@ fn smoke_provider_models_route_to_their_intended_adapters() {
     // The two native protocols keep theirs; anything else would test the wrong wire format.
     // Gemini especially: an `openai::` namespace here routes it to chat-completions, and the
     // whole `gemini-smoke` lane would then pass against a path it isn't meant to cover.
-    assert_eq!(remote_model_iden(sp::ANTHROPIC.model), sp::ANTHROPIC.model);
-    assert_eq!(remote_model_iden(sp::GEMINI.model), sp::GEMINI.model);
+    assert_eq!(remote_model_iden(sp::ANTHROPIC.model, None), sp::ANTHROPIC.model);
+    assert_eq!(remote_model_iden(sp::GEMINI.model, None), sp::GEMINI.model);
     // OpenAI proper is left alone so genai can auto-route Responses vs chat-completions.
     for model in [
         sp::OPENAI.model,
@@ -81,7 +121,7 @@ fn smoke_provider_models_route_to_their_intended_adapters() {
         sp::OPENAI_CHAT_REASONING_MODEL,
     ] {
         assert_eq!(
-            remote_model_iden(model),
+            remote_model_iden(model, None),
             model,
             "{model} should keep its inferred adapter"
         );
@@ -89,7 +129,7 @@ fn smoke_provider_models_route_to_their_intended_adapters() {
     // The OpenAI-compatible hosts must be forced onto `openai::`, slashed ids and all.
     for provider in [&sp::GROQ, &sp::FIREWORKS] {
         assert_eq!(
-            remote_model_iden(provider.model),
+            remote_model_iden(provider.model, None),
             format!("openai::{}", provider.model),
             "{} would fall back to the Ollama adapter",
             provider.name
@@ -165,6 +205,7 @@ fn a_streaming_http_error_classifies_by_status_like_any_other() {
                 status,
                 canonical_reason: status.canonical_reason().unwrap_or("Unknown").to_string(),
                 body: body.to_string(),
+                headers: Box::default(),
             }),
         }
     }
@@ -263,6 +304,19 @@ fn the_anthropic_adapter_sends_no_sampling_knobs() {
     assert_eq!(sent.temperature, None);
     assert_eq!(sent.top_p, None);
     assert_eq!(sent.max_tokens, Some(200), "everything else passes through");
+}
+
+/// The Responses API fills an unset effort with `low`, except for a caller that turned
+/// reasoning capture off: that's the agent saying the model doesn't reason, and an effort sent
+/// to such a model is a 400 (`agent::llm::CallSettings::model_reasons`).
+#[test]
+fn a_caller_opting_out_of_reasoning_gets_no_effort_filled_in() {
+    let target = target_for(AdapterKind::OpenAIResp, "gpt-5.5");
+    let filled = adjust_for_model(&ChatOptions::default(), &target);
+    assert!(filled.reasoning_effort.is_some(), "an unset effort still gets `low`");
+
+    let opted_out = adjust_for_model(&ChatOptions::default().with_capture_reasoning_content(false), &target);
+    assert!(opted_out.reasoning_effort.is_none());
 }
 
 #[test]

@@ -123,6 +123,12 @@ describe('advanced settings in the global search index', () => {
     expect(ids).toContain('advanced.dragThreshold')
   })
 
+  it('finds the Ask Cmdr tool-group choice by a keyword and by its card title', () => {
+    expect(searchSettings('collapse').map((r) => r.entry.id)).toContain('askCmdr.toolGroupsOnAnswer')
+    expect(searchSettings('ask cmdr').map((r) => r.entry.id)).toContain('askCmdr.toolGroupsOnAnswer')
+    expect(sectionHasMatches(['Advanced'], getMatchingSections('collapse'))).toBe(true)
+  })
+
   it('surfaces an Advanced setting by its card title', () => {
     // "Performance" is the shared card title for the three buffer-size rows.
     const ids = searchSettings('performance').map((r) => r.entry.id)

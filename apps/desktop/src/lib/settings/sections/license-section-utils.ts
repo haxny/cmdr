@@ -1,5 +1,6 @@
 import type { LicenseInfo, LicenseStatus } from '#lib/tauri-commands/index.js'
 import { tString } from '#lib/intl/messages.svelte.js'
+import { formatLongDate } from '#lib/settings/format-utils.js'
 
 export function getLicenseTypeLabel(licenseInfo: LicenseInfo | null): string {
   if (!licenseInfo) return tString('licensing.section.typePersonal')
@@ -9,17 +10,10 @@ export function getLicenseTypeLabel(licenseInfo: LicenseInfo | null): string {
   return tString('licensing.section.typePersonal')
 }
 
+/** A license date as words in the OS region's conventions, or the raw string when it isn't a date. */
 export function formatLicenseDate(dateStr: string | null | undefined): string {
   if (!dateStr) return ''
-  try {
-    return new Date(dateStr).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-  } catch {
-    return dateStr
-  }
+  return formatLongDate(new Date(dateStr)) ?? dateStr
 }
 
 export function getStatusText(licenseStatus: LicenseStatus | null): string | null {

@@ -47,6 +47,10 @@ pub fn search_schema() -> Value {
                 "type": "string",
                 "description": "Scope string: comma-separated paths, ! for excludes (for example, \"~/projects, !node_modules\"). A search covers ONE volume, so every include path must be on the same drive; omit to search the boot volume."
             },
+            "volumeId": {
+                "type": "string",
+                "description": "From list_volumes: search its whole root, or the scope's paths on it. Works when not connected, from its index."
+            },
             "caseSensitive": {
                 "type": "boolean",
                 "description": "Case-sensitive matching. Default: false on macOS, true on Linux"

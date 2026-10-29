@@ -156,10 +156,6 @@ fn wire(event: AgentChatEvent) -> Value {
 fn every_runtime_event_maps_to_its_tagged_wire_event() {
     assert_eq!(wire(AgentChatEvent::Queued), json!({ "type": "queued" }));
     assert_eq!(
-        wire(AgentChatEvent::UserPersisted { message_id: 4, seq: 1 }),
-        json!({ "type": "userPersisted", "messageId": 4, "seq": 1 })
-    );
-    assert_eq!(
         wire(AgentChatEvent::AssistantStarted),
         json!({ "type": "assistantStarted" })
     );
@@ -169,11 +165,8 @@ fn every_runtime_event_maps_to_its_tagged_wire_event() {
     );
     assert_eq!(wire(AgentChatEvent::ReasoningTick), json!({ "type": "reasoningTick" }));
     assert_eq!(
-        wire(AgentChatEvent::ToolCallFinished {
-            call_id: "call-1".into(),
-            ok: false,
-        }),
-        json!({ "type": "toolCallFinished", "callId": "call-1", "ok": false })
+        wire(AgentChatEvent::Stopped { turn: None }),
+        json!({ "type": "stopped", "turn": null })
     );
     assert_eq!(
         wire(AgentChatEvent::ModelChanged {
@@ -190,6 +183,7 @@ fn every_runtime_event_maps_to_its_tagged_wire_event() {
         }),
         json!({ "type": "contextTrimmed", "elidedResults": 3, "approxTokens": 4200 })
     );
+    assert_eq!(wire(AgentChatEvent::CostMetered), json!({ "type": "costMetered" }));
 }
 
 /// The typed `ToolId` becomes its WIRE name, because the frontend's label map is keyed on
@@ -218,6 +212,7 @@ fn done_carries_the_persisted_identity_stop_reason_and_usage() {
                 prompt_tokens: 900,
                 completion_tokens: 120,
             },
+            turn: None,
         }),
         json!({
             "type": "done",
@@ -225,6 +220,101 @@ fn done_carries_the_persisted_identity_stop_reason_and_usage() {
             "seq": 5,
             "stop": "toolCall",
             "usage": { "promptTokens": 900, "completionTokens": 120 },
+            "turn": null,
+        })
+    );
+}
+
+/// What a tool-running turn spent rides every terminal event, so a stopped or failed turn shows
+/// it too: numbers only, the rail owns the words.
+#[test]
+fn terminal_events_carry_what_the_turn_spent() {
+    let stats = TurnStats {
+        tool_calls: 3,
+        wall_ms: Some(4_250),
+        prompt_tokens: 1_800,
+        completion_tokens: 90,
+        stopped: true,
+        limit: None,
+    };
+    let expected = json!({ "toolCalls": 3, "wallMs": 4250, "promptTokens": 1800, "completionTokens": 90, "stopped": true, "limit": null });
+    assert_eq!(wire(AgentChatEvent::Stopped { turn: Some(stats) })["turn"], expected);
+    let failed = wire(AgentChatEvent::Failed {
+        kind: AgentErrorKind::BudgetExhausted,
+        detail: None,
+        turn: Some(stats),
+    });
+    assert_eq!(failed["turn"], expected);
+}
+
+/// The persisted opener crosses as the same view history shows, with its identity on the event
+/// too, so a rail that reloaded before the row landed can insert it.
+#[test]
+fn user_persisted_carries_the_opener_as_history_shows_it() {
+    use crate::agent::chat::message_view::{MessageBlock, MessageRoleView};
+    let opener = MessageView {
+        id: 4,
+        seq: 1,
+        role: MessageRoleView::User,
+        blocks: vec![MessageBlock::Text { text: "hi".into() }],
+        prompt_tokens: None,
+        completion_tokens: None,
+        created_at: 100,
+        turn_id: Some(4),
+        during_turn: false,
+        turn_stats: None,
+    };
+    let event = wire(AgentChatEvent::UserPersisted { opener });
+    assert_eq!(event["type"], "userPersisted");
+    assert_eq!(event["messageId"], 4);
+    assert_eq!(event["seq"], 1);
+    assert_eq!(event["opener"]["blocks"], json!([{ "type": "text", "text": "hi" }]));
+}
+
+/// A line is `(messageId, callId)` on the wire: the call id alone collides across rounds. The
+/// subject and outcome cross as typed facts, never a sentence.
+#[test]
+fn tool_line_events_carry_the_line_identity_and_typed_facts() {
+    use crate::agent::tools::line::LineRef;
+    let resolved = wire(AgentChatEvent::ToolCallsResolved {
+        message_id: 12,
+        calls: vec![ResolvedCall {
+            call_id: "fake-call-0".into(),
+            tool: "list_volumes".into(),
+            subject: ToolSubject::Drives,
+            repeat_of: Some(LineRef {
+                message_id: 10,
+                call_id: "fake-call-0".into(),
+            }),
+        }],
+    });
+    assert_eq!(
+        resolved,
+        json!({
+            "type": "toolCallsResolved",
+            "messageId": 12,
+            "calls": [{
+                "callId": "fake-call-0",
+                "tool": "list_volumes",
+                "subject": { "kind": "drives" },
+                "repeatOf": { "messageId": 10, "callId": "fake-call-0" },
+            }],
+        })
+    );
+    let finished = wire(AgentChatEvent::ToolCallFinished {
+        message_id: 12,
+        call_id: "fake-call-0".into(),
+        outcome: ToolOutcome::Answered,
+        subject: ToolSubject::Drives,
+    });
+    assert_eq!(
+        finished,
+        json!({
+            "type": "toolCallFinished",
+            "messageId": 12,
+            "callId": "fake-call-0",
+            "outcome": { "kind": "answered" },
+            "subject": { "kind": "drives" },
         })
     );
 }
@@ -238,15 +328,17 @@ fn failed_carries_the_typed_kind_and_the_providers_own_wording_verbatim() {
         wire(AgentChatEvent::Failed {
             kind: AgentErrorKind::RateLimited,
             detail: Some("quota resets at 14:00".into()),
+            turn: None,
         }),
-        json!({ "type": "failed", "kind": "rateLimited", "detail": "quota resets at 14:00", "managed": null })
+        json!({ "type": "failed", "kind": "rateLimited", "detail": "quota resets at 14:00", "managed": null, "turn": null })
     );
     assert_eq!(
         wire(AgentChatEvent::Failed {
             kind: AgentErrorKind::BudgetExhausted,
             detail: None,
+            turn: None,
         }),
-        json!({ "type": "failed", "kind": "budgetExhausted", "detail": null, "managed": null })
+        json!({ "type": "failed", "kind": "budgetExhausted", "detail": null, "managed": null, "turn": null })
     );
 }
 
@@ -258,8 +350,9 @@ fn a_managed_failure_carries_the_organizations_reason() {
         wire(AgentChatEvent::Failed {
             kind: AgentErrorKind::ManagedByOrganization(ManagedAiRefusal::CloudAiOff),
             detail: None,
+            turn: None,
         }),
-        json!({ "type": "failed", "kind": "managedByOrganization", "detail": null, "managed": "cloudAiOff" })
+        json!({ "type": "failed", "kind": "managedByOrganization", "detail": null, "managed": "cloudAiOff", "turn": null })
     );
 }
 
@@ -267,17 +360,34 @@ fn a_managed_failure_carries_the_organizations_reason() {
 
 /// The conversation id is what a subscriber filters on, so it rides the ENVELOPE rather than
 /// one variant's payload: a rail that had to read it out of `started` would have no way to
-/// tell whose `textDelta` it was holding.
+/// tell whose `textDelta` it was holding. The run rides it too: it is how the rail tells one turn
+/// of a thread from the next, so a late terminal ends only its own.
 #[test]
-fn every_event_crosses_under_the_conversation_it_belongs_to() {
+fn every_event_crosses_under_the_conversation_and_turn_it_belongs_to() {
     let turn = AskCmdrTurn {
         conversation_id: 41,
+        run: Some(7),
         event: AskCmdrStreamEvent::TextDelta { text: "hi".into() },
     };
     assert_eq!(
         serde_json::to_value(turn).expect("serializes"),
-        json!({ "conversationId": 41, "event": { "type": "textDelta", "text": "hi" } })
+        json!({ "conversationId": 41, "run": 7, "event": { "type": "textDelta", "text": "hi" } })
     );
+}
+
+/// ⚠️ Every event a forwarded turn emits carries that turn's run, the terminal included.
+#[tokio::test]
+async fn a_forwarded_turn_stamps_every_event_with_its_run() {
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    tx.send(AgentChatEvent::AssistantStarted).expect("send");
+    tx.send(AgentChatEvent::Stopped { turn: None }).expect("send");
+    drop(tx);
+    let _ = take_emitted_turns();
+
+    forward_to_windows(41, 9, &mut rx).await;
+
+    let runs: Vec<_> = take_emitted_turns().iter().map(|turn| turn.run).collect();
+    assert_eq!(runs, vec![Some(9), Some(9)]);
 }
 
 /// `Started` and `Discarded` bracket a wake: the first is how the session list hears a thread
@@ -316,6 +426,7 @@ fn a_decision_crosses_with_its_row_and_no_authored_sentence() {
                 skipped: 1,
                 failed: 0,
             },
+            protocol: None,
         },
     };
 
@@ -330,6 +441,7 @@ fn a_decision_crosses_with_its_row_and_no_authored_sentence() {
                 "what": "/Users/dana/Downloads/*.dmg",
                 "ops": 3,
                 "outcome": { "kind": "ran", "done": 2, "skipped": 1, "failed": 0 },
+                "protocol": null,
             },
         })
     );

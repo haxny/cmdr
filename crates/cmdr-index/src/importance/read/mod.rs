@@ -42,8 +42,10 @@ use std::sync::Mutex;
 
 use tokio::sync::broadcast;
 
+use super::classify::{Disk, PathSpace};
 use super::scorer::{Explanation, FolderSignals, Score, SignalSet, Weights, explain};
 use super::store::{ImportanceStoreError, importance_db_path, open_read_connection};
+use crate::IndexVolumeKind;
 use crate::indexing::store::normalize_for_comparison;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::sqlite_util::{THREAD_CONN_SLOTS, ThreadConnCache};
@@ -125,15 +127,15 @@ pub enum FloorReason {
 /// Derive why a path floors, or `None` when it doesn't. The single derivation the
 /// read side uses for both [`ImportanceIndex::lookup`]'s [`WeightLookup::Floored`]
 /// reason and the floored-signals reconstruction, so the two agree by construction.
-fn floor_reason_for(path: &str, home: &str) -> Option<FloorReason> {
+fn floor_reason_for(path: &str, space: PathSpace<'_>) -> Option<FloorReason> {
     use crate::importance::classify::{is_denylisted, is_hidden_or_system, leaf_name};
-    if !crate::importance::classify::floors_by_path(path, home) {
+    if !crate::importance::classify::floors_by_path(path, space) {
         return None;
     }
     let name = leaf_name(path);
     if is_denylisted(&name) {
         Some(FloorReason::NameDenylisted)
-    } else if is_hidden_or_system(path, &name, home) {
+    } else if is_hidden_or_system(path, &name, space) {
         Some(FloorReason::HiddenOrSystem)
     } else {
         Some(FloorReason::UnderFlooredAncestor)
@@ -157,6 +159,12 @@ pub struct ImportanceIndex {
     /// hidden/system priors are home-relative, so the derivation needs it. Defaults
     /// to `$HOME`; a caller measuring an arbitrary volume can override it.
     home: String,
+    /// Whose paths this volume's index stores, for the same derivation: the boot
+    /// disk's OS roots floor only there. Defaults to the boot disk, the one volume
+    /// the app derives a floor for (`cmdr://importance`'s `?path=` falls back to the
+    /// root index); a consumer deriving floors on another volume sets its kind with
+    /// [`with_path_space`](ImportanceIndex::with_path_space).
+    disk: Disk,
 }
 
 impl ImportanceIndex {
@@ -176,13 +184,16 @@ impl ImportanceIndex {
             available,
             weights: Weights::default(),
             home: std::env::var("HOME").unwrap_or_default(),
+            disk: Disk::Boot,
         }
     }
 
-    /// Override the home dir used to derive a floored-vs-unscored classification
-    /// (see [`lookup`](ImportanceIndex::lookup)). Defaults to `$HOME`.
-    pub fn with_home(mut self, home: impl Into<String>) -> Self {
+    /// Override the home dir and the volume kind used to derive a floored-vs-unscored
+    /// classification (see [`lookup`](ImportanceIndex::lookup)). Defaults to `$HOME`
+    /// on the boot disk.
+    pub fn with_path_space(mut self, home: impl Into<String>, kind: IndexVolumeKind) -> Self {
         self.home = home.into();
+        self.disk = Disk::of(kind);
         self
     }
 
@@ -256,7 +267,7 @@ impl ImportanceIndex {
     pub fn lookup(&self, path: &str) -> Result<WeightLookup, ImportanceStoreError> {
         match self.weight_for(path)? {
             Some(w) => Ok(WeightLookup::Scored(w)),
-            None => Ok(match floor_reason_for(path, &self.home) {
+            None => Ok(match floor_reason_for(path, PathSpace::new(&self.home, self.disk)) {
                 Some(reason) => WeightLookup::Floored(reason),
                 None => WeightLookup::Unscored,
             }),
@@ -280,7 +291,7 @@ impl ImportanceIndex {
     /// Unordered because its callers fold the rows into a lookup table, and ranking
     /// every scored folder (~90k on a big home) costs SQLite an external sort for
     /// nothing. A caller that wants the ranking uses
-    /// [`top_above_threshold`](ImportanceIndex::top_above_threshold).
+    /// [`top_under`](ImportanceIndex::top_under).
     pub fn above_threshold(&self, threshold: f64) -> Result<Vec<ScoredWeight>, ImportanceStoreError> {
         if !self.db_path.exists() {
             return Ok(Vec::new());
@@ -288,16 +299,29 @@ impl ImportanceIndex {
         self.with_conn(|conn| read_at_least(conn, threshold))
     }
 
-    /// The top `n` folders scoring at or above `threshold`, highest first — the
-    /// `top_n` cap and the `above_threshold` filter in one bounded query. The
-    /// `cmdr://importance?threshold=` read fetches `cap + 1` this way to detect
-    /// truncation without loading the whole tail (a low threshold can match every
-    /// scored folder). A missing DB reads empty, not an error.
-    pub fn top_above_threshold(&self, n: usize, threshold: f64) -> Result<Vec<ScoredWeight>, ImportanceStoreError> {
+    /// The top `n` folders at or under `under`, highest first, optionally only those
+    /// scoring at or above `threshold` (inclusive) — the `top_n` cap, the
+    /// `above_threshold` filter, and a subtree in one bounded query. The
+    /// `cmdr://importance` reads fetch one past their window this way to detect a cut
+    /// without loading the whole tail (a low threshold can match every scored folder).
+    /// The subtree is served by the same BINARY `path_folded` range the incremental's
+    /// subtree read uses (`../writer.rs`, `SUBTREE_READ_SQL`), so a small subtree on a
+    /// big volume costs an index search, not a table scan. `/` (or an empty `under`)
+    /// means the whole volume. A missing DB reads empty, not an error.
+    pub fn top_under(
+        &self,
+        n: usize,
+        threshold: Option<f64>,
+        under: &str,
+    ) -> Result<Vec<ScoredWeight>, ImportanceStoreError> {
         if !self.db_path.exists() {
             return Ok(Vec::new());
         }
-        self.with_conn(|conn| read_ordered(conn, Some(n), Some(threshold)))
+        let under = under.trim_end_matches('/');
+        if under.is_empty() {
+            return self.with_conn(|conn| read_ordered(conn, Some(n), threshold));
+        }
+        self.with_conn(|conn| read_ordered_under(conn, n, threshold, under))
     }
 
     /// Stream every scored folder's `(path, score)` with a NON-ZERO score to `visit`.
@@ -361,7 +385,7 @@ impl ImportanceIndex {
         // One flag, the precedence winner — `explain`'s `floored` is the OR of the
         // three, so setting only the reported reason is enough to floor the score,
         // and it keeps this in lockstep with `lookup`'s reported reason.
-        match floor_reason_for(path, &self.home)? {
+        match floor_reason_for(path, PathSpace::new(&self.home, self.disk))? {
             FloorReason::NameDenylisted => signals.name_denylisted = true,
             FloorReason::HiddenOrSystem => signals.hidden_or_system = true,
             FloorReason::UnderFlooredAncestor => signals.under_floored_ancestor = true,
@@ -414,7 +438,7 @@ fn read_scored_weight(conn: &rusqlite::Connection, path: &str) -> Result<Option<
 
 /// Read weights ordered by score descending (ties by path), optionally limited to
 /// the top `n` and/or filtered to `>= threshold`. One query serves `top_n` and
-/// `top_above_threshold`; the ORDER BY is stable so the two agree on ranking.
+/// `top_under` over a whole volume; the ORDER BY is stable so the reads agree on ranking.
 fn read_ordered(
     conn: &rusqlite::Connection,
     limit: Option<usize>,
@@ -438,6 +462,37 @@ fn read_ordered(
             .query_map([], row_to_scored_weight)?
             .collect::<Result<Vec<_>, _>>()?,
     };
+    Ok(out)
+}
+
+/// [`read_ordered`] restricted to `under` and its descendants. `?1` is the folder's
+/// own folded key and `?2`..`?3` the half-open range of its descendants (`/` is
+/// 0x2f, `0` is 0x30), the exact shape `writer::SUBTREE_READ_SQL` documents. An
+/// absent threshold binds `-1.0`, which every stored score clears.
+fn read_ordered_under(
+    conn: &rusqlite::Connection,
+    limit: usize,
+    threshold: Option<f64>,
+    under: &str,
+) -> Result<Vec<ScoredWeight>, ImportanceStoreError> {
+    let folded = normalize_for_comparison(under);
+    let mut stmt = conn.prepare_cached(
+        "SELECT path, score, signals, as_of_generation FROM weights \
+         WHERE (path_folded = ?1 OR (path_folded >= ?2 AND path_folded < ?3)) AND score >= ?4 \
+         ORDER BY score DESC, path ASC LIMIT ?5",
+    )?;
+    let out = stmt
+        .query_map(
+            rusqlite::params![
+                folded,
+                format!("{folded}/"),
+                format!("{folded}0"),
+                threshold.unwrap_or(-1.0),
+                i64::try_from(limit).unwrap_or(i64::MAX)
+            ],
+            row_to_scored_weight,
+        )?
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(out)
 }
 

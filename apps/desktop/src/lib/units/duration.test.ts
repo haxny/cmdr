@@ -142,8 +142,8 @@ describe('the locale owns the decimal mark, in every unit on the screen', () => 
   it('formats a sub-second duration through the locale too', () => {
     // Diagnostics-only, and fixed anyway: two identical bugs in one file is how
     // the next person finds the second one all over again.
-    _setFormatLocaleForTests('de-DE')
-    expect(formatMilliseconds(1400)).toBe('1,4s')
+    _setLocaleForTests('de-DE')
+    expect(formatMilliseconds(1400).replace(/\s/g, ' ')).toBe('1,4 Sek.')
   })
 })
 
@@ -184,10 +184,14 @@ describe('formatMilliseconds', () => {
     }
   })
 
-  it('takes the decimal mark from the formatting locale, the unit from the UI language', () => {
-    // A French speaker on a US-formatted Mac: French unit, US decimal point.
+  it('takes the decimal mark and the unit from the UI language, not the OS region', () => {
+    // A French speaker on a US-formatted Mac reads French throughout; an English one on a
+    // Swedish-formatted Mac reads "1.4s".
     _setLocaleForTests('fr-FR')
     _setFormatLocaleForTests('en-US')
-    expect(formatMilliseconds(1400)).toBe(platform('fr', 'second', 1.4, 1).replace(',', '.'))
+    expect(formatMilliseconds(1400)).toBe(platform('fr', 'second', 1.4, 1))
+    _setLocaleForTests('en')
+    _setFormatLocaleForTests('en-SE')
+    expect(formatMilliseconds(1400)).toBe('1.4s')
   })
 })

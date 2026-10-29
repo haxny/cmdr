@@ -5,6 +5,7 @@
 
 use crate::ignore_poison::IgnorePoison;
 use crate::network::NetworkHost;
+use crate::network::server_guid::GuidProof;
 use crate::network::server_identity::SmbServer;
 use crate::state_recovery::StateFile;
 use serde::{Deserialize, Serialize};
@@ -70,6 +71,19 @@ pub struct KnownNetworkShare {
     /// its first mount through Cmdr, moved by `set_share_pinned`.
     #[serde(default)]
     pub pinned: bool,
+    /// Share rows: the GUID the share's server answered NEGOTIATE with, in
+    /// `crate::network::server_guid::ServerGuid`'s text form: the proof two rows (one NAS by its LAN
+    /// and its Tailscale address) are one server. Written only through
+    /// [`record_server_guid`], never by a row an add or a mount files.
+    #[serde(default)]
+    pub server_guid: Option<String>,
+    /// Share rows: how `server_guid` was learned. Only `authenticated` on both rows
+    /// lets one answer for the other (`location::same_share`). Written with the
+    /// GUID, and demoted when a save changes the row's account
+    /// ([`keep_recorded_guid`]); a row saved before the field reads
+    /// `unauthenticated` until a signed-in session records its GUID again.
+    #[serde(default)]
+    pub server_guid_proof: GuidProof,
 }
 
 impl KnownNetworkShare {
@@ -231,6 +245,9 @@ pub fn update_known_share(share: KnownNetworkShare) {
             .iter_mut()
             .find(|s| share_key(&s.server_name, &s.share_name) == key)
         {
+            // The server's identity outlives a reconnect that doesn't bring one.
+            let mut share = share;
+            keep_recorded_guid(&mut share, existing);
             *existing = share;
         } else {
             cache.known_network_shares.push(share);
@@ -300,12 +317,39 @@ fn same_share_row(a: &KnownNetworkShare, b: &KnownNetworkShare, hosts: &[Network
         .any(|x| names(b).iter().any(|y| same_machine(x, y, hosts)))
 }
 
+/// Keeps the GUID `existing` recorded when `row` brings none, with its proof only
+/// while the row keeps its account ([`share_account`]). ❗ Proof earned signed in
+/// as one account never vouches for another: `location::same_share` would let a
+/// read on this share be answered by a session that opens it as someone else, so
+/// a new account (a guest included) keeps the GUID as a hint, unauthenticated,
+/// until its own signed-in session records it.
+fn keep_recorded_guid(row: &mut KnownNetworkShare, existing: &mut KnownNetworkShare) {
+    if row.server_guid.is_none() {
+        let same_account = share_account(row.username.as_deref()) == share_account(existing.username.as_deref());
+        row.server_guid = existing.server_guid.take();
+        row.server_guid_proof = if same_account {
+            existing.server_guid_proof
+        } else {
+            GuidProof::Unauthenticated
+        };
+    }
+}
+
+/// The account a share is opened as, the way `location::same_share` compares it:
+/// folded, and a guest (no name, empty, or `Guest`) is no account.
+pub(crate) fn share_account(username: Option<&str>) -> Option<String> {
+    username
+        .filter(|name| !name.is_empty() && !name.eq_ignore_ascii_case("guest"))
+        .map(fold_name)
+}
+
 /// Files `row` (a share row) in `rows`, replacing the one for the same share.
 ///
 /// What a replace keeps: the pin (only `set_share_pinned` moves one, except that
 /// a share's FIRST mount pins it, rule 1 of the servers model), and a volume id,
-/// mount path, address, and port the new row doesn't bring (an add names none of
-/// them). The account is the new row's: the row remembers who opened it last.
+/// mount path, address, port, and `last_connected_at` the new row doesn't bring (an
+/// add names none of them, and connects nothing). The account is the new row's: the
+/// row remembers who opened it last.
 ///
 /// ❗ Except that an ADD naming no account keeps the one the share is saved with. An
 /// add is the row with no address (every mount records the address it dialed), and
@@ -332,10 +376,15 @@ fn upsert_share_row(
             row.port = row.port.or(existing.port);
             let is_add = row.address.is_none();
             if is_add && row.username.is_none() && existing.username.is_some() {
-                row.username = existing.username.take();
+                row.username = existing.username.clone();
                 row.last_connection_mode = existing.last_connection_mode;
             }
+            // After the account settles: the GUID's proof follows it.
+            keep_recorded_guid(&mut row, existing);
             row.address = row.address.or(existing.address.take());
+            if row.last_connected_at.is_empty() {
+                row.last_connected_at = std::mem::take(&mut existing.last_connected_at);
+            }
             *existing = row;
             previous
         }
@@ -516,6 +565,63 @@ pub fn share_by_volume_id(volume_id: &str) -> Option<KnownNetworkShare> {
     saved_shares().into_iter().find(|row| place_id(row) == volume_id)
 }
 
+/// Records `guid` on the share row whose place is `volume_id`. `signed_in_as` is the
+/// account of the session that answered it: `None` for a guest session or the
+/// probe. ❗ The proof is decided HERE, from the row's own account, never handed in:
+/// `Authenticated` only when the session signed in as the account the row opens the
+/// share as ([`share_account`]), so proof earned as one person never vouches for
+/// another. An unauthenticated GUID only fills a missing one; an authenticated one
+/// overwrites, and proves the GUID a probe filled. The proof that won is recorded
+/// with it. Touches no other field. Answers `None` when no share row has that
+/// place, else whether the row's GUID or its proof changed.
+fn record_guid_in(
+    rows: &mut [KnownNetworkShare],
+    volume_id: &str,
+    guid: &str,
+    signed_in_as: Option<&str>,
+) -> Option<bool> {
+    let row = rows
+        .iter_mut()
+        .find(|row| row.is_share() && place_id(row) == volume_id)?;
+    let session_account = share_account(signed_in_as);
+    let proof = if session_account.is_some() && session_account == share_account(row.username.as_deref()) {
+        GuidProof::Authenticated
+    } else {
+        GuidProof::Unauthenticated
+    };
+    let holds_one = row
+        .server_guid
+        .as_deref()
+        .and_then(crate::network::server_guid::ServerGuid::parse)
+        .is_some();
+    let unchanged = row.server_guid.as_deref() == Some(guid) && row.server_guid_proof == proof;
+    if (holds_one && proof == GuidProof::Unauthenticated) || unchanged {
+        return Some(false);
+    }
+    row.server_guid = Some(guid.to_string());
+    row.server_guid_proof = proof;
+    Some(true)
+}
+
+/// Records the server GUID of the saved share whose place is `volume_id`
+/// ([`record_guid_in`], which decides the proof from `signed_in_as`), persisting only
+/// on a change. Answers `false` when no share row has that place: a live share Cmdr
+/// never saved keeps its GUID in memory (`smb_server_guid`).
+pub fn record_server_guid(
+    volume_id: &str,
+    guid: &crate::network::server_guid::ServerGuid,
+    signed_in_as: Option<&str>,
+) -> bool {
+    let recorded = {
+        let mut store = get_known_shares_mutex().lock_ignore_poison();
+        record_guid_in(&mut store.known_network_shares, volume_id, guid.as_str(), signed_in_as)
+    };
+    if recorded == Some(true) {
+        save_known_shares();
+    }
+    recorded.is_some()
+}
+
 /// Moves a saved share's pin, in place under the lock, answering whether a share
 /// row holds that volume id.
 pub fn set_share_pinned(volume_id: &str, pinned: bool) -> bool {
@@ -581,7 +687,7 @@ pub fn forget_rows(gone: &[KnownNetworkShare]) -> usize {
 }
 
 /// Case- and NFC-folds one half of a share's name, the fold [`share_key`] applies.
-fn fold_name(name: &str) -> String {
+pub(crate) fn fold_name(name: &str) -> String {
     use unicode_normalization::UnicodeNormalization;
 
     name.nfc().flat_map(char::to_lowercase).collect()

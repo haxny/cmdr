@@ -6,7 +6,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { SuggestedOpPage, SuggestedSweepView, SuggestionsChanged } from '#lib/tauri-commands/index.js'
+import type {
+  ServerApprovalResultView,
+  SuggestedOpPage,
+  SuggestedSweepView,
+  SuggestionsChanged,
+} from '#lib/tauri-commands/index.js'
 
 const listMock = vi.fn<() => Promise<SuggestedSweepView[]>>()
 const pageMock = vi.fn<(payload: { groupId: number; offset: number; limit: number }) => Promise<SuggestedOpPage>>()
@@ -15,7 +20,9 @@ const approveMock =
   vi.fn<
     (payload: { groupId: number; revision: number; selection: Record<string, unknown> }) => Promise<{ kind: string }>
   >()
+const runsAsMock = vi.fn<(runsAs: string | null) => void>()
 const factsMock = vi.fn<(payload: { groupId: number; offset: number; limit: number }) => Promise<unknown>>()
+const approveServerMock = vi.fn<(payload: { groupId: number; revision: number }) => Promise<ServerApprovalResultView>>()
 
 /** The subscriber the store installs while the dialog is open. */
 let emit: ((payload: SuggestionsChanged) => void) | null = null
@@ -24,8 +31,11 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   listSuggestedOps: () => listMock(),
   pageSuggestedOps: (g: number, o: number, l: number) => pageMock({ groupId: g, offset: o, limit: l }),
   rejectSuggestedGroup: (g: number) => rejectMock(g),
-  approveSuggestedGroup: (g: number, revision: number, selection: Record<string, unknown>) =>
-    approveMock({ groupId: g, revision, selection }),
+  approveSuggestedGroup: (g: number, revision: number, selection: Record<string, unknown>, runsAs: string | null) => {
+    runsAsMock(runsAs)
+    return approveMock({ groupId: g, revision, selection })
+  },
+  approveSuggestedServer: (g: number, revision: number) => approveServerMock({ groupId: g, revision }),
   liveSuggestedOpFacts: (g: number, o: number, l: number) => factsMock({ groupId: g, offset: o, limit: l }),
   onSuggestionsChanged: (cb: (p: SuggestionsChanged) => void) => {
     emit = cb
@@ -45,6 +55,8 @@ import {
   approvableCount,
   canApprove,
   approveGroup,
+  isNewNameTaken,
+  isOpMissing,
   isOpSelected,
   selectionState,
   toggleAllOps,
@@ -96,6 +108,7 @@ function group(groupId: number, liveOpCount: number, overrides: Record<string, u
     liveOpCount,
     totalOpCount: liveOpCount,
     fromSelector: false,
+    server: null,
     revision: 1,
     ...overrides,
   } as unknown as SuggestedSweepView['groups'][number]
@@ -139,6 +152,7 @@ beforeEach(() => {
   )
   rejectMock.mockResolvedValue({ kind: 'rejected' })
   approveMock.mockResolvedValue({ kind: 'started' })
+  approveServerMock.mockResolvedValue({ kind: 'saved', volumeId: null })
 })
 
 describe('opening and reading', () => {
@@ -221,6 +235,40 @@ describe('the op window', () => {
     await Promise.all([first, second])
 
     expect(opAt(BIG, 40_000)).not.toBeNull()
+  })
+
+  // Regression: only the range's FIRST row was checked, so scrolling the drawn range across
+  // the held window's end left its bottom rows as blank placeholders until the top crossed too.
+  it('holds every drawn row when the range runs past the end of the held window', async () => {
+    await openSuggestedOps()
+    pageMock.mockClear()
+
+    await showRange(BIG, 180, 240)
+
+    expect(pageMock).toHaveBeenCalledTimes(1)
+    for (let index = 180; index < 240; index++) expect(opAt(BIG, index)?.opId).toBe(index)
+  })
+
+  it('follows a range that grew past the window while a page was loading', async () => {
+    await openSuggestedOps()
+    pageMock.mockClear()
+    let land: () => void = () => {}
+    pageMock.mockImplementationOnce(
+      ({ offset }) =>
+        new Promise((resolve) => {
+          land = () => {
+            resolve({ ops: ops(offset, 200), offset, total: 60_000 } as unknown as SuggestedOpPage)
+          }
+        }),
+    )
+
+    const first = showRange(BIG, 5_000, 5_060)
+    // Same first row, but the range now reaches past what the in-flight page will hold.
+    const second = showRange(BIG, 5_000, 5_190)
+    land()
+    await Promise.all([first, second])
+
+    expect(opAt(BIG, 5_189)).not.toBeNull()
   })
 
   it('answers null for a row whose window is not loaded, rather than a wrong row', async () => {
@@ -387,6 +435,113 @@ describe('approving', () => {
 
     expect(suggestedOpsState.open).toBe(false)
     expect(suggestedOpsState.reviews.size).toBe(0)
+  })
+
+  describe('a server card', () => {
+    const SERVER = 9
+    const card = { protocol: 'sftp', fields: [], addressIsNew: true, sharesAffected: null }
+
+    beforeEach(() => {
+      listMock.mockResolvedValue([
+        sweep([group(SERVER, 0, { verb: 'addServer', destination: null, server: card, revision: 2 })]),
+      ])
+    })
+
+    it('saves through its own command with the revision the user read, and selects no ops', async () => {
+      await openSuggestedOps()
+      expect(canApprove(SERVER)).toBe(true)
+
+      await approveGroup(SERVER)
+
+      expect(approveServerMock).toHaveBeenCalledWith({ groupId: SERVER, revision: 2 })
+      expect(approveMock).not.toHaveBeenCalled()
+    })
+
+    it('closes the dialog once a save leaves nothing to decide', async () => {
+      await openSuggestedOps()
+      listMock.mockResolvedValue([])
+
+      await approveGroup(SERVER)
+
+      expect(suggestedOpsState.open).toBe(false)
+    })
+
+    it('raises the changed notice when the card was amended since it was read', async () => {
+      approveServerMock.mockResolvedValueOnce({ kind: 'listChanged' })
+      await openSuggestedOps()
+
+      await approveGroup(SERVER)
+
+      expect(reviewOf(SERVER)?.changedUnderReview).toBe(true)
+      expect(canApprove(SERVER)).toBe(false)
+    })
+
+    it('stays on the list when the save is refused', async () => {
+      approveServerMock.mockResolvedValueOnce({ kind: 'nameTaken', name: 'Naspolya' })
+      await openSuggestedOps()
+
+      await approveGroup(SERVER)
+
+      expect(suggestedOpsState.open).toBe(true)
+      expect(listMock).toHaveBeenCalledTimes(2)
+    })
+
+    // Zero ops: nothing to page, nothing to check on disk, so nothing asks.
+    it('reads no op page for a card, on opening or on a reload', async () => {
+      await openSuggestedOps()
+      await reloadGroup(SERVER)
+
+      expect(pageMock).not.toHaveBeenCalled()
+      expect(factsMock).not.toHaveBeenCalled()
+      expect(reviewOf(SERVER)?.window).toBeNull()
+    })
+
+    it('keeps every refusal that gave the card back under it, with its reason', async () => {
+      const givenBack: ServerApprovalResultView[] = [
+        { kind: 'refused', outcome: { outcome: 'address_taken', name: 'Naspolya' } },
+        { kind: 'addServer', error: { type: 'invalid_address', message: 'no host' } },
+        { kind: 'serverChanged' },
+        { kind: 'alreadySaved', serverId: 'sftp-build-22-ada' },
+        { kind: 'nameTaken', name: 'Naspolya' },
+      ]
+      for (const answer of givenBack) {
+        approveServerMock.mockResolvedValueOnce(answer)
+        await openSuggestedOps()
+
+        await approveGroup(SERVER)
+
+        expect(suggestedOpsState.refusals.get(SERVER)).toEqual({ kind: 'server', answer })
+        closeSuggestedOps()
+      }
+    })
+
+    it('says nothing under a card that saved, was answered elsewhere, or changed', async () => {
+      const quiet: ServerApprovalResultView[] = [
+        { kind: 'saved', volumeId: 'sftp-build-22-ada' },
+        { kind: 'alreadyAnswered' },
+        { kind: 'unknown' },
+        { kind: 'listChanged' },
+      ]
+      for (const answer of quiet) {
+        approveServerMock.mockResolvedValueOnce(answer)
+        await openSuggestedOps()
+
+        await approveGroup(SERVER)
+
+        expect(suggestedOpsState.refusals.has(SERVER)).toBe(false)
+        closeSuggestedOps()
+      }
+    })
+
+    // The saved server moved under the card: the re-read shows the card as it is now.
+    it('re-reads the card after the server changed under it', async () => {
+      approveServerMock.mockResolvedValueOnce({ kind: 'serverChanged' })
+      await openSuggestedOps()
+
+      await approveGroup(SERVER)
+
+      expect(listMock).toHaveBeenCalledTimes(2)
+    })
   })
 
   it('stays open when other suggestions are still waiting', async () => {
@@ -838,5 +993,99 @@ describe('closing', () => {
     await openSuggestedOps()
 
     expect(isOpSelected(BIG, pending(1))).toBe(true)
+  })
+})
+
+describe('a file that’s gone', () => {
+  /** Live facts that say op 3 is gone and op 5's new name is taken, the rest present and free. */
+  function factsSaying() {
+    factsMock.mockImplementation(({ offset, limit }) =>
+      Promise.resolve({
+        kind: 'facts',
+        facts: Array.from({ length: limit }, (_, i) => {
+          const opId = offset + i
+          return {
+            opId,
+            state: opId === 3 ? { kind: 'missing' } : { kind: 'present', size: 2048, modified: 1_790_000_000 },
+            newName: opId === 5 ? 'taken' : null,
+          }
+        }),
+      }),
+    )
+  }
+
+  it('reads unticked, can’t be ticked back on, and counts for nothing', async () => {
+    factsSaying()
+    await openSuggestedOps()
+    const gone = opAt(BIG, 3)
+    if (!gone) throw new Error('row 3 is held')
+
+    expect(isOpMissing(BIG, gone)).toBe(true)
+    expect(isOpSelected(BIG, gone)).toBe(false)
+    expect(approvableCount(BIG)).toBe(60_000 - 1)
+    toggleOp(BIG, gone)
+    expect(isOpSelected(BIG, gone)).toBe(false)
+    expect(approvableCount(BIG)).toBe(60_000 - 1)
+  })
+
+  it('goes out turned off, as a flip over the stored ticks', async () => {
+    factsSaying()
+    await openSuggestedOps()
+
+    await approveGroup(BIG)
+
+    expect(approveMock).toHaveBeenCalledWith({
+      groupId: BIG,
+      revision: 1,
+      selection: { mode: 'fromStored', excludeOpIds: [3], includeOpIds: [] },
+    })
+  })
+
+  it('stays out after select all, and isn’t double-counted after select none', async () => {
+    factsSaying()
+    await openSuggestedOps()
+    toggleAllOps(BIG) // all → none
+    expect(approvableCount(BIG)).toBe(0)
+    toggleAllOps(BIG) // none → all
+    expect(approvableCount(BIG)).toBe(60_000 - 1)
+    expect(selectionState(BIG)).toBe('all')
+
+    await approveGroup(BIG)
+
+    expect(approveMock).toHaveBeenCalledWith({
+      groupId: BIG,
+      revision: 1,
+      selection: { mode: 'allExcept', opIds: [3] },
+    })
+  })
+
+  it('marks a row whose new name is already taken where it lands (#774)', async () => {
+    factsSaying()
+    await openSuggestedOps()
+    const taken = opAt(BIG, 5)
+    const free = opAt(BIG, 4)
+    if (!taken || !free) throw new Error('rows are held')
+
+    expect(isNewNameTaken(BIG, taken)).toBe(true)
+    expect(isNewNameTaken(BIG, free)).toBe(false)
+  })
+})
+
+describe('a trash on a drive with no Trash', () => {
+  it('approves with the fallback the review showed, so the backend deletes only then', async () => {
+    listMock.mockResolvedValue([sweep([group(BIG, 3, { verb: 'trash', runsAs: 'permanentDelete' })])])
+    await openSuggestedOps()
+
+    await approveGroup(BIG)
+
+    expect(runsAsMock).toHaveBeenCalledWith('permanentDelete')
+  })
+
+  it('sends no fallback for a group that runs as itself', async () => {
+    await openSuggestedOps()
+
+    await approveGroup(BIG)
+
+    expect(runsAsMock).toHaveBeenCalledWith(null)
   })
 })

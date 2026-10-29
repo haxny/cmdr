@@ -37,7 +37,7 @@ cmdr-fs = { path = "../cmdr-fs" }
 # The index's three databases. Feature set matches `cmdr-fs`'s, which owns the
 # connection factories: Cargo unifies features per package, so a subset here would
 # silently take whatever the other consumer asked for.
-rusqlite = { version = "0.40", features = ["bundled", "collation", "fallible_uint"] }
+rusqlite = { version = "0.41", features = ["bundled", "collation", "fallible_uint"] }
 serde = { version = "1", features = ["derive"] }
 # The importance evals corpus and the media index's ANN sidecar metadata are JSON
 # on disk.
@@ -72,7 +72,7 @@ half = "2"
 # metric, mmap `view` reads (at-rest RSS stays small, pages evictable). Chosen by
 # the measured spike (`docs/notes/ann-vector-search-spike-2026-07-24.md`). Pinned
 # `=2.26.0`: it vendors SimSIMD, so a surprise bump is a surprise binary size.
-usearch = "=2.26.4"
+usearch = "=2.26.5"
 # CLIP byte-pair text tokenizer (ctx 77) for the semantic-search query path. Not
 # macOS-gated: the query path tokenizes everywhere, only inference is Core ML.
 instant-clip-tokenizer = "0.1.0"
@@ -177,7 +177,7 @@ tempfile = "3"
 # bookkeeping. Declared here rather than in `[dependencies]` so the hook machinery
 # stays out of every shipped build; the resolver only unifies dev-dependency features
 # when a dev target is being built.
-rusqlite = { version = "0.40", features = ["hooks"] }
+rusqlite = { version = "0.41", features = ["hooks"] }
 # Property-based testing for the algorithmic cores: path resolution, aggregate
 # roll-up, and the importance scorer, where the input space is too large for
 # example tests to cover meaningfully.

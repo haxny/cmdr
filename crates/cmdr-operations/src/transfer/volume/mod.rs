@@ -75,6 +75,25 @@ pub(crate) use transfer_error::unregistered_volume_error;
 /// delete walker maps its own volume failures through it too.
 pub(crate) use transfer_error::{PathRole, map_failure_after_wait, map_finalize_failure, map_volume_error};
 
+/// A both-local transfer's source as the native engines walk it: re-rooted on
+/// its volume's local path (`join`, so an absolute path wins over the root).
+/// The one rule the both-local facades and the routed start's leaf validation
+/// share, so the leaves' keys and the sources can't be re-rooted two ways.
+pub(crate) fn on_local_root(src_root: &std::path::Path, source: &std::path::Path) -> std::path::PathBuf {
+    src_root.join(source)
+}
+
+/// Both volumes' local roots when a transfer between them runs on the native engines (both
+/// ends sit on a local path), else `None` for the cross-volume engine. The one fork the
+/// both-local facades, the routed start's leaf validation, and the ahead-of-start
+/// `TransferLeaves::check_own_names` share, so they can't disagree on which engine runs.
+pub(crate) fn native_roots(
+    source_volume: &dyn cmdr_fs::volume::Volume,
+    dest_volume: &dyn cmdr_fs::volume::Volume,
+) -> Option<(std::path::PathBuf, std::path::PathBuf)> {
+    source_volume.local_path().zip(dest_volume.local_path())
+}
+
 // Driven directly by the SMB/MTP integration suites and the volume-journal
 // capture tests, which bypass the Tauri command layer.
 #[cfg(any(test, feature = "testing"))]

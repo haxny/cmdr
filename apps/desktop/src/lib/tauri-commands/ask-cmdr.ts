@@ -15,6 +15,7 @@ import {
   type WakeReadinessView,
   type AskCmdrStreamEvent,
   type AskCmdrTurn,
+  type CancelOutcomeView,
   type ConversationRow,
   type ConversationDetailView,
   type ConversationSearchHit,
@@ -29,6 +30,9 @@ import {
   type ConversationCost,
   type CostSummary,
   type ModelWindowView,
+  type NextCallPricing,
+  type ProviderReadiness,
+  type SlotStatus,
   type RenameEvidence,
   type RenameProposalRowSnapshot,
   type StopReasonView,
@@ -36,6 +40,8 @@ import {
   type WakeDigestFolderView,
   type WakeDigestRollupView,
   type ProposalDecision,
+  type AskCmdrToolResultError,
+  type ToolResultDetailView,
 } from '#lib/ipc/bindings.js'
 import { throwIpcError } from './ipc-types'
 
@@ -54,6 +60,9 @@ export type {
   ConversationCost,
   CostSummary,
   ModelWindowView,
+  NextCallPricing,
+  ProviderReadiness,
+  SlotStatus,
   RenameEvidence,
   /** One folder a wake's digest named outright, with its four counts. Numbers and a path
    * only: every word around them is the rail's, so ten locales can say it their own way. */
@@ -99,7 +108,8 @@ export type RenameProposalRow = RenameProposalRowSnapshot
 
 /** What a send answered: the thread it landed in, or why it never started. */
 export type AskCmdrSendOutcome =
-  | { accepted: true; conversationId: number }
+  /** `run` is the turn's, which every event of it carries (`AskCmdrTurn.run`). */
+  | { accepted: true; conversationId: number; run: number }
   /** Decided before the turn existed (Ask Cmdr off, cloud AI not allowed, no slot, a window
    * too small), so it can't arrive as a stream event — some of these happen before there IS a
    * thread to key one on. */
@@ -124,7 +134,7 @@ export async function sendAskCmdrMessage(
   if (res.status === 'error') {
     return { accepted: false, kind: res.error.kind, detail: res.error.detail, managed: res.error.managed }
   }
-  return { accepted: true, conversationId: res.data }
+  return { accepted: true, conversationId: res.data.conversationId, run: res.data.run }
 }
 
 /**
@@ -141,9 +151,16 @@ export function onAskCmdrTurn(callback: (payload: AskCmdrTurn) => void): Promise
   })
 }
 
-/** Stop the in-flight turn for a thread. Idempotent; safe after natural completion. */
-export async function cancelAskCmdr(conversationId: number): Promise<void> {
-  await commands.askCmdrCancel(conversationId)
+/** Stop the in-flight turn for a thread. Idempotent; safe after natural completion. Answers what
+ * the Stop reached: how many turns it newly tripped, and how many still owe a terminal. */
+export async function cancelAskCmdr(conversationId: number): Promise<CancelOutcomeView> {
+  return commands.askCmdrCancel(conversationId)
+}
+
+/** Answer a thread's spend pause with Keep going. Answers whether a turn was waiting on it; a
+ * stale click (the turn already went on or ended) answers `false` and changes nothing. */
+export async function keepGoingAskCmdr(conversationId: number): Promise<boolean> {
+  return commands.askCmdrKeepGoing(conversationId)
 }
 
 /** Rechecks the user-selected rows of a server-owned rename proposal. Only opaque ids
@@ -200,6 +217,28 @@ export async function getAskCmdrConversation(
   return res.data
 }
 
+/** What one tool line's call returned: the preview and the raw result for Copy, or why there's
+ * nothing to show. */
+export type AskCmdrToolResult =
+  | { found: true; detail: ToolResultDetailView }
+  | { found: false; reason: AskCmdrToolResultError }
+
+/**
+ * What the call `(messageId, callId)` of a thread returned, for its expanded line; `occurrence`
+ * picks among the calls one row names with that id (0 for the first). The one door a raw tool
+ * result crosses by: on the user's expand, never in the stream or a history page.
+ * ❌ Never log it: it can hold file text and photo locations.
+ */
+export async function askCmdrToolResult(
+  conversationId: number,
+  messageId: number,
+  callId: string,
+  occurrence: number,
+): Promise<AskCmdrToolResult> {
+  const res = await commands.askCmdrToolResult(conversationId, messageId, callId, occurrence)
+  return res.status === 'ok' ? { found: true, detail: res.data } : { found: false, reason: res.error }
+}
+
 /** Conversations newest-activity first, paged. Empty when the store never opened. */
 export async function listAskCmdrConversations(
   limit: number,
@@ -241,18 +280,6 @@ export async function resolveAskCmdrAttachments(paths: string[]): Promise<Attach
   return commands.askCmdrResolveAttachments(paths)
 }
 
-/** True when the Ask Cmdr send path is served by the deterministic scripted fake LLM
- * (`CMDR_E2E_ASK_CMDR_FAKE`, E2E only). The composer treats the fake as an active
- * provider so Send isn't gated off while `ai.provider` is `off` under E2E. Returns
- * false when not, or when the backend isn't reachable (non-Tauri context, like Vitest). */
-export async function askCmdrFakeActive(): Promise<boolean> {
-  try {
-    return await commands.askCmdrFakeActive()
-  } catch {
-    return false
-  }
-}
-
 /**
  * What the legacy Ask Cmdr opt-in says, for the one-time `askCmdr.enabled` mapping at startup.
  * `storeUnavailable` means write nothing and ask again next launch.
@@ -291,6 +318,15 @@ export async function askCmdrCostSummary(): Promise<CostSummary> {
  */
 export async function askCmdrModelWindow(): Promise<ModelWindowView> {
   return commands.askCmdrModelWindow()
+}
+
+/**
+ * What the rail knows before anything is sent: whether an AI provider is set up, how the next
+ * call is priced, and what every call of a new chat costs at minimum (the gauge's baseline).
+ * `null` only when the backend's read itself broke; keep what was last known then.
+ */
+export async function askCmdrSlotStatus(): Promise<SlotStatus | null> {
+  return commands.askCmdrSlotStatus()
 }
 
 /**

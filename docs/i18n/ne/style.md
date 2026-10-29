@@ -18,13 +18,13 @@ and well-established short forms. That register matches Cmdr exactly.
 
 ## Formality
 
-- **Second person: respectful-but-modern `तपाईं` (tapāī̃).** Nepali has a three-way honorific scale (`तँ` low / `तिमी`
-  mid / `तपाईं` high-respect). Software universally uses `तपाईं`, the polite-standard form, which reads as ordinary
-  courtesy rather than stiff formality. Microsoft, GNOME, and Google all use `तपाईं`-level address. Recommendation:
-  `तपाईं` throughout. Confidence: high.
+- **Second person: respectful-but-modern `तपाईं` (tapāī̃).** Nepali has a three-way honorific scale (`तँ` low / `तिमी` mid
+  / `तपाईं` high-respect). Software universally uses `तपाईं`, the polite-standard form, which reads as ordinary courtesy
+  rather than stiff formality. Microsoft, GNOME, and Google all use `तपाईं`-level address. Recommendation: `तपाईं`
+  throughout. Confidence: high.
 - **UI actions use the polite imperative**, matching GNOME Nepali, which suffixes verbs with `-नुहोस्` ("कपी गर्नुहोस्",
-  "खोल्नुहोस्", "रद्द गर्नुहोस्"). This is the standard polite-command form. Recommendation: `-नुहोस्` imperatives for
-  buttons and menu items. Confidence: high.
+  "खोल्नुहोस्", "रद्द गर्नुहोस्"). This is the standard polite-command form. Recommendation: `-नुहोस्` imperatives for buttons
+  and menu items. Confidence: high.
 
 ## Decision points
 
@@ -33,8 +33,8 @@ and well-established short forms. That register matches Cmdr exactly.
 - **Formality: polite-standard `तपाईं` and `-नुहोस्` imperatives.** Covered above. Confidence: high.
 - **Register: modern, not Sanskritized.** The risk for Nepali (as for Hindi) is over-Sanskritized officialese.
   Microsoft's modern-voice guidance and GNOME both favor everyday vocabulary and accepted loanwords over coined Sanskrit
-  equivalents. Recommendation: everyday register; prefer a common loanword (e.g. "फोल्डर" for folder, as GNOME does)
-  over a coined Sanskrit term when the loanword is what users say. Confidence: high.
+  equivalents. Recommendation: everyday register; prefer a common loanword (e.g. "फोल्डर" for folder, as GNOME does) over
+  a coined Sanskrit term when the loanword is what users say. Confidence: high.
 - **Anglicism handling.** Common computing terms are routinely kept as Devanagari-spelled loanwords ("फोल्डर" folder,
   "फाइल" file). GNOME and Microsoft both do this. Recommendation: keep entrenched loanwords in Devanagari spelling;
   translate where a native word is genuinely common (e.g. "प्रतिलिपि" for copy). Confidence: high.
@@ -49,15 +49,15 @@ and well-established short forms. That register matches Cmdr exactly.
 
 Confirmed against GNOME Nautilus Nepali (Tier 3) and Microsoft terminology (Tier 2). Extend as strings come up.
 
-| English term | Nepali                | Notes                        |
-| ------------ | --------------------- | ---------------------------- |
-| file         | फाइल                  | loanword, Devanagari-spelled |
-| folder       | फोल्डर                | GNOME; loanword              |
+| English term | Nepali            | Notes                        |
+| ------------ | ----------------- | ---------------------------- |
+| file         | फाइल              | loanword, Devanagari-spelled |
+| folder       | फोल्डर             | GNOME; loanword              |
 | copy         | प्रतिलिपि गर्नुहोस्   | GNOME; polite imperative     |
-| trash        | रद्दीटोकरी            | GNOME; the location noun     |
+| trash        | रद्दीटोकरी         | GNOME; the location noun     |
 | rename       | पुन: नामकरण गर्नुहोस् | GNOME                        |
 | paste        | टाँस्नुहोस्           | GNOME                        |
-| open         | खोल्नुहोस्            | GNOME                        |
+| open         | खोल्नुहोस्           | GNOME                        |
 | cancel       | रद्द गर्नुहोस्        | GNOME                        |
 
 ## Brand and do-not-translate

@@ -154,6 +154,8 @@ fn test_known_share_serialization() {
         volume_id: None,
         mount_path: None,
         pinned: false,
+        server_guid: None,
+        server_guid_proof: GuidProof::Unauthenticated,
     };
 
     let json = serde_json::to_string_pretty(&share).unwrap();
@@ -187,6 +189,8 @@ fn test_store_serialization() {
                 volume_id: None,
                 mount_path: None,
                 pinned: false,
+                server_guid: None,
+                server_guid_proof: GuidProof::Unauthenticated,
             },
             KnownNetworkShare {
                 server_name: "Bravo".to_string(),
@@ -201,6 +205,8 @@ fn test_store_serialization() {
                 volume_id: None,
                 mount_path: None,
                 pinned: false,
+                server_guid: None,
+                server_guid_proof: GuidProof::Unauthenticated,
             },
         ],
         direct_connection_opt_outs: Vec::new(),
@@ -245,6 +251,8 @@ fn test_in_memory_operations() {
             volume_id: None,
             mount_path: None,
             pinned: false,
+            server_guid: None,
+            server_guid_proof: GuidProof::Unauthenticated,
         });
     }
 
@@ -284,6 +292,8 @@ fn test_username_hints() {
             volume_id: None,
             mount_path: None,
             pinned: false,
+            server_guid: None,
+            server_guid_proof: GuidProof::Unauthenticated,
         });
         c.known_network_shares.push(KnownNetworkShare {
             server_name: "Server2".to_string(),
@@ -298,6 +308,8 @@ fn test_username_hints() {
             volume_id: None,
             mount_path: None,
             pinned: false,
+            server_guid: None,
+            server_guid_proof: GuidProof::Unauthenticated,
         });
     }
 
@@ -335,6 +347,8 @@ fn a_username_hint_is_found_under_every_name_form_of_its_server() {
             volume_id: None,
             mount_path: None,
             pinned: false,
+            server_guid: None,
+            server_guid_proof: GuidProof::Unauthenticated,
         });
     }
 
@@ -382,6 +396,8 @@ fn the_newest_username_on_a_server_wins() {
                 volume_id: None,
                 mount_path: None,
                 pinned: false,
+                server_guid: None,
+                server_guid_proof: GuidProof::Unauthenticated,
             });
         }
     }
@@ -427,6 +443,8 @@ fn concurrent_in_memory_updates_no_lost_writes() {
                     volume_id: None,
                     mount_path: None,
                     pinned: false,
+                    server_guid: None,
+                    server_guid_proof: GuidProof::Unauthenticated,
                 });
             }
         }));
@@ -473,6 +491,8 @@ fn concurrent_read_during_write() {
             volume_id: None,
             mount_path: None,
             pinned: false,
+            server_guid: None,
+            server_guid_proof: GuidProof::Unauthenticated,
         });
     }
 
@@ -498,6 +518,8 @@ fn concurrent_read_during_write() {
                     volume_id: None,
                     mount_path: None,
                     pinned: false,
+                    server_guid: None,
+                    server_guid_proof: GuidProof::Unauthenticated,
                 });
             }
         }
@@ -562,6 +584,8 @@ fn rapid_sequential_updates_same_share() {
                     volume_id: None,
                     mount_path: None,
                     pinned: false,
+                    server_guid: None,
+                    server_guid_proof: GuidProof::Unauthenticated,
                 });
             }
         }
@@ -608,12 +632,16 @@ fn mounted(
         volume_id: Some(volume_id.to_string()),
         mount_path: Some(format!("/Volumes/{share}")),
         pinned: false,
+        server_guid: None,
+        server_guid_proof: GuidProof::Unauthenticated,
     }
 }
 
-/// A share row as Add files it: named in `smb://user@host/share`, never mounted.
+/// A share row as Add files it: named in `smb://user@host/share`, never mounted,
+/// so never connected.
 fn added(server_name: &str, share: &str, username: Option<&str>) -> KnownNetworkShare {
     KnownNetworkShare {
+        last_connected_at: String::new(),
         address: None,
         volume_id: None,
         mount_path: None,
@@ -683,6 +711,10 @@ fn re_adding_a_mounted_share_keeps_its_place() {
     assert_eq!(rows[0].mount_path.as_deref(), Some("/Volumes/photos"));
     assert_eq!(rows[0].address.as_deref(), Some("10.0.0.2"));
     assert_eq!(rows[0].username.as_deref(), Some("ada"));
+    assert_eq!(
+        rows[0].last_connected_at, "2026-09-24T10:00:00Z",
+        "an add connects nothing, so the mount's time stays: `connect_volume` dials the most recently connected member of a share"
+    );
 }
 
 /// ❗ **An Add never erases a known account.** A plain re-Add of
@@ -1123,3 +1155,8 @@ fn one_row_that_doesnt_read_keeps_the_rest_and_a_copy() {
     assert_eq!(store.pending_moves, vec!["smb-naspolya-naspi".to_string()]);
     assert_eq!(the_copy(&path), SAVED.as_bytes());
 }
+
+// -- Server GUIDs --
+
+#[path = "known_shares_guid_test.rs"]
+mod guid;

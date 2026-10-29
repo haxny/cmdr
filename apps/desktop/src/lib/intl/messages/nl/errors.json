@@ -2444,5 +2444,49 @@
   "errors.write.duplicateSourceNames.suggestion.move": "Verplaats ze een voor een, of wijzig eerst de naam van een ervan.",
   "@errors.write.duplicateSourceNames.suggestion.move": {
     "sourceHash": "8af755e"
+  },
+  "errors.write.namedLeavesRefused.title": "Deze nieuwe namen zijn niet te gebruiken",
+  "@errors.write.namedLeavesRefused.title": {
+    "sourceHash": "08c8600"
+  },
+  "errors.write.namedLeavesRefused.message.notASource": "Een van de nieuwe namen hoort bij {path}, en dat onderdeel zit niet in deze suggestie, dus er is niets gestart.",
+  "@errors.write.namedLeavesRefused.message.notASource": {
+    "sourceHash": "12b2cb4"
+  },
+  "errors.write.namedLeavesRefused.message.sameName": "Twee onderdelen zouden allebei op {path} terechtkomen. Veel schijven zien die twee namen als één naam, dus het ene onderdeel zou het andere vervangen.",
+  "@errors.write.namedLeavesRefused.message.sameName": {
+    "sourceHash": "95e02b9"
+  },
+  "errors.write.namedLeavesRefused.message.ontoASource": "Een onderdeel zou op {path} terechtkomen, maar daar staat een ander onderdeel uit deze suggestie, dat dan vervangen zou worden.",
+  "@errors.write.namedLeavesRefused.message.ontoASource": {
+    "sourceHash": "724f9c3"
+  },
+  "errors.write.namedLeavesRefused.message.alreadyInDestination": "{path} staat al in de doelmap, dus een nieuwe naam geven komt daar neer op een naamwijziging.",
+  "@errors.write.namedLeavesRefused.message.alreadyInDestination": {
+    "sourceHash": "06a0593"
+  },
+  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr kan onderdelen niet elk een eigen naam geven als ze een zip-archief in gaan of eruit komen, dus er is niets naar {path} gegaan.",
+  "@errors.write.namedLeavesRefused.message.routeCannotName": {
+    "sourceHash": "f2e48ca"
+  },
+  "errors.write.namedLeavesRefused.suggestion.notASource": "Vraag Ask Cmdr om het opnieuw voor te stellen.",
+  "@errors.write.namedLeavesRefused.suggestion.notASource": {
+    "sourceHash": "c1dbe85"
+  },
+  "errors.write.namedLeavesRefused.suggestion.sameName": "Vraag Ask Cmdr om een andere naam voor elk onderdeel.",
+  "@errors.write.namedLeavesRefused.suggestion.sameName": {
+    "sourceHash": "76257a9"
+  },
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Vraag Ask Cmdr om namen die niet overeenkomen met de onderdelen die je verplaatst of kopieert.",
+  "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
+    "sourceHash": "9ab88ec"
+  },
+  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Wijzig de naam van de onderdelen die al in die map staan, en verplaats of kopieer daarna de rest.",
+  "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {
+    "sourceHash": "8917a8e"
+  },
+  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Verplaats of kopieer ze onder hun eigen namen en wijzig de namen daarna ter plekke.",
+  "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
+    "sourceHash": "b1e881c"
   }
 }

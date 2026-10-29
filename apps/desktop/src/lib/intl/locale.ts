@@ -1,17 +1,18 @@
 /**
  * The two locale sources for the whole frontend: the language we SPEAK and the
- * conventions we FORMAT in. Every consumer reads one of them from here, so
- * "what locale is active" has two answers and two places to change, never more.
+ * region whose date conventions we FORMAT in. Every consumer reads them from
+ * here, so "what locale is active" has two answers and two places to change.
  *
  * They're separate because macOS keeps them separate. System Settings >
  * General > Language & Region is two settings, and a person can legitimately
- * read Hungarian while living in Sweden. Picking a UI language is not
- * permission to overwrite the number, size, and date conventions they chose:
+ * read Hungarian while living in Sweden:
  *
  *  - {@link getUiLocale} follows the `appearance.language` setting (`'system'`
- *    resolves through `os-locales.ts`). Catalog text reads this.
+ *    resolves through `os-locales.ts`). Catalog text reads this, and so do
+ *    numbers and sizes, through {@link getCatalogLocale} (its resolved catalog
+ *    tag): digits inside an English sentence read as English.
  *  - {@link getFormatLocale} always follows the OS, whatever the setting says.
- *    Numbers, sizes, dates, and calendar conventions read this.
+ *    Dates, times, and calendar conventions read this.
  *
  * Both answers arrive from Rust, which reads the OS directly (`os-locales.ts`
  * fetches them). The webview can't work the formatting one out for itself: it
@@ -72,9 +73,9 @@ export function defaultUiLocale(): string {
 }
 
 /**
- * The locale whose CONVENTIONS the user formats in, as a BCP 47 tag. Numbers,
- * file sizes, dates, and calendar facts (which day the week starts on) read
- * this. It follows the OS and ❌ never the `appearance.language` setting.
+ * The locale whose DATE conventions the user formats in, as a BCP 47 tag.
+ * Dates, times, and calendar facts (which day the week starts on) read this;
+ * numbers don't ({@link getCatalogLocale}). It follows the OS and ❌ never the `appearance.language` setting.
  *
  * Prefers the tag Rust composed from the OS's language and REGION, because the
  * webview's own locale silently drops the region override. Falls back to that
@@ -91,6 +92,32 @@ export function defaultUiLocale(): string {
  */
 export function getFormatLocale(): string {
   return formatLocaleOverride ?? osFormatLocale ?? runtimeLocale()
+}
+
+/**
+ * Until the message runtime installs its resolver, a number reads the raw UI tag: the right
+ * language, without the catalog resolution (and in a test that mocks the runtime away).
+ */
+let catalogLocaleResolver: () => string = getUiLocale
+
+/**
+ * The locale every NUMBER and list join is written in: the catalog tag the UI speaks (`en`, `en-GB`, `hu`),
+ * so digits inside an English sentence read as English (`612.00 MB`, `$0.83`, `54.5s`) on any
+ * Mac. Dates, times, and calendar facts stay on {@link getFormatLocale}; the split and its why
+ * are `DETAILS.md` § "Language and region are two settings".
+ *
+ * The answer comes from `messages.svelte.ts` (installed through {@link setCatalogLocaleResolver}),
+ * which owns the catalog resolution and the version rune: it answers the RESOLVED catalog tag
+ * (a Japanese Mac with no `ja` catalog reads English text, so English numbers) and reads the
+ * rune, so markup that formats a number re-runs on a language switch.
+ */
+export function getCatalogLocale(): string {
+  return catalogLocaleResolver()
+}
+
+/** Installs the message runtime's answer for {@link getCatalogLocale}. Called once, at its load. */
+export function setCatalogLocaleResolver(resolver: () => string): void {
+  catalogLocaleResolver = resolver
 }
 
 /**
@@ -114,8 +141,8 @@ export function setOsFormatLocale(locale: string | null): void {
  * bumps a version rune. Call `setLocale()` from app code, not this, so
  * re-render fires.
  *
- * Deliberately reaches the UI half only: a language pick must leave the user's
- * formatting conventions where System Settings put them.
+ * Moves the copy and the numbers; a language pick leaves the user's date
+ * conventions where System Settings put them.
  */
 export function setUiLocaleOverride(locale: string | null): void {
   uiLocaleOverride = locale

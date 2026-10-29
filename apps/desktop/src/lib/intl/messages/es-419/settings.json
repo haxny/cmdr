@@ -259,6 +259,14 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "1fb74fc"
   },
+  "settings.askCmdr.spendPause.description": "Una respuesta puede hacer muchas consultas. Cuando supera este costo estimado, Cmdr la pausa y te pregunta antes de gastar más. Las estimaciones usan precios de lista, así que la caché suele hacer que el costo real sea menor.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "3a30d70"
+  },
+  "settings.askCmdr.spendPause.keywords": "gasto, dinero, precio, presupuesto, límite, pausa, dólares, caro, factura",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "abae628"
+  },
   "settings.askCmdr.memory.notAllForgotten": "Cmdr no pudo eliminar todas las notas. Abre la carpeta de notas para eliminar el resto.",
   "@settings.askCmdr.memory.notAllForgotten": {
     "sourceHash": "e7830d6"
@@ -494,5 +502,9 @@
   "settings.license.enterKey.keywords": "licencia, clave, clave de licencia, introducir, ingresar, activar, activación, canjear",
   "@settings.license.enterKey.keywords": {
     "sourceHash": "b539db7"
+  },
+  "settings.ai.reasoningEfforts.keywords": "esfuerzo de razonamiento, esfuerzo, razonamiento, pensar, pensamiento, reflexión, profundidad, velocidad, costo, calidad",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "59fad22"
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { _setLocaleForTests } from '#lib/intl/locale.js'
+import { _setFormatLocaleForTests, _setLocaleForTests } from '#lib/intl/locale.js'
 import { getLicenseTypeLabel, formatLicenseDate, getStatusText } from './license-section-utils'
 import type { LicenseInfo, LicenseStatus } from '#lib/tauri-commands/index.js'
 
@@ -75,14 +75,20 @@ describe('formatLicenseDate', () => {
     expect(result).toContain('2025')
   })
 
-  it('should return the raw string if Date parsing produces Invalid Date', () => {
-    // new Date('not-a-date') produces Invalid Date, toLocaleDateString returns 'Invalid Date'
-    // The function catches errors, but Invalid Date doesn't throw - it returns 'Invalid Date' string
-    // So this tests the catch path won't be hit for truly invalid strings
-    const result = formatLicenseDate('not-a-date')
-    // NaN date toLocaleDateString may throw in some environments or return 'Invalid Date'
-    expect(typeof result).toBe('string')
-    expect(result.length).toBeGreaterThan(0)
+  it('returns the raw string when it is not a date', () => {
+    expect(formatLicenseDate('not-a-date')).toBe('not-a-date')
+  })
+
+  it('writes the date in the OS region, not the webview default', () => {
+    // An English Mac set to the Swedish region: the webview alone resolves `en-US` and writes
+    // "June 15, 2025"; the region the user set writes the day first.
+    _setFormatLocaleForTests('en-SE')
+    const expected = new Intl.DateTimeFormat('en-SE', { year: 'numeric', month: 'long', day: 'numeric' }).format(
+      new Date('2025-06-15T12:00:00Z'),
+    )
+    expect(formatLicenseDate('2025-06-15T12:00:00Z')).toBe(expected)
+    expect(expected).not.toBe('June 15, 2025')
+    _setLocaleForTests('en-US')
   })
 })
 

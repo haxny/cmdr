@@ -137,8 +137,8 @@ files rather than volumes, and `HandleMethods` 38 → 40 with no new root promis
 
 - **`disk_footprint()`** — the bytes every index database occupies, sidecars included, plus the importance databases a
   forget removes with them. It reads the data dir, ❌ never the registry: the whole point is the database a walk built
-  that nothing re-registered after a restart, which `status(volume_id)` reports as absent because it asks the live
-  instance.
+  that nothing re-registered after a restart, which the registry can't see (`status(volume_id)` reads such a database's
+  last-scan facts, § "A stopped volume's last scan", but says nothing about its size).
 - **`forget_all_volumes()`** — the whole-index sibling of `forget_volume`, reaching those same unregistered databases.
   Each volume still goes through `clear_index`, so a live one drains its writer and withdraws its read handles first.
   What a forget takes beside the index: `crates/cmdr-index/DETAILS.md` § "A volume's files, and the one door they leave
@@ -168,6 +168,40 @@ dead root by itself can't tell a rename from an unplug.
 
 It answers a `bool` (followed or not) rather than a typed outcome, because the host only logs it and a new enum would
 spend a root promise on a log line.
+
+## Ground the scanner skips: the fourth concept added since the audit
+
+Added 2026-10-26 (#749), `HandleMethods` 41 → 42 with no new root promise. Ask Cmdr's `list_dir` reads a folder live
+when no index lists it, and it must never show ground the index left out on purpose, or one tool answers two ways for
+the same folder depending on a source the model can't see. **`scan_skips(volume_id, path)`** is the scanner's own
+`should_exclude` under the scope the read side already derives (`exclusion_scope_for_volume`).
+
+Why no disposition fits: the policy is the scanner's and has to stay single-sourced, so copying `JUNK_BASENAMES` and the
+boot prefixes into the host is out; no existing method answers "would you have skipped this path"; and
+`SYSTEM_DIR_EXCLUDES` (the one exclusion list already promised) is search's default-hidden tier, which the scanner
+deliberately does NOT apply.
+
+## A stopped volume's last scan: folded into `status`, no ceiling moved
+
+Added 2026-10-26 (#749). Ask Cmdr has to answer about a volume that isn't connected (a saved NAS share asleep at home):
+its last root and the date of what its index holds, both in that volume's database on disk, with nothing registered. The
+read-only opener that reads them is crate-private (`../store/stored.rs`, `StoredIndex`): it opens the file
+`SQLITE_OPEN_READ_ONLY`, refuses typed (`Missing`, `OtherSchema`, `Unreadable`) a database this build can't read without
+touching it, and holds one connection that closes with it, ❌ never a cached per-thread one (§ "A stop retires too" in
+`crates/cmdr-index/DETAILS.md`).
+
+Disposition: **fold**. `status(volume_id)` already promised "last-scan facts" and answered a stopped volume with none,
+though they were on disk; now an uninstanced volume's `index_status` comes off its database, with `initialized` staying
+`false`. ❌ Not folded into `volume_status`: that one runs per badge and per `cmdr://state` row, and its `enabled` and
+`freshness` must keep saying "not indexed" for a volume with no instance (the "registered is not indexed" trap). Callers
+of `status` at the fold: the root status IPC (root is always instanced) and `list_dir`'s `walked_roots` (empty either
+way), so neither changed behavior.
+
+The opener's row reads (an offline `list_dir`) folded into `list_children` / `dir_stats` / `dir_stats_batch` the same
+way, so the concept cost no method: each already promised "what this volume's index knows", and a stopped volume's index
+is its database. Only a volume the host doesn't serve falls back, so every pane and operation caller (always a mounted
+volume, or a path routed to one) keeps today's answer. Mechanism: `../read/DETAILS.md` § A stopped volume's database
+answers reads.
 
 ## The mapping
 

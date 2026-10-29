@@ -13,6 +13,19 @@ fn cancelling_an_id_nobody_is_running_is_a_plain_no() {
     assert!(!TABLE.cancel("nothing-is-filed-under-this"));
 }
 
+/// A shared saved-place dial is called off by its own id, and an SFTP or S3 dial
+/// reads the Keychain before it files that id: the call-off must still reach it.
+#[test]
+fn an_attempt_called_off_before_it_filed_starts_cancelled() {
+    call_off_early("called-off-early");
+    let (cancel, _guard) = TABLE.register("called-off-early");
+    assert!(cancel.is_cancelled());
+
+    forget_call_off("called-off-early");
+    let (again, _guard) = OTHER.register("called-off-early");
+    assert!(!again.is_cancelled(), "a forgotten call-off reaches no later attempt");
+}
+
 #[test]
 fn a_registered_attempt_is_cancelable_and_its_token_says_so() {
     let (cancel, _guard) = TABLE.register("cancelable");

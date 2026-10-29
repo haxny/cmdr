@@ -8,6 +8,7 @@ use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Manager, Runtime};
 
+use crate::location::Location;
 use crate::mcp::pane_state::PaneState;
 use crate::mcp::{PaneStateStore, ToolError, ToolResult};
 
@@ -63,8 +64,8 @@ pub enum PaneListingScope {
 #[serde(rename_all = "camelCase")]
 pub struct PaneListingResult {
     pub pane: String,
-    pub path: String,
-    pub volume_id: String,
+    /// The pane's folder: the shared parent and volume a rename proposal needs.
+    pub location: Location,
     pub scope: PaneListingScope,
     pub total: usize,
     pub returned: usize,
@@ -127,8 +128,10 @@ pub(crate) fn build_pane_listing(
     let returned = entries.len();
     Ok(PaneListingResult {
         pane,
-        path: state.path.clone(),
-        volume_id,
+        location: Location {
+            volume_id,
+            path: state.path.clone(),
+        },
         scope,
         total,
         returned,
@@ -192,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn folder_scope_is_compact_capped_and_carries_volume_id() {
+    fn folder_scope_is_compact_capped_and_carries_its_location() {
         let state = PaneState {
             path: "/shots".to_string(),
             volume_id: Some("root".to_string()),
@@ -201,7 +204,12 @@ mod tests {
             ..Default::default()
         };
         let result = build_pane_listing("right".to_string(), &state, (0..205).map(source).collect()).unwrap();
-        assert_eq!(result.volume_id, "root");
+        let wire = serde_json::to_value(&result).unwrap();
+        assert_eq!(
+            wire["location"],
+            serde_json::json!({ "volumeId": "root", "path": "/shots" }),
+            "the folder is a location the next tool takes as is"
+        );
         assert_eq!(result.scope, PaneListingScope::Folder);
         assert_eq!(result.total, 205);
         assert_eq!(result.returned, 200);

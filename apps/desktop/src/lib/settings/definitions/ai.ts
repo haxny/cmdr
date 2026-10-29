@@ -5,7 +5,7 @@
 
 import type { EnumOption, SettingDefinitionSource } from '../types'
 import { cloudProviderPresets } from '../cloud-providers'
-import { formatInteger } from '#lib/intl/number-format.js'
+import { formatInteger, formatMoney } from '#lib/intl/number-format.js'
 
 /**
  * A token-count option whose label is the number itself, grouped for the reader's locale
@@ -18,6 +18,18 @@ function tokenOption(tokens: number): EnumOption {
     value: String(tokens),
     get label() {
       return formatInteger(tokens)
+    },
+  }
+}
+
+/** A dollar-amount option whose label is the amount as money in the reader's locale ($2.00). A
+ * getter for the same reason as {@link tokenOption}. The value is the amount in dollars, which
+ * the backend reads as is (`settings::load_ask_cmdr_spend_pause_micros`). */
+function dollarOption(dollars: number): EnumOption {
+  return {
+    value: String(dollars),
+    get label() {
+      return formatMoney(dollars, 'USD')
     },
   }
 }
@@ -85,6 +97,23 @@ export const aiSettings: SettingDefinitionSource[] = [
     component: 'text-input',
   },
   {
+    // How hard each cloud model thinks, per provider and model: a JSON object keyed
+    // `"<provider id>/<model>"` with `"recommended"`, `"off"`, or a level (`"low"` …
+    // `"max"`). Rendered as the reasoning picker under the model in `AiCloudSection`, never as a
+    // text field; the row's label is the provider's own term (`ai-effort.ts::effortLabelKey`),
+    // and this `labelKey` is the fallback term, which search and MCP see. Read fresh per send by `load_ai_reasoning_efforts`, so no applier case; the
+    // backend maps a pick the model can't take to the nearest it can
+    // (`agent::chat::effort::resolve_effort`).
+    id: 'ai.reasoningEfforts',
+    section: ['AI', 'Provider'],
+    labelKey: 'settings.ai.reasoningEfforts.label.thinkingLevel',
+    descriptionKey: 'settings.ai.reasoningEfforts.description',
+    keywordsKey: 'settings.ai.reasoningEfforts.keywords',
+    type: 'string',
+    default: '{}',
+    component: 'text-input',
+  },
+  {
     id: 'ai.localContextSize',
     section: ['AI', 'Provider'],
     labelKey: 'settings.ai.localContextSize.label',
@@ -93,7 +122,7 @@ export const aiSettings: SettingDefinitionSource[] = [
     type: 'enum',
     // 32,768 is the floor Ask Cmdr needs for one working turn
     // (`agent::chat::budget::MIN_LOCAL_CONTEXT_TOKENS`, which this default mirrors): the
-    // system prompt plus the tool declarations cost ~6,263 tokens before the user says a
+    // system prompt plus the tool declarations cost ~7k tokens before the user says a
     // word, and one paged tool result can spend 8,000 more. Nothing smaller is offered, and
     // a smaller stored size from an earlier build no longer validates, so it reads as this
     // default instead of leaving a tester with a chat that can't complete a single message.
@@ -145,10 +174,11 @@ export const aiSettings: SettingDefinitionSource[] = [
     component: 'text-input',
   },
   {
-    // How much of the thread one message may carry. `auto` follows the model's window (the
-    // family table in `agent::chat::budget`); a number overrides it and is used as given,
-    // even above the window we believe the model has — the section warns instead of
-    // clamping, because that table will be wrong sometimes and the user may be right.
+    // How much of the thread one message may carry. `auto` spends the model's whole window
+    // (the provider's report, else the family table in `agent::chat::budget`); a number is
+    // an optional lower limit, to spend less, used as given even above the window we believe
+    // the model has — the section warns instead of clamping, because our knowledge will be
+    // wrong sometimes and the user may be right.
     // Presets rather than a free number field: the bounds are then unmisstateable, so
     // there's no below-minimum case and no validation copy. Read fresh per send by
     // `load_ask_cmdr_chat_memory_size`, so it applies to the next message and never moves a
@@ -172,6 +202,32 @@ export const aiSettings: SettingDefinitionSource[] = [
         tokenOption(60000),
         tokenOption(128000),
         tokenOption(200000),
+      ],
+    },
+  },
+  {
+    // Where one answer the user started pauses on its estimated spend and asks to keep going.
+    // Read fresh per send by `load_ask_cmdr_spend_pause_micros`, so like the two above it applies
+    // to the next message, never moves a turn in flight, and needs no `settings-applier` case.
+    // The Rust loader mirrors the default ($2; why: `agent/chat/DETAILS.md` § Constants table),
+    // since the store is sparse and an untouched row arrives as an absent key.
+    id: 'askCmdr.spendPause',
+    section: ['AI', 'Ask Cmdr'],
+    labelKey: 'settings.askCmdr.spendPause.label',
+    descriptionKey: 'settings.askCmdr.spendPause.description',
+    keywordsKey: 'settings.askCmdr.spendPause.keywords',
+    terms: ['ask cmdr'],
+    type: 'enum',
+    default: '2',
+    component: 'select',
+    constraints: {
+      options: [
+        dollarOption(0.5),
+        dollarOption(1),
+        dollarOption(2),
+        dollarOption(5),
+        dollarOption(10),
+        { value: 'never', labelKey: 'settings.askCmdr.spendPause.opt.never' },
       ],
     },
   },

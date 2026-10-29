@@ -416,6 +416,7 @@ fn server_entry_serialization_round_trip() {
         port: 9445,
         added_at: "2026-04-02T10:00:00Z".to_string(),
         username: None,
+        awaiting_first_connect: false,
     };
 
     let json = serde_json::to_string_pretty(&entry).unwrap();
@@ -438,6 +439,7 @@ fn store_serialization_round_trip() {
             port: 445,
             added_at: "2026-04-02T10:00:00Z".to_string(),
             username: None,
+            awaiting_first_connect: false,
         }],
     };
 
@@ -535,6 +537,7 @@ fn test_entry(index: usize) -> ManualServerEntry {
         port: 445,
         added_at: "2026-01-01T00:00:00Z".to_string(),
         username: None,
+        awaiting_first_connect: false,
     }
 }
 

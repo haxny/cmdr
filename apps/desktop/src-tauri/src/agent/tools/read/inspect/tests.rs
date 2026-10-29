@@ -519,7 +519,8 @@ async fn an_expired_call_deadline_launches_nothing_and_leaves_every_path_unanswe
         returned,
         truncated,
         unanswered,
-    } = shape_ok(&paths, rows);
+        ..
+    } = shape_ok(&paths, unplaced(rows));
     assert!(files.is_empty());
     assert_eq!((total, returned, truncated), (3, 0, true));
     assert_eq!(unanswered, paths, "the model can ask again for exactly these");
@@ -585,6 +586,11 @@ async fn a_read_that_honours_the_cancel_flag_hands_back_its_partial_row() {
 
 // ── The size contract ─────────────────────────────────────────────────────────
 
+/// Rows with no volume placement, for the tests about the answer's shape.
+fn unplaced(rows: Vec<Option<FileRow>>) -> PlacedRows {
+    place_rows(rows, None, &|_| None)
+}
+
 /// One text row carrying a full window: the densest row this tool produces.
 fn dense_row(index: usize) -> FileRow {
     FileRow::Ok(Box::new(InspectedFile {
@@ -624,7 +630,8 @@ fn two_hundred_dense_rows_page_and_unanswered_names_exactly_the_rows_not_carried
         returned,
         truncated,
         unanswered,
-    } = shape_ok(&paths, rows);
+        ..
+    } = shape_ok(&paths, unplaced(rows));
 
     assert_eq!(total, MAX_PATHS, "the count asked about is reported in full");
     assert_eq!(returned, files.len());
@@ -657,7 +664,7 @@ fn a_gap_left_by_an_unlaunched_path_is_unanswered_while_the_rest_still_answers()
         truncated,
         unanswered,
         ..
-    } = shape_ok(&paths, rows);
+    } = shape_ok(&paths, unplaced(rows));
     assert_eq!(files.len(), 2);
     assert_eq!((returned, truncated), (2, true));
     assert_eq!(unanswered, vec!["/b.txt".to_string()]);
@@ -666,7 +673,11 @@ fn a_gap_left_by_an_unlaunched_path_is_unanswered_while_the_rest_still_answers()
 #[test]
 fn a_call_that_fits_is_answered_whole_and_carries_no_unanswered_key() {
     let paths = vec!["/a.txt".to_string()];
-    let json = serde_json::to_value(shape_ok(&paths, vec![Some(FileRow::Missing { path: "/a.txt".into() })])).unwrap();
+    let json = serde_json::to_value(shape_ok(
+        &paths,
+        unplaced(vec![Some(FileRow::Missing { path: "/a.txt".into() })]),
+    ))
+    .unwrap();
     assert_eq!(json["status"], "ok");
     assert_eq!(json["total"], 1);
     assert_eq!(json["returned"], 1);
@@ -726,7 +737,7 @@ fn every_row_shape_is_text_only_no_byte_fields() {
         }),
     ];
     let paths: Vec<String> = rows.iter().map(|r| r.as_ref().unwrap().path().to_string()).collect();
-    let json = serde_json::to_value(shape_ok(&paths, rows)).unwrap();
+    let json = serde_json::to_value(shape_ok(&paths, unplaced(rows))).unwrap();
     assert_text_only(&json, "result");
 
     let kinds: Vec<&str> = json["files"]

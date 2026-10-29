@@ -1,7 +1,7 @@
 /**
- * The context gauge's state slice: a `contextUsage` event records the turn's figures, opening a
- * thread restores its last measured figures, and a fresh chat carries none of the previous
- * thread's fill.
+ * The footer's state slice: a `contextUsage` event records one call's figures, a `costMetered`
+ * event nudges the cost re-read, opening a thread restores its last measured figures, and a
+ * fresh chat carries none of the previous thread's fill.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -13,7 +13,7 @@ const getConversationMock =
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
-  cancelAskCmdr: vi.fn(() => Promise.resolve()),
+  cancelAskCmdr: vi.fn(() => Promise.resolve({ tripped: 1, live: 1 })),
   listAskCmdrConversations: vi.fn(() => Promise.resolve([])),
   getAskCmdrConversation: (id: number, limit: number, offset: number) =>
     getConversationMock({ id, msgLimit: limit, msgOffset: offset }),
@@ -39,25 +39,25 @@ vi.mock('./ask-cmdr-gate.svelte', () => ({
 }))
 
 import { askCmdrState, newChat, sendMessage, switchToThread } from './ask-cmdr-trigger.svelte'
-import { handleTurnEvent, resetStoppedTurns } from './ask-cmdr-stream.svelte'
+import { handleTurnEvent, resetTurnBookkeeping } from './ask-cmdr-stream.svelte'
 
 /** The thread a fired event belongs to when the test doesn't name one. */
 const THREAD_ID = 1
 
 /** Feed one stream event in as the backend emits it, for the thread the rail is on. A rail with
- * no thread yet is put on the named one first: production gets there through `started`, which
- * `adopts a new thread's id from its own started event` covers on its own. */
+ * no thread yet is put on the named one first: production gets there through its send's answer,
+ * which `ask-cmdr-send-before-id.test.ts` covers on its own. */
 function fire(event: AskCmdrStreamEvent, conversationId: number = askCmdrState.conversationId ?? THREAD_ID): void {
   askCmdrState.conversationId = conversationId
-  handleTurnEvent({ conversationId, event })
+  handleTurnEvent({ conversationId, run: null, event })
 }
 
 beforeEach(() => {
   sendMock.mockReset()
-  sendMock.mockImplementation((c) => Promise.resolve({ accepted: true, conversationId: c ?? THREAD_ID }))
+  sendMock.mockImplementation((c) => Promise.resolve({ accepted: true, conversationId: c ?? THREAD_ID, run: 1 }))
   getConversationMock.mockReset()
   newChat()
-  resetStoppedTurns()
+  resetTurnBookkeeping()
   askCmdrState.messages = []
   askCmdrState.conversationId = null
 })
@@ -87,6 +87,8 @@ describe('the context gauge state', () => {
       messages: [],
       totalMessages: 0,
       lastContextUsage: { estimatedTokens: 44_000, budgetTokens: 60_000 },
+      turnInFlightSinceSeq: null,
+      spendPausedMicros: null,
     })
 
     await switchToThread(7)
@@ -99,12 +101,24 @@ describe('the context gauge state', () => {
     })
   })
 
-  it('shows no gauge for a thread that never finished a turn', async () => {
+  it('nudges the footer to re-read the meter after each metered call, mid-turn', () => {
+    sendMessage('name these')
+    const before = askCmdrState.costRevision
+
+    fire({ type: 'costMetered' })
+    fire({ type: 'costMetered' })
+
+    expect(askCmdrState.costRevision).toBe(before + 2)
+  })
+
+  it('has no measured figure for a thread that never finished a call, so the gauge shows the baseline', async () => {
     getConversationMock.mockResolvedValue({
       conversation: { id: 8, title: 't', createdAt: 0, updatedAt: 0, archived: false, origin: null },
       messages: [],
       totalMessages: 0,
       lastContextUsage: null,
+      turnInFlightSinceSeq: null,
+      spendPausedMicros: null,
     })
 
     await switchToThread(8)

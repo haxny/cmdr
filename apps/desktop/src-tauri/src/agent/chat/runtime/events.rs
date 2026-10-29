@@ -8,7 +8,12 @@
 
 use tokio::sync::mpsc::UnboundedSender;
 
+use serde::Serialize;
+
+use crate::agent::chat::message_view::MessageView;
 use crate::agent::llm::types::{AgentStopReason, AgentUsage, ToolId};
+use crate::agent::store::TurnStats;
+use crate::agent::tools::line::{LineRef, ToolOutcome, ToolSubject};
 use crate::agent::tools::propose::rename::RenameProposalSnapshot;
 
 /// The sink the runtime emits progress through. A plain unbounded channel; the IPC command forwards
@@ -24,8 +29,9 @@ pub enum AgentChatEvent {
     /// A send arrived while this thread's loop was running; it will start once the
     /// running one finishes. Drives the "working… stop?" affordance.
     Queued,
-    /// The user's message was persisted (written on the first `respond` `End`).
-    UserPersisted { message_id: i64, seq: i64 },
+    /// The turn's opener was persisted (written on the first `respond` `End`), as the same view
+    /// history shows, so a rail that reloaded before this row landed can still show it.
+    UserPersisted { opener: MessageView },
     /// A new assistant turn began streaming. Carries no id by design: `content_blocks`
     /// are written only on `End`, so no row exists yet (crash case a). The final id
     /// arrives with [`AgentChatEvent::Done`].
@@ -34,29 +40,48 @@ pub enum AgentChatEvent {
     TextDelta { text: String },
     /// Opaque reasoning progressed; the UI shows "thinking…", content never surfaced.
     ReasoningTick,
-    /// The model started a tool call (surfaced as a collapsible "looked at X" line).
+    /// The model started a tool call (surfaced as a collapsible "looked at X" line). Its
+    /// arguments are still streaming, so it names only the tool.
     ToolCallStarted { call_id: String, tool: ToolId },
-    /// A tool call finished dispatching. `ok` is false for a refusal or a handler
-    /// problem (inspected from OUR OWN typed result shape, not external wording).
-    ToolCallFinished { call_id: String, ok: bool },
+    /// A round's assistant row persisted with these tool calls, before any of them runs: EVERY
+    /// call of the final message, in order, with what each looks at. It stamps the row's id onto
+    /// the round, adds a call whose `ToolCallStarted` never came, and drops a started call the
+    /// final message doesn't hold (a nameless call the provider seam dropped).
+    ToolCallsResolved { message_id: i64, calls: Vec<ResolvedCall> },
+    /// A tool call's result row persisted (always BEFORE this is emitted, so fetching the result
+    /// never races the row). `subject` is refined by the result where the arguments couldn't say
+    /// (`list_pane_files`). The line is `(message_id, call_id)`: ids collide across rounds.
+    ToolCallFinished {
+        message_id: i64,
+        call_id: String,
+        outcome: ToolOutcome,
+        subject: ToolSubject,
+    },
     /// A server-owned rename proposal is ready for the review surface. The
     /// snapshot is display-only; later approval uses only opaque row ids.
     ProposalReady { proposal: RenameProposalSnapshot },
-    /// The turn produced its final answer. Carries the persisted assistant message id.
+    /// The turn produced its final answer. Carries the persisted assistant message id, the LAST
+    /// call's usage, and what the whole turn spent when it ran a tool.
     Done {
         message_id: i64,
         seq: i64,
         stop: AgentStopReason,
         usage: AgentUsage,
+        turn: Option<TurnStats>,
     },
     /// The turn ended without an answer, honestly and typed. Rendered by the frontend
     /// without the words "error"/"failed" (the frontend owns the copy). `detail` is the
     /// source error's own wording — shown under the typed headline so the user sees what
     /// to fix (a retired model slug, a quota reset time); display only, never control flow.
+    /// `turn` is what the turn spent when it ran a tool.
     Failed {
         kind: AgentErrorKind,
         detail: Option<String>,
+        turn: Option<TurnStats>,
     },
+    /// The user (or the status corner) stopped the turn. Terminal, like `Done` and `Failed`,
+    /// and the only thing a cancel emits; `turn` is what it spent when it ran a tool.
+    Stopped { turn: Option<TurnStats> },
     /// The conversation's effective model changed since its previous turn; a UI-facing
     /// event row was persisted (its identity rides along). The rail shows it as a small
     /// timeline line before this turn's user message.
@@ -81,10 +106,10 @@ pub enum AgentChatEvent {
         /// Roughly how many tokens of detail that removed.
         approx_tokens: usize,
     },
-    /// What this turn's prompt actually cost, against the budget it was assembled for.
-    /// Emitted ONCE per answered turn, from the turn's LAST assembly (the largest one, since
-    /// each tool result joins the same turn), so the gauge reports the peak the user should
-    /// judge "is this chat filling up?" by, not the cheapest moment in the turn.
+    /// What one model call's prompt cost, against the budget it was assembled for. Emitted
+    /// once per COMPLETED call (its `End`), so the gauge moves as each tool result joins the
+    /// turn; the turn's last report is its largest assembly, the peak "is this chat filling
+    /// up?" is judged by. A call that never reached `End` reports nothing.
     ///
     /// Both numbers are `chars/4` ESTIMATES, not a tokenizer's count, and the UI says so.
     ContextUsage {
@@ -96,6 +121,29 @@ pub enum AgentChatEvent {
         /// "set aside" state without a second event.
         elided_results: usize,
     },
+    /// One completed model call was just folded into the cost meter. Carries no numbers on
+    /// purpose: the meter stays the one source of the thread's total, so the rail re-reads it
+    /// (`ask_cmdr_conversation_cost`) rather than adding up figures of its own.
+    CostMetered,
+    /// The turn's estimated spend passed the user's threshold, so it stopped between rounds and
+    /// waits for Keep going or Stop (`chat::spend_pause`). `cost_micros` is what the turn has
+    /// spent so far, by the same estimate as the cost footer.
+    SpendPaused { cost_micros: i64 },
+    /// The user pressed Keep going on the spend pause, and the turn runs on.
+    SpendResumed,
+}
+
+/// One call of a round, as [`AgentChatEvent::ToolCallsResolved`] lists it: which tool, what it
+/// looks at (from its arguments alone), and the earlier identical call of this turn it repeats, if
+/// any. The tool's wire name rides along so a line whose `ToolCallStarted` never came is still
+/// added with its label.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedCall {
+    pub call_id: String,
+    pub tool: String,
+    pub subject: ToolSubject,
+    pub repeat_of: Option<LineRef>,
 }
 
 /// The typed reasons a turn can end without an answer. A pure classification the
@@ -114,7 +162,7 @@ pub enum AgentErrorKind {
     AuthFailed,
     /// The provider is rate-limiting or out of quota.
     RateLimited,
-    /// A per-message budget (tool turns or wall time) was exhausted before an answer.
+    /// A per-answer limit (a background round cap, or the loop guard) ended the tool loop before an answer.
     BudgetExhausted,
     /// The model kept re-sending a tool call that had already come back with a problem, after
     /// being told plainly that repeating it changes nothing (`repeats.rs`). Distinct from

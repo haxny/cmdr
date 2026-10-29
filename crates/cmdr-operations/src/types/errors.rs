@@ -139,6 +139,29 @@ pub enum ArchiveNameRefusal {
     Empty,
 }
 
+/// Why a transfer that names its items one by one refused to start, for
+/// [`WriteOperationError::NamedLeavesRefused`]. Every one is checked before the
+/// operation is admitted, so nothing was written (`transfer/DETAILS.md` §
+/// "Named destinations").
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum NamedLeavesRefusal {
+    /// A name was given for an item the transfer doesn't carry. `path` is that item.
+    NotASource,
+    /// Two items would land under one name, compared ignoring case and Unicode
+    /// form, so on many disks one would replace the other. `path` is where they'd land.
+    SameName,
+    /// An item would land where another item of the same transfer is, replacing
+    /// it before it's read or moved. `path` is where it would land.
+    OntoASource,
+    /// An item already sits in the destination folder, so naming it there is a
+    /// rename, not a transfer. `path` is that item.
+    AlreadyInDestination,
+    /// The route can't take a name per item: an archive changeset (copy or move
+    /// into a zip, move out of one). `path` is the destination.
+    RouteCannotName,
+}
+
 /// What a refused operation would have done to a mounted drive, for
 /// [`WriteOperationError::MountedVolumeInside`]. Each is its own sentence: a
 /// MOVE of the folder holding the drive and an Overwrite REPLACING a folder
@@ -287,6 +310,14 @@ pub enum WriteOperationError {
         name: String,
         first: String,
         second: String,
+    },
+    /// The names a transfer gave its items one by one can't all be honoured,
+    /// so it refused before anything was admitted or written. `reason` says
+    /// which rule, and `path` is the item, landing path, or destination that
+    /// rule is about.
+    NamedLeavesRefused {
+        path: String,
+        reason: NamedLeavesRefusal,
     },
     /// The selected items aren't all served by one volume: some sit on the drive
     /// and some inside a read-only view of it (a backup repo's `Browse snapshots`,

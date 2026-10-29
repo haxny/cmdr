@@ -573,9 +573,57 @@ NAS.
 
 ### Named destinations
 
-`WriteOperationConfig::destination_name` and `VolumeCopyConfig::destination_name` supply an explicit leaf for one
-source. The destination argument remains its parent directory. `validation::validate_transfer_destination_name` checks
-the single-source count, leaf components, null bytes, and path limits before writes.
+`TransferLeaves` (`../types/transfer_leaves.rs`), the `leaves` field of both `WriteOperationConfig` and
+`VolumeCopyConfig`, says which name each top-level source lands as. Three forms: every source keeps its own name; ONE
+source lands as an explicit leaf (the dialog's single-item Copy/Move); or a per-source map, where each keyed source
+lands as its leaf and any other keeps its own name (an approved suggestion that files each item under a new name, built
+only in Rust). The destination argument remains its parent directory. On the wire it stays the optional
+`destinationName`, one leaf: the map is never on the wire, and serializing one refuses rather than drop its names.
+
+- **Every route asks it**: `leaf_of(source)` (the chosen leaf, else the source's own name) or `chosen_for(source)` (the
+  chosen leaf only, where a rename-by-move's target name may apply instead). No engine reads the leaf any other way, so
+  a route can't honor a name another forgets. A source the binding or the queue prunes after admission simply never
+  asks, so a pruned set needs nothing.
+- **Validated once, at the start, before the operation is admitted**: `leaf_validation::validate_transfer_leaves`. The
+  routed starts run it in `route_volume_copy` / `route_volume_move` (so `start_volume_*` and a retry, whose
+  `RetryRecipe` keeps the config whole), through `validate_leaves_for_route`: a both-local transfer is checked in the
+  frame the native engines will walk (sources re-rooted by `transfer::volume::on_local_root`, the map re-keyed the same
+  way, `dev+ino` available), anything else in the paths as given, by name. The same-`root` `move_files_start` runs it
+  before `local_move_start`, which is what the both-local facade calls. ❌ No engine re-validates: a test that drives an
+  engine directly hands it leaves it already trusts.
+- **A single leaf** must name exactly one source and be one component without NUL, within the path limits.
+- **A per-source map** refuses, typed as `WriteOperationError::NamedLeavesRefused { path, reason }` unless a leaf itself
+  is bad (`InvalidName`):
+  - a key that is no source (`notASource`): ❌ never ignored, or the item it meant lands under its old name unannounced;
+  - a leaf that isn't a plain leaf (`cmdr_fs::validation::validate_plain_leaf`: no edge whitespace, separator, dot name,
+    control, or invisible format character, at most 255 bytes) or makes too long a path;
+  - two effective leaves (renamed or kept) equal under `cmdr_fs::name_fold::fold_name` (`sameName`), whatever the
+    destination's own case rule: a refusal on a case-sensitive disk costs a retry, a missed collision on a
+    case-insensitive one costs a file, and a cross-FS move would stage both under one name;
+  - a landing that is another source (`ontoASource`), folded, or by `dev+ino` where both exist (a symlinked destination,
+    a hard link): a copy would overwrite it before reading it, a move would lose a file when "a to b, b to c" ran in the
+    wrong order;
+  - any source already in the destination (`alreadyInDestination`, folded or by `dev+ino`): naming it there is a rename,
+    and the same-volume identity guard would drop a case-only leaf;
+  - a route that can't name each source (`routeCannotName`): an archive changeset (copy into, move into, and move out of
+    a zip), whose plan takes one leaf at most (`refuse_per_source_leaves_here`, in `route_volume_copy` /
+    `route_volume_move`). Every other engine names each source.
+  - On a route whose ends aren't both on this machine, the comparisons are by folded path alone, even across two
+    volumes: the two could be one share under two addresses, and a refusal there costs a retry. By-name mode
+    (`LeafIdentity::Names`) stats nothing: a remote route's paths mean nothing on this disk, and `check_landings` runs
+    on a tokio worker for an AI proposal, where one stat of a hung mount would stall it (pinned by
+    `leaf_validation::tests::names_mode_never_stats`).
+  - The name rules (plain leaf, `sameName`, `ontoASource`, `alreadyInDestination`) are one function,
+    `leaf_validation::landing_clash`, and a caller checking a batch BEFORE its start asks the same one by name alone
+    through the public `TransferLeaves::check_landings` (typed `LandingClash`): an AI proposal refuses there, while the
+    model can still fix the call, rather than after the user approved. ❌ Never a second copy of the rules.
+  - Two sources sharing an ORIGINAL name still refuse byte-exact on the native engines, in the started operation
+    (`validate_source_names_are_distinct`), map or not: they key their subtree remap on `<destination>/<own name>`, so
+    two such sources can't be told apart there. The volume engines key every landing on the source PATH, so there two
+    such sources named apart land apart. A caller checking ahead asks the public `TransferLeaves::check_own_names`
+    (`LandingClash::SharedOwnName`, folded into the one public clash type rather than a new root promise) with the two
+    volumes: it takes the same fork the facades do (`transfer::volume::native_roots`, both ends on a local path) and the
+    same rule (`validation::first_shared_name`).
 
 Native Copy seeds the shared `named_destination::initial_remap` before its identity check. The per-file loop and
 empty-directory pass use that map, so staging, journal entries, durability, and rollback refer to the requested paths.
@@ -586,15 +634,29 @@ identity would drop as already in place, renames on every volume. A native cross
 its staging directory and lands that same leaf at the destination; ordinary staging-to-final rebasing therefore journals
 and flushes the named files and directories. Original-source stamps and deletion ledgers continue naming the originals.
 
-Both-local volume facades forward the leaf into the native engines. Other volume copies and moves apply it in the serial
-driver's landing probe before conflict resolution. Same-volume Move's no-op guard also checks the requested leaf.
-Archive destinations carry it into the changeset's top-level inner path before conflicts and subtree expansion; archive
-moves remove only originals whose bytes committed. Archive move-out passes the same config to its extraction engine.
+Both-local volume facades forward the leaves into the native engines, re-keying a per-source map with `rebased` in the
+same step they re-root the sources (`on_local_root`), so a key can't drift from the path the engine walks. Every other
+volume copy and move names each source's landing path before anything probes or resolves a clash there: the serial async
+driver (cross-volume copy and move, the same-volume move by rename and by copy) through `DriverConfig::leaves`, the
+concurrent copy driver (three or more sources) in `ConcurrentCopy::prepare_source`, whose destination listing is
+consulted at that name. A clash is therefore asked about, skipped, or overwritten at the RENAMED path, never at a
+bystander holding the source's own name. Same-volume Move's no-op guard also checks the requested leaf. On MTP a
+cross-folder rename is two device calls, and its order keeps a file holding the old name safe
+(`crates/cmdr-mtp/DETAILS.md` § "A move that also renames"). Archive destinations carry it into the changeset's
+top-level inner path before conflicts and subtree expansion; archive moves remove only originals whose bytes committed.
+Archive move-out passes the same config to its extraction engine.
 
 The dialog refuses a complete target equal to its source; directory-targeted Paste/Duplicate callers retain the backend
 self-collision behavior below. Frontend interpretation: `apps/desktop/src/lib/file-operations/transfer/DETAILS.md` §
 "Single-item destinations". Regression coverage: `copy/named_copy_tests.rs`, `move_op/named_move_tests.rs`, the move
-journal suite, `volume/named_move_tests.rs`, and archive `copy_into_tests.rs`.
+journal suite, `volume/named_move_tests.rs`, archive `copy_into_tests.rs`, the routed-start refusals in
+`../named_leaf_entry_tests.rs`, the undo of every named route in `../named_leaf_undo_tests.rs`, and the wire shape in
+`../types/transfer_leaves_wire_tests.rs`. Per-source maps: every start's landing and refusal in
+`../named_leaves_tests.rs`, the native engines' clashes at the renamed path and interrupted runs in
+`named_leaves_engine_tests.rs`, and their undo in `../named_leaf_undo_tests.rs` and the move journal suite. The volume
+engines' landing, clashes, refusals, queued-then-pruned run, and undo, on every route:
+`../named_leaves_volume_tests.rs`. Onto a real SMB share and a virtual phone, through the operation log's undo:
+`apps/desktop/src-tauri/src/operations_host/backend_suites/network_named_leaves_test_support.rs`.
 
 ### Self-collision (duplicating in place)
 

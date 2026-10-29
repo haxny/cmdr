@@ -115,7 +115,19 @@ sections compose).
   See § "The setup steps are shared with onboarding". The provider row is the one hand-rolled `Select` in settings;
   every other dropdown here goes through `SettingSelect`. A preset the organization refuses stays listed as a `disabled`
   item with the reason as its description (`followPresetHostVerdicts`, `#lib/ai-provider-setup/DETAILS.md` § The
-  organization's policy).
+  organization's policy). Under the steps, a `.model-limits` note names the chosen model's context window and, when the
+  service reports it, its longest reply (`getAiModelLimits`, read from the backend's capability cache and re-read on
+  `onAiModelCapabilitiesChanged`). A window from Cmdr's built-in table says "about … (from Cmdr's built-in list)", so a
+  guess never passes for the service's word; an unknown window shows nothing. Not asked while `locked`. Beside it, the
+  reasoning picker (`ai.reasoningEfforts`, a JSON map keyed `"<provider id>/<model>"`; pure half in `ai-effort.ts`)
+  takes the provider's own name for the knob: "Reasoning effort", "Effort" (Anthropic), or "Thinking level" (Gemini, and
+  the fallback for a provider with no name of its own). Decision/Why: users already know the term from their provider's
+  docs and console. The term is data on each preset (`CloudProviderPreset.effortTerm`, sources listed on `EffortTerm`),
+  resolved by `effortLabelKey`; the registry label (search, MCP) is the fallback. It offers what
+  `getAiModelLimits().effort` lists: Recommended (naming its level when anything knows it), Off where the model can stop
+  thinking, then its levels. Hidden for a model known not to reason; Recommended alone, with a note, when nothing knows
+  the levels. A stored pick the model can't take shows as the nearest it can (`effectiveEffortChoice`, mirroring
+  `agent::chat::effort::resolve_effort`, which is the actual guard).
 - **`AiLocalSection.svelte`**: Local llama-server lifecycle, model install with multi-step tracking, context window
   "Apply" (server restart), RAM gauge, delete confirmation. Only the context-window registry-row cluster (`SettingRow`
   - the RAM gauge) is wrapped in an unlabeled `SectionCard`, and that wrapper sits INSIDE the
@@ -685,11 +697,13 @@ registry entries all live at `section: ['AI', 'Ask Cmdr']`. Its parts:
   `commands/agent/chat.rs::resolve_agent_llm` + `settings::load_ask_cmdr_interactive_model`.
 - **Chat memory size** (`askCmdr.chatMemorySize`, a `SettingSelect`): "Automatic (recommended)" or one of five presets
   (16,000 / 32,000 / 60,000 / 128,000 / 200,000). Presets rather than a number field, so there is no bound to misstate,
-  no below-minimum case, and no numeric validation copy. Automatic follows the window the backend knows the model to
-  have; an explicit size overrides it and is used as chosen. Resolution is `agent::chat::budget::resolve_prompt_budget`,
+  no below-minimum case, and no numeric validation copy. Automatic spends the WHOLE window the backend knows the model
+  to have (the provider's report, else the family table), less the reply's room; an explicit size is an optional lower
+  limit, to spend less per message, and is used as chosen. Resolution is `agent::chat::budget::resolve_prompt_budget`,
   read fresh per send, so there is no `settings-applier` case (same as the model override).
   - **The warning lives here, the window knowledge doesn't.** `ask_cmdr_model_window` answers with the model the next
-    turn would use plus the window Cmdr believes it has; the section compares the just-picked value against it and shows
+    turn would use plus the window Cmdr believes it has, and re-asks on `AiModelCapabilitiesChanged` since the
+    provider's report can land after mount; the section compares the just-picked value against it and shows
     `settings.askCmdr.chatMemorySize.overWindow` when it's larger. Two reasons the comparison is frontend-side: a
     `setSetting` reaches `settings.json` up to 500 ms later (`SAVE_DEBOUNCE_MS`), so asking the backend "is my pick too
     big" would warn a beat late; and the picker must warn WITHOUT overruling, since a stale family table is likelier

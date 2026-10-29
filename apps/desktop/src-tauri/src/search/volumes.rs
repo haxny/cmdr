@@ -361,23 +361,32 @@ pub(crate) fn has_searchable_index(volume_id: &str) -> bool {
 
 /// A non-root volume's mount root, needed to prefix its mount-relative index paths.
 ///
-/// Prefers the persisted `volume_path` meta; falls back to the LIVE volume registry
-/// when that meta is absent. The fallback matters because SMB index DBs written
-/// before this meta existed never wrote it (only the local scan-completion path
-/// did), so a real NAS index has no `volume_path` — without the fallback its mount
-/// root reads as `None`, scope paths never get stripped, and every scoped search
-/// returns nothing. While the volume is mounted (the only time a `/Volumes/…` scope
-/// even routes to it) the registry knows its root; the DB is also healed on the next
-/// SMB registration so offline reads recover too. `None` only when neither source
-/// has it (an offline volume whose DB predates the meta) — the caller then treats
-/// the scope as unresolved rather than mis-rooting it.
+/// The one root function's answer (`location::resolve::volume_root`), so search
+/// strips and prefixes the same root every agent tool checks a location against:
+/// the LIVE registry's root while the volume is mounted, else the persisted
+/// `volume_path` meta. Live first, because a remounted share (`/Volumes/naspi-1`)
+/// still carries its last scan's `/Volumes/naspi` in the meta, and stripping that
+/// off a live scope matches nothing. The meta is what an offline volume answers
+/// with; SMB index DBs written before it existed have none, which the next SMB
+/// registration heals. `None` only when neither source has it (an offline volume
+/// whose DB predates the meta) — the caller then treats the scope as unresolved
+/// rather than mis-rooting it.
+///
+/// The meta comes off this load's own pool, ❌ not `Index::status`: the arena,
+/// its pool, and this read must all describe the one file this load opened, and
+/// the loader finds that file through its own `SearchDirs`.
 fn read_mount_root(pool: &ReadPool, volume_id: &str) -> Option<String> {
-    let from_meta = pool
+    let recorded = pool
         .with_conn(|conn| IndexStore::get_meta(conn, "volume_path").ok().flatten())
         .ok()
         .flatten()
         .and_then(usable_mount_root);
-    from_meta.or_else(|| registry_mount_root(volume_id))
+    let live = registry_mount_root(volume_id);
+    crate::location::resolve::volume_root(crate::location::resolve::RootSources {
+        live: live.as_deref(),
+        index_meta: recorded.as_deref(),
+        saved: None,
+    })
 }
 
 /// A mounted volume's root, from the LIVE registry.

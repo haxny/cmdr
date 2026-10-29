@@ -21,7 +21,7 @@ async fn named_volume_moves_honor_skip_and_overwrite_at_the_requested_leaf() {
                 .await
                 .unwrap();
             let config = VolumeCopyConfig {
-                destination_name: Some("renamed.txt".into()),
+                leaves: crate::types::TransferLeaves::single("renamed.txt"),
                 conflict_resolution: policy,
                 ..Default::default()
             };
@@ -79,7 +79,7 @@ async fn named_volume_folder_moves_keep_empty_directories() {
             .await
             .unwrap();
         let config = VolumeCopyConfig {
-            destination_name: Some("renamed".into()),
+            leaves: crate::types::TransferLeaves::single("renamed"),
             ..Default::default()
         };
         let events = Arc::new(CollectorEventSink::new());

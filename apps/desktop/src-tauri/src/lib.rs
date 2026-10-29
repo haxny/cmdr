@@ -154,6 +154,9 @@ mod server_request;
 // that follows it. Gated with `network`, whose stores it moves.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod server_move;
+// Saved servers: listed, saved, edited, dialed. Below `commands` and `agent`. Gated with `network`.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+mod saved_servers;
 #[cfg(target_os = "macos")]
 pub mod services_menu;
 mod settings;
@@ -574,6 +577,15 @@ pub fn run() {
             network::load_webdav_stores(app.handle());
             network::load_s3_stores(app.handle());
             network::load_nfs_stores(app.handle());
+
+            // The tools' location resolver remembers every root a volume held, seeded
+            // with each saved share's last mount path, so a path a model got before a
+            // remount still resolves after it. After the share store above (its seed).
+            location::facts::start_root_history();
+            // Saved shares recorded before Cmdr kept server GUIDs get one from a
+            // credential-free probe, in the background once startup settles.
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            network::smb_server_guid::schedule_startup_probe();
 
             // Load persisted recent search history into the in-memory cache.
             search::history::RECENT_SEARCHES.load(app.handle());

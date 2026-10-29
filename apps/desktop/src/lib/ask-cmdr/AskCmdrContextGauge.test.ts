@@ -56,6 +56,17 @@ describe('AskCmdrContextGauge', () => {
     target.remove()
   })
 
+  it('says a baseline reading is what every message carries, not something this chat used', () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(AskCmdrContextGauge, { target, props: { usage: usage(6_300, 16_000), baseline: true } })
+    flushSync()
+    const text = target.querySelector('[role="meter"]')?.getAttribute('aria-valuetext')
+    expect(text).toContain('6,300 of 16,000')
+    expect(text).toMatch(/every message/i)
+    target.remove()
+  })
+
   it('marks a filling gauge once it passes the threshold', () => {
     const target = render(usage(50_000, 60_000))
     expect(target.querySelector('.gauge')?.getAttribute('data-state')).toBe('filling')

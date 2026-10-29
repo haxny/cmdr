@@ -123,8 +123,8 @@ use std::sync::Arc;
 use super::super::event_sinks::OperationEventSink;
 use super::super::state::WriteOperationState;
 use super::super::types::{
-    ConflictResolution, SourceItemOutcome, WriteOperationError, WriteOperationPhase, WriteOperationType,
-    WriteProgressEvent, WriteSourceItemDoneEvent,
+    ConflictResolution, SourceItemOutcome, TransferLeaves, WriteOperationError, WriteOperationPhase,
+    WriteOperationType, WriteProgressEvent, WriteSourceItemDoneEvent,
 };
 
 mod async_driver;
@@ -445,6 +445,11 @@ pub(super) struct DriverConfig {
     /// same-volume rename). Ignored by the sync driver, whose closure reports
     /// every verdict.
     pub report_source_outcomes: bool,
+    /// The name each top-level source lands as. The ASYNC driver asks it
+    /// before the landing probe, so a conflict is checked at the name the item
+    /// lands under. Ignored by the sync driver: the local copy lands through
+    /// its remap (`named_destination.rs`).
+    pub leaves: TransferLeaves,
 }
 
 /// One `write-source-item-done`: how a top-level source ended. The LAST one a

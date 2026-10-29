@@ -73,7 +73,7 @@ use crate::mtp::{
 };
 use crate::network::{
     NetworkDiscoveryStateChanged, NetworkHostContextAction, NetworkHostFound, NetworkHostLost, NetworkHostResolved,
-    SmbFellBackToOsMount, SmbOsMountNoticeWithdrawn, VolumeConnectionChanged,
+    SmbFellBackToOsMount, SmbOsMountNoticeWithdrawn, VolumeConnectionChanged, VolumeReconnectRequested,
 };
 use crate::operations_host::{VolumesBusyChanged, wire};
 use crate::reveal::RevealDelivered;
@@ -394,6 +394,7 @@ macro_rules! ipc_command_manifest {
                     // configure_ai, start_ai_server, start_ai_download are generic (<R: Runtime>): excluded
                     crate::ai::server::stop_ai_server,
                     crate::ai::connection_check::check_ai_connection,
+                    crate::ai::model_capabilities::get_ai_model_limits,
                     crate::ai::managed::cloud_ai_host_verdicts,
                     crate::ai::cloud_consent::cloud_ai_consent_status,
                     crate::ai::cloud_consent::accept_cloud_ai_consent,
@@ -517,6 +518,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::operation_log::undo_operations,
                     crate::commands::agent::ask_cmdr_send_message,
                     crate::commands::agent::ask_cmdr_cancel,
+                    crate::commands::agent::ask_cmdr_keep_going,
                     crate::commands::agent::preflight_bulk_rename,
                     crate::commands::agent::apply_bulk_rename,
                     crate::commands::agent::revise_bulk_rename_row,
@@ -526,8 +528,10 @@ macro_rules! ipc_command_manifest {
                     crate::commands::agent::suggested_ops_live_facts,
                     crate::commands::agent::suggested_ops_reject,
                     crate::commands::agent::suggested_ops_approve,
+                    crate::commands::agent::suggested_ops_approve_server,
                     crate::commands::agent::ask_cmdr_record_slot_change,
                     crate::commands::agent::ask_cmdr_get_conversation,
+                    crate::commands::agent::ask_cmdr_tool_result,
                     crate::commands::agent::ask_cmdr_list_conversations,
                     crate::commands::agent::ask_cmdr_search_conversations,
                     crate::commands::agent::ask_cmdr_rename_conversation,
@@ -538,6 +542,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::agent::ask_cmdr_conversation_cost,
                     crate::commands::agent::ask_cmdr_cost_summary,
                     crate::commands::agent::ask_cmdr_model_window,
+                    crate::commands::agent::ask_cmdr_slot_status,
                     crate::commands::agent::ask_cmdr_wake_settings_changed,
                     crate::commands::agent::agent_wake_status,
                     crate::commands::agent::ask_cmdr_memory_folder,
@@ -554,7 +559,6 @@ macro_rules! ipc_command_manifest {
                     crate::commands::e2e::get_e2e_start_path,
                     crate::commands::e2e::is_e2e_mode,
                     crate::commands::e2e::get_automated_run,
-                    crate::commands::e2e::ask_cmdr_fake_active,
                     crate::commands::e2e::is_force_onboarding,
                     crate::commands::clipboard::copy_paths_to_clipboard,
                     crate::commands::clipboard::cut_paths_to_clipboard,
@@ -1028,6 +1032,10 @@ macro_rules! ipc_command_manifest {
                     // (`test/e2e-playwright/helpers/core.ts`).
                     crate::commands::file_actions::e2e_opened_paths,
                     crate::commands::file_actions::e2e_clear_opened_paths,
+                    // Stages a suggestion through the real `propose_suggestions` handler.
+                    crate::commands::e2e::e2e_propose_suggestions,
+                    // Stages a server card through the real `propose_server` handler.
+                    crate::commands::e2e::e2e_propose_server,
                 ]
             }
             // The dialog gallery's fixtures, which outlive `debug_assertions`: an E2E build is a
@@ -1195,7 +1203,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             // place (network/live_server_edit.rs), or a renamed drive (volumes/lifecycle.rs).
             VolumeRootChanged,
             // A saved server moved to a new address, so its places have new ids
-            // (commands/servers/moves.rs).
+            // (server_move.rs).
             ServerPlaceMoved,
             VolumesBusyChanged,
             // The volumes with an eject still running (file_system/volume/eject/in_flight.rs).
@@ -1207,6 +1215,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             // reuses it. The type lives in `network/mod.rs` so it resolves on every
             // platform (see its doc comment).
             VolumeConnectionChanged,
+            // Ask Cmdr asking the reconnect manager to take a dropped volume.
+            VolumeReconnectRequested,
             // A share Cmdr couldn't take over stays on the macOS kernel mount. Same
             // reason this type lives in `network/mod.rs`: it has to resolve here on
             // every platform.
@@ -1281,6 +1291,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             AiInstallComplete,
             AiExtracting,
             crate::ai::cloud_consent::CloudAiConsentChanged,
+            crate::ai::model_capabilities::AiModelCapabilitiesChanged,
             // Appearance / system (system_events.rs, menu/menu_handlers.rs,
             // commands/ui.rs, downloads/global_shortcut.rs). Scalar emits got
             // wrapped in named structs; the drag structs live in the always-compiled

@@ -13,14 +13,14 @@
 use chrono::{FixedOffset, Local};
 use tauri::{AppHandle, Manager};
 
-use super::budget;
 use super::context::{ContextEnvelope, EnvelopeAttachment, EnvelopeConnectivity, EnvelopeFreshness, EnvelopeVolume};
 use super::runtime::now_secs;
 use super::stream::AgentErrorKindView;
+use super::{budget, effort};
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::fake::FakeAgentLlm;
 use crate::agent::llm::genai_impl::GenaiAgentLlm;
-use crate::agent::llm::types::ProviderTag;
+use crate::agent::llm::types::{CallSettings, ProviderTag};
 use crate::ai::client::AiBackend;
 use crate::ai::llm_log::LlmLogContext;
 use crate::mcp::PaneStateStore;
@@ -219,13 +219,50 @@ fn scripted_fake_llm(slot: AgentSlot) -> FakeAgentLlm {
             WakeFakeScript::Reply => {}
         }
     }
-    let chunks = match slot {
-        AgentSlot::Rail => ["Hi! ", "I'm the ", "test assistant."],
-        AgentSlot::Wake => ["I had ", "a look at ", "what changed."],
-    };
-    FakeAgentLlm::script(vec![ScriptedTurn::Say(
-        chunks.iter().map(|chunk| (*chunk).to_string()).collect(),
-    )])
+    match slot {
+        AgentSlot::Rail => FakeAgentLlm::by_prompt(rail_fake_turn),
+        AgentSlot::Wake => FakeAgentLlm::script(vec![say(&["I had ", "a look at ", "what changed."])]),
+    }
+}
+
+/// What a rail message starting with this plays: [`rail_fake_turn`]'s tool-running turn.
+const RAIL_FAKE_TOOLS_MARKER: &str = "[tools]";
+
+/// The rail fake's turn for the prompt it's handed. A message starting with
+/// [`RAIL_FAKE_TOOLS_MARKER`] runs three rounds, so `ask-cmdr.spec.ts` can pin a tool-running
+/// turn's view live and after a reload: narration plus `app_state`, `list_volumes`, and a
+/// hallucinated `delete` (refused); narration plus `list_volumes` twice (both repeats of round
+/// one's, and reusing its call ids); then the answer. Anything else gets the one-line reply.
+///
+/// The round comes from the prompt (`latest_user_turn`), never a counter, so a retry or a second
+/// thread can't desync it. `app_state` and `list_volumes` read the machine's real state: a spec
+/// asserts their shape, never their values.
+fn rail_fake_turn(messages: &[crate::agent::llm::types::AgentMessage]) -> crate::agent::llm::fake::ScriptedTurn {
+    use crate::agent::llm::fake::{ScriptedTurn, latest_user_turn};
+    use crate::agent::llm::types::ToolId;
+    let no_args = || serde_json::json!({});
+    match latest_user_turn(messages) {
+        Some((text, round)) if text.starts_with(RAIL_FAKE_TOOLS_MARKER) => match round {
+            0 => ScriptedTurn::SayThenCall {
+                say: vec!["Let me look at ".into(), "your panes and drives.".into()],
+                calls: vec![
+                    (ToolId::AppState, no_args()),
+                    (ToolId::ListVolumes, no_args()),
+                    (ToolId::Unrecognized("delete".into()), no_args()),
+                ],
+            },
+            1 => ScriptedTurn::SayThenCall {
+                say: vec!["Checking the drives ".into(), "once more.".into()],
+                calls: vec![(ToolId::ListVolumes, no_args()), (ToolId::ListVolumes, no_args())],
+            },
+            _ => say(&["That's all, ", "from the test assistant."]),
+        },
+        _ => say(&["Hi! ", "I'm the ", "test assistant."]),
+    }
+}
+
+fn say(chunks: &[&str]) -> crate::agent::llm::fake::ScriptedTurn {
+    crate::agent::llm::fake::ScriptedTurn::Say(chunks.iter().map(|chunk| (*chunk).to_string()).collect())
 }
 
 /// A wake that stages one group and signs off, so a spec can drive the path where the user is
@@ -273,21 +310,115 @@ pub fn provider_and_model(model_override: Option<&str>) -> (ProviderTag, String)
             ai_model
         }
     };
-    let provider = if model.starts_with("claude-") {
+    (cloud_provider_tag(&model), model)
+}
+
+/// A cloud model's provider tag, by its name prefix, matching `ai::client`'s adapter routing.
+pub fn cloud_provider_tag(model: &str) -> ProviderTag {
+    if model.starts_with("claude-") {
         ProviderTag::Anthropic
     } else if model.starts_with("gemini-") {
         ProviderTag::Gemini
     } else {
         ProviderTag::OpenAi
-    };
-    (provider, model)
+    }
+}
+
+/// The window the configured cloud provider reports for `model`, if a report has arrived.
+/// Never waits for one: a stale or missing catalog starts a background refresh and this answers
+/// `None`, so the send sizes from the family table this once. A local model has no report.
+pub fn reported_window_tokens(app: &AppHandle, provider: ProviderTag, model: &str) -> Option<usize> {
+    if provider == ProviderTag::Local {
+        return None;
+    }
+    crate::ai::model_capabilities::for_configured_cloud_model(app, model)?
+        .context_window_tokens
+        .map(|tokens| tokens as usize)
+}
+
+/// How hard the slot's model thinks and how much room its reply gets, gathered here and decided
+/// in the pure [`effort`] module: the user's choice for this provider and model
+/// (`ai.reasoningEfforts`, read fresh per send), and what the provider reports about the
+/// model's reasoning and longest reply. A choice the model can't take is logged with what it
+/// became. A local model and the E2E fake get the default: the provider decides.
+pub fn resolve_call_settings(app: &AppHandle, provider: ProviderTag, model: &str) -> CallSettings {
+    let pick =
+        |provider_id: &str| effort::choice_for(&crate::settings::load_ai_reasoning_efforts(app), provider_id, model);
+    call_settings_for(app, provider, model, pick)
+}
+
+/// [`resolve_call_settings`] for a WAKE: Recommended, whatever the rail's pick, so a background
+/// sweep never inherits an expensive one, but sized like the rail's Recommended (Claude's
+/// default is high, so it gets High's room rather than thinking inside the base slot).
+pub fn resolve_wake_call_settings(app: &AppHandle, provider: ProviderTag, model: &str) -> CallSettings {
+    call_settings_for(app, provider, model, |_| effort::EffortChoice::Recommended)
+}
+
+fn call_settings_for(
+    app: &AppHandle,
+    provider: ProviderTag,
+    model: &str,
+    choice: impl FnOnce(&str) -> effort::EffortChoice,
+) -> CallSettings {
+    if provider == ProviderTag::Local || crate::test_mode::ask_cmdr_fake_active() {
+        return CallSettings::default();
+    }
+    let provider_id = crate::ai::state::get_cloud_provider_id();
+    let reported = crate::ai::model_capabilities::for_configured_cloud_model(app, model);
+    let options = effort::effort_options(provider, model, reported.as_ref().map(|c| &c.reasoning));
+    let choice = choice(&provider_id);
+    let resolved = effort::resolve_effort(&options, choice, reported.as_ref().and_then(|c| c.max_output_tokens));
+    if let Some(adjusted_to) = resolved.adjusted_to {
+        log::info!(
+            target: LOG_TARGET,
+            "reasoning effort {choice:?} isn't one {model} takes; sending {adjusted_to:?} instead" // allowed-pluralize-noun: `takes` is a verb here
+        );
+    }
+    // Fit the reply to the window it shares with the prompt, so a high effort on a small window
+    // can't starve the prompt or ask for more than prompt plus reply can hold.
+    let window = budget::known_window(
+        provider,
+        model,
+        crate::ai::state::get_local_context_size(),
+        reported.and_then(|c| c.context_window_tokens).map(|t| t as usize),
+    )
+    .map(|w| w.tokens);
+    let max_output_tokens = effort::fit_reply_to_window(resolved.max_output_tokens, window);
+    if max_output_tokens < resolved.max_output_tokens {
+        log::debug!(
+            target: LOG_TARGET,
+            "reply ceiling for {model} fitted to its window: {max_output_tokens} of {}",
+            resolved.max_output_tokens
+        );
+    }
+    CallSettings {
+        effort: resolved.effort,
+        max_output_tokens,
+        model_reasons: options.reasons,
+    }
+}
+
+/// The chat memory the slot-change timeline names (`budget::chat_memory_figure`): moves only when
+/// the user's "Chat memory size" or the model does, never with an effort or a late report.
+pub fn chat_memory_tokens(app: &AppHandle, provider: ProviderTag, model: &str) -> Result<usize, budget::BudgetRefusal> {
+    if crate::test_mode::ask_cmdr_fake_active() {
+        return Ok(budget::DEFAULT_PROMPT_TOKEN_BUDGET);
+    }
+    budget::chat_memory_figure(budget::BudgetInputs {
+        provider,
+        model,
+        user_choice: crate::settings::load_ask_cmdr_chat_memory_size(app),
+        local_context_tokens: crate::ai::state::get_local_context_size(),
+        reported_window_tokens: reported_window_tokens(app, provider, model),
+        reply_tokens: budget::AGENT_MAX_OUTPUT_TOKENS as usize,
+    })
 }
 
 /// The assembled-prompt token budget for the resolved slot, gathered here and decided in the
-/// pure [`budget`] module. This layer supplies the two values the core may not read itself:
+/// pure [`budget`] module. This layer supplies the three values the core may not read itself:
 /// the user's `askCmdr.chatMemorySize` choice (read fresh per turn, so a change applies to the
-/// NEXT message and never to a turn already in flight) and the local server's configured
-/// window.
+/// NEXT message and never to a turn already in flight), the local server's configured window,
+/// and the window the provider reports ([`reported_window_tokens`]).
 ///
 /// The resolution's source is logged, so a budget that came from a stale family table is
 /// visible in the log rather than silently authoritative.
@@ -295,6 +426,17 @@ pub fn resolve_prompt_budget(
     app: &AppHandle,
     provider: ProviderTag,
     model: &str,
+) -> Result<usize, budget::BudgetRefusal> {
+    resolve_prompt_budget_for(app, provider, model, resolve_call_settings(app, provider, model))
+}
+
+/// [`resolve_prompt_budget`] for a slot whose [`CallSettings`] the caller already resolved, so a
+/// send sizes its prompt against the SAME reply ceiling its calls then ask for.
+pub fn resolve_prompt_budget_for(
+    app: &AppHandle,
+    provider: ProviderTag,
+    model: &str,
+    call: CallSettings,
 ) -> Result<usize, budget::BudgetRefusal> {
     // The E2E fake answers as a LOCAL provider with no local server behind it, so the real
     // resolution would size its budget from `ai.localContextSize` — a setting the harness has no
@@ -309,6 +451,8 @@ pub fn resolve_prompt_budget(
         model,
         user_choice: crate::settings::load_ask_cmdr_chat_memory_size(app),
         local_context_tokens: crate::ai::state::get_local_context_size(),
+        reported_window_tokens: reported_window_tokens(app, provider, model),
+        reply_tokens: call.max_output_tokens as usize,
     })?;
     log::debug!(
         target: LOG_TARGET,
@@ -402,6 +546,46 @@ pub fn local_offset() -> FixedOffset {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The rail fake's tool turn plays its rounds by what the prompt holds, and every other
+    /// message keeps the one-line reply `ask-cmdr.spec.ts` counts.
+    #[test]
+    fn the_rail_fake_picks_its_round_from_the_prompt() {
+        use crate::agent::llm::fake::ScriptedTurn;
+        use crate::agent::llm::types::{AgentMessage, AgentPart, AgentRole, ToolId};
+        let message = |role, text: &str| AgentMessage {
+            role,
+            parts: vec![AgentPart::Text("<envelope>".into()), AgentPart::Text(text.into())],
+            at: 0,
+        };
+        let tools = message(AgentRole::User, "[tools] look around");
+        let answer = message(AgentRole::Assistant, "…");
+        let tools_of = |turn: ScriptedTurn| match turn {
+            ScriptedTurn::SayThenCall { calls, .. } => calls.into_iter().map(|(tool, _)| tool).collect(),
+            _ => Vec::new(),
+        };
+
+        assert_eq!(
+            tools_of(rail_fake_turn(std::slice::from_ref(&tools))),
+            [
+                ToolId::AppState,
+                ToolId::ListVolumes,
+                ToolId::Unrecognized("delete".into())
+            ]
+        );
+        assert_eq!(
+            tools_of(rail_fake_turn(&[tools.clone(), answer.clone()])),
+            [ToolId::ListVolumes, ToolId::ListVolumes]
+        );
+        assert!(matches!(
+            rail_fake_turn(&[tools, answer.clone(), answer.clone()]),
+            ScriptedTurn::Say(_)
+        ));
+        let ScriptedTurn::Say(chunks) = rail_fake_turn(&[message(AgentRole::User, "hello")]) else {
+            panic!("a plain message gets the one-line reply");
+        };
+        assert_eq!(chunks.concat(), "Hi! I'm the test assistant.");
+    }
 
     /// A slot refusal reaches the rail as its OWN wire kind: a missing cloud consent must not
     /// read as "set up a provider" to somebody whose provider is set up.

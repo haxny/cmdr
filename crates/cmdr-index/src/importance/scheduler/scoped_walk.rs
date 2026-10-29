@@ -13,13 +13,14 @@
 //! - `under_floored_ancestor` is exact from a folder's own path. A folder's ancestors
 //!   are the prefixes of its absolute path, so `classify::under_floored_ancestor`
 //!   sees a flooring `node_modules` far above the subtree root without reading it.
-//! - `has_marker_below` is exact INSIDE a subtree: a subtree is downward-closed, so
-//!   every descendant that could raise a folder is present.
-//! - The one signal that crosses the boundary is a subtree's marker presence raising
+//! - `nearest_marker_below` is exact INSIDE a subtree: a subtree is downward-closed,
+//!   so every descendant that could raise a folder is present.
+//! - The one signal that crosses the boundary is a subtree's marker depth raising
 //!   ancestors ABOVE the subtree. That is detected exactly rather than estimated: a
-//!   subtree's marker presence is `has_project_marker` on its own row, so comparing
-//!   the stored value against the fresh one says whether any ancestor outside could
-//!   have moved. If it did, the pass takes the full walk instead.
+//!   subtree's marker depth (capped at `MARKER_REACH`) is `marker_depth` on its own
+//!   row, and an ancestor `d >= 1` levels up only sees `d + depth`, so comparing the
+//!   stored value against the fresh one says whether any ancestor outside could have
+//!   moved. If it did, the pass takes the full walk instead.
 //!
 //! **An origin bigger than the budget is DEMOTED, not descended.** A change to a file
 //! sitting directly inside an origin can move that origin's own signals and propagate
@@ -41,7 +42,7 @@ use super::walk::{
     ExtensionGroup, IndexFolder, WalkedFolders, folded_is_project_marker, lowercased_extension_into,
     propagate_marker_to_ancestors, walk_index_folders,
 };
-use crate::importance::classify::under_floored_ancestor;
+use crate::importance::classify::{PathSpace, marker_depth, under_floored_ancestor};
 use crate::importance::signals::ChildAggregate;
 use crate::importance::stop::{PassError, check};
 use crate::indexing::store::{ARENA_FULL, DirTree, IndexStore, ROOT_ID};
@@ -230,19 +231,24 @@ fn subtree_is_over_budget(conn: &rusqlite::Connection, id: i64) -> Result<bool, 
 ///
 /// `stop` reaches both walks: the fallback is the same seconds-long walk a full pass
 /// takes, and the scoped one looks between origins.
-pub(super) fn walk_for_incremental(
+pub(super) fn walk_for_incremental<'a>(
     conn: &rusqlite::Connection,
-    home: &str,
+    space: impl Into<PathSpace<'a>>,
     origins: &[String],
-    previous_markers: &HashMap<String, bool>,
+    previous_markers: &HashMap<String, Option<u8>>,
     stop: &CancellationToken,
 ) -> Result<(WalkedFolders, RescoreScope, BatchPlan), PassError> {
     let plan = plan_incremental_batch(conn, origins)?;
-    match try_scoped_walk(conn, home, &plan, previous_markers, stop)? {
+    let space = space.into();
+    match try_scoped_walk(conn, space, &plan, previous_markers, stop)? {
         ScopedWalkOutcome::Scoped(folders) => Ok((folders, RescoreScope::ChangedSubtreesOnly, plan)),
         ScopedWalkOutcome::FullWalkNeeded(reason) => {
             log::debug!(target: "importance", "incremental rescore takes the full walk: {reason}");
-            Ok((walk_index_folders(conn, home, stop)?, RescoreScope::WithAncestors, plan))
+            Ok((
+                walk_index_folders(conn, space, stop)?,
+                RescoreScope::WithAncestors,
+                plan,
+            ))
         }
     }
 }
@@ -253,14 +259,15 @@ pub(super) fn walk_for_incremental(
 /// `plan` comes from [`plan_incremental_batch`] over an already-sanitized batch
 /// ([`super::recompute::sanitize_incremental_batch`]), so no origin floors and none is
 /// under a DESCENDED one. `previous_markers` maps an origin's path to the
-/// `has_project_marker` its stored row carries; a missing entry means it has no row.
-pub(super) fn try_scoped_walk(
+/// `marker_depth` its stored row carries; a missing entry means it has no row.
+pub(super) fn try_scoped_walk<'a>(
     conn: &rusqlite::Connection,
-    home: &str,
+    space: impl Into<PathSpace<'a>>,
     plan: &BatchPlan,
-    previous_markers: &HashMap<String, bool>,
+    previous_markers: &HashMap<String, Option<u8>>,
     stop: &CancellationToken,
 ) -> Result<ScopedWalkOutcome, PassError> {
+    let space = space.into();
     if plan.origins.len() > SCOPED_WALK_MAX_ORIGINS {
         return Ok(ScopedWalkOutcome::FullWalkNeeded(FullWalkReason::TooManyOrigins));
     }
@@ -288,18 +295,18 @@ pub(super) fn try_scoped_walk(
     // an ancestor-chain row isn't a folder here, so the climb simply stops being
     // recorded once it leaves the subtree.
     folders.for_each_mut(|folder, path| {
-        folder.under_floored_ancestor = under_floored_ancestor(path, home);
+        folder.under_floored_ancestor = under_floored_ancestor(path, space);
     });
-    propagate_marker_to_ancestors(&mut folders, stop)?;
+    propagate_marker_to_ancestors(&mut folders, space, stop)?;
     carry_marker_below_for_demoted(&mut folders, plan, previous_markers);
 
     // The guard: an ancestor outside every subtree can only have moved if some
-    // subtree's marker presence did.
+    // subtree's marker depth did.
     for origin in &plan.origins {
         let fresh = origin
             .id
             .and_then(|id| folders.folder_of_dir_id(id))
-            .is_some_and(|index| folders.marker_presence_at(index));
+            .and_then(|index| folders.marker_depth_at(index));
         match previous_markers.get(&origin.path) {
             Some(&stored) if stored == fresh => {}
             Some(_) => {
@@ -317,47 +324,53 @@ pub(super) fn try_scoped_walk(
     Ok(ScopedWalkOutcome::Scoped(folders))
 }
 
-/// Give each demoted origin back the `has_marker_below` its stored row carries.
+/// Give each demoted origin back the `nearest_marker_below` its stored row carries.
 ///
 /// **Decision/Why the stored value is the honest source.** Nothing under a demoted
-/// origin was read, so the propagation above can't produce its marker-below flag — and
-/// nothing under it CHANGED either: a change deeper in the tree makes that directory
-/// its own origin (the `dir-changed` contract in
+/// origin was read, so the propagation above can't produce its marker-below distance —
+/// and nothing under it CHANGED either: a change deeper in the tree makes that
+/// directory its own origin (the `dir-changed` contract in
 /// `../../indexing/lifecycle/CLAUDE.md`), where it is either descended or demoted in
 /// its own right. Its own direct children ARE read, so a marker landing directly in
-/// the origin still shows up in `has_direct_marker` and flips the guard above.
+/// the origin still shows up in `has_direct_marker` and moves the guard above.
 ///
-/// `has_project_marker` is `has_direct_marker || has_marker_below`, so seeding the
-/// stored value here is exactly "the origin keeps the marker presence it had unless
-/// its own listing gained one". ❌ It is deliberately ONE-directional: the last marker
-/// disappearing from deep inside a demoted origin's subtree leaves the origin reading
-/// project-adjacent until the next full pass. That is the same bounded staleness the
-/// batch gate already accepts for a marker inside a floored subtree
-/// (`DETAILS.md` § The batch gate), in the same advisory signal.
+/// Only a stored depth of `1` or more says something about BELOW; a stored `0` came
+/// from a direct marker and says nothing about the children, so it seeds nothing. If
+/// that direct marker is still there, the fresh depth is `0` again and matches; if it
+/// left, the fresh depth differs and the guard takes the full walk, which reads the
+/// truth. ❌ The seed is deliberately ONE-directional: the last marker disappearing
+/// from a child of a demoted origin leaves the origin reading project-adjacent until
+/// the next full pass. That is the same bounded staleness the batch gate already
+/// accepts for a marker inside a floored subtree (`DETAILS.md` § The batch gate), in
+/// the same advisory signal.
 fn carry_marker_below_for_demoted(
     folders: &mut WalkedFolders,
     plan: &BatchPlan,
-    previous_markers: &HashMap<String, bool>,
+    previous_markers: &HashMap<String, Option<u8>>,
 ) {
     for origin in plan.origins.iter().filter(|o| o.demoted) {
-        if previous_markers.get(&origin.path) != Some(&true) {
+        let Some(&Some(stored)) = previous_markers.get(&origin.path) else {
+            continue;
+        };
+        if stored == 0 {
             continue;
         }
         if let Some(id) = origin.id
             && let Some(index) = folders.folder_of_dir_id(id)
         {
-            folders.folder_at_mut(index).has_marker_below = true;
+            let nearest = &mut folders.folder_at_mut(index).nearest_marker_below;
+            *nearest = Some(nearest.map_or(stored, |d| d.min(stored)));
         }
     }
 }
 
 impl WalkedFolders {
-    /// Whether the folder at `index` has a project marker in it or below it — the
-    /// `has_project_marker` signal, and exactly what a subtree contributes to its
-    /// ancestors' `has_marker_below`.
-    fn marker_presence_at(&self, index: usize) -> bool {
+    /// The folder at `index`'s marker depth — the `marker_depth` signal its row
+    /// stores, and exactly what a subtree contributes to its ancestors'
+    /// `nearest_marker_below`.
+    pub(super) fn marker_depth_at(&self, index: usize) -> Option<u8> {
         let folder = self.folder_at(index);
-        folder.children.has_direct_marker || folder.has_marker_below
+        marker_depth(folder.children.has_direct_marker, folder.nearest_marker_below)
     }
 }
 
@@ -439,7 +452,7 @@ impl ScopedRows {
                     dir_index: index as u32,
                     modified_at: row.modified_at,
                     children: ChildAggregate::default(),
-                    has_marker_below: false,
+                    nearest_marker_below: None,
                     under_floored_ancestor: false,
                 });
                 scored_ids.push(*id);
@@ -579,11 +592,11 @@ fn read_origin_alone(conn: &rusqlite::Connection, root_id: i64, rows: &mut Scope
 /// Returns `false` when the descent passed [`SCOPED_WALK_MAX_DIRS`], which means the
 /// caller should take the full walk instead.
 ///
-/// **Floored subtrees are descended too, deliberately.** A `node_modules` or a
-/// `.git` scores nothing itself, but a project marker inside one still raises the
-/// folders above it (`propagate_marker_to_ancestors` doesn't stop at a floor), so
-/// skipping them would make this walk disagree with the full one. The size bail is
-/// what keeps that affordable.
+/// **Floored subtrees are descended too**, mirroring the full walk's folder set. A
+/// floored folder writes no row and a marker inside one raises nothing
+/// (`propagate_marker_to_ancestors` skips a floored seed), so pruning them here would
+/// now be safe and cheaper; it isn't done yet. The size bail is what keeps the
+/// descent affordable meanwhile.
 fn descend_subtree(conn: &rusqlite::Connection, root_id: i64, rows: &mut ScopedRows) -> Result<bool, String> {
     let Some(root) = IndexStore::get_entry_by_id(conn, root_id).map_err(|e| e.to_string())? else {
         return Ok(true);

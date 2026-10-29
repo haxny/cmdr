@@ -19,12 +19,15 @@ the surface, so every later slice grows here too.
 
 ## Must-knows
 
-- **The agent can propose; only the user can approve** (invariant 7). Dispatch admits `Read`, `Propose`, and `Memory`,
-  never `Write`; a `Propose` tool mutates nothing, approval is a frontend user action, and no tool approves. `Propose`
-  doesn't touch consent (proposals flow agent → user), so don't re-litigate that.
+- **The agent can propose; only the user can approve** (invariant 7). Dispatch admits `Read`, `Propose`, `Memory`, and
+  `Session`, never `Write`; a `Propose` tool mutates nothing, approval is a frontend user action, and no tool approves.
+  `Propose` doesn't touch consent (proposals flow agent → user), so don't re-litigate that.
+- **`Access::Session` only connects a SAVED place, and only on a turn the user started** (`text`, retries included; `resume` is reserved, unset in production; a wake or
+  follow-up gets `refusedInBackground`). The gate reads `TurnParams::origin`, ❌ never the opener's shape. Hand-allowlisted
+  in `EXPECTED_SESSION_TOOL_NAMES`.
 - **`Access::Memory` is the one write.** The promise is "the agent writes only into its memory folder", held by
   `memory/`'s jail plus a hand-authored allowlist: ❌ never tag a tool `Memory` without adding its name there. Memory
-  rides every prefix, so it is an injection surface: `memory/DETAILS.md`.
+  reaches every thread (in a user turn, never the cached prefix), so it is an injection surface: `memory/DETAILS.md`.
 - **The egress line is structural, and the cloud AI disclosure names every item on it.** Names, paths, and metadata
   reach the provider on every turn; contents only through `search_photos` / `image_facts` (image-derived text) and
   `inspect_file` (text windows, `find` lines, PDF pages plus title and author, archive entry names, EXIF incl. GPS;

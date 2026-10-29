@@ -12,7 +12,7 @@
 
 use serde_json::{Value, json};
 
-use super::types::{TurnParams, TurnResult, TurnTally, UserTurn};
+use super::types::{TurnParams, TurnResult, TurnTally};
 use crate::agent::chat::stream::AgentErrorKindView;
 use crate::analytics::item_count_bucket;
 
@@ -30,25 +30,13 @@ fn turn_props(params: &TurnParams<'_>, result: &TurnResult, tally: &TurnTally) -
         TurnResult::Failed(kind) => ("failed", kind.as_token()),
     };
     json!({
-        "origin": origin_token(params.user.as_ref()),
+        "origin": params.origin.as_token(),
         "outcome": outcome,
         "failure": failure,
         "provider": params.provider.as_token(),
         "tool_turns": item_count_bucket(tally.tool_turns),
         "proposals": item_count_bucket(tally.proposals),
     })
-}
-
-/// What opened the turn. `resume` is the post-crash replay of a persisted thread, which is
-/// neither a fresh user message nor a wake and would otherwise inflate whichever it was
-/// folded into.
-fn origin_token(user: Option<&UserTurn<'_>>) -> &'static str {
-    match user {
-        Some(UserTurn::Text(_)) => "text",
-        Some(UserTurn::Wake(_)) => "wake",
-        Some(UserTurn::Outcomes(_)) => "outcomes",
-        None => "resume",
-    }
 }
 
 /// Reports a send refused before a turn ever started.
@@ -80,6 +68,7 @@ fn refusal_props(kind: AgentErrorKindView) -> Value {
 mod tests {
     use super::*;
     use crate::agent::chat::context::ContextEnvelope;
+    use crate::agent::chat::runtime::UserTurn;
     use crate::agent::chat::runtime::events::AgentErrorKind;
     use crate::agent::llm::types::ProviderTag;
     use chrono::FixedOffset;
@@ -102,15 +91,19 @@ mod tests {
     fn params<'a>(user: Option<UserTurn<'a>>, provider: ProviderTag, envelope: &'a ContextEnvelope) -> TurnParams<'a> {
         TurnParams {
             conversation_id: 1,
+            origin: super::super::test_support::origin_of(user.as_ref()),
             user,
             cmdr_md: None,
-            memory: None,
+            memory: &[],
             envelope,
             offset: FixedOffset::east_opt(0).expect("UTC is a valid offset"),
             now_secs: 0,
             provider,
             model: "test-model".to_string(),
             prompt_budget: 1000,
+            chat_memory_tokens: 1000,
+            call: crate::agent::llm::CallSettings::default(),
+            spend_pause: None,
         }
     }
 
@@ -126,6 +119,7 @@ mod tests {
             &TurnTally {
                 tool_turns: 3,
                 proposals: 1,
+                ..TurnTally::default()
             },
         );
 
@@ -195,6 +189,7 @@ mod tests {
             &TurnTally {
                 tool_turns: 1,
                 proposals: 0,
+                ..TurnTally::default()
             },
         );
 

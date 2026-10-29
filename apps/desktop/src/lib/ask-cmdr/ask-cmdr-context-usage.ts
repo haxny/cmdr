@@ -1,9 +1,10 @@
 /**
  * How full the model's view of this chat got, as the rail's gauge reports it.
  *
- * Pure on purpose: the backend measures (`ContextUsage`, once per answered turn) and this
- * decides only what the user is told. Both figures are `chars/4` ESTIMATES, never a
- * tokenizer's count, so every surface that renders them says "estimated".
+ * Pure on purpose: the backend measures (`ContextUsage`, once per completed model call, and
+ * the slot status's baseline before any) and this decides only what the user is told. Both
+ * figures are `chars/4` ESTIMATES, never a tokenizer's count, so every surface that renders
+ * them says "estimated".
  */
 
 /** The last measured turn: what the prompt cost, the budget it was assembled against, and how
@@ -17,8 +18,10 @@ export type ContextUsage = {
 /**
  * What the gauge is saying, as one of four named states:
  *
- * - `unmeasured`: no turn has finished yet, so there is nothing honest to show. Deliberately
- *   distinct from 0%, which would read as "plenty of room" for a thread nobody has measured.
+ * - `unmeasured`: no reading at all, neither a measured call nor a baseline (AI is off, or the
+ *   slot status hasn't been read yet). Deliberately distinct from 0%, which would read as
+ *   "plenty of room" for a thread nobody has measured. A new chat isn't this: it shows the
+ *   baseline ({@link gaugeReading}).
  * - `calm`: under {@link FILLING_THRESHOLD_PERCENT} of the budget.
  * - `filling`: at or over the threshold, with nothing dropped yet.
  * - `setAside`: something from the history left the model's view this turn. Going OVER the
@@ -30,6 +33,24 @@ export type ContextUsageState = 'unmeasured' | 'calm' | 'filling' | 'setAside'
 /** Where `calm` becomes `filling`. Early enough that a long chat warns before it starts
  * dropping history, late enough that an ordinary chat never nags. */
 export const FILLING_THRESHOLD_PERCENT = 80
+
+/** The prefix alone against the next send's budget: what every call of a new chat costs at
+ * minimum (the backend's `BaselineUsage`). */
+export type BaselineUsage = { estimatedTokens: number; budgetTokens: number }
+
+/** What the gauge shows, and whether it's the baseline (the tooltip words the two apart). */
+export type GaugeReading = { usage: ContextUsage; baseline: boolean }
+
+/**
+ * The thread's last measured call when it has one, else the baseline. The baseline is honest,
+ * not a placeholder: no call of this chat can cost less than the prefix it always carries, so
+ * a new chat's bar starts where the first call will start.
+ */
+export function gaugeReading(measured: ContextUsage | null, baseline: BaselineUsage | null): GaugeReading | null {
+  if (measured) return { usage: measured, baseline: false }
+  if (baseline) return { usage: { ...baseline, elidedResults: 0 }, baseline: true }
+  return null
+}
 
 export function contextUsageState(usage: ContextUsage | null): ContextUsageState {
   // A budget of zero can't produce a percentage, so it is not a measurement — the same

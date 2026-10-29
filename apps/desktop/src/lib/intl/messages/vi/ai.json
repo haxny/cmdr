@@ -263,6 +263,54 @@
   "@ai.cloud.connectedNoModels": {
     "sourceHash": "54f2b6f"
   },
+  "ai.cloud.contextWindow": "Cửa sổ ngữ cảnh: {windowText} {window, plural, other {token}}",
+  "@ai.cloud.contextWindow": {
+    "sourceHash": "fad1fe6"
+  },
+  "ai.cloud.contextWindowEstimate": "Cửa sổ ngữ cảnh: khoảng {windowText} {window, plural, other {token}} (theo danh sách có sẵn trong Cmdr)",
+  "@ai.cloud.contextWindowEstimate": {
+    "sourceHash": "999230f"
+  },
+  "ai.cloud.effort.recommended": "Khuyến nghị",
+  "@ai.cloud.effort.recommended": {
+    "sourceHash": "d70604e"
+  },
+  "ai.cloud.effort.recommendedWithLevel": "Khuyến nghị ({level})",
+  "@ai.cloud.effort.recommendedWithLevel": {
+    "sourceHash": "e9e8984"
+  },
+  "ai.cloud.effort.off": "Tắt",
+  "@ai.cloud.effort.off": {
+    "sourceHash": "ca7981b"
+  },
+  "ai.cloud.effort.low": "Thấp",
+  "@ai.cloud.effort.low": {
+    "sourceHash": "f793de2"
+  },
+  "ai.cloud.effort.medium": "Trung bình",
+  "@ai.cloud.effort.medium": {
+    "sourceHash": "8e588cd"
+  },
+  "ai.cloud.effort.high": "Cao",
+  "@ai.cloud.effort.high": {
+    "sourceHash": "c4ebc6d"
+  },
+  "ai.cloud.effort.max": "Tối đa",
+  "@ai.cloud.effort.max": {
+    "sourceHash": "a1a5936"
+  },
+  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr dùng mô hình riêng ({model}), nên mục này áp dụng cho mô hình đó.",
+  "@ai.cloud.effort.forAskCmdrModel": {
+    "sourceHash": "3a36d6f"
+  },
+  "ai.cloud.effort.levelsUnknown": "Dịch vụ này không cho biết mô hình này nhận những mức nào, nên dịch vụ sẽ tự quyết định.",
+  "@ai.cloud.effort.levelsUnknown": {
+    "sourceHash": "4688a12"
+  },
+  "ai.cloud.maxOutput": "Câu trả lời dài nhất: {outputText} {output, plural, other {token}}",
+  "@ai.cloud.maxOutput": {
+    "sourceHash": "16bd61d"
+  },
   "ai.cloud.recheck": "Kiểm tra lại",
   "@ai.cloud.recheck": {
     "sourceHash": "1f47d83"

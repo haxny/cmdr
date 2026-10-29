@@ -9,6 +9,8 @@
 //!   view, jailed to `<data-dir>/ai/memory/` by `agent::memory`.
 //! - [`quiet`]: the one signal tool — how a wake says it found nothing worth
 //!   raising. The handler is inert; only the wake path acts on the call.
+//! - [`connect`]: `connect_volume`, the one `Session` tool — brings a place the user
+//!   saved to life with stored credentials, on a turn the user started.
 //! - [`suggestions`]: the suggested-ops surface — two reads over the proposal
 //!   spine plus the one `Propose` tool that stages a sweep or amends a pending
 //!   group.
@@ -20,12 +22,17 @@
 //! See `CLAUDE.md` for the must-knows (reuse the core; the honesty contract; the
 //! Unrecognized-out-of-view invariant) and `DETAILS.md` for the tool catalog.
 
+pub mod connect;
+pub mod line;
 pub mod memory;
 pub mod propose;
 pub mod quiet;
 pub mod read;
 pub mod suggestions;
 pub mod view;
+
+#[cfg(test)]
+mod transcript_179_tests;
 
 use crate::agent::llm::types::{ToolDeclaration, ToolId};
 use crate::mcp::agent_tool_view;

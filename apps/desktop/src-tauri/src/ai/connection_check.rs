@@ -91,7 +91,15 @@ pub async fn check_ai_connection(
         return refused;
     }
     let (api_key, _) = super::api_keys::read_for_backend(&provider_id);
-    probe_ai_endpoint(base_url, api_key, ModelListProtocol::for_provider(&provider_id)).await
+    match list_models(&base_url, &api_key, ModelListProtocol::for_provider(&provider_id)).await {
+        Ok(listed) => {
+            // The same answer carries each model's window, so a check doubles as a capability
+            // refresh at no extra request (`model_capabilities`).
+            super::model_capabilities::store(&app, &provider_id, &base_url, listed.capabilities);
+            AiConnectionCheckResult::models(listed.ids)
+        }
+        Err(problem) => AiConnectionCheckResult::problem(problem),
+    }
 }
 
 /// How a provider wants its key checked and its models listed. Chat requests don't need this
@@ -132,7 +140,7 @@ const GEMINI_MODEL_PAGE_SIZE: u32 = 1000;
 
 impl ModelListProtocol {
     /// Keyed by the preset id the settings UI passes, the same id the key is stored under.
-    fn for_provider(provider_id: &str) -> Self {
+    pub(super) fn for_provider(provider_id: &str) -> Self {
         match provider_id {
             "anthropic" => Self::Anthropic,
             "google-gemini" => Self::Gemini,
@@ -164,7 +172,7 @@ impl ModelListProtocol {
 
 /// The policy half of [`check_ai_connection`], pure so it's testable: `Some` answer when the
 /// organization refuses the endpoint (judged as the backend would send to it), `None` to go on.
-fn refuse_by_policy(policy: &ManagedPolicy, base_url: &str) -> Option<AiConnectionCheckResult> {
+pub(super) fn refuse_by_policy(policy: &ManagedPolicy, base_url: &str) -> Option<AiConnectionCheckResult> {
     let refusal = policy
         .ai_destination(&super::client::remote_destination(base_url))
         .err()?;
@@ -187,66 +195,92 @@ fn refuse_without_consent(cloud_consent: bool) -> Option<AiConnectionCheckResult
     })
 }
 
-/// Asks the provider, the way `protocol` says, whether the key works and which models it serves.
-/// Split from the command so it stays pure and testable.
+/// Asks the provider, the way `protocol` says, whether the key works and which models it serves:
+/// [`list_models`] shaped as the command answers, minus the policy and consent gates and the
+/// capability store, so the tests can drive it against a mock server.
+#[cfg(test)]
 pub(super) async fn probe_ai_endpoint(
     base_url: String,
     api_key: String,
     protocol: ModelListProtocol,
 ) -> AiConnectionCheckResult {
+    match list_models(&base_url, &api_key, protocol).await {
+        Ok(listed) => AiConnectionCheckResult::models(listed.ids),
+        Err(problem) => AiConnectionCheckResult::problem(problem),
+    }
+}
+
+/// One answer from a provider's model list: the ids to offer, plus what each model can take,
+/// parsed from the same body.
+pub(super) struct ListedModels {
+    pub(super) ids: Vec<String>,
+    pub(super) capabilities: super::model_capabilities::ModelCatalog,
+}
+
+/// The request half of [`check_ai_connection`], shared with the capability refresh
+/// (`model_capabilities`): the key check and the model list, or the typed problem. The caller
+/// has already asked the policy and consent; this guards the key against plaintext.
+pub(super) async fn list_models(
+    base_url: &str,
+    api_key: &str,
+    protocol: ModelListProtocol,
+) -> Result<ListedModels, AiConnectionProblem> {
     // Same plaintext-key guard as `configure_ai`: never send the BYOK key over
     // `http://` to a non-loopback host.
-    if let Err(rejection) = validate_ai_base_url(&base_url, &api_key) {
-        return AiConnectionCheckResult::problem(rejection.into());
-    }
+    validate_ai_base_url(base_url, api_key)?;
 
     // The policy judged `base_url` above; the redirect guard judges every hop after it.
-    let client = match cmdr_http::client_builder()
+    let client = cmdr_http::client_builder()
         .timeout(PROBE_TIMEOUT)
         .redirect(super::client::policy_guarded_redirects())
         .build()
-    {
-        Ok(client) => client,
-        Err(e) => {
+        .map_err(|e| {
             log::warn!("Couldn't build the AI key-check HTTP client: {e}");
-            return AiConnectionCheckResult::problem(AiConnectionProblem::Unreachable);
+            AiConnectionProblem::Unreachable
+        })?;
+    let base = base_url.trim_end_matches('/');
+    let get = |url: String| protocol.authorize(client.get(url), api_key);
+
+    let body = match protocol {
+        ModelListProtocol::OpenAiCompatible => fetch(get(format!("{base}/models")), protocol, api_key).await?,
+        ModelListProtocol::Anthropic => {
+            fetch(
+                get(format!("{base}/models?limit={ANTHROPIC_MODEL_PAGE_LIMIT}")),
+                protocol,
+                api_key,
+            )
+            .await?
+        }
+        ModelListProtocol::Gemini => {
+            fetch(
+                get(format!("{base}/models?pageSize={GEMINI_MODEL_PAGE_SIZE}")),
+                protocol,
+                api_key,
+            )
+            .await?
+        }
+        ModelListProtocol::OpenRouter => {
+            fetch(get(format!("{base}/key")), protocol, api_key).await?;
+            fetch(get(format!("{base}/models")), protocol, api_key).await?
+        }
+        ModelListProtocol::Perplexity => {
+            fetch(get(format!("{base}/v1/models")), protocol, api_key).await?;
+            return Ok(ListedModels {
+                ids: vec![],
+                capabilities: super::model_capabilities::ModelCatalog::default(),
+            });
         }
     };
-    let base = base_url.trim_end_matches('/');
-    let get = |url: String| protocol.authorize(client.get(url), &api_key);
-
-    let listed = match protocol {
-        ModelListProtocol::OpenAiCompatible => fetch(get(format!("{base}/models")), protocol, &api_key)
-            .await
-            .map(|body| sorted(openai_model_ids(&body))),
-        ModelListProtocol::Anthropic => fetch(
-            get(format!("{base}/models?limit={ANTHROPIC_MODEL_PAGE_LIMIT}")),
-            protocol,
-            &api_key,
-        )
-        .await
-        .map(|body| openai_model_ids(&body)),
-        ModelListProtocol::Gemini => fetch(
-            get(format!("{base}/models?pageSize={GEMINI_MODEL_PAGE_SIZE}")),
-            protocol,
-            &api_key,
-        )
-        .await
-        .map(|body| sorted(gemini_chat_model_ids(&body))),
-        ModelListProtocol::OpenRouter => match fetch(get(format!("{base}/key")), protocol, &api_key).await {
-            Ok(_) => fetch(get(format!("{base}/models")), protocol, &api_key)
-                .await
-                .map(|body| sorted(openai_model_ids(&body))),
-            Err(problem) => Err(problem),
-        },
-        ModelListProtocol::Perplexity => fetch(get(format!("{base}/v1/models")), protocol, &api_key)
-            .await
-            .map(|_| vec![]),
+    let ids = match protocol {
+        // Anthropic lists newest first, which is the useful order; keep it.
+        ModelListProtocol::Anthropic => openai_model_ids(&body),
+        ModelListProtocol::Gemini => sorted(gemini_chat_model_ids(&body)),
+        _ => sorted(openai_model_ids(&body)),
     };
-    match listed {
-        Ok(models) => AiConnectionCheckResult::models(models),
-        Err(problem) => AiConnectionCheckResult::problem(problem),
-    }
+    Ok(ListedModels {
+        ids,
+        capabilities: super::model_capabilities::parse_catalog(protocol, &body),
+    })
 }
 
 /// Sends one probe request: the body on 200, else the typed problem.
@@ -364,20 +398,63 @@ fn host_is_loopback(parsed: &reqwest::Url) -> bool {
 }
 
 /// Model ids from an OpenAI-shaped `{ "data": [{ "id" }] }` answer, in the provider's order.
-/// Empty on a shape we don't know (connected, but nothing to suggest).
+/// Together answers a bare `[{ "id" }]` array instead (per its API reference; not verified
+/// live, no key), so that shape counts too. Empty on a shape we don't know (connected, but
+/// nothing to suggest). A model the provider itself marks as unable to chat is left out
+/// ([`ModelEntry::cannot_chat`]); picked, it would fail every request.
 fn openai_model_ids(body: &str) -> Vec<String> {
     #[derive(serde::Deserialize)]
-    struct ModelsResponse {
-        data: Vec<ModelEntry>,
-    }
-    #[derive(serde::Deserialize)]
-    struct ModelEntry {
-        id: String,
+    #[serde(untagged)]
+    enum ModelsResponse {
+        Wrapped { data: Vec<ModelEntry> },
+        Bare(Vec<ModelEntry>),
     }
 
     serde_json::from_str::<ModelsResponse>(body)
-        .map(|r| r.data.into_iter().map(|m| m.id).collect())
+        .map(|r| match r {
+            ModelsResponse::Wrapped { data } | ModelsResponse::Bare(data) => {
+                data.into_iter().filter(|m| !m.cannot_chat()).map(|m| m.id).collect()
+            }
+        })
         .unwrap_or_default()
+}
+
+/// One entry of an OpenAI-shaped model list, plus the provider markers that say it can't chat
+/// (verified on each provider's live `/models`, 2026-10-27).
+#[derive(serde::Deserialize)]
+struct ModelEntry {
+    id: String,
+    /// Mistral: `{ "completion_chat": false }` on embeddings, OCR, and moderation models.
+    #[serde(default)]
+    capabilities: Option<ModelEntryCapabilities>,
+    /// Groq: `["speech"]` or `["transcription"]` on its TTS and Whisper models.
+    #[serde(default)]
+    output_modalities: Option<Vec<String>>,
+    /// Fireworks: `"EMBEDDING_MODEL"` on embedders and rerankers, which still claim `supports_chat`.
+    #[serde(default)]
+    kind: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct ModelEntryCapabilities {
+    #[serde(default)]
+    completion_chat: Option<bool>,
+}
+
+impl ModelEntry {
+    /// True only on a positive marker; an entry without one (OpenAI marks none) stays offered.
+    fn cannot_chat(&self) -> bool {
+        let no_chat_capability = self
+            .capabilities
+            .as_ref()
+            .is_some_and(|c| c.completion_chat == Some(false));
+        let no_text_output = self
+            .output_modalities
+            .as_ref()
+            .is_some_and(|out| !out.iter().any(|m| m == "text"));
+        let embedder = self.kind.as_deref() == Some("EMBEDDING_MODEL");
+        no_chat_capability || no_text_output || embedder
+    }
 }
 
 /// The `gemini-*` chat models in a native Gemini list, as bare ids. A model must offer

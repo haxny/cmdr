@@ -263,6 +263,54 @@
   "@ai.cloud.connectedNoModels": {
     "sourceHash": "54f2b6f"
   },
+  "ai.cloud.contextWindow": "Kontextusablak: {windowText} {window, plural, one {token} other {token}}",
+  "@ai.cloud.contextWindow": {
+    "sourceHash": "fad1fe6"
+  },
+  "ai.cloud.contextWindowEstimate": "Kontextusablak: kb. {windowText} {window, plural, one {token} other {token}} (a Cmdr beépített listája szerint)",
+  "@ai.cloud.contextWindowEstimate": {
+    "sourceHash": "999230f"
+  },
+  "ai.cloud.effort.recommended": "Ajánlott",
+  "@ai.cloud.effort.recommended": {
+    "sourceHash": "d70604e"
+  },
+  "ai.cloud.effort.recommendedWithLevel": "Ajánlott ({level})",
+  "@ai.cloud.effort.recommendedWithLevel": {
+    "sourceHash": "e9e8984"
+  },
+  "ai.cloud.effort.off": "Ki",
+  "@ai.cloud.effort.off": {
+    "sourceHash": "ca7981b"
+  },
+  "ai.cloud.effort.low": "Alacsony",
+  "@ai.cloud.effort.low": {
+    "sourceHash": "f793de2"
+  },
+  "ai.cloud.effort.medium": "Közepes",
+  "@ai.cloud.effort.medium": {
+    "sourceHash": "8e588cd"
+  },
+  "ai.cloud.effort.high": "Magas",
+  "@ai.cloud.effort.high": {
+    "sourceHash": "c4ebc6d"
+  },
+  "ai.cloud.effort.max": "Maximális",
+  "@ai.cloud.effort.max": {
+    "sourceHash": "a1a5936"
+  },
+  "ai.cloud.effort.forAskCmdrModel": "Az Ask Cmdr saját modellt használ ({model}), így ez a beállítás arra a modellre vonatkozik.",
+  "@ai.cloud.effort.forAskCmdrModel": {
+    "sourceHash": "3a36d6f"
+  },
+  "ai.cloud.effort.levelsUnknown": "Ez a szolgáltatás nem adja meg, milyen szinteket fogad el ez a modell, ezért a szolgáltatás dönt.",
+  "@ai.cloud.effort.levelsUnknown": {
+    "sourceHash": "4688a12"
+  },
+  "ai.cloud.maxOutput": "Leghosszabb válasz: {outputText} {output, plural, one {token} other {token}}",
+  "@ai.cloud.maxOutput": {
+    "sourceHash": "16bd61d"
+  },
   "ai.cloud.recheck": "Újraellenőrzés",
   "@ai.cloud.recheck": {
     "sourceHash": "1f47d83"

@@ -953,9 +953,9 @@ name = "EXIF Columns"
 provides = ["column"]
 
 [scopes]
-fs.read = ["selection"]              # only files Cmdr passes me
-fs.write = []                         # nothing
-net.fetch = ["api.exiftool.org"]      # specific host(s) only
+fs.read = ["selection"] # only files Cmdr passes me
+fs.write = [] # nothing
+net.fetch = ["api.exiftool.org"] # specific host(s) only
 process.exec = []
 clipboard.read = false
 ```
@@ -1064,8 +1064,8 @@ extensions = ["db", "sqlite", "sqlite3"]
 mimeTypes = ["application/x-sqlite3"]
 
 [capabilities.volume]
-schemes = ["sqlite"]                     # opens sqlite://path/to/file.db
-opensFromFile = ["db", "sqlite"]         # also: "open this .db as a folder"
+schemes = ["sqlite"] # opens sqlite://path/to/file.db
+opensFromFile = ["db", "sqlite"] # also: "open this .db as a folder"
 
 [capabilities.column]
 columns = ["sqlite.tableCount", "sqlite.size"]

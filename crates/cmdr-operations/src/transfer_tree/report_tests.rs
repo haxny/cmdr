@@ -12,11 +12,11 @@ use super::model::{LeafState, NodeId, TreeRowState};
 use super::test_support::{english, node_at};
 use super::view::{TransferTreeViewRequest, TreeWindow};
 use super::{TransferTree, TransferTreeSlot, TreeLanding, TreeLeaf, TreeRecorder, TreeReporter};
-use crate::types::{ProgressAxis, WriteOperationError};
+use crate::types::{ProgressAxis, TransferLeaves, WriteOperationError};
 
 /// `/src/top/{a.bin 10 B, sub/c.bin 30 B}`, landing in `/dest`, installed in a slot.
 fn installed() -> TransferTreeSlot {
-    installed_landing(TreeLanding::under(Path::new("/dest"), None))
+    installed_landing(TreeLanding::under(Path::new("/dest"), &TransferLeaves::default()))
 }
 
 fn installed_landing(landing: TreeLanding) -> TransferTreeSlot {
@@ -126,12 +126,16 @@ fn a_failure_on_the_destination_side_marks_the_row_it_was_writing() {
 /// stages under its own folder first; both find their rows.
 #[test]
 fn a_named_copy_and_a_staging_folder_find_their_rows_too() {
-    let named = installed_landing(TreeLanding::under(Path::new("/dest"), Some("renamed")));
+    let named = installed_landing(TreeLanding::under(
+        Path::new("/dest"),
+        &TransferLeaves::single("renamed"),
+    ));
     named.note_failure(&full_disk_at("/dest/renamed/a.bin"));
     assert_eq!(state_of(&named, node(&named, &["top", "a.bin"])), LeafState::Failed);
 
     let staged = installed_landing(
-        TreeLanding::under(Path::new("/dest"), None).and_first_under(PathBuf::from("/dest/.cmdr-staging-op")),
+        TreeLanding::under(Path::new("/dest"), &TransferLeaves::default())
+            .and_first_under(PathBuf::from("/dest/.cmdr-staging-op")),
     );
     staged.note_failure(&full_disk_at("/dest/.cmdr-staging-op/top/sub/c.bin"));
     assert_eq!(

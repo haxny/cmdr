@@ -1,7 +1,7 @@
 <!--
   The Ask Cmdr chat rail: a toggleable right-side panel next to the panes. Header (title +
-  ALPHA badge + new-chat + close), the scrolling thread, the getting-long nudge, and the
-  composer. A left-edge drag handle resizes it (persisted). Below ~900px it overlays the
+  ALPHA badge + new-chat + close), the no-provider notice when one applies, the scrolling
+  thread, the getting-long nudge, the composer, and the cost footer. A left-edge drag handle resizes it (persisted). Below ~900px it overlays the
   right pane instead of compressing the panes below their min-width.
 -->
 <script lang="ts">
@@ -23,22 +23,33 @@
         ensureThreadLoaded,
         hasOlderMessages,
         isOverSoftCap,
+        keepGoingPastSpend,
         loadOlderMessages,
-        newChat,
+        markRailFocused,
+        newChatShortcutText,
+        openNewChat,
         setRailWidth,
+        stopStreaming,
     } from './ask-cmdr-trigger.svelte'
+    import AskCmdrSpendPause from './AskCmdrSpendPause.svelte'
     import { railGate } from './ask-cmdr-gate.svelte'
+    import AskCmdrProviderNotice from './AskCmdrProviderNotice.svelte'
+    import { providerGap, refreshSlotStatus, slotStatusState, watchSlotStatus } from './ask-cmdr-slot-status.svelte'
+    import { contentSignature } from './ask-cmdr-rounds'
     import { cloudConsentState } from '#lib/ai/cloud-consent.svelte.js'
     import { getSetting, onSpecificSettingChange, type AiProvider } from '#lib/settings/index.js'
     import { openSessions, sessionsState } from './ask-cmdr-sessions.svelte'
     import type { SelectionAttachmentsRead } from '#lib/file-explorer/pane/selection-attachments-read.js'
+    import type { RevealPath } from './ask-cmdr-tool-line'
 
     interface Props {
         /** The composer's "Ask about selection" read, handed down from the explorer. */
         readSelection: () => Promise<SelectionAttachmentsRead>
+        /** Shows a tool line's path in a pane, handed down from the explorer. */
+        revealPath: RevealPath
     }
 
-    const { readSelection }: Props = $props()
+    const { readSelection, revealPath }: Props = $props()
 
     const badgeStatus = getBadgeStatus('ask-cmdr')
 
@@ -63,6 +74,20 @@
         })
     })
 
+    // Whether a provider is set up, and the footer's baseline: read while the rail is up, and
+    // again on a thread switch or a turn's end (the memory slice and the budget may have moved).
+    $effect(() => watchSlotStatus())
+    let lastSeen: { id: number | null; streaming: boolean } | null = null
+    $effect(() => {
+        const now = { id: askCmdrState.conversationId, streaming: askCmdrState.streaming }
+        untrack(() => {
+            const turnEnded = lastSeen?.streaming === true && !now.streaming
+            if (lastSeen !== null && (turnEnded || lastSeen.id !== now.id)) void refreshSlotStatus()
+            lastSeen = now
+        })
+    })
+    const gap = $derived(providerGap(slotStatusState.status))
+
     let listElement = $state<HTMLDivElement | null>(null)
     // Whether the user was near the bottom before the last content change. Streaming
     // appends scroll to follow; a "load earlier" prepend (user scrolled up) does not.
@@ -73,26 +98,34 @@
         if (el) wasNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
     }
 
-    // Keep the newest message in view as the thread grows or text streams in, but only
-    // when the user is already at the bottom.
-    const lastText = $derived(askCmdrState.messages.at(-1))
+    // Keep the newest message in view as the thread grows or a turn streams in (a round, a tool
+    // line, prose, its stats), but only when the user is already at the bottom.
+    const tail = $derived(contentSignature(askCmdrState.messages))
     $effect(() => {
-        // Track the message count and the live tail so streaming deltas also scroll.
-        dependOn(askCmdrState.messages.length, lastText && lastText.kind === 'assistant' ? lastText.text : '')
+        dependOn(tail)
         if (!wasNearBottom) return
         void tick().then(() => {
             if (listElement) listElement.scrollTop = listElement.scrollHeight
         })
     })
 
-    // Prepend older history, holding the user's scroll position steady across the growth.
+    // Prepend older history, holding the user's scroll position steady across the growth. The
+    // last page takes the button away, so focus on it would fall to `<body>`: the rail keeps it.
     async function onLoadEarlier(): Promise<void> {
         const el = listElement
         const before = el ? el.scrollHeight : 0
         await loadOlderMessages()
         await tick()
         if (el) el.scrollTop += el.scrollHeight - before
+        if (document.activeElement === document.body) railElement?.focus()
     }
+
+    // The rail is focusable (tabindex -1, out of the tab order) so a click on its text or on a
+    // button keeps focus in the rail: WebKit doesn't focus a clicked button, and with no
+    // focusable ancestor it drops focus to `<body>`, where the keyboard reaches nothing.
+    let railElement = $state<HTMLElement | null>(null)
+
+    const newChatShortcut = $derived(newChatShortcutText())
 
     // Left-edge resize: dragging left widens (the rail hugs the right edge).
     let dragStartX = 0
@@ -112,7 +145,14 @@
     }
 </script>
 
-<aside class="ask-cmdr-rail" style="width: {askCmdrState.width}px" aria-label={tString('askCmdr.title')}>
+<aside
+    class="ask-cmdr-rail"
+    style="width: {askCmdrState.width}px"
+    aria-label={tString('askCmdr.title')}
+    tabindex="-1"
+    bind:this={railElement}
+    onfocusin={markRailFocused}
+>
     <div
         class="resize-handle"
         role="separator"
@@ -135,7 +175,13 @@
                 <button type="button" class="icon-button" onclick={openSessions} aria-label={tString('askCmdr.threads.open')} use:tooltip={tString('askCmdr.threads.open')}>
                     <Icon name="messages-square" size={16} aria-hidden="true" />
                 </button>
-                <button type="button" class="icon-button" onclick={newChat} aria-label={tString('askCmdr.newChat')}>
+                <button
+                    type="button"
+                    class="icon-button"
+                    onclick={openNewChat}
+                    aria-label={tString('askCmdr.newChat')}
+                    use:tooltip={{ text: tString('askCmdr.newChat'), shortcut: newChatShortcut }}
+                >
                     <Icon name="file-plus" size={16} aria-hidden="true" />
                 </button>
             {/if}
@@ -144,6 +190,11 @@
             </button>
         </span>
     </header>
+
+    <!-- Above whichever gate or chat follows, so with Ask Cmdr off both steps show at once. -->
+    {#if gap}
+        <AskCmdrProviderNotice {gap} />
+    {/if}
 
     {#if gate === 'off' || gate === 'cloudOff'}
         <AskCmdrGate kind={gate} />
@@ -162,12 +213,19 @@
                 </div>
             {:else}
                 {#each askCmdrState.messages as message, index (index)}
-                    <AskCmdrMessage {message} />
+                    <AskCmdrMessage {message} {revealPath} />
                 {/each}
+                {#if askCmdrState.streaming && askCmdrState.spendPausedMicros !== null}
+                    <AskCmdrSpendPause
+                        costMicros={askCmdrState.spendPausedMicros}
+                        onKeepGoing={keepGoingPastSpend}
+                        onStop={stopStreaming}
+                    />
+                {/if}
                 {#if isOverSoftCap()}
                     <div class="soft-cap">
                         <span>{tString('askCmdr.softCap.message')}</span>
-                        <button type="button" class="soft-cap-action" onclick={newChat}>
+                        <button type="button" class="soft-cap-action" onclick={openNewChat}>
                             {tString('askCmdr.softCap.action')}
                         </button>
                     </div>
@@ -194,6 +252,12 @@
         min-height: 0;
         background: var(--color-bg-secondary);
         border-left: 1px solid var(--color-border);
+    }
+
+    /* Focus lands on the rail itself only from a click (it's out of the tab order), so it draws
+       no ring: the region it marks is already the whole panel. */
+    .ask-cmdr-rail:focus {
+        outline: none;
     }
 
     .resize-handle {

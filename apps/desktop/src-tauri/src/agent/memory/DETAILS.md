@@ -70,6 +70,19 @@ that matters:
 Every escape attempt has a test in `tests.rs`, and each asserts both the typed refusal AND that nothing landed outside.
 Asserting only the `Err` would pass for a refusal that wrote first.
 
+**`shown_location(root, requested)` is steps 1 and 2 only**, joined onto the root: no syscall, no directory created.
+It exists so the rail's tool line can turn the path a memory call named into a place to go
+(`../tools/line/DETAILS.md`), and `None` keeps the path plain text. ❌ Never a write gate: it skips the symlink walk
+and the containment re-check.
+
+## Refusal tokens (`refusal.rs`)
+
+A refusal reaches the model as `{ saved: false, refused: <token>, detail }`. `MemoryRefusal::token()` writes the
+token; `MemoryRefusalKind::from_token` reads it back for anything downstream (the rail's tool line), so nothing parses
+`detail`. The kind is `MemoryRefusal` without its data, plus `Unavailable` (the folder couldn't be reached, which
+`tools/memory.rs` answers without a `MemoryRefusal`) and `Other` (a token this build doesn't know). `token()` goes
+through the kind's own token, so the writer and the reader can't drift; a test round-trips every variant.
+
 ## The two caps
 
 **`MEMORY_DIR_MAX_BYTES` = 64 KB, across every `.md` under the root.** A disk guard. `used_bytes()` walks the folder and
@@ -86,10 +99,11 @@ keep answering as if it had.
 **The prompt slice** is `chat::budget::memory_slice_bytes(prompt_budget)`, a tenth of what the budget has left after the
 fixed overhead. It is a SHARE rather than a constant for two reasons that a byte cap can't cover:
 
-- The system string is never elided (`context::assemble_prompt` tightens tool results only), so every byte of memory is
-  a permanent tax on every turn of every thread. At `MIN_LOCAL_CONTEXT_TOKENS` the resolved budget is 19,660 tokens and
-  the prefix takes 6,263 of it; a flat 8 KB of memory would take 2,048 more, on top of a paged tool result's 8,000,
-  leaving little for the digest, the envelope, the history, and everything else the turn carries.
+- Memory notes are never elided (`context::assemble_prompt` tightens tool results only), so every byte of memory is a
+  permanent tax on every thread, paid again in each turn after a file changed. At `MIN_LOCAL_CONTEXT_TOKENS` the fixed prefix already takes a large
+  part of the budget, so a flat 8 KB of memory, on top of a paged tool result, would leave little for the digest, the
+  envelope, the history, and everything else the turn carries. The arithmetic lives on `budget.rs`'s
+  `MEMORY_BUDGET_PERCENT`, next to the constants it uses.
 - **The agent writes this file itself.** A flat cap lets it permanently degrade its own chat, and nothing in the loop
   would tell anybody why the replies got worse.
 
@@ -101,16 +115,18 @@ whole of what it once knew.
 
 The write path is reachable from text the agent read. `image_facts` returns the full stored OCR of the user's images
 (the widest derived-content egress the agent has), and file names come off disk. So a crafted filename or a picture of a
-sentence can get the agent to write a line into `AGENTS.md`, and that line then rides the cached prefix of every later
-turn, including ones that call `propose_suggestions`. It survives restarts and thread deletion.
+sentence can get the agent to write a line into `AGENTS.md`, and that line then reaches every later thread, including
+turns that call `propose_suggestions`. It survives restarts and thread deletion.
 
 Three defences, and all three are load-bearing:
 
 1. **The jail** keeps the writing inside one folder of Markdown.
-2. **Placement and fencing** (`../chat/context.rs`): memory goes BEFORE the rules, not after them, inside a fence whose
-   closing marker the fenced content cannot produce, under a line saying the block is data that never overrides what
-   follows. Appending it the way `CMDR.md` is appended would put agent-written text in the strongest override position
-   the prompt has.
+2. **Placement and fencing** (`../chat/context/memory_notes.rs`): memory rides a user turn as its own part, never the
+   system string, so it never borrows the system prompt's authority; it sits inside a fence whose closing marker the
+   fenced content cannot produce, under a line saying Cmdr added it (not the user) and that it is data that never
+   overrides the rules. Appending it to the system string the way `CMDR.md` is appended would put agent-written text in
+   the strongest override position the prompt has. It also keeps memory out of the cached prefix:
+   `../chat/DETAILS.md` § The memory block.
 3. **The write instruction** (`../chat/system_prompt.rs`): notes record facts about the user and their preferences,
    never instructions to itself, and a note that reads as an order is to be reported and removed.
 

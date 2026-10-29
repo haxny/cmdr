@@ -9,9 +9,12 @@ The shared scaffolding this engine runs on is documented one level up, next to t
 signal (§ "The stall signal"), per-file retry and its watchdog (§ "Retrying one FILE, and the watchdog that ends a wait
 nothing else will"), and cancel/rollback against a parked driver (§ "Cancel and rollback reach a parked driver").
 
-The both-local copy delegation preserves an explicit leaf name in its config. The serial drivers pass that leaf to
-`landing.rs::top_level_precheck`, which substitutes it before probing the destination. Contract: `../DETAILS.md` §
-"Named destinations".
+The both-local delegations carry the config's `TransferLeaves` into the native engines, a per-source map re-keyed
+(`rebased`) in the same step the sources are re-rooted (`on_local_root`). Every driver here names each source's landing
+path from them before the pre-check probes it: the serial async driver (`chosen_for`, ahead of a rename-by-move's target
+name, then `landing.rs::top_level_precheck`), and the concurrent copy driver (`leaf_of`, in
+`copy_concurrent_source.rs::prepare_source`, the name its `DestNameIndex` lookup asks about). Contract: `../DETAILS.md`
+§ "Named destinations".
 
 ## Files
 
@@ -42,7 +45,7 @@ Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`.
   created, stamped once the subtree landed, and `landed_flags.rs` the flags a FILE waits to wear until its landing (both
   § "Copies keep the source's metadata").
 - **The move is three files, and the dependency runs ONE way.** `r#move` is the DISPATCHER and nothing else: it picks
-  same-volume (`move_same`), both-local (`move_files_start`, one level up), or cross-volume (`move_cross`), then owns
+  same-volume (`move_same`), both-local (`local_move_start`, one level up), or cross-volume (`move_cross`), then owns
   the managed-op lifecycle around whichever it picked. Both engines are leaves under it. ❗ Nothing in an engine may
   import the dispatcher back — that is exactly what the three `FetchFut` / `ResolveFut` / `TransferFut` aliases used to
   do from `r#move`, and three lines of type alias were the whole of a three-module cycle. They live with the driver
@@ -479,7 +482,7 @@ specific to volumes:
 
 **The move drops the item rather than renaming it**, in `move_same.rs` before the driver runs, so no engine below can
 represent the case. Only the same-volume path can reach one at all: `move_between_volumes` routes `Arc::ptr_eq` there
-FIRST, the both-local branch hands off to `move_files_start` (whose own rule lives in `../DETAILS.md`), and a genuine
+FIRST, the both-local branch hands off to `local_move_start` (whose own rule lives in `../DETAILS.md`), and a genuine
 cross-volume move names two different volumes, so no two paths there name one item. Without the drop a folder reaches
 `rename_merge_directory`, which threads the destination down through recursion and renames every leaf onto itself or
 shuffles it aside to `name (1)`. Dropped items still emit `write-source-item-done` as `Done` with

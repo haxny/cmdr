@@ -253,9 +253,10 @@ async fn a_named_source_freezes_what_its_volume_says_about_it() {
     volume.set_modified_at(Path::new("/Users/someone/Downloads/a.dmg"), Some(1_700_000_000));
     let volume: Arc<dyn Volume> = Arc::new(volume);
 
-    let mut planned = super::plan_sweep(&trash_call(), super::NOW).expect("the call is valid");
+    let mut planned = super::plan_sweep(&trash_call(), super::NOW, &super::local_facts()).expect("the call is valid");
     super::super::snapshot::freeze_named_sources(&mut planned, |id| (id == "root").then(|| volume.clone())).await;
-    let mut unregistered = super::plan_sweep(&trash_call(), super::NOW).expect("the call is valid");
+    let mut unregistered =
+        super::plan_sweep(&trash_call(), super::NOW, &super::local_facts()).expect("the call is valid");
     super::super::snapshot::freeze_named_sources(&mut unregistered, |_| None).await;
 
     let conn = migrated_conn();

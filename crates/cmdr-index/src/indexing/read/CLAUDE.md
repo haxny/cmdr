@@ -14,7 +14,9 @@ volume-keyed handle tables.
   `lifecycle::state`: a registry lookup would put the hot read path behind the mutex a shutdown drain holds. The table
   lock is a LEAF — ❌ never call out under it.
 - **`get_read_pool_for(vid)` returning `None` IS the skip signal.** The gate is pool-presence, not registry-key
-  presence, so it can't disagree with the routing call that asks the same question.
+  presence, so it can't disagree with the routing call that asks the same question. The one exception: the per-path
+  reads of a volume the HOST doesn't serve fall back to its database on disk (`IndexReader`), ❌ never for a mounted
+  one.
 - **`root` ALSO keeps the `scanner::should_exclude(parent_path)` check.** A `root` listing can navigate to a path root
   never indexes; without it, enrichment misses and logs on every ~2/s refresh.
 - **Map the read path into index-relative space via `routing::index_read_path` before `resolve_path`** — a
@@ -36,7 +38,8 @@ volume-keyed handle tables.
   frontier. Rests on the `EXCLUSION_POLICY_KEY` stamp: stale or absent ⇒ nothing is trusted.
 - **Enrichment logs once per changed result, via `EnrichResultMemo`.** ❌ No per-pass line: an idle pane triggers this
   ~2/s.
-- ⚠️ **An UNLISTED directory's rows aren't its contents**, so `list_dir_children` answers `None` there.
+- ⚠️ **An UNLISTED directory's rows aren't its contents**, so `list_dir_children_on_volume` answers `None` there.
+- **Per-path reads take the volume from the caller**, ❌ never from the path: a dead mount point routes to `root`.
 
 Owned elsewhere: the `dir_stats` ledger, honest sizes, and epochs in `../writer/CLAUDE.md`; the registry, handle
 bootstrap, phase, and freshness in `../lifecycle/CLAUDE.md`; path routing in `../paths/CLAUDE.md`.

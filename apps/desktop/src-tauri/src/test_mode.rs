@@ -239,8 +239,8 @@ fn automated_run_from(e2e_mode: Option<&str>, i18n_capture: Option<&str>) -> Aut
 /// scripted fake LLM (`agent::resolve_agent_llm`), so the rail's send-and-render can
 /// be tested with no real provider. This is the single source of truth for "the fake
 /// backend is serving": both `resolve_agent_llm` (which answers the send) and the
-/// composer's provider gate (which allows the send, via the `ask_cmdr_fake_active`
-/// command) key off it, so the two can't disagree.
+/// rail's slot status (`agent::chat::slot_status`, which reads it as a ready provider so
+/// the composer allows the send) key off it, so the two can't disagree.
 ///
 /// **Strictly additive**: code must keep working with the var unset.
 pub fn ask_cmdr_fake_active() -> bool {

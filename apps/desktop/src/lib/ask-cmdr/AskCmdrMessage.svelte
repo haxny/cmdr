@@ -1,6 +1,7 @@
 <!--
-  One rendered thread item: a user bubble, an assistant turn (tool lines + a "thinking…"
-  indicator + markdown-lite prose with a streaming cursor), or a typed failure notice.
+  One rendered thread item: a user bubble, an assistant turn (its rounds as markdown-lite
+  narration and tool lines, in order, plus a "thinking…" indicator and a streaming cursor), or a
+  typed failure notice.
 
   Assistant prose is the XSS boundary: it's untrusted model text, so it goes through
   `renderAssistantMarkdown` (HTML-entity escape + snarkdown) before {@html}. User text and
@@ -12,17 +13,41 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { errorMessage, undoSkipMessage } from './ask-cmdr-labels'
     import { renderAssistantMarkdown } from './ask-cmdr-markdown'
+    import { displaySegments, groupKey } from './ask-cmdr-rounds'
+    import { groupSummaryText } from './ask-cmdr-tool-group-summary'
+    import { claimGroupAnnouncement } from './ask-cmdr-tool-groups.svelte'
+    import AskCmdrToolGroup from './AskCmdrToolGroup.svelte'
     import AskCmdrToolLine from './AskCmdrToolLine.svelte'
+    import AskCmdrTurnStats from './AskCmdrTurnStats.svelte'
+    import type { RevealPath } from './ask-cmdr-tool-line'
     import AskCmdrAttachmentChip from './AskCmdrAttachmentChip.svelte'
     import AskCmdrWakeDigest from './AskCmdrWakeDigest.svelte'
     import AskCmdrProposalDecisions from './AskCmdrProposalDecisions.svelte'
     import { formatInteger } from '#lib/intl/number-format.js'
-    import { undoRename, type RailMessage } from './ask-cmdr-trigger.svelte'
+    import { askCmdrState, sendMessage, undoRename, type RailMessage } from './ask-cmdr-trigger.svelte'
+    import AskCmdrLimitNotice from './AskCmdrLimitNotice.svelte'
 
     interface Props {
         message: RailMessage
+        /** Shows a tool line's path in a pane. */
+        revealPath: RevealPath
     }
-    const { message }: Props = $props()
+    const { message, revealPath }: Props = $props()
+
+    const segments = $derived(message.kind === 'assistant' ? displaySegments(message.rounds) : [])
+
+    /** A live group's summary as it settles: every call in it came back. A reloaded bubble's
+     * groups were settled before anyone was listening, so they say nothing. */
+    let groupAnnouncement = $state('')
+    $effect(() => {
+        if (message.kind !== 'assistant' || !message.streaming) return
+        for (const segment of segments) {
+            if (segment.kind !== 'tools' || segment.lines.length < 2) continue
+            const key = groupKey(segment.lines)
+            if (key === null || segment.lines.some((line) => line.call.running)) continue
+            if (claimGroupAnnouncement(key)) groupAnnouncement = groupSummaryText(segment.lines.map((line) => line.call))
+        }
+    })
 
     /** A count as both the preformatted string the sentence drops in and the raw
      *  integer that picks the plural form (the catalogs' `*Text` convention). */
@@ -94,29 +119,47 @@
         <AskCmdrProposalDecisions decisions={message.decisions} />
     </div>
 {:else if message.kind === 'assistant'}
+    <!-- One turn: each round's narration, then its tool lines, in the order they happened. Only
+         the last round's prose is a live region, so earlier narration doesn't re-announce. -->
     <div class="msg">
-        {#if message.tools.length > 0}
-            <div class="tools">
-                {#each message.tools as tool (tool.callId)}
-                    <AskCmdrToolLine {tool} />
-                {/each}
-            </div>
-        {/if}
+        {#each segments as segment, index (segment.key)}
+            {#if segment.kind === 'tools'}
+                <div class="tools">
+                    {#if segment.lines.length > 1}
+                        <AskCmdrToolGroup lines={segment.lines} live={message.streaming} {revealPath} />
+                    {:else}
+                        <AskCmdrToolLine line={segment.lines[0]} {revealPath} />
+                    {/if}
+                </div>
+            {:else}
+                <div class="prose" data-text-region aria-live={segment.lastRound ? 'polite' : undefined}>
+                    <!-- eslint-disable-next-line svelte/no-at-html-tags -- untrusted model text is HTML-entity-escaped (escapeForMarkdownLite) before snarkdown inside renderAssistantMarkdown; this is the XSS boundary. -->
+                    {@html renderAssistantMarkdown(segment.text)}{#if message.streaming && index === segments.length - 1}<span
+                            class="cursor"
+                            aria-hidden="true"
+                        ></span>{/if}
+                </div>
+            {/if}
+        {/each}
         {#if message.thinking || message.stalled}
             <div class="status-line" role="status">
                 <span class="status-glyph"><Spinner size="sm" /></span>
                 <span>{message.stalled ? tString('askCmdr.stalled') : tString('askCmdr.thinking')}</span>
             </div>
         {/if}
-        {#if message.text}
-            <div class="prose" data-text-region aria-live="polite">
-                <!-- eslint-disable-next-line svelte/no-at-html-tags -- untrusted model text is HTML-entity-escaped (escapeForMarkdownLite) before snarkdown inside renderAssistantMarkdown; this is the XSS boundary. -->
-                {@html renderAssistantMarkdown(message.text)}{#if message.streaming}<span
-                        class="cursor"
-                        aria-hidden="true"
-                    ></span>{/if}
-            </div>
+        {#if message.stats?.limit}
+            <AskCmdrLimitNotice
+                limit={message.stats.limit}
+                canContinue={!askCmdrState.streaming && askCmdrState.messages.at(-1) === message}
+                onContinue={() => {
+                    sendMessage(tString('askCmdr.limit.continueMessage'))
+                }}
+            />
         {/if}
+        <AskCmdrTurnStats stats={message.stats} />
+        <!-- The bubble's one word on its groups: each group's summary, once, when it settles. The
+             headers themselves stay quiet, so a 12-call turn doesn't chatter. -->
+        <span class="sr-only" role="status">{groupAnnouncement}</span>
     </div>
 {:else if message.kind === 'error'}
     <div class="msg error" role="status">
@@ -324,6 +367,11 @@
         line-height: var(--font-line-height-prose);
         color: var(--color-text-primary);
         word-break: break-word;
+    }
+
+    /* Narration followed by the tool lines it introduces. */
+    .prose:not(:last-child) {
+        margin-bottom: var(--spacing-xs);
     }
 
     /* snarkdown output: tighten the default block margins to the rail's rhythm. */

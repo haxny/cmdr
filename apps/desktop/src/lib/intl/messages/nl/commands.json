@@ -129,6 +129,14 @@
   "@commands.askCmdrToggle.description": {
     "sourceHash": "c520468"
   },
+  "commands.askCmdrNewChat.label": "Nieuwe Ask Cmdr-chat",
+  "@commands.askCmdrNewChat.label": {
+    "sourceHash": "54ebf70"
+  },
+  "commands.askCmdrNewChat.description": "Start een nieuwe chat in Ask Cmdr en open het gedeelte als het gesloten is",
+  "@commands.askCmdrNewChat.description": {
+    "sourceHash": "957741b"
+  },
   "commands.feedbackSend.label": "Verstuur feedback",
   "@commands.feedbackSend.label": {
     "sourceHash": "8235980"

@@ -6,7 +6,7 @@ use rusqlite::Connection;
 
 use super::*;
 use crate::agent::llm::types::{AgentPart, AgentRole, AgentToolCall, ProviderTag, ReasoningState, ToolId};
-use crate::agent::store::append_event;
+use crate::agent::store::{append_event, append_raw_event_row};
 use crate::agent::types::ConversationOrigin;
 
 /// An in-memory `main.db` at the current schema. FTS5 works in-memory, so this exercises
@@ -67,6 +67,46 @@ fn event_rows_round_trip_and_interleave_by_seq() {
         other => panic!("expected an event row, got {other:?}"),
     }
     assert_eq!(messages[1].id, event_id);
+}
+
+#[test]
+fn an_event_kind_this_build_does_not_know_loads_and_keeps_its_row() {
+    // A newer build wrote a kind this one lacks (a downgrade). The page must still load, and
+    // the row must stay in place: paging counts rows, so dropping it would shift every offset.
+    let conn = migrated_conn();
+    let id = create_conversation(&conn, "t", 100, None).expect("create");
+    append_user_text(&conn, id, "hello", 100);
+    let (unknown_id, unknown_seq) =
+        append_raw_event_row(&conn, id, r#"{"kind":"fromTheFuture","stats":{"calls":3}}"#, 150).expect("append raw");
+    append_user_text(&conn, id, "again", 200);
+
+    let detail = get_conversation(&conn, id, 2, 0)
+        .expect("an unknown event kind loads")
+        .expect("present");
+    assert_eq!(detail.total_messages, 3, "the unknown row still counts");
+    assert_eq!(detail.messages.len(), 2);
+    assert_eq!(detail.messages[1].id, unknown_id);
+    assert_eq!(detail.messages[1].seq, unknown_seq);
+    assert!(matches!(
+        detail.messages[1].content,
+        StoredContent::Event(ConversationEvent::Unknown)
+    ));
+    let next = list_messages(&conn, id, 2, 2).expect("next page");
+    assert_eq!(next.len(), 1, "the next page starts right after the unknown row");
+    assert_eq!(next[0].seq, unknown_seq + 1);
+}
+
+#[test]
+fn a_known_event_kind_with_a_broken_body_still_refuses_to_load() {
+    // The tolerance is for UNKNOWN kinds only: a known kind that doesn't parse is corruption,
+    // and reading it as `Unknown` would hide it.
+    let conn = migrated_conn();
+    let id = create_conversation(&conn, "t", 100, None).expect("create");
+    append_raw_event_row(&conn, id, r#"{"kind":"modelChanged"}"#, 150).expect("append raw");
+    assert!(matches!(
+        list_messages(&conn, id, 10, 0),
+        Err(AgentStoreError::ContentBlocks(_))
+    ));
 }
 
 #[test]

@@ -263,6 +263,54 @@
   "@ai.cloud.connectedNoModels": {
     "sourceHash": "54f2b6f"
   },
+  "ai.cloud.contextWindow": "Контекстное окно: {windowText} {window, plural, one {токен} few {токена} many {токенов} other {токена}}",
+  "@ai.cloud.contextWindow": {
+    "sourceHash": "fad1fe6"
+  },
+  "ai.cloud.contextWindowEstimate": "Контекстное окно: примерно {windowText} {window, plural, one {токен} few {токена} many {токенов} other {токена}} (из встроенного списка Cmdr)",
+  "@ai.cloud.contextWindowEstimate": {
+    "sourceHash": "999230f"
+  },
+  "ai.cloud.effort.recommended": "Рекомендуется",
+  "@ai.cloud.effort.recommended": {
+    "sourceHash": "d70604e"
+  },
+  "ai.cloud.effort.recommendedWithLevel": "Рекомендуется ({level})",
+  "@ai.cloud.effort.recommendedWithLevel": {
+    "sourceHash": "e9e8984"
+  },
+  "ai.cloud.effort.off": "Выключено",
+  "@ai.cloud.effort.off": {
+    "sourceHash": "ca7981b"
+  },
+  "ai.cloud.effort.low": "Низкая",
+  "@ai.cloud.effort.low": {
+    "sourceHash": "f793de2"
+  },
+  "ai.cloud.effort.medium": "Средняя",
+  "@ai.cloud.effort.medium": {
+    "sourceHash": "8e588cd"
+  },
+  "ai.cloud.effort.high": "Высокая",
+  "@ai.cloud.effort.high": {
+    "sourceHash": "c4ebc6d"
+  },
+  "ai.cloud.effort.max": "Максимальная",
+  "@ai.cloud.effort.max": {
+    "sourceHash": "a1a5936"
+  },
+  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr использует собственную модель ({model}), поэтому эта настройка действует для этой модели.",
+  "@ai.cloud.effort.forAskCmdrModel": {
+    "sourceHash": "3a36d6f"
+  },
+  "ai.cloud.effort.levelsUnknown": "Этот сервис не сообщает, какие уровни поддерживает эта модель, поэтому решает сам сервис.",
+  "@ai.cloud.effort.levelsUnknown": {
+    "sourceHash": "4688a12"
+  },
+  "ai.cloud.maxOutput": "Самый длинный ответ: {outputText} {output, plural, one {токен} few {токена} many {токенов} other {токена}}",
+  "@ai.cloud.maxOutput": {
+    "sourceHash": "16bd61d"
+  },
   "ai.cloud.recheck": "Проверить снова",
   "@ai.cloud.recheck": {
     "sourceHash": "1f47d83"

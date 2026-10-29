@@ -13,7 +13,7 @@ use walkdir::WalkDir;
 use super::super::OperationEventSink;
 use super::super::conflict::{ApplyToAll, IncomingItem};
 use super::super::state::WriteOperationState;
-use super::super::types::{ConflictResolution, WriteOperationError};
+use super::super::types::{ConflictResolution, TransferLeaves, WriteOperationError};
 use super::conflicts::{ArchiveClash, ConflictMode, conditional_overwrites, find_unique_inner, resolve_effective};
 use super::edit_error::EditError;
 use cmdr_archive::mutator::{self, AddEntry, AddSource, Changeset};
@@ -34,11 +34,11 @@ pub(super) fn build_copy_into_changeset(
     archive_path: &Path,
     absolute_sources: &[PathBuf],
     dest_inner: &str,
-    destination_name: Option<&str>,
+    leaves: &TransferLeaves,
     conflict: ConflictResolution,
 ) -> Result<CopyIntoPlan, WriteOperationError> {
     let mut mode = ConflictMode::Policy(conflict);
-    build_copy_into_changeset_inner(archive_path, absolute_sources, dest_inner, destination_name, &mut mode).map_err(
+    build_copy_into_changeset_inner(archive_path, absolute_sources, dest_inner, leaves, &mut mode).map_err(
         |e| match e {
             EditError::Op(w) => w,
             // A pre-resolved policy never prompts, so it can't be cancelled here.
@@ -57,7 +57,7 @@ pub(super) fn build_copy_into_changeset_interactive(
     archive_path: &Path,
     absolute_sources: &[PathBuf],
     dest_inner: &str,
-    destination_name: Option<&str>,
+    leaves: &TransferLeaves,
     events: &dyn OperationEventSink,
     operation_id: &str,
     state: &Arc<WriteOperationState>,
@@ -69,7 +69,7 @@ pub(super) fn build_copy_into_changeset_interactive(
         state,
         apply_to_all: &mut latch,
     };
-    build_copy_into_changeset_inner(archive_path, absolute_sources, dest_inner, destination_name, &mut mode)
+    build_copy_into_changeset_inner(archive_path, absolute_sources, dest_inner, leaves, &mut mode)
 }
 
 /// The shared copy-into walk. Resolves each FILE collision, and each folder
@@ -79,7 +79,7 @@ fn build_copy_into_changeset_inner(
     archive_path: &Path,
     absolute_sources: &[PathBuf],
     dest_inner: &str,
-    destination_name: Option<&str>,
+    leaves: &TransferLeaves,
     mode: &mut ConflictMode<'_>,
 ) -> Result<CopyIntoPlan, EditError> {
     let source = LocalFileSource::open(archive_path).map_err(|e| {
@@ -108,7 +108,8 @@ fn build_copy_into_changeset_inner(
         let Some(name) = src.file_name().and_then(|n| n.to_str()) else {
             continue;
         };
-        let base_inner = join_inner_str(dest_inner, destination_name.unwrap_or(name));
+        let leaf = leaves.chosen_for(src).and_then(std::ffi::OsStr::to_str).unwrap_or(name);
+        let base_inner = join_inner_str(dest_inner, leaf);
         // The root `__MACOSX` is where the zip's sidecars live, hidden from every
         // listing: an item landing there could never be seen again, and an
         // extract would read it as metadata. Skipped and counted, like a symlink.

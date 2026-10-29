@@ -1,6 +1,6 @@
 [package]
 name = "cmdr"
-version = "0.56.0"
+version = "0.57.0"
 description = "A blazing fast, keyboard-driven, two-pane file manager built, Rust, Tauri, and ❤️"
 authors = ["David Veszelovszki <david@getcmdr.com>"]
 edition = "2024"
@@ -193,7 +193,7 @@ mime_guess = "2"
 base64 = "0.23.0"
 rayon = "1.11.0"
 regex = "1"
-uuid = { version = "1.19.0", features = ["v4", "v7"] }
+uuid = { version = "1.29.0", features = ["v4", "v7"] }
 tauri-plugin-clipboard-manager = "2"
 notify-debouncer-full = "0.7.0"
 bincode2 = "2"
@@ -238,7 +238,7 @@ arc-swap = "1.9.3"
 walkdir = "2"
 # Drive indexing: SQLite store and macOS FSEvents watcher (the parallel directory
 # walker is now the in-tree `indexing::scanner::walker`, not a dependency)
-rusqlite = { version = "0.40", features = ["bundled", "collation", "fallible_uint"] }
+rusqlite = { version = "0.41", features = ["bundled", "collation", "fallible_uint"] }
 # Extended attributes: Finder tags, per-path icons, and Google Drive's item ids.
 xattr = "1"
 sysinfo = { version = "0.39.0", default-features = false, features = ["system"] }
@@ -262,11 +262,14 @@ rand = "0.10"
 # that reject custom `temperature` (HTTP 400) and (2) Responses-only models that 404 on
 # `/v1/chat/completions`.
 #
-# Pinned at the EXACT 0.6.5 (published 2026-06-06). The 0.6 line ships often, so pin exact
-# to avoid surprise breakage on `cargo update` — 0.6.5 added the required `ToolResponse.fn_name`
-# field, which is the kind of churn a caret range would have landed silently. The 0.7 line is
-# still in beta. Solo maintainer; MIT/Apache-2.0; ~25k LOC if we ever need to fork.
-genai = "=0.6.5"
+# Pinned at the EXACT 0.7.1 (published 2026-10-23). The line ships often and breaks APIs in
+# minors, so pin exact to avoid surprise breakage on `cargo update`. 0.7 is what lets reasoning
+# survive a tool loop: Anthropic signed and redacted thinking blocks, OpenAI Responses encrypted
+# reasoning items, Gemini per-part thought signatures, and Mistral `thinking` chunks round-trip
+# (`src/agent/llm/DETAILS.md` § Reasoning round-trip). Patched through `vendor/genai/CMDR-PATCH.md` (OpenRouter's streamed
+# `reasoning_details`). Solo maintainer; MIT/Apache-2.0; ~25k LOC
+# if we ever need to fork.
+genai = "=0.7.1"
 # Type-safe IPC: typed Rust↔TS bindings for tauri commands and events.
 # Generated `bindings.ts` lands in `apps/desktop/src/lib/ipc/`; the frontend
 # imports `commands.commandName(args)` instead of `invoke('command_name', ...)`.
@@ -304,11 +307,11 @@ cmdr-mtp = { path = "../../../crates/cmdr-mtp" }
 # mDNS discovery for network host browsing (pure Rust, cross-platform).
 # 0.21.5 is the floor: older releases retry a failed multicast join every 5 s forever
 # on Macs with VM or container bridges. See `src/network/DETAILS.md`.
-mdns-sd = { version = "0.21.5", features = ["logging"] }
+mdns-sd = { version = "0.21.6", features = ["logging"] }
 # SMB2/3 protocol client for share enumeration (pure Rust, pipelined I/O).
 # When bumping: also re-vendor the test containers per
 # apps/desktop/test/smb-servers/.compose/VENDORED.md
-smb2 = { version = "0.35.0", features = ["serde"] }
+smb2 = { version = "0.36.0", features = ["serde"] }
 # NFD normalization for APFS collation and SMB path normalization
 unicode-normalization = "0.1"
 # Percent-decoding for MCP resource URI query strings (cross-platform).
@@ -319,11 +322,11 @@ url = "2"
 semver = "1"
 # Property lists: macOS bundle and Dock plists, and the managed-policy values (`managed_policy/`),
 # which the test-build plist-file override also reads on Linux.
-plist = "1.8.0"
+plist = "1.10.3"
 # CommonMark rendering for the What's-new popup, so a lead renders the way GitHub and the website
 # render the same changelog, and for the viewer's rendered Markdown view. `html` only: the default
 # `getopts` feature is the crate's own CLI.
-pulldown-cmark = { version = "0.13.4", default-features = false, features = ["html"] }
+pulldown-cmark = { version = "0.13.5", default-features = false, features = ["html"] }
 # Sanitizes the HTML the viewer renders from an untrusted Markdown file (READMEs carry raw `<img>`,
 # `<details>`, `<a>`): an allowlist of tags and attributes, so no script, handler, form, or frame
 # reaches the viewer's webview. Also hands back the parsed DOM, where the image sources get rewritten.

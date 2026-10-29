@@ -19,7 +19,9 @@ use super::super::transfer::left_in_source::LeftInSource;
 use super::super::transfer::volume::pull_path_to_local;
 use super::super::transfer::volume::{CarriedSource, stamp_source, sweep_carried_source};
 use super::super::types::ReadOnlySide;
-use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult, WriteOperationType};
+use super::super::types::{
+    ConflictResolution, TransferLeaves, WriteOperationError, WriteOperationStartResult, WriteOperationType,
+};
 use super::copy_into_plan::{build_copy_into_changeset, build_copy_into_changeset_interactive};
 use super::edit_error::EditError;
 use super::engine::{EditLeftovers, MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
@@ -86,7 +88,7 @@ impl crate::Operations {
             compression_level,
             preview_id,
             super::super::journal::ArchiveProvenance::edit(cmdr_operation_log::types::Initiator::User),
-            None,
+            TransferLeaves::default(),
         )
         .await
     }
@@ -111,13 +113,8 @@ impl crate::Operations {
         compression_level: Option<i64>,
         preview_id: Option<String>,
         prov: super::super::journal::ArchiveProvenance,
-        destination_name: Option<String>,
+        leaves: TransferLeaves,
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
-        super::super::validation::validate_transfer_destination_name(
-            &source_paths,
-            &dest_full_path,
-            destination_name.as_deref(),
-        )?;
         // A LOCAL source volume's root — `Some` skips the pull (the changeset walks
         // real paths); `None` (a remote source) triggers the in-op pull-to-scratch.
         let src_local_root = source_volume.local_path();
@@ -154,7 +151,7 @@ impl crate::Operations {
             compression_level,
             preview_id,
             prov,
-            destination_name,
+            leaves,
         )
         .await
     }
@@ -357,7 +354,7 @@ impl crate::Operations {
         compression_level: Option<i64>,
         preview_id: Option<String>,
         prov: super::super::journal::ArchiveProvenance,
-        destination_name: Option<String>,
+        leaves: TransferLeaves,
     ) -> Result<WriteOperationStartResult, WriteOperationError> {
         let operation_id = OperationId::from(cmdr_operation_log::new_operation_id());
         let operation_type = if prov.subkind == ArchiveSubkind::Compress {
@@ -474,7 +471,7 @@ impl crate::Operations {
                                         working,
                                         &absolute_sources,
                                         &dest_inner,
-                                        destination_name.as_deref(),
+                                        &leaves,
                                         &*events_for_blocking,
                                         op_id_for_blocking.as_str(),
                                         &state_for_blocking,
@@ -484,7 +481,7 @@ impl crate::Operations {
                                         working,
                                         &absolute_sources,
                                         &dest_inner,
-                                        destination_name.as_deref(),
+                                        &leaves,
                                         conflict,
                                     )
                                     .map_err(EditError::Op)?

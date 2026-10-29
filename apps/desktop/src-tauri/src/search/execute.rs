@@ -121,6 +121,23 @@ fn resolve_target(query: &SearchQuery) -> Result<Target, ScopeError> {
     })
 }
 
+/// The target for a query its caller already placed on one volume's index
+/// (`mcp/executor/search/placement.rs`), so its paths aren't routed again.
+///
+/// The one case path routing can't express: a share that isn't connected. Its
+/// locations sit under its last root (`/Volumes/naspi`), which routes to the boot
+/// disk once nothing is mounted there, so only the caller's resolution reaches the
+/// share's index on disk. Empty include paths are the whole volume, as unscoped is.
+fn target_on(query: &SearchQuery, volume_id: &str) -> Target {
+    let include_paths = query.include_paths.clone().unwrap_or_default();
+    Target {
+        can_be_indexed: volume_can_be_indexed(volume_id, include_paths.first().map_or("", String::as_str)),
+        volume_id: volume_id.to_string(),
+        from_scope: !include_paths.is_empty(),
+        include_paths,
+    }
+}
+
 /// Whether a drive index can serve the volume a scope routed to.
 ///
 /// A registered volume answers for itself (`Volume::capabilities`, the answer the

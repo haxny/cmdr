@@ -22,6 +22,7 @@ mod migrations;
 pub mod proposals;
 mod query;
 mod rows;
+mod turns;
 
 use std::path::{Path, PathBuf};
 
@@ -32,17 +33,21 @@ pub(crate) use connection::open_write_connection;
 #[cfg(test)]
 pub(crate) use consent::set_legacy_ask_cmdr_consent_for_tests;
 pub use consent::{ConsentRecord, ConsentRecordView, clear_cloud_ai_consent, get_consent, set_cloud_ai_consent};
-pub use events::{ConversationEvent, append_event};
+#[cfg(test)]
+pub use events::append_raw_event_row;
+pub use events::{ConversationEvent, TurnLimit, TurnLimitKind, TurnStats, append_event};
 pub use inbox::{StoredInboxRow, clear_inbox, load_inbox, load_inbox_row, replace_inbox, upsert_inbox_row};
 pub use migrations::{MIGRATIONS, Migration, run_migrations};
 pub use query::{
     ConversationCost, ConversationDetail, ConversationRow, ConversationSearchHit, CostDay, CostRecord, CostSummary,
     StoredContent, StoredMessage, append_message, archive_conversation, conversation_context_usage, conversation_cost,
     conversation_last_chat_memory, conversation_last_model, cost_summary, create_conversation, delete_conversation,
-    discard_conversation_keeping_cost, get_conversation, list_conversations, list_messages, proactive_tokens_for_day,
-    quiet_wakes_conversation, record_cost, rename_conversation, sanitize_fts_query, search_conversations,
-    set_conversation_context_usage, set_conversation_last_chat_memory, set_conversation_last_model,
+    discard_conversation_keeping_cost, get_conversation, last_seq, list_conversations, list_messages,
+    proactive_tokens_for_day, quiet_wakes_conversation, record_cost, rename_conversation, sanitize_fts_query,
+    search_conversations, set_conversation_context_usage, set_conversation_last_chat_memory,
+    set_conversation_last_model,
 };
+pub use turns::{TurnContext, row_and_rest_of_turn, turn_context, turn_opener_at};
 
 /// The durable store's file name in the app data dir. Peer to `operation-log.db`.
 pub const MAIN_DB_FILE: &str = "main.db";
@@ -73,6 +78,24 @@ pub enum AgentStoreError {
     /// A persisted `content_blocks` JSON value failed to parse back into the typed
     /// message-part model. Carried for logging only.
     ContentBlocks(serde_json::Error),
+    /// A server group with no draft row, or one whose JSON won't decode. A server group's
+    /// draft IS what it proposes, so the read fails closed rather than showing or saving a
+    /// guess. Names the group, ❌ never the JSON, which holds a host and an account.
+    ServerDraft {
+        group_id: i64,
+        problem: ServerDraftProblem,
+    },
+}
+
+/// What's wrong with a server group's stored draft.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ServerDraftProblem {
+    /// The group has no `proposal_server_drafts` row.
+    Missing,
+    /// The row's `draft` or `previous` isn't a `ServerDraft` this build reads.
+    Undecodable,
+    /// The row's `completion_note` isn't a `ServerSaveNote` token.
+    UnknownNote,
 }
 
 impl std::fmt::Display for AgentStoreError {
@@ -90,6 +113,9 @@ impl std::fmt::Display for AgentStoreError {
                 write!(f, "main.db undecodable token in {column}: {value:?}")
             }
             AgentStoreError::ContentBlocks(e) => write!(f, "main.db undecodable content_blocks: {e}"),
+            AgentStoreError::ServerDraft { group_id, problem } => {
+                write!(f, "main.db server group {group_id} has no readable draft ({problem:?})")
+            }
         }
     }
 }

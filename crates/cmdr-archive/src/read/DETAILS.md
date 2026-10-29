@@ -29,9 +29,10 @@ reasons that are both load-bearing here:
    whole `EntryFsm` loop on a `spawn_blocking` thread.
 
 `rc-zip` still owns everything hard: the EOCD/zip64 hunt, central-directory parsing, filename encoding detection, and
-the per-method decoders (deflate/bzip2/lzma/zstd via cargo features on `rc-zip`). A future remote source implements the
-same `ArchiveByteSource` trait — one uniform seam for local and remote — which is cleaner than `rc-zip-tokio`'s GAT
-`HasCursor` for our caching needs.
+the per-method decoders (deflate/bzip2/lzma/zstd via cargo features on `rc-zip`). `rc-zip` is vendored
+(`vendor/rc-zip/CMDR-PATCH.md`): it sits on `zstd` 0.14, and its zstd decoder reads an entry that fills its output
+buffer mid-read. A future remote source implements the same `ArchiveByteSource` trait — one uniform seam for local and
+remote — which is cleaner than `rc-zip-tokio`'s GAT `HasCursor` for our caching needs.
 
 ## The byte-source seam (`ArchiveByteSource`)
 
@@ -367,9 +368,10 @@ benefits from `TailCachedSource`. The plain-tar random-access path issues one `r
 
 `archive_test.rs` covers parse + listing, synthetic dirs, Zip Slip quarantine, the depth-bomb quarantine,
 first-writer-wins file/dir collisions (both orders), the empty archive, a zip64 round-trip, encrypted/corrupt/not-an-
-archive typed errors, streaming (bounded chunks + decompression correctness + truncated-entry error), stored reads,
-concurrent reads, best-effort encoding, and cache hit/invalidation. `name.rs` and `index.rs` carry pure unit tests for
-the sanitizer (incl. the depth cap) and the tree builder (incl. the node-count cap and the collision orders).
+archive typed errors, streaming (bounded chunks + decompression correctness + truncated-entry error), stored reads, a
+zstd (method 93) entry, concurrent reads, best-effort encoding, and cache hit/invalidation. `name.rs` and `index.rs`
+carry pure unit tests for the sanitizer (incl. the depth cap) and the tree builder (incl. the node-count cap and the
+collision orders).
 
 `multiformat_test.rs` builds tar and 7z fixtures in memory (dev-only encoders: `tar`/`flate2`/`bzip2` writers,
 `lzma-rust2`'s `XzWriter`, `zstd`, and `sevenz-rust2`'s `compress` feature — the shipped path stays decode-only) and

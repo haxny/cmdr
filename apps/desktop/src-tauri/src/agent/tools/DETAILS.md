@@ -33,12 +33,16 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
   `selectedEntriesOmitted` (`outsideWindow` / `tooMany`), never a half list that would read as the whole selection.
   `selectedCount` is always honest, and `list_pane_files` pages the names.
 - **`list_pane_files`** (`read/pane_listing.rs`) — up to 200 compact rows from the focused pane's existing Rust
-  listing cache. It uses the current selection when present, otherwise the whole folder, and returns the exact volume
-  ID plus one shared parent path for `propose_rename_plan`. It never queries the index or starts a filesystem listing.
-- **`list_dir`** (`read/listing.rs`, shared `[AiClient, Agent]`) — a directory's immediate children
-  (`indexing::list_dir_children`, a path-based helper beside `get_dir_stats`) plus its own recursive size stats
-  (`get_dir_stats`) and a `Coverage` block. `Ok(None)` children ⇒ typed "not in index" / "no index", distinguished by
-  whether the volume is indexed. Ordered by `sortBy` (`name` / `size` / `modified`) and paged by `limit` / `offset`;
+  listing cache. It uses the current selection when present, otherwise the whole folder, and returns the folder as a
+  `location` (the exact volume ID plus the one shared parent path `propose_rename_plan` needs). It never queries the
+  index or starts a filesystem listing.
+- **`list_dir`** (`read/listing.rs`, shared `[AiClient, Agent]`) — takes `path` + optional `volumeId`, resolved
+  once (§ The location contract), then reads THAT volume's index: its immediate children (`Index::list_children`) plus
+  its own recursive size stats (`Index::dir_stats`) and a `Coverage` block naming `source: index`. The result echoes
+  `location`. A folder no index lists (an unindexed share, or ground the index hasn't reached) is read live once
+  instead, `source: live` (§ The live source); a resolved volume that isn't connected answers from the index its last
+  walk left on disk, `source: offlineIndex` (§ The honesty contract), or `volumeNotConnected` when that index doesn't
+  list the folder, and an unplaceable one the resolver's miss. Ordered by `sortBy` (`name` / `size` / `modified`) and paged by `limit` / `offset`;
   `type` narrows to files or folders. **`sortBy: "size"` is the disk-usage answer for ONE folder's children**;
   `search` with the same sort ranks a whole drive — see § One tool, both questions.
   Every number also arrives spoken (`sizeHuman`, `modifiedHuman`, `recursiveSizeHuman`, `totalHuman` /
@@ -55,8 +59,9 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
     already on the consent screen, so `search` widened no egress and needed no `CONSENT_COPY_VERSION` bump.
   - **One drive per call, and the model loops.** `resolve_target` refuses a scope spanning volumes
     (`ScopeError::SpansMultipleVolumes`), because a fan-out is the only way a search can silently omit a drive. The
-    default is the boot volume; another drive is named by the `mountPath` `list_volumes` hands over. The description
-    obliges the model to say WHICH drive it covered before offering the others.
+    default is the boot volume; another drive is named by its `volumeId` (no scope covers its whole `root`), which
+    also reaches a volume that isn't connected, from its index (§ The location contract). The description obliges
+    the model to say WHICH drive it covered before offering the others.
   - **What the coverage block obliges the model to say**, field by field: `stillWalking` and `abandonedGround` make the
     list a lower bound (❗ never "no matches"), `permissionDenied` names refused folders and offers Full Disk Access
     only where it would help, `declined` explains rather than offers (snapshot trees are nothing to fix),
@@ -75,11 +80,21 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
     would be a second index with its own enrichment pass, storage budget, and incremental reconcile, on the scale of
     `media_index`.
 - **`important_folders`** (`read/importance.rs`) — top-N or above-threshold across scored volumes, reusing
-  `mcp::resources::importance::{snapshot_top, snapshot_threshold, snapshot_overview}` (which read every scored volume,
-  including offline ones). The overview carries each volume's current generation for staleness.
-- **`folder_importance`** (`read/importance.rs`) — one folder's `PathImportance` (`snapshot_path`): Scored (score +
+  `mcp::resources::importance::{snapshot_top, snapshot_threshold, snapshot_overview}` (which read offline volumes too).
+  Every row is a `location` on its volume's root (§ The location contract), with a terse `why` (its top three signals)
+  and `folded` (near-duplicate descendants merged into it). `volumeId` scopes to one volume; `under` (a folder, on
+  `volumeId` when given, else on the live volume holding it) narrows to one subtree, whose own children then get rows,
+  and echoes back as `under`. The overview carries each volume's current generation for staleness, and `unplaced: true`
+  for a store scored under an id no volume carries (the Bonjour-addressed share): its rows have no root to stand on, so
+  the read skips that store (`RankedScope.among`), ❌ never a row with an invented root. Folding, `why`, and `under` live
+  in the snapshot layer: `mcp/resources/DETAILS.md` § `cmdr://importance`. An empty ranking carries `empty`
+  (`EmptyReason`): no scored volume, a kind never scored (MTP, SFTP, ...), no drive index, still on its first pass (no
+  rows AND generation 0; generation alone lies, since only a full pass stamps it), `under` floors, nothing reaches
+  `threshold`, or nothing scored there. A named volume with no store answers this way too, ❌ never an `invalid_params`.
+- **`folder_importance`** (`read/importance.rs`) — `path` + optional `volumeId`; the resolver picks ONE volume and only
+  its store answers (`snapshot_path_on`), so `/papers` on one share never answers for another's. Scored (score +
   `Explanation` breakdown + `stale` from asOf vs the volume's current `recompute_generation`), Floored (with reason), or
-  Unscored. Offline-capable.
+  Unscored, each with its `location`. Offline-capable: a named saved share resolves and its store still answers.
 - **`inspect_file`** (`read/inspect/`) — "what's in this file?" for up to 200 paths in one call. Each row: metadata
   (`sizeBytes` + `sizeHuman`, `modified` + `modifiedHuman`), the extension's `mime` beside `content.kind` (so a lying
   extension shows), and a typed `content` per kind. Text is a line window (`startLine` + `maxLines`, default 200, max
@@ -103,24 +118,39 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
   one, lists its immediate children (`format`, `inner`, up to 200 `entries` with `isDir`, `size` + `sizeHuman`,
   `modified` + `modifiedHuman`, `encrypted`, plus `total` / `returned` / `truncated` and `hasEncryptedEntries`), and a
   FILE inside an archive is read as its own kind through the viewer's bounded temp; empty and binary carry metadata
-  only. Per-path statuses: `ok` / `folder` / `missing` /
+  only. Per-path statuses: `ok` / `folder` / `missing` / `noVolumeAtPath` /
   `unreadable { permission | io | encrypted | corrupt | unsupported | tooLargeToExtract }` / `unreachable` /
-  `unsupportedVolume`. The call reports `total` / `returned` / `truncated` and names every path with no row in
-  `unanswered`. The sole disk reader among the handlers; how it reads and how it times out: § Reading a
+  `unsupportedVolume`, and every row echoes the `volumeId` it's on (§ The location contract). The call reports
+  `total` / `returned` / `truncated` and names every path with no row in `unanswered`. One of two disk readers among the handlers (the other is `list_dir`'s live source); how it reads and how it times out: § Reading a
   file the way the viewer does.
-- **`list_volumes`** (`read/volumes.rs`) — every volume with `indexStatus` (`fresh`/`scanning`/`stale`/`off`) and, for
-  a remote one, `connectionState` (`direct`/`os_mount`/`disconnected`/`needs_sign_in`/`needs_host_key_approval`/`saved`),
-  straight from `snapshot_volumes` so tokens can't drift. A DEVICE row carries `deviceReadiness`
+- **`list_volumes`** (`read/volumes.rs`) — the map a model plans from: `{ volumes, favorites }`. Every volume with
+  `root`, `indexStatus` (`fresh`/`scanning`/`stale`/`off`) and, for a remote one, `connectionState`
+  (`direct`/`os_mount`/`disconnected`/`needs_sign_in`/`needs_host_key_approval`/`saved`), the tokens straight from
+  `snapshot_volumes_from` so they can't drift. A DEVICE row carries `deviceReadiness`
   (`ready`/`waiting_for_authorization`/`unavailable_offline`/`unavailable_no_permissions`) instead: ❗ a phone waiting
   for its "Allow USB debugging?" tap is listed, so without it the row reads as browsable and every call against it is a
   refusal you can't explain. Presence is not a session, which is why it isn't on `connectionState`.
   Space rides along as `totalBytes` / `availableBytes` plus `totalHuman` / `availableHuman`, each pair present exactly
   when the poller has a reading (the same pair `cmdr://state`'s `volumes:` renders; see `mcp/DETAILS.md`).
-  `mountPath` is what makes a `search` of anything but the boot volume expressible: `search` covers ONE volume per call
-  and addresses it by a path in `scope`, and every other field here is a name, an id, or a token. It's absent for a
-  volume with no filesystem path (MTP storages, the `Network` root), which is also exactly where a search can't reach.
-  ⚠️ It rides `VolumeSummary` but ❌ NOT the `cmdr://state` YAML: that view redacts home paths, so a favorite folder's
-  mount path would render redacted and an AI client copying it into a scope would match nothing.
+  - **`root`** is the resolver's own (`VolumeFact::root`, the one root rule below), so a row and a `list_dir` on that
+    volume can't disagree about where its paths start: a mount point, a scheme root (`sftp://…`, `mtp://…`), or for a
+    volume that isn't connected the root it last had (its `connectionState` says so). Absent only on a row no location
+    lives on (the `Network` hub). It's also the scope a `search` of that drive names. ❌ No `mountPath` here: a saved
+    share's LAST mount point read as "where it is" is what sent the model to a dead `/Volumes/naspi`. `cmdr://state`'s
+    YAML keeps `mountPath` (an ai-client contract).
+  - **The offline vocabulary.** A volume that isn't live, whose index database is on disk with a completed scan,
+    reads `indexStatus: stale` plus `asOf` (that scan's date, spoken), the same pair `list_dir`'s offline coverage
+    voices; with no database it stays `off`. The date comes off the index's read-only opener through the facts shell
+    (`IndexSources::stored_as_of`), never by registering the volume. A live volume's status is its index's own.
+  - **Rows of one share sit together**, most recently connected first (`known-shares.json`'s `lastConnectedAt`, rows
+    matched by share name ignoring case), so the address that worked last is the one a model meets first. Ordering
+    only: it claims nothing about the rows being one share.
+  - **`favorites`** are folders, not volumes, so they left `volumes` (where they read as `kind: local`, the phone one
+    included). Each is `{ name, path, location?, reachable? }`: the saved `path` always, a `location` when it resolves
+    as a bare path to a connected volume, and `reachable: false` when nothing connected holds it.
+  - **Two sources, one per kind of fact.** `VolumeSummary` is shared with `cmdr://state` and the envelope; `root`,
+    `asOf`, and the favorites' locations come from `VolumeFacts` in the pure `to_volume_map`, so a field added for this
+    tool can't reach the YAML by accident. `app_state` embeds the same map's `volumes`.
 - **`operations_list` / `operations_get`** — the shipped executors (`mcp/executor/operation_log.rs`), shared into the
   agent view unchanged (their schemas + coverage flags already fit an agent reader).
 - **`search_photos`** (`mcp/executor/photos.rs`, shared `[AiClient, Agent]`) — photo search by description (CLIP),
@@ -145,9 +175,55 @@ tool-result JSON the model reads. Every tool maps 1:1 to a `ToolId` variant.
   over the proposal spine: what the agent has already put in front of the user (summaries and counts, never op rows),
   one group's ops paged, and the one tool that stages a sweep or amends a pending group. Access classes, the
   resolve-check-write order, the selector schema, and the last-opened gap: `suggestions/DETAILS.md`.
+- **`propose_server`** (`suggestions/server.rs`, agent-only, `Access::Propose`) — stages a server to save, or a change
+  to a saved one, as a zero-op group on the same spine. No secret, no contact with any server, only on a turn the user
+  started, and an edit can't move a server or change its account. `suggestions/DETAILS.md` § Proposing a server.
 - **`nothing_to_suggest`** (`quiet.rs`) — one argument, a short `reason`, and no effect at all. See § A tool that is
   only a signal.
 - **`memory_write` / `memory_edit`** (`memory.rs`) — the two `Access::Memory` tools. See § The two tools that write.
+- **`connect_volume`** (`connect.rs`, agent-only) — the one `Access::Session` tool: brings a place the user saved to
+  life by `volumeId`. See § Connecting a saved place.
+
+## Connecting a saved place (`connect_volume`)
+
+Turns "the NAS isn't connected" from a dead end into one call, without any power an injected file name would want: the
+schema is `{ volumeId }` and nothing else, so it can't add a host, take a password, or approve a key. The gate admits
+it only on a turn the user started (§ The dispatch gate); the promise is agent invariant 7 in `../DETAILS.md`.
+
+**One move per standing, the frontend's own** (`apps/desktop/src/lib/servers/DETAILS.md` § The three arms), because
+the wrong move is silent: re-dialing a registered volume registers a SECOND one, and dialing one the backoff loop owns
+races it.
+
+- Serving (or a local disk) → `alreadyConnected`, no dial.
+- Registered and `disconnected` → no dial. It emits `VolumeReconnectRequested`, which the frontend's
+  `smbReconnectManager` answers with the same `startCycle` a pane landing there makes, and waits up to `RECONNECT_WAIT`
+  (10 s) on `file_system::volume::manager::connection_news()` (subscribed BEFORE the emit) for the outcome:
+  `connected`, `needsCredentials`, `needsApproval`, `rejected` (a refused guest session), or `stillReconnecting`, whose
+  detail tells the model not to poll. With no window listening, the wait ends `stillReconnecting`, which is true.
+- Registered and `needs_sign_in` / a host key to approve → `needsCredentials` / `needsApproval`, no dial.
+- Not registered (a `saved` row) → the only dial: `saved_servers::connect_saved_place` with no secret and no
+  account, so a missing Keychain password answers `needsCredentials` before anything mounts, and every NetFS mount is
+  `NoUI` anyway (`network/CLAUDE.md`). A Keychain access prompt on a user-started turn is acceptable (invariant 7).
+  `connected` echoes the root it landed on, which may have moved (`naspi-2`).
+
+**One share, one connect** (`location/same_share.rs::connect_target`, on the same `redirectable` proof every read
+uses): a member whose same-account sibling is serving answers `alreadyConnected` with the sibling's `location` and
+`via` naming the volume asked; with none serving, the dial goes to the member connected most recently
+(`known-shares.json`'s `lastConnectedAt`), with `via` when that isn't the one named. Recency is the one signal for "the
+address that works from here"; nothing sniffs networks.
+
+**Shared with the pane's dial.** Every saved-place dial is one flight per place (`network/dial_flights.rs`): a rail
+call during a pane's Enter shares that dial's outcome instead of registering a second volume. Stop drops the call,
+which leaves the flight; the dial is called off once nobody waits on it, so Stop never ends a dial the pane still
+wants. The handler races the turn's token itself, so a stop reads `outcome: cancelled`.
+
+**The result is always an answer**, `{ outcome, location?, via?, reason?, detail }`: `reason` is the dial's own outcome
+name for `rejected` / `unreachable` / `needsApproval`, mapped exhaustively in `connect.rs::classify` (no `_ =>`, so a
+new `ServerConnectOutcome` is a compile error there). `refusedInBackground` is the gate's, never the handler's.
+
+**Not shared with AI clients.** `select_volume` on a saved place already brings it to life for them: the pane lands on
+it and `place-connect.svelte.ts` dials, with the sign-in sheet for anything missing. `mcp/DETAILS.md` § The `Session`
+tier.
 
 ## A tool that is only a signal (`nothing_to_suggest`)
 
@@ -170,8 +246,8 @@ delete lives on the wake path, after the turn (`agent/wake/`), and a rail turn c
 auto-dispatched ones the user never previews, and `redact::RedactionContext::redact_line` is path-shaped, so it does
 nothing to a sentence about which of the user's folders were boring. Log that a wake was quiet, never what it said.
 
-**What it costs everyone else.** The schema is prefix, so all 19 declarations are paid on every rail turn: this one is
-97 tokens of the 6,263 fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
+**What it costs everyone else.** The schema is prefix, so all 21 declarations are paid on every rail turn: this one is
+97 tokens of the fixed overhead (`agent/chat/DETAILS.md` § What the budgets buy). That's the price of the wake
 being able to stay silent, and it's why the description is two sentences.
 
 ## The two tools that write (`memory_write`, `memory_edit`)
@@ -361,11 +437,169 @@ Three properties make the size ordering an honest disk-usage answer:
 `offset + returned`" safe: an unstable order would silently skip or double-count rows, and double-counting a folder is
 double-counting its bytes.
 
+## The location contract
+
+Every tool that takes a place speaks one shape, placed by one resolver (`apps/desktop/src-tauri/src/location/resolve.rs`, pure over
+`VolumeFacts`; table tests in `resolve_tests.rs`, the prod story in `transcript_179_tests.rs`). `list_dir`,
+`important_folders`, `folder_importance`, `search`, and `inspect_file` speak it, `list_pane_files` echoes its folder
+as a `location`, and `propose_suggestions` places every destination, selector root, and hand-listed source through it,
+refusing the call in the miss shape and re-addressing a write only onto a redirectable sibling
+(`suggestions/DETAILS.md` § Where a proposal may point).
+
+**Shapes.** An INPUT is the flat pair `path` + optional `volumeId` (`LocationInput`): flat so an AI client's schema stays
+two strings, `volumeId` optional so `~/Downloads` or `/Volumes/naspi-1/papers` simply works. An OUTPUT carries
+`location`, the wire shape of `crate::location::Location`, `{ "volumeId", "path" }`, so a result's two fields are a
+valid next input. `path` is always the APP path: the string the panes, `search` rows, `inspect_file`, and
+`propose_suggestions` use. ❌ Never a share-relative path on the wire; translating into a store's own path space
+(index-relative, importance-relative) happens inside the tool.
+
+**Resolution.**
+
+- A leading `~` expands to this machine's home (app paths start with `/` or a scheme, so `~` can mean nothing else).
+- **Named** (`volumeId` given): an unknown id is `unknownVolume`. A path under the volume's root resolves, connected or
+  not (`live: false` for a saved share: whether it answers is the TOOL's call). A path under a root the volume held
+  earlier is rebased onto the current one and answers with `rebasedFrom`; earlier roots are the saved share's last mount
+  path plus every root it held this session (`facts.rs::RootHistory`, fed by `on_volume_arrival` and by every facts
+  read). Anything else is `pathOutsideVolume` with the volume's `root`.
+- **Bare**: the deepest LIVE root that holds the path wins. A path inside a mount area (`/Volumes/<name>` on macOS) is
+  never the boot disk's, so with nothing live mounted there it's `noVolumeAtPath`. ❌ No saved-root tier: two saved
+  shares can share one last root, and a reused mount point would resolve to the wrong one. Only an explicit `volumeId`
+  reaches a not-connected volume.
+- **One root rule** (`volume_root`): the live mount (or scheme) root when registered, else the index's `volume_path`
+  meta, else the saved row's last mount path. For a volume that isn't live, the facts shell reads the meta (and the
+  last scan's date) off its index database through `Index::status`, the read-only opener: nothing is registered or
+  rebuilt to answer. `search`'s loader (`search/volumes.rs::read_mount_root`) takes its root from the same function.
+- **Facts are in-memory** (`facts.rs`): the registry's live set, the saved-server and saved-share stores, the cached
+  device list, and the index's own state. ❌ No `statfs`, mount-table read, or full volume listing, so a resolve can't
+  wait on a wedged mount. That's also why the resolver doesn't reuse `resolve_location`'s filesystem arm: its `statfs`
+  answers `root` for a dead mount point, exactly the lie this contract exists to stop. The scheme arms read the same
+  stores the facts do, with the same deepest-root rule (`app_paths::path_is_under`).
+- **A volume is not always its own index.** `ResolvedLocation.index.volume_id` names the index holding the rows: a cloud
+  drive in `~/Library/CloudStorage` is its own volume but `root`'s index walks it. A live volume's index is wherever
+  the index routes its ROOT; a volume that isn't live has only its own (routing a dead mount point answers `root`).
+  `location` keeps the volume's id; index reads use the index's.
+- **An importance store keeps its index's paths** (volume-relative, absolute only on the boot disk), so the importance
+  tools translate at one seam (`apps/desktop/src-tauri/src/location/store_path.rs`, shared with the visit recorder): strip the resolved volume's root on
+  the way in, join it back on the way out. A cloud drive's store is relative to the drive's OWN root although `root`'s
+  index walks it, so the seam always takes the importance volume's root, ❌ never the index's routing.
+
+**Misses** (`apps/desktop/src-tauri/src/location/miss.rs`) are an `Ok` result, the memory tools' refusal pattern (§ The two tools that
+write): `{ miss, location, detail, root?, nearby?, sameShareAs? }`. `location` echoes what was asked (tilde-expanded),
+`detail` names a next move. Tokens: `unknownVolume`, `pathOutsideVolume` (carries `root`), `noVolumeAtPath`, and
+`volumeNotConnected`, which a tool answers when the volume resolved but none of its sources can (`volume_not_connected`,
+shared), plus the live source's own (§ The live source). ❌ Never an empty listing, ❌ never `authoritative: true` for ground nothing read.
+
+**`nearby` and `candidate`.** Every not-connected miss carries `nearby` (possibly empty) and `sameShareAs` (the volume's
+proven siblings, § One share, many ids; empty for a bare path, which names no volume). Each `nearby` entry is `{ volumeId, name, kind, connectionState?, root, candidate }`,
+where `candidate` is the requested place re-rooted onto that volume (`/Volumes/naspi/papers` →
+`{ smb-192-…, /Volumes/naspi-1/papers }`), so the next call is a copy, not arithmetic. Picked in order: volumes whose
+mount name shares the requested `/Volumes/<name>` stem (macOS appends `-N` to a second mount), else volumes whose root
+holds the path, else every remote volume; live first, at most 8, never the volume the miss is about.
+
+**One share, many ids** (`apps/desktop/src-tauri/src/location/same_share.rs`). One NAS reached by its LAN IP and by
+Tailscale is two volumes, two indexes, and two importance stores (transcript 179: a 220-folder offline index beside an
+unindexed live share). Two rules, both proof-based:
+
+- **Same share**: both record the same server GUID AND the same share name, ignoring case. The GUID names the BOX, so it
+  never groups alone, and an all-zero GUID is no GUID (`apps/desktop/src-tauri/src/network/server_guid.rs`). Where the GUIDs come from, and why a
+  probe's only fills: `apps/desktop/src-tauri/src/network/DETAILS.md` § "Which server a share is on". ❌ No fuzzy "possibly the same". It shows as
+  `sameShareAs: [volumeId]` on `list_volumes` rows, `important_folders`' overview, and not-connected misses.
+- **Redirectable**: the same share AND the same account (a guest is no account) AND both GUIDs recorded by a session
+  that signed in as that account (`serverGuidProof: authenticated` on both rows, or the live session's own proof).
+  Another account can see different files on the same share, and a GUID the probe or a guest session filled only says
+  what answered a saved address (a hotel network can hand out the NAS's LAN IP), so either sibling stays a
+  `sameShareAs` hint and never answers in its place, for reads (`readers`, `preferred_member`, `redirect_group_ids`)
+  and for anything that re-addresses a write.
+- **Preference is per read** (`list_dir`, `read/listing/readers.rs`): across the volume asked and its redirectable
+  siblings, the first member and source in order live index → live readdir → freshest index on disk answers, the
+  volume asked first within each tier. A sibling's answer carries its own `location` plus `via: { volumeId }` naming the
+  volume ASKED, misses included.
+- **`important_folders` re-addresses** a member's rows onto the member a read prefers (`preferred_member`: live with an
+  index, then live, then the freshest index on disk, the scoring volume on a tie), with `via` naming the store that
+  scored it, and dedupes by `location`, keeping the higher score. A `volumeId` scope spans the volume's redirectable
+  group, since one share's stores hold share-relative paths.
+
+**The two tools that can't take the pair as is.**
+
+- **`search`** (`apps/desktop/src-tauri/src/mcp/executor/search/placement.rs`) takes `volumeId` beside its `scope` string, shared with AI clients,
+  so it adds rather than reinterprets: with no `volumeId` the scope routes the run as it always did, and the resolver
+  only catches an include path under a mount area with nothing mounted there (`noVolumeAtPath`, which would otherwise
+  route to the boot disk and walk a folder that isn't the user's drive). ❌ No miss for any other bare scope: a phone's
+  or server's scheme path routes by its own spelling, connected or not. With `volumeId`, every include path resolves
+  onto that volume (a miss answers the call whole), no scope means the volume's root, and the run reads the RESOLVED
+  index (`run_live_collected`'s `on_volume`), because a not-connected share's last root routes to the boot disk. A
+  not-connected volume with an index on disk answers from it, leading its `notes` with "isn't connected … as of";
+  one with none is `volumeNotConnected`.
+- **`inspect_file`** keeps `paths: string[]` (200 location objects would be a large call for no gain), and every row
+  echoes `volumeId` from the volume registry (`read/inspect/place.rs`). A `missing` row under a mount area with nothing
+  mounted there is `noVolumeAtPath` instead, and the call carries the resolver's `nearby` ONCE, for the first such row
+  (each `candidate` is that path on another volume; the others swap the same prefix). Only `missing` rows read volume
+  facts, so a call that found every file pays nothing for placement.
+
+### The live source
+
+`list_dir` on a CONNECTED volume whose index doesn't list the folder (no index at all, like the LAN share in
+transcript 179, or ground the index hasn't reached), and whose share has no live sibling index listing it either
+(§ One share, many ids), answers from one readdir through the volume's provider
+(`read/listing/live.rs`), so the share the user has connected is always listable. `coverage.source: live`, the
+volume's own `indexStatus` beside it, `authoritative: true` unless the cap cut it, and a note that folder sizes need an
+index: folder rows and the folder's own `size` are ABSENT, never the inode's 4 KB or a `0 B`.
+
+- **Gate first, on the target links resolve to.** For a volume whose paths are `std::fs` paths, `gate_local` resolves
+  the target one component at a time and checks each place against the Full Disk Access gate BEFORE `lstat` touches it
+  (`fda_gate::is_fda_pending_runtime` + `tcc_paths::is_potentially_tcc_restricted`). ❌ Never `std::fs::canonicalize`
+  first: it stats a link's target to resolve it, which for a link into `~/Documents` (or the first touch of a network
+  mount) is the very TCC prompt the gate exists to prevent. Then the resolved target must sit under the volume's
+  resolved root with no deeper live root holding it (a link off the volume is refused, naming where it lands, ❌ never
+  followed). The folder listed is the PHYSICAL one, spelled under the volume's own root.
+- **Never ground the index skipped on purpose.** Every folder from the root down to the target, the leaf included, is
+  asked `Index::scan_skips` (the scanner's own `should_exclude`: junk basenames like `.Spotlight-V100` on any volume, a
+  root pseudo-filesystem, the boot disk's system prefixes), so a live read and the index answer the same way for one
+  folder. ❌ Not search's default-hidden tier (`SYSTEM_DIR_EXCLUDES`): the index lists `node_modules`, so a live read
+  must too. A provider-addressed volume (direct SMB, MTP) reaches no local folder, so only this check applies: links are
+  the server's. ⚠️ The scanner's pseudo-filesystem probe stats a `proc` / `sys` / `dev` at a volume root's parent, so
+  the check runs on the read's blocking thread, under its deadline.
+- **One bounded read** (`run_bounded`): its own task on the app's shared runtime (a turn's runtime is single-threaded
+  and ends with the turn, and an abandoned read must still finish), `LIVE_READ` = 10 s with a 1 s grace: at 9 s its
+  token flips (SMB and MTP stop between round trips), at 10 s it's ABANDONED as `unreachable`. One in flight per
+  volume: the slot frees only when the task really returns, so a second call behind a hung mount answers `unreachable`
+  at once instead of parking another thread.
+- **Stop reaches it.** The turn races every call against Stop (`agent/chat/DETAILS.md` § Stop reaches every tool
+  call); `view::dispatch` also hands `list_dir` the turn's token through `execute_list_dir_cancellable`, so the read
+  stops itself and answers `cancelled` with its `location` before the turn's generic answer would. The abandoned task
+  frees its slot when it returns. An AI client's call gets a fresh token, and dropping it (the client hanging up)
+  flips the read's token too.
+- **The cap**: `LIVE_ENTRY_CAP` = 10,000 entries kept, the first ones in the provider's order (folders first, then
+  names), so a capped folder pages over a stable set; the requested sort applies within it, with `truncated: true`,
+  `totalIsLowerBound: true`, and `authoritative: false`. An `offset` at or past the cap is refused before reading,
+  pointing at a subfolder or `search`. ⚠️ The cap bounds what's KEPT, not what the provider reads: no `Volume` lists
+  in pages, so a 200,000-entry folder still materializes once inside the provider, as it does for a pane.
+- **The listing is the pane's open** (`cmdr_listing::entries_as_stored`), so a typed path in another Unicode form (an NFD
+  `Rymdskottkärra AB` against an NFC share) finds the stored spelling.
+
+Its misses ride the same shape as the resolver's (`LocationMissResult::on`, `location` naming the volume):
+`needsDiskAccess` (the FDA question is open, or macOS privacy refused the read; the `detail` says which),
+`unreachable` (past the deadline, another read on the volume still stuck, or the volume dropping mid-read), `notFound`
+(nothing there, a link loop, or a link off the volume, whose `detail` names the volume and path to ask instead),
+`excluded` (names the folder the index skips), `permissionDenied`
+(the folder's own permissions: Full Disk Access won't help), and `cancelled`.
+
+**A dropped session points at `connect_volume`, not at the user.** When the volume is a session Cmdr owns
+(`connectionState` `direct` or `disconnected`, `live.rs::reconnects`), a mid-read drop's `detail` says Cmdr is
+reconnecting it and to call `connect_volume` with its `volumeId` (which waits out the reconnect, § Connecting a saved
+place), or wait a few seconds where that tool isn't offered (AI clients), then read again. An OS mount or a local disk
+keeps "tell the user". Why: a stale smb2 session failed one read with "Tell the user it may have disconnected", the
+agent wrote the NAS off for the whole answer, and the backoff loop had it back nine seconds later (verified on a dev
+build, `main.db` conversation 689 plus `cmdr.log` `ConnectionLost` then `session: established`, 2026-10-28). A location
+miss carries no `problem` key, so the repeat breaker never refuses the retry.
+
 ## The honesty (coverage) contract
 
-`read/listing.rs::coverage` is the single builder for index freshness honesty: it reuses `status_token` +
+`read/listing/source.rs::coverage` is the single builder for index freshness honesty: it reuses `status_token` +
 `Freshness::is_authoritative` (never re-derives the tokens) and attaches a plain-language note when a read isn't
-authoritative or the path isn't indexed. `SizeStats::from_dir_stats` carries the exact-vs-lower-bound / stale /
+authoritative or the path isn't indexed. `authoritative` needs both a `fresh` index AND a row for the folder: a fresh
+volume vouches for nothing it doesn't list (a model once read `authoritative: true` beside "isn't in the drive index"
+and trusted the bool). `SizeStats::from_dir_stats` carries the exact-vs-lower-bound / stale /
 has-symlinks flags verbatim from `DirStats`. Importance staleness is `asOfGeneration < recomputeGeneration`. These are
 the flags spec §2.4 makes load-bearing; the system prompt requires the model to voice them.
 
@@ -376,9 +610,22 @@ folder's own draining writes. So `execute_list_dir` resolves the volume's walked
 deep inside one child leaves its siblings settled. ❌ Reading the pending flag alone calls a folder settled through the
 whole walk that's rewriting it, which is when its number is furthest from the truth.
 
-That ground travels as one field of `VolumeView`, beside `enabled`, `freshness`, and the `VolumeBlock` the model sees.
-All four are read from the same volume at the same instant, so bundling them is what stops a `walked_roots` resolved
-for one volume from sitting beside an `enabled` read from another and quietly mis-reporting every size on the page.
+That ground travels as one field of `VolumeView`, beside `enabled`, `freshness`, the `VolumeBlock` the model sees, and
+`reach` (which copy of the index answers, below). All are read from the same volume at the same instant, so bundling
+them is what stops a `walked_roots` resolved for one volume from sitting beside an `enabled` read from another and
+quietly mis-reporting every size on the page.
+
+**An offline answer is dated, stale, and never authoritative.** A resolved volume that isn't connected
+(`ResolvedLocation::live == false`) answers through `answer_offline`: the same `Index::list_children` / `dir_stats` /
+`dir_stats_batch` cores, which read a volume the host doesn't serve from its database on disk, read-only, with nothing
+stood up (`crates/cmdr-index/src/indexing/read/DETAILS.md` § A stopped volume's database answers reads). Its coverage
+(`offline_coverage`) is `source: offlineIndex`, `indexStatus: stale`, `authoritative: false`, and `asOf` (the last
+completed walk, spoken; absent when it never finished), the one offline vocabulary `list_volumes` speaks too, plus a
+note to connect for a live answer. Sizes keep their own flags. Nothing walks a volume with no instance, so nothing is
+`sizeIsUpdating`; space is the poller's cache, as for any volume. A folder that index doesn't list (or a volume with no
+index on disk) is `volumeNotConnected` with its `nearby`, ❌ never an empty listing. The index maps the app path by the
+root its last walk recorded (`volume_path`), which is what the one root rule answers for a volume that isn't live; a
+database that predates that meta can't place a path and so answers nothing.
 
 Aggregation (the 12–19 s after a first index's walk, when the drive's folder totals are computed) is deliberately NOT
 in that answer: the walker has released its ground by then, and nothing queryable per volume reports it. The `coverage`
@@ -479,28 +726,40 @@ and the system prompt requires the model to disclose "returned of total" wheneve
 
 ## The dispatch gate
 
-`view.rs::refuse_unavailable(call_id, tool)` is the runtime enforcement point:
+`view.rs::refuse_unavailable(call_id, tool, origin)` is the runtime enforcement point:
 
 - `ToolId::Unrecognized(_)` (any non-view name — a hallucinated `delete`, a typo) ⇒ a typed `{ available: false, … }`
   result, returned BEFORE `execute_tool`. The parse (`ToolId::from_wire_name`) is the choke point.
 - A known name the registry classifies `Access::Write`, or doesn't classify at all ⇒ also refused (a runtime backstop
   against a mis-tagged entry; belt to the structural `test_agent_tool_view_never_writes` suspenders).
+- An `Access::Session` tool on a turn the user didn't start (`wake`, `outcomes`) ⇒
+  `{ available: false, refusal: "refusedInBackground", … }`: a background connect can spin up a sleeping NAS's disks for
+  a digest nobody asked for (agent invariant 7). "User-started" follows `docs/design-principles.md` ("An approved action
+  is the user's own"): an action the user approved counts as theirs, while a turn the app opens on its own (a wake, the
+  follow-up a rejection earns) doesn't. Today no approval opens a turn, so `TurnOrigin` has no approved-action origin; a
+  feature that runs an approved card's follow-up through the agent adds one that `user_started()` answers `true`.
 - Otherwise `None` ⇒ `dispatch` calls `execute_tool(app, Consumer::Agent, …)`, which itself refuses any name outside the
   agent view (a second, structural backstop).
 
-The access half lives in the pure `access_is_dispatchable(Option<Access>) -> bool`: `Read`, `Propose`, and `Memory`
-dispatch, `Write` and an unclassified name don't. It's separate so the rule is unit-testable against EVERY `Access` variant
-without authoring a tool per variant — with zero `Propose` tools in the registry, a name-driven test would cover the
-`Propose` arm vacuously, and the widened gate would go unexercised until some future commit.
+The access half lives in the pure `admit(Option<Access>, TurnOrigin) -> Admission`: `Read`, `Propose`, and `Memory`
+dispatch on every turn, `Session` only when `TurnOrigin::user_started` (`text`, `resume`), `Write` and an unclassified
+name never. It's separate so the rule is unit-testable against EVERY `Access` variant and origin without authoring a
+tool per variant, so a variant no tool carries is never covered vacuously.
+
+**The origin is the turn's, stated by its caller.** `TurnParams::origin` (`agent::types::TurnOrigin`) is set by
+`send_message` (`text`) and by the wake runner (`wake` / `outcomes`), and reaches every call in `CallContext` beside the
+turn's Stop. ❌ Never derive it from the opener: a follow-up rides as `UserTurn::Outcomes` today, and the gate must hold
+if that wrapping ever changes.
 
 The negative test (`view.rs`) drives the fake `AgentLlm`'s `CallRawTool("delete", …)` and asserts the refusal end to
 end; it was proven red (gate disabled ⇒ "delete" not refused) before green.
 
-The refusal copy says Ask Cmdr can prepare a rename plan, suggest file operations for the user to review, and save
-notes in its own memory folder, but can't touch the user's files or approve a proposal, and reads a file's contents only
-through `inspect_file`. ⚠️ Keep it accurate as the tiers grow: it promised "couldn't change anything at all" until
-`Access::Memory`, and "can't read file contents" until `inspect_file`; a model told a false limit either refuses the
-question or invents the answer.
+The refusal copy says Ask Cmdr can prepare a rename plan, suggest file operations for the user to review, save notes in
+its own memory folder, and connect a server or share the user saved, but can't touch the user's files or approve a
+proposal, and reads a file's contents only through `inspect_file`. ⚠️ Keep it accurate as the tiers grow: it promised
+"couldn't change anything at all" until `Access::Memory`, and "can't read file contents" until `inspect_file`; a model
+told a false limit either refuses the question or invents the answer, and a claim the view can't back is the same lie
+pointed the other way.
 
 ### A propose result always answers `readyForReview`
 
@@ -531,9 +790,11 @@ The refusal SENTENCE matters as much as the shape, and its rules live with the g
 at the top level is a `Misplaced` violation naming the row that takes it, because "propose_rename_plan has no volumeId
 parameter. It takes renames." is a true sentence a model cannot act on — it reads as "your rows were fine".
 
-`dispatch` routes two tools specially rather than through the generic `execute_tool` call: `propose_rename_plan`,
-which needs the evidence scope, and `propose_suggestions`, which needs the conversation id so a sweep records the
-thread it came out of (`suggestions/DETAILS.md` § The conversation link). Both are gated first, like every other call.
+`dispatch` routes five tools specially rather than through the generic `execute_tool` call: `propose_rename_plan`,
+which needs the evidence scope, `propose_suggestions`, which needs the conversation id so a sweep records the thread it
+came out of (`suggestions/DETAILS.md` § The conversation link), `propose_server`, which needs that and the turn's origin
+(it refuses a turn the user didn't start itself, so the gate stays tier-only), and `list_dir` and `connect_volume`,
+which take the turn's Stop to answer it in their own words. All are gated first, like every other call.
 
 `dispatch` also feeds `propose::evidence::ImageFactsLedger` from every non-elided `image_facts` result. That's what makes
 a rename plan's content claim checkable; the guardrail, its refusal shape, and the revocation seam are in
@@ -541,9 +802,9 @@ a rename plan's content claim checkable; the guardrail, its refusal shape, and t
 
 ## Cross-module symbols the toolset reuses
 
-- `indexing::read::queries::list_dir_children` — a path-based helper (re-exported from `crate::indexing`); the child-listing
-  analog of `get_dir_stats`, wrapping the read-pool + `index_read_path` + `resolve_path` + `IndexStore::list_children_on`
-  wiring so the tool stays path-based (it lives in `indexing`, its elegant home).
+- `Index::list_children` / `dir_stats` / `dir_stats_batch` — volume-keyed: the caller names the volume the resolver
+  placed, so a path can't pick a second index (`crates/cmdr-index/src/indexing/read/DETAILS.md`).
+- `crate::location` — the resolver every location-taking tool shares (§ The location contract).
 - `mcp::resources::volumes::VolumeKind::token` — `pub(crate)` so the volume mapper reuses the one kind→token mapping.
 - `mcp` re-exports `Access`, `Consumer`, `agent_tool_view`, `execute_tool`, `tool_access`, `ToolError`, `ToolResult` as
   `pub(crate)` for the agent runtime. `snapshot_volumes` and the `importance::snapshot_*` functions are `pub(crate)` too.

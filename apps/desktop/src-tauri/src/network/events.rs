@@ -140,6 +140,17 @@ pub struct VolumeConnectionChanged {
     pub state: VolumeConnection,
 }
 
+/// Typed `volume-reconnect-requested` Tauri event: the backend asks the frontend's
+/// reconnect manager to take a registered volume whose session dropped, the move
+/// `servers/connect-flow.ts`'s arm 1 makes for a pane. Ask Cmdr's `connect_volume`
+/// emits it, so recovery keeps its one owner and the banner, the switcher dot,
+/// and the backoff agree. ❌ Never a second reconnect loop in the backend.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[serde(rename_all = "camelCase")]
+pub struct VolumeReconnectRequested {
+    pub volume_id: String,
+}
+
 /// Typed `smb-fell-back-to-os-mount` Tauri event: a share Cmdr tried to take over
 /// with its own smb2 session is staying on the macOS kernel mount instead.
 ///

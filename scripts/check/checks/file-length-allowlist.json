@@ -9,10 +9,6 @@
     "scripts/check/checks/registry.go": "append-only check registry (one CheckDefinition entry per check); line count tracks the number of checks, not splittable logic"
   },
   "files": {
-    "apps/desktop/src-tauri/src/ai/client.rs": {
-      "lines": 800,
-      "reason": "TODO: two seams sit beside the request path and only share imports with it. Move the policy-guarded HTTP client (`policy_guarded_http_client`, `policy_guarded_redirects`, `follow_allowed_hop`, `remote_destination`, `remote_endpoint`, `parse_endpoint`) into `client_policy.rs`, and the provider-error mapping (`AiError` with its `Display`, `ai_error_for_status`, `provider_error_detail`, `map_genai_error`) into `client_errors.rs`, about 140 lines out together. What stays is `AiBackend`, the three `chat_completion*` entry points, the model-specific option tweaks, and the response logging, which is what callers mean by the AI client."
-    },
     "apps/desktop/src-tauri/src/crash_reporter/mod.rs": {
       "lines": 812,
       "reason": "TODO: the panic path is its own concern and already has `panic_courier.rs` and `panic_courier_tests.rs` as neighbors. Move `install_panic_hook`, `contained_panic_warning`, `PanicDisposition`, `handle_panic`, `write_first_crash_report`, `build_panic_report`, and the message/backtrace helpers (`extract_panic_message`, `sanitize_panic_message`, `sanitize_thread_name`, `cap_chars`, `cap_panic_message`, `parse_backtrace_frames`, `current_image_base_hex`) into `panic_hook.rs`, about 260 lines. `mod.rs` keeps the `CrashReport` shape, `init`, the pending-report read/write, and the active-settings snapshot."
@@ -69,6 +65,10 @@
       "lines": 860,
       "reason": "TODO: split it, because it divides as 241 lines of script, 317 of markup, and 300 of `\u003cstyle\u003e`, and two pieces come out cleanly. The per-row `\u003ctr\u003e` at lines 322-539 is ~218 lines of markup carrying the allow checkbox, the thumbnail preview button, both name cells, the four warning and danger badges, the provenance badge, and the evidence and coverage cell, all keyed off one `row` plus `proposal.proposalId`; it should become a `BulkRenameReviewRow.svelte` child taking `{row, proposalId, preflighting, thumbnailUrl, focused, draftName}` and callbacks, moving roughly half the `\u003cstyle\u003e` block with it. Separately, the thumbnail token lifecycle (`thumbnailUrls`, `mintedTokens`, `thumbnailSeq`, `dropTokens`, `releaseThumbnails`, `syncThumbnails`, `withoutKeys`, the mint-and-drop `$effect`, and the `onDestroy`, ~100 script lines) is pure state with no markup dependency and belongs in a `bulk-rename-thumbnails.svelte.ts`, the pattern this directory already uses for `ask-cmdr-rename-review.svelte.ts`. The dialog itself then sits near 350 lines."
     },
+    "apps/desktop/src/lib/ask-cmdr/ask-cmdr-stream.svelte.ts": {
+      "lines": 818,
+      "reason": "TODO: split out the stop ledger into `ask-cmdr-stops.svelte.ts`: `PendingStop`, `pendingStops`, `stopsAwaitingId`, `settledRuns`, `matchStopsToTerminals`, `findStopFor`, `withdrawStop`, `settlePendingStop`, and `applyToStoppedTurn` (~200 lines), which decide which turn a terminal or a late event belongs to after a Stop. It needs the reducer's `resolveRound` / `applyToolFinished` / `applyUserPersisted` / `stampAnswer`, so move those round helpers into an `ask-cmdr-rounds-live.ts` both import, leaving this file the send path and the reducer."
+    },
     "apps/desktop/src/lib/file-explorer/navigation/VolumeBreadcrumb.svelte.test.ts": {
       "lines": 1212,
       "reason": "TODO: one test file covers the chip, the switcher rows, the connection dot, and the eject/indexing affordances. Split by surface into `VolumeBreadcrumb.chip.svelte.test.ts` (chip, dot, tooltips) and `VolumeBreadcrumb.switcher.svelte.test.ts` (rows, keyboard, actions), sharing the mount/fixture helpers through a `volume-breadcrumb-test-support.ts`."
@@ -116,6 +116,10 @@
     "apps/desktop/src/lib/file-operations/transfer/transfer-error-messages.parity.test.ts": {
       "lines": 1218,
       "reason": "One table: every `WriteOperationError` variant's en wording per operation, pinned case by case so a copy edit lands in the catalog AND here. It grows by one case per new refusal wording; splitting by variant would scatter the table a reviewer reads top to bottom."
+    },
+    "apps/desktop/src/lib/file-operations/transfer/transfer-error-messages.ts": {
+      "lines": 809,
+      "reason": "TODO: the refusals raised before an operation starts are one family with their own way out each, and `archive-edit-error-messages.ts` already shows the shape. Move the builders for `destination_inside_source`, `duplicate_source_names`, `named_leaves_refused`, `sources_span_volumes`, and `mounted_volume_inside` (with `mountedVolumeMessage`) into `refusal-error-messages.ts`, dispatched the way `archiveEditMessage` is, about 90 lines out. What stays is the in-flight failures and the category table."
     },
     "apps/desktop/src/lib/file-operations/transfer/transfer-progress-state.svelte.ts": {
       "lines": 1003,
@@ -196,6 +200,10 @@
     "crates/cmdr-index/src/indexing/aggregator/mod.rs": {
       "lines": 810,
       "reason": "One algorithm with five entry points: `topological_sort_bottom_up` plus `compute_bottom_up` (the 0-absorbing `min_subtree_epoch` rollup) is the core, and `compute_all_aggregates_reported`, `compute_all_aggregates_with_maps`, `compute_partial_aggregates`, `compute_partial_aggregates_sql`, `compute_subtree_aggregates`, and `backfill_missing_dir_stats` differ only in where their input maps come from and which subset of rows they write back. The SQL readers already live in `readers.rs` behind a one-directional compute-to-readers seam and the tests in `tests.rs`, and 248 lines are doc comments recording why all four callers must supply the separate `listed_epoch` map (the `CLAUDE.md` must-know that a missing one re-breaks coverage). It sits 47 lines over budget, and splitting by entry point would strand the shared core in a third module."
+    },
+    "crates/cmdr-index/src/indexing/handle/mod.rs": {
+      "lines": 810,
+      "reason": "TODO: the handle's methods already sit in six labeled groups. Move \"Turning volumes on and off\" (the start, stop, removable-stop, and resume family, about 300 lines) into `handle/lifecycle.rs` as a second `impl Index` block; `mod.rs` keeps the type, the builder wiring, and the read-side groups. One type over two files keeps the surface count unchanged."
     },
     "crates/cmdr-index/src/indexing/lifecycle/phased_bench.rs": {
       "lines": 1415,
@@ -292,6 +300,10 @@
     "crates/cmdr-operations/src/transfer/volume/strategy_test_support.rs": {
       "lines": 1245,
       "reason": "TODO: split it, because it is 13 unrelated `Volume` / `VolumeReadStream` doubles serving nine suites and the seams show in who reads what. `RecursiveDeleteVolume` and `UndeletableSource` (lines 371-502, ~130 lines) have no `strategy_*` consumer at all; their readers are `cleanup_tests.rs`, `conflict_tests.rs`, and `move_failure_tests.rs`, so they belong in a `cleanup_test_support.rs`. The auto-yield cluster `ReleasingStream` + `ReleasingSource` + `AutoYieldTuningGuard` + `YieldingSource` + `NeverPendingYieldSource` (lines 765-1129, ~365 lines) is read only by `strategy_yield_tests.rs`, `strategy_dest_yield_tests.rs`, and `copy_wedge_test_support.rs`, and should join the existing `strategy_dest_yield_test_support.rs` or get its own `strategy_yield_test_support.rs`. `FlakyDest` (~125 lines) pairs with `strategy_retry_tests.rs`. That leaves the abort and stale-handle doubles (`SlowChunkedStream`, `SlowSource`, `FailOnceStaleDest`, `WedgedThenWorkingDest`, `WedgedOpenSource`, `TierOneWitnessDest`) at ~500 lines here. The header comment still claims four suites, so the file has outgrown its own description, and note that a `_test_support.rs` name gets the 800-line budget, not the 1,200-line test one."
+    },
+    "crates/cmdr-operations/src/types/errors.rs": {
+      "lines": 819,
+      "reason": "TODO: the typed payloads the variants carry are leaf types with no behavior of their own. Move `ReadOnlySide`, `PermissionSide`, `TransferRole`, `DisconnectedSide`, `PermissionRefusal`, `ArchiveNameRefusal`, `NamedLeavesRefusal`, `MountedVolumeAction`, `TrashRefusalKind`, and `OversizedFile` into a child `errors/payloads.rs` (beside `errors/log_detail.rs`), re-exported with `pub use payloads::*` so every `types::` path holds and `bindings.ts` doesn't move, about 230 lines out. What stays is `WriteOperationError`, its `item_path` macro, and its impls."
     },
     "crates/cmdr-operations/src/types/events.rs": {
       "lines": 1057,

@@ -52,6 +52,9 @@ Work in a worktree. Take npm and Cargo in **separate commits**, so a bisect can 
    - **The 3-day window is yours to enforce here.** crates.io has no equivalent of pnpm's gate:
      `curl -s https://crates.io/api/v1/crates/<name>/versions | jq -r '.versions[] | "\(.num) \(.created_at)"'` and take
      the newest one older than three days.
+   - ❗ Skip `--precise` when the lockfile already has that version: the no-op call re-picks duplicate-version edges
+     across the graph (`windows-sys` 0.61 → 0.52, `getrandom` 0.4 → 0.3; cargo 1.99.1, 2026-10-27). Read the
+     `Cargo.lock` diff after each bump; only the crates you named should move.
    - Verifying a risky bump: download both `.crate` files from `static.crates.io` (the crates.io API refuses
      unauthenticated downloads) and `diff -ru` them, so you review what cargo actually installs rather than a GitHub
      compare.

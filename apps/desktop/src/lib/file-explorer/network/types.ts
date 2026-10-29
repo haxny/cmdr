@@ -83,6 +83,9 @@ export type ConnectionMode = 'guest' | 'credentials'
 /** Authentication options available for a share. */
 export type AuthOptions = 'guest_only' | 'credentials_only' | 'guest_or_credentials'
 
+/** How a share row's server GUID was learned: only a GUID a sign-in recorded lets one share answer for another. */
+export type GuidProof = 'authenticated' | 'unauthenticated'
+
 /** Information about a known network share (previously connected). */
 export interface KnownNetworkShare {
   /** Hostname or IP of the server */
@@ -105,6 +108,10 @@ export interface KnownNetworkShare {
   volumeId?: string | null
   mountPath?: string | null
   pinned?: boolean
+  /** Share rows only: the GUID the share's server answered NEGOTIATE with, which proves two rows one share. */
+  serverGuid?: string | null
+  /** How `serverGuid` was learned. */
+  serverGuidProof?: GuidProof
 }
 
 // ============================================================================

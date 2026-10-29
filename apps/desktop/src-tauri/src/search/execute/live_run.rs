@@ -21,7 +21,7 @@ use super::coverage::{
     AfterAnotherWalk, CoverageQuestion, UnreadableGround, arena_for_coverage, coverage_kind, coverage_of,
     coverage_scopes, every_frontier_root_is_another_walks,
 };
-use super::{CoveredHalf, Target, resolve_target, search_covered_half};
+use super::{CoveredHalf, Target, resolve_target, search_covered_half, target_on};
 use crate::search::excludes::ExcludeRules;
 use crate::search::live::{
     self, CollectingSink, CoverageKind, LiveAnswer, LiveRun, ResultStream, RunOrigin, SearchEventSink, SearchPhase,
@@ -102,14 +102,25 @@ pub(crate) const AGENT_WAIT_MAX: std::time::Duration = std::time::Duration::from
 /// Blocks for up to `budget` — call it inside `spawn_blocking`. ❌ Returning
 /// does not stop the walk: its rows land in the index either way, so the same
 /// search run again continues from where this one left off.
-pub(crate) fn run_live_collected(query: SearchQuery, budget: std::time::Duration) -> Result<LiveAnswer, String> {
+///
+/// `on_volume` is the index the caller already placed the query on, which
+/// skips the scope routing (`target_on`); `None` routes by the scope as the
+/// dialog does.
+pub(crate) fn run_live_collected(
+    query: SearchQuery,
+    on_volume: Option<&str>,
+    budget: std::time::Duration,
+) -> Result<LiveAnswer, String> {
     // An agent has no dialog to close, so the call itself stands in for one: the
     // arena drops 30 s after its answer (the 10-minute backstop stays underneath), and
     // not while this call or another agent's still waits on one.
     let _in_flight = volumes::agent_search_started();
     volumes::touch_activity();
 
-    let target = resolve_target(&query).map_err(|e| e.to_string())?;
+    let target = match on_volume {
+        Some(volume_id) => target_on(&query, volume_id),
+        None => resolve_target(&query).map_err(|e| e.to_string())?,
+    };
     let volume_id = target.volume_id.clone();
     let run_id = format!("agent-{}", uuid::Uuid::new_v4());
     let run = live::register(&run_id, &volume_id, RunOrigin::Agent);

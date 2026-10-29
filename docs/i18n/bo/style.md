@@ -1,7 +1,6 @@
 # Tibetan (bo) translation style guide
 
-Working notes for translating Cmdr into Tibetan (བོད་སྐད་). Read `../README.md` for how this fits the translation
-process.
+Working notes for translating Cmdr into Tibetan (བོད་སྐད་). Read `../README.md` for how this fits the translation process.
 
 `bo` is the language base, written in the Tibetan script. The reference pile has only GNOME nautilus for `bo` (Tier 3);
 no macOS, no Microsoft localized UI. This is a low-resource locale with a small but real localization tradition.

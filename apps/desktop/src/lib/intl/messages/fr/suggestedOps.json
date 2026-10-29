@@ -3,9 +3,9 @@
   "@suggestedOps.title": {
     "sourceHash": "1a1f5b9"
   },
-  "suggestedOps.description": "L’IA a suggéré ceci. Rien ne s’exécute tant que vous ne l’avez pas approuvé.",
+  "suggestedOps.description": "L’agent a suggéré les actions ci-dessous. Appliquez-les uniquement si vous êtes d’accord.",
   "@suggestedOps.description": {
-    "sourceHash": "73255a0"
+    "sourceHash": "4d98280"
   },
   "suggestedOps.approvalNoticeDismiss": "Ne plus afficher",
   "@suggestedOps.approvalNoticeDismiss": {
@@ -35,9 +35,9 @@
   "@suggestedOps.empty": {
     "sourceHash": "b93eccd"
   },
-  "suggestedOps.loadFailed": "Cmdr n’a pas pu lire les suggestions. Fermez cette fenêtre et rouvrez-la.",
+  "suggestedOps.loadFailed": "Cmdr n’a pas pu lire les suggestions. Fermez cette boîte de dialogue et rouvrez-la.",
   "@suggestedOps.loadFailed": {
-    "sourceHash": "ef0da3e"
+    "sourceHash": "139450e"
   },
   "suggestedOps.agentReason": "Pourquoi :",
   "@suggestedOps.agentReason": {
@@ -54,6 +54,34 @@
   "suggestedOps.fileCount": "{countText} {count, plural, one {fichier} many {fichiers} other {fichiers}}",
   "@suggestedOps.fileCount": {
     "sourceHash": "76ef0a6"
+  },
+  "suggestedOps.action.move": "Déplacer",
+  "@suggestedOps.action.move": {
+    "sourceHash": "6ecc3df"
+  },
+  "suggestedOps.action.copy": "Copier",
+  "@suggestedOps.action.copy": {
+    "sourceHash": "e21f935"
+  },
+  "suggestedOps.action.trash": "Placer dans la corbeille",
+  "@suggestedOps.action.trash": {
+    "sourceHash": "9adcdf3"
+  },
+  "suggestedOps.action.delete": "Supprimer",
+  "@suggestedOps.action.delete": {
+    "sourceHash": "e2d0a54"
+  },
+  "suggestedOps.action.rename": "Renommer",
+  "@suggestedOps.action.rename": {
+    "sourceHash": "3064d79"
+  },
+  "suggestedOps.action.compress": "Compresser",
+  "@suggestedOps.action.compress": {
+    "sourceHash": "033fc04"
+  },
+  "suggestedOps.action.extract": "Extraire",
+  "@suggestedOps.action.extract": {
+    "sourceHash": "c15301c"
   },
   "suggestedOps.approve.move": "Déplacer {countText} {count, plural, one {fichier} many {fichiers} other {fichiers}}",
   "@suggestedOps.approve.move": {
@@ -82,6 +110,14 @@
   "suggestedOps.approve.extract": "Extraire {countText} {count, plural, one {archive} many {archives} other {archives}}",
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
+  },
+  "suggestedOps.approve.addServer": "Enregistrer le serveur",
+  "@suggestedOps.approve.addServer": {
+    "sourceHash": "726b9af"
+  },
+  "suggestedOps.approve.editServer": "Enregistrer les modifications",
+  "@suggestedOps.approve.editServer": {
+    "sourceHash": "dd0ae7a"
   },
   "suggestedOps.reject": "Refuser",
   "@suggestedOps.reject": {
@@ -140,13 +176,13 @@
   "@suggestedOps.irreversible.delete": {
     "sourceHash": "e32da9a"
   },
-  "suggestedOps.blocked.noTrash": "Exécution impossible : ce disque n’a pas de corbeille",
-  "@suggestedOps.blocked.noTrash": {
-    "sourceHash": "f08e038"
+  "suggestedOps.noTrash": "Ce disque n’a pas de corbeille",
+  "@suggestedOps.noTrash": {
+    "sourceHash": "38a6adc"
   },
-  "suggestedOps.blocked.noTrashTooltip": "Le disque qui contient ces fichiers n’a pas de corbeille : les y placer ne peut pas fonctionner et rien ne se passerait. Refusez cette suggestion ou supprimez vous-même les fichiers si c’est ce que vous voulez.",
-  "@suggestedOps.blocked.noTrashTooltip": {
-    "sourceHash": "f2a5d5f"
+  "suggestedOps.noTrashTooltip": "Le disque qui contient ces fichiers n’a pas de corbeille, donc si vous approuvez, ils seront supprimés définitivement.",
+  "@suggestedOps.noTrashTooltip": {
+    "sourceHash": "4327cb2"
   },
   "suggestedOps.irreversible.overwrite": "Cette opération est irréversible : elle remplace une archive existante",
   "@suggestedOps.irreversible.overwrite": {
@@ -155,6 +191,14 @@
   "suggestedOps.irreversible.other": "Cette opération est irréversible",
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
+  },
+  "suggestedOps.reversible.forgetServer": "Vous pouvez annuler : oubliez le serveur dans la liste Serveurs",
+  "@suggestedOps.reversible.forgetServer": {
+    "sourceHash": "892c381"
+  },
+  "suggestedOps.reversible.changeServerBack": "Vous pouvez annuler : rétablissez les anciens réglages du serveur dans la liste Serveurs",
+  "@suggestedOps.reversible.changeServerBack": {
+    "sourceHash": "ff1ea36"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr créera ce dossier",
   "@suggestedOps.folderWillBeCreated": {
@@ -308,12 +352,93 @@
   "@suggestedOps.refusal.couldNotStart.message": {
     "sourceHash": "77ef48b"
   },
-  "suggestedOps.refusal.couldNotStart.suggestion": "Refusez-la, puis demandez à l’IA de la suggérer à nouveau.",
+  "suggestedOps.refusal.couldNotStart.suggestion": "Refusez-la, puis demandez à Cmdr de la suggérer à nouveau.",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
-    "sourceHash": "5b5b779"
+    "sourceHash": "1d2b1bd"
+  },
+  "suggestedOps.refusal.serverLabel": "Pourquoi rien n’a été enregistré",
+  "@suggestedOps.refusal.serverLabel": {
+    "sourceHash": "c1958af"
+  },
+  "suggestedOps.refusal.serverChanged.message": "Ce serveur a changé depuis que l’IA a suggéré cette modification, Cmdr n’a donc rien enregistré.",
+  "@suggestedOps.refusal.serverChanged.message": {
+    "sourceHash": "a346372"
+  },
+  "suggestedOps.refusal.serverChanged.suggestion": "Demandez à Cmdr de suggérer à nouveau cette modification, ou modifiez le serveur dans la liste Serveurs.",
+  "@suggestedOps.refusal.serverChanged.suggestion": {
+    "sourceHash": "cab1352"
+  },
+  "suggestedOps.refusal.alreadySaved.message": "Ce serveur est déjà dans votre liste Serveurs, Cmdr n’a donc rien enregistré.",
+  "@suggestedOps.refusal.alreadySaved.message": {
+    "sourceHash": "111276b"
+  },
+  "suggestedOps.refusal.alreadySaved.suggestion": "Ouvrez-le depuis la liste Serveurs, ou demandez plutôt à Cmdr de suggérer une modification de ce serveur.",
+  "@suggestedOps.refusal.alreadySaved.suggestion": {
+    "sourceHash": "6ec8bdc"
+  },
+  "suggestedOps.refusal.nameTaken.message": "Un autre serveur enregistré s’appelle déjà {name}, Cmdr n’a donc rien enregistré.",
+  "@suggestedOps.refusal.nameTaken.message": {
+    "sourceHash": "1d0c01c"
+  },
+  "suggestedOps.refusal.nameTaken.suggestion": "Demandez à Cmdr de suggérer un autre nom.",
+  "@suggestedOps.refusal.nameTaken.suggestion": {
+    "sourceHash": "e366b0c"
+  },
+  "suggestedOps.server.add": "Ajouter un serveur",
+  "@suggestedOps.server.add": {
+    "sourceHash": "8667e21"
+  },
+  "suggestedOps.server.change": "Modifier les réglages du serveur",
+  "@suggestedOps.server.change": {
+    "sourceHash": "187a941"
+  },
+  "suggestedOps.server.field.port": "Port",
+  "@suggestedOps.server.field.port": {
+    "sourceHash": "72e9a59",
+    "sameAsSourceJustification": "'Port' is the same word in French (network port), as in settings.developer.mcpPort.label and terms.json `port`."
+  },
+  "suggestedOps.server.field.account": "Compte",
+  "@suggestedOps.server.field.account": {
+    "sourceHash": "7e1b0d5"
+  },
+  "suggestedOps.server.field.share": "Partage",
+  "@suggestedOps.server.field.share": {
+    "sourceHash": "4268344"
+  },
+  "suggestedOps.server.field.bucket": "Compartiment",
+  "@suggestedOps.server.field.bucket": {
+    "sourceHash": "c83b657"
+  },
+  "suggestedOps.server.notSet": "Aucune valeur",
+  "@suggestedOps.server.notSet": {
+    "sourceHash": "4895f73"
+  },
+  "suggestedOps.server.changesTo": "devient",
+  "@suggestedOps.server.changesTo": {
+    "sourceHash": "8c0db20"
+  },
+  "suggestedOps.server.newAddress": "Nouvelle adresse",
+  "@suggestedOps.server.newAddress": {
+    "sourceHash": "5fc5498"
+  },
+  "suggestedOps.server.newAddressTooltip": "Aucun de vos serveurs enregistrés ne se trouve à cette adresse. Vérifiez qu’il s’agit bien de celle que vous voulez.",
+  "@suggestedOps.server.newAddressTooltip": {
+    "sourceHash": "16d851c"
+  },
+  "suggestedOps.server.sharesAffected": "Cette modification touche {countText} {count, plural, one {partage enregistré} many {partages enregistrés} other {partages enregistrés}} sur ce serveur.",
+  "@suggestedOps.server.sharesAffected": {
+    "sourceHash": "390f931"
   },
   "suggestedOps.indicatorTooltip": "Des suggestions de l’IA vous attendent. Cliquez pour les examiner.",
   "@suggestedOps.indicatorTooltip": {
     "sourceHash": "4508b0b"
+  },
+  "suggestedOps.newNameTaken": "Ce nom est déjà pris",
+  "@suggestedOps.newNameTaken": {
+    "sourceHash": "58e9841"
+  },
+  "suggestedOps.newNameTakenTooltip": "Un élément nommé « {name} » existe déjà à cet endroit.",
+  "@suggestedOps.newNameTakenTooltip": {
+    "sourceHash": "b18f96a"
   }
 }

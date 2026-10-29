@@ -9,6 +9,7 @@ use rusqlite::{Connection, Transaction, TransactionBehavior, params};
 
 use super::super::AgentStoreError;
 use super::GroupIntent;
+use super::server::{delete_server_draft, write_server_draft};
 use crate::agent::types::{OpStatus, ProposalStatus};
 
 /// A new sweep: one agent wake's output, before its groups exist.
@@ -32,7 +33,30 @@ pub struct NewOp {
     pub snapshot: Option<OpSnapshot>,
 }
 
-/// One proposed rename. Rename is the ONE verb whose ops carry their own destinations.
+/// One proposed op under move or copy: a source landing in the group's destination folder,
+/// under its own name or the one given here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TransferOp {
+    pub source_path: String,
+    /// The name the source lands as, a NAME, never a path. `None` keeps its own, and a
+    /// producer normalizes a name equal to the source's own to `None`, so the review draws an
+    /// arrow only where a name changes.
+    pub new_name: Option<String>,
+    pub snapshot: Option<OpSnapshot>,
+}
+
+impl From<NewOp> for TransferOp {
+    /// An op that keeps its own name: what a selector, which can't decide names, produces.
+    fn from(op: NewOp) -> Self {
+        Self {
+            source_path: op.source_path,
+            new_name: None,
+            snapshot: op.snapshot,
+        }
+    }
+}
+
+/// One proposed rename. Rename's ops ALWAYS carry their own destinations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewRename {
     pub source_path: String,
@@ -57,7 +81,9 @@ pub struct OpSnapshot {
 pub struct NewGroup {
     /// The verb, its target, and its ops, in the one shape they're valid in.
     pub intent: GroupIntent,
-    /// The volume every source lives on. A sweep may span volumes; a group may not.
+    /// The volume every source lives on. A sweep may span volumes; a group may not. Ignored
+    /// for a server group, which has no sources: the spine stores the edited place's id, or
+    /// `""` for an add (`GroupIntent::stored_source_volume`).
     pub source_volume_id: String,
     /// The friendly name the review dialog leads with. Carries the selector's pattern as
     /// display text when a selector produced the group.
@@ -109,7 +135,7 @@ pub fn create_group(conn: &Connection, set_id: i64, group: &NewGroup, now: i64) 
         seq,
         group.intent.verb().as_token(),
         ProposalStatus::Pending.as_token(),
-        group.source_volume_id,
+        group.intent.stored_source_volume(&group.source_volume_id),
         destination,
         destination_volume_id,
         group.intent.reversibility().as_token(),
@@ -121,8 +147,20 @@ pub fn create_group(conn: &Connection, set_id: i64, group: &NewGroup, now: i64) 
     ])?;
     let group_id = tx.last_insert_rowid();
     insert_ops(&tx, group_id, &group.intent, now)?;
+    write_beside_ops(&tx, group_id, &group.intent)?;
     tx.commit()?;
     Ok(group_id)
+}
+
+/// What a group stores beside its ops, in the group's own transaction: a server group's draft
+/// (replacing any), and no draft row for any other group. Its own transaction rather than a
+/// producer's later write, because a server group's draft IS what it proposes: a pending group
+/// without one could never be shown or saved (`DETAILS.md` § A server group).
+fn write_beside_ops(tx: &Transaction<'_>, group_id: i64, intent: &GroupIntent) -> Result<(), AgentStoreError> {
+    match intent {
+        GroupIntent::SaveServer { draft, edit } => write_server_draft(tx, group_id, draft, edit.as_ref()),
+        _ => delete_server_draft(tx, group_id),
+    }
 }
 
 /// Write a group's op rows, numbered from 0.
@@ -189,7 +227,7 @@ pub fn repropose_group(
         .execute(params![
             group_id,
             group.intent.verb().as_token(),
-            group.source_volume_id,
+            group.intent.stored_source_volume(&group.source_volume_id),
             destination,
             destination_volume_id,
             group.intent.reversibility().as_token(),
@@ -222,6 +260,7 @@ pub fn repropose_group(
     tx.prepare_cached("DELETE FROM proposal_acceptances WHERE group_id = ?1")?
         .execute(params![group_id])?;
     insert_ops(&tx, group_id, &group.intent, now)?;
+    write_beside_ops(&tx, group_id, &group.intent)?;
     tx.commit()?;
     Ok(ReproposeOutcome::Reproposed)
 }

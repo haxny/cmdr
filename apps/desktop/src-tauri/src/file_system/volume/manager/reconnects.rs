@@ -14,11 +14,30 @@
 //! once per reconnect and a superseded volume never announces its successor's
 //! id.
 
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use cmdr_fs::volume::host::events::{SecurityRefusal, VolumeConnection, VolumeEventSink};
+use tokio::sync::broadcast;
 
 use super::get_volume_manager;
+
+/// One connection transition a backend reported, as the backend-side sink saw it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ConnectionNews {
+    pub volume_id: String,
+    pub connection: VolumeConnection,
+}
+
+/// Every transition, for in-process work waiting on one volume's next one (Ask
+/// Cmdr's `connect_volume` waiting out a reconnect). A lagging or absent listener
+/// costs nothing: a send with nobody subscribed is dropped.
+static CONNECTION_NEWS: LazyLock<broadcast::Sender<ConnectionNews>> = LazyLock::new(|| broadcast::channel(64).0);
+
+/// Listen for every connection transition from now on. ❗ Subscribe BEFORE asking
+/// for the change you'll wait on, or it can land unheard.
+pub fn connection_news() -> broadcast::Receiver<ConnectionNews> {
+    CONNECTION_NEWS.subscribe()
+}
 
 /// Forwards every connection fact to `inner`, and announces a registered
 /// volume's reconnect to the registry's arrival listeners first.
@@ -38,6 +57,11 @@ impl VolumeEventSink for ArrivalOnReconnect {
         if connection == VolumeConnection::Connected {
             get_volume_manager().announce_reconnected(volume_id);
         }
+        // Nobody listening is the usual case, not a problem.
+        let _ = CONNECTION_NEWS.send(ConnectionNews {
+            volume_id: volume_id.to_string(),
+            connection,
+        });
         self.inner.connection_changed(volume_id, connection);
     }
 

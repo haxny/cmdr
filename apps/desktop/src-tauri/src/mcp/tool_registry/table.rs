@@ -485,21 +485,21 @@ mcp_tools! {
         run: app_params crate::agent::tools::propose::rename::execute_propose_rename_plan
     },
     "list_dir" => {
-        desc: "List a folder's children from the drive index (never the disk), plus its recursive size total. Sort by name, size, or modified; page with limit/offset. sortBy size ranks files and folders together by space used, to find where space goes inside ONE folder; search ranks a whole drive.",
+        desc: "List a folder's children and recursive size from the drive index. An unindexed folder is read live, without folder sizes; a volume that isn't connected answers from its last index, dated. sortBy size finds where space goes inside ONE folder; search ranks a whole drive.",
         schema: crate::agent::tools::read::listing::list_dir_schema(),
         consumers: &[Consumer::AiClient, Consumer::Agent],
         access: Access::Read,
         run: app_params crate::agent::tools::read::listing::execute_list_dir
     },
     "list_pane_files" => {
-        desc: "List up to 200 entries of the focused pane (the selection when one exists, else the folder) from its listing cache, never the index or disk. Returns the volume ID and shared parent path a rename proposal needs.",
+        desc: "List up to 200 entries of the focused pane (the selection when one exists, else the folder) from its listing cache, never the index or disk. Its location is the volume ID and parent path a rename proposal needs.",
         schema: crate::agent::tools::read::pane_listing::list_pane_files_schema(),
         consumers: &[Consumer::Agent],
         access: Access::Read,
         run: app_params crate::agent::tools::read::pane_listing::execute_list_pane_files
     },
     "important_folders" => {
-        desc: "List the most important folders across scored volumes (top-N, or at or above a threshold), highest first, each with its volume and score. Importance is Cmdr's offline signal, so an unmounted-but-scored drive still answers.",
+        desc: "List the most important folders across scored volumes, highest first, each a location with its score and why. A row's folded counts near-duplicate subfolders merged into it; pass its location as under + volumeId to list them. Works offline, so an unmounted-but-scored drive still answers.",
         schema: crate::agent::tools::read::importance::important_folders_schema(),
         consumers: &[Consumer::Agent],
         access: Access::Read,
@@ -527,11 +527,18 @@ mcp_tools! {
         run: app_params crate::agent::tools::suggestions::execute_get_suggestion_group
     },
     "propose_suggestions" => {
-        desc: "Propose file operations (move, copy, trash, delete, rename, compress, extract) for the user to review, in groups each approved or rejected on its own. It stages a proposal and changes nothing: only the user approves. Name up to 200 paths per group, or describe thousands with a selector, resolved against the drive index once, now. A whole folder is ONE op: give its path. sweepId plus groupId replaces a pending group you proposed earlier.",
+        desc: "Propose file operations for the user to review. It stages a proposal and changes nothing: only the user approves. Name up to 200 paths per group, or describe thousands with a selector, resolved against the drive index once, now. A whole folder is ONE op: give its path. A place on a volume that isn't connected refuses. sweepId plus groupId replaces a pending group you proposed.",
         schema: crate::agent::tools::suggestions::propose_suggestions_schema(),
         consumers: &[Consumer::Agent],
         access: Access::Propose,
         run: app_params crate::agent::tools::suggestions::execute_propose_suggestions
+    },
+    "propose_server" => {
+        desc: "Suggest saving a server, or renaming or refoldering a saved one, for the user to approve. It saves and contacts nothing. Never send a password: the user types it when connecting. Only when the user asked.",
+        schema: crate::agent::tools::suggestions::propose_server_schema(),
+        consumers: &[Consumer::Agent],
+        access: Access::Propose,
+        run: app_params crate::agent::tools::suggestions::execute_propose_server
     },
     "nothing_to_suggest" => {
         desc: "Say the activity you were shown is not worth telling the user about, and stop: call it instead of proposing when nothing deserves a person's attention. Changes nothing, shows nothing.",
@@ -555,10 +562,17 @@ mcp_tools! {
         run: app_params crate::agent::tools::memory::execute_memory_edit
     },
     "list_volumes" => {
-        desc: "List every volume Cmdr can see (local disks, SMB shares, MTP devices, the Network root) with kind, index freshness (fresh / scanning / stale / off), and for SMB its connection state (direct / os_mount / disconnected). mountPath is the path to put in search's scope to cover that drive; no mountPath means nothing can search it.",
+        desc: "List every volume (disks, shares, servers, phones) with kind, root (the path its locations start with), index freshness (fresh / scanning / stale / off; a not-connected one is stale, with asOf), and connection state; plus favorites, located when on a connected volume.",
         schema: crate::agent::tools::read::volumes::list_volumes_schema(),
         consumers: &[Consumer::Agent],
         access: Access::Read,
         run: app_params crate::agent::tools::read::volumes::execute_list_volumes
+    },
+    "connect_volume" => {
+        desc: "Connect a saved server or share with its stored credentials, or wait out the reconnect of one that dropped. A missing password answers needsCredentials.",
+        schema: crate::agent::tools::connect::connect_volume_schema(),
+        consumers: &[Consumer::Agent],
+        access: Access::Session,
+        run: app_params crate::agent::tools::connect::execute_connect_volume
     },
 }

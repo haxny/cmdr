@@ -12,9 +12,9 @@ stores (`resources/CLAUDE.md`).
 ## Must-knows
 
 - **One registry, two consumer views.** Each entry declares `consumers` + `access`, and each transport dispatches only
-  its own view. **The agent can propose; only the user can approve**: `[agent]` entries are `Read`, `Propose`, or
-  `Memory`, never `Write` (pinned structurally), so tag any mutating tool `Write`. Agent handlers:
-  `../agent/tools/CLAUDE.md`.
+  its own view. **The agent can propose; only the user can approve**: `[agent]` entries are `Read`, `Propose`,
+  `Memory`, or `Session`, never `Write` (pinned structurally), so tag any mutating tool `Write`. `Session` (connect a
+  saved place, user-started turns only) is hand-allowlisted like `Memory`. Agent handlers: `../agent/tools/CLAUDE.md`.
 - **`Access::Memory` is the agent's only write, and it is agent-only.** ❌ Never add one to `Consumer::AiClient`: this
   transport's story is "no filesystem access" (a test pins that).
 - **Auth covers every `/mcp` request** before session handling or dispatch; only the minimal health endpoint and

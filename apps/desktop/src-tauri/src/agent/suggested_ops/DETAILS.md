@@ -109,6 +109,8 @@ clicked one does, and the audit trail is the one place the difference is worth k
 make "what did the agent talk me into?" permanently unanswerable, at no benefit. `AgentEdited` marks the mixed case,
 where the user typed the name themselves (invariant 10) and the row would otherwise credit the model for it.
 
+**A move or copy with names is still one executor call.** `named_config` is the default config a click gets plus `TransferLeaves::per_source`, built by `transfer_names` from each op's stored NAME (`proposal_ops.destination`; `NULL` keeps the source's own). Its keys are EXACTLY the sources the binding keeps: a source preflight couldn't fingerprint, which the binding drops, takes its name with it. The engine validates the map once at the routed start (`crates/cmdr-operations/src/transfer/DETAILS.md` § Named destinations), the same rules the proposal already checked (`../tools/suggestions/DETAILS.md` § Moving or copying under a new name), so an approved group refusing there means something changed since. ❌ Never split a named group into several operations: one group is one call, one queue row, and one undo.
+
 **Rename routes like every other verb.** Its executor is the one that takes per-row destinations and a fingerprint per row, and the live capture supplies exactly that: `rename_rows` rejoins the group's shared parent with each op's stored NAME (the executor refuses a row whose parents differ) and reads the fingerprint out of the binding rather than stat-ing the same files twice.
 
 **Compress is the one verb that runs unbound.** It routes to the archive-changeset driver, which plans from its own walk and has nowhere to apply a per-source binding. The exposure is small and one-directional: compress READS its sources into a new archive rather than moving or deleting them, so a source that changed in the window is copied in its newer form rather than lost.
@@ -119,6 +121,60 @@ where the user typed the name themselves (invariant 10) and the row would otherw
 - **A compress that updates an EXISTING archive in place** rather than seeding a new one. `GroupIntent::Compress` already carries `overwrites_existing`, and an overwrite is `Reversibility::Irreversible` because the prior bytes are not retained; an unbound one would destroy an archive the user reviewed on the strength of what it contained.
 
 Either change makes the binding load-bearing for this verb, and the cheapest honest fix is the same one the transfer routes took: teach the archive driver a per-source pre-flight, or refuse a bound compress the way `route_cannot_hold_a_binding` refuses the other changeset routes. ❌ Don't add either capability while compress still passes no `ExpectedSources`.
+
+## Approving a server
+
+`server/` is a server card's approval: `approve_server` claims the card, checks it again against what's saved NOW, runs
+one save through a `ServerSaver`, and ends the group by what the save wrote. `HubSaver` (`server/hub.rs`) is the real
+saver, one arm per servers-hub core; tests hand in fakes. The command is `../../commands/agent/suggested_ops_server.rs`, a
+pass-through that words the answer (`ServerApprovalResultView`) and emits `volumes-changed` on a save, as
+`update_saved_server` does.
+
+**The order.** The claim (`claim_server_group`, its revision the binding) commits first and announces `Approved`; then
+the checks; then the save, ❌ never inside the `main.db` write transaction; then `mark_server_group_completed`, the
+approval metric (counted on a SAVE, never the claim: a refused save gives the card back), and `record_completion`, which
+writes the thread line and the memory-ring lesson.
+
+**Decision: the anti-spoofing checks run again at the click, through the SAME code `propose_server` ran.**
+`server/saved.rs` (`SavedServers`) and `server/placement.rs` (`place_add`, `name_holder`) sit here, below both, so the
+two can't disagree. **Why**: a server saved between proposal and click (by the user, or another approved card) can make
+an add one of a saved server (`alreadySaved`, which `remember` would then silently REPLACE by id) or make its name
+another server's (`nameTaken`). An edit re-reads the saved place and refuses `serverChanged` when its address or any
+editable field no longer matches the card's `previous`; the SMB host's share count is the card's description, not the
+host, so it never reads as drift, and nothing a reconnect writes is in a draft. A place forgotten since answers the
+core's own `Unreachable`, unasked. Each of these gives the card back: nothing was written.
+
+**Decision: a claim goes back only when nothing was written.** `SaveResult` is `Saved` or `Refused`: every
+`SavedServerOutcome` refusal and both `AddServerError`s are made BEFORE the core writes (checked against `saves.rs`, the
+wirings' `save_without_connecting`, `live_server_edit.rs`, `smb_hosts.rs`, and `server_move.rs`), pinned per variant by
+`server/tests.rs::every_core_refusal_classifies_as_written_nothing_and_only_saved_as_saved`, with no `_` arm so a new
+variant forces the call. A save that doesn't answer within `SAVE_DEADLINE`, or whose task dies, may have written: the
+group stays `approved` (the save runs on, detached, through `timeout_detached_typed`), the dialog hears
+`ApprovalDidntFinish` and re-reads, and the next launch's recovery calls it `interrupted`. ❌ Nothing that may have
+written goes back to `pending`: a second click would write twice.
+
+**There is no "partial" save.** The contact-free SMB add writes the host and then its share row with no failure point it
+reports between them (both stores' file writes log rather than answer), so `ServerSaveNote` has no producer. The spine
+still stores one (`mark_server_group_completed`), ready for a core that grows a real partial outcome.
+
+**What each save is, and why it can't contact or move anything:**
+
+- An SFTP, WebDAV, NFS, or S3 add: `save_target` with the draft plus the add form's defaults ("Reconnect
+  automatically" on, no key file), which dials nothing for a place nobody connected. The SSH agent is the one
+  exception, saved OFF (`placement::target_of`): `../tools/suggestions/DETAILS.md` § Proposing a server says why.
+- An SMB add: `manual_servers::save_manual_server_without_contact` on `smb://host:port[/share]` (the same save the
+  sheet's "Add anyway" makes), ❌ never `add_manual_server` with `Reachability::Check` (it probes, and joins
+  discovery at once).
+- An edit of a place: `saved_servers::save_place_edit`, the STORED entry with only the editable fields set, so the
+  address, the account, the key file, and every switch stay exactly as saved. A connected place's edit rides the
+  session the user opened (`live_server_edit.rs`); an NFS identity change dials its own, as the user's own edit does.
+- An SMB host's edit: `smb_hosts::edit_host` with NO address, so it saves in place and never moves the host or its
+  passwords.
+
+**The card** (`server/card.rs::server_card`, `SuggestedGroupView.server`): the fields the click saves in a fixed order,
+an edit's old value beside each changed one, `addressIsNew` (no saved server of any protocol is at that host), and an
+SMB edit's `sharesAffected`, counted LIVE from the host's group. All read at list time from cached state, ❌ never the
+network.
 
 ## What the user's answer teaches the agent
 
@@ -145,6 +201,11 @@ the ones it just wrote.
 ⚠️ **That seam holds a `Connection` and no `AppHandle`**, and the engine, a crate with no `cmdr` dependency, never can. The
 `MemoryStore` is resolved by the command layer and MOVED in beside the reporting connection, for the same reason that
 one is: the operation outlives the call that started it. This is the concrete payoff of `MemoryStore` being pure.
+
+**A server group's line names the server, not a count** (`store::proposals::decision_of`, below `wake/` so the follow-up
+builds the same line without a cycle): `ProposalDecision.protocol` comes
+from its draft, and a settled one is `ProposalOutcomeKind::Saved { note }`, the note saying what a partial save left
+undone ("saved the SMB server naspolya, not its share"). There are no ops to tally.
 
 **Decision: `RejectSource` separates a dismissal from a rejection.**
 **Why**: `cancel_bulk_rename_proposal` calls `reject` when somebody closes the rename review, and the group does need
@@ -217,10 +278,10 @@ The dialog's facts are Cmdr's, read through the group's own volumes (`commands/a
 
 Gotcha: a `saved` SMB row in the switcher is published ONLY while that share's volume isn't registered (`server_volumes.rs::fold_saved_smb_shares`), so "the share shows `saved`" always means the registry lookup comes back empty. Before #747 that branch answered `Unknown` silently, and every move onto a saved NAS share read "Cmdr couldn't check the target folder" (QA 2026-10, a Downloads cleanup onto `naspi`).
 
-**Trash on a volume with no Trash can't run; it isn't "irreversible".** Trash goes through the OS on raw paths (`cmdr-operations`'s `delete/trash.rs::move_to_trash_sync`, `trashItemAtURL`), whatever backend serves the pane. On a volume without a Trash (a network mount) the OS refuses each item with `NSFeatureUnsupportedError`, the engine records `TrashRefusalKind::NoTrashForVolume` per item, the operation completes with every item refused, and nothing is deleted (verified by reading that code path, 2026-10-26). So `reversible` stays the verb's own answer (`GroupIntent::reversibility`, the one per-verb source) and a separate read-time fact says the group can't run: `facts.rs::run_blocker` answers `RunBlocker::NoTrash` for a trash group whose source volume says `!Volume::has_trash()`. It's read at read time because a volume's state changes while a suggestion waits two weeks. An unregistered source isn't a blocker here: approving it refuses with its own typed `SourceNotConnected`. The dialog (`runBlocker`) and the agent's `list_suggestions` both go through `source_run_blocker`, so they can't disagree. Disclosed, never enforced: approving still makes the ordinary engine call.
+**A trash on a volume with no Trash runs as a permanent delete, and only when the user approved it as one** (David’s call, 2026-10-28). Trash goes through the OS on raw paths (`cmdr-operations`’s `delete/trash.rs::move_to_trash_sync`, `trashItemAtURL`), whatever backend serves the pane. On a volume without a Trash (a network mount) the OS refuses each item with `NSFeatureUnsupportedError`, the engine records `TrashRefusalKind::NoTrashForVolume` per item, the operation completes with every item refused, and nothing is deleted (verified by reading that code path, 2026-10-26). A user-approved action shouldn’t end in a no-op, so the review offers what the delete dialog offers a user there: a permanent delete. `reversible` stays the verb’s own answer (`GroupIntent::reversibility`, the one per-verb source) and a separate read-time fact says what the group runs as instead: `facts.rs::runs_as` answers `RunsAs::PermanentDelete` for a trash group whose source volume says `!Volume::has_trash()`. It’s read at read time because a volume’s state changes while a suggestion waits two weeks. The dialog (`runsAs`) and the agent’s `list_suggestions` both go through `source_runs_as`, so they can’t disagree. The approval sends back the `runsAs` the review showed, and the bridge deletes only when that AND the volume still say so (`bridge::approved_runs_as`): a stale review that offered a trash never becomes a delete nobody saw (it trashes, and the OS refuses each item, as a clicked trash there would), and a drive that gained a Trash since takes the trash. An unregistered source runs as its verb: approving it refuses with its own typed `SourceNotConnected`.
 
 **Read facts cost no I/O.** Names and trash support come from the volume registry (`Volume::name`, `Volume::has_trash`), with `server_volumes::saved_place_name` for a saved place nobody connected, ❌ never a volume discovery per list call.
 
-**Header facts.** `sourceVolumeName` and `destinationVolumeName` are each the registered volume's own name, or a saved place's while nobody connected it (`destinationVolumeName` names the source volume for a rename). `sourceFolder` is the `proposals.source_folder` column (v12), written with the op list at creation and on every amend from the paths already in memory (`store::proposals::shared_parent`), so a list refresh reads one column instead of streaming every op path of every group.
+**Header facts.** `sourceVolumeName` and `destinationVolumeName` are each the registered volume's own name, or a saved place's while nobody connected it (`destinationVolumeName` names the source volume for a rename). Both derive from the STORED ids, so a group the proposal re-addressed onto a live sibling names the volume it will write to, never the one the agent asked for (`tools/suggestions/DETAILS.md` § Where a proposal may point). `sourceFolder` is the `proposals.source_folder` column (v12), written with the op list at creation and on every amend from the paths already in memory (`store::proposals::shared_parent`), so a list refresh reads one column instead of streaming every op path of every group.
 
 **Live facts.** `suggested_ops_live_facts(groupId, offset, limit)` stats one window of a group's ops through the source volume, so the dialog draws a page from the frozen rows first and fills in what's true now. Each op answers `present` (size, modified), `missing`, or `unknown`; per-file trouble is that file's `unknown`, never a command error. The call refuses only when it can't ask at all: no store, no group, or a source volume that isn't connected (`sourceNotConnected`) or left (`sourceGone`). The dialog re-asks on scroll faster than a slow share answers, so stats share `facts.rs`'s `SOURCE_STATS` budget with the proposal-time snapshot, and a stat that outlives its deadline keeps its permit until it really ends: a dead mount's stragglers stay counted instead of piling up pool threads. A stat that only got its permit after its caller stopped waiting doesn't start.

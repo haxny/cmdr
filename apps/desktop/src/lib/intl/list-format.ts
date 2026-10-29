@@ -4,14 +4,16 @@
  * The one place a list of names becomes a phrase inside a sentence, so no
  * feature module hand-joins with `', '` and a hardcoded English "and". The
  * callers: the eject refusal that names the apps still holding a drive
- * (`#lib/file-explorer/navigation/eject-error-messages.ts`), and the transfer
+ * (`#lib/file-explorer/navigation/eject-error-messages.ts`), the transfer
  * toast naming the metadata a destination couldn't keep
- * (`#lib/file-operations/transfer/transfer-complete-toast.ts`).
+ * (`#lib/file-operations/transfer/transfer-complete-toast.ts`), and the Ask Cmdr
+ * tool line listing the folders a search looked in, as links
+ * (`conjunctionListParts`).
  *
- * The locale is {@link getUiLocale}, not the OS formatting one: this is a
+ * The locale is {@link getCatalogLocale}, the RESOLVED catalog tag: this is a
  * conjunction inside catalog copy, so it has to speak the language the sentence
- * around it speaks. That's the split `./locale.ts` draws, and it's why sizes and
- * dates resolve the other way.
+ * around it is actually written in (a `ja-JP` Mac with no `ja` catalog reads
+ * English, so it joins with "and"). Dates resolve the other way (`./locale.ts`).
  *
  * Memoized per locale for the same reason `number-format.ts` is: constructing an
  * `Intl` formatter costs far more than formatting with one.
@@ -22,7 +24,7 @@
  * engine lacks it: `DETAILS.md` § Catalina has no Intl.ListFormat.
  */
 
-import { getUiLocale } from './locale'
+import { getCatalogLocale } from './locale'
 
 interface ListJoiner {
   /** `undefined` on an engine without `Intl.ListFormat`. */
@@ -49,7 +51,7 @@ const listFormatterCache = new Map<string, ListJoiner>()
 
 /** A memoized `Intl.ListFormat` of `type` for the active UI locale. */
 function getJoiner(type: ListType): ListJoiner {
-  const locale = getUiLocale()
+  const locale = getCatalogLocale()
   const cacheKey = `${type}:${locale}`
   let joiner = listFormatterCache.get(cacheKey)
   if (joiner === undefined) {
@@ -69,6 +71,37 @@ function getJoiner(type: ListType): ListJoiner {
  */
 export function formatConjunctionList(items: readonly string[]): string {
   return formatList(items, 'conjunction')
+}
+
+/** One piece of a joined list: an item, by its index in the input, or the words between items. */
+export type ListPart = { kind: 'item'; index: number } | { kind: 'literal'; text: string }
+
+/**
+ * {@link formatConjunctionList} as pieces, for a list whose items render as something other
+ * than text (the Ask Cmdr tool line's path links). Joined back, the pieces read exactly as the
+ * string join does, connectives and Han spacing included. Empty for an empty list.
+ */
+export function conjunctionListParts(items: readonly string[]): ListPart[] {
+  if (items.length === 0) return []
+  const { formatter, spacesHan } = getJoiner('conjunction')
+  if (formatter === undefined) {
+    const separator = enumerationSeparator()
+    return items.flatMap((_, index): ListPart[] =>
+      index === 0
+        ? [{ kind: 'item', index }]
+        : [
+            { kind: 'literal', text: separator },
+            { kind: 'item', index },
+          ],
+    )
+  }
+  const parts = formatter.formatToParts(items)
+  let next = 0
+  return parts.map((part, i): ListPart => {
+    if (part.type === 'element') return { kind: 'item', index: next++ }
+    const text = spacesHan ? spaceLiteral(part.value, parts[i - 1]?.value, parts[i + 1]?.value) : part.value
+    return { kind: 'literal', text }
+  })
 }
 
 /**
@@ -101,7 +134,7 @@ const separatorCache = new Map<string, string>()
 
 /** The literal CLDR puts between the first two of three conjunction items: `, ` or `、`. */
 function enumerationSeparator(): string {
-  const locale = getUiLocale()
+  const locale = getCatalogLocale()
   let separator = separatorCache.get(locale)
   if (separator === undefined) {
     const parts = createListFormat(locale, { style: 'long', type: 'conjunction' })?.formatToParts(['a', 'b', 'c'])

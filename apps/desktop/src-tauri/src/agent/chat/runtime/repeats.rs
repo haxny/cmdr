@@ -2,7 +2,7 @@
 //! retry doesn't buy the same answer at the price of a full provider round trip.
 //!
 //! A `propose_rename_plan` call missing `volumeId` was refused, and the model re-sent the
-//! byte-identical call eight times until `MAX_TOOL_TURNS` ended the turn: about 90 seconds
+//! byte-identical call eight times until the round cap ended the turn: about 90 seconds
 //! and eight round trips spent on one broken payload, and from the user's side the agent just
 //! stopped answering.
 //!
@@ -40,9 +40,8 @@ pub(super) enum Repeat {
     Stuck(Value),
 }
 
-/// The per-turn ledger. Keyed by the tool's wire name plus its whole arguments object, both
-/// serialized: `serde_json`'s `Map` is a `BTreeMap`, so two calls that mean the same thing
-/// render the same bytes whatever order the provider emitted their keys in.
+/// The per-turn ledger, keyed by [`AgentToolCall::identity_key`]: the tool's wire name plus its
+/// whole arguments object, the same key the rail's repeat mark uses.
 #[derive(Default)]
 pub(super) struct FailedCalls {
     seen: HashMap<String, Failure>,
@@ -58,7 +57,7 @@ struct Failure {
 impl FailedCalls {
     /// Whether `call` may run, and what to hand back if it may not.
     pub(super) fn judge(&mut self, call: &AgentToolCall) -> Repeat {
-        let Some(failure) = self.seen.get_mut(&key(call)) else {
+        let Some(failure) = self.seen.get_mut(&call.identity_key()) else {
             return Repeat::Fresh;
         };
         if failure.warned {
@@ -72,7 +71,7 @@ impl FailedCalls {
     /// synthesized repeat can't deepen its own record.
     pub(super) fn record_failure(&mut self, call: &AgentToolCall, content: &Value) {
         self.seen.insert(
-            key(call),
+            call.identity_key(),
             Failure {
                 content: content.clone(),
                 warned: false,
@@ -84,12 +83,8 @@ impl FailedCalls {
 const REFUSED: &str = "This exact call already came back with this, and it answers the same way every time. Change the arguments \
      or tell the user what you couldn't do; sending it again does nothing.";
 
-const STUCK: &str = "This exact call has now been sent three times with nothing changed, so the turn ends here.";
-
-fn key(call: &AgentToolCall) -> String {
-    // A unit separator, so no tool name plus arguments can collide with another pair.
-    format!("{}\u{1f}{}", call.tool.as_wire_name(), call.arguments)
-}
+const STUCK: &str =
+    "This exact call has now been sent three times with nothing changed, so no further tool call will run this turn.";
 
 /// The failed result plus the two keys that make it a repeat notice. The original content is
 /// kept whole, so `dispatch_ok` still reads it as a problem and the model still reads what to
@@ -160,6 +155,21 @@ mod tests {
         failed.record_failure(&call(ToolId::ListDir, json!({ "a": 1, "b": 2 })), &problem());
         let reordered = call(ToolId::ListDir, json!({ "b": 2, "a": 1 }));
         assert!(matches!(failed.judge(&reordered), Repeat::Refuse(_)));
+    }
+
+    #[test]
+    fn nested_argument_key_order_does_not_dodge_the_repeat_breaker() {
+        // serde_json keeps insertion order in this build (genai turns on `preserve_order`), so
+        // the key sorts its arguments itself, at every depth. Regression anchor: with insertion
+        // order, a model reshuffling an inner object's keys looped on a failing call unchecked.
+        let mut failed = FailedCalls::default();
+        let first = json!({ "paths": [{ "path": "/a", "volumeId": "root" }], "limit": 5 });
+        failed.record_failure(&call(ToolId::ImageFacts, first), &problem());
+        let reordered = json!({ "limit": 5, "paths": [{ "volumeId": "root", "path": "/a" }] });
+        assert!(matches!(
+            failed.judge(&call(ToolId::ImageFacts, reordered)),
+            Repeat::Refuse(_)
+        ));
     }
 
     #[test]

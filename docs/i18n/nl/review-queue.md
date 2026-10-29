@@ -56,6 +56,8 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   "repair". Fallback `terughalen uit koude opslag`.
 - **`Interoperabiliteit`** (`servers.sheet.s3GcsKeyHelp`): assumed to be the Dutch Google Cloud console's tab name;
   unverified.
+- `settings.ai.reasoningEfforts.label.*` → `Redeneerinspanning` / `Inspanning` / `Denkniveau`: no provider ships Dutch
+  docs; confirm the compound `Redeneerinspanning` doesn’t read too heavy.
 
 ## Phrasing and tone
 
@@ -220,3 +222,10 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   find clearer. `Opnamedatum` for date taken matches Spotlight's recording date, not a photo-specific Apple label.
 - The value-slot notes `niet in deze bestanden` and `tot nu toe nergens` are coined; confirm they read naturally beside
   a field name.
+
+## Ask Cmdr-hulpmiddelregels (`askCmdr.tool.*`, `askCmdr.toolGroup.*`, `askCmdr.turnStats.*`, `settings.askCmdr.toolGroupsOnAnswer.*`)
+
+- `toolaanroep(en)` in the cost footer mixes the loanword with Dutch, while the term ruling is `hulpmiddel`;
+  `hulpmiddelaanroep` felt heavier. Confirm.
+- `zoekopdracht(en)` counts searches the AI ran (the `query` term's word); `Hulpmiddelgroepen` as the Settings label;
+  `geen van zijn hulpmiddelen` for "not a tool it has". Confirm they read naturally.

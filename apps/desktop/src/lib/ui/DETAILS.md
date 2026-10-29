@@ -8,6 +8,7 @@ Pull-tier docs for `lib/ui/`: architecture, component APIs, and decision rationa
 - **`ModalDialog.svelte`**: Central modal container: overlay, dragging, Escape, focus, MCP tracking
 - **`modal-resize.ts`**: `ModalDialog`'s edge-and-corner resize geometry as pure functions (`resizeStep`, the limits,
   which bands show)
+- **`modal-drag.ts`**: where `ModalDialog` may be dragged: the clamp that keeps the title bar grabbable
 - **`focus-trap.ts`**: `use:trapFocus` action: Tab wrapping, focus-leak guard, Escape fallback, trap stack
 - **`dialog-registry.ts`**: `SOFT_DIALOG_REGISTRY` array: single source of truth for all dialog IDs
 - **`markdown-link-click.ts`**: `handleMarkdownLinkClick`, the click delegate every `{@html}`-rendered markdown block
@@ -188,6 +189,18 @@ The same trap sits one level up: `blur` puts `backdrop-filter` on the OVERLAY, w
 dialog hosts a `Popover` today (the query dialogs, the only `Popover` consumers, don't set `blur`), and unlike the panel
 transform this one can't just be dropped — the filter IS the feature. So if a blurred dialog ever needs a popover, that
 one has to portal.
+
+**The title bar always stays grabbable.** A title-bar drag stops the panel where its top would pass the overlay's top
+(which already sits below the window's own title bar and traffic lights), where less than the title bar's full height
+would stay above the bottom, or where less than 100px of it would stay inside either side. The pointer itself roams
+free, the way a macOS window stops at the menu bar while the cursor keeps going: a webview can't confine the cursor, and
+warping it fights the user. The clamp runs on the RAW offset (pointer minus grab point) on every move, so the panel
+picks the pointer back up exactly where it stopped. Two more paths could strand the title bar, and both are covered: a
+resize band's pointer is held inside the overlay, so the north edge can't carry the title out; and a `ResizeObserver` on
+the overlay and the panel re-clamps after the window shrinks or the panel grows. **Why**: a dialog dragged up under the
+window's title bar had nothing left to grab, and stayed clipped until it closed. The geometry is pure
+(`modal-drag.ts::clampDragOffset`), pinned by `modal-drag.test.ts`; `ModalDialog.svelte.test.ts` § "drag limits" drives
+it end to end. With no layout to measure (an overlay of zero size, as under happy-dom), nothing is clamped.
 
 **`resizable` is the answer to a path that doesn't fit**, so every dialog rendering one takes it (delete, copy/move,
 progress, transfer error, operation log, go to path, new file/folder, alert, and the query dialogs). It puts a grab band
@@ -725,6 +738,12 @@ a wrapper: `focus` doesn't bubble, so a wrapping element never sees keyboard foc
 Every button is a capsule: `border-radius: var(--radius-full)` on `.btn`, both sizes, matching the shape macOS gives an
 alert's action buttons. `--radius-full` (9999px) rather than `50%`, which curves against the box and goes oval on a wide
 button.
+
+Every variant shares one box: each has a 1px border, and primary's is `transparent`, so a primary beside a secondary or
+danger button matches it to the pixel (borderless, it sat 2px narrower and shorter, and the AI suggestions dialog's
+mixed footer misaligned). The accent fill paints under the transparent border, so the look is unchanged. In
+forced-colors mode the browser paints that border in the system button color, which is deliberate: it gives the primary
+the same visible outline its siblings get there. ❌ Don't add a variant with `border: none`.
 
 `.btn-primary` renders `color: var(--color-accent-fg)` on `background: var(--color-accent)`. Both are derived at runtime
 by `lib/accent-color.ts`:
@@ -1332,8 +1351,9 @@ For a link that switches a view on and off in place, pass `aria-pressed` (button
 button, and pressed it drops the underline for an accent wash that bleeds into the margin, so the text doesn't move.
 Multi-rename's "N problems" in its summary line is the example.
 
-The `href` mode includes a per-line eslint disable for `svelte/no-navigation-without-resolve`. That rule wants
-SvelteKit's `resolve()`, which is for internal routes; we route external URLs through `openExternalUrl()` after
+The `href` mode wraps its `<a>` in an eslint disable/enable block (the rule reports on the `href` attribute's line, so a
+next-line disable above `<a` misses it) for `svelte/no-navigation-without-resolve`. That rule wants SvelteKit's
+`resolve()`, which is for internal routes; we route external URLs through `openExternalUrl()` after
 `event.preventDefault()` in `onclick`. The `<a href>` is decorative: it gives screen readers the right semantics and
 preserves "right-click → Copy link." For SvelteKit-internal navigation, don't use `LinkButton`; use `<a>` with
 `resolve()` directly.
@@ -1716,8 +1736,17 @@ itself, which is exactly what this leaves to the parent.
   which receives `{ row, index, isUnderCursor }`.
 - **Rows**: a plain array, or a `ColumnListWindowedSource<T>`: `count`, a reactive `getRow(index)` (return `undefined`
   for a row not loaded yet, which draws an `aria-hidden` placeholder), and `onRangeChange({ start, end })`, called (in
-  `untrack`) whenever the drawn range moves, so the consumer fetches those rows. `rowKey` keys an array's rows; a
-  windowed source is keyed by index.
+  `untrack`) whenever the drawn range moves, so the consumer fetches those rows. The range is reported ONCE per move, so
+  ❗ the consumer must cover ALL of `start`–`end`, not just `start`: AI suggestions once checked only `start`, and the
+  bottom of the drawn range sat on blank placeholders whenever it ran past the held page's end. `rowKey` keys an array's
+  rows; a windowed source is keyed by index.
+- **A cell always reads its OWN row, even while it tears down** (`heldRowOf`). Each block reads its row through its
+  drawn item (`{ index, key }`), checks the row at that index still has its key (`liveRowOf`), and hands its cells the
+  last row it drew when it doesn't. Ark's checkbox reads its props on the way out, and a block keyed by its row but
+  reading by INDEX found `undefined` (a dropped window, an emptied list) or the neighbour that shifted in: the AI
+  suggestions and bulk rename reviews each crashed the main window that way from Debug > Soft dialogs. So a consumer's
+  `getRow` may answer `undefined` honestly, and ❌ no consumer keeps its own copy of drawn rows for teardown. Regression
+  anchor: `ColumnList.teardown.svelte.test.ts` (jsdom reproduces the windowed case; the array cases showed in WebKit).
 - **Cursor**: the parent owns the index. `cursorIndex` paints `.is-under-cursor` (and `aria-selected` in a listbox or
   grid). The list reports every move it makes through `onCursorChange(index)`: a click on a data row, a `grid`'s own
   cursor keys, and `mouseenter` when `hoverMovesCursor` is on. Writing it back to `cursorIndex` is what makes them one

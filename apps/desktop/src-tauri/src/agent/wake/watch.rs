@@ -21,7 +21,7 @@ use std::sync::Mutex;
 
 use futures_util::future::BoxFuture;
 
-use crate::agent::chat::runtime::{ToolDispatchOutcome, ToolDispatcher, dispatch_ok};
+use crate::agent::chat::runtime::{CallContext, ToolDispatchOutcome, ToolDispatcher, dispatch_ok};
 use crate::agent::llm::types::{AgentToolCall, ToolId};
 use crate::agent::tools::quiet::reason_of;
 use crate::ignore_poison::IgnorePoison;
@@ -80,13 +80,13 @@ fn is_proposal(tool: &ToolId) -> bool {
 }
 
 impl ToolDispatcher for WakeToolWatch<'_> {
-    fn dispatch<'a>(&'a self, call: &'a AgentToolCall) -> BoxFuture<'a, ToolDispatchOutcome> {
+    fn dispatch<'a>(&'a self, call: &'a AgentToolCall, turn: CallContext<'a>) -> BoxFuture<'a, ToolDispatchOutcome> {
         if call.tool == ToolId::NothingToSuggest {
             self.seen.lock_ignore_poison().quiet = Some(reason_of(&call.arguments));
         }
         let proposal = is_proposal(&call.tool);
         Box::pin(async move {
-            let outcome = self.inner.dispatch(call).await;
+            let outcome = self.inner.dispatch(call, turn).await;
             // ⚠️ Only a call that LANDED counts. A refused or failed proposal leaves nothing
             // for the user to review, and a toast about it would send them to an empty list.
             if proposal && dispatch_ok(&outcome.result) {
@@ -99,5 +99,9 @@ impl ToolDispatcher for WakeToolWatch<'_> {
 
     fn revoke_evidence(&self, call_ids: &[String]) {
         self.inner.revoke_evidence(call_ids);
+    }
+
+    fn memory_root(&self) -> Option<std::path::PathBuf> {
+        self.inner.memory_root()
     }
 }

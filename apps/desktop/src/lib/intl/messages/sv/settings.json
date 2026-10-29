@@ -1222,6 +1222,26 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
+  "settings.ai.reasoningEfforts.label.reasoningEffort": "Ansträngning för resonemang",
+  "@settings.ai.reasoningEfforts.label.reasoningEffort": {
+    "sourceHash": "3236aee"
+  },
+  "settings.ai.reasoningEfforts.label.effort": "Ansträngning",
+  "@settings.ai.reasoningEfforts.label.effort": {
+    "sourceHash": "4387e5d"
+  },
+  "settings.ai.reasoningEfforts.label.thinkingLevel": "Tankenivå",
+  "@settings.ai.reasoningEfforts.label.thinkingLevel": {
+    "sourceHash": "96f115b"
+  },
+  "settings.ai.reasoningEfforts.description": "Hur länge modellen tänker innan den svarar. Mer ansträngning hjälper med kluriga uppgifter, men svaren kommer långsammare och tänkandet debiteras som utdata.",
+  "@settings.ai.reasoningEfforts.description": {
+    "sourceHash": "2c0938f"
+  },
+  "settings.ai.reasoningEfforts.keywords": "ansträngning för resonemang, ansträngning, resonemang, tänka, tänkande, betänketid, djup, hastighet, kostnad, kvalitet",
+  "@settings.ai.reasoningEfforts.keywords": {
+    "sourceHash": "3bbb127"
+  },
   "settings.ai.localContextSize.label": "Kontextfönster",
   "@settings.ai.localContextSize.label": {
     "sourceHash": "7696d08"
@@ -2287,9 +2307,9 @@
   "@settings.askCmdr.cloudOffHint": {
     "sourceHash": "1d3ec5d"
   },
-  "settings.askCmdr.openAiSettings": "Öppna AI-inställningar",
+  "settings.askCmdr.openAiSettings": "Gå till AI-inställningar",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Leverantör och modell",
   "@settings.askCmdr.provider.title": {
@@ -2307,9 +2327,9 @@
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "Modellen chatten använder. Lämna tomt för att använda samma modell som Cmdrs andra AI-funktioner. Exempel: claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "Modellen chatten använder. Lämna tomt för att använda samma modell som Cmdrs andra AI-funktioner. Exempel: claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
-    "sourceHash": "881f8a4"
+    "sourceHash": "e301e99"
   },
   "settings.askCmdr.interactiveModel.placeholder": "Samma som Cmdrs AI",
   "@settings.askCmdr.interactiveModel.placeholder": {
@@ -2323,9 +2343,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Hur mycket av samtalet Cmdr skickar till modellen. Automatiskt följer modellens kända gräns.",
+  "settings.askCmdr.chatMemorySize.description": "Hur mycket av samtalet Cmdr skickar till modellen. Automatiskt använder modellens hela kontextfönster; en storlek sätter en lägre gräns så att det kostar mindre.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automatiskt (rekommenderas)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {
@@ -2334,6 +2354,22 @@
   "settings.askCmdr.chatMemorySize.overWindow": "Din modell kan avvisa ett så långt meddelande. Cmdr behåller värdet du ställer in.",
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
+  },
+  "settings.askCmdr.spendPause.label": "Fråga när ett svar kostar mer än",
+  "@settings.askCmdr.spendPause.label": {
+    "sourceHash": "0d0fa3b"
+  },
+  "settings.askCmdr.spendPause.description": "Ett svar kan göra många sökningar. Över den här uppskattade kostnaden pausar Cmdr svaret och frågar innan mer pengar går åt. Uppskattningarna bygger på listpriser, så med cachelagring blir den verkliga kostnaden oftast lägre.",
+  "@settings.askCmdr.spendPause.description": {
+    "sourceHash": "089be96"
+  },
+  "settings.askCmdr.spendPause.opt.never": "Aldrig",
+  "@settings.askCmdr.spendPause.opt.never": {
+    "sourceHash": "6300ef8"
+  },
+  "settings.askCmdr.spendPause.keywords": "pengar, utgift, pris, budget, gräns, paus, dollar, kronor, dyrt, spendera",
+  "@settings.askCmdr.spendPause.keywords": {
+    "sourceHash": "ebe4f4a"
   },
   "settings.askCmdr.chatMemorySize.keywords": "chatt, minne, kontext, kontextfönster, fönster, token, storlek, budget, historik",
   "@settings.askCmdr.chatMemorySize.keywords": {
@@ -2938,6 +2974,31 @@
   "settings.advanced.card.updates": "Uppdateringar",
   "@settings.advanced.card.updates": {
     "sourceHash": "22e2bad"
+  },
+  "settings.advanced.card.askCmdr": "Ask Cmdr",
+  "@settings.advanced.card.askCmdr": {
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Product name; kept verbatim in every locale (do-not-translate list)."
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Verktygsgrupper när svaret kommer",
+  "@settings.askCmdr.toolGroupsOnAnswer.label": {
+    "sourceHash": "e5e922b"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr visar vad AI:n tittar på medan den arbetar. Välj om de raderna ska fällas ihop när svaret kommer.",
+  "@settings.askCmdr.toolGroupsOnAnswer.description": {
+    "sourceHash": "785da0a"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fäll ihop dem",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
+    "sourceHash": "01052be"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Låt dem vara som jag lämnade dem",
+  "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
+    "sourceHash": "0aa6718"
+  },
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistent, chatt, fäll ut, dölj, komprimera, verktyg, steg, svar, rader",
+  "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
+    "sourceHash": "6a9f055"
   },
   "settings.updates.card.updates": "Uppdateringar",
   "@settings.updates.card.updates": {

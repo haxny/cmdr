@@ -173,3 +173,35 @@ func TestRustdocDeniedLintsAreRustdocLints(t *testing.T) {
 		t.Fatal("the deny list is the whole contract; an empty one gates nothing")
 	}
 }
+
+// Shaped like `cargo doc --message-format=json`: diagnostics arrive as JSON on
+// stdout, cargo's own lines as text on stderr after them.
+const jsonRustdocOutput = `{"reason":"compiler-message","package_id":"path+file:///work/vendor/rustic_core#0.13.0","manifest_path":"/work/vendor/rustic_core/Cargo.toml","message":{"level":"warning","rendered":"warning: lint ` + "`no_mangle_generic_items`" + ` has been removed\n  = note: requested on the command line\n"}}
+{"reason":"compiler-artifact","package_id":"path+file:///work/crates/cmdr-fs#0.0.0","manifest_path":"/work/crates/cmdr-fs/Cargo.toml"}
+{"reason":"compiler-message","package_id":"path+file:///work/crates/cmdr-restic#0.0.0","manifest_path":"/work/crates/cmdr-restic/Cargo.toml","message":{"level":"error","rendered":"error: unresolved link to ` + "`limit`" + `\n  --> crates/cmdr-restic/src/lib.rs:4:5\n"}}
+{"reason":"build-finished","success":false}
+ Documenting cmdr-restic v0.0.0 (/work/crates/cmdr-restic)
+error: could not document ` + "`cmdr-restic`" + `
+`
+
+func TestRustdocOwnOutputDropsOnlyVendoredCratesDiagnostics(t *testing.T) {
+	got := rustdocOwnOutput(jsonRustdocOutput, []string{"vendor/rustic_core", "vendor/zip"})
+	// A vendored crate is third-party code that cargo can't cap the lints of, the
+	// way it caps a registry crate's, so its warnings aren't this lane's to own.
+	if strings.Contains(got, "no_mangle_generic_items") {
+		t.Fatalf("a vendored crate's diagnostic survived:\n%s", got)
+	}
+	// Our own diagnostics come back as the text the rest of the lane reads, and
+	// cargo's own stderr lines pass through untouched.
+	for _, line := range []string{"error: unresolved link to", "--> crates/cmdr-restic/src/lib.rs:4:5", "could not document"} {
+		if !strings.Contains(got, line) {
+			t.Fatalf("lost %q:\n%s", line, got)
+		}
+	}
+	if strings.Contains(got, `"reason"`) {
+		t.Fatalf("a non-diagnostic JSON line leaked into the text:\n%s", got)
+	}
+	if kept := rustdocDiagnostics(got); !strings.Contains(kept, "unresolved link to") || strings.Contains(kept, "removed") {
+		t.Fatalf("the diagnostics filter saw the wrong set:\n%s", kept)
+	}
+}

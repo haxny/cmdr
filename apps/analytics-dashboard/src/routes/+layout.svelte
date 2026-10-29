@@ -68,6 +68,7 @@
             <nav class="flex items-center gap-1">
                 {#each navItems as item (item.href)}
                     {@const active = pathname === item.href}
+                    <!-- eslint-disable svelte/no-navigation-without-resolve -- every `navItems` href is built with resolve() above; the rule can't follow it through the array -->
                     <a
                         href={item.href}
                         aria-current={active ? 'page' : undefined}
@@ -76,6 +77,7 @@
                     >
                         {item.label}
                     </a>
+                    <!-- eslint-enable svelte/no-navigation-without-resolve -->
                 {/each}
             </nav>
         </div>

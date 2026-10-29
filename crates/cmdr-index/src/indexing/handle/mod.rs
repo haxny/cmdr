@@ -463,8 +463,21 @@ impl Index {
     // ── What the index knows about a volume ──────────────────────────
 
     /// One volume's scan counters, database size, and last-scan facts.
+    ///
+    /// A volume with no instance (a saved share that isn't connected, an ejected
+    /// drive) still has the facts its database on disk records: those arrive in
+    /// `index_status`, read-only, with `initialized` staying `false`. Nothing is
+    /// registered, opened for writing, or rebuilt to answer, and a database this
+    /// build can't read leaves `index_status` empty. That's where a stopped
+    /// volume's root (`volume_path`) and the date of what it holds come from.
     pub fn status(&self, volume_id: &str) -> Result<IndexStatusResponse, IndexError> {
-        crate::indexing::read::queries::get_status(volume_id).map_err(Into::into)
+        let mut status = crate::indexing::read::queries::get_status(volume_id)?;
+        if !status.initialized && status.index_status.is_none() {
+            status.index_status = crate::indexing::store::StoredIndex::open_for_volume(volume_id)
+                .and_then(|stored| stored.last_scan())
+                .ok();
+        }
+        Ok(status)
     }
 
     /// How many bytes every index database occupies on disk right now, across all
@@ -537,27 +550,46 @@ impl Index {
         crate::indexing::read::enrichment::enrich_entries_with_index_on_volume(volume_id, entries);
     }
 
-    /// The recursive size, file count, and directory count under one path, or
-    /// `None` when the index doesn't cover it.
-    pub fn dir_stats(&self, path: &str) -> Result<Option<DirStats>, IndexError> {
-        crate::indexing::read::queries::get_dir_stats(path).map_err(Into::into)
+    /// The recursive size, file count, and directory count under one path of
+    /// `volume_id`, or `None` when that volume's index doesn't cover it. The caller
+    /// names the volume (a dead mount point's path routes to `root`); one holding
+    /// only a path asks [`volume_id_for_path`](Self::volume_id_for_path) first.
+    ///
+    /// A volume the host doesn't serve (a saved share that isn't connected, an
+    /// unplugged phone) answers from the database its last walk left, read-only,
+    /// the way [`status`](Self::status) does; one that's mounted with its
+    /// indexing off answers `None`. Same for [`dir_stats_batch`](Self::dir_stats_batch)
+    /// and [`list_children`](Self::list_children).
+    pub fn dir_stats(&self, volume_id: &str, path: &str) -> Result<Option<DirStats>, IndexError> {
+        crate::indexing::read::queries::get_dir_stats_on_volume(volume_id, path).map_err(Into::into)
     }
 
-    /// [`dir_stats`](Self::dir_stats) for many paths in one pass, answering in
-    /// the order asked.
-    pub fn dir_stats_batch(&self, paths: &[String]) -> Result<Vec<Option<DirStats>>, IndexError> {
-        crate::indexing::read::queries::get_dir_stats_batch(paths).map_err(Into::into)
+    /// [`dir_stats`](Self::dir_stats) for many paths of one volume, in the order asked.
+    pub fn dir_stats_batch(&self, volume_id: &str, paths: &[String]) -> Result<Vec<Option<DirStats>>, IndexError> {
+        crate::indexing::read::queries::get_dir_stats_batch_on_volume(volume_id, paths).map_err(Into::into)
     }
 
-    /// What the index has under one directory, without touching the disk.
+    /// What `volume_id`'s index has under one directory, without touching the disk.
     ///
     /// `None` when the path isn't indexed, which includes a directory that HAS a
     /// row but that nothing has listed: rows under it are a lower bound (FSEvents
     /// verification and the cover walk's chain materialization both create that
     /// shape), and there is nothing in a `Vec<EntryRow>` for a caller to read that
-    /// caveat off.
-    pub fn list_children(&self, path: &str) -> Result<Option<Vec<EntryRow>>, IndexError> {
-        crate::indexing::read::queries::list_dir_children(path).map_err(Into::into)
+    /// caveat off. A volume the host doesn't serve reads its stored database, as
+    /// [`dir_stats`](Self::dir_stats) says.
+    pub fn list_children(&self, volume_id: &str, path: &str) -> Result<Option<Vec<EntryRow>>, IndexError> {
+        crate::indexing::read::queries::list_dir_children_on_volume(volume_id, path).map_err(Into::into)
+    }
+
+    /// Whether the scanner leaves `path` out of `volume_id`'s index on purpose: a
+    /// junk basename (`.Spotlight-V100`) on any volume, a pseudo-filesystem at a
+    /// volume root, and on the boot disk its system prefixes. For a reader that
+    /// lists the disk itself, so it never shows ground the index deliberately
+    /// skipped. One path, not its ancestors: ask each. ⚠️ Can stat (the
+    /// pseudo-filesystem probe), so call it off the async thread.
+    pub fn scan_skips(&self, volume_id: &str, path: &str) -> bool {
+        let scope = crate::indexing::paths::routing::exclusion_scope_for_volume(volume_id);
+        crate::indexing::scanner::should_exclude(path, &scope)
     }
 
     /// What a copy or move of `sources` is about to cost, from what the index

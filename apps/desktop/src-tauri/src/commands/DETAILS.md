@@ -94,10 +94,11 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   `known_shares.rs` and `manual_servers.rs`), `connect_saved_place`, `connect_server`, `cancel_server_connect`,
   `disconnect_place`, `set_place_pinned`, `set_place_auto_reconnect`, `forget_server`, `forget_server_secret`,
   `update_saved_server`, and `saved_server_id` (the id a save is found by, from the same id funnel the listing uses:
-  ❌ never by comparing a typed address with the listed one, which the stores normalize). The wire
-  vocabulary (`ServerTarget`, `ServerConnectOutcome`, `SavedPlaceRefusal`, `SavedServer`, `SavedPlace`,
-  `ServerProtocol`, `ServerNameSource`) lives in the sibling `servers/wire.rs`, re-exported at the same path so nothing
-  outside this file has to know it moved.
+  ❌ never by comparing a typed address with the listed one, which the stores normalize). Every core under
+  these commands (the listing, the saves and edits, the dial, and the wire vocabulary: `ServerTarget`,
+  `ServerConnectOutcome`, `SavedPlaceRefusal`, `SavedServer`, `SavedPlace`, `ServerProtocol`, `ServerNameSource`) lives
+  in `saved_servers/` (`apps/desktop/src-tauri/src/saved_servers/CLAUDE.md`), below `commands` so Ask Cmdr reads and saves through the same
+  functions; this file re-exports what the wire needs.
   - `list_saved_servers` names an SFTP or WebDAV account by its label and publishes `name_source: fallback` when
     nobody named it, so the edit sheet can open an empty name field with the label as its placeholder, and nothing on
     the frontend derives one (`network/DETAILS.md` § "An unnamed server's label, and names that only repeat the
@@ -111,14 +112,15 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
     never-seeds rule. Neither refusal is something a person did, which is why they are an `Err` rather than an outcome:
     the frontend reads either as a `saved` row that went stale and moves on (reload or close), ❌ never a sentence
     (`apps/desktop/src/lib/servers/DETAILS.md` § The three arms).
-  - ❗ **An SMB host's identity is where it dials, address AND port** (`servers/smb_hosts.rs`), ❌ never the name a
-    person gave it and never the address alone: one machine can run several servers (the Docker fixtures are ten on
-    `localhost`). Its sign-in history and shares are filed under its discovery name (`localhost:11482`), so the listing
-    matches store rows by that name, or by the address and port a mount dialed. Matching by the typed name once split a
-    named host in two, and the made-up second row then took edits meant for the first. Its `address` carries the port
-    off 445. Its saved shares are its places (`docs/specs/saved-smb-shares.md`).
+  - ❗ **Both commands are thin over `saved_servers/`**, below `commands` so Ask Cmdr's `connect_volume` dials through
+    the same core: one flight per place (`network/dial_flights.rs`), since the registered-id refusal can't guard the
+    30 s a dial is out, so a second caller joins the first dial instead of starting one. `cancel_server_connect` asks
+    the flights first; the backends only ever see the flight's own attempt id. `ServerConnectOutcome` and
+    `SavedPlaceRefusal` live there too, re-exported here. Rules: the "Dialing a saved place" entry of
+    `network/DETAILS.md`.
+  - ❗ **An SMB host's identity is where it dials, address AND port**: `apps/desktop/src-tauri/src/saved_servers/DETAILS.md` § "SMB hosts".
   - `eject_and_update_saved_smb_host` is `update_saved_smb_host` for the sheet's "Eject and save": the same id and
-    fields plus the sheet's attempt id, which `cancel_server_connect` calls off. Both share `smb_hosts::plan_edit`, so
+    fields plus the sheet's attempt id, which `cancel_server_connect` calls off. Both share `saved_servers::smb_hosts::plan_edit`, so
     they can't read one edit two ways (`docs/notes/server-address-move.md` § "SMB: a pending move").
   - ❗ **`update_saved_smb_host` and `forget_saved_smb_host` take the listing's id and nothing else**: they rebuild the
     same host groups (`smb_hosts::smb_host_group`) and act on the one with that id, so an edit or a Forget can only
@@ -139,7 +141,7 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
     snapshot can't overwrite a sheet edit; it moves the store and a connected volume's live switch through each
     wiring's `apply_auto_reconnect`, and `list_saved_servers` publishes the value (`auto_reconnect`, `None` for SMB). Its
     `editing` argument is the id of the saved place the edit sheet opened on (`None` for "Add anyway"), and
-    `servers/saves.rs` takes it from there: no id builds the `KnownSftpServer` / `KnownWebdavServer` and calls
+    `saved_servers/saves.rs` takes it from there: no id builds the `KnownSftpServer` / `KnownWebdavServer` and calls
     `*_volume_wiring::save_without_connecting` directly (there is no per-protocol command behind it any more); an id
     saves in place when the address is the same, else MOVES the server to the new one (`server_move.rs`). It answers a
     typed `SavedServerOutcome` (`network/saved_server_fields.rs`), and a refusal writes nothing:
@@ -161,7 +163,7 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
     whatever outcomes the protocol adds to the superset. The frontend then branches once, in a `switch` it already has.
     S3 plugged in that way: its account is an endpoint plus an access key, its places are buckets (plus the account root),
     and its sign-in is `SignInShape::AccessKeys`. The listing groups an account's places under ONE `SavedServer` whose
-    id is the account root's place id, the SMB host → shares shape (`servers/s3_accounts.rs`); every per-place command
+    id is the account root's place id, the SMB host → shares shape (`saved_servers/s3_accounts.rs`); every per-place command
     takes the place's own volume id. Its outcomes add `access_denied`, `bucket_list_refused`, `bucket_not_found`,
     `region_mismatch`, `clock_skewed`, and `not_an_s3_endpoint`, with a wrong secret reusing `authentication_rejected`.
 - **`volume_sign_in.rs`**: the backend-neutral sign-in commands, one per `Volume` trait method: in-place reconnect
@@ -418,8 +420,8 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   history (`get_recent_paths`, `add_recent_path`, `remove_recent_path`, `clear_recent_paths`).
 - **`sync_status.rs`**: `get_sync_status`: macOS delegates to `file_system::sync_status`; non-macOS returns an empty map
   via `#[cfg]` on the function itself (not the module).
-- **`e2e.rs`**: E2E/test-support hooks. The four READERS are always compiled in (reading an unset env var is a no-op in
-  production): `get_e2e_start_path`, `is_e2e_mode`, `ask_cmdr_fake_active`, `is_force_onboarding`. Everything below them
+- **`e2e.rs`**: E2E/test-support hooks. The three READERS are always compiled in (reading an unset env var is a no-op in
+  production): `get_e2e_start_path`, `is_e2e_mode`, `is_force_onboarding`. Everything below them
   is `#[cfg(feature = "playwright-e2e")]`, so no production binary carries a command that CHANGES behavior:
   `set_test_throttle`,
   `set_test_rollback_throttle` (the same idea for the operation-log rollback engine's item loop, on its own knob so
@@ -427,12 +429,16 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   loop's real channel and makes it act now, on that folder alone; it skips the timer and the proactive toggle, never a
   gate, and its `quiet` flag picks which script the wake's fake assistant plays), `stage_agent_rollup` (the same
   staging without the wake, so a spec can prove the force reports on its own folder). Both are in
-  `agent/wake/DETAILS.md` § Forcing a wake.
+  `agent/wake/DETAILS.md` § Forcing a wake. `e2e_propose_suggestions` (dispatch-only) runs the real
+  `propose_suggestions` handler over a spec's own call, so a spec reviews exactly the group a model would have staged
+  (`suggested-ops-named-move.spec.ts`). `e2e_propose_server` (dispatch-only) does the same for `propose_server`, as on
+  a turn the user started (`suggested-ops-server-card.spec.ts`).
 
 ## Decisions
 
 `agent/` is the one command domain split into a directory, because it carries five unrelated command families plus the
-wire DTOs they share: `views.rs` (the stream event enum, the specta display projections, and the pure mappings),
+wire DTOs they share: `views.rs` (the specta DTOs and their pure mappings; one row's `MessageView` projection lives in
+`../agent/chat/message_view.rs`, because the live stream carries it too, and is re-exported here),
 `chat.rs` (send + cancel), `attachments.rs`, `bulk_rename.rs`, `conversations.rs`, `legacy_opt_in.rs` (the one-time
 read of Ask Cmdr's old opt-in for the `askCmdr.enabled` mapping), `cost.rs`, `wake.rs` (the live-apply pushes for the
 proactive loop's settings and the Ask Cmdr switch). Cloud AI consent's commands live in `ai/cloud_consent.rs`. `mod.rs`

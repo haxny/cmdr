@@ -13,6 +13,8 @@ import {
   type ApprovalResultView,
   type OpSelection,
   type RejectResultView,
+  type RunsAs,
+  type ServerApprovalResultView,
   type SuggestedOpLiveFact,
   type SuggestedOpPage,
   type SuggestedOpsLiveFactsError,
@@ -66,13 +68,26 @@ export async function rejectSuggestedGroup(groupId: number): Promise<RejectResul
  *  60,000-op group whole nor ticking three of them carries 60,000 ids. An `only` that keeps
  *  nothing answers `nothingSelected` and runs nothing. `revision` is the group's `revision` the
  *  review showed: if the agent amended the group since, the approval answers `listChanged` and
- *  nothing runs. */
+ *  nothing runs. `runsAs` is the fallback the review showed (the group's `runsAs`): a trash group on
+ *  a drive with no Trash deletes for good only when the user approved that delete. */
 export async function approveSuggestedGroup(
   groupId: number,
   revision: number,
   selection: OpSelection,
+  runsAs: RunsAs | null,
 ): Promise<ApprovalResultView> {
-  const res = await commands.suggestedOpsApprove(groupId, revision, selection)
+  const res = await commands.suggestedOpsApprove(groupId, revision, selection, runsAs)
+  if (res.status === 'error') throwSuggestedOpsError(res.error)
+  return res.data
+}
+
+/** Approve a server card (`addServer` / `editServer`, which have no ops): save it through the
+ *  servers hub's own code, with no password and no contact with the server. `revision` is the one
+ *  the review showed, as for a file group. Every refusal but `alreadyAnswered` and `unknown` gives
+ *  the card back; a save that never answered throws `approvalDidntFinish`, and the card stays
+ *  approved because it may have saved. */
+export async function approveSuggestedServer(groupId: number, revision: number): Promise<ServerApprovalResultView> {
+  const res = await commands.suggestedOpsApproveServer(groupId, revision)
   if (res.status === 'error') throwSuggestedOpsError(res.error)
   return res.data
 }
@@ -93,8 +108,10 @@ export type {
   OpSelection,
   SuggestionChange,
   SuggestionsChanged,
+  NewNameState,
   RejectResultView,
-  RunBlocker,
+  RunsAs,
+  ServerApprovalResultView,
   SuggestedGroupView,
   SuggestedOpLiveFact,
   SuggestedOpPage,

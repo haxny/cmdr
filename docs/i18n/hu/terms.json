@@ -109,6 +109,12 @@
     "confidence": "high",
     "sources": "ms (client: an entity that connects to another over a network → kliens)"
   },
+  "ai-context": {
+    "avoid": [{ "form": "környezet", "why": "reads as environment, the MS execution-context sense" }],
+    "chosen": "kontextus",
+    "confidence": "tentative",
+    "sources": "MS terminology has only környezet (the execution-environment sense); kontextus is the AI-context word; askCmdr.cost.estimateTooltip"
+  },
   "ai-feature": {
     "chosen": "AI-funkciók",
     "accept": ["az AI", "AI-"],
@@ -130,9 +136,16 @@
     "confidence": "high",
     "sources": "catalog (askCmdr.* A válasz nem fejeződött be; errors.volume.signatureInvalid A szerver válasza)"
   },
+  "ai-lookup": {
+    "accept": ["keresési", "keresést"],
+    "chosen": "keresés",
+    "confidence": "high",
+    "forms": "a round of lookups → keresési kör; a limit of N rounds → N körös keresési korlát (the noun stays singular after the numeral)",
+    "sources": "catalog precedent: `askCmdr.error.repeatedToolCall`, `askCmdr.event.contextTrimmed`"
+  },
   "ai-tool": {
     "chosen": "eszköz",
-    "forms": "tool status chips: verbal noun while doing (Egy mappa listázása), -va/-ve participle when done (Egy mappa listázva), same object in both; Finding/Found → X keresése / X megtalálva; searching a log or a collection → X átvizsgálása / X átvizsgálva; fallback Working → Folyamatban, Used a tool → Egy eszköz használva",
+    "forms": "tool status chips: verbal noun while doing (Egy mappa listázása), -va/-ve participle when done (Egy mappa listázva), same object in both; Finding/Found → X keresése / X megtalálva; searching a log or a collection → X átvizsgálása / X átvizsgálva; fallback Working → Folyamatban, Used a tool → Egy eszköz használva; a named chip puts {name} as bare possessor ({name} listázása / {name} listázva) or after ide:/itt:; a query chip → Rákeresés / Rákeresve erre: „{query}” (keresve is no done state); Tried to X → Megpróbált/Megpróbálta X-ni, never Nem sikerült (a reason follows on the line)",
     "avoid": [
       {
         "form": "Átnevezési terv elkészült",
@@ -850,6 +863,12 @@
     "forms": "More about “X” → Bővebben: X (a colon, no quotes)",
     "sources": "shipped catalog frame, the same in onboarding.moreAbout, servers.sheet.autoReconnectInfoLabel, and fileOperations.transferDialog.rememberChoiceInfoLabel"
   },
+  "level": {
+    "chosen": "szint",
+    "confidence": "high",
+    "sources": "MS terminology (szint); shipped settings.archives.compressionLevel.label",
+    "accept": ["szintek", "nagyítás"]
+  },
   "link": {
     "chosen": "link",
     "confidence": "high",
@@ -1235,7 +1254,7 @@
   },
   "edit": {
     "chosen": "szerkesztés",
-    "accept": ["szerkeszt", "módosít"],
+    "accept": ["szerkeszt", "szerkeszd", "módosít"],
     "forms": "the menu bar Edit → Szerkesztés; F4 Edit in editor → Megnyitás szerkesztésre (tentative); editing an archive → Archívum szerkesztése; editing a saved server → Szerver szerkesztése…; to change them (a form) → a módosításukhoz",
     "confidence": "high",
     "sources": "macOS (Szerkesztés); catalog (commands.fileEdit.label)"
@@ -2244,6 +2263,13 @@
     "forms": "the Servers list → a Szerverek lista (a Szerverek listában, your → a Szerverek listádban); stops listing it → leveszi a listáról; Cmdr lists X (verb) → a Cmdr felsorolja",
     "confidence": "high",
     "sources": "Microsoft terminology (list → lista); macOS AppKit (méretlista, stíluslista); catalog (fileExplorer.navigation.forgetServerConfirm)"
+  },
+  "listing": {
+    "chosen": "listázás",
+    "accept": ["listáz", "Fájllista"],
+    "forms": "tool chip → {name} listázása / {name} listázva (the name as bare possessor); the Settings section keeps Fájllista",
+    "confidence": "high",
+    "sources": "macOS AppKit MenuCommands (List… → Listázás…); Total Commander (mappa listázás); Thunar (könyvtárlistázás); catalog (askCmdr.tool.listDir.doing Egy mappa listázása)"
   },
   "local": {
     "chosen": "helyi",
@@ -3547,6 +3573,16 @@
     "confidence": "high",
     "sources": "catalog"
   },
+  "start": {
+    "chosen": "elindul",
+    "accept": ["elindít", "indul", "indít"],
+    "exceptions": {
+      "indexing.step.statusPending": "a status cell: Not started is the waiting state, and the slot takes one word (Várakozik)"
+    },
+    "forms": "a task starting → elindul; so nothing started → ezért semmi nem indult el; Why this didn’t start → Miért nem indult el; Cmdr starts X → a Cmdr elindítja",
+    "confidence": "high",
+    "sources": "macOS AppKit hu (nem sikerült elindítani); catalog (suggestedOps.refusal.label, suggestedOps.refusal.couldNotStart.message: semmi nem indult el, 4×)"
+  },
   "startup-disk": {
     "chosen": "indítólemez",
     "forms": "your startup disk → az indítólemezed",
@@ -4187,5 +4223,27 @@
       "fileExplorer.errorPane.hoursAgo": "a terse age chip in the error pane: the bare abbreviation ({hours} ó) already reads as elapsed time, and ezelőtt would crowd the chip"
     },
     "sources": "macOS Finder hu (Egy héttel ezelőtt); catalog (ui.toast.age, queryUi.age.*, fileExplorer.errorPane.aMomentAgo)"
+  },
+  "zip": {
+    "chosen": "zip",
+    "accept": ["zip-archívum", "zip archívum", "zipet", "zipben", "zipből", "Zip"],
+    "forms": "the bare prose noun takes front-vowel suffixes, no hyphen (zipet, zipben, zipből); into or out of a zip archive → zip-archívumba / zip-archívumból (see archive); a capitalized heading keeps macOS's space (Zip archívumok)",
+    "confidence": "high",
+    "sources": "macOS hu (Zip archívum, ZIP-archívum); Total Commander / Double Commander hu (ZIP fájl); catalog (zipet 3×, zipben 2×, zipből, zip-archívum 3×)"
+  },
+  "reasoning-effort": {
+    "chosen": "Érvelés mértéke",
+    "confidence": "tentative",
+    "sources": "OpenAI docs are English-only; no established rendering, so built from the locale’s reasoning wording; érvelés as in the catalog’s keywords"
+  },
+  "reasoning-effort-anthropic": {
+    "chosen": "Erőfeszítés",
+    "confidence": "tentative",
+    "sources": "Anthropic localized docs, platform.claude.com/docs/<lang>/build-with-claude/effort, read 2026-10-28: no hu docs; the localized ones render the plain word (ru усилие, es esfuerzo, de Aufwand)"
+  },
+  "thinking-level": {
+    "chosen": "Gondolkodási szint",
+    "confidence": "tentative",
+    "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
   }
 }

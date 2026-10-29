@@ -172,6 +172,40 @@ fn mount_root_falls_back_to_the_volume_registry() {
     manager.unregister(vid);
 }
 
+/// A share remounted at `/Volumes/naspi-1` still carries its last scan's
+/// `/Volumes/naspi` in the meta. Its root is the one root function's answer, live
+/// first, so search strips and prefixes the same root `list_dir` checks against;
+/// the meta's would make every scope under the live mount match nothing.
+#[test]
+fn a_live_volumes_root_beats_the_root_its_last_scan_recorded() {
+    use crate::file_system::volume::manager::get_volume_manager;
+    use cmdr_local::LocalPosixVolume;
+    use std::sync::Arc;
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    let vid = "smb-remounted-test";
+    let live_root = "/Volumes/cmdr-remounted-nas-1";
+    make_index_db(dir.path(), vid, "/Volumes/cmdr-remounted-nas");
+
+    let manager = get_volume_manager();
+    manager.register(
+        vid,
+        Arc::new(LocalPosixVolume::local_folder(
+            "Remounted",
+            live_root,
+            crate::volume_host::host(),
+        )),
+    );
+    let cancel = AtomicBool::new(false);
+    let loaded = load_volume_blocking(vid, &SearchDirs::single(dir.path()), &cancel);
+    manager.unregister(vid);
+
+    match loaded {
+        VolumeLoad::Loaded(v) => assert_eq!(v.mount_root.as_deref(), Some(live_root)),
+        other => panic!("expected Loaded, got {}", describe(&other)),
+    }
+}
+
 // ── Staleness + refresh pacing ───────────────────────────────────────
 
 /// Only ROOT can go stale: its writer bumps the global generation. A non-root

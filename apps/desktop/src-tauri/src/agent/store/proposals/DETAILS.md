@@ -16,10 +16,19 @@ Two consequences fall out:
 - **`source_volume_id` is a GROUP column, not a sweep column.** A sweep may span volumes; a group may not.
 - **Rename is the documented exception**: its ops carry their own destinations and the group binds a shared _parent_,
   because `start_bulk_rename` refuses a row whose source and destination parents differ.
+- **`proposal_ops.destination` is a per-op NAME, never a path**: always set under rename (the rename review reads it
+  unconditionally), set under move or copy only for an op that lands under a new name (`NULL` keeps its own), and
+  `NULL` under every other verb. The transfer engine takes the move's or copy's names as one per-source map, so the
+  group stays one call. (v4's DDL comment says "rename only"; it describes the shape that shipped then, and a shipped
+  migration is never edited.)
+
+A **server group** (`add_server` / `edit_server`) is the one group with no executor call and no ops: its draft is the
+whole proposal (§ A server group).
 
 `GroupIntent` encodes exactly that table in the type system. Each variant carries the target its verb binds and the op
-shape it takes (`NewOp` for the shared-target verbs, `NewRename` for rename), so the pairing can't be violated and there
-is no runtime check to keep in sync with the executors. Adding a verb means adding a variant, which makes every `match`
+shape it takes (`TransferOp`, with its optional name, for move and copy; `NewOp` for the other shared-target verbs;
+`NewRename` for rename), so the pairing can't be violated and there is no runtime check to keep in sync with the
+executors. Adding a verb means adding a variant, which makes every `match`
 here a compile error until it's handled.
 
 ## What preflight accepts
@@ -114,6 +123,8 @@ run leaves no `approved` rows.
   saw is what runs" true: `../../suggested_ops/DETAILS.md`.
 - Every classification column is a TEXT token, so `main.db` stays `sqlite3`-inspectable and nothing branches on a
   message string.
+- **A server group's `source_volume_id`** is the edited place's id, or `""` for an add, and nothing reads it (§ A server
+  group). `proposal_server_drafts` CHECKs that `editing_id` and `previous` are set together.
 
 ## What a producer may add beside the ops
 
@@ -124,6 +135,55 @@ verb-agnostic, so adding a verb never means adding a column every other verb lea
 
 The catch a producer owns: `create_group` is its own transaction, so a sidecar row can only be written afterwards. State
 what a group missing its sidecar means, and fail closed — rename refuses to load such a group at all.
+
+**The one exception is a server group's draft, which the spine writes itself** (§ A server group). Rename's evidence is
+display-only, so a group missing it can fail closed later. A server group's draft IS the operation: a pending card with
+no draft is one nothing can show or save. So `create_group` and `repropose_group` write it from the intent inside the
+group's own transaction, and it can't be missing.
+
+## A server group
+
+**Decision: a server proposal is a ZERO-OP `GroupIntent::SaveServer` variant, its draft in a sidecar the spine writes in
+the group's own transaction.** Verbs `add_server` / `edit_server` (picked by whether the intent carries a `ServerEdit`),
+reversibility `server_settings`, and `proposal_server_drafts` (migration v13: `draft`, `editing_id`, `previous`,
+`completion_note`), where `draft` and `previous` are the spine's own `ServerDraft` as JSON (`draft.rs`; the writes and
+the claim are `server.rs`, the fail-closed read `read.rs`).
+
+**Why a variant, not a sibling `server_proposals` table**: one lifecycle. Sweeps, the `pending`-only amend with its
+`revision`, the claim's `pending → approved`, rejection, the recovery sweep, the thread line, the agent hearing every
+answer (`../../outcomes.rs`), the badge (`count_pending` counts groups), `suggestions-changed`, analytics, and
+`list_suggestions` all apply unchanged. A sibling table would duplicate each, or leave a server card outside one: a
+badge that doesn't count it, an answer the agent never hears.
+
+**Against it, and the answer**: file-shaped code assumes ops. The acceptance record and the op binding mean nothing for
+zero ops, so a server group takes its OWN claim, and neither claim takes the other's kind:
+
+- `record_acceptance` refuses a server group as `AcceptanceOutcome::NotAFileGroup`. With no acceptance on record,
+  `claim_group_for_execution` then refuses it as a binding mismatch, so the file path can't approve one.
+- `claim_server_group` refuses a file group as `NotAServerGroup`. Otherwise it is one `BEGIN IMMEDIATE`: check the
+  status and the `revision` the card showed, read the draft, then `UPDATE ... WHERE status = 'pending' AND revision = ?`.
+  **The revision IS the binding**: a draft changes only through `repropose_group`, which bumps it in the same
+  transaction it replaces the draft (`tests/server.rs` holds that a failed draft write leaves both old), and nothing
+  changes it after the claim.
+
+**The draft fails closed.** A server group with no draft row, or one that won't decode, is a typed
+`AgentStoreError::ServerDraft` on every read (`read_server_proposal`, `list_groups`, the claim), ❌ never a default
+draft: a card with invented fields is one the user could approve. `ServerDraft` is `deny_unknown_fields` and has no
+field that could hold a secret (no password, key, key file, agent, or auto-reconnect), so a stored secret is
+unrepresentable both ways. The error names the group, never the JSON (it holds a host and an account).
+
+**An amend may change a group's kind.** The draft row follows the intent: `repropose_group` writes it for a server
+intent and deletes it for a file one, in the same transaction.
+
+**Completion and give-back.** `mark_server_group_completed` is the file group's conditional `approved → completed` plus
+the `ServerSaveNote` (a save that wrote the host but not its share) in the same transaction. `release_claim` gives a
+server claim back unchanged (zero ops, so its no-outcome guard holds trivially); WHEN it may is the approval service's
+call: only a save that wrote nothing (`../../suggested_ops/DETAILS.md` § Approving a server, which also says why no save
+writes a note today). A completed group never goes back. `recover_interrupted_groups` freezes an
+`approved` server group as `interrupted`: the app died mid-save, and nothing knows whether it landed.
+
+**`source_volume_id` (NOT NULL) of a server group** holds the edited place's id for an edit and `""` for an add
+(`GroupIntent::stored_source_volume`); `NewGroup::source_volume_id` is ignored for one, and nothing reads the column.
 
 ## What lives a layer up
 

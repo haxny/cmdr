@@ -9,7 +9,7 @@
 use serde::{Deserialize, Serialize};
 use tokio_util::sync::CancellationToken;
 
-use cmdr_nfs::{NfsConnectError, NfsIdentity, NfsIdentitySource, NfsServer};
+use cmdr_nfs::{NfsConnectError, NfsIdentitySource, NfsServer};
 
 // ============================================================================
 // The wire vocabulary
@@ -105,7 +105,7 @@ pub async fn list_nfs_exports(host: String, port: Option<u16>) -> NfsExportList 
 #[tauri::command]
 #[specta::specta]
 pub async fn guess_nfs_identity(host: String, port: Option<u16>, export_path: String) -> GuessedNfsIdentity {
-    let this_mac = this_mac_identity();
+    let this_mac = crate::saved_servers::nfs_places::this_mac_identity();
     let server = NfsServer::new(&host, port);
     let guess = cmdr_nfs::guess_identity(&server, &export_path, this_mac, CancellationToken::new()).await;
     let (identity, source) = match guess {
@@ -117,14 +117,6 @@ pub async fn guess_nfs_identity(host: String, port: Option<u16>, export_path: St
         gid: identity.gid,
         source,
     }
-}
-
-/// This process's own uid and gid.
-fn this_mac_identity() -> NfsIdentity {
-    // SAFETY: `getuid` and `getgid` take no arguments, can't fail, and touch no
-    // memory of ours.
-    let (uid, gid) = unsafe { (libc::getuid(), libc::getgid()) };
-    NfsIdentity { uid, gid }
 }
 
 /// One saved NFS place as the edit sheet reads it: the stored entry plus the

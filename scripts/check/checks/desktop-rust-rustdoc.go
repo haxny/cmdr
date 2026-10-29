@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -107,19 +108,26 @@ func RunRustdoc(ctx *CheckContext) (CheckResult, error) {
 	if documented == 0 {
 		return Skipped("no first-party members build on this platform"), nil
 	}
+	vendored, err := vendoredPatchDirs(ctx.RootDir)
+	if err != nil {
+		return CheckResult{}, err
+	}
 
 	cmd := exec.Command("cargo", args...)
 	cmd.Dir = ctx.RootDir
 	cmd.Env = rustdocEnv(cmd.Environ(), ctx.RootDir, rustdocLintFlags(), ctx.CI)
 	output, err := RunCommand(cmd, true)
-	return rustdocVerdict(output, err, documented, "")
+	return rustdocVerdict(rustdocOwnOutput(output, vendored), err, documented, "")
 }
 
 // rustdocArgs is the doc build for one target OS, and how many members it documents.
 // Pure, so the Linux lane (`desktop-rust-clippy-linux.go`) can ask the container the
 // same question this lane asks the host.
 func rustdocArgs(members []WorkspaceMember, targetOS string) ([]string, int) {
-	args := []string{"doc", "--no-deps", "--all-features", "--document-private-items", "--locked"}
+	// JSON so each diagnostic names its package: `rustdocOwnOutput` drops a vendored
+	// crate's and renders the rest back to text.
+	args := []string{"doc", "--no-deps", "--all-features", "--document-private-items", "--locked",
+		"--message-format=json"}
 	documented := 0
 	for _, m := range members {
 		// A vendored fork's docs aren't ours to hold to this, and `--all-features`
@@ -132,6 +140,70 @@ func rustdocArgs(members []WorkspaceMember, targetOS string) ([]string, int) {
 		documented++
 	}
 	return args, documented
+}
+
+// vendoredPatchDirs is every crate the root `[patch.crates-io]` swaps in from a
+// path (`vendor/rc-zip`), relative to the root.
+func vendoredPatchDirs(rootDir string) ([]string, error) {
+	patched, err := readPathPatches(rootDir)
+	if err != nil {
+		return nil, err
+	}
+	dirs := make([]string, 0, len(patched))
+	for _, path := range patched {
+		dirs = append(dirs, filepath.ToSlash(filepath.Clean(path)))
+	}
+	return dirs, nil
+}
+
+// cargoJSONMessage is the part of a `--message-format=json` line this lane reads.
+type cargoJSONMessage struct {
+	Reason       string `json:"reason"`
+	ManifestPath string `json:"manifest_path"`
+	Message      struct {
+		Rendered string `json:"rendered"`
+	} `json:"message"`
+}
+
+// rustdocOwnOutput turns `cargo doc --message-format=json` output back into the
+// text stream the rest of this lane reads, minus every diagnostic from a crate in
+// `vendored` (the `[patch.crates-io]` paths).
+//
+// Cargo caps a registry crate's lints, so its warnings never print. A vendored
+// copy is a PATH dependency, which cargo treats as local: its own `[lints]` table
+// applies uncapped, and `rustic_core`'s names a lint our toolchain has removed.
+// That's third-party code we don't edit to please a lint, so it's dropped here,
+// by the package each diagnostic names. Cargo's own lines (stderr text, not JSON)
+// pass through; non-diagnostic JSON (artifacts, the build summary) is dropped.
+func rustdocOwnOutput(output string, vendored []string) string {
+	var out strings.Builder
+	for _, line := range strings.SplitAfter(output, "\n") {
+		var msg cargoJSONMessage
+		if !strings.HasPrefix(line, "{") || json.Unmarshal([]byte(line), &msg) != nil {
+			out.WriteString(line)
+			continue
+		}
+		if msg.Reason != "compiler-message" || isVendoredManifest(msg.ManifestPath, vendored) {
+			continue
+		}
+		out.WriteString(msg.Message.Rendered)
+		if !strings.HasSuffix(msg.Message.Rendered, "\n") {
+			out.WriteString("\n")
+		}
+	}
+	return out.String()
+}
+
+// isVendoredManifest says whether a manifest sits in one of the vendored dirs. A
+// suffix match, because the Linux lane's paths are the container's.
+func isVendoredManifest(manifestPath string, vendored []string) bool {
+	dir := filepath.ToSlash(filepath.Dir(manifestPath))
+	for _, v := range vendored {
+		if strings.HasSuffix(dir, "/"+v) {
+			return true
+		}
+	}
+	return false
 }
 
 // rustdocLintFlags is the lint contract as one `RUSTDOCFLAGS` value.

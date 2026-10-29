@@ -14,7 +14,7 @@
 //! table would let a stray cancel from one sign-in dialog reach into another
 //! backend's dial.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -78,7 +78,12 @@ impl AttemptTable {
         places: Vec<String>,
         set_out: DialTicket,
     ) -> (CancellationToken, AttemptGuard) {
+        #[cfg(test)]
+        DIALS_FILED.with(|filed| filed.set(filed.get() + 1));
         let cancel = CancellationToken::new();
+        if CALLED_OFF_EARLY.lock_ignore_poison().contains(attempt_id) {
+            cancel.cancel();
+        }
         let serial = self.next_serial.fetch_add(1, Ordering::Relaxed);
         let set_out_at = set_out.0;
         self.entries.lock_ignore_poison().insert(
@@ -151,6 +156,36 @@ impl AttemptTable {
     pub fn is_filed(&self, attempt_id: &str) -> bool {
         self.entries.lock_ignore_poison().contains_key(attempt_id)
     }
+}
+
+#[cfg(test)]
+thread_local! {
+    static DIALS_FILED: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// How many dials this thread filed in any backend's table, the seam a test reads
+/// to prove a save dialed nothing: every connect wiring's dial (SFTP, WebDAV, S3,
+/// NFS, a saved SMB share) files one before it opens a socket. Per thread, so a
+/// `#[tokio::test]` (current-thread) counts only its own.
+#[cfg(test)]
+pub fn dials_filed() -> u64 {
+    DIALS_FILED.with(std::cell::Cell::get)
+}
+
+/// Attempt ids called off before their dial filed them, across every table: a
+/// shared saved-place dial (`network::dial_flights`) is called off by an id its
+/// backend may not have filed yet, since SFTP and S3 read the Keychain first.
+static CALLED_OFF_EARLY: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
+
+/// Calls off `attempt_id` ahead of its filing: the attempt registers already
+/// cancelled. ❗ Pair with [`forget_call_off`] once the dial ends, or the id stays.
+pub fn call_off_early(attempt_id: &str) {
+    CALLED_OFF_EARLY.lock_ignore_poison().insert(attempt_id.to_string());
+}
+
+/// Drops a call-off [`call_off_early`] made, once its dial is over.
+pub fn forget_call_off(attempt_id: &str) {
+    CALLED_OFF_EARLY.lock_ignore_poison().remove(attempt_id);
 }
 
 /// Takes one attempt's entry out of the table when its connect ends, however it

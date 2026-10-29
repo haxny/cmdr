@@ -264,14 +264,64 @@ describe('ModalDialog body padding and resizing', () => {
     if (!panel) return
     panel.style.width = '820px'
 
-    const titleBar = target.querySelector('.dialog-title-bar')
-    titleBar?.dispatchEvent(new MouseEvent('mousedown', { clientX: 10, clientY: 10, bubbles: true }))
-    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 60, clientY: 40 }))
-    document.dispatchEvent(new MouseEvent('mouseup'))
-    await tick()
+    await dragTitleBar(target, { x: 10, y: 10 }, { x: 60, y: 40 })
 
     expect(panel.style.width).toBe('820px')
     expect(panel.style.left).toBe('50px')
+    target.remove()
+  })
+})
+
+/** Presses the title bar at `from`, moves the pointer to `to`, and releases it. */
+async function dragTitleBar(target: HTMLElement, from: { x: number; y: number }, to: { x: number; y: number }) {
+  const titleBar = target.querySelector('.dialog-title-bar')
+  titleBar?.dispatchEvent(new MouseEvent('pointerdown', { clientX: from.x, clientY: from.y, bubbles: true }))
+  document.dispatchEvent(new MouseEvent('pointermove', { clientX: to.x, clientY: to.y }))
+  document.dispatchEvent(new MouseEvent('pointerup'))
+  await tick()
+}
+
+// Dragged past the overlay's top, the title bar used to slide under the window's own
+// title bar, leaving nothing to grab the dialog by again.
+describe('ModalDialog drag limits', () => {
+  /** A 1000×700 overlay 40px down, a 400×300 panel centered in it at (300, 240), a 44px title bar. */
+  async function mountLaidOut() {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(ModalDialog, { target, props: { titleId: 't', title: titleSnippet, children: bodySnippet } })
+    await tick()
+    const overlay = target.querySelector<HTMLElement>('.modal-overlay')
+    const panel = target.querySelector<HTMLElement>('.modal-dialog')
+    const titleBar = target.querySelector<HTMLElement>('.dialog-title-bar')
+    if (!overlay || !panel || !titleBar) throw new Error('the dialog never mounted')
+    const rect = (left: number, top: number, width: number, height: number) =>
+      ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top }) as DOMRect
+    overlay.getBoundingClientRect = () => rect(0, 40, 1000, 700)
+    // The panel's rect follows the offset it's rendered at, as a laid-out one would.
+    panel.getBoundingClientRect = () =>
+      rect(300 + (parseFloat(panel.style.left) || 0), 240 + (parseFloat(panel.style.top) || 0), 400, 300)
+    titleBar.getBoundingClientRect = () => rect(0, 0, 400, 44)
+    return { target, panel }
+  }
+
+  it('stops the panel at the overlay top while the pointer keeps going', async () => {
+    const { target, panel } = await mountLaidOut()
+    await dragTitleBar(target, { x: 500, y: 260 }, { x: 500, y: 0 })
+    expect(panel.style.top).toBe('-200px')
+    target.remove()
+  })
+
+  it('keeps a strip of the title bar inside the right edge', async () => {
+    const { target, panel } = await mountLaidOut()
+    await dragTitleBar(target, { x: 500, y: 260 }, { x: 2000, y: 260 })
+    expect(panel.style.left).toBe('600px')
+    target.remove()
+  })
+
+  it('moves freely while the title bar stays inside', async () => {
+    const { target, panel } = await mountLaidOut()
+    await dragTitleBar(target, { x: 500, y: 260 }, { x: 450, y: 200 })
+    expect([panel.style.left, panel.style.top]).toEqual(['-50px', '-60px'])
     target.remove()
   })
 })

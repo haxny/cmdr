@@ -154,6 +154,10 @@
     ],
     "hu": [
       {
+        "source": "Not connected yet",
+        "reason": "Two surfaces with two verbs, per the `connect` ruling in `docs/i18n/hu/terms.json`. The servers hub status cell (`servers.hub.status.notConnectedYet`) sits in one column with `Kapcsolódva` (AppKit SavePanel's `Nem kapcsolódik` stem), so it reads `Még nincs kapcsolódva`. The error titles (`errors.listing.notConnected.title`, `errors.write.notConnected.title`) cover a phone as well as a server, where the attach verb `csatlakoztat` fits, so they keep `Még nincs csatlakoztatva`."
+      },
+      {
         "source": "Archive",
         "reason": "Two parts of speech. `askCmdr.sessions.archive` is the VERB that hides a chat (`Archiválás`, the `archive-chat` ruling); `suggestedOps.facts.archive` is the NOUN label before the zip file a compress suggestion creates (`Archívum`, the `archive` ruling), like `fileExplorer.list.rowKind.archive`."
       },
@@ -404,6 +408,10 @@
       {
         "source": "Modified",
         "reason": "`Đã sửa đổi` is the date column (Finder Get Info \"Modified:\"); `shortcuts.section.filterModified` filters commands whose shortcut the user CHANGED, so `Đã thay đổi`. One word would make the shortcut filter read like a date filter. See `docs/i18n/vi/terms.json` `modified`."
+      },
+      {
+        "source": "Never",
+        "reason": "Two senses. `Chưa từng` says something has never happened yet (a server never used, `servers.hub.neverUsed`); `Không bao giờ` is the picker option meaning never pause however much an answer costs (`settings.askCmdr.spendPause.opt.never`). The never-yet form reads as a past fact, not a choice."
       }
     ],
     "zh": [
@@ -478,6 +486,10 @@
       {
         "source": "Why",
         "reason": "Two shapes. `onboarding.stepFda.why` is a question link (`为什么？`); `suggestedOps.agentReason` is a label leading the AI's reason, where Chinese names the noun (`原因：`, which its spoken form `原因，按 AI 的说法：` starts with). A `为什么：` label before a statement reads wrong."
+      },
+      {
+        "source": "Never",
+        "reason": "Two senses. `从未` says something has never happened (a server never used, `servers.hub.neverUsed`); `从不` is the picker option meaning never pause however much an answer costs (`settings.askCmdr.spendPause.opt.never`). `从未` reads as a past fact, not a setting."
       }
     ],
     "zh-Hant": [
@@ -556,6 +568,10 @@
       {
         "source": "Skip",
         "reason": "`略過` answers ONE clash (`fileOperations.transferProgress.conflictSkip`); the Settings option `settings.fileOperations.defaultConflictPolicy.opt.skip` is a standing policy and reuses the copy dialog radio `fileOperations.transferDialog.policySkip`, whose Chinese has no one-clash form, so both say `全部略過`."
+      },
+      {
+        "source": "Never",
+        "reason": "Two senses. `從未使用` says a server has never been used (`servers.hub.neverUsed`); `從不` is the picker option meaning never pause however much an answer costs (`settings.askCmdr.spendPause.opt.never`). `從未` reads as a past fact, not a setting."
       }
     ],
     "ru": [

@@ -31,9 +31,10 @@ against the page's "yours forever" promise. Prices, wiring, and what each type g
 
 - **All user-facing copy here lives in `messages/en/licensing.json`, resolved via `t`/`tString`/`<Trans>`**
   (`#lib/intl`), never hardcoded; `cmdr/no-raw-user-facing-string` covers `lib/licensing/` and `LicenseSection.svelte`.
-  Dates are locale-formatted at the call site and passed in as preformatted `{date}` STRING params. Catalog conventions
-  (doubled apostrophes, `<Trans>` tag snippets): `#lib/intl/messages/CLAUDE.md`. Parity net:
-  `licensing-i18n-parity.test.ts`, which pins the reminder's price literal so it can't drift.
+  Dates go through `formatLicenseDate` (the OS region, via `format-utils.ts::formatLongDate`) and are passed in as
+  preformatted `{date}` STRING params. Catalog conventions (doubled apostrophes, `<Trans>` tag snippets):
+  `#lib/intl/messages/CLAUDE.md`. Parity net: `licensing-i18n-parity.test.ts`, which pins the reminder's price literal
+  so it can't drift.
 - **Activation uses the verify/commit split.** `handleActivate` calls `verifyLicense()` (nothing stored), then
   `validateLicenseWithServer(transactionId)` (transaction ID passed explicitly because the key isn't stored yet), then
   decides whether to `commitLicense()`. Four outcomes: active → commit + onSuccess; expired → commit + inline expiry

@@ -188,13 +188,13 @@ async fn model_is_gone(err: &AiError) -> bool {
 /// `openai::` namespace, or a `genai` release that stops recognizing the prefix, would leave
 /// every test below green against the wrong wire format.
 ///
-/// Costs no network call: `resolve_adapter` runs the resolver alone.
+/// Costs no network call: `resolve_model` runs the resolver alone.
 /// `client_unit_test::smoke_provider_models_route_to_their_intended_adapters` guards the same
 /// invariant without a key, so an ordinary test run catches it too.
 #[tokio::test]
 #[ignore = "real API call: set GEMINI_API_KEY to run"]
 async fn smoke_gemini_routes_to_the_native_adapter() {
-    let adapter = backend().resolve_adapter().await;
+    let adapter = backend().resolve_model().await.map(|model| model.adapter_kind);
     assert!(
         matches!(adapter, Ok(AdapterKind::Gemini)),
         "`{}` must reach Gemini's native adapter, got {adapter:?}",

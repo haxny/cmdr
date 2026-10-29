@@ -99,6 +99,13 @@ banner's Sign in.
   `needs_host_key_approval`, `needs_credentials`, or `authentication_rejected`, the place goes to the sheet as an ABSENT
   one, carrying the outcome so the sheet opens on the right step.
 
+**Ask Cmdr takes the same arms from the backend** (`connect_volume`, `src-tauri/src/agent/tools/DETAILS.md` § Connecting
+a saved place): for arm 1 it emits `volume-reconnect-requested`, which `smbReconnectManager` answers with the same
+`startCycle`; arm 2 answers the model "needs credentials"; arm 3 dials through the same command body. Every dial of a
+saved place is ONE flight per place in the backend (`src-tauri/src/network/dial_flights.rs`): a caller with no typed
+secret joins a dial already out, one carrying a secret dials its own after it, and each caller's Cancel (or Stop) lets
+only that caller go, so the pane's Cancel never ends the agent's dial or the other way round.
+
 ❗ **`auth_method_unsupported` never reaches the sheet.** The server challenged with a scheme Cmdr doesn't speak, the
 secret never left, and no typing fixes it. A password box over that asks for something that cannot help.
 
@@ -518,10 +525,12 @@ somewhere else. Only "Add and open" moves a pane:
   (`disconnectPlace`), so the row reads Saved, and a password Remember filed stays filed. A place that was already live
   before the Add keeps its session, since a pane may be standing on it.
 - **"Add anyway"** appears under the address only after `unreachable` or `timed_out`, beside a line saying nothing was
-  checked. It saves as typed: `connect_to_server` with `check_reachability: false` for SMB, `update_saved_server` for
-  SFTP and WebDAV (plus the typed password when Remember is on). ❌ Never for `invalid_url`: `AddServerError` keeps an
-  address that doesn't parse apart from a server that didn't answer, and only the second can be added anyway. ❌ Never
-  the default.
+  checked. It saves as typed, contacting nothing until the user connects: `connect_to_server` with
+  `check_reachability: false` for SMB (saved `awaitingFirstConnect`, out of discovery and share listing, and the hub row
+  reads "Not connected yet": `src-tauri/src/network/DETAILS.md` § "A manual server saved without contact"),
+  `update_saved_server` for SFTP, WebDAV, S3, and NFS (plus the typed password when Remember is on). ❌ Never for
+  `invalid_url`: `AddServerError` keeps an address that doesn't parse apart from a server that didn't answer, and only
+  the second can be added anyway. ❌ Never the default.
 
 ❗ **SMB is the default**, the one that costs nothing when it's wrong: SMB browses with no account, so it asks the user
 for nothing, while defaulting to SFTP would put an account field in front of someone who typed a NAS name off a sticker.

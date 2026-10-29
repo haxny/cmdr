@@ -77,6 +77,7 @@ mod human_wait;
 mod in_flight_temps;
 mod journal;
 mod journal_search;
+mod leaf_validation;
 // The local-filesystem copy, move, delete, and trash starters.
 mod ledger;
 mod local_start;
@@ -181,10 +182,12 @@ pub use source_binding::{ExpectedSources, LocalContent, RemoteContent, SourceFin
 // Engine-free helpers the IPC edge asks before or beside an operation: the F8
 // routing question, where a path's trash is, the bare unjournaled trash move
 // (for the app's own leftovers, which no undo should list), the look-alike name
-// check, whether two paths are one local file, and anchoring a volume-relative
+// check, why named items can't land (`TransferLeaves::check_landings`' answer),
+// whether two paths are one local file, and anchoring a volume-relative
 // destination (`routing.rs`).
 pub use delete::cloud_trash::{TrashRoutingAnswer, routing_for_selection as trash_routing_for_selection};
 pub use delete::trash::{move_to_trash_sync, trash_dir_for_path};
+pub use leaf_validation::LandingClash;
 pub use look_alike::held_in_another_spelling;
 pub use rename::same_local_file;
 pub use routing::resolve_dest_path;
@@ -195,7 +198,7 @@ pub use types::{
     LeftoversKeptEvent, LifecycleStatus, LockedSourcesAnswer, LockedSourcesAnswerOutcome, OperationStatus,
     ReadOnlySide, RetryOutcome, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent,
     ScanPreviewProgressEvent, ScanPreviewPurpose, ScanPreviewRefusal, ScanPreviewStartResult, ScanPreviewTotals,
-    ScanProgressEvent, SourceItemOutcome, SourcesGoneAnswerOutcome, TransferActivity, VolumeCopyConfig,
+    ScanProgressEvent, SourceItemOutcome, SourcesGoneAnswerOutcome, TransferActivity, TransferLeaves, VolumeCopyConfig,
     WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent,
     WriteLockedSourcesEvent, WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationStartResult,
     WriteOperationType, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
@@ -348,6 +351,14 @@ mod approved_op_parity_tests;
 mod journal_capture_tests;
 #[cfg(test)]
 mod journal_capture_volume_tests;
+#[cfg(test)]
+mod named_leaf_entry_tests;
+#[cfg(test)]
+mod named_leaf_undo_tests;
+#[cfg(test)]
+mod named_leaves_tests;
+#[cfg(test)]
+mod named_leaves_volume_tests;
 // Every write path announces each own write before the syscall that makes it.
 #[cfg(test)]
 mod own_write_announce_tests;

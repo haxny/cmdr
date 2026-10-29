@@ -22,8 +22,8 @@ Friendly, concise, active, calm. Microsoft's Telugu style guide sets the same re
 `te/microsoft-style-guides/StyleGuide.pdf`, 2026-06-20). Keep sentences short and spoken; avoid the heavy Sanskritized
 literary register (grandhika), use the modern standard (vyavaharika).
 
-Error messages stay calm and actionable. Don't reach for a "లోపం" (error) or "విఫలమైంది" (failed) label; phrase the
-problem and the next step, the way the English voice avoids "error" / "failed".
+Error messages stay calm and actionable. Don't reach for a "లోపం" (error) or "విఫలమైంది" (failed) label; phrase the problem
+and the next step, the way the English voice avoids "error" / "failed".
 
 ## Formality
 
@@ -32,8 +32,8 @@ problem and the next step, the way the English voice avoids "error" / "failed".
   reference pile, 2026-06-20). Never use `నువ్వు` in UI: it reads as overly familiar or talking down. Keep verb endings
   (`-ండి` polite imperatives) and pronouns in the `మీరు` register consistently.
 - **Buttons and menu items: polite imperative.** Telugu UI uses the polite `-ండి` imperative for actions: "రద్దు చేయి" /
-  "రద్దుచేయి" (cancel), "తొలగించు" (delete), "నకలు చెయ్యి" (copy), "తరలించు" (move), "తెరువు" (open), "మూసివేయి"
-  (close). Keep these concise; don't expand to full polite request sentences on buttons.
+  "రద్దుచేయి" (cancel), "తొలగించు" (delete), "నకలు చెయ్యి" (copy), "తరలించు" (move), "తెరువు" (open), "మూసివేయి" (close). Keep these
+  concise; don't expand to full polite request sentences on buttons.
 
 ## Decision points
 
@@ -67,14 +67,14 @@ problem and the next step, the way the English voice avoids "error" / "failed".
   disagree on the most visible words (verified against the reference pile, 2026-06-20):
   - folder → Microsoft `ఫోల్డర్` (loanword) vs GNOME `సంచయం` (native).
   - file → Microsoft `ఫైల్` (loanword) vs Thunar `దస్త్రం` (native).
-  - trash → Microsoft `రీసైకిల్ బిన్` (loanword) vs GNOME/Thunar `చెత్తబుట్ట` (native "rubbish bin"). GNOME and Thunar
-    agree here, strengthening the native form.
+  - trash → Microsoft `రీసైకిల్ బిన్` (loanword) vs GNOME/Thunar `చెత్తబుట్ట` (native "rubbish bin"). GNOME and Thunar agree
+    here, strengthening the native form.
   - They agree on copy → `నకలు చెయ్యి`, move → `తరలించు`, delete → `తొలగించు`, settings → `సెట్టింగ్‌లు`.
 - **Recommendation:** lean toward the native GNOME/Thunar coinages for the file-manager-core nouns where two independent
-  open-source catalogs agree (`సంచయం`, `చెత్తబుట్ట`, `దస్త్రం`), because Cmdr is a file manager and that's the register
-  users meet in Nautilus/Thunar; the Microsoft loanwords are widely understood and a valid alternative if David prefers
-  them for consistency with Windows. This is the one term-register call worth settling up front. `tentative` (real
-  source split, flagged above); the agreed terms are `high`.
+  open-source catalogs agree (`సంచయం`, `చెత్తబుట్ట`, `దస్త్రం`), because Cmdr is a file manager and that's the register users
+  meet in Nautilus/Thunar; the Microsoft loanwords are widely understood and a valid alternative if David prefers them
+  for consistency with Windows. This is the one term-register call worth settling up front. `tentative` (real source
+  split, flagged above); the agreed terms are `high`.
 
 ### Gender: grammatical gender in 3rd person, keep UI gender-neutral
 
@@ -96,8 +96,8 @@ Format per term: `chosen · sources · confidence`. Sources are read to decide t
 copyrighted; GNOME/Thunar GPL). Top source is Microsoft terminology (no macOS tier); GNOME Nautilus and Xfce Thunar are
 the file-manager cross-check. Evidence verified against the reference pile (`_ignored/i18n/te/`) on 2026-06-20.
 
-- **file: `దస్త్రం`** · Thunar (native) / Microsoft `ఫైల్` (loanword). Prefer `దస్త్రం` for the file-manager-native
-  register, or `ఫైల్` for Microsoft consistency; pick one. `tentative` (real split).
+- **file: `దస్త్రం`** · Thunar (native) / Microsoft `ఫైల్` (loanword). Prefer `దస్త్రం` for the file-manager-native register,
+  or `ఫైల్` for Microsoft consistency; pick one. `tentative` (real split).
 - **folder: `సంచయం`** · GNOME (native) / Microsoft `ఫోల్డర్` (loanword). Prefer `సంచయం`, or `ఫోల్డర్` for Microsoft
   consistency. `tentative` (real split).
 - **directory: `సంచయని`** · Microsoft terminology. Use only where the technical directory sense matters, else folder
@@ -106,11 +106,11 @@ the file-manager cross-check. Evidence verified against the reference pile (`_ig
 - **move: `తరలించు`** · Microsoft terminology. `high`.
 - **delete: `తొలగించు`** · Microsoft terminology. `high`.
 - **cancel: `రద్దుచేయి`** · GNOME (`రద్దుచేయి`), Microsoft (`రద్దు చేయి`) agree. `high`.
-- **search: `వెతుకు` (verb) / `శోధన` (noun)** · GNOME (`వెతుకు`), Microsoft (`శోధన`). The button is the imperative
-  `వెతుకు`. `high`.
+- **search: `వెతుకు` (verb) / `శోధన` (noun)** · GNOME (`వెతుకు`), Microsoft (`శోధన`). The button is the imperative `వెతుకు`.
+  `high`.
 - **settings: `సెట్టింగ్‌లు`** · Microsoft terminology. `high`.
-- **trash: `చెత్తబుట్ట`** · GNOME and Thunar agree (native); Microsoft uses `రీసైకిల్ బిన్`. Prefer `చెత్తబుట్ట` (two
-  file-manager sources agree). `high` for the GNOME/Thunar choice.
+- **trash: `చెత్తబుట్ట`** · GNOME and Thunar agree (native); Microsoft uses `రీసైకిల్ బిన్`. Prefer `చెత్తబుట్ట` (two file-manager
+  sources agree). `high` for the GNOME/Thunar choice.
 - **drive: `డ్రైవ్`** · Microsoft terminology (naturalized loan). `high`.
 - **volume: `వాల్యూమ్` / disk-volume sense** · Microsoft maps "volume" → `పరిమాణం` (the size/quantity sense, wrong for a
   disk); use the disk-volume reading. `tentative`, confirm the disk-volume term against Google/Android Telugu.
@@ -129,8 +129,8 @@ tokens. The curated list (BRAND_WORDS + SYSTEM_TOKENS) is enforced by `desktop-i
 
 CLDR categories: `one`, `other` (verified with `new Intl.PluralRules('te')`, 2026-06-20). Write both branches.
 
-- Telugu pluralizes with the `-లు` suffix (ఫైల్ → ఫైళ్లు; సంచయం → సంచయాలు), with stem changes/sandhi, so write the
-  natural plural for each noun rather than appending mechanically.
+- Telugu pluralizes with the `-లు` suffix (ఫైల్ → ఫైళ్లు; సంచయం → సంచయాలు), with stem changes/sandhi, so write the natural
+  plural for each noun rather than appending mechanically.
 - Keep verb and pronoun agreement consistent with the counted noun inside each branch.
 
 ## Notes and decisions

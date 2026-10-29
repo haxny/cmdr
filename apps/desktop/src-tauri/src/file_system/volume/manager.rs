@@ -32,7 +32,7 @@ mod reconnects;
 #[cfg(any(target_os = "macos", test))]
 mod root_move;
 
-pub use reconnects::ArrivalOnReconnect;
+pub use reconnects::{ArrivalOnReconnect, ConnectionNews, connection_news};
 #[cfg(target_os = "macos")]
 pub use root_move::RootMove;
 pub use root_replace::RootReplacement;

@@ -165,6 +165,40 @@ const cases: Case[] = [
       suggestion: 'Copy them one at a time, or rename one first.',
     },
   },
+  ...(
+    [
+      [
+        'notASource',
+        'One of the new names is for /d/ghost.pdf, which isn’t part of this suggestion, so nothing started.',
+        'Ask Cmdr to suggest it again.',
+      ],
+      [
+        'sameName',
+        'Two items would end up as /d/ghost.pdf. Many disks treat those as one name, so one would replace the other.',
+        'Ask Cmdr for a different name for each item.',
+      ],
+      [
+        'ontoASource',
+        'An item would land as /d/ghost.pdf, which is another item in this same suggestion, and replace it.',
+        'Ask Cmdr for names that don’t match the items being moved or copied.',
+      ],
+      [
+        'alreadyInDestination',
+        '/d/ghost.pdf is already in the destination folder, so giving it a new name there is a rename.',
+        'Rename the items already in that folder, then move or copy the rest.',
+      ],
+      [
+        'routeCannotName',
+        'Cmdr can’t give each item its own name on the way into or out of a zip archive, so nothing went to /d/ghost.pdf.',
+        'Move or copy them under their own names, then rename them there.',
+      ],
+    ] as const
+  ).map(([reason, message, suggestion]) => ({
+    name: `named_leaves_refused (${reason})`,
+    error: { type: 'named_leaves_refused' as const, path: '/d/ghost.pdf', reason },
+    op: 'move' as const,
+    expected: { title: 'These new names can’t be used', message, suggestion },
+  })),
   {
     name: 'sources_span_volumes',
     error: { type: 'sources_span_volumes', path: '/r/Browse snapshots' },

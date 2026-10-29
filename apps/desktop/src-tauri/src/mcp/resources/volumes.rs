@@ -24,7 +24,7 @@ use crate::search::format_size;
 /// A volume's transport kind, the coarse routing hint an agent reads first.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum VolumeKind {
-    /// A local disk, favorite folder, or cloud-drive mount (a real filesystem path).
+    /// A local disk or cloud-drive mount (a real filesystem path).
     Local,
     /// An SMB share (direct smb2 or an OS mount). Constructed only in the macOS
     /// `snapshot_volumes` path (the Linux snapshot surfaces only root + MTP), so
@@ -114,7 +114,7 @@ pub(crate) struct VolumeSummary {
     pub index_status: Option<&'static str>,
     /// How live the volume's session is (`direct` / `os_mount` / `disconnected` /
     /// `needs_sign_in` / `needs_host_key_approval` / `saved`). `None` for anything
-    /// with no session: a local disk, a favorite, the hub row.
+    /// with no session: a local disk, the hub row.
     pub connection_state: Option<&'static str>,
     /// Whether the DEVICE behind the row can be opened right now (`ready` /
     /// `waiting_for_authorization` / `unavailable_offline` /
@@ -343,6 +343,13 @@ pub(crate) async fn snapshot_volumes_from(locations: &[crate::volume_listing::Lo
         // device provider's storages, which is why there is no MTP block below on
         // this platform. (`current_listing`.)
         for loc in locations {
+            // A favorite is a folder ON a volume, and every consumer of this
+            // snapshot already lists favorites in their own section
+            // (`cmdr://state` `favorites:`, `list_volumes` `favorites`). As a row
+            // here it read as `kind: local`, the phone one included.
+            if loc.category == crate::volumes::LocationCategory::Favorite {
+                continue;
+            }
             let connection_state = loc.connection_state.map(connection_state_token);
             let device_readiness = loc.device_readiness.map(device_readiness_token);
             let kind = kind_for_location(loc.fs_type.as_deref(), loc.connection_state.is_some());
@@ -350,10 +357,12 @@ pub(crate) async fn snapshot_volumes_from(locations: &[crate::volume_listing::Lo
             // Path-based status resolution routes each volume to its OWN index (see
             // `indexing::routing::volume_id_for_local_path`): a mounted-but-unindexed
             // external drive (`/Volumes/X`) reports `off`, not `root`'s freshness, so
-            // this can't disagree with `cmdr://indexing`. ❗ A scheme root
-            // (`mtp://…`, `sftp://…`) is not a path any router can place, so those
-            // are looked up by their volume id instead.
-            let status = if on_a_real_path {
+            // this can't disagree with `cmdr://indexing`. ❗ A server row (it carries
+            // a `connection_state`) and a scheme root (`mtp://…`, `sftp://…`) are
+            // looked up by their volume id instead: a scheme root is no path a router
+            // can place, and a saved share's path is its LAST mount point, which with
+            // nothing mounted there routes to `root` and would read `root`'s `fresh`.
+            let status = if on_a_real_path && loc.connection_state.is_none() {
                 index().volume_status_for_path(&loc.path)
             } else {
                 index().volume_status(&loc.id)
@@ -456,291 +465,5 @@ pub(crate) async fn snapshot_volumes_from(locations: &[crate::volume_listing::Lo
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::volume_listing::SERVERS_VOLUME_NAME;
-
-    fn local(name: &str, id: &str) -> VolumeSummary {
-        VolumeSummary {
-            name: name.to_string(),
-            id: id.to_string(),
-            kind: VolumeKind::Local,
-            filesystem: Some("apfs".to_string()),
-            read_only: Some(false),
-            ejectable: Some(false),
-            index_status: Some("fresh"),
-            connection_state: None,
-            device_readiness: None,
-            mount_path: Some("/".to_string()),
-            space: None,
-        }
-    }
-
-    /// An OS-mounted NFS, AFP, or FTP share is a network drive with no dedicated
-    /// backend, and it must read as one: pre-fix it fell through to `local`, telling
-    /// an agent a share that can hang for minutes was a plain disk.
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn a_network_mount_without_a_backend_reads_as_network() {
-        for fs in ["nfs", "afpfs", "ftp"] {
-            assert_eq!(kind_for_location(Some(fs), false), VolumeKind::Network, "{fs}");
-        }
-        assert_eq!(kind_for_location(Some("apfs"), false), VolumeKind::Local);
-        assert_eq!(kind_for_location(Some("smbfs"), false), VolumeKind::Smb);
-        assert_eq!(kind_for_location(Some("webdav"), false), VolumeKind::Webdav);
-        // ❗ Before the session arm: an S3 place has a session, and isn't SMB.
-        assert_eq!(kind_for_location(Some("s3"), true), VolumeKind::S3);
-    }
-
-    #[test]
-    fn empty_renders_flow_seq() {
-        assert_eq!(build_volumes_yaml(&[]), "volumes: []\n");
-    }
-
-    /// ❗ **A saved server reaches `cmdr://state`.** The snapshot used to build
-    /// its own list from `list_locations` plus a hand-appended MTP block, so no
-    /// row ever carried `fs_type: "sftp"`: the `Sftp` / `Webdav` / `Adb` arms of
-    /// [`kind_for_location`] and every `connectionState` past `disconnected` were
-    /// unreachable in practice, while the resource's own docs advertised them as
-    /// the agent-facing contract. The compiler can't see it, because the arms are
-    /// constructed inside a function that IS called.
-    ///
-    /// Drives the real snapshot rather than a fixture, because the fixture is
-    /// exactly what stayed green through the bug.
-    #[cfg(target_os = "macos")]
-    #[tokio::test]
-    async fn a_saved_server_reaches_the_state_resource() {
-        // ❗ `192.0.2.x` is reserved for documentation (RFC 5737) and routed
-        // nowhere, so nothing here can dial a stranger's machine — and the
-        // snapshot must not dial at all.
-        let host = "192.0.2.51";
-        crate::network::sftp_known_servers::remember(crate::network::sftp_known_servers::KnownSftpServer {
-            host: host.to_string(),
-            port: 2222,
-            username: "ada".to_string(),
-            display_name: format!("{host} server"),
-            remote_root: "/srv/data".to_string(),
-            start_folder: None,
-            key_file: None,
-            use_agent: false,
-            auto_reconnect: true,
-            pinned: true,
-            last_connected_at: "2026-09-06T00:00:00Z".to_string(),
-        });
-
-        let volumes = snapshot_volumes().await;
-        let id = cmdr_fs::volume::sftp_volume_id(host, 2222, "ada");
-        let row = volumes
-            .iter()
-            .find(|v| v.id == id)
-            .expect("a saved server is a volume the agent can see");
-
-        assert_eq!(row.kind, VolumeKind::Sftp, "❌ never `local`: the fs_type names it");
-        // Nothing is registered under that id, so it is the greyed row, and the
-        // agent needs the word for that to route a connect at it.
-        assert_eq!(row.connection_state, Some("saved"));
-        assert!(build_volumes_yaml(&volumes).contains("kind: sftp"));
-    }
-
-    #[test]
-    fn local_volume_carries_every_known_field() {
-        let yaml = build_volumes_yaml(&[local("Macintosh HD", "root")]);
-        assert_eq!(
-            yaml,
-            "volumes:\n  - name: Macintosh HD\n    id: root\n    kind: local\n    mountPath: \"/\"\n    \
-             filesystem: apfs\n    readOnly: false\n    ejectable: false\n    indexStatus: fresh\n"
-        );
-    }
-
-    #[test]
-    fn the_mount_path_renders_verbatim() {
-        // An AI client copies it into a `search` scope, so a redacted
-        // `$HOME/<dir>` would be a scope that matches nothing.
-        let mut v = local("Downloads", "favorite-downloads");
-        v.mount_path = Some("/Users/someone/Downloads".to_string());
-        let yaml = build_volumes_yaml(&[v]);
-        assert!(
-            yaml.contains("    mountPath: \"/Users/someone/Downloads\"\n"),
-            "yaml: {yaml}"
-        );
-    }
-
-    #[test]
-    fn a_watched_volume_carries_capacity_and_free_space() {
-        // The pair is what makes a size answer actionable: "40 GB" reads
-        // differently against 2 TB free than against 8 GB.
-        let mut v = local("Macintosh HD", "root");
-        v.space = Some(SpaceInfo::bounded(2_000_000_000_000, 214_300_000_000));
-        let yaml = build_volumes_yaml(&[v]);
-        assert!(yaml.contains("totalBytes: 2000000000000"));
-        assert!(yaml.contains("availableBytes: 214300000000"));
-        // Beside the bytes, not instead of them: a reader that has to state the number
-        // out loud can't divide by 1,024 reliably, and one doing arithmetic still has
-        // the exact value.
-        assert!(yaml.contains(&format!("totalHuman: {}", format_size(2_000_000_000_000))));
-        assert!(yaml.contains(&format!("availableHuman: {}", format_size(214_300_000_000))));
-    }
-
-    #[test]
-    fn an_unwatched_volume_omits_space_rather_than_reporting_zero() {
-        // Nothing is polling it, so we don't know. A rendered `availableBytes: 0`
-        // would read as a full disk.
-        let yaml = build_volumes_yaml(&[local("Backup HD", "volumes-backup")]);
-        assert!(!yaml.contains("totalBytes"));
-        assert!(!yaml.contains("availableBytes"));
-        assert!(!yaml.contains("totalHuman"));
-        assert!(!yaml.contains("availableHuman"));
-    }
-
-    #[test]
-    fn smb_volume_carries_connection_state_and_kind() {
-        let smb = VolumeSummary {
-            name: "naspi".to_string(),
-            id: "smb-192-168-1-111-445-naspi".to_string(),
-            kind: VolumeKind::Smb,
-            filesystem: Some("smbfs".to_string()),
-            read_only: Some(false),
-            ejectable: Some(true),
-            index_status: Some("stale"),
-            connection_state: Some("direct"),
-            device_readiness: None,
-            mount_path: Some("/Volumes/naspi".to_string()),
-            space: None,
-        };
-        let yaml = build_volumes_yaml(&[smb]);
-        assert!(yaml.contains("kind: smb"));
-        assert!(yaml.contains("connectionState: direct"));
-        assert!(yaml.contains("indexStatus: stale"));
-        assert!(yaml.contains("ejectable: true"));
-    }
-
-    #[test]
-    fn mtp_volume_omits_filesystem_and_smb_state() {
-        let mtp = VolumeSummary {
-            name: "Pixel 8".to_string(),
-            id: "mtp-336592896:65537".to_string(),
-            kind: VolumeKind::Mtp,
-            filesystem: None,
-            read_only: Some(true),
-            ejectable: Some(true),
-            index_status: Some("off"),
-            connection_state: None,
-            device_readiness: None,
-            mount_path: None,
-            space: None,
-        };
-        let yaml = build_volumes_yaml(&[mtp]);
-        assert!(yaml.contains("kind: mtp"));
-        assert!(yaml.contains("id: mtp-336592896:65537"));
-        assert!(yaml.contains("readOnly: true"));
-        assert!(!yaml.contains("filesystem:"));
-        assert!(!yaml.contains("connectionState:"));
-    }
-
-    /// ❗ A phone waiting for its "Allow USB debugging?" tap IS listed, so the
-    /// row has to say why it can't be opened. Without `deviceReadiness` an agent
-    /// reads a browsable ADB row and gets a refusal it can't explain, and the
-    /// session field is the wrong place to say it (that would enrol a device with
-    /// no session in a reconnect loop).
-    #[test]
-    fn an_adb_row_says_what_the_device_is_waiting_for_without_claiming_a_session() {
-        let waiting = VolumeSummary {
-            name: "Pixel 8".to_string(),
-            id: "adb-R58M12345".to_string(),
-            kind: VolumeKind::Adb,
-            filesystem: None,
-            read_only: Some(false),
-            ejectable: Some(true),
-            index_status: None,
-            connection_state: None,
-            device_readiness: Some(device_readiness_token(
-                cmdr_fs::volume::DeviceReadiness::WaitingForAuthorization,
-            )),
-            mount_path: None,
-            space: None,
-        };
-        let yaml = build_volumes_yaml(&[waiting]);
-        assert!(yaml.contains("deviceReadiness: waiting_for_authorization"));
-        assert!(
-            !yaml.contains("connectionState:"),
-            "presence is not a session; a device with no session must not read as one"
-        );
-    }
-
-    /// Each unavailable reason gets its own token, so a tooltip can say which.
-    #[test]
-    fn every_readiness_has_its_own_wire_word() {
-        use cmdr_fs::volume::{DeviceReadiness as R, DeviceUnavailableReason as Why};
-        assert_eq!(device_readiness_token(R::Ready), "ready");
-        assert_eq!(
-            device_readiness_token(R::WaitingForAuthorization),
-            "waiting_for_authorization"
-        );
-        assert_eq!(
-            device_readiness_token(R::Unavailable { reason: Why::Offline }),
-            "unavailable_offline"
-        );
-        assert_eq!(
-            device_readiness_token(R::Unavailable {
-                reason: Why::NoPermissions
-            }),
-            "unavailable_no_permissions"
-        );
-    }
-
-    #[test]
-    fn virtual_volume_is_name_id_kind_only() {
-        let network = VolumeSummary {
-            name: SERVERS_VOLUME_NAME.to_string(),
-            id: "network".to_string(),
-            kind: VolumeKind::Virtual,
-            filesystem: None,
-            read_only: None,
-            ejectable: None,
-            index_status: None,
-            connection_state: None,
-            device_readiness: None,
-            mount_path: None,
-            space: None,
-        };
-        let yaml = build_volumes_yaml(&[network]);
-        assert_eq!(
-            yaml,
-            "volumes:\n  - name: Servers\n    id: network\n    kind: virtual\n"
-        );
-    }
-
-    #[test]
-    fn mixed_fixture_keeps_every_entry_uniform_head() {
-        let network = VolumeSummary {
-            name: SERVERS_VOLUME_NAME.to_string(),
-            id: "network".to_string(),
-            kind: VolumeKind::Virtual,
-            filesystem: None,
-            read_only: None,
-            ejectable: None,
-            index_status: None,
-            connection_state: None,
-            device_readiness: None,
-            mount_path: None,
-            space: None,
-        };
-        let yaml = build_volumes_yaml(&[local("Macintosh HD", "root"), network]);
-        // Every entry leads with name / id / kind, in order.
-        let heads: Vec<&str> = yaml
-            .lines()
-            .filter(|l| l.trim_start().starts_with("- name:") || l.contains("id:") || l.contains("kind:"))
-            .collect();
-        assert_eq!(
-            heads,
-            vec![
-                "  - name: Macintosh HD",
-                "    id: root",
-                "    kind: local",
-                "  - name: Servers",
-                "    id: network",
-                "    kind: virtual",
-            ]
-        );
-    }
-}
+#[path = "volumes_tests.rs"]
+mod tests;

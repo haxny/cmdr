@@ -1,6 +1,7 @@
 /**
  * Shared navigation primitives for the "jump somewhere in the focused pane"
- * features: "Go to latest download" (⌘J) and "Go to path" (⌘G). Both want to
+ * features: "Go to latest download" (⌘J), "Go to path" (⌘G), search results,
+ * and the Ask Cmdr tool line's path links. All want to
  * point a pane at a directory and (for files) land the cursor on a specific
  * entry, with the same careful handling of `navigate()`'s `NavigateResult`.
  *
@@ -199,4 +200,35 @@ export async function revealFileInBestPane(
 export async function navigateToDirInBestPane(explorer: PaneRevealAPI, location: Location): Promise<void> {
   if (focusPaneShowing(explorer, location.path)) return
   await navigateToDirInPane(explorer, explorer.getFocusedPane(), location)
+}
+
+/**
+ * Show an absolute path in the best pane: a folder opens, a file's folder opens with the
+ * cursor on it. Both reuse a pane already showing the folder. Used by the Ask Cmdr tool
+ * line's path links. Never throws: the click fires it with `void`, and a file the listing
+ * doesn't hold (a dotfile while hidden files are off) still leaves the user in its folder.
+ */
+export async function revealPathInBestPane(
+  explorer: PaneRevealAPI,
+  target: { path: string; kind: 'file' | 'folder' },
+): Promise<void> {
+  if (target.kind === 'folder') {
+    const location = await resolveLocationOrToast(target.path)
+    if (location) await navigateToDirInBestPane(explorer, location)
+    return
+  }
+  const lastSlash = target.path.lastIndexOf('/')
+  const parentDir = lastSlash > 0 ? target.path.slice(0, lastSlash) : '/'
+  const fileName = target.path.slice(lastSlash + 1)
+  const location = await resolveLocationOrToast(parentDir)
+  if (!location) return
+  try {
+    await revealFileInBestPane(explorer, location, fileName)
+  } catch (error) {
+    log.debug('Opened {dir} but not on {name} (hidden, or gone since): {error}', {
+      dir: parentDir,
+      name: fileName,
+      error,
+    })
+  }
 }

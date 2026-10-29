@@ -150,7 +150,10 @@ pub fn check_object(schema: &Value, value: &Value) -> ParamProblems {
     let Some(properties) = schema.get("properties").and_then(Value::as_object) else {
         return ParamProblems::default();
     };
-    let accepted: Vec<String> = properties.keys().cloned().collect();
+    // Sorted: `serde_json::Map` keeps insertion order in this build (genai turns on `preserve_order`),
+    // and the list a model reads back shouldn't follow how a schema happened to be written.
+    let mut accepted: Vec<String> = properties.keys().cloned().collect();
+    accepted.sort();
     // A tool that takes no arguments is called with `null` as often as with `{}`, and both
     // mean the same thing.
     let empty = serde_json::Map::new();

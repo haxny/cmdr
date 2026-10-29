@@ -77,6 +77,19 @@ token_enum! {
         Rename => "rename",
         Compress => "compress",
         Extract => "extract",
+        /// Save a new server. Zero ops: the group's server draft is the whole proposal
+        /// (`agent/store/proposals/DETAILS.md` § A server group).
+        AddServer => "add_server",
+        /// Change a saved server's editable fields. Zero ops, like `AddServer`.
+        EditServer => "edit_server",
+    }
+}
+
+impl ProposalVerb {
+    /// Whether a group of this verb proposes a server rather than acting on files. A server
+    /// group has no ops and no acceptance record, and takes its own claim.
+    pub fn is_server(self) -> bool {
+        matches!(self, ProposalVerb::AddServer | ProposalVerb::EditServer)
     }
 }
 
@@ -137,6 +150,41 @@ token_enum! {
         /// Nothing takes it back: a permanent delete, or a compress that overwrote an
         /// existing archive (the seed is unconditional and the prior bytes are gone).
         Irreversible => "irreversible",
+        /// A saved server's settings: forgotten again, or changed back, in Servers.
+        ServerSettings => "server_settings",
+    }
+}
+
+token_enum! {
+    /// Which kind of server a server proposal describes, stored inside its draft.
+    pub enum DraftProtocol {
+        Smb => "smb",
+        Sftp => "sftp",
+        Webdav => "webdav",
+        Nfs => "nfs",
+        S3 => "s3",
+    }
+}
+
+impl DraftProtocol {
+    /// The protocol as a person names it, for the line the model reads.
+    pub fn label(self) -> &'static str {
+        match self {
+            DraftProtocol::Smb => "SMB",
+            DraftProtocol::Sftp => "SFTP",
+            DraftProtocol::Webdav => "WebDAV",
+            DraftProtocol::Nfs => "NFS",
+            DraftProtocol::S3 => "S3",
+        }
+    }
+}
+
+token_enum! {
+    /// What an approved server save left undone, stored beside the group's draft when the save
+    /// wrote something but not everything. Absent on a whole save.
+    pub enum ServerSaveNote {
+        /// An SMB add saved the host but not its share row.
+        ShareNotSaved => "share_not_saved",
     }
 }
 
@@ -163,6 +211,9 @@ pub enum ProposalOutcomeKind {
     /// The user approved it and the app quit before the operation settled. Written by the
     /// next launch, so a line never reads "running" after the run it named is gone.
     Interrupted,
+    /// The user approved a server proposal and Cmdr saved it: all of it, unless `note` says
+    /// what it left undone. A server group has no ops, so there are no tallies.
+    Saved { note: Option<ServerSaveNote> },
 }
 
 /// One answered proposal group: what was asked, over how much, and what the user did.
@@ -173,7 +224,7 @@ pub enum ProposalOutcomeKind {
 /// already on disk, not a refactor.
 ///
 /// ❌ **No rationale, no file names, no op paths.** A decision line goes into the agent's memory
-/// ring, which rides the prefix of every later turn; the group's own display text (a path or a
+/// ring, which reaches every later thread; the group's own display text (a path or a
 /// pattern the user already saw) plus a count is the whole of what a lesson needs.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -181,9 +232,13 @@ pub struct ProposalDecision {
     pub verb: ProposalVerb,
     /// The group's display name: a path or a pattern, so the user's own data rather than copy.
     pub what: String,
-    /// The live op count the user was answering about.
+    /// The live op count the user was answering about. 0 for a server group, which has none.
     pub ops: u32,
     pub outcome: ProposalOutcomeKind,
+    /// The kind of server a server group proposed; absent for a file group. Optional on disk
+    /// too, so a line written before servers could be proposed still reads.
+    #[serde(default)]
+    pub protocol: Option<DraftProtocol>,
 }
 
 /// What the user answered across one sweep.
@@ -205,6 +260,7 @@ impl ProposalOutcomeKind {
             ProposalOutcomeKind::Ran { .. } => "ran",
             ProposalOutcomeKind::Running => "running",
             ProposalOutcomeKind::Interrupted => "interrupted",
+            ProposalOutcomeKind::Saved { .. } => "saved",
         }
     }
 }
@@ -215,6 +271,9 @@ impl ProposalDecision {
     /// ❌ Never render this into the UI. It is what goes into the memory ring and into the
     /// follow-up turn's prompt; the rail says the same numbers in the user's own language.
     pub fn render(&self) -> String {
+        if self.verb.is_server() {
+            return self.render_server();
+        }
         let verb = self.verb.as_token();
         let ops = self.ops;
         match self.outcome {
@@ -230,6 +289,35 @@ impl ProposalDecision {
                 "approved, cut short by an app restart: {verb} {ops} item(s) under {}",
                 self.what
             ),
+            // Only a server group is saved, so a file group never reaches this arm.
+            ProposalOutcomeKind::Saved { .. } => format!("approved: {verb} {ops} item(s) under {}", self.what),
+        }
+    }
+
+    /// A server group's line: what was asked, about which server, and how it ended. No counts:
+    /// a server group has no ops.
+    fn render_server(&self) -> String {
+        let server = match self.protocol {
+            Some(protocol) => format!("the {} server {}", protocol.label(), self.what),
+            None => format!("the server {}", self.what),
+        };
+        let asked = match self.verb {
+            ProposalVerb::EditServer => format!("change {server}"),
+            _ => format!("add {server}"),
+        };
+        match self.outcome {
+            ProposalOutcomeKind::Rejected => format!("turned down: {asked}"),
+            ProposalOutcomeKind::Saved { note: None } => match self.verb {
+                ProposalVerb::EditServer => format!("approved: saved the changes to {server}"),
+                _ => format!("approved: saved {server}"),
+            },
+            ProposalOutcomeKind::Saved {
+                note: Some(ServerSaveNote::ShareNotSaved),
+            } => format!("approved: saved {server}, not its share"),
+            ProposalOutcomeKind::Running => format!("approved, still saving: {asked}"),
+            ProposalOutcomeKind::Interrupted => format!("approved, cut short by an app restart: {asked}"),
+            // A server group has no ops to tally, so a file outcome on one says only that it ran.
+            ProposalOutcomeKind::Ran { .. } => format!("approved: {asked}"),
         }
     }
 }
@@ -265,6 +353,48 @@ impl ProposalOutcomes {
     }
 }
 
+/// Who started a turn: the user, or the app on its own.
+///
+/// Set by each caller of `run_turn`, ❌ never read off the opener's shape: a follow-up rides as
+/// `UserTurn::Outcomes` today, and the dispatch gate (`agent::tools::view`) must stay right if
+/// one day it doesn't. The turn hands it to every tool call, and analytics reports it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TurnOrigin {
+    /// The user typed into the rail.
+    Text,
+    /// The proactive loop noticed something and opened a thread of its own.
+    Wake,
+    /// The follow-up turn the app opens after the user turned a sweep down.
+    Outcomes,
+    /// RESERVED, set by no production caller: a persisted thread driven again from its
+    /// transcript at the user's request. A rail retry is a fresh send, so it runs as `Text`.
+    /// ⚠️ A replay the app starts on its own isn't this, and needs an origin of its own.
+    Resume,
+}
+
+impl TurnOrigin {
+    /// The stable analytics token (`ask_cmdr_turn`'s `origin`).
+    pub fn as_token(self) -> &'static str {
+        match self {
+            TurnOrigin::Text => "text",
+            TurnOrigin::Wake => "wake",
+            TurnOrigin::Outcomes => "outcomes",
+            TurnOrigin::Resume => "resume",
+        }
+    }
+
+    /// Whether the user started this turn. A background turn runs with nobody watching, so a
+    /// tool that reaches past the app (`Access::Session`) waits for one the user did start.
+    /// ❗ An action the user approved counts as user-started (`docs/design-principles.md`,
+    /// "An approved action is the user's own"); a turn the app opens on its own doesn't.
+    pub fn user_started(self) -> bool {
+        match self {
+            TurnOrigin::Text | TurnOrigin::Resume => true,
+            TurnOrigin::Wake | TurnOrigin::Outcomes => false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -275,7 +405,60 @@ mod tests {
             what: "/Users/dana/Downloads/*.dmg".to_string(),
             ops: 12,
             outcome,
+            protocol: None,
         }
+    }
+
+    fn server_decision(verb: ProposalVerb, outcome: ProposalOutcomeKind) -> ProposalDecision {
+        ProposalDecision {
+            verb,
+            what: "build-box".to_string(),
+            ops: 0,
+            outcome,
+            protocol: Some(DraftProtocol::Sftp),
+        }
+    }
+
+    /// A server group's line names the protocol and the server, and never a count: "0 items"
+    /// would teach the agent nothing and read as if nothing happened.
+    #[test]
+    fn a_server_decision_line_names_the_server_and_no_count() {
+        let saved = server_decision(ProposalVerb::AddServer, ProposalOutcomeKind::Saved { note: None }).render();
+        assert_eq!(saved, "approved: saved the SFTP server build-box");
+
+        let rejected = server_decision(ProposalVerb::AddServer, ProposalOutcomeKind::Rejected).render();
+        assert_eq!(rejected, "turned down: add the SFTP server build-box");
+
+        let edit = server_decision(ProposalVerb::EditServer, ProposalOutcomeKind::Rejected).render();
+        assert_eq!(edit, "turned down: change the SFTP server build-box");
+    }
+
+    /// A save that wrote the host but not its share says so, so the agent doesn't believe the
+    /// share is there.
+    #[test]
+    fn a_partial_server_save_says_what_it_left_undone() {
+        let mut decision = server_decision(
+            ProposalVerb::AddServer,
+            ProposalOutcomeKind::Saved {
+                note: Some(ServerSaveNote::ShareNotSaved),
+            },
+        );
+        decision.protocol = Some(DraftProtocol::Smb);
+        decision.what = "naspolya".to_string();
+
+        assert_eq!(
+            decision.render(),
+            "approved: saved the SMB server naspolya, not its share"
+        );
+    }
+
+    /// The protocol is optional on disk: a decision stored before servers could be proposed
+    /// carries none, and must still read back.
+    #[test]
+    fn a_decision_stored_without_a_protocol_still_reads() {
+        let stored = r#"{"verb":"trash","what":"/x","ops":1,"outcome":{"kind":"rejected"}}"#;
+        let decision: ProposalDecision = serde_json::from_str(stored).expect("an older decision reads");
+        assert_eq!(decision.protocol, None);
     }
 
     /// The one line that goes into the agent's memory ring. It has to name the verb, the size,

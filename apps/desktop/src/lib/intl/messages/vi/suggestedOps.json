@@ -3,9 +3,9 @@
   "@suggestedOps.title": {
     "sourceHash": "1a1f5b9"
   },
-  "suggestedOps.description": "AI đã đề xuất những thao tác này. Không có gì chạy cho đến khi bạn phê duyệt.",
+  "suggestedOps.description": "Tác nhân đã đề xuất các thao tác bên dưới. Chỉ áp dụng nếu bạn đồng ý.",
   "@suggestedOps.description": {
-    "sourceHash": "73255a0"
+    "sourceHash": "4d98280"
   },
   "suggestedOps.approvalNoticeDismiss": "Không hiển thị ghi chú này nữa",
   "@suggestedOps.approvalNoticeDismiss": {
@@ -35,9 +35,9 @@
   "@suggestedOps.empty": {
     "sourceHash": "b93eccd"
   },
-  "suggestedOps.loadFailed": "Cmdr không đọc được các đề xuất. Hãy đóng lại và mở lần nữa.",
+  "suggestedOps.loadFailed": "Cmdr không đọc được các đề xuất. Hãy đóng hộp thoại này và mở lại.",
   "@suggestedOps.loadFailed": {
-    "sourceHash": "ef0da3e"
+    "sourceHash": "139450e"
   },
   "suggestedOps.agentReason": "Lý do:",
   "@suggestedOps.agentReason": {
@@ -54,6 +54,34 @@
   "suggestedOps.fileCount": "{countText} {count, plural, other {tệp}}",
   "@suggestedOps.fileCount": {
     "sourceHash": "76ef0a6"
+  },
+  "suggestedOps.action.move": "Di chuyển",
+  "@suggestedOps.action.move": {
+    "sourceHash": "6ecc3df"
+  },
+  "suggestedOps.action.copy": "Sao chép",
+  "@suggestedOps.action.copy": {
+    "sourceHash": "e21f935"
+  },
+  "suggestedOps.action.trash": "Chuyển vào thùng rác",
+  "@suggestedOps.action.trash": {
+    "sourceHash": "9adcdf3"
+  },
+  "suggestedOps.action.delete": "Xóa",
+  "@suggestedOps.action.delete": {
+    "sourceHash": "e2d0a54"
+  },
+  "suggestedOps.action.rename": "Đổi tên",
+  "@suggestedOps.action.rename": {
+    "sourceHash": "3064d79"
+  },
+  "suggestedOps.action.compress": "Nén",
+  "@suggestedOps.action.compress": {
+    "sourceHash": "033fc04"
+  },
+  "suggestedOps.action.extract": "Giải nén",
+  "@suggestedOps.action.extract": {
+    "sourceHash": "c15301c"
   },
   "suggestedOps.approve.move": "Di chuyển {countText} {count, plural, other {tệp}}",
   "@suggestedOps.approve.move": {
@@ -82,6 +110,14 @@
   "suggestedOps.approve.extract": "Giải nén {countText} {count, plural, other {tệp nén}}",
   "@suggestedOps.approve.extract": {
     "sourceHash": "0bf7541"
+  },
+  "suggestedOps.approve.addServer": "Lưu máy chủ",
+  "@suggestedOps.approve.addServer": {
+    "sourceHash": "726b9af"
+  },
+  "suggestedOps.approve.editServer": "Lưu thay đổi",
+  "@suggestedOps.approve.editServer": {
+    "sourceHash": "dd0ae7a"
   },
   "suggestedOps.reject": "Từ chối",
   "@suggestedOps.reject": {
@@ -139,13 +175,13 @@
   "@suggestedOps.irreversible.delete": {
     "sourceHash": "e32da9a"
   },
-  "suggestedOps.blocked.noTrash": "Không chạy được: ổ đĩa này không có thùng rác",
-  "@suggestedOps.blocked.noTrash": {
-    "sourceHash": "f08e038"
+  "suggestedOps.noTrash": "Ổ đĩa này không có thùng rác",
+  "@suggestedOps.noTrash": {
+    "sourceHash": "38a6adc"
   },
-  "suggestedOps.blocked.noTrashTooltip": "Ổ đĩa chứa các tệp này không có thùng rác, nên không thể chuyển chúng vào đó và sẽ không có gì xảy ra. Hãy từ chối đề xuất này, hoặc tự xóa các tệp nếu đó là điều bạn muốn.",
-  "@suggestedOps.blocked.noTrashTooltip": {
-    "sourceHash": "f2a5d5f"
+  "suggestedOps.noTrashTooltip": "Ổ đĩa chứa các tệp này không có thùng rác, nên khi bạn phê duyệt, các tệp sẽ bị xóa vĩnh viễn.",
+  "@suggestedOps.noTrashTooltip": {
+    "sourceHash": "4327cb2"
   },
   "suggestedOps.irreversible.overwrite": "Không thể hoàn tác: thao tác này thay thế một tệp nén hiện có",
   "@suggestedOps.irreversible.overwrite": {
@@ -154,6 +190,14 @@
   "suggestedOps.irreversible.other": "Không thể hoàn tác thao tác này",
   "@suggestedOps.irreversible.other": {
     "sourceHash": "b583829"
+  },
+  "suggestedOps.reversible.forgetServer": "Có thể hoàn tác: quên máy chủ trong danh sách Máy chủ",
+  "@suggestedOps.reversible.forgetServer": {
+    "sourceHash": "892c381"
+  },
+  "suggestedOps.reversible.changeServerBack": "Có thể hoàn tác: sửa lại cài đặt máy chủ như cũ trong danh sách Máy chủ",
+  "@suggestedOps.reversible.changeServerBack": {
+    "sourceHash": "ff1ea36"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr sẽ tạo thư mục này",
   "@suggestedOps.folderWillBeCreated": {
@@ -307,12 +351,92 @@
   "@suggestedOps.refusal.couldNotStart.message": {
     "sourceHash": "77ef48b"
   },
-  "suggestedOps.refusal.couldNotStart.suggestion": "Hãy từ chối, rồi nhờ AI đề xuất lại.",
+  "suggestedOps.refusal.couldNotStart.suggestion": "Hãy từ chối, rồi nhờ Cmdr đề xuất lại.",
   "@suggestedOps.refusal.couldNotStart.suggestion": {
-    "sourceHash": "5b5b779"
+    "sourceHash": "1d2b1bd"
+  },
+  "suggestedOps.refusal.serverLabel": "Tại sao chưa lưu được",
+  "@suggestedOps.refusal.serverLabel": {
+    "sourceHash": "c1958af"
+  },
+  "suggestedOps.refusal.serverChanged.message": "Máy chủ này đã thay đổi kể từ lúc AI đề xuất, nên Cmdr không lưu gì cả.",
+  "@suggestedOps.refusal.serverChanged.message": {
+    "sourceHash": "a346372"
+  },
+  "suggestedOps.refusal.serverChanged.suggestion": "Hãy nhờ Cmdr đề xuất lại, hoặc sửa máy chủ trong danh sách Máy chủ.",
+  "@suggestedOps.refusal.serverChanged.suggestion": {
+    "sourceHash": "cab1352"
+  },
+  "suggestedOps.refusal.alreadySaved.message": "Máy chủ này đã có trong danh sách Máy chủ của bạn, nên Cmdr không lưu gì cả.",
+  "@suggestedOps.refusal.alreadySaved.message": {
+    "sourceHash": "111276b"
+  },
+  "suggestedOps.refusal.alreadySaved.suggestion": "Hãy mở máy chủ đó từ danh sách Máy chủ, hoặc nhờ Cmdr đề xuất một thay đổi cho máy chủ đó.",
+  "@suggestedOps.refusal.alreadySaved.suggestion": {
+    "sourceHash": "6ec8bdc"
+  },
+  "suggestedOps.refusal.nameTaken.message": "Một máy chủ đã lưu khác đã mang tên {name}, nên Cmdr không lưu gì cả.",
+  "@suggestedOps.refusal.nameTaken.message": {
+    "sourceHash": "1d0c01c"
+  },
+  "suggestedOps.refusal.nameTaken.suggestion": "Hãy nhờ Cmdr đề xuất một tên khác.",
+  "@suggestedOps.refusal.nameTaken.suggestion": {
+    "sourceHash": "e366b0c"
+  },
+  "suggestedOps.server.add": "Thêm một máy chủ",
+  "@suggestedOps.server.add": {
+    "sourceHash": "8667e21"
+  },
+  "suggestedOps.server.change": "Sửa cài đặt máy chủ",
+  "@suggestedOps.server.change": {
+    "sourceHash": "187a941"
+  },
+  "suggestedOps.server.field.port": "Cổng",
+  "@suggestedOps.server.field.port": {
+    "sourceHash": "72e9a59"
+  },
+  "suggestedOps.server.field.account": "Tài khoản",
+  "@suggestedOps.server.field.account": {
+    "sourceHash": "7e1b0d5"
+  },
+  "suggestedOps.server.field.share": "Thư mục chia sẻ",
+  "@suggestedOps.server.field.share": {
+    "sourceHash": "4268344"
+  },
+  "suggestedOps.server.field.bucket": "Bộ chứa",
+  "@suggestedOps.server.field.bucket": {
+    "sourceHash": "c83b657"
+  },
+  "suggestedOps.server.notSet": "Chưa đặt",
+  "@suggestedOps.server.notSet": {
+    "sourceHash": "4895f73"
+  },
+  "suggestedOps.server.changesTo": "đổi thành",
+  "@suggestedOps.server.changesTo": {
+    "sourceHash": "8c0db20"
+  },
+  "suggestedOps.server.newAddress": "Địa chỉ mới",
+  "@suggestedOps.server.newAddress": {
+    "sourceHash": "5fc5498"
+  },
+  "suggestedOps.server.newAddressTooltip": "Không có máy chủ đã lưu nào ở địa chỉ này. Hãy kiểm tra xem đây có đúng là địa chỉ bạn muốn không.",
+  "@suggestedOps.server.newAddressTooltip": {
+    "sourceHash": "16d851c"
+  },
+  "suggestedOps.server.sharesAffected": "Thay đổi này áp dụng cho {countText} {count, plural, other {mục chia sẻ}} đã lưu trên máy chủ này.",
+  "@suggestedOps.server.sharesAffected": {
+    "sourceHash": "390f931"
   },
   "suggestedOps.indicatorTooltip": "Có đề xuất từ AI đang chờ. Bấm để xem lại.",
   "@suggestedOps.indicatorTooltip": {
     "sourceHash": "4508b0b"
+  },
+  "suggestedOps.newNameTaken": "Tên đã được dùng",
+  "@suggestedOps.newNameTaken": {
+    "sourceHash": "58e9841"
+  },
+  "suggestedOps.newNameTakenTooltip": "Ở đó đã có thứ gì đó tên “{name}”.",
+  "@suggestedOps.newNameTakenTooltip": {
+    "sourceHash": "b18f96a"
   }
 }

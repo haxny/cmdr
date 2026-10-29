@@ -154,6 +154,11 @@
     "confidence": "high",
     "sources": "MS (client → клиент, 'a program that connects to another entity over a network'; AI → ИИ)"
   },
+  "ai-context": {
+    "chosen": "контекст",
+    "confidence": "high",
+    "sources": "MS terminology (context → контекст); askCmdr.cost.estimateTooltip"
+  },
   "ai-feature": {
     "chosen": "функции ИИ",
     "accept": ["функци", "ИИ"],
@@ -188,6 +193,13 @@
     "forms": "The reply didn't finish → Ответ не завершен",
     "confidence": "high",
     "sources": "MS (reply → ответ, 'a response to a message'); macOS live Mail (Reply → Ответить)"
+  },
+  "ai-lookup": {
+    "accept": ["поиска", "результат поиска"],
+    "chosen": "поиск",
+    "confidence": "high",
+    "forms": "a round of lookups → раунд поиска (не больше 25 раундов поиска)",
+    "sources": "catalog precedent: `askCmdr.error.repeatedToolCall`, `askCmdr.event.contextTrimmed`"
   },
   "ai-tool": {
     "chosen": "инструмент",
@@ -2402,6 +2414,7 @@
     "chosen": "поиск изображений",
     "accept": [
       "поиск фотограф",
+      "поиска фотограф",
       "поиск изображ",
       "поиска изображ",
       "поиске изображ",
@@ -2740,6 +2753,16 @@
     "forms": "your Servers list → список «Серверы»",
     "confidence": "high",
     "sources": "macOS AppKit (List → Список); Finder ViewOptionsWindow; MS"
+  },
+  "listing": {
+    "chosen": "просмотр",
+    "accept": ["просмотр", "чтение", "список"],
+    "forms": "the AI listing a folder → Просмотр папки {name} / Папка {name} просмотрена (askCmdr.tool.listDir.*); a pane or transfer reading a folder → Чтение папки…; the Settings section → Список файлов",
+    "confidence": "tentative",
+    "exceptions": {
+      "fileOperations.transferTree.preparing": "A transfer listing what it's about to copy reads to the user as counting (Подсчет файлов…), the established progress wording."
+    },
+    "sources": "TC 1207 Reading directory → «Чтение каталога...» (каталог swapped for папка per the folder ruling); catalog precedent askCmdr.tool.listDir.doing «Просмотр папки», settings.section.listing «Список файлов»"
   },
   "load": {
     "chosen": "загрузка",
@@ -4494,7 +4517,7 @@
     ],
     "confidence": "high",
     "sources": "Finder LocalizableMerged: Send → Отправить, Sending… → Отправка…; MS: send → отправить / отправлять",
-    "proseAccept": ["направ"],
+    "proseAccept": ["направ", "присыл"],
     "exceptions": {
       "settings.advanced.maxLogStorageMb.description": "Says reports are «недоступны» without logs; the sending is implicit."
     }
@@ -4951,6 +4974,13 @@
     "sources": "No source names a stalled transfer; live macOS: Not Responding → Не отвечает, Hang Report → Отчет о зависании (the hang sense to stay clear of)",
     "note": "Pick a word that says alive-but-not-moving; «остановилась» is the stop concept.",
     "decision": "Stalled transfer"
+  },
+  "start": {
+    "chosen": "запустить",
+    "accept": ["запуст", "запуск", "запущ", "выполн", "начат", "начн"],
+    "forms": "so nothing started → поэтому ничего не запустилось; Why this didn’t start → Почему это не запустилось; a refused approved suggestion may also say ничего не выполнилось; a step's status Not started → Не начато",
+    "confidence": "high",
+    "sources": "MS (start a task → запустить); catalog (suggestedOps.refusal.label Почему это не запустилось, suggestedOps.refusal.*.message ничего не выполнилось, indexing.step.statusPending Не начато)"
   },
   "start-up": {
     "chosen": "запуск",
@@ -6075,6 +6105,13 @@
     "confidence": "high",
     "sources": "MS: write (transfer information to a storage device) → записывать / запись; Thunar: Writing data to device → Запись данных на устройство; DC: Write → Запись; Finder: Writing track ^0 → Запись дорожки ^0"
   },
+  "zip": {
+    "chosen": "zip-архив",
+    "accept": ["zip", "ZIP"],
+    "forms": "prose may say bare zip, uninflected (в zip, внутри zip, инструменты для zip); into or out of a zip archive → в zip-архив или из него; the format in a label → архивы zip",
+    "confidence": "high",
+    "sources": "Total Commander ru (ZIP-архив, Создать самораспаковывающийся ZIP-архив?); Nautilus ru (Формат zip‑архива); archive ruling (zip archive → zip-архив); catalog (errors.write.archiveEntryNameRefused.* в zip 10+×)"
+  },
   "zoom": {
     "chosen": "Масштаб",
     "accept": ["масштаб", "увелич", "уменьш"],
@@ -6168,5 +6205,20 @@
     "forms": "unlock the phone → разблокируйте телефон; plug it in and unlock it → подключите его … и разблокируйте",
     "confidence": "high",
     "sources": "MS (unlock → разблокировать); catalog (errors.listing.notConnected.suggestion, errors.provider.macDroid.*: Разблокируйте телефон)"
+  },
+  "reasoning-effort": {
+    "chosen": "Глубина рассуждений",
+    "confidence": "tentative",
+    "sources": "OpenAI docs are English-only; no established rendering, so built from the locale’s reasoning wording"
+  },
+  "reasoning-effort-anthropic": {
+    "chosen": "Уровень усилий",
+    "confidence": "high",
+    "sources": "Anthropic localized docs, platform.claude.com/docs/<lang>/build-with-claude/effort, read 2026-10-28 (title Уровень усилий)"
+  },
+  "thinking-level": {
+    "chosen": "Уровень размышлений",
+    "confidence": "tentative",
+    "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
   }
 }

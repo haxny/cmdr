@@ -48,12 +48,13 @@ vi.mock('#lib/managed-policy/managed-policy.svelte.js', async (importOriginal) =
 })
 
 const { modelWindow } = vi.hoisted(() => ({
-  modelWindow: { model: 'gpt-4o', knownWindowTokens: null as number | null },
+  modelWindow: { model: 'gpt-4o', knownWindowTokens: null as number | null, replyTokens: 12_000 },
 }))
 vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   askCmdrCostSummary: vi.fn(() => Promise.resolve({ days: [] })),
   askCmdrModelWindow: vi.fn(() => Promise.resolve(modelWindow)),
+  onAiModelCapabilitiesChanged: vi.fn(() => Promise.resolve(() => undefined)),
   askCmdrForgetMemory: vi.fn(() => Promise.resolve(3)),
   // The forget confirmation is a `ModalDialog`, which reports itself open and closed.
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
@@ -90,6 +91,7 @@ describe('AskCmdrSection chat memory size', () => {
     settings['askCmdr.chatMemorySize'] = 'auto'
     modelWindow.model = 'gpt-4o'
     modelWindow.knownWindowTokens = null
+    modelWindow.replyTokens = 12_000
   })
 
   it('renders the row, showing the current choice by name', async () => {
@@ -121,6 +123,15 @@ describe('AskCmdrSection chat memory size', () => {
   it('warns, without overruling, when the size is larger than that window', async () => {
     settings['askCmdr.chatMemorySize'] = '200000'
     modelWindow.knownWindowTokens = 128_000
+    const target = await mountSection()
+    expect(warningText(target)).toBe('Your model may refuse a message this long. Cmdr keeps the value you set.')
+    target.remove()
+  })
+
+  it('warns when the size fills the window and leaves the reply no room', async () => {
+    settings['askCmdr.chatMemorySize'] = '200000'
+    modelWindow.knownWindowTokens = 200_000
+    modelWindow.replyTokens = 32_000
     const target = await mountSection()
     expect(warningText(target)).toBe('Your model may refuse a message this long. Cmdr keeps the value you set.')
     target.remove()

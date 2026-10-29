@@ -27,7 +27,7 @@ use crate::agent::chat::runtime::{ChatEventSink, ToolDispatcher, TurnParams, Tur
 use crate::agent::llm::AgentLlm;
 use crate::agent::llm::types::{ToolDeclaration, WakeDigest};
 use crate::agent::store::create_conversation;
-use crate::agent::types::ConversationOrigin;
+use crate::agent::types::{ConversationOrigin, TurnOrigin};
 
 const LOG_TARGET: &str = "agent::wake";
 
@@ -85,10 +85,15 @@ pub struct RunWakeParams<'a> {
     pub provider: crate::agent::llm::types::ProviderTag,
     pub model: String,
     pub prompt_budget: usize,
+    /// The chat memory the slot-change timeline names (`session::chat_memory_tokens`).
+    pub chat_memory_tokens: usize,
+    /// How hard the model thinks and the reply's ceiling: Recommended, resolved like the rail's
+    /// (`session::resolve_wake_call_settings`), and the same value the budget was sized with.
+    pub call: crate::agent::llm::CallSettings,
     /// What the agent has written about the user, already cut to this turn's share of the
     /// budget (`agent::memory::read_for_turn`). A wake needs it as much as the rail does: it
     /// is what stops the agent re-proposing what was already turned down.
-    pub memory: Option<&'a str>,
+    pub memory: &'a [crate::agent::llm::types::MemoryNote],
 }
 
 /// What a wake needs that it cannot work out for itself, for the whole job in one call.
@@ -105,8 +110,13 @@ pub struct WakeParams<'a> {
     pub provider: crate::agent::llm::types::ProviderTag,
     pub model: String,
     pub prompt_budget: usize,
+    /// The chat memory the slot-change timeline names (`session::chat_memory_tokens`).
+    pub chat_memory_tokens: usize,
+    /// How hard the model thinks and the reply's ceiling: Recommended, resolved like the rail's
+    /// (`session::resolve_wake_call_settings`), and the same value the budget was sized with.
+    pub call: crate::agent::llm::CallSettings,
     /// What the agent has written about the user, cut to this turn's share of the budget.
-    pub memory: Option<&'a str>,
+    pub memory: &'a [crate::agent::llm::types::MemoryNote],
 }
 
 /// How a wake ended.
@@ -226,14 +236,26 @@ pub async fn run_prepared_wake(
 /// connection and the single-flight guard. Two places composing a wake's turn independently
 /// is how the two would drift.
 pub fn wake_turn_params<'a>(prepared: &'a PreparedWake, params: &'a RunWakeParams<'a>) -> TurnParams<'a> {
-    turn_params(prepared.conversation_id, UserTurn::Wake(&prepared.digest), params)
+    turn_params(
+        prepared.conversation_id,
+        TurnOrigin::Wake,
+        UserTurn::Wake(&prepared.digest),
+        params,
+    )
 }
 
 /// The shape both background turns share: a wake's digest and a rejection's outcomes differ
-/// only in what opens them, so everything else is written once.
-pub fn turn_params<'a>(conversation_id: i64, user: UserTurn<'a>, params: &'a RunWakeParams<'a>) -> TurnParams<'a> {
+/// only in what opens them and which background `origin` they are, so everything else is
+/// written once.
+pub fn turn_params<'a>(
+    conversation_id: i64,
+    origin: TurnOrigin,
+    user: UserTurn<'a>,
+    params: &'a RunWakeParams<'a>,
+) -> TurnParams<'a> {
     TurnParams {
         conversation_id,
+        origin,
         user: Some(user),
         cmdr_md: None,
         memory: params.memory,
@@ -243,6 +265,10 @@ pub fn turn_params<'a>(conversation_id: i64, user: UserTurn<'a>, params: &'a Run
         provider: params.provider,
         model: params.model.clone(),
         prompt_budget: params.prompt_budget,
+        chat_memory_tokens: params.chat_memory_tokens,
+        call: params.call,
+        // A background turn has nobody to answer the question: its round cap bounds it instead.
+        spend_pause: None,
     }
 }
 
@@ -298,6 +324,8 @@ pub async fn run_wake(
             provider: params.provider,
             model: params.model,
             prompt_budget: params.prompt_budget,
+            chat_memory_tokens: params.chat_memory_tokens,
+            call: params.call,
             memory: params.memory,
         },
         sink,

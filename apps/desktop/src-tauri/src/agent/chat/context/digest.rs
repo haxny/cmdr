@@ -39,8 +39,8 @@ pub(super) fn of_arguments(arguments: Option<&Value>, budget: usize) -> String {
     let described = match arguments {
         None => "unknown".to_string(),
         Some(Value::Object(map)) if map.is_empty() => "no arguments".to_string(),
-        Some(Value::Object(map)) => map
-            .iter()
+        Some(Value::Object(map)) => by_key(map)
+            .into_iter()
             .map(|(key, value)| describe_argument(key, value))
             .collect::<Vec<_>>()
             .join(", "),
@@ -54,8 +54,8 @@ pub(super) fn of_arguments(arguments: Option<&Value>, budget: usize) -> String {
 pub(super) fn of_result(content: &Value, budget: usize) -> String {
     let described = match content {
         Value::Object(map) if map.is_empty() => "an empty object".to_string(),
-        Value::Object(map) => map
-            .iter()
+        Value::Object(map) => by_key(map)
+            .into_iter()
             .map(|(key, value)| describe_field(key, value))
             .collect::<Vec<_>>()
             .join(", "),
@@ -125,7 +125,7 @@ fn row_fields(items: &[Value]) -> Vec<String> {
     let mut filled: Vec<usize> = Vec::new();
     for item in items {
         let Some(map) = item.as_object() else { continue };
-        for (key, value) in map {
+        for (key, value) in by_key(map) {
             let position = match order.iter().position(|seen| *seen == key.as_str()) {
                 Some(position) => position,
                 None => {
@@ -198,11 +198,19 @@ fn common_prefix_bytes(a: &str, b: &str) -> usize {
 /// The first argument key holding a non-empty collection: the noun the re-fetch sentence
 /// uses. The model's own key name, so the sentence never invents vocabulary.
 fn collection_key(arguments: &Value) -> Option<String> {
-    arguments
-        .as_object()?
-        .iter()
+    by_key(arguments.as_object()?)
+        .into_iter()
         .find(|(_, value)| matches!(value, Value::Array(items) if !items.is_empty()))
         .map(|(key, _)| truncate(key, MAX_NOUN_BYTES))
+}
+
+/// An object's entries in key order. `serde_json::Map` iterates in insertion order in this build
+/// (genai turns on `preserve_order`), and the order a model emitted its keys in mustn't move a
+/// digest the model reads back.
+fn by_key(map: &serde_json::Map<String, Value>) -> Vec<(&String, &Value)> {
+    let mut entries: Vec<_> = map.iter().collect();
+    entries.sort_by(|a, b| a.0.cmp(b.0));
+    entries
 }
 
 /// Cut `text` to `budget` BYTES (the unit the shared token estimator counts), on a character

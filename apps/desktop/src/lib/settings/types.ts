@@ -368,7 +368,12 @@ export type AiLocalContextSize = '32768' | '65536' | '131072' | '262144'
  * window; a preset overrides it and is honoured as given (the section warns when it is
  * larger than the window Cmdr believes the model has).
  */
+export type AskCmdrToolGroupsOnAnswer = 'collapse' | 'keep'
 export type AskCmdrChatMemorySize = 'auto' | '16000' | '32000' | '60000' | '128000' | '200000'
+
+/** Where one Ask Cmdr answer the user started pauses on its estimated spend and asks to keep going: an
+ * amount in dollars, or `'never'`. */
+export type AskCmdrSpendPause = '0.5' | '1' | '2' | '5' | '10' | 'never'
 
 /**
  * UI language: `'system'` follows the OS locale (the default); any other value
@@ -673,6 +678,7 @@ export interface SettingsValues {
   'ai.localContextSize': AiLocalContextSize
   'ai.cloudProvider': string
   'ai.cloudProviderConfigs': string // JSON blob
+  'ai.reasoningEfforts': string // JSON blob, keyed "<provider id>/<model>"
   // A "no" to cloud AI the consent store hasn't recorded yet. Every Rust cloud gate reads it fresh
   // from `settings.json`, so the "no" holds before the store catches up (`cloud-consent.svelte.ts`).
   'ai.cloudConsentRevokePending': boolean
@@ -688,6 +694,9 @@ export interface SettingsValues {
   // The prompt budget one message may claim; `'auto'` follows the model's window. Read fresh
   // backend-side each send (`load_ask_cmdr_chat_memory_size`), like the model override above.
   'askCmdr.chatMemorySize': AskCmdrChatMemorySize
+  // Where one answer pauses on its estimated spend (dollars, or never). Read fresh backend-side
+  // each send (`load_ask_cmdr_spend_pause_micros`), like the two above.
+  'askCmdr.spendPause': AskCmdrSpendPause
   // Whether Ask Cmdr may start conversations on its own. The three rows below drive a SLEEPING
   // timer in Rust (`agent::wake`), so unlike the two above they each need a `settings-applier`
   // case: the backend can't read them fresh at send time, because there is no send.
@@ -702,6 +711,9 @@ export interface SettingsValues {
   // The legacy held "no" to Ask Cmdr's old opt-in. Nothing writes it; only the one-time
   // `askCmdr.enabled` mapping reads it (backend-side, through `ask_cmdr_legacy_opt_in`).
   'askCmdr.consentRevokePending': boolean
+  // What a finished answer does with the tool groups it left open: close them all, or leave
+  // each as the person had it. Pure frontend, read at each turn's end.
+  'askCmdr.toolGroupsOnAnswer': AskCmdrToolGroupsOnAnswer
 
   // Developer
   'developer.mcpEnabled': boolean

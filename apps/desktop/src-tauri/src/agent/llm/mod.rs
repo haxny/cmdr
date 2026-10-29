@@ -19,7 +19,7 @@ use futures_util::future::BoxFuture;
 use futures_util::stream::BoxStream;
 use tokio_util::sync::CancellationToken;
 
-pub use types::{AgentDelta, AgentLlmError, AgentMessage, ToolDeclaration};
+pub use types::{AgentDelta, AgentLlmError, AgentMessage, CallSettings, ReasoningEffort, ToolDeclaration};
 
 /// The stream of increments a single [`AgentLlm::respond`] call produces. Always
 /// `'static` (it owns its data), so it survives the borrow of the call arguments.
@@ -33,6 +33,10 @@ pub type AgentDeltaStream = BoxStream<'static, Result<AgentDelta, AgentLlmError>
 /// [`AgentDelta`]s and, on `End`, the fully-assembled final [`AgentMessage`]
 /// carrying any opaque provider state for persistence and replay.
 ///
+/// `call` is how hard the model thinks on this call ([`ReasoningEffort`]) and the output ceiling
+/// that thinking shares with the reply ([`CallSettings`]); whatever the level, the reasoning the provider hands back rides on the `End` message and replays on the
+/// next call, which is what keeps a reasoning-on tool loop coherent.
+///
 /// Cancellation: fire `cancel` to drop the stream (the reqwest body closes, billing
 /// stops — the genai impl reuses `crate::ai`'s stream-cancel model).
 ///
@@ -44,6 +48,7 @@ pub trait AgentLlm: Send + Sync {
         system: &'a str,
         tools: &'a [ToolDeclaration],
         messages: &'a [AgentMessage],
+        call: CallSettings,
         cancel: CancellationToken,
     ) -> BoxFuture<'a, Result<AgentDeltaStream, AgentLlmError>>;
 }
