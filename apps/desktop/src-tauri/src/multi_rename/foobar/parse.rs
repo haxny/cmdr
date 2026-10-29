@@ -17,7 +17,7 @@ enum Context {
     Top,
     /// Inside `[ ]`: `]` ends it.
     Optional,
-    /// A function argument: `,` and `)` end it.
+    /// A function argument: `,` and `)` end it, except inside a balanced `( )` of its own text.
     Argument,
 }
 
@@ -45,13 +45,24 @@ impl Parser<'_> {
     fn sequence(&mut self, context: Context, depth: usize) -> Result<(Vec<Node>, End), FoobarError> {
         let mut nodes = Vec::new();
         let mut text = String::new();
+        // In an argument, the `(`s of its own text still open: `$if(%date%,x (y),z)`'s `(y)`
+        // and the `,` inside one are text, as a pattern pasted from the web expects.
+        let mut parens: Vec<usize> = Vec::new();
         let end = loop {
-            let Some(c) = self.peek() else { break End::Pattern };
+            let Some(c) = self.peek() else {
+                if let Some(&open) = parens.last() {
+                    return Err(FoobarError::Unclosed {
+                        what: Unclosed::Parenthesis,
+                        at: open,
+                    });
+                }
+                break End::Pattern;
+            };
             let at = self.pos;
             let closing = match (c, context) {
                 (']', Context::Optional) => Some(End::Bracket),
-                (',', Context::Argument) => Some(End::Comma),
-                (')', Context::Argument) => Some(End::Paren),
+                (',', Context::Argument) if parens.is_empty() => Some(End::Comma),
+                (')', Context::Argument) if parens.is_empty() => Some(End::Paren),
                 _ => None,
             };
             if let Some(end) = closing {
@@ -69,6 +80,13 @@ impl Parser<'_> {
                     });
                 }
                 _ => {
+                    if context == Context::Argument {
+                        match c {
+                            '(' => parens.push(at),
+                            ')' => _ = parens.pop(),
+                            _ => {}
+                        }
+                    }
                     text.push(c);
                     self.pos += c.len_utf8();
                 }

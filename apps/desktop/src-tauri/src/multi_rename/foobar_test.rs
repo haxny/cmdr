@@ -284,6 +284,7 @@ fn ten_thousand_random_patterns_never_panic() {
         "$caps(",
         "$trim(",
         "$pad(",
+        "$year(",
         "-",
         "9",
         "99999999999999999999",

@@ -102,8 +102,19 @@ error with its byte offset.
   what makes the user's SFT pattern drop its numbers, which a literal-true `$num` would turn into `000`.
 - **A missing field outside `[ ]` is no text**, not foobar's `?`: File Operations, which renames, shows `()` for a
   missing `%year%` (the user's screenshot), rather than a `?` in the new name.
-- **Fallbacks:** `%album artist%` → artist, `%title%` → the name without extension; `%tracknumber%`/`%track%` pad to
-  two digits; `%year%` is the date's first four characters when they're digits, else the reader's year.
+- **`%album artist%` falls back to the artist only**, a deliberate departure from foobar's documented chain (album
+  artist → artist → composer → performer): the user's canon never puts the reader in the author slot. `%artist%` has
+  no fallback. The user may revisit this (`foobar/fields.rs`).
+- **Cmdr conveniences, not foobar built-ins:** `%year%` is the date's first four characters when they're digits, else
+  the reader's year (foobar reads a raw YEAR tag; its users write `$year(%date%)`, which works too); `%track%` and
+  `%disc%` alias `%tracknumber%` and `%discnumber%`. `%title%` falls back to the name without extension and
+  `%tracknumber%` pads to two digits, as in foobar. A blank tag (spaces only) is missing, so `[ ]` drops it.
+- **Parentheses in an argument:** `,` and `)` end an argument, except inside a balanced `( )` of its own text, so
+  `$if(%date%,x (y),z)` is `x (y)` as a pattern pasted from the web means; an unbalanced `(` there is
+  `Unclosed { what: parenthesis }`. foobar wants such text quoted; Cmdr accepts both.
+- **`$caps` starts a word after whitespace or `( [ { " /`** and lower-cases the rest (`o'neil` → `O'neil`,
+  `jean-paul` → `Jean-paul`). foobar doesn't document its set; this is Cmdr's choice.
+- **Error offsets are bytes** into the pattern; a UI highlighting in a JS string converts them.
 - **No input panics or runs away:** nesting stops at `MAX_DEPTH` (32) before recursing, every value is cut at
   `MAX_TEXT_BYTES`, `$num`/`$pad` widths at `MAX_WIDTH`, numbers saturate. A 10,000-pattern random loop and a
   200,000-deep bomb guard it.

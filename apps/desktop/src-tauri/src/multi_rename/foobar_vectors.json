@@ -85,6 +85,11 @@
       "media": { "artist": "Someone", "track": 123 }
     },
     "plainFile": { "fileName": "notes.final.txt", "parent": "Docs" },
+    "blankTags": {
+      "fileName": "05 Song.mp3",
+      "parent": "Album",
+      "media": { "artist": "   ", "albumArtist": "", "title": " ", "performer": ["", " "], "comment": "\t", "track": 5 }
+    },
     "oddDate": {
       "fileName": "x.mp3",
       "parent": "p",
@@ -141,6 +146,12 @@
     { "pattern": "$if(%artist%,$if(%album%,$upper(%album%),x),y)", "facts": "anneFrank", "expected": "DENIK" },
     { "pattern": "$if(%artist%,'a,b','(c)')", "facts": "anneFrank", "expected": "a,b" },
     { "pattern": "$if(%artist%,[%comment%],[%album%])|$if(,a,b)", "facts": "anneFrank", "expected": "|b" },
+    { "pattern": "$if(%date%,x (y),z)|$if(%comment%,x (y),z (w, v))|$upper(a (b (c)) d)|$if(%date%,'(',z)", "facts": "anneFrank", "expected": "x (y)|z (w, v)|A (B (C)) D|(" },
+    { "pattern": "SFT $if(%date%,%date% (%disc%),none)", "facts": "sft", "expected": "SFT 2024-05-01 (1)" },
+    { "pattern": "$year(%date%)|$year(2011-05-01)|[$year(%comment%)]|[$year(May 2001)]|[$year(%date%)]", "facts": "anneFrank", "expected": "1947|2011|||1947" },
+    { "pattern": "$year(%date%) %album%", "facts": "oddDate", "expected": " " },
+    { "pattern": "[%album artist% - ][%artist% - ][%performer% ][%comment%]%title%", "facts": "blankTags", "expected": "05 Song" },
+    { "pattern": "$if(%artist%,a,b)$if2(%performer%,c)$if3(%album artist%,%comment%,d)", "facts": "blankTags", "expected": "bcd" },
     { "pattern": "", "facts": "anneFrank", "expected": "" }
   ],
   "errors": [
@@ -167,6 +178,10 @@
     { "pattern": "x 'open", "error": { "type": "unclosed", "what": "quote", "at": 2 } },
     { "pattern": "$num(%track%,2", "error": { "type": "unclosed", "what": "function", "at": 0 } },
     { "pattern": "$if(a,[b)", "error": { "type": "unclosed", "what": "bracket", "at": 6 } },
-    { "pattern": "$upper('a)", "error": { "type": "unclosed", "what": "quote", "at": 7 } }
+    { "pattern": "$upper('a)", "error": { "type": "unclosed", "what": "quote", "at": 7 } },
+    { "pattern": "$upper(a (b", "error": { "type": "unclosed", "what": "parenthesis", "at": 9 } },
+    { "pattern": "$upper(a (b (c) d", "error": { "type": "unclosed", "what": "parenthesis", "at": 9 } },
+    { "pattern": "$if(a,x (y,z)", "error": { "type": "unclosed", "what": "function", "at": 0 } },
+    { "pattern": "$year(a,b)", "error": { "type": "badArguments", "function": "year", "at": 0 } }
   ]
 }

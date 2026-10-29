@@ -1,7 +1,7 @@
-//! The `%field%`s a foobar pattern can name, with foobar's meaning: `%album artist%` falls back
-//! to the artist, `%title%` to the file name, `%tracknumber%` pads to two digits, `%year%` is the
-//! date's first four digits. Values come from the row's tags (`MediaFacts`), multi-value fields
-//! joined with `, `.
+//! The `%field%`s a foobar pattern can name: `%title%` falls back to the file name and
+//! `%tracknumber%` pads to two digits, as in foobar; `%album artist%` falls back to the artist only
+//! and `%year%` is the date's first four digits, Cmdr's choices (`multi_rename/DETAILS.md`). Values
+//! come from the row's tags (`MediaFacts`, blanks are missing), multi-value fields joined with `, `.
 
 use cmdr_media_meta::{MediaFacts, MediaField, MediaValue};
 
@@ -113,15 +113,17 @@ fn text(facts: &MediaFacts, field: MediaField) -> Option<String> {
     }
 }
 
-/// The date's first four characters when they're digits (`2011-05-01` → `2011`), else the year
-/// the reader found.
+/// `%year%` (a Cmdr convenience; foobar reads a raw YEAR tag): the date's year, else the year the
+/// reader found.
 fn year(facts: &MediaFacts) -> Option<String> {
-    let from_date = text(facts, MediaField::TagDate).and_then(|date| {
-        date.get(..4)
-            .filter(|four| four.bytes().all(|b| b.is_ascii_digit()))
-            .map(str::to_string)
-    });
+    let from_date = text(facts, MediaField::TagDate).and_then(|date| year_of(&date).map(str::to_string));
     from_date.or_else(|| text(facts, MediaField::TagYear))
+}
+
+/// A date's year, as foobar's `$year` reads it: its first four characters when they're digits
+/// (`2011-05-01` → `2011`), else none.
+pub(super) fn year_of(date: &str) -> Option<&str> {
+    date.get(..4).filter(|four| four.bytes().all(|b| b.is_ascii_digit()))
 }
 
 fn non_empty(text: &str) -> Option<String> {

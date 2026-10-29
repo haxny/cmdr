@@ -7,8 +7,9 @@
 //! - `[ … ]` kept only when something inside is true (a field with a value, or a function whose
 //!   result is true), else dropped whole.
 //! - `'…'` literal text (`%`, `$`, `[`, `(`, `,` all plain inside); `''` is one apostrophe.
-//! - `$num $if $if2 $if3 $left $right $replace $lower $upper $caps $trim $pad`, in `eval.rs`.
-//!   Names are case-insensitive. Inside an argument `,` and `)` end it, so quote them as text.
+//! - `$num $if $if2 $if3 $left $right $replace $lower $upper $caps $trim $pad $year`, in
+//!   `eval.rs`. Names are case-insensitive. Inside an argument `,` and `)` end it, except within a
+//!   balanced `( )` of the argument's own text (`$if(%date%,x (y),z)`); quote anything else.
 //! - Anything else is a [`FoobarError`] naming it and its byte offset.
 //!
 //! Nesting (brackets and calls together) stops at [`MAX_DEPTH`], every value at
@@ -43,7 +44,7 @@ pub enum FoobarError {
     UnknownFunction { name: String, at: usize },
     /// A known function with the wrong number of arguments, or none at all (`$upper`).
     BadArguments { function: String, at: usize },
-    /// An opening `%`, `[`, `'`, or `$f(` with no end.
+    /// An opening `%`, `[`, `'`, `$f(`, or a `(` in an argument's text with no end.
     Unclosed { what: Unclosed, at: usize },
     /// Nested deeper than [`MAX_DEPTH`]; `at` is the first opening past it.
     TooDeep { at: usize },
@@ -57,6 +58,8 @@ pub enum Unclosed {
     Bracket,
     Quote,
     Function,
+    /// A `(` in a function argument's text (`$upper(a (b`).
+    Parenthesis,
 }
 
 /// A parsed pattern.
@@ -90,6 +93,7 @@ enum Function {
     Caps,
     Trim,
     Pad,
+    Year,
 }
 
 impl Function {
@@ -107,6 +111,7 @@ impl Function {
             "caps" => Self::Caps,
             "trim" => Self::Trim,
             "pad" => Self::Pad,
+            "year" => Self::Year,
             _ => return None,
         })
     }
@@ -114,7 +119,7 @@ impl Function {
     /// Whether `count` arguments is a call foobar accepts.
     fn takes(self, count: usize) -> bool {
         match self {
-            Self::Lower | Self::Upper | Self::Caps | Self::Trim => count == 1,
+            Self::Lower | Self::Upper | Self::Caps | Self::Trim | Self::Year => count == 1,
             Self::Num | Self::Left | Self::Right | Self::If2 => count == 2,
             Self::If | Self::Pad => (2..=3).contains(&count),
             Self::If3 => count >= 2,

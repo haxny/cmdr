@@ -2,8 +2,10 @@
 //! value: a field with a value is true, literal text is false, a sequence is true when any part
 //! is, `[ ]` is its content when true and nothing otherwise. `$if`, `$if2`, `$if3` test truth and
 //! return the branch they pick (text and truth); every other function returns the truth of its
-//! first argument, so `[$num(%disc%,1)]` drops when the disc is missing.
+//! first argument, so `[$num(%disc%,1)]` drops when the disc is missing (and `$year` is false
+//! when the text has no year).
 
+use super::fields::year_of;
 use super::{Function, MAX_TEXT_BYTES, MAX_WIDTH, Node};
 use crate::multi_rename::mask::RowFacts;
 
@@ -99,6 +101,10 @@ fn call(function: Function, args: &[Vec<Node>], row: &RowFacts) -> Value {
         Function::Caps => change(&|text| caps(&text)),
         Function::Trim => change(&|text| text.trim_matches(' ').to_string()),
         Function::Pad => change(&|text| padded(text, count(1), &arg(args, 2, row).text)),
+        Function::Year => {
+            let date = arg(args, 0, row);
+            year_of(&date.text).map_or_else(Value::default, |year| Value::new(year.to_string(), date.truth))
+        }
     }
 }
 
