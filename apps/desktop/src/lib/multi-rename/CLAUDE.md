@@ -13,8 +13,9 @@ The ⌃M sheet over `src-tauri/src/multi_rename/` (the engine and its rules: tha
   clash) and `preset-keys.ts` (F2 / ⌘S) are pure.
 - `spec.ts` the default spec, the preset seeds, `specsEqual`, placeholder insertion; `row-status.ts` a row status →
   glyph, label, reason; `error-text.ts` the error line's words. Pure.
-- `MaskInput.svelte` both mask fields; `[C…]`, range, and `[=…]` tokens get a ▾ marker and an inline editor
-  (`mask-token-kinds.ts`), over pure `mask-tokens.ts`, the `*-token.ts` grammars, and `token-editor-rules.ts`.
+- `MaskFields.svelte` masks + syntax switch. `MaskInput.svelte` one field; `[C…]`, range, and `[=…]` tokens get a ▾
+  marker and an inline editor (`mask-token-kinds.ts`), over pure `mask-tokens.ts`, the `*-token.ts` grammars, and
+  `token-editor-rules.ts`.
 - `PlaceholderChips.svelte` the placeholder buttons and `media ▾`, whose `MediaFieldPicker.svelte` inserts fields
   (`media-fields.ts`: their words, the picker's groups, spaced inserts). `PlaceholderTip.svelte` /
   `placeholder-help.ts`, `SearchOptionChips.svelte` / `search-option-help.ts`: tooltips and chips; `rename-examples.ts`
@@ -43,9 +44,9 @@ The ⌃M sheet over `src-tauri/src/multi_rename/` (the engine and its rules: tha
 - **The `*-token.ts` grammars read tokens as `mask.rs` does** (`src-tauri/src/multi_rename/*_token_vectors.json`);
   change one there first.
 - **Tooltip and editor examples are the engine's render.** ❌ No slicing or replacing in TS. DETAILS § Tooltip examples.
-- **A spec error keeps the last good preview** under the message; any other error clears it.
+- **A spec error shows old names, never new ones** (`shownRow`); Rename and Results refuse.
 - **A caret-opened editor is `passive`** (no focus, no trap). A token editor reads `shown`, ❌ never `editing`: a gone
   token blanked the window. DETAILS § Mask input.
-- **The sheet opens on what the last one closed with**: fields AND loaded preset. An edit made before they arrive wins.
+- **The sheet opens on what the last one closed with**: fields AND loaded preset; an earlier edit wins.
 
 More: `DETAILS.md`.

@@ -70,6 +70,7 @@ import { SvelteMap } from 'svelte/reactivity'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { DEFAULT_SPEC, PRESET_SEEDS, specsEqual } from './spec'
 import { usesMediaFields } from './media-token'
+import { maskUsesMedia, patchSpec } from './mask-syntax'
 
 export const PREVIEW_DELAY_MS = 120
 
@@ -123,6 +124,12 @@ export interface MultiRenameState {
   readonly source: ColumnListWindowedSource<PreviewRow>
   /** Why the preview has no answer: a bad mask or regex, a gone listing, a timeout. */
   readonly error: MultiRenameError | null
+  /** A spec error: rows show their old names (never the last good preview's) and Rename and Results don't run. */
+  readonly maskInvalid: boolean
+  /** The name mask switched to foobar on its own, as a foobar pattern came in: the sheet says so, with a way back. */
+  readonly syntaxSwitched: boolean
+  /** Back to Cmdr syntax after an automatic switch; the mask's text stays. */
+  undoSyntaxSwitch: () => void
   /** Why the last Start didn't run. Cleared by the next edit or preview; doesn't block a retry. */
   readonly applyError: MultiRenameError | null
   /** An edit the preview hasn't caught up with yet: Start waits, so it never runs a spec nobody saw. */
@@ -226,6 +233,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
   // each preview and each switch of the list; pages land in it as they arrive.
   let rows = $state.raw(new SvelteMap<number, PreviewRow>())
   let error = $state<MultiRenameError | null>(null)
+  let syntaxSwitched = $state(false)
   let presets = $state.raw<MultiRenamePreset[]>([])
   let loadedId = $state<string | null>(null)
   let applying = $state(false)
@@ -263,14 +271,19 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
   let prioritized = ''
 
   const totalOf = (c: PreviewCounts): number => c.ready + c.unchanged + c.problems + c.reading
-  const usesMedia = (): boolean => usesMediaFields(spec.nameMask) || usesMediaFields(spec.extensionMask)
+  const usesMedia = (): boolean =>
+    maskUsesMedia(spec.nameMask, spec.maskSyntax ?? 'cmdr') || usesMediaFields(spec.extensionMask)
+  const maskInvalid = (): boolean => error?.type === 'spec'
+  /** A row as the list shows it: under a spec error, its old name, unchanged. */
+  const shownRow = (row: PreviewRow | undefined): PreviewRow | undefined =>
+    row && maskInvalid() ? { ...row, newName: row.oldName, status: { type: 'unchanged' }, edited: false } : row
   // Rows still reading, or a read that isn't done: a value may still come for some file.
   const waitsForMedia = (): boolean =>
     usesMedia() && (counts.reading > 0 || (media !== null && media.total > 0 && !media.done))
   const filterOf = (): PreviewFilter => (problemsOnly ? 'problems' : 'all')
   const listed = (): number => (problemsOnly ? counts.problems : totalOf(counts))
   const cursorIndex = (): number => (listed() === 0 ? -1 : Math.max(0, Math.min(cursor, listed() - 1)))
-  const cursorRow = (): PreviewRow | undefined => rows.get(cursorIndex())
+  const cursorRow = (): PreviewRow | undefined => shownRow(rows.get(cursorIndex()))
   // Every row of the session, problems included: what the range editor's examples come from.
   const sampleRows = $derived.by((): SampleRows | null => {
     const cursorPlace = cursorRow()?.row
@@ -331,8 +344,9 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
       show(shown)
       runQueued()
     } else {
-      // A spec problem keeps the last good preview on screen under the error.
+      // A spec problem keeps the files listed (`shownRow` drops their new names) under the error.
       error = answer.error
+      if (answer.error.type === 'spec' && previewId === null) void listFiles(asked)
       if (answer.error.type !== 'spec') {
         previewId = null
         counts = NO_COUNTS
@@ -343,6 +357,19 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
         if (!launching) dropQueue()
       }
     }
+  }
+
+  /**
+   * The sheet opened on a spec that doesn't run, so no preview lists the files: one of the default spec
+   * does, for their old names. Dropped when an edit came meanwhile.
+   */
+  async function listFiles(asked: number): Promise<void> {
+    const answer = await previewMultiRename(sessionId, { ...DEFAULT_SPEC })
+    if (asked !== generation || !answer.ok || !maskInvalid()) return
+    previewId = answer.value.previewId
+    counts = answer.value.counts
+    rows = new SvelteMap(answer.value.rows.map((row) => [row.row, row]))
+    show(shown)
   }
 
   function show(window: RowWindow): void {
@@ -399,7 +426,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
   /** Renames preview `previewId`'s ready rows; `'stillReading'` when the backend found a file still being read. */
   async function startRename(): Promise<MultiRenameStarted | 'stillReading' | null> {
     const id = previewId
-    if (applying || waiting > 0 || id === null) return null
+    if (applying || waiting > 0 || id === null || maskInvalid()) return null
     applying = true
     try {
       // The preview the user saw: the backend renames only if it still computes exactly its ready rows.
@@ -557,7 +584,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
       get count() {
         return listed()
       },
-      getRow: (index) => rows.get(index),
+      getRow: (index) => shownRow(rows.get(index)),
       onRangeChange: (range) => {
         show(range)
         prioritizeShown(range)
@@ -565,6 +592,18 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
     },
     get error() {
       return error
+    },
+    get maskInvalid() {
+      return maskInvalid()
+    },
+    get syntaxSwitched() {
+      return syntaxSwitched
+    },
+    undoSyntaxSwitch() {
+      touched = true
+      spec = { ...spec, maskSyntax: 'cmdr' }
+      syntaxSwitched = false
+      schedule()
     },
     get presets() {
       return presets
@@ -617,7 +656,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
       return waiting > 0
     },
     rowAt(index) {
-      return rows.get(index)
+      return shownRow(rows.get(index))
     },
     show,
     setProblemsOnly(on) {
@@ -633,7 +672,9 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
     },
     update(patch) {
       touched = true
-      spec = { ...spec, ...patch }
+      const next = patchSpec(spec, patch)
+      spec = next.spec
+      if (next.switched !== null) syntaxSwitched = next.switched
       schedule()
     },
     loadPreset(id) {
@@ -642,12 +683,14 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
       touched = true
       loadedId = id
       spec = { ...next }
+      syntaxSwitched = false
       schedule()
     },
     resetFields() {
       touched = true
       loadedId = null
       spec = { ...DEFAULT_SPEC }
+      syntaxSwitched = false
       schedule()
     },
     async loadPresets() {
@@ -685,7 +728,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
     },
     async writeNames() {
       const id = previewId
-      if (waiting > 0 || id === null) return null
+      if (waiting > 0 || id === null || maskInvalid()) return null
       const answer = await writeMultiRenameNames(sessionId, id)
       if (answer.ok) return answer.value
       applyError = answer.error
@@ -708,6 +751,7 @@ export function createMultiRenameState(sessionId: string): MultiRenameState {
         cancelQueue()
         return null
       }
+      if (maskInvalid()) return null
       if (waitsForMedia()) return enqueue()
       const pressedAt = edits
       const outcome = await startRename()

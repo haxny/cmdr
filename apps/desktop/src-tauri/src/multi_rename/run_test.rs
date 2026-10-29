@@ -31,6 +31,7 @@ pub(super) fn strip_diacritics() -> MultiRenameSpec {
         remove_diacritics: true,
         greek_to_latin: false,
         normalize_unicode: false,
+        mask_syntax: crate::multi_rename::plan::MaskSyntax::Cmdr,
     }
 }
 

@@ -57,6 +57,7 @@ fn blank_spec() -> Value {
         "removeDiacritics": false,
         "greekToLatin": false,
         "normalizeUnicode": false,
+        "maskSyntax": "cmdr",
     })
 }
 

@@ -100,6 +100,31 @@ fn a_mask_with_media_fields_compiles_and_a_bad_mask_is_a_typed_spec_error() {
     assert_eq!(err.data.expect("typed")["specError"]["type"], "nameMask");
 }
 
+/// `maskSyntax` defaults to Cmdr's; `foobar` renders the name mask as a foobar2000 pattern, and a
+/// pattern that doesn't parse is the sheet's typed `pattern` spec error.
+#[test]
+fn the_name_mask_takes_either_syntax() {
+    use crate::multi_rename::plan::MaskSyntax;
+    assert_eq!(
+        parse_request(&json!({})).expect("valid").spec.mask_syntax,
+        MaskSyntax::Cmdr
+    );
+    let request = parse_request(&json!({ "maskSyntax": "foobar", "nameMask": "$upper(%filename%)" })).expect("valid");
+    assert_eq!(request.spec.mask_syntax, MaskSyntax::Foobar);
+    let rows = preview_of(
+        json!({ "maskSyntax": "foobar", "nameMask": "$upper(%filename%)" }),
+        &[file("a.jpg")],
+        &["a.jpg"],
+    );
+    assert_eq!(rows[0].new_name, "A.jpg");
+    let request = parse_request(&json!({ "maskSyntax": "foobar", "nameMask": "%nope%" })).expect("valid params");
+    let err = compile(&request.spec).err().expect("a bad pattern");
+    let data = err.data.expect("typed");
+    assert_eq!(data["specError"]["type"], "pattern");
+    assert_eq!(data["specError"]["error"]["type"], "unknownField");
+    parse_request(&json!({ "maskSyntax": "winamp" })).expect_err("unknown syntax");
+}
+
 /// Paging a proposal would silently propose a slice, so it's refused.
 #[test]
 fn paging_params_beside_a_proposal_are_refused() {

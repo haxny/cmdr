@@ -90,10 +90,16 @@ it today), "next step" chaining, and editing names in an editor.
 ## foobar2000 patterns (`foobar/`)
 
 A second mask syntax: foobar2000 title formatting as the user writes it in foobar, so a pasted pattern renders as
-foobar's File Operations would. `foobar::parse` once, `Pattern::render(&RowFacts)` per row; pure, and not yet wired
-into the sheet. The grammar and its limits are in `foobar/mod.rs`, the fields in `foobar/fields.rs`, the functions and
+foobar's File Operations would. `foobar::parse` once, `Pattern::render(&RowFacts)` per row; pure. The grammar and its limits are in `foobar/mod.rs`, the fields in `foobar/fields.rs`, the functions and
 truth rules in `foobar/eval.rs`; `foobar_vectors.json` holds the user's own patterns with their exact names and every
 error with its byte offset.
+
+- **Chosen per spec**: `MultiRenameSpec.mask_syntax` (`MaskSyntax::{Cmdr, Foobar}`, `#[serde(default)]` Cmdr, so old
+  presets, the last spec, and MCP calls read as before). Foobar parses the NAME mask only (`plan.rs` `NameMask`); the
+  extension mask stays Cmdr's. The name then takes the same pipeline (search & replace, case, Greek, diacritics, NFC)
+  and the same statuses. A pattern that doesn't parse is `SpecError::Pattern { error: FoobarError }`; a row whose
+  tags are still read is `Reading` while the pattern names a tag field (a pattern never lacks a value otherwise).
+  A stored preset's legacy counter fields never fold into a foobar name mask: its `[C]` is a section, not a counter.
 
 - **Truth decides `[ ]`.** A field with a value is true, literal text false, a sequence true when any part is.
   `$if`/`$if2`/`$if3` return the branch they pick; every other function carries its first argument's truth, so

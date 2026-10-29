@@ -18,6 +18,7 @@ use cmdr_fs::validation::{ValidationError, validate_filename};
 
 use cmdr_media_meta::{MediaFacts, MediaField};
 
+use super::foobar::{self, FoobarError, Pattern};
 use super::mask::{FieldGap, Mask, MaskError, NumberWidth, RowFacts, RowMedia};
 use super::transform::{CaseChange, CompiledTransform, Replace, ReplaceError, Transform};
 
@@ -45,15 +46,41 @@ pub struct MultiRenameSpec {
     /// over decomposed names. Off, such a name counts as unchanged.
     #[serde(default)]
     pub normalize_unicode: bool,
+    /// How the name mask reads: Cmdr's placeholders, or a foobar2000 pattern as
+    /// foobar writes it. Cmdr in a preset, a last spec, or an MCP call from
+    /// before it existed. The extension mask is always Cmdr's.
+    #[serde(default)]
+    pub mask_syntax: MaskSyntax,
+}
+
+/// The name mask's language.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum MaskSyntax {
+    /// Total Commander's placeholders: `[N]`, `[C]`, `[=tag.title]`.
+    #[default]
+    Cmdr,
+    /// foobar2000 title formatting: `%title%`, `[ … ]`, `$num(…)` (`foobar.rs`).
+    Foobar,
 }
 
 /// Why the spec itself can't run (the sheet shows it under the field).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum SpecError {
-    NameMask { error: MaskError },
-    ExtensionMask { error: MaskError },
-    BadRegex { detail: String },
+    NameMask {
+        error: MaskError,
+    },
+    /// The name mask is a foobar pattern that doesn't parse.
+    Pattern {
+        error: FoobarError,
+    },
+    ExtensionMask {
+        error: MaskError,
+    },
+    BadRegex {
+        detail: String,
+    },
 }
 
 /// One row of the preview.
@@ -186,9 +213,47 @@ impl NameEdits {
     }
 }
 
+/// The name mask, parsed in its syntax.
+enum NameMask {
+    Cmdr(Mask),
+    Foobar(Pattern),
+}
+
+impl NameMask {
+    fn parse(spec: &MultiRenameSpec) -> Result<Self, SpecError> {
+        match spec.mask_syntax {
+            MaskSyntax::Cmdr => Mask::parse(&spec.name_mask)
+                .map(Self::Cmdr)
+                .map_err(|error| SpecError::NameMask { error }),
+            MaskSyntax::Foobar => foobar::parse(&spec.name_mask)
+                .map(Self::Foobar)
+                .map_err(|error| SpecError::Pattern { error }),
+        }
+    }
+
+    fn uses_media(&self) -> bool {
+        match self {
+            Self::Cmdr(mask) => mask.uses_media(),
+            Self::Foobar(pattern) => pattern.uses_media(),
+        }
+    }
+
+    /// A foobar pattern never lacks a value (a missing one is no text), but a row whose tags are
+    /// still being read waits for them, as a Cmdr mask's does.
+    fn render(&self, facts: &RowFacts<'_>) -> Result<String, FieldGap> {
+        match self {
+            Self::Cmdr(mask) => mask.render(facts),
+            Self::Foobar(pattern) if pattern.uses_media() && matches!(facts.media, RowMedia::Reading) => {
+                Err(FieldGap::Reading)
+            }
+            Self::Foobar(pattern) => Ok(pattern.render(facts)),
+        }
+    }
+}
+
 /// The parsed spec, built once per preview.
 pub(crate) struct Compiled {
-    name_mask: Mask,
+    name_mask: NameMask,
     extension_mask: Mask,
     transform: CompiledTransform,
     normalize_unicode: bool,
@@ -196,7 +261,7 @@ pub(crate) struct Compiled {
 
 impl Compiled {
     pub(crate) fn new(spec: &MultiRenameSpec) -> Result<Self, SpecError> {
-        let name_mask = Mask::parse(&spec.name_mask).map_err(|error| SpecError::NameMask { error })?;
+        let name_mask = NameMask::parse(spec)?;
         let extension_mask = Mask::parse(&spec.extension_mask).map_err(|error| SpecError::ExtensionMask { error })?;
         let replace = (!spec.search.is_empty()).then(|| Replace {
             search: spec.search.clone(),

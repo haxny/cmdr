@@ -21,6 +21,7 @@ export const DEFAULT_SPEC: MultiRenameSpec = {
   removeDiacritics: false,
   greekToLatin: false,
   normalizeUnicode: false,
+  maskSyntax: 'cmdr',
 }
 
 /**
@@ -50,7 +51,10 @@ export const PRESET_SEEDS: PresetSeedSource[] = [
  * the backend (its own field order) still equals the one the sheet holds.
  */
 export function specsEqual(a: MultiRenameSpec, b: MultiRenameSpec): boolean {
-  return (Object.keys(DEFAULT_SPEC) as (keyof MultiRenameSpec)[]).every((field) => a[field] === b[field])
+  return (Object.keys(DEFAULT_SPEC) as (keyof MultiRenameSpec)[]).every((field) =>
+    // A spec saved before the syntax existed is a Cmdr one.
+    field === 'maskSyntax' ? (a[field] ?? 'cmdr') === (b[field] ?? 'cmdr') : a[field] === b[field],
+  )
 }
 
 /** Inserts `placeholder` into `mask` at the caret (or at the end). Returns the new mask and caret. */

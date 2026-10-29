@@ -18,6 +18,8 @@
      *   Escape, or ArrowUp from its first field return focus here with the caret after the token;
      *   a click elsewhere closes it and leaves focus where the click put it.
      * - The editor reads `shown`, which holds the token past its close until the editor unmounts.
+     * - `tokenEditors` off (a foobar2000 pattern, whose `[ ]` aren't Cmdr placeholders): no markers, no
+     *   editors. `errorAt` underlines the character the mask breaks at, measured like the markers.
      */
     import { flushSync, onDestroy, onMount, tick, type Snippet } from 'svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -41,10 +43,23 @@
         inputElement?: HTMLInputElement
         /** Controls at the field's end (the sheet's history chevron), in `TextInput`'s trailing slot. */
         trailing?: Snippet
+        /** Cmdr placeholders get their ▾ editors; off for a mask in another syntax. */
+        tokenEditors?: boolean
+        /** Where the mask breaks, as a field index (UTF-16): that character is underlined. */
+        errorAt?: number | null
     }
 
     /* eslint-disable prefer-const -- $bindable() requires `let` destructuring */
-    let { value, onValueChange, ariaLabel, invalid = false, inputElement = $bindable(), trailing }: Props = $props()
+    let {
+        value,
+        onValueChange,
+        ariaLabel,
+        invalid = false,
+        inputElement = $bindable(),
+        trailing,
+        tokenEditors = true,
+        errorAt = null,
+    }: Props = $props()
     /* eslint-enable prefer-const */
 
     const MARKER_WIDTH = 12
@@ -61,11 +76,17 @@
     let anchorEl: HTMLSpanElement | undefined = $state()
     let editorEl: HTMLDivElement | undefined = $state()
 
-    const tokens = $derived(findTokens(value, MASK_TOKEN_KINDS))
+    const tokens = $derived(tokenEditors ? findTokens(value, MASK_TOKEN_KINDS) : [])
+    /** The underline rides this far up from the field's bottom edge: in its bottom padding, under the text. */
+    const ERROR_MARK_RISE = 5
+    /** How wide the underline is past the mask's end (an unclosed `%`, `[`, `'`). */
+    const END_MARK_WIDTH = 8
 
     /** Each token's horizontal extent in the wrapper, keyed by its start; `null` while its middle is scrolled out of view. */
     let tokenBox = $state<Partial<Record<number, { left: number; right: number } | null>>>({})
     let markerTop = $state(0)
+    /** The underlined character's extent in the wrapper; `null` with no error, or with it scrolled away. */
+    let errorBox = $state<{ left: number; right: number } | null>(null)
 
     /** The open editor: its token, by start (a rewrite changes only its end), and why it's open. */
     let editor = $state<EditorOpen | null>(null)
@@ -95,7 +116,7 @@
         return box ? (box.left + box.right) / 2 : null
     }
 
-    function measure(current: readonly Token[]): void {
+    function measure(current: readonly Token[], at: number | null = errorAt): void {
         const input = inputElement
         if (!input || !wrapperEl) return
         measureContext ??= document.createElement('canvas').getContext('2d')
@@ -120,11 +141,28 @@
         }
         tokenBox = next
         markerTop = inputRect.bottom - wrapperRect.top
+        errorBox = at === null ? null : errorExtent(at, xAt, laidOut ? [contentLeft, contentLeft + input.clientWidth] : null)
+    }
+
+    /**
+     * The character at `at` (a whole surrogate pair), or a short mark past the end; `null` when it's
+     * scrolled out of `view` (the field's visible extent, `null` while it isn't laid out).
+     */
+    function errorExtent(
+        at: number,
+        xAt: (offset: number) => number,
+        view: [number, number] | null,
+    ): { left: number; right: number } | null {
+        const left = xAt(at)
+        const width = (value.codePointAt(at) ?? 0) > 0xffff ? 2 : 1
+        const right = at >= value.length ? left + END_MARK_WIDTH : xAt(at + width)
+        if (view && (right < view[0] || left > view[1])) return null
+        return { left, right }
     }
 
     $effect(() => {
-        // Re-measure after every render of a new mask (and its tokens).
-        measure(tokens)
+        // Re-measure after every render of a new mask (and its tokens), and when the error moves.
+        measure(tokens, errorAt)
     })
 
     $effect(() => {
@@ -349,6 +387,15 @@
             </button>
         {/if}
     {/each}
+    {#if errorBox}
+        <span
+            class="error-mark"
+            aria-hidden="true"
+            style:left="{errorBox.left}px"
+            style:width="{errorBox.right - errorBox.left}px"
+            style:top="{markerTop - ERROR_MARK_RISE}px"
+        ></span>
+    {/if}
     <!-- The popover's anchor and its focus-return target: Escape focuses it, and it hands focus
          on to the field with the caret after the token. -->
     <span
@@ -416,6 +463,15 @@
     .token-marker:hover,
     .token-marker.open {
         color: var(--color-accent-text);
+    }
+
+    /* The character the mask breaks at, underlined in the error color under its glyph. */
+    .error-mark {
+        position: absolute;
+        height: 2px;
+        border-radius: var(--radius-sm);
+        background: var(--color-error-text);
+        pointer-events: none;
     }
 
     .editor-anchor {

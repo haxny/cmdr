@@ -270,6 +270,66 @@
   "@multiRename.error.badRegex": {
     "description": "Shown when the search is a regular expression that can't be parsed."
   },
+  "multiRename.error.foobar.unknownField": "Cmdr doesn’t know the field %{name}% (character {position})",
+  "@multiRename.error.foobar.unknownField": {
+    "description": "Shown under the name mask when a foobar2000 pattern names a field Cmdr can’t fill. {name} is the field name as typed between the percent signs; {position} is where it starts in the mask, counting characters from 1. Keep %{name}% as is: it’s foobar2000 syntax."
+  },
+  "multiRename.error.foobar.unknownFunction": "Cmdr doesn’t know the function ${name} (character {position})",
+  "@multiRename.error.foobar.unknownFunction": {
+    "description": "Shown when a foobar2000 pattern calls a function Cmdr doesn’t have. {name} is the function name as typed after the dollar sign; {position} is where it starts, counting characters from 1. Keep ${name} as is: it’s foobar2000 syntax."
+  },
+  "multiRename.error.foobar.badArguments": "${function} got the wrong number of values (character {position})",
+  "@multiRename.error.foobar.badArguments": {
+    "description": "Shown when a foobar2000 function in the pattern has too many or too few comma-separated values in its parentheses. {function} is its name; {position} is where it starts, counting characters from 1."
+  },
+  "multiRename.error.foobar.unclosed": "{what, select, field {A field is missing its closing “%”} bracket {A “[” is missing its closing “]”} quote {A quote is missing its closing apostrophe} function {A function is missing its closing “)”} other {A “(” is missing its closing “)”}} (character {position})",
+  "@multiRename.error.foobar.unclosed": {
+    "description": "Shown when a foobar2000 pattern opens something it never closes. {what} picks the sentence: a %field%, a [section], a 'quoted text', a $function( call, or a plain parenthesis inside a function. {position} is where it opens, counting characters from 1."
+  },
+  "multiRename.error.foobar.tooDeep": "The pattern nests too many sections and functions inside each other (character {position})",
+  "@multiRename.error.foobar.tooDeep": {
+    "description": "Shown when a foobar2000 pattern nests [sections] and $functions( ) more than 32 levels deep. {position} is where the level too many opens, counting characters from 1."
+  },
+  "multiRename.syntax.label": "Name mask syntax",
+  "@multiRename.syntax.label": {
+    "description": "Accessible name of the two-option switch beside the Multi-rename name mask that picks how the mask is read: Cmdr’s own [N]-style placeholders, or a foobar2000 title-formatting pattern."
+  },
+  "multiRename.syntax.cmdr": "Cmdr",
+  "@multiRename.syntax.cmdr": {
+    "description": "Option of the name mask syntax switch: the mask uses Cmdr’s placeholders like [N] and [C]. The app’s name; not translated."
+  },
+  "multiRename.syntax.foobar": "foobar2000",
+  "@multiRename.syntax.foobar": {
+    "description": "Option of the name mask syntax switch: the mask is a pattern written as in the foobar2000 music player (%artist%, $num(…)). A product name, lowercase as its makers write it; not translated."
+  },
+  "multiRename.syntax.cmdrTooltip": "Placeholders like [N], [C], and [=tag.title]",
+  "@multiRename.syntax.cmdrTooltip": {
+    "description": "Tooltip of the Cmdr option of the name mask syntax switch. Keep the placeholders as they are."
+  },
+  "multiRename.syntax.foobarTooltip": "A foobar2000 pattern as written in foobar: %artist%, [ … ], $num(…)",
+  "@multiRename.syntax.foobarTooltip": {
+    "description": "Tooltip of the foobar2000 option of the name mask syntax switch. Keep the pattern pieces as they are."
+  },
+  "multiRename.syntax.switched": "The name mask looks like a foobar2000 pattern, so Cmdr reads it as one.",
+  "@multiRename.syntax.switched": {
+    "description": "Shown above the preview right after the user typed or pasted a name mask containing %field% or $function(, which made Cmdr switch the mask to foobar2000 syntax on its own. A link to switch back follows (multiRename.syntax.useCmdr)."
+  },
+  "multiRename.syntax.useCmdr": "Use Cmdr syntax",
+  "@multiRename.syntax.useCmdr": {
+    "description": "Link after multiRename.syntax.switched: switches the name mask back to Cmdr’s placeholders, keeping the text the user typed."
+  },
+  "multiRename.waitingForMask": "Fix the mask to see the new names",
+  "@multiRename.waitingForMask": {
+    "description": "Shown in the Multi-rename footer instead of the counts while a mask or the search can’t be read: every file keeps its current name in the list until the mask is fixed."
+  },
+  "multiRename.status.waitingForMask": "Waiting for a valid mask",
+  "@multiRename.status.waitingForMask": {
+    "description": "Screen-reader label of a preview row while the mask can’t be read: the row shows the file’s current name, not a new one."
+  },
+  "multiRename.foobarFields": "Insert foobar2000 field",
+  "@multiRename.foobarFields": {
+    "description": "Accessible name of the row of buttons beside the name mask in foobar2000 mode; each inserts one foobar2000 field like %album% at the caret."
+  },
   "multiRename.error.gone": "This folder isn’t open any more. Close Multi-rename and open it again.",
   "@multiRename.error.gone": {
     "description": "Shown when the pane the tool renames in moved to another folder."

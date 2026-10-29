@@ -36,6 +36,7 @@ fn spec(name_mask: &str) -> MultiRenameSpec {
         remove_diacritics: false,
         greek_to_latin: false,
         normalize_unicode: false,
+        mask_syntax: crate::multi_rename::plan::MaskSyntax::Cmdr,
     }
 }
 

@@ -1,10 +1,6 @@
 //! Multi-Rename Tool (⌃M): Total Commander's mask renamer. See `DETAILS.md`.
 
 pub(crate) mod error;
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the name mask's foobar syntax renders through it next")
-)]
 pub(crate) mod foobar;
 pub(crate) mod history;
 pub(crate) mod mask;
@@ -18,6 +14,8 @@ pub(crate) mod session;
 pub(crate) mod transform;
 pub(crate) mod transliterate;
 
+#[cfg(test)]
+mod foobar_spec_test;
 #[cfg(test)]
 mod foobar_test;
 #[cfg(test)]

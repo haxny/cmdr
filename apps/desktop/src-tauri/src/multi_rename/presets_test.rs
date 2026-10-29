@@ -26,6 +26,7 @@ fn spec(name_mask: &str) -> MultiRenameSpec {
         remove_diacritics: false,
         greek_to_latin: false,
         normalize_unicode: false,
+        mask_syntax: crate::multi_rename::plan::MaskSyntax::Cmdr,
     }
 }
 
@@ -279,6 +280,18 @@ fn masks(preset: &MultiRenamePreset) -> (&str, &str) {
 fn a_legacy_counter_moves_into_every_bare_c_of_both_masks() {
     let p = legacy("[N]_[C] ([C])", "[E][C]", 10, 5, 3);
     assert_eq!(masks(&p), ("[N]_[C10+5:3] ([C10+5:3])", "[E][C10+5:3]"));
+}
+
+/// A foobar pattern's `[C]` is an optional section with the letter C, never a counter: the
+/// load leaves the name mask as typed.
+#[test]
+fn a_foobar_name_mask_is_never_read_as_a_legacy_counter() {
+    let mut json = serde_json::to_value(legacy("[C]", "[E]", 10, 1, 1)).expect("serializes");
+    json["spec"]["nameMask"] = "[C]".into();
+    json["spec"]["maskSyntax"] = "foobar".into();
+    json["spec"]["counterStart"] = 10.into();
+    let p: MultiRenamePreset = serde_json::from_value(json).expect("loads");
+    assert_eq!(masks(&p), ("[C]", "[E]"));
 }
 
 #[test]

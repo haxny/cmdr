@@ -9588,6 +9588,22 @@ export type FolderSizes = {
 }
 
 /**
+ *  Why a foobar pattern doesn't parse. Typed, so the sheet words it; `at` is a byte offset into
+ *  the pattern.
+ */
+export type FoobarError =
+  // `%name%` names no field Cmdr knows; `name` as typed.
+  | { type: 'unknownField'; name: string; at: number }
+  // `$name(` names no function Cmdr knows; `name` as typed (empty for a bare `$`).
+  | { type: 'unknownFunction'; name: string; at: number }
+  // A known function with the wrong number of arguments, or none at all (`$upper`).
+  | { type: 'badArguments'; function: string; at: number }
+  // An opening `%`, `[`, `'`, `$f(`, or a `(` in an argument's text with no end.
+  | { type: 'unclosed'; what: Unclosed; at: number }
+  // Nested deeper than [`MAX_DEPTH`]; `at` is the first opening past it.
+  | { type: 'tooDeep'; at: number }
+
+/**
  *  `foreground-operation`: the operation queue asks the main window to show one
  *  operation in its progress dialog (the row's Foreground button). Carries only
  *  the id: the registry snapshot both windows already receive is the single
@@ -12013,6 +12029,13 @@ export type MaskError =
   // A placeholder Cmdr doesn't know, as typed between the brackets.
   | { type: 'unknown'; placeholder: string }
 
+// The name mask's language.
+export type MaskSyntax =
+  // Total Commander's placeholders: `[N]`, `[C]`, `[=tag.title]`.
+  | 'cmdr'
+  // foobar2000 title formatting: `%title%`, `[ … ]`, `$num(…)` (`foobar.rs`).
+  | 'foobar'
+
 /**
  *  `mcp-settings-close`: ask the settings window to close itself. Emitted via a
  *  distinct static `emit_to("settings", …)` (NOT through the generic `mcp-*`
@@ -13177,6 +13200,12 @@ export type MultiRenameSpec = {
    *  over decomposed names. Off, such a name counts as unchanged.
    */
   normalizeUnicode?: boolean
+  /**
+   *  How the name mask reads: Cmdr's placeholders, or a foobar2000 pattern as
+   *  foobar writes it. Cmdr in a preset, a last spec, or an MCP call from
+   *  before it existed. The extension mask is always Cmdr's.
+   */
+  maskSyntax?: MaskSyntax
 }
 
 // A started rename.
@@ -18131,6 +18160,8 @@ export type SpaceShortfall =
 // Why the spec itself can't run (the sheet shows it under the field).
 export type SpecError =
   | { type: 'nameMask'; error: MaskError }
+  // The name mask is a foobar pattern that doesn't parse.
+  | { type: 'pattern'; error: FoobarError }
   | { type: 'extensionMask'; error: MaskError }
   | { type: 'badRegex'; detail: string }
 
@@ -19674,6 +19705,15 @@ export type TypeToJumpInfo = {
    */
   lastMatchedName?: string | null
 }
+
+// What a [`FoobarError::Unclosed`] left open.
+export type Unclosed =
+  | 'field'
+  | 'bracket'
+  | 'quote'
+  | 'function'
+  // A `(` in a function argument's text (`$upper(a (b`).
+  | 'parenthesis'
 
 /**
  *  The whole job's undo result: a per-operation breakdown plus the totals the UI

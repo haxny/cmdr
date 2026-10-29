@@ -196,7 +196,7 @@ describe('MultiRenameDialog', () => {
     expect(root.querySelector('[role="grid"]')?.getAttribute('aria-label')).toBe('Preview')
   })
 
-  it('a mask error dims the last good preview and its summary as stale, and a fixed mask brings them back', async () => {
+  it('a mask error shows no new names: the rows keep their old ones, dimmed, until the mask is fixed', async () => {
     ipc.previewMultiRename.mockResolvedValueOnce({ ok: true, value: READY })
     ipc.previewMultiRename.mockResolvedValueOnce({
       ok: false,
@@ -204,7 +204,7 @@ describe('MultiRenameDialog', () => {
     })
     const root = await mountSheet()
     expect(root.querySelector('.preview.is-unavailable')).toBeNull()
-    expect(root.querySelector('.counts.is-unavailable')).toBeNull()
+    expect(root.querySelector('.preview-new-name')?.textContent).toContain('Z.pdf')
 
     const mask = inputs(root)[0]
     mask.value = '[N'
@@ -212,14 +212,18 @@ describe('MultiRenameDialog', () => {
     await new Promise((resolve) => setTimeout(resolve, 150))
     await settle()
     expect(root.querySelector('.preview.is-unavailable')).not.toBeNull()
-    expect(root.querySelector('.counts.is-unavailable')).not.toBeNull()
+    expect(root.querySelector('.preview-new-name')?.textContent).not.toContain('Z.pdf')
+    expect(root.querySelector('.counts')?.textContent.trim()).toBe('Fix the mask to see the new names')
+    const rename = [...root.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent.includes('Rename'))
+    expect(rename?.disabled).toBe(true)
 
+    ipc.previewMultiRename.mockResolvedValueOnce({ ok: true, value: READY })
     mask.value = '[N]'
     mask.dispatchEvent(new Event('input', { bubbles: true }))
     await new Promise((resolve) => setTimeout(resolve, 150))
     await settle()
     expect(root.querySelector('.preview.is-unavailable')).toBeNull()
-    expect(root.querySelector('.counts.is-unavailable')).toBeNull()
+    expect(root.querySelector('.counts')?.textContent).not.toContain('Fix the mask')
   })
 
   it('an error takes the label’s place in the same slot, through the live region that was already there', async () => {

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::recents::{RecentEntry, RecentsFile};
 
 use super::mask::fill_counter_defaults;
-use super::plan::MultiRenameSpec;
+use super::plan::{MaskSyntax, MultiRenameSpec};
 
 /// How many presets the list holds; saving a new one past it is refused.
 pub const MAX_PRESETS: usize = 200;
@@ -60,7 +60,10 @@ impl<'de> Deserialize<'de> for MultiRenamePreset {
                 counter_digits.unwrap_or(1),
             )
         };
-        spec.name_mask = fill(&spec.name_mask);
+        // A foobar pattern's `[ … ]` is an optional section, never a counter.
+        if spec.mask_syntax == MaskSyntax::Cmdr {
+            spec.name_mask = fill(&spec.name_mask);
+        }
         spec.extension_mask = fill(&spec.extension_mask);
         Ok(Self { id, name, spec })
     }
