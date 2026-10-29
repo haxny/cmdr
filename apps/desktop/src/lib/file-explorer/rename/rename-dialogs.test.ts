@@ -8,6 +8,7 @@ import {
 } from '#lib/settings/settings-registry.js'
 import { SOFT_DIALOG_REGISTRY } from '#lib/ui/dialog-registry.js'
 import RenameConflictDialog from './RenameConflictDialog.svelte'
+import ExtensionChangeDialog from './ExtensionChangeDialog.svelte'
 import type { RenameConflictResolution } from './rename-operations'
 
 vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
@@ -340,5 +341,62 @@ describe('RenameConflictDialog sizes that look the same', () => {
   it('makes no size comparison against a folder', async () => {
     const target = await mountSizes(0, 0, true)
     expect(target.querySelector('.same-size')).toBeNull()
+  })
+})
+
+/**
+ * The extension-change dialog words each of the three changes on its own:
+ * swapping one extension for another, removing it, and adding one where there
+ * was none. A dialog that only knew the swap read "Use ." and "to “.”".
+ */
+describe('ExtensionChangeDialog wording', () => {
+  const mounted: HTMLElement[] = []
+
+  afterEach(() => {
+    for (const target of mounted.splice(0)) target.remove()
+  })
+
+  async function mountDialog(oldExtension: string, newExtension: string, isDirectory = false) {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mounted.push(target)
+    mount(ExtensionChangeDialog, {
+      target,
+      props: { oldExtension, newExtension, isDirectory, onKeepOld: () => {}, onUseNew: () => {} },
+    })
+    await tick()
+    const description = target.querySelector('#extension-change-description')?.textContent.trim() ?? ''
+    const buttons = [...target.querySelectorAll('.modal-footer button')].map((b) => b.textContent.trim())
+    return { description, buttons }
+  }
+
+  it('words a swap with both extensions', async () => {
+    const { description, buttons } = await mountDialog('txt', 'md')
+
+    expect(description).toContain('from “.txt” to “.md”')
+    expect(buttons).toEqual(['Keep .txt', 'Use .md'])
+  })
+
+  it('words a removal without an empty extension', async () => {
+    const { description, buttons } = await mountDialog('txt', '')
+
+    expect(description).toContain('remove the “.txt” extension')
+    expect(description).not.toContain('“.”')
+    expect(buttons).toEqual(['Keep .txt', 'Remove .txt'])
+  })
+
+  it('says what removing a package folder’s extension does to it', async () => {
+    const { description } = await mountDialog('app', '', true)
+
+    expect(description).toContain('remove the “.app” extension')
+    expect(description).toContain('folder')
+  })
+
+  it('words an addition without an empty extension', async () => {
+    const { description, buttons } = await mountDialog('', 'md')
+
+    expect(description).toContain('add the “.md” extension')
+    expect(description).not.toContain('“.”')
+    expect(buttons).toEqual(['Keep no extension', 'Use .md'])
   })
 })

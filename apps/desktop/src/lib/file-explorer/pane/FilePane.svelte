@@ -2395,6 +2395,7 @@
     <ExtensionChangeDialog
         oldExtension={renameFlow.extensionDialogState.oldExtension}
         newExtension={renameFlow.extensionDialogState.newExtension}
+        isDirectory={renameFlow.extensionDialogState.isDirectory}
         onKeepOld={handleExtensionKeepOld}
         onUseNew={handleExtensionUseNew}
     />

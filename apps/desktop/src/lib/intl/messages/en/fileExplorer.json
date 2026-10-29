@@ -2279,6 +2279,33 @@
     },
     "screenshot": "extension-change.png"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Are you sure you want to remove the “.{oldExt}” extension? macOS will show this as an ordinary folder instead of a single item.} other {Are you sure you want to remove the “.{oldExt}” extension? Your Mac may not know which app opens the file without it.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "description": "Body of the extension-change confirmation when the new name has NO extension any more (the user deleted it). The folder branch is for a macOS package folder such as an app (“Cmdr.app”), which turns into an ordinary folder without its extension; the other branch is for a file. Write each branch as complete, natural sentences. The leading dot is part of the displayed extension.",
+    "placeholders": {
+      "kind": "what is being renamed: \"folder\" for a folder, anything else for a file",
+      "oldExt": "the current extension without the dot (e.g. txt, app)"
+    }
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Are you sure you want to add the “.{newExt}” extension? macOS may show this folder as a single item instead.} other {Are you sure you want to add the “.{newExt}” extension? Your file may open in a different app next time you open it.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "description": "Body of the extension-change confirmation when the old name had NO extension and the new one has one (for example “README” to “README.md”). The folder branch is for a folder getting a macOS package extension such as “.app”, which makes Finder show it as one item; the other branch is for a file. Write each branch as complete, natural sentences. The leading dot is part of the displayed extension.",
+    "placeholders": {
+      "kind": "what is being renamed: \"folder\" for a folder, anything else for a file",
+      "newExt": "the new extension without the dot (e.g. md, app)"
+    }
+  },
+  "fileExplorer.extensionChange.keepNone": "Keep no extension",
+  "@fileExplorer.extensionChange.keepNone": {
+    "description": "Button in the extension-change confirmation that keeps the name without an extension, as it was before the rename (the user had added one). Pairs with “Use .{newExt}”."
+  },
+  "fileExplorer.extensionChange.removeExtension": "Remove .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "description": "Button in the extension-change confirmation that applies the rename and so removes the extension (the user deleted it from the name). Pairs with “Keep .{oldExt}”. The leading dot is part of the displayed extension.",
+    "placeholders": {
+      "oldExt": "the current extension without the dot (e.g. txt, app)"
+    }
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Always allow extension changes",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "description": "Checkbox in the extension-change dialog to stop asking for confirmation on future extension changes.",

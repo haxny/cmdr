@@ -71,7 +71,7 @@ export function createRenameFlow(deps: RenameFlowDeps) {
     addToastForPane(deps.paneId, content, options)
 
   // Extension change dialog state
-  let extensionDialogState = $state<{ oldExtension: string; newExtension: string } | null>(null)
+  let extensionDialogState = $state<{ oldExtension: string; newExtension: string; isDirectory: boolean } | null>(null)
 
   // Conflict dialog state
   let conflictDialogState = $state<{
@@ -423,6 +423,7 @@ export function createRenameFlow(deps: RenameFlowDeps) {
         extensionDialogState = {
           oldExtension: result.oldExtension,
           newExtension: result.newExtension,
+          isDirectory: target.isDirectory,
         }
         break
       case 'conflict':

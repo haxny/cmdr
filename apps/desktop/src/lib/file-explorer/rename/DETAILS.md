@@ -25,8 +25,10 @@ Depth and rationale for inline rename. `CLAUDE.md` holds the must-knows.
   "Continue renaming". The two ways out sit in `ModalDialog`'s `footerLeading`, the two overwrites in its `footer` with
   the Enter one (trash, when offered) rightmost.
 - **ExtensionChangeDialog.svelte**: confirmation when the extension changed and policy is "ask". Buttons: "Keep .{old}",
-  "Use .{new}". Checkbox: "Always allow extension changes" (sets policy to "yes"). "Keep" puts the old extension back
-  with `withExtension`, also when the edit removed it or added one where there was none.
+  "Use .{new}". Removing the extension and adding one where there was none each get their own body and button ("Remove
+  .{old}", "Keep no extension"), and the body has a folder branch for a macOS package (`Cmdr.app` → `Cmdr`), so nothing
+  reads "Use ." or "to “.”". Checkbox: "Always allow extension changes" (sets policy to "yes"). "Keep" puts the old
+  extension back with `withExtension`, also when the edit removed it or added one where there was none.
 - **rename-state.svelte.ts**: reactive `$state` for active/target/currentName/validation/shaking/focusTrigger. Must be
   `.svelte.ts` for Svelte 5 reactivity.
 - **rename-operations.ts**: pure save-flow logic returning a `RenameResult` discriminated union instead of side effects.

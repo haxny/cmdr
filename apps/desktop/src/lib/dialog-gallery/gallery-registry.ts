@@ -332,6 +332,9 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
     states: [
       { id: 'typical', label: '.txt → .zip' },
       { id: 'long-extension', label: 'Long extensions' },
+      { id: 'removed-extension', label: '.txt → none' },
+      { id: 'removed-package-extension', label: 'Cmdr.app → Cmdr (folder)' },
+      { id: 'added-extension', label: 'none → .md' },
     ],
   },
   {
