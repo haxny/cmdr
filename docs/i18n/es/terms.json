@@ -3874,5 +3874,16 @@
     "chosen": "Nivel de pensamiento",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (Pensamiento de Gemini)"
+  },
+  "shared-storage": {
+    "chosen": "almacenamiento compartido",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-es storage_internal (read 2026-10-30): Almacenamiento interno compartido"
+  },
+  "busy": {
+    "chosen": "ocupado",
+    "confidence": "high",
+    "forms": "the greyed menu marker: the base label word for word, then (ocupado), invariable",
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)"
   }
 }

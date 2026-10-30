@@ -458,5 +458,17 @@
   "fileExplorer.dateTooltip.dateAdded": "Fecha en que se agregó",
   "@fileExplorer.dateTooltip.dateAdded": {
     "sourceHash": "3709ae0"
+  },
+  "fileExplorer.pane.ejectedDriveStaysToast": "{volumeName} se expulsó, pero deja el disco conectado: otros volúmenes de ese disco siguen montados.",
+  "@fileExplorer.pane.ejectedDriveStaysToast": {
+    "sourceHash": "b2290a4"
+  },
+  "fileExplorer.pane.ejectAllFailedToast": "No se pudo expulsar todo lo que hay en este disco: {message}",
+  "@fileExplorer.pane.ejectAllFailedToast": {
+    "sourceHash": "505a94a"
+  },
+  "fileExplorer.pane.ejectAllHeldToast": "No se expulsó nada de este disco: {message}",
+  "@fileExplorer.pane.ejectAllHeldToast": {
+    "sourceHash": "3011356"
   }
 }

@@ -791,9 +791,9 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "89559ef"
   },
-  "errors.eject.unmountRefusedByCmdr": "El propio Cmdr todavía tiene archivos abiertos ahí. Espera un momento y vuelve a intentarlo. Si sigue pasando, envía un reporte.",
+  "errors.eject.unmountRefusedByCmdr": "El propio Cmdr todavía está usando algo ahí. Espera un momento y vuelve a intentarlo. Si sigue pasando, envía un reporte.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "ea88792"
+    "sourceHash": "fb66da0"
   },
   "errors.eject.unexpected": "Algo salió mal y Cmdr no pudo saber qué.",
   "@errors.eject.unexpected": {
@@ -878,5 +878,13 @@
   "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr no puede dar a cada elemento su propio nombre al meterlo en un zip o sacarlo de uno, así que no llegó nada a {path}.",
   "@errors.write.namedLeavesRefused.message.routeCannotName": {
     "sourceHash": "ccd9d14"
+  },
+  "errors.listing.serverRefused.explanation": "Esta carpeta está en un servidor, y la cuenta con la que te conectaste no tiene permiso para abrirla. Lo decide el servidor, así que ninguna opción de esta computadora lo cambia.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "a78cb55"
+  },
+  "errors.write.permissionDenied.suggestion.server": "El servidor lo rechazó para la cuenta con la que te conectaste. Revisa los permisos de la carpeta en el servidor o conéctate con una cuenta que tenga acceso.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "444bdce"
   }
 }

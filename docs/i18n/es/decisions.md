@@ -427,10 +427,10 @@ text editor is the category, ❌ TextEdit (that arrives in `{app}`). `Editar arc
 ## Quién retiene el disco (`errors.eject.unmountRefusedBy*`, `errors.eject.other*`)
 
 - These follow `No se ha podido expulsar {volumeName}:` or `No se ha podido desconectar:` and may be a share or a phone:
-  one skeleton, `X todavía tiene archivos abiertos ahí.` + `… y vuelve a intentarlo.`, ❌ `este disco`,
-  `vuelve a expulsarlo`.
-- `{app}` opens with no article (a proper name); `Ciérralos` points at `archivos`. `otras apps` / `otros` join through
-  `Intl.ListFormat('es')`. Cmdr stays subject (`Cmdr no tiene el nombre de la app`), ❌ `No tenemos`.
+  one skeleton, `X todavía está usando algo ahí.` + `… y vuelve a intentarlo.`, ❌ `este disco`, `vuelve a expulsarlo`.
+- `{app}` opens with no article (a proper name); `Cierra la app` / `esas apps`: no pronoun for an insert. Eject all →
+  `Expulsar todo` (Finder `N199.1`). `otras apps` / `otros` join through `Intl.ListFormat('es')`. Cmdr stays subject
+  (`Cmdr no tiene el nombre de la app`), ❌ `No tenemos`.
 
 ## Seleccionar lo de la misma clase (`menu.select.*`, `commands.selectionSelectSameKind.*`, `menu.context.selection`)
 
