@@ -299,9 +299,9 @@
   "@onboarding.stepAi.local.note": {
     "sourceHash": "af89d60"
   },
-  "onboarding.stepAi.localTooltip": "Lokales LLM erfordert Apple silicon. Cloud funktioniert auf Intel.",
+  "onboarding.stepAi.localTooltip": "Lokales LLM braucht Apple silicon und macOS 14 oder neuer. Cloud funktioniert auf jedem Mac.",
   "@onboarding.stepAi.localTooltip": {
-    "sourceHash": "75c6d48"
+    "sourceHash": "f95b4a9"
   },
   "onboarding.stepAi.missingKeyWarning": "Du hast KI aktiviert, aber keinen API-Schlüssel eingegeben. Die KI funktioniert dann nicht, und du siehst eine Warnung. Bitte korrigiere das oben.\n\n<strong>Klicke noch einmal auf „{nextLabel}“, um das zu ignorieren und fortzufahren.</strong>",
   "@onboarding.stepAi.missingKeyWarning": {

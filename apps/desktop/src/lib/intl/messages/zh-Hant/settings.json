@@ -2862,9 +2862,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "在你的裝置上完整執行一個小型語言模型。隱私最大化：沒有任何內容離開你的電腦。可以離線運作。佔用約 2 GB 磁碟空間和約 400 MB 記憶體（隨上下文大小而變）。需要 Apple 晶片（M1 以上）。",
+  "settings.ai.tooltipLocal": "在你的裝置上完整執行一個小型語言模型。隱私最大化：沒有任何內容離開你的電腦。可以離線運作。佔用約 2 GB 磁碟空間和約 400 MB 記憶體（隨上下文大小而變）。需要 Apple 晶片（M1 以上）和 macOS 14 或以上版本。",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "本機 AI 需要 Apple 晶片（M1 或更新）。請改用雲端 AI。",
   "@settings.ai.tooltipLocalDisabled": {

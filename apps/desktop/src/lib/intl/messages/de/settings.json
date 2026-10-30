@@ -2871,9 +2871,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Führt ein kleines Sprachmodell vollständig auf deinem Gerät aus. Maximaler Datenschutz: nichts verlässt deinen Computer. Funktioniert offline. Nutzt ~2 GB Speicherplatz und ~400 MB Arbeitsspeicher (variiert mit der Kontextgröße). Erfordert Apple silicon (M1+).",
+  "settings.ai.tooltipLocal": "Führt ein kleines Sprachmodell vollständig auf deinem Gerät aus. Maximaler Datenschutz: nichts verlässt deinen Computer. Funktioniert offline. Nutzt ~2 GB Speicherplatz und ~400 MB Arbeitsspeicher (variiert mit der Kontextgröße). Erfordert Apple silicon (M1+) und macOS 14 oder neuer.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "Lokale KI erfordert Apple silicon (M1 oder neuer). Nutze stattdessen Cloud-KI.",
   "@settings.ai.tooltipLocalDisabled": {

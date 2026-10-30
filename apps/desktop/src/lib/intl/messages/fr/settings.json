@@ -2875,9 +2875,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Exécute un petit modèle de langage entièrement sur votre appareil. Confidentialité maximale : rien ne quitte votre ordinateur. Fonctionne hors ligne. Utilise ~2 Go d’espace disque et ~400 Mo de mémoire (varie selon la taille du contexte). Nécessite Apple Silicon (M1+).",
+  "settings.ai.tooltipLocal": "Exécute un petit modèle de langage entièrement sur votre appareil. Confidentialité maximale : rien ne quitte votre ordinateur. Fonctionne hors ligne. Utilise ~2 Go d’espace disque et ~400 Mo de mémoire (varie selon la taille du contexte). Nécessite Apple Silicon (M1+) et macOS 14 ou version ultérieure.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "L’IA locale nécessite Apple Silicon (M1 ou ultérieur). Utilisez plutôt l’IA dans le cloud.",
   "@settings.ai.tooltipLocalDisabled": {

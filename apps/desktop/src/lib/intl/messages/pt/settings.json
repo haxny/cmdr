@@ -2864,9 +2864,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Roda um pequeno modelo de linguagem inteiramente no seu dispositivo. Privacidade máxima: nada sai do seu computador. Funciona offline. Usa ~2 GB de espaço em disco e ~400 MB de memória (varia com o tamanho do contexto). Requer Apple silicon (M1+).",
+  "settings.ai.tooltipLocal": "Roda um pequeno modelo de linguagem inteiramente no seu dispositivo. Privacidade máxima: nada sai do seu computador. Funciona offline. Usa ~2 GB de espaço em disco e ~400 MB de memória (varia com o tamanho do contexto). Requer Apple silicon (M1+) e macOS 14 ou posterior.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "A IA local requer Apple silicon (M1 ou posterior). Use a IA na nuvem.",
   "@settings.ai.tooltipLocalDisabled": {

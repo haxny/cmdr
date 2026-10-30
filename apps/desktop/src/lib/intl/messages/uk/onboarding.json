@@ -299,9 +299,9 @@
   "@onboarding.stepAi.local.note": {
     "sourceHash": "af89d60"
   },
-  "onboarding.stepAi.localTooltip": "Для локальної LLM потрібен Mac з Apple silicon. Хмарний ШІ працює і на Mac з Intel.",
+  "onboarding.stepAi.localTooltip": "Для локальної LLM потрібні Mac з Apple silicon і macOS 14 або новіша. Хмарний ШІ працює на будь-якому Mac.",
   "@onboarding.stepAi.localTooltip": {
-    "sourceHash": "75c6d48"
+    "sourceHash": "f95b4a9"
   },
   "onboarding.stepAi.missingKeyWarning": "Ви ввімкнули ШІ, але не ввели ключ API. ШІ не працюватиме, і ви бачитимете застереження. Будь ласка, виправте це вище.\n\n<strong>Натисніть «{nextLabel}» ще раз, щоб не зважати на це й продовжити.</strong>",
   "@onboarding.stepAi.missingKeyWarning": {

@@ -2862,9 +2862,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Chạy một mô hình ngôn ngữ nhỏ hoàn toàn trên thiết bị của bạn. Riêng tư tối đa: không gì rời khỏi máy tính của bạn. Hoạt động ngoại tuyến. Dùng ~2 GB dung lượng đĩa và ~400 MB bộ nhớ (thay đổi theo cỡ ngữ cảnh). Cần Apple silicon (M1+).",
+  "settings.ai.tooltipLocal": "Chạy một mô hình ngôn ngữ nhỏ hoàn toàn trên thiết bị của bạn. Riêng tư tối đa: không gì rời khỏi máy tính của bạn. Hoạt động ngoại tuyến. Dùng ~2 GB dung lượng đĩa và ~400 MB bộ nhớ (thay đổi theo cỡ ngữ cảnh). Cần Apple silicon (M1+) và macOS 14 trở lên.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "AI cục bộ cần Apple silicon (M1 trở lên). Hãy dùng AI đám mây thay vào đó.",
   "@settings.ai.tooltipLocalDisabled": {

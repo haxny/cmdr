@@ -2871,9 +2871,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Kör en liten språkmodell helt på din enhet. Maximal integritet: ingenting lämnar din dator. Fungerar offline. Använder ~2 GB diskutrymme och ~400 MB minne (varierar med kontextstorlek). Kräver Apple silicon (M1+).",
+  "settings.ai.tooltipLocal": "Kör en liten språkmodell helt på din enhet. Maximal integritet: ingenting lämnar din dator. Fungerar offline. Använder ~2 GB diskutrymme och ~400 MB minne (varierar med kontextstorlek). Kräver Apple silicon (M1+) och macOS 14 eller senare.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "Lokal AI kräver Apple silicon (M1 eller senare). Använd Moln-AI i stället.",
   "@settings.ai.tooltipLocalDisabled": {

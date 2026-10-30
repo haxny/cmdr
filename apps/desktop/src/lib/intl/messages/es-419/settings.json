@@ -319,9 +319,9 @@
   "@settings.appearance.tintGroupDescription": {
     "sourceHash": "25e3480"
   },
-  "settings.ai.tooltipLocal": "Ejecuta un modelo de lenguaje pequeño completamente en tu dispositivo. Privacidad máxima: nada sale de tu computadora. Funciona sin conexión. Usa ~2 GB de espacio en disco y ~400 MB de memoria (varía según el tamaño del contexto). Requiere Apple silicon (M1 o posterior).",
+  "settings.ai.tooltipLocal": "Ejecuta un modelo de lenguaje pequeño completamente en tu dispositivo. Privacidad máxima: nada sale de tu computadora. Funciona sin conexión. Usa ~2 GB de espacio en disco y ~400 MB de memoria (varía según el tamaño del contexto). Requiere Apple silicon (M1 o posterior) y macOS 14 o posterior.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "0093baa"
+    "sourceHash": "92a710f"
   },
   "settings.appearance.card.namesAndIcons": "Nombres e íconos",
   "@settings.appearance.card.namesAndIcons": {

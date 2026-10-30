@@ -2859,9 +2859,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Запускає невелику мовну модель повністю на вашому пристрої. Максимальна приватність: ніщо не залишає ваш компʼютер. Працює офлайн. Займає ~2 ГБ місця на диску й ~400 МБ памʼяті (залежить від розміру контексту). Потрібен Mac з Apple silicon (M1+).",
+  "settings.ai.tooltipLocal": "Запускає невелику мовну модель повністю на вашому пристрої. Максимальна приватність: ніщо не залишає ваш компʼютер. Працює офлайн. Займає ~2 ГБ місця на диску й ~400 МБ памʼяті (залежить від розміру контексту). Потрібні Mac з Apple silicon (M1+) і macOS 14 або новіша.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "Для локального ШІ потрібен Mac з Apple silicon (M1 або новіший). Виберіть «Хмарний ШІ».",
   "@settings.ai.tooltipLocalDisabled": {

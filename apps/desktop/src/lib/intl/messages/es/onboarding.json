@@ -299,9 +299,9 @@
   "@onboarding.stepAi.local.note": {
     "sourceHash": "af89d60"
   },
-  "onboarding.stepAi.localTooltip": "El LLM local necesita Apple silicon. La nube funciona en Intel.",
+  "onboarding.stepAi.localTooltip": "El LLM local necesita Apple silicon y macOS 14 o posterior. La nube funciona en cualquier Mac.",
   "@onboarding.stepAi.localTooltip": {
-    "sourceHash": "75c6d48"
+    "sourceHash": "f95b4a9"
   },
   "onboarding.stepAi.missingKeyWarning": "Has activado la IA pero no has introducido ninguna clave de API. La IA no funcionará y verás un aviso. Corrígelo arriba.\n\n<strong>Haz clic en “{nextLabel}” otra vez para ignorarlo y continuar.</strong>",
   "@onboarding.stepAi.missingKeyWarning": {
