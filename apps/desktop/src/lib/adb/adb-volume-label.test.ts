@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
 import type { VolumeInfo } from '#lib/file-explorer/types.js'
-import { deviceRowDefersToMtpTwin, deviceVolumeLabel } from './adb-volume-label'
+import { deviceRowDefersToMtpTwin, deviceVolumeLabel, withUnnamedPhonesNamed } from './adb-volume-label'
 
 // The suffixed label resolves through the i18n catalog (`tString`); pin the
 // base locale so the asserted en copy is deterministic.
@@ -45,6 +45,38 @@ describe('deviceRowDefersToMtpTwin', () => {
 
   it('never defers the MTP row', () => {
     expect(deviceRowDefersToMtpTwin(MTP_PIXEL, [WAITING, MTP_PIXEL])).toBe(false)
+  })
+
+  it('leaves one row for a phone whose MTP session is still connecting: its words cover both prompts', () => {
+    const connecting = { ...MTP_PIXEL, id: 'mtp-dev:waiting', deviceReadiness: { kind: 'connecting' } as const }
+    expect(deviceRowDefersToMtpTwin(WAITING, [WAITING, connecting])).toBe(true)
+    expect(deviceRowDefersToMtpTwin(connecting, [WAITING, connecting])).toBe(false)
+  })
+})
+
+describe('withUnnamedPhonesNamed', () => {
+  const NAMELESS = volume({ id: 'adb-r58', name: 'R58M12345', path: 'adb://R58M12345', fsType: 'adb' })
+
+  it('never lets a serial stand in for a phone’s name', () => {
+    const [named] = withUnnamedPhonesNamed([NAMELESS])
+    expect(named.name).toBe('Android phone')
+    expect(named.path).toBe('adb://R58M12345')
+    expect(named.id).toBe('adb-r58')
+  })
+
+  it('leaves a phone with a real name alone', () => {
+    expect(withUnnamedPhonesNamed([ADB_PIXEL])[0].name).toBe('Pixel 9')
+  })
+
+  it('leaves everything that is not an ADB row alone, even one named like its path', () => {
+    const disk = volume({ id: 'disk', name: 'disk', path: '/Volumes/disk', category: 'attached_volume' })
+    const mtp = volume({ id: 'mtp-a:1', name: 'a', path: 'mtp://a/1' })
+    expect(withUnnamedPhonesNamed([disk, mtp]).map((v) => v.name)).toEqual(['disk', 'a'])
+  })
+
+  it('hands back the same list when there is nothing to name, so consumers keep their identity', () => {
+    const list = [ADB_PIXEL, MTP_PIXEL]
+    expect(withUnnamedPhonesNamed(list)).toBe(list)
   })
 })
 

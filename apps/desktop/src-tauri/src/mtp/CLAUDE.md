@@ -15,8 +15,7 @@ rules (`resources/99-cmdr-mtp.rules`). The frontend (`src/lib/mtp/CLAUDE.md`) is
   `DeviceVolumeProvider`. `macos_workaround.rs`: ptpcamerad suppression and restore.
 - `mod.rs`: where the app parks the one manager it built (`install_connection_manager`, then `connection_manager()`),
   and the door the crate's names are re-exported through, so a call site writes `crate::mtp::…` either way.
-- `test_support.rs`: how every app-side MTP cell reaches a virtual device, over the parked manager. `DETAILS.md` lists
-  where those cells sit and why.
+- `test_support.rs`: how app-side MTP cells reach a virtual device; where they sit: `DETAILS.md`.
 
 ## Must-knows
 
@@ -26,6 +25,8 @@ rules (`resources/99-cmdr-mtp.rules`). The frontend (`src/lib/mtp/CLAUDE.md`) is
 - **Auto-connect retries `Timeout` / `DeviceBusy` / `SessionReset` while the same ARRIVAL stays plugged in** (Android
   holds the session behind its "Allow access" prompt, and no hotplug event follows). ❌ Never retry `ExclusiveAccess` or
   `PermissionDenied`: each attempt re-raises their dialog. Checks run between attempts, never during one.
+- **A phone auto-connecting past `WAITING_ROW_DELAY` gets a `Connecting` row**, held on its arrival in `KnownDevices`. ❌
+  Its words never claim a prompt: `DETAILS.md`.
 - **The MTP-on bit lives on the MANAGER** (`set_enabled` / `is_enabled`, default on). The app pushes the persisted
   setting in; `watcher.rs` reads it back to gate auto-connect, never the watcher loop. Key `fileOperations.mtpEnabled`.
 - **Identity lives in `cmdr_fs::volume::mtp_ids`.** `device_id_for(serial, location_id)` prefers the serial (stable
@@ -48,5 +49,5 @@ rules (`resources/99-cmdr-mtp.rules`). The frontend (`src/lib/mtp/CLAUDE.md`) is
   the blocking process name from `ioreg`, `None` on Linux) and `mtp-permission-error` (Linux udev rules missing →
   `MtpPermissionDialog`).
 
-Hotplug reconciliation, the delete-scope decision, ptpcamerad mechanics, the registrar decision, and the virtual
-device's E2E gating: `DETAILS.md`. Read it before any non-trivial work here.
+Hotplug, delete scopes, ptpcamerad, the registrar, and E2E gating: `DETAILS.md`. Read it before any non-trivial work
+here.

@@ -13,7 +13,7 @@ use std::sync::{Mutex, OnceLock};
 use tauri::AppHandle;
 
 use super::MtpDisconnectReason;
-use super::auto_connect::{Arrival, AutoConnectEnd, KnownDevices, connect_while_present};
+use super::auto_connect::{Arrival, AutoConnectEnd, KnownDevices, WAITING_ROW_DELAY, connect_while_present};
 
 /// Global app handle for emitting events from the watcher
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
@@ -70,8 +70,10 @@ pub async fn set_mtp_enabled(enabled: bool) {
         }
 
         // Clear known devices so re-enable detects everything as new
-        if let Some(known) = KNOWN_DEVICES.get() {
-            known.lock_ignore_poison().clear();
+        if let Some(known) = KNOWN_DEVICES.get()
+            && known.lock_ignore_poison().clear()
+        {
+            crate::volume_broadcast::emit_volumes_changed();
         }
 
         // Restore ptpcamerad on macOS
@@ -119,6 +121,9 @@ fn check_for_device_changes() {
     // Update known devices before async work to avoid re-triggering
     let changes = known.lock_ignore_poison().reconcile(&current_devices);
     let removed_devices = changes.left;
+    if changes.a_waiting_row_left {
+        crate::volume_broadcast::emit_volumes_changed();
+    }
 
     // Auto-connect newly detected devices
     if !changes.arrived.is_empty() {
@@ -152,11 +157,56 @@ fn auto_connect_still_wanted(device_id: &str, arrival: Arrival) -> bool {
             .is_some_and(|known| known.lock_ignore_poison().is_still_present(device_id, arrival))
 }
 
+/// The phones whose auto-connect has run long enough to have a waiting row, for
+/// the volume list to show.
+pub(super) fn waiting_devices() -> Vec<super::MtpDeviceInfo> {
+    KNOWN_DEVICES
+        .get()
+        .map(|known| known.lock_ignore_poison().waiting_devices())
+        .unwrap_or_default()
+}
+
+/// Gives the phone a waiting row once its auto-connect has run for a while.
+///
+/// A timer of its own rather than a race around the attempt: ❌ an mtp-rs future must
+/// run to its end, and this way nothing can drop one. [`KnownDevices::settle`] is what
+/// keeps a late firing from showing a row for a connect that already ended.
+fn show_waiting_row_after_a_while(device_id: String, arrival: Arrival) {
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(WAITING_ROW_DELAY).await;
+        let Some(known) = KNOWN_DEVICES.get() else {
+            return;
+        };
+        if !known.lock_ignore_poison().is_still_trying(&device_id, arrival) {
+            return;
+        }
+        // The row's name, read once rather than on every listing: the listing runs on every
+        // `volumes-changed`, and enumerating USB there is the traffic it must not cause.
+        let Some(device) = super::list_mtp_devices().into_iter().find(|d| d.id == device_id) else {
+            return;
+        };
+        if known.lock_ignore_poison().mark_waiting(&device_id, arrival, device) {
+            info!("MTP {device_id}: auto-connect is taking a while; showing its waiting row");
+            crate::volume_broadcast::emit_volumes_changed();
+        }
+    });
+}
+
+/// Ends this arrival's auto-connect, taking its waiting row away if it had one.
+fn settle_auto_connect(device_id: &str, arrival: Arrival) {
+    if let Some(known) = KNOWN_DEVICES.get()
+        && known.lock_ignore_poison().settle(device_id, arrival)
+    {
+        crate::volume_broadcast::emit_volumes_changed();
+    }
+}
+
 /// Spawns an async task to connect a newly detected MTP device, retrying a
 /// failure a wait can fix (a phone holding its session behind Android's "Allow
 /// access" prompt times out) for as long as this arrival of the device stays
 /// plugged in and MTP stays on. See `auto_connect.rs`.
 fn auto_connect_device(device_id: String, arrival: Arrival) {
+    show_waiting_row_after_a_while(device_id.clone(), arrival);
     tauri::async_runtime::spawn(async move {
         let cm = super::connection_manager();
         let end = connect_while_present(
@@ -166,6 +216,7 @@ fn auto_connect_device(device_id: String, arrival: Arrival) {
             tokio::time::sleep,
         )
         .await;
+        settle_auto_connect(&device_id, arrival);
         match end {
             AutoConnectEnd::Connected { value: info, attempts } => {
                 info!(

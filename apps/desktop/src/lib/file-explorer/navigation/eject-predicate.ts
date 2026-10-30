@@ -1,6 +1,7 @@
 import type { VolumeInfo } from '../types'
 import { isLiveSession, showsDisconnect } from './connection-state'
 import { volumeScheme } from '#lib/volume-scheme.js'
+import { isStillConnecting } from '#lib/adb/device-readiness.js'
 
 /**
  * Whether the volume picker offers this row an eject-or-disconnect control at all.
@@ -23,12 +24,14 @@ import { volumeScheme } from '#lib/volume-scheme.js'
  * `connectionState` is always `null` by design (readiness is PRESENCE, never
  * session health), so the first half says yes to every device row — including a
  * greyed `unavailable` one the user cannot even open, and one still showing its
- * "Allow USB debugging?" prompt with nothing yet to disconnect.
+ * "Allow USB debugging?" prompt with nothing yet to disconnect. An MTP row still
+ * connecting is the same case: no session to close, and unplugging is what stops it.
  *
  * Cloud drives, favorites, and the root volume are never ejectable on either path.
  */
 export function isVolumeEjectable(volume: VolumeInfo | undefined): boolean {
   if (!volume) return false
+  if (isStillConnecting(volume)) return false
   if (volumeScheme(volume.id) === 'adb') return volume.deviceReadiness?.kind === 'ready'
   return volume.isEjectable || isLiveSession(volume.connectionState) || showsDisconnect(volume.connectionState)
 }

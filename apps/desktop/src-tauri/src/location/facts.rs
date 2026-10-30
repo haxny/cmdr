@@ -14,7 +14,7 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 
-use cmdr_fs::volume::{BackendKind, ConnectionState, MountClass};
+use cmdr_fs::volume::{BackendKind, ConnectionState, DeviceReadiness, MountClass};
 
 use super::resolve::{IndexSources, RootSources, VolumeFact, VolumeFacts, volume_root};
 use super::share_identity::ShareIdentity;
@@ -188,7 +188,8 @@ impl VolumeFacts {
         let mut devices = Vec::new();
         crate::device_volumes::append_device_volumes(&mut devices).await;
         for device in devices {
-            if known(&volumes, &device.id) {
+            // An MTP phone still connecting has no storage a model could go to.
+            if known(&volumes, &device.id) || device.device_readiness == Some(DeviceReadiness::Connecting) {
                 continue;
             }
             let Some(kind) = device.fs_type.as_deref().and_then(kind_of_fs_type) else {

@@ -13,7 +13,9 @@
 //! - [`KnownDevices`]: the devices the watcher last saw, each with the
 //!   [`Arrival`] that saw it come. A retry loop holds its arrival and stops the
 //!   moment it's no longer current, which covers an unplug AND a replug (a new
-//!   arrival starts its own loop, so the old one must not keep going).
+//!   arrival starts its own loop, so the old one must not keep going). It also
+//!   holds which phones have a waiting row: an open can run for 30 s or forever,
+//!   and the user needs to see the phone meanwhile.
 //! - [`connect_while_present`]: the loop itself, with the connect, the presence
 //!   check, and the sleep handed in.
 
@@ -24,7 +26,14 @@ use std::time::Duration;
 use cmdr_fs::log_error::LogError;
 use log::{debug, info};
 
-use super::MtpConnectionError;
+use super::{MtpConnectionError, MtpDeviceInfo};
+
+/// How long an auto-connect runs before the phone gets a row saying what's up. A
+/// healthy open takes a fraction of a second (verified on a Pixel 9 Pro XL, dev
+/// build, `attempt 1` in 0.2 s, 2026-10-30, #834), and a row that flashes up for
+/// those would only be noise. An open that stalls runs for 30 s, far too long to
+/// say nothing.
+pub(super) const WAITING_ROW_DELAY: Duration = Duration::from_secs(3);
 
 /// One sighting of a device: from the diff that saw it arrive to the one that saw
 /// it leave. A replug is a new `Arrival`, even under the same device id.
@@ -38,12 +47,37 @@ pub(super) struct DeviceChanges {
     pub(super) arrived: Vec<(String, Arrival)>,
     /// Devices that were there and are gone.
     pub(super) left: Vec<String>,
+    /// Whether one of `left` had a waiting row, so the volume list has to hear about it.
+    pub(super) a_waiting_row_left: bool,
 }
 
-/// The devices the hotplug watcher currently sees, and when each one arrived.
+/// Where a device's auto-connect stands.
+#[derive(Debug)]
+enum ConnectPhase {
+    /// Under way, with nothing said about it yet.
+    Trying,
+    /// Under way for long enough that the phone has a row.
+    Waiting(MtpDeviceInfo),
+    /// Over, however it ended. Its row, if it had one, is gone, and ❗ a timer still
+    /// counting can't bring it back: that's the race this state exists for.
+    Settled,
+}
+
+#[derive(Debug)]
+struct KnownDevice {
+    arrival: Arrival,
+    phase: ConnectPhase,
+}
+
+/// The devices the hotplug watcher currently sees, when each one arrived, and how
+/// far its auto-connect got.
+///
+/// ❗ The waiting rows live here, on the arrival, rather than in a list of their own:
+/// an unplug, a replug, and MTP being turned off all end the row by the same stroke
+/// that ends the arrival, even while an attempt is still running out its 30 s.
 #[derive(Debug, Default)]
 pub(super) struct KnownDevices {
-    present: HashMap<String, Arrival>,
+    present: HashMap<String, KnownDevice>,
     next_arrival: u64,
 }
 
@@ -57,8 +91,11 @@ impl KnownDevices {
             .filter(|id| !current.contains(*id))
             .cloned()
             .collect();
+        let mut a_waiting_row_left = false;
         for id in &left {
-            self.present.remove(id);
+            if let Some(gone) = self.present.remove(id) {
+                a_waiting_row_left |= matches!(gone.phase, ConnectPhase::Waiting(_));
+            }
         }
 
         let mut arrived = Vec::new();
@@ -66,22 +103,82 @@ impl KnownDevices {
             if !self.present.contains_key(id) {
                 let arrival = Arrival(self.next_arrival);
                 self.next_arrival += 1;
-                self.present.insert(id.clone(), arrival);
+                self.present.insert(
+                    id.clone(),
+                    KnownDevice {
+                        arrival,
+                        phase: ConnectPhase::Trying,
+                    },
+                );
                 arrived.push((id.clone(), arrival));
             }
         }
-        DeviceChanges { arrived, left }
+        DeviceChanges {
+            arrived,
+            left,
+            a_waiting_row_left,
+        }
     }
 
     /// Whether `device_id` is still here from the SAME arrival. False once it
     /// left, and false after a replug, whose own loop takes over.
     pub(super) fn is_still_present(&self, device_id: &str, arrival: Arrival) -> bool {
-        self.present.get(device_id) == Some(&arrival)
+        self.current(device_id, arrival).is_some()
+    }
+
+    /// Whether this arrival's auto-connect is still under way with no row yet.
+    pub(super) fn is_still_trying(&self, device_id: &str, arrival: Arrival) -> bool {
+        self.current(device_id, arrival)
+            .is_some_and(|known| matches!(known.phase, ConnectPhase::Trying))
+    }
+
+    /// Gives the phone its row, if this arrival is still trying. Returns whether it did.
+    pub(super) fn mark_waiting(&mut self, device_id: &str, arrival: Arrival, device: MtpDeviceInfo) -> bool {
+        match self.present.get_mut(device_id) {
+            Some(known) if known.arrival == arrival && matches!(known.phase, ConnectPhase::Trying) => {
+                known.phase = ConnectPhase::Waiting(device);
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Ends this arrival's auto-connect. Returns whether that took a row away.
+    pub(super) fn settle(&mut self, device_id: &str, arrival: Arrival) -> bool {
+        match self.present.get_mut(device_id) {
+            Some(known) if known.arrival == arrival => {
+                let had_row = matches!(known.phase, ConnectPhase::Waiting(_));
+                known.phase = ConnectPhase::Settled;
+                had_row
+            }
+            _ => false,
+        }
+    }
+
+    /// The phones with a row, in a stable order so the list doesn't reshuffle between publishes.
+    pub(super) fn waiting_devices(&self) -> Vec<MtpDeviceInfo> {
+        let mut waiting: Vec<MtpDeviceInfo> = self
+            .present
+            .values()
+            .filter_map(|known| match &known.phase {
+                ConnectPhase::Waiting(device) => Some(device.clone()),
+                ConnectPhase::Trying | ConnectPhase::Settled => None,
+            })
+            .collect();
+        waiting.sort_by(|a, b| a.id.cmp(&b.id));
+        waiting
     }
 
     /// Forgets every device, so the next reconciliation sees them all as new.
-    pub(super) fn clear(&mut self) {
+    /// Returns whether that took a row away.
+    pub(super) fn clear(&mut self) -> bool {
+        let had_row = !self.waiting_devices().is_empty();
         self.present.clear();
+        had_row
+    }
+
+    fn current(&self, device_id: &str, arrival: Arrival) -> Option<&KnownDevice> {
+        self.present.get(device_id).filter(|known| known.arrival == arrival)
     }
 }
 
@@ -368,6 +465,115 @@ mod tests {
         assert_ne!(old, new);
         assert!(!known.is_still_present("mtp-A", old));
         assert!(known.is_still_present("mtp-A", new));
+    }
+
+    fn phone(id: &str) -> MtpDeviceInfo {
+        MtpDeviceInfo {
+            id: id.to_string(),
+            location_id: 1,
+            vendor_id: 0x18d1,
+            product_id: 0x4ee1,
+            manufacturer: Some("Google".to_string()),
+            product: Some("Pixel 9 Pro XL".to_string()),
+            serial_number: Some("46061FDAS000A4".to_string()),
+            usb_speed: None,
+        }
+    }
+
+    fn waiting_ids(known: &KnownDevices) -> Vec<String> {
+        known.waiting_devices().into_iter().map(|d| d.id).collect()
+    }
+
+    #[test]
+    fn a_new_device_has_no_row_until_its_connect_has_run_a_while() {
+        let mut known = KnownDevices::default();
+        let (_, arrival) = known.reconcile(&ids(&["mtp-A"])).arrived[0].clone();
+        assert!(known.is_still_trying("mtp-A", arrival));
+        assert!(waiting_ids(&known).is_empty());
+
+        assert!(known.mark_waiting("mtp-A", arrival, phone("mtp-A")));
+        assert_eq!(waiting_ids(&known), ["mtp-A"]);
+        assert!(!known.is_still_trying("mtp-A", arrival), "it has its row now");
+    }
+
+    #[test]
+    fn a_connect_that_ends_takes_the_row_away() {
+        let mut known = KnownDevices::default();
+        let (_, arrival) = known.reconcile(&ids(&["mtp-A"])).arrived[0].clone();
+        known.mark_waiting("mtp-A", arrival, phone("mtp-A"));
+
+        assert!(known.settle("mtp-A", arrival), "the volume list has to hear about it");
+        assert!(waiting_ids(&known).is_empty());
+        assert!(
+            known.is_still_present("mtp-A", arrival),
+            "settled, and still plugged in"
+        );
+    }
+
+    /// The race the `Settled` state exists for: the delay's timer runs on its own task, so it
+    /// can fire just after a fast connect finished. A row there would stick around forever.
+    #[test]
+    fn a_timer_firing_after_the_connect_ended_shows_no_row() {
+        let mut known = KnownDevices::default();
+        let (_, arrival) = known.reconcile(&ids(&["mtp-A"])).arrived[0].clone();
+        assert!(!known.settle("mtp-A", arrival), "no row to take away");
+
+        assert!(!known.is_still_trying("mtp-A", arrival));
+        assert!(!known.mark_waiting("mtp-A", arrival, phone("mtp-A")));
+        assert!(waiting_ids(&known).is_empty());
+    }
+
+    /// An attempt in flight runs out its 30 s, so nothing but the arrival can take the row away
+    /// the moment the cable comes out.
+    #[test]
+    fn an_unplug_takes_the_row_away_at_once_and_says_so() {
+        let mut known = KnownDevices::default();
+        let (_, arrival) = known.reconcile(&ids(&["mtp-A"])).arrived[0].clone();
+        known.mark_waiting("mtp-A", arrival, phone("mtp-A"));
+
+        assert!(known.reconcile(&ids(&[])).a_waiting_row_left);
+        assert!(waiting_ids(&known).is_empty());
+    }
+
+    #[test]
+    fn an_unplug_with_no_row_has_nothing_to_announce() {
+        let mut known = KnownDevices::default();
+        known.reconcile(&ids(&["mtp-A"]));
+        assert!(!known.reconcile(&ids(&[])).a_waiting_row_left);
+    }
+
+    /// The old loop's timer and its end both still hold the OLD arrival.
+    #[test]
+    fn the_old_arrivals_loop_cannot_touch_the_replugged_device() {
+        let mut known = KnownDevices::default();
+        let (_, old) = known.reconcile(&ids(&["mtp-A"])).arrived[0].clone();
+        known.reconcile(&ids(&[]));
+        let (_, new) = known.reconcile(&ids(&["mtp-A"])).arrived[0].clone();
+        assert!(known.mark_waiting("mtp-A", new, phone("mtp-A")));
+
+        assert!(!known.settle("mtp-A", old));
+        assert_eq!(waiting_ids(&known), ["mtp-A"], "the new arrival's row stays");
+        assert!(!known.mark_waiting("mtp-A", old, phone("mtp-A")));
+    }
+
+    #[test]
+    fn turning_mtp_off_takes_every_row_away_and_says_so() {
+        let mut known = KnownDevices::default();
+        let (_, arrival) = known.reconcile(&ids(&["mtp-A"])).arrived[0].clone();
+        known.mark_waiting("mtp-A", arrival, phone("mtp-A"));
+
+        assert!(known.clear());
+        assert!(waiting_ids(&known).is_empty());
+        assert!(!known.clear(), "nothing left to take away");
+    }
+
+    #[test]
+    fn waiting_rows_keep_one_order_between_publishes() {
+        let mut known = KnownDevices::default();
+        for (id, arrival) in known.reconcile(&ids(&["mtp-C", "mtp-A", "mtp-B"])).arrived {
+            known.mark_waiting(&id, arrival, phone(&id));
+        }
+        assert_eq!(waiting_ids(&known), ["mtp-A", "mtp-B", "mtp-C"]);
     }
 
     /// Turning MTP off clears the set, so turning it back on sees every

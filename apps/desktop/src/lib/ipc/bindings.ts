@@ -8167,6 +8167,12 @@ export type DeviceReadiness =
    */
   | { kind: 'waiting_for_authorization' }
   /**
+   *  The device is plugged in, its session hasn't opened, and the app keeps
+   *  trying. Not openable: there's no storage to land on yet, and the row
+   *  turns into the storage's own the moment one is there.
+   */
+  | { kind: 'connecting' }
+  /**
    *  The device is visible to the daemon but can't be used. The row is
    *  disabled and the reason is its tooltip.
    */

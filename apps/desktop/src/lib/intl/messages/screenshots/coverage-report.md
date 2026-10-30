@@ -16,12 +16,12 @@ Per catalog area, each renderable key is one of three:
 
 Coverage is PARTIAL by design. Uncoupled keys are expected, not bugs.
 
-**Total: 3139 / 5209 keys have a screenshot (60%):** 1804 direct (35%) and 1335 representative (26%). 1878 remain
+**Total: 3149 / 5221 keys have a screenshot (60%):** 1804 direct (35%) and 1345 representative (26%). 1880 remain
 uncoupled, and 192 are native surfaces a webview capture cannot reach.
 
 | Area            | Direct | Representative | Uncoupled | Native | Total | Any % |
 | --------------- | -----: | -------------: | --------: | -----: | ----: | ----: |
-| adb             |      3 |              0 |        17 |      0 |    20 |   15% |
+| adb             |      3 |              0 |        19 |      0 |    22 |   14% |
 | ai              |      0 |            138 |         0 |      0 |   138 |  100% |
 | askCmdr         |     86 |              0 |       259 |      0 |   345 |   25% |
 | commandPalette  |      3 |              2 |         2 |      0 |     7 |   71% |
@@ -30,7 +30,7 @@ uncoupled, and 192 are native surfaces a webview capture cannot reach.
 | crashReporter   |     12 |             11 |         0 |      0 |    23 |  100% |
 | downloads       |     10 |              5 |        21 |      0 |    36 |   42% |
 | errorReporter   |     16 |              0 |        43 |      0 |    59 |   27% |
-| errors          |    154 |            461 |         0 |      0 |   615 |  100% |
+| errors          |    154 |            469 |         0 |      0 |   623 |  100% |
 | feedback        |      8 |              6 |         2 |      0 |    16 |   88% |
 | fileExplorer    |    125 |             65 |       343 |      0 |   533 |   36% |
 | fileOperations  |    137 |             87 |       114 |      0 |   338 |   66% |
@@ -40,7 +40,7 @@ uncoupled, and 192 are native surfaces a webview capture cannot reach.
 | lowDiskSpace    |      0 |              0 |         5 |      0 |     5 |    0% |
 | main            |      7 |              0 |        46 |      2 |    55 |   13% |
 | menu            |      4 |              0 |         0 |    190 |   194 |    2% |
-| mtp             |     18 |              2 |         0 |      0 |    20 |  100% |
+| mtp             |     18 |              4 |         0 |      0 |    22 |  100% |
 | multiRename     |      0 |              0 |       231 |      0 |   231 |    0% |
 | notifications   |      0 |              0 |         1 |      0 |     1 |    0% |
 | onboarding      |     96 |             43 |        25 |      0 |   164 |   85% |

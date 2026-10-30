@@ -12,14 +12,16 @@
  * taps Allow. A disabled row there is the silence the ADB work exists to end,
  * and it is the one answer here that is easy to get backwards.
  *
- * The type is generic and ADB is the only provider that sets it today, so the
- * tooltips are Android's words. A second provider answering readiness moves
- * them behind a per-provider lookup rather than bending Android's onto it.
+ * ❗ **A `connecting` row is MTP's, and it is NOT openable.** Its session hasn't
+ * opened, so there's no storage to land on and no dialer to walk a pane in; the
+ * row turns into the storage's own the moment one is there. ❌ Never word it as
+ * though a prompt is showing: the open can time out with none on screen.
  */
 
 import { tString } from '#lib/intl/messages.svelte.js'
 import type { DeviceReadiness, DeviceUnavailableReason } from '#lib/ipc/bindings.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { VolumeInfo } from '#lib/file-explorer/types.js'
 
 /** How the switcher draws one row, once readiness has had its say. */
 export interface DeviceRowState {
@@ -27,10 +29,12 @@ export interface DeviceRowState {
   openable: boolean
   /** The finished sentence for the row's tooltip, or `null` for no tooltip. */
   tooltip: string | null
+  /** What to do next, on a line of its own under the row, or `null` for no line. */
+  status: string | null
 }
 
 /** A row nothing is holding back: every disk, and a phone that is ready. */
-const UNREMARKABLE: DeviceRowState = { openable: true, tooltip: null }
+const UNREMARKABLE: DeviceRowState = { openable: true, tooltip: null, status: null }
 
 /**
  * Why a greyed row is greyed, one sentence each.
@@ -51,8 +55,27 @@ export function deviceRowState(readiness: DeviceReadiness | null | undefined): D
     case 'ready':
       return UNREMARKABLE
     case 'waiting_for_authorization':
-      return { openable: true, tooltip: tString('adb.readiness.waitingForAuthorization') }
+      return {
+        openable: true,
+        tooltip: tString('adb.readiness.waitingForAuthorization'),
+        status: tString('adb.readiness.tapAllow'),
+      }
+    case 'connecting':
+      return {
+        openable: false,
+        tooltip: tString('mtp.readiness.connectingTooltip'),
+        status: tString('mtp.readiness.connecting'),
+      }
     case 'unavailable':
-      return { openable: false, tooltip: tString(UNAVAILABLE_KEYS[readiness.reason]) }
+      return { openable: false, tooltip: tString(UNAVAILABLE_KEYS[readiness.reason]), status: null }
   }
+}
+
+/**
+ * Whether this row stands for a phone whose MTP session hasn't opened: on the list so the user
+ * sees it, but not a place yet. ❗ Anything that picks a volume to go to or to write to asks this
+ * first (the palette, MCP, the transfer dialog's destinations); so do eject and the index badge.
+ */
+export function isStillConnecting(volume: Pick<VolumeInfo, 'deviceReadiness'>): boolean {
+  return volume.deviceReadiness?.kind === 'connecting'
 }

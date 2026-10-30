@@ -84,6 +84,23 @@ describe('createVolumeSelection', () => {
     expect(navigate).not.toHaveBeenCalled()
   })
 
+  // The palette and MCP walk the same list the switcher's greyed row comes from.
+  it('refuses a phone whose MTP session is still connecting, by name and by id', async () => {
+    const { ops, navigate } = setup([
+      vol({
+        id: 'mtp-pixel:waiting',
+        name: 'Pixel 9',
+        path: 'mtp://mtp-pixel/waiting',
+        category: 'mobile_device',
+        deviceReadiness: { kind: 'connecting' },
+      }),
+    ])
+
+    expect(await ops.selectVolumeByName('left', 'Pixel 9')).toEqual({ kind: 'not-found' })
+    expect(await ops.selectVolumeById('left', 'mtp-pixel:waiting')).toEqual({ kind: 'not-found' })
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
   it('selectVolumeByName for a saved server place opens it on its start folder', async () => {
     const place = vol({
       id: 'sftp-nas',

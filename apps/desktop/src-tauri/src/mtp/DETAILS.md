@@ -99,6 +99,19 @@ connected in 0.4 s). `auto_connect.rs` holds the fix, pure and injectable so it 
 - `connect()` is idempotent, so a manual connect from the frontend that wins the race just makes the loop's next attempt
   report `Connected`. ptpcamerad suppression needs nothing new: it stays on while any device is known, and the loop only
   runs while its device is.
+- **The waiting row.** Until now a phone in that loop had no row, and one open can run 30 s. Once an auto-connect has
+  run for `WAITING_ROW_DELAY` (3 s, so a healthy 0.2 s open never flashes a row), `waiting_entry` lists the device under
+  `DeviceReadiness::Connecting`, named by product or manufacturer, until the loop ends. Not openable, no detach, no space
+  figure, no index badge: there's no storage behind it. Id `{device}:waiting` and path `mtp://{device}/waiting` name no
+  storage, so `split_volume_id` refuses the id and `device_volume_for_path` can't resolve the phone's real paths to it.
+- **The row's state lives on the arrival in `KnownDevices`** (`ConnectPhase`), because an attempt in flight can't be
+  interrupted: an unplug, a replug, and MTP going off all end the row the moment they end the arrival, up to 30 s before
+  the loop notices. `Settled` is what stops the delay's timer, a task of its own so nothing can drop an mtp-rs future,
+  from showing a row for a connect that just ended. A refusal settles too, since its dialog says what's wrong.
+- **The row's words don't claim a prompt.** A plain replug with the prompts left unanswered connected in 0.2 s, and the
+  one 30 s timeout seen came right after a cable pull mid-upload (verified on a Pixel 9 Pro XL, dev build, #834's retest,
+  2026-10-30), so a stall may have no prompt behind it at all. Copy and its reasoning:
+  `apps/desktop/src/lib/adb/DETAILS.md`.
 
 **No double-count at startup:** `start_mtp_watcher` enumerates and seeds `KNOWN_DEVICES` synchronously, *before* it
 spawns the watcher task, so the stream's initial already-connected `Arrived` burst diffs to nothing. When MTP is

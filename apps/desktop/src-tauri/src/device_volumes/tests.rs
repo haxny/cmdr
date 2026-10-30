@@ -88,6 +88,23 @@ async fn a_serial_only_row_takes_the_name_of_the_phone_it_is() {
     assert_eq!(names, ["Pixel 9 Pro XL", "Pixel 9 Pro XL"]);
 }
 
+/// The MTP row of a phone still connecting has to name its ADB twin too, or a phone waiting on both
+/// shows up as two devices, one of them nameless.
+#[tokio::test]
+async fn a_serial_only_row_takes_the_name_of_a_phone_still_connecting() {
+    let connecting = DeviceVolumeEntry {
+        device_readiness: Some(DeviceReadiness::Connecting),
+        ..phone_entry("mtp", "Pixel 9 Pro XL", "46061FDAS000A4")
+    };
+    let names = names_after_fold(
+        vec![connecting],
+        vec![phone_entry("adb", "46061FDAS000A4", "46061FDAS000A4")],
+    )
+    .await;
+
+    assert_eq!(names, ["Pixel 9 Pro XL", "Pixel 9 Pro XL"]);
+}
+
 #[tokio::test]
 async fn a_serial_only_row_matches_whatever_case_each_side_reports_the_serial_in() {
     let names = names_after_fold(

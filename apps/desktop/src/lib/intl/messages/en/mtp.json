@@ -107,6 +107,18 @@
     "screenshot": "ptpcamerad-known-process.png"
   },
 
+  "mtp.readiness.connecting": "Still connecting. Unlock your phone and tap Allow if it asks.",
+  "@mtp.readiness.connecting": {
+    "description": "One line under a phone's greyed-out row in the volume switcher (the dropdown listing disks and devices) while Cmdr keeps retrying to open the phone. Says what the user can do. ❗ Keep the condition (\"if it asks\"): the phone may be showing no prompt at all, so this must never read as though one is on screen. \"Allow\" is the button on ANDROID's own prompts: render it exactly as Android's own translation of that button reads in your language.",
+    "screenshot": "mtp-browse.png",
+    "screenshotNote": "MTP (phone/camera) device messaging: a connect/permission dialog or toast tied to an MTP device. This shows the MTP browse surface for context. Keep device/protocol names (MTP, PTP) as-is."
+  },
+  "mtp.readiness.connectingTooltip": "Cmdr keeps trying while your phone stays plugged in, and you can open it once it connects.",
+  "@mtp.readiness.connectingTooltip": {
+    "description": "Hover tooltip on that same greyed-out row. Says why the row can't be opened yet and that nothing else is needed: retrying is automatic and goes on until the phone is unplugged. \"Cmdr\" is the product name; \"it\" is the phone.",
+    "screenshot": "mtp-browse.png",
+    "screenshotNote": "MTP (phone/camera) device messaging: a connect/permission dialog or toast tied to an MTP device. This shows the MTP browse surface for context. Keep device/protocol names (MTP, PTP) as-is."
+  },
   "mtp.deviceFallbackName": "MTP device",
   "@mtp.deviceFallbackName": {
     "description": "Generic fallback name for a connected MTP device when its real display name isn't known yet. MTP is a protocol acronym; keep it.",

@@ -390,6 +390,23 @@ describe('volume-store duplicate IDs', () => {
     expect(getVolumes()).toEqual(distinct)
   })
 
+  // Sixty-odd readers take a volume's name from here, so this is where a serial stops.
+  it('publishes a phone with no known name under a word a person can read', async () => {
+    const phone: VolumeInfo = {
+      id: 'adb-r58',
+      name: 'R58M12345',
+      path: 'adb://R58M12345',
+      category: 'mobile_device',
+      fsType: 'adb',
+      isEjectable: true,
+    }
+    mockListVolumes.mockResolvedValue({ data: [phone], timedOut: false })
+    await initVolumeStore()
+
+    expect(getVolumes()[0].name).toBe('Android phone')
+    expect(getVolumes()[0].path).toBe('adb://R58M12345')
+  })
+
   it('names a duplicate once while updates keep repeating it, and again after the list came back clean', async () => {
     mockListVolumes.mockResolvedValue({ data: [], timedOut: false })
     await initVolumeStore()

@@ -296,6 +296,10 @@ const ADB_CONNECT_ERRORS: AdbConnectOutcomeError[] = [
 const ADB_PANE_KEYS: MessageKey[] = [
   'adb.connect.openSettings',
   'adb.readiness.waitingForAuthorization',
+  'adb.readiness.tapAllow',
+  'adb.unnamedPhone',
+  'mtp.readiness.connecting',
+  'mtp.readiness.connectingTooltip',
   'adb.readiness.offline',
   'adb.readiness.noPermissions',
   'adb.hint.text',

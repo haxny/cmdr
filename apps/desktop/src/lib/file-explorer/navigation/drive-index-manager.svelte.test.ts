@@ -225,6 +225,11 @@ describe('isDriveRow — index-affordance eligibility', () => {
     expect(isDriveRow(vol({ ...phone, capabilities: dialed }))).toBe(true)
   })
 
+  it('gives a phone whose MTP session is still connecting no badge: there is nothing to scan yet', () => {
+    const phone = { id: 'mtp-1:waiting', category: 'mobile_device', deviceReadiness: { kind: 'connecting' } } as const
+    expect(isDriveRow(vol(phone))).toBe(false)
+  })
+
   it('keeps the badge on an MTP phone, which the index scans over its own session', () => {
     expect(isDriveRow(vol({ id: 'mtp-1:65537', category: 'mobile_device', fsType: undefined }))).toBe(true)
   })

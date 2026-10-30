@@ -84,6 +84,10 @@ pub enum DeviceReadiness {
     /// tap "Allow" on the phone. Openable — the pane waits and navigates itself
     /// the moment the row turns ready.
     WaitingForAuthorization,
+    /// The device is plugged in, its session hasn't opened, and the app keeps
+    /// trying. Not openable: there's no storage to land on yet, and the row
+    /// turns into the storage's own the moment one is there.
+    Connecting,
     /// The device is visible to the daemon but can't be used. The row is
     /// disabled and the reason is its tooltip.
     Unavailable {

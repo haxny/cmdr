@@ -35,7 +35,7 @@ pub mod watcher;
 #[cfg(feature = "virtual-mtp")]
 pub use cmdr_mtp::virtual_device;
 pub use cmdr_mtp::{
-    ConnectedDeviceInfo, DeviceWatch, MtpConnectionError, MtpConnectionManager, MtpDisconnectReason,
+    ConnectedDeviceInfo, DeviceWatch, MtpConnectionError, MtpConnectionManager, MtpDeviceInfo, MtpDisconnectReason,
     MtpVolumeRegistrar, list_mtp_devices,
 };
 pub use events::{
