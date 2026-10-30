@@ -18,9 +18,9 @@
 //!   does, so an upload that never reaches `DONE` leaves a torn file behind.
 //! - `shell,v2,raw:<cmd>` with `mkdir [-p]`, `rmdir`, `rm [-rf]`, `mv`,
 //!   `cp [-f]`, `df -k [path...]` (per [`FakeTree::mount_for`], in toybox's
-//!   layout: a missing path prints the bare header and exits 1), `readlink -f`, `test -e|-d|-f|-w` (`-w` follows
-//!   [`FakeTree::read_only`]), and `stat -c '%f %s %Y'`; anything else exits
-//!   127.
+//!   layout: a missing path prints the bare header and exits 1), `readlink -f`, `test -e|-d|-f|-w|-r|-x` (`-w`
+//!   follows [`FakeTree::read_only`], `-r` follows [`FakeTree::deny_read`]), and `stat -c '%f %s %Y'`, chained with
+//!   `&&`; anything else exits 127.
 //!
 //! ## Faults
 //!

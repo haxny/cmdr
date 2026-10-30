@@ -75,6 +75,8 @@ pub struct FakeTree {
     pub read_only: bool,
     /// Paths the SYNC service may not stat, see [`FakeTree::deny_sync_stat`].
     sync_stat_denied: BTreeSet<String>,
+    /// Directories the device won't open for us, see [`FakeTree::deny_read`].
+    read_denied: BTreeSet<String>,
 }
 
 impl Default for FakeTree {
@@ -187,6 +189,7 @@ impl FakeTree {
             mounts: Vec::new(),
             read_only: false,
             sync_stat_denied: BTreeSet::new(),
+            read_denied: BTreeSet::new(),
         };
         tree.add_dir("/");
         tree.add_dir("/sdcard");
@@ -323,6 +326,7 @@ impl FakeTree {
             mounts: Vec::new(),
             read_only: false,
             sync_stat_denied: BTreeSet::new(),
+            read_denied: BTreeSet::new(),
         };
         tree.add_dir("/");
         tree.add_dir("/storage/emulated/0");
@@ -382,6 +386,26 @@ impl FakeTree {
             return Err(EACCES);
         }
         self.stat(path)
+    }
+
+    /// Makes `path` a directory the device won't open for us, as `/data` is on a
+    /// non-rooted phone (`drwxrwx--x system`): the sync service still stats it,
+    /// `LIST` answers `DONE` straight away as for an empty folder, and the
+    /// shell's `test -r` exits 1 (`test -x` still passes, as the `x` bit does).
+    /// Chainable.
+    pub fn deny_read(&mut self, path: &str) -> &mut Self {
+        self.read_denied.insert(Self::normalize(path));
+        self
+    }
+
+    /// Whether the device would open `path` for reading, honoring
+    /// [`deny_read`](Self::deny_read) after following links. `false` for a path
+    /// that isn't there.
+    pub fn readable(&self, path: &str) -> bool {
+        match self.canonical(path) {
+            Ok(resolved) => self.get(&resolved).is_some() && !self.read_denied.contains(&resolved),
+            Err(_) => false,
+        }
     }
 
     /// Whether a write at `path` is refused: the whole-tree

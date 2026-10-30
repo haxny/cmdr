@@ -280,6 +280,19 @@ v1 `STAT` zeroes the mode on any failure, so a device without `stat_v2` can't te
 that gap stays. The fake models the denial with `FakeTree::deny_sync_stat`, and `conformance_test.rs` holds the three
 guards to it.
 
+**An empty listing asks whether the folder could be opened at all.** `adbd`'s `LIST`/`LIS2` answers `DONE` straight away
+when `opendir` fails, so a folder it can't read, an empty folder, and a missing path all list as nothing, and it never
+sends `.`/`..` (verified on Pixel 9 Pro XL, Android 17 `CP3A.261005.005`, adb 37.0.0, raw sync `LIST` of `/data`, an
+empty folder, and `/sdcard/nope-xyz`, 2026-10-30, #836). `list_directory_impl`'s stat before the `LIST` separates
+"missing", but `STAT` succeeds on `/data` (`drwxrwx--x system`), which then read as an empty folder. So a listing that
+comes back EMPTY runs one `test -r '<p>' && test -x '<p>'` (`shell::run_chain`, one round trip, only for empty
+listings): exit 1 re-stats the folder and answers `PermissionDenied { path, raw_os_error: None }`, or `NotFound` if it
+went away meanwhile; any other exit can't tell and leaves the listing empty. `-x` counts too: a folder with `r` but no
+`x` opens, but `adbd` can't stat what's inside and drops every entry. The drive-index walk reads through the same
+`list_directory_impl` (`scan_list`, `list_directory_for_scan`), so it records such a folder as unreadable
+(`unreadable_cause = Abandoned`, `cmdr-index`'s `network_scanner/DETAILS.md`) rather than empty with size 0. The fake
+models it with `FakeTree::deny_read`.
+
 **`create_directory_all` names a file in the way** as `NotADirectory(device_path)`, the contract every backend keeps
 (`conformance::assert_create_directory_all_refuses_a_file_in_the_way`). `mkdir -p` says "File exists" or "Not a
 directory" only on stderr, so both halves are the probe's: the leaf stat that already decides `AlreadyExisted` refuses a
@@ -305,13 +318,14 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
   file at open, as a device's does, so an upload that stops short leaves a torn file for the writer's cleanup to remove,
   and a cell can watch that cleanup fail), and `shell,v2,raw:` over an in-memory `FakeTree`. The tree resolves links as
   the kernel does: a read follows every link along the path (`canonical`, up to `MAX_LINK_HOPS`, then `ELOOP`), `STAT`
-  leaves the last one unfollowed, `LIST` of a link lists its target, and a write stays literal;
-  `FakeTree::android_layout` builds the `/sdcard` → `/storage/self/primary` → `/storage/emulated/0` chain the index
-  cells walk (a phone's own, verified on Pixel 9 Pro XL, Android 17, `adb shell readlink /sdcard /storage/self/primary`,
-  2026-09-11), plus `host:track-devices` with `push_devices` for scripted hotplug, `drop_connections` / `stop` for
-  faults, `hold_answers` / `release_answers` to hold a dial provably in flight, and `requests` (every service request,
-  in order) for counting dials or proving none happened. `volume/testing.rs` holds the volume-level fixtures on top of
-  it. No `adb` binary, no device, no Docker: every cell runs in the unit lane.
+  leaves the last one unfollowed, `LIST` of a link lists its target (with no `.`/`..`, and nothing at all for a
+  `deny_read` folder, as a phone answers), and a write stays literal; `FakeTree::android_layout` builds the `/sdcard` →
+  `/storage/self/primary` → `/storage/emulated/0` chain the index cells walk (a phone's own, verified on Pixel 9 Pro XL,
+  Android 17, `adb shell readlink /sdcard /storage/self/primary`, 2026-09-11), plus `host:track-devices` with
+  `push_devices` for scripted hotplug, `drop_connections` / `stop` for faults, `hold_answers` / `release_answers` to
+  hold a dial provably in flight, and `requests` (every service request, in order) for counting dials or proving none
+  happened. `volume/testing.rs` holds the volume-level fixtures on top of it. No `adb` binary, no device, no Docker:
+  every cell runs in the unit lane.
 - **App-side** (`apps/desktop/src-tauri/src/adb/`): anything driving `cmdr-operations`, the volume registry,
   `volume_listing::complete`, or the listing cache. The transfer engine's cells sit beside the SFTP suite, in
   `apps/desktop/src-tauri/src/operations_host/backend_suites/adb_transfer_test.rs`; the list of what exists is
@@ -349,7 +363,8 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
 - **Wireless debugging** (`adb pair`) is out of scope: the server owns pairing, and a paired device appears in
   `track-devices` like any other.
 - **Real-device pass pending**: the authorize prompt, an `unauthorized` → `device` transition mid-session, a 2 GB `RECV`
-  / `SEND`, and a `/data` listing on a non-rooted phone (expect `PermissionDenied` carrying the path).
+  / `SEND`, and a re-check of the `/data` listing's `PermissionDenied` (§ "The error policy"; its `test -r`/`-x` exit
+  codes are toybox's documented ones, not yet watched on a phone).
 
 ## The public surface
 

@@ -236,9 +236,12 @@ impl SyncSession {
     /// Lists `path`, handing each entry to `on_entry` as it arrives. `LIS2`
     /// where the device has it, else `LIST`. `.` and `..` are skipped.
     ///
-    /// ❗ A missing or unreadable directory lists as EMPTY on both verbs (the
-    /// device answers `DONE` straight away); callers that need to tell those
-    /// apart stat the path first.
+    /// ❗ A missing, an unreadable, and an empty directory all list as EMPTY on
+    /// both verbs (the device answers `DONE` straight away). A stat separates
+    /// "missing", but it succeeds on a folder the device won't open, so telling
+    /// "unreadable" from "empty" takes the shell's `test -r` / `test -x` (the
+    /// volume's `refuse_if_unreadable`). A real `adbd` sends no `.`/`..`; the
+    /// skip stays for one that does.
     pub async fn list(&mut self, path: &str, on_entry: &mut (dyn FnMut(SyncDirEntry) + Send)) -> Result<(), AdbError> {
         if self.features.ls_v2 {
             self.send_payload(b"LIS2", path.as_bytes()).await?;

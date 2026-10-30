@@ -45,7 +45,7 @@ async fn stat_and_list(features: DeviceFeatures) {
 
     let entries = collect(&mut session, "/sdcard").await;
     let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
-    assert_eq!(names, vec!["DCIM", "hello.txt", "link"], "dot entries are skipped");
+    assert_eq!(names, vec!["DCIM", "hello.txt", "link"]);
     assert_eq!(entries[2].stat.kind(), SyncEntryKind::Symlink);
     assert_eq!(entries[1].stat.size, 12);
     assert_eq!(entries[1].stat.size_is_exact, features.ls_v2);

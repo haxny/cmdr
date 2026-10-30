@@ -222,6 +222,8 @@ pub fn run_fake_shell(tree: &Mutex<FakeTree>, argv: &[String]) -> (u8, String, S
                 "-d" => matches!(node, Some(FakeNode::Dir { .. })),
                 "-f" => matches!(node, Some(FakeNode::File { .. })),
                 "-w" => node.is_some() && args.first().is_some_and(|p| !tree.writes_refused_at(p)),
+                "-r" => args.first().is_some_and(|p| tree.readable(p)),
+                "-x" => args.first().is_some_and(|p| tree.resolve(p).is_ok()),
                 _ => false,
             };
             (u8::from(!ok), String::new(), String::new())
@@ -280,6 +282,48 @@ pub fn run_fake_shell(tree: &Mutex<FakeTree>, argv: &[String]) -> (u8, String, S
             format!("/system/bin/sh: {other}: inaccessible or not found\n"),
         ),
     }
+}
+
+/// Runs a command line that may chain commands with `&&`, as `sh -c` does:
+/// each runs while the previous one exited 0, the outputs concatenate, and the
+/// exit code is the last one run's. An `&&` inside quotes is part of a word.
+pub(super) fn run_fake_command_line(tree: &Mutex<FakeTree>, line: &str) -> (u8, Vec<u8>, Vec<u8>) {
+    let mut outcome = (0, Vec::new(), Vec::new());
+    for command in split_and_list(line) {
+        let (code, stdout, stderr) = run_fake_shell_bytes(tree, &split_argv(command));
+        outcome.0 = code;
+        outcome.1.extend(stdout);
+        outcome.2.extend(stderr);
+        if code != 0 {
+            break;
+        }
+    }
+    outcome
+}
+
+/// Splits `line` at every `&&` outside single or double quotes.
+fn split_and_list(line: &str) -> Vec<&str> {
+    let mut parts = Vec::new();
+    let mut start = 0;
+    let mut quote: Option<u8> = None;
+    let bytes = line.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        match (quote, bytes[i]) {
+            (None, b'\'' | b'"') => quote = Some(bytes[i]),
+            (Some(q), c) if c == q => quote = None,
+            (None, b'\\') => i += 1,
+            (None, b'&') if bytes.get(i + 1) == Some(&b'&') => {
+                parts.push(&line[start..i]);
+                i += 1;
+                start = i + 1;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    parts.push(&line[start..]);
+    parts
 }
 
 /// Binary-output twin used by the fake server. `dd` returns file bytes; the

@@ -21,7 +21,7 @@ use crate::server::AdbEndpoint;
 use crate::sync::MAX_DATA_CHUNK;
 use crate::transport::hex_message;
 
-use super::shell::{run_fake_shell_bytes, split_argv};
+use super::shell::run_fake_command_line;
 use super::tree::{DEFAULT_MTIME, FakeNode, FakeTree};
 use super::{FAKE_FEATURES, fake_device};
 
@@ -358,20 +358,21 @@ async fn serve_sync(stream: &mut TcpStream, shared: &Shared) -> std::io::Result<
                     let tree = shared.tree.lock_ignore_poison();
                     // `opendir` follows every link along the path, the last one
                     // included, so a listing of `/sdcard` lists the storage it points at.
+                    // Like a real `adbd`: a folder it can't open, an empty one, and a
+                    // missing path all answer `DONE` straight away, and `.`/`..` are
+                    // never sent (verified on a Pixel 9 Pro XL, Android 17, raw sync
+                    // `LIST`, 2026-10-30, #836).
                     let listed = tree.canonical(&path).unwrap_or_else(|_| path.clone());
-                    if let Some(FakeNode::Dir { .. }) = tree.get(&listed) {
-                        let mut entries = vec![
-                            (".".to_string(), tree.stat(&listed)),
-                            ("..".to_string(), tree.stat(&listed)),
-                        ];
-                        entries.extend(tree.children(&listed).into_iter().map(|(n, node)| (n, Ok(node))));
-                        for (name, node) in entries {
+                    if let Some(FakeNode::Dir { .. }) = tree.get(&listed)
+                        && tree.readable(&listed)
+                    {
+                        for (name, node) in tree.children(&listed) {
                             if v2 {
                                 out.extend_from_slice(b"DNT2");
-                                out.extend_from_slice(&stat_v2_bytes(&node));
+                                out.extend_from_slice(&stat_v2_bytes(&Ok(node)));
                             } else {
                                 out.extend_from_slice(b"DENT");
-                                out.extend_from_slice(&stat_v1_bytes(node.as_ref().ok()));
+                                out.extend_from_slice(&stat_v1_bytes(Some(&node)));
                             }
                             out.extend_from_slice(&(name.len() as u32).to_le_bytes());
                             out.extend_from_slice(name.as_bytes());
@@ -488,8 +489,7 @@ fn shell_frame(id: u8, payload: &[u8]) -> Vec<u8> {
 }
 
 async fn serve_shell(stream: &mut TcpStream, shared: &Shared, cmd: &str) -> std::io::Result<()> {
-    let argv = split_argv(cmd);
-    let (exit_code, stdout, stderr) = run_fake_shell_bytes(&shared.tree, &argv);
+    let (exit_code, stdout, stderr) = run_fake_command_line(&shared.tree, cmd);
     let mut out = Vec::new();
     if !stdout.is_empty() {
         out.extend_from_slice(&shell_frame(1, &stdout));

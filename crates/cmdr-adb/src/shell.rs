@@ -74,7 +74,19 @@ pub fn command_line(argv: &[&str]) -> String {
 
 /// Runs `argv` on the device and collects its output and exit code.
 pub async fn run(endpoint: &AdbEndpoint, serial: &str, argv: &[&str]) -> Result<ShellOutcome, AdbError> {
-    run_inner(endpoint, serial, argv, None).await
+    run_inner(endpoint, serial, &command_line(argv), None).await
+}
+
+/// Runs `commands` as one `&&` chain in one round trip: each runs while the
+/// previous one exited 0, and the exit code is the last one run's. Every
+/// argument is quoted as [`run`] quotes it; only the `&&` between them isn't.
+pub async fn run_chain(endpoint: &AdbEndpoint, serial: &str, commands: &[&[&str]]) -> Result<ShellOutcome, AdbError> {
+    let line = commands
+        .iter()
+        .map(|argv| command_line(argv))
+        .collect::<Vec<_>>()
+        .join(" && ");
+    run_inner(endpoint, serial, &line, None).await
 }
 
 /// Runs `argv`, rejecting stdout beyond `max_stdout` before allocating its
@@ -85,18 +97,20 @@ pub async fn run_bounded(
     argv: &[&str],
     max_stdout: usize,
 ) -> Result<ShellOutcome, AdbError> {
-    run_inner(endpoint, serial, argv, Some(max_stdout)).await
+    run_inner(endpoint, serial, &command_line(argv), Some(max_stdout)).await
 }
 
+/// ❗ `line` goes to the device's `sh -c` as is: build it only from
+/// [`command_line`]'s quoted words.
 async fn run_inner(
     endpoint: &AdbEndpoint,
     serial: &str,
-    argv: &[&str],
+    line: &str,
     max_stdout: Option<usize>,
 ) -> Result<ShellOutcome, AdbError> {
     let mut conn = endpoint.connect().await.map_err(connect_as_transport)?;
     conn.bind_device(serial).await?;
-    conn.request(&format!("shell,v2,raw:{}", command_line(argv))).await?;
+    conn.request(&format!("shell,v2,raw:{line}")).await?;
     read_frames(&mut conn, max_stdout).await
 }
 

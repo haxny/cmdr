@@ -8,7 +8,7 @@ use tokio_util::sync::CancellationToken;
 use super::AdbVolume;
 use super::mapping::{stat_to_file_entry, with_link_target};
 use super::paths::join_device_path;
-use crate::errors::{ENOENT, volume_error_from_errno};
+use crate::errors::{EACCES, ENOENT, volume_error_from_errno};
 use crate::sync::{SyncDirEntry, SyncEntryKind, SyncSession, SyncStat};
 
 /// How many entries go by between two progress reports.
@@ -33,9 +33,9 @@ impl AdbVolume {
         let mut session = self.open_sync(&device).await?;
 
         // ❗ `LIST` answers an unreadable or missing directory with an EMPTY
-        // listing rather than an error, so the directory is stat'ed first and
-        // the refusal comes from that. One round trip, and the only way to tell
-        // "/data on an unrooted phone" from "an empty folder".
+        // listing rather than an error. The stat here catches "missing" (and
+        // "not a folder"); "unreadable" stats fine, so an empty listing asks the
+        // shell afterwards (`refuse_if_unreadable`).
         let top = session
             .stat(&device)
             .await
@@ -98,6 +98,12 @@ impl AdbVolume {
             session.quit().await;
             return Err(VolumeError::Cancelled(device.into()));
         }
+        if entries.is_empty()
+            && let Err(e) = self.refuse_if_unreadable(&mut session, &device).await
+        {
+            session.quit().await;
+            return Err(e);
+        }
 
         // A link to a folder must navigate like one. One `stat` per symlink,
         // on the same socket, ❗ never per entry: a listing is mostly files.
@@ -121,6 +127,37 @@ impl AdbVolume {
             on_progress(tally);
         }
         Ok(entries)
+    }
+
+    /// Tells an empty folder from one the device won't open, after `LIST`
+    /// answered nothing: `adbd` sends the same bare `DONE` for both, and its
+    /// `STAT` succeeds on a folder the shell user can't read (`/data` on a
+    /// non-rooted phone). One `test -r && test -x` round trip, ONLY for an empty
+    /// listing, read by its exit code ❌ never its stderr: 1 is "can't open",
+    /// and the folder is stat'ed again so one deleted meanwhile says `NotFound`.
+    /// Any other exit (2 for a `test` that can't parse, 127 for none) can't tell,
+    /// so the listing stays empty.
+    async fn refuse_if_unreadable(&self, session: &mut SyncSession, device: &str) -> Result<(), VolumeError> {
+        let outcome = crate::shell::run_chain(
+            &self.inner.endpoint,
+            &self.inner.serial,
+            &[&["test", "-r", device], &["test", "-x", device]],
+        )
+        .await
+        .map_err(|e| self.inner.map_adb_error(e, device))?;
+        if outcome.exit_code != 1 {
+            return Ok(());
+        }
+        let again = session
+            .stat(device)
+            .await
+            .map_err(|e| self.inner.map_adb_error(e, device))?;
+        let errno = if again.exists() {
+            EACCES
+        } else {
+            again.errno.unwrap_or(ENOENT)
+        };
+        Err(volume_error_from_errno(errno, device))
     }
 
     /// One `stat` round trip, as a `FileEntry`.
