@@ -109,6 +109,7 @@ pub(super) fn is_worth_retrying(error: &MtpConnectionError) -> bool {
         | MtpConnectionError::StorageFull { .. }
         | MtpConnectionError::StoreReadOnly { .. }
         | MtpConnectionError::PermissionDenied { .. }
+        | MtpConnectionError::ReadRefused { .. }
         | MtpConnectionError::Cancelled { .. }
         | MtpConnectionError::ObjectNotFound { .. }
         | MtpConnectionError::AmbiguousName { .. }

@@ -59,8 +59,9 @@ and classification (`transfer-error-messages.ts`). There is no `friendly_error` 
 gate or mount is involved, so they come first. None has an `action_kind`, and ❌ none is told apart by a message.
 
 - **`PhoneRefused`** for `adb://` and `mtp://`: Android keeps the folder for the system and its apps (`/data` on a
-  non-rooted phone). Carries no path: the pane shows it, and a phone's app path holds its serial. MTP's own per-object
-  refusal arrives as `StoreReadOnly` (`VolumeError::ReadOnly`), so what reaches this arm over MTP is rarer.
+  non-rooted phone). Carries no path: the pane shows it, and a phone's app path holds its serial. MTP's refused read
+  (`MtpConnectionError::ReadRefused`) lands here; its refused WRITE stays `VolumeError::ReadOnly`, and its USB-level
+  refusals are `VolumeError::NotConnected`, since no folder was asked about.
 - **`ServerRefused`** for `sftp://`, `webdav://`, and `nfs://`: the server refused the account. Its own reason because
   `RemotePermissionDenied` talks about a mount, and nothing is mounted here. NFS's `NFS3ERR_ACCES` carries `EACCES`, and
   still lands here: the scheme outranks the errno.

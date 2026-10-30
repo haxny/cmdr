@@ -74,6 +74,16 @@ pub enum MtpConnectionError {
         /// The device this is about.
         device_id: String,
     },
+    /// The phone refused to READ this folder or file: Android keeps it for the
+    /// system and its apps. Nothing about the storage or the USB link, so ❌ never
+    /// `StoreReadOnly` (reading isn't writing) or `PermissionDenied` (the host's USB
+    /// access).
+    ReadRefused {
+        /// The device this is about.
+        device_id: String,
+        /// The refused object's path on the device.
+        path: String,
+    },
     /// The caller cancelled, and the operation stopped at a safe PTP boundary.
     /// Nothing is half-written on the wire.
     Cancelled {
@@ -206,6 +216,10 @@ impl ErrorLogText for MtpConnectionError {
             Self::PermissionDenied { device_id } => {
                 write!(out, "Permission denied for device: {device_id}")
             }
+            Self::ReadRefused { device_id, path } => {
+                write!(out, "{device_id} refused to read: ")?;
+                out.value(LogPrivate::path(path))
+            }
             Self::Cancelled { device_id, message } => {
                 write!(out, "Cancelled on {device_id}: {message}")
             }
@@ -286,7 +300,9 @@ pub(super) fn map_mtp_error(e: mtp_rs::Error, device_id: &str) -> MtpConnectionE
         E::Busy => MtpConnectionError::DeviceBusy { device_id },
         E::StorageFull => MtpConnectionError::StorageFull { device_id },
         // Read-only storage and write-protected/denied objects all surface to the
-        // user as "the device refused this write".
+        // user as "the device refused this write". ❗ Only true of a write: a read
+        // goes through `MtpConnectionManager::map_device_read_error`, which reads
+        // this same `AccessDenied` as `ReadRefused`.
         E::AccessDenied => MtpConnectionError::StoreReadOnly { device_id },
         // A re-keyed handle is the recoverable stale-cache case; the upload path
         // intercepts it via `is_stale_handle_rejection` before mapping, so reaching
@@ -457,6 +473,10 @@ mod tests {
             },
             MtpConnectionError::PermissionDenied {
                 device_id: "test".to_string(),
+            },
+            MtpConnectionError::ReadRefused {
+                device_id: "test".to_string(),
+                path: "/path".to_string(),
             },
             MtpConnectionError::Cancelled {
                 device_id: "test".to_string(),

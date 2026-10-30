@@ -255,12 +255,12 @@ impl MtpConnectionManager {
             let storage = device
                 .storage(StorageId(u64::from(storage_id)))
                 .await
-                .map_err(|e| self.map_device_error(e, device_id))?;
+                .map_err(|e| self.map_device_read_error(e, device_id, path))?;
 
             storage
                 .list_objects_stream_with_cancel(parent_opt, cancel)
                 .await
-                .map_err(|e| self.map_device_error(e, device_id))?
+                .map_err(|e| self.map_device_read_error(e, device_id, path))?
             // `device` / `storage` drop here, releasing the lock before the
             // metadata batches below.
         };
@@ -309,7 +309,7 @@ impl MtpConnectionManager {
                         // session failure mid-listing quietly produced a SHORT
                         // folder that looked complete. mtp-rs 0.30 separates the
                         // two cases, so this can propagate again.
-                        return Err(self.map_device_error(e, device_id));
+                        return Err(self.map_device_read_error(e, device_id, path));
                     }
                     None => {
                         done = true;
@@ -419,7 +419,7 @@ impl MtpConnectionManager {
         let storage = device
             .storage(StorageId(u64::from(storage_id)))
             .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
+            .map_err(|e| self.map_device_read_error(e, device_id, path))?;
         debug!(
             "MTP list_directory [req#{}]: got storage object in {:?}",
             request_id,
@@ -443,7 +443,7 @@ impl MtpConnectionManager {
         let mut object_infos = match storage.list_objects_with_cancel(parent_opt, cancel).await {
             Ok(infos) => infos,
             Err(e) => {
-                let mapped_err = self.map_device_error(e, device_id);
+                let mapped_err = self.map_device_read_error(e, device_id, path);
                 error!(
                     "MTP list_directory [req#{}]: list_objects failed after {:?}: {}",
                     request_id,
@@ -549,7 +549,7 @@ impl MtpConnectionManager {
         let storage = device
             .storage(StorageId(u64::from(storage_id)))
             .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
+            .map_err(|e| self.map_device_read_error(e, device_id, path))?;
 
         let parent_opt = if parent_handle == ObjectHandle::ROOT {
             None
@@ -562,7 +562,7 @@ impl MtpConnectionManager {
         let mut listing = storage
             .list_objects_stream_with_cancel(parent_opt, cancel)
             .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
+            .map_err(|e| self.map_device_read_error(e, device_id, path))?;
 
         let total = listing.total();
         debug!(
@@ -600,7 +600,7 @@ impl MtpConnectionManager {
                     // error, so a transport or session failure mid-listing quietly
                     // produced a SHORT folder that looked complete. mtp-rs 0.30
                     // separates the two cases, so this can propagate again.
-                    return Err(self.map_device_error(e, device_id));
+                    return Err(self.map_device_read_error(e, device_id, path));
                 }
             };
 

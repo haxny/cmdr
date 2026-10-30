@@ -636,3 +636,12 @@ The check covers both trees, so none of them needs watching by hand.
 **The two deliberate exceptions**, both annotated `// allowed-dropping-timeout:`: the device-lock wait
 (`acquire_device_lock` — a `tokio::Mutex`, nothing on the wire) and the event loop's 5 s `next_event()` poll (the
 INTERRUPT endpoint, not the bulk pipe; mtp-rs leaves that transfer pending on drop and picks it up next poll).
+
+## A refused read
+
+`mtp_rs::Error::AccessDenied` folds read-only storage, a write-protected object, and a plain denial into one variant,
+with no direction. A write refused this way stays `StoreReadOnly`; a listing or a byte read goes through
+`map_device_read_error`, which makes it `ReadRefused`, so a folder the phone keeps private (`/Android/data`) reads as
+the phone refusing, never as read-only. The USB-level `ExclusiveAccess` and `PermissionDenied` are about this machine
+reaching the phone: they map to `VolumeError::NotConnected` (`../volume/mapping.rs`), never to a folder refusal. (Found
+by reading the code, 2026-10-30; not reproduced on a phone.)

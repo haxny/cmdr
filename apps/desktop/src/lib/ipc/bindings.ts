@@ -3042,10 +3042,9 @@ export const commands = {
    *
    *  - An ALREADY-active drive: kicks off a fresh full scan (Stale ⇒ Scanning ⇒
    *    Fresh on clean completion), truncating and rebuilding its index.
-   *  - An SMB drive that's NOT active (e.g. a persisted Stale index loaded on
-   *    launch but never re-enabled this session): enable it, which scans. Returns
-   *    the typed refusal if the direct-smb2 gate blocks it.
-   *  - `root` that's not active: starts the local indexer.
+   *  - A drive that's NOT active (e.g. a persisted Stale index loaded on launch but
+   *    never re-enabled this session): start it, then the same scan
+   *    (`Index::rescan_volume`). Returns the typed refusal if a start's gate blocks it.
    */
   rescanDriveIndex: (volumeId: string) =>
     typedError<EnableIndexingOutcome, string>(__TAURI_INVOKE('rescan_drive_index', { volumeId })),
@@ -12915,6 +12914,19 @@ export type MtpConnectionError =
       type: 'permissionDenied'
       // The device this is about.
       device_id: string
+    }
+  /**
+   *  The phone refused to READ this folder or file: Android keeps it for the
+   *  system and its apps. Nothing about the storage or the USB link, so ❌ never
+   *  `StoreReadOnly` (reading isn't writing) or `PermissionDenied` (the host's USB
+   *  access).
+   */
+  | {
+      type: 'readRefused'
+      // The device this is about.
+      device_id: string
+      // The refused object's path on the device.
+      path: string
     }
   /**
    *  The caller cancelled, and the operation stopped at a safe PTP boundary.

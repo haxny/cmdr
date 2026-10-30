@@ -29,6 +29,8 @@ use cmdr_fs::log_private::LogPrivate;
 pub(crate) struct MtpReadSession {
     device_arc: Arc<Mutex<MtpDevice>>,
     windowed: WindowedDownload,
+    /// The object this reads, for a refusal of one of its windows.
+    path: String,
 }
 
 /// What an upload creates: the `SendObjectInfo` half, ahead of the bytes.
@@ -108,12 +110,12 @@ impl MtpConnectionManager {
             let storage = device
                 .storage(StorageId(u64::from(storage_id)))
                 .await
-                .map_err(|e| self.map_device_error(e, device_id))?;
+                .map_err(|e| self.map_device_read_error(e, device_id, path))?;
 
             storage
                 .download_windowed(object_handle, ByteRange::From(offset), window_size)
                 .await
-                .map_err(|e| self.map_device_error(e, device_id))?
+                .map_err(|e| self.map_device_read_error(e, device_id, path))?
         };
 
         debug!(
@@ -122,7 +124,11 @@ impl MtpConnectionManager {
             LogPrivate::file_path(path)
         );
 
-        Ok(MtpReadSession { device_arc, windowed })
+        Ok(MtpReadSession {
+            device_arc,
+            windowed,
+            path: path.to_string(),
+        })
     }
 
     /// Reads the next bounded window of an object opened with
@@ -161,7 +167,7 @@ impl MtpConnectionManager {
         let outcome = session.windowed.next_window().await;
         match outcome {
             Some(Ok(bytes)) => Ok(Some(bytes)),
-            Some(Err(e)) => Err(self.map_device_error(e, device_id)),
+            Some(Err(e)) => Err(self.map_device_read_error(e, device_id, &session.path)),
             None => Ok(None),
         }
     }
@@ -224,7 +230,7 @@ impl MtpConnectionManager {
                     device
                         .storage(StorageId(u64::from(storage_id)))
                         .await
-                        .map_err(|e| self.map_device_error(e, device_id))?,
+                        .map_err(|e| self.map_device_read_error(e, device_id, path))?,
                 );
                 if let Ok(mut cache) = storage_cache.write() {
                     cache.insert(storage_id, Arc::clone(&storage));
@@ -236,7 +242,7 @@ impl MtpConnectionManager {
         storage
             .read_range(object_handle, offset, len)
             .await
-            .map_err(|e| self.map_device_error(e, device_id))
+            .map_err(|e| self.map_device_read_error(e, device_id, path))
     }
 
     /// Uploads pre-collected chunks to the MTP device.
