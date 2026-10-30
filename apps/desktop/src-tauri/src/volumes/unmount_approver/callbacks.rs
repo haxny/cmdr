@@ -46,6 +46,9 @@ pub(crate) trait Host: Send + Sync + 'static {
     /// Whether Cmdr's own eject of the volume is in flight. Such a volume is the flight's to stop
     /// and to resume.
     fn is_ejecting(&self, volume_id: &str) -> bool;
+    /// Whether Cmdr's own eject is taking this volume down alone, leaving the rest of its disk up.
+    /// Only then does an ask know it isn't the first of a whole-disk request's.
+    fn is_ejecting_alone(&self, volume_id: &str) -> bool;
     /// Let go of every git repo on the volumes mounted at `mount_roots`, waiting until `deadline`
     /// for the reads still holding one, and answer whether all let go. A plain unmount fails while
     /// any repo there has a pack file mapped. In memory only: no filesystem.
@@ -304,6 +307,17 @@ impl Approver {
             whole_unit: disk.whole_unit,
             path: path.to_path_buf(),
         }];
+        // ❗ Cmdr's own one-volume eject: the siblings stay mounted, so they keep their indexes. A
+        // Finder unmount of one volume looks like a whole-disk request's first ask from here.
+        let ejecting_alone = volumes
+            .first()
+            .is_some_and(|asked| self.host.is_ejecting_alone(&asked.volume_id));
+        if ejecting_alone {
+            return AskGroup {
+                volumes,
+                unit_unreadable: false,
+            };
+        }
         let Some(on_unit) = volumes_on_unit(disk.whole_unit) else {
             log::warn!(
                 target: "unmount_approver",
@@ -523,6 +537,34 @@ mod tests {
             fx.index.stops_that_found_an_index(),
             2,
             "the sibling's ask finds its own volume already let go of"
+        );
+    }
+
+    #[test]
+    fn cmdrs_own_eject_of_one_volume_leaves_its_siblings_index_and_repos_alone() {
+        // The one ask that can tell: Finder's one-volume unmount looks like a whole-disk request's.
+        let fx = fixture();
+        let (a, b) = (path("A"), path("B"));
+        fx.indexed_volume("vol-a", "disk7s2", &a);
+        fx.indexed_volume("vol-b", "disk7s3", &b);
+        fx.host.ejecting.lock_ignore_poison().insert("vol-a".to_string());
+        fx.host.ejecting_alone.lock_ignore_poison().insert("vol-a".to_string());
+        let asked_at = fx.gate.now();
+
+        let answer = fx.approver.on_unmount_ask(&asked("disk7s2", UNIT, &a), |_| {
+            panic!("an ask about one volume has no reason to look at the rest of the unit")
+        });
+
+        assert_eq!(answer, Answer::Approve);
+        assert_eq!(
+            fx.index.stops_that_found_an_index(),
+            1,
+            "only the volume that's leaving"
+        );
+        assert_eq!(
+            fx.host.repo_releases(),
+            [(vec![a], asked_at + APPROVAL_STOP_BUDGET)],
+            "and only its repos"
         );
     }
 

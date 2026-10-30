@@ -138,6 +138,8 @@ const EJECT_MESSAGE: { [K in EjectError['type']]: (error: Extract<EjectError, { 
   remoteNotConnected: () => raw('errors.eject.remoteNotConnected'),
   deviceDisconnectRefused: () => raw('errors.eject.deviceDisconnectRefused'),
   unmountRefused: (e) => wordUnmountRefusal(e.holders),
+  // The same names and the same advice; the toast around it says nothing was unmounted.
+  heldBeforeEject: (e) => wordUnmountRefusal(e.holders),
   timedOut: () => raw('errors.eject.timedOut'),
   // Nothing was unmounted, so it must NOT share `timedOut`'s "may still eject".
   notResponding: () => raw('errors.eject.notResponding'),
@@ -150,6 +152,44 @@ const EJECT_MESSAGE: { [K in EjectError['type']]: (error: Extract<EjectError, { 
 export function renderEjectError(error: EjectError): string {
   const render = EJECT_MESSAGE[error.type] as (error: EjectError) => string
   return render(error)
+}
+
+/**
+ * What a refused eject's toast offers: `false` for no "Send error report…", `undefined` for the
+ * toast's usual offer.
+ *
+ * ❗ A refusal that says who to close, or that names a cause someone can act on, isn't broken, so
+ * offering a report reads as if it were. The offer stays where Cmdr itself held the drive (its
+ * sentence asks for one), where the scan named nobody, and for everything nothing classifies.
+ */
+export function ejectRefusalReport(error: unknown): false | undefined {
+  const typed = asEjectError(error)
+  if (!typed) return undefined
+  switch (typed.type) {
+    case 'busy':
+    case 'volumeNotFound':
+    case 'notEjectable':
+    case 'notAnSmbVolume':
+    case 'remoteNotConnected':
+      return false
+    case 'unmountRefused':
+    case 'heldBeforeEject':
+      return holdersExplainIt(typed.holders) ? false : undefined
+    case 'deviceDisconnectRefused':
+    case 'timedOut':
+    case 'notResponding':
+    case 'unexpected':
+      return undefined
+  }
+}
+
+/** Whether {@link wordUnmountRefusal}'s sentence says who holds the drive, and isn't Cmdr's own. */
+function holdersExplainIt(holders: HolderScan): boolean {
+  const named = holders.named
+  if (actionableNames(named).length > 0 || named.some((h) => h.kind === 'diskImage')) return true
+  if (named.some((h) => h.kind === 'cmdr')) return false
+  // A `complete` scan that named nobody words the same "macOS, wait" as a `system` holder.
+  return named.length > 0 || holders.type === 'complete'
 }
 
 /** `EjectError` variants that carry their own free-text `detail` field. */
@@ -197,7 +237,7 @@ export function wordEjectRefusal(error: unknown): string {
  * was us.
  */
 function warnIfCmdrHeldTheDrive(error: EjectError): void {
-  if (error.type !== 'unmountRefused') return
+  if (error.type !== 'unmountRefused' && error.type !== 'heldBeforeEject') return
   const ours = error.holders.named.filter((h) => h.kind === 'cmdr')
   if (ours.length === 0) return
   log.warn('Cmdr itself held the drive when the unmount was refused: {pids}', {

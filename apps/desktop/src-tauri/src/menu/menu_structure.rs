@@ -19,11 +19,11 @@ use super::HELP_MENU_ID;
 use super::menu_items::APP_MENU_TITLE;
 use super::menu_items::{DetachWord, detach_label, pin_tab_label};
 use super::{
-    COPY_CURRENT_DIR_PATH_ID, EDIT_MENU_ID, EJECT_VOLUME_ID, FAVORITES_ADD_CONTEXT_ID, FUNCTION_KEY_BAR_HIDE_ID,
-    NETWORK_HOST_DISCONNECT_ID, NETWORK_HOST_EDIT_ID, NETWORK_HOST_FORGET_SECRET_ID, NETWORK_HOST_FORGET_SERVER_ID,
-    TAB_CLOSE_ID, TAB_CLOSE_OTHERS_ID, TAB_PIN_ID, VIEWER_CONTEXT_COPY_ID, VIEWER_CONTEXT_SELECT_ALL_ID,
-    VIEWER_EDIT_COPY_ID, VIEWER_GO_BACK_ID, VIEWER_GO_FORWARD_ID, VIEWER_SELECT_ALL_ID, VIEWER_WORD_WRAP_ID,
-    ViewerMenuItems,
+    COPY_CURRENT_DIR_PATH_ID, EDIT_MENU_ID, EJECT_ALL_VOLUMES_ID, EJECT_VOLUME_ID, FAVORITES_ADD_CONTEXT_ID,
+    FUNCTION_KEY_BAR_HIDE_ID, NETWORK_HOST_DISCONNECT_ID, NETWORK_HOST_EDIT_ID, NETWORK_HOST_FORGET_SECRET_ID,
+    NETWORK_HOST_FORGET_SERVER_ID, TAB_CLOSE_ID, TAB_CLOSE_OTHERS_ID, TAB_PIN_ID, VIEWER_CONTEXT_COPY_ID,
+    VIEWER_CONTEXT_SELECT_ALL_ID, VIEWER_EDIT_COPY_ID, VIEWER_GO_BACK_ID, VIEWER_GO_FORWARD_ID, VIEWER_SELECT_ALL_ID,
+    VIEWER_WORD_WRAP_ID, ViewerMenuItems,
 };
 #[cfg(target_os = "macos")]
 use super::{VIEWER_EDIT_CUT_ID, VIEWER_EDIT_PASTE_ID};
@@ -129,9 +129,10 @@ pub fn build_function_key_bar_context_menu<R: Runtime>(app: &AppHandle<R>) -> ta
 /// Its one command's accelerator comes from `shortcuts` like the file menu's do; see
 /// [`ContextMenuShortcuts`]. `eject_volume_name`, when present, appends the detach item that lets the user
 /// leave the volume the breadcrumb represents: `Eject ({name})` for a disk,
-/// `Disconnect` for a phone (`detach_word`). The caller is responsible for
-/// stashing the matching `volume_id` in `MenuState.volume_eject_context` so
-/// `on_menu_event` can dispatch the click.
+/// `Disconnect` for a phone (`detach_word`), plus "Eject all" under it with
+/// `offer_eject_all`. The caller is responsible for stashing the matching
+/// `volume_id` in `MenuState.volume_eject_context` so `on_menu_event` can dispatch
+/// the click.
 ///
 /// When `eject_busy` is true, the item is rendered disabled with a ` (busy)`
 /// suffix, so a volume with a write op reading from / writing to it can't be
@@ -142,6 +143,7 @@ pub fn build_breadcrumb_context_menu<R: Runtime>(
     eject_volume_name: Option<&str>,
     eject_busy: bool,
     detach_word: DetachWord,
+    offer_eject_all: bool,
 ) -> tauri::Result<Menu<R>> {
     let menu = Menu::new(app)?;
     let copy_path_item = context_item(
@@ -161,6 +163,15 @@ pub fn build_breadcrumb_context_menu<R: Runtime>(
             None::<&str>,
         )?;
         menu.append(&eject_item)?;
+        if offer_eject_all {
+            let label = menu_t(if eject_busy {
+                "menu.volume.ejectAllBusy"
+            } else {
+                "menu.volume.ejectAll"
+            });
+            let eject_all_item = MenuItem::with_id(app, EJECT_ALL_VOLUMES_ID, label, !eject_busy, None::<&str>)?;
+            menu.append(&eject_all_item)?;
+        }
     }
     Ok(menu)
 }

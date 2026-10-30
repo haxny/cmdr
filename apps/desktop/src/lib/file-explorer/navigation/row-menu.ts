@@ -40,7 +40,7 @@ import type { MenuItem, MenuSection } from '#lib/ui/menu-types.js'
 import { connectDirectly } from '../network/direct-connect'
 import { showsDisconnect } from './connection-state'
 import { detachControlFor } from './detach-control'
-import { runDetach } from './detach-volume'
+import { detachAllOnDisk, runDetach } from './detach-volume'
 import { isServerPlaceRow, runServerRowAction } from './server-row-actions'
 import { volumeScheme } from '#lib/volume-scheme.js'
 import type { VolumeInfo } from '../types'
@@ -60,6 +60,8 @@ export interface RowActionEntry {
   disabled?: boolean
   /** Leaves the menu up after the pick (see `MenuItem.keepsMenuOpen`). */
   keepsMenuOpen?: boolean
+  /** What the item does, where the label alone invites a wrong reading. */
+  tooltip?: string
 }
 
 /** A one-shot fix: runs once, now. Closes the menu, since a fix may raise a sheet. */
@@ -187,7 +189,7 @@ function pinAction(volume: VolumeInfo): RowActionEntry {
  * A drive's or a phone's detach item, worded and greyed from the same `detachControlFor`
  * answer the row's inline button renders. `null` when the row has no detach at all.
  */
-function detachAction(volume: VolumeInfo, facts: VolumeRowFacts): RowActionEntry | null {
+function detachAction(volume: VolumeInfo, facts: VolumeRowFacts & { shares: boolean }): RowActionEntry | null {
   const detach = detachControlFor(volume, { busy: facts.busy, ejecting: facts.ejecting })
   if (detach?.action !== 'eject') return null
   const { disabled, icon } = detach.button
@@ -196,7 +198,27 @@ function detachAction(volume: VolumeInfo, facts: VolumeRowFacts): RowActionEntry
     icon === 'unplug'
       ? tString(disabled ? 'menu.volume.disconnectBusy' : 'menu.network.disconnect')
       : tString(disabled ? 'menu.volume.ejectBusy' : 'menu.volume.eject', { name: volume.name })
-  return { type: 'action', action: 'eject', label, icon, disabled, keepsMenuOpen: true }
+  // ❗ Only here, where the row's Eject really does leave the drive attached: the bare word
+  // promises safe-to-unplug everywhere else.
+  const tooltip = facts.shares ? tString('fileExplorer.navigation.ejectOneVolumeTooltip') : undefined
+  return { type: 'action', action: 'eject', label, icon, disabled, keepsMenuOpen: true, tooltip }
+}
+
+/**
+ * "Eject all", on a drive with several volumes mounted: the same control's state, since whatever
+ * greys Eject also greys taking down everything around it. A write op on a SIBLING isn't greyed
+ * here, because this row's facts can't see it: the backend refuses `busy` and says so.
+ */
+function ejectAllAction(detach: RowActionEntry): RowActionEntry {
+  return {
+    type: 'action',
+    action: 'eject-all',
+    label: tString(detach.disabled === true ? 'menu.volume.ejectAllBusy' : 'menu.volume.ejectAll'),
+    icon: detach.icon,
+    disabled: detach.disabled,
+    keepsMenuOpen: true,
+    tooltip: tString('fileExplorer.navigation.ejectAllTooltip'),
+  }
 }
 
 /**
@@ -252,8 +274,10 @@ export function volumeRowMenu(volume: VolumeInfo, facts: VolumeRowFacts): RowMen
   if (isServerPlaceRow(volume)) {
     actions.push(...serverActions(volume, facts))
   } else {
-    const detach = detachAction(volume, facts)
+    const shares = volume.sharesDiskWithOthers === true
+    const detach = detachAction(volume, { ...facts, shares })
     if (detach) actions.push(detach)
+    if (detach && shares) actions.push(ejectAllAction(detach))
     // A SAVED SMB share is pinnable like a server place (`docs/specs/saved-smb-shares.md`);
     // a mount nothing saved (Finder's) has no pin to move.
     if (volume.category === 'network' && volumeScheme(volume.id) === 'smb' && facts.isSaved)
@@ -293,7 +317,13 @@ function entryKey(entry: RowMenuEntry): string {
 function entryItem<T>(volumeId: string, entry: RowMenuEntry, wrap: (entry: RowMenuEntry) => T): MenuItem<T> {
   const common = { value: `row:${volumeId}:${entryKey(entry)}`, label: entry.label, data: wrap(entry) }
   if (entry.type === 'action') {
-    return { ...common, icon: { lucide: entry.icon }, disabled: entry.disabled, keepsMenuOpen: entry.keepsMenuOpen }
+    return {
+      ...common,
+      icon: { lucide: entry.icon },
+      disabled: entry.disabled,
+      keepsMenuOpen: entry.keepsMenuOpen,
+      tooltip: entry.tooltip,
+    }
   }
   if (entry.type === 'fix') return { ...common, icon: { lucide: entry.icon }, tooltip: entry.tooltip }
   return { ...common, check: { kind: 'toggle', checked: entry.checked }, tooltip: entry.tooltip }
@@ -361,6 +391,10 @@ export async function runVolumeRowAction(payload: {
   const { volume, action: kind, onOpen } = payload
   if (kind === 'eject') {
     await runDetach(volume, 'eject')
+    return
+  }
+  if (kind === 'eject-all') {
+    await detachAllOnDisk(volume)
     return
   }
   if (kind === 'disconnect') {

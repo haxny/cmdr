@@ -280,6 +280,20 @@ struct LocalVolumeMeta {
     uuid: Option<String>,
 }
 
+/// Where the mounts that earn a switcher row sit, for an eject asking whether a volume's disk
+/// keeps anything the person can see. `None` when the mount table wouldn't answer. No provider
+/// lookup: this is asked about a disk's own device-backed mounts.
+pub(crate) fn mount_points_with_rows() -> Option<Vec<std::path::PathBuf>> {
+    let mounts = enumerate_mounts()?;
+    Some(
+        mounts
+            .iter()
+            .filter(|mount| is_user_facing_mount(mount, None))
+            .map(|mount| std::path::PathBuf::from(&mount.mount_point))
+            .collect(),
+    )
+}
+
 /// The SMB mount info for a network mount, or `None` if it isn't an SMB mount we
 /// can parse. Read straight out of the `getfsstat` snapshot, no syscall.
 fn smb_info(mount: &MountEntry) -> Option<SmbMountInfo> {
@@ -371,6 +385,7 @@ fn build_attached_location(
         supports_trash,
         mount_is_read_only: mount.is_read_only,
         is_disk_image,
+        shares_disk_with_others: false,
         is_cloud_mount,
         connection_state: None,
         pinned: None,

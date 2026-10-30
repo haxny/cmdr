@@ -176,6 +176,8 @@ pub(super) struct FakeHost {
     pub(super) stops: Arc<Stops>,
     pub(super) busy: Mutex<HashSet<String>>,
     pub(super) ejecting: Mutex<HashSet<String>>,
+    /// Volumes Cmdr's own eject is taking down alone, leaving the rest of the disk up.
+    pub(super) ejecting_alone: Mutex<HashSet<String>>,
     /// Every volume a VANISH stop was asked about, kept apart from the pre-unmount stops so a test
     /// can tell "let go of before the unmount" from "cleaned up after the drive went".
     vanish_stops: Mutex<Vec<String>>,
@@ -271,6 +273,10 @@ impl Host for FakeHost {
         self.ejecting.lock_ignore_poison().contains(volume_id)
     }
 
+    fn is_ejecting_alone(&self, volume_id: &str) -> bool {
+        self.ejecting_alone.lock_ignore_poison().contains(volume_id)
+    }
+
     fn note_idle(&self) {
         self.idles.fetch_add(1, Ordering::SeqCst);
     }
@@ -336,6 +342,7 @@ fn build(presence: Presence, gate: impl FnOnce(Arc<dyn IndexDoor>) -> DriveRelea
         stops: Arc::new(Stops::default()),
         busy: Mutex::default(),
         ejecting: Mutex::default(),
+        ejecting_alone: Mutex::default(),
         vanish_stops: Mutex::default(),
         presence,
         mounted: Mutex::default(),

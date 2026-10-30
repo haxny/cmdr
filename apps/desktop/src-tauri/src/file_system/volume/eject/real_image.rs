@@ -19,10 +19,11 @@ use cmdr_fs::testing::disk_images::{DiskImage, DiskImageSession, FileHolder, Har
 use super::disk_flight::DiskTeardown;
 use super::disk_flight::test_support::FakeIndex;
 use super::disk_flight::{FlightResume, Sibling, capture, captured_paths, hand_back, owed_ids};
+use super::disk_reach::{self, DiskReach};
 use super::disk_target::{self, DiskMounts, Resolution};
 use super::holders::{self, HolderKind, HolderScan, VolumeHolder};
 use super::unmount_tool::{self, Target, ToolOutcome, UnmountVerb};
-use super::{EjectError, INDEX_STOP_DEADLINE, name_the_holders};
+use super::{EjectError, EjectScope, INDEX_STOP_DEADLINE, name_the_holders, pre_check};
 use crate::file_system::volume::drive_release::{DriveRelease, IndexDoor};
 use crate::volumes::disk_units::MountedVolume;
 
@@ -409,6 +410,193 @@ async fn an_idle_two_volume_disk_ejects_whole_and_its_image_detaches() {
         !image.is_attached().expect("hdiutil info"),
         "the whole image detached, not just the volume that was clicked"
     );
+}
+
+// ── One volume at a time, and Eject all ───────────────────────────
+
+/// What the eject decides for `mount_point`. Every image's mount here is `-nobrowse`, so the rows
+/// question is answered yes for all of them: what's pinned is what the disk's real mounts say.
+fn reach_on_this_disk(scope: EjectScope, mount_point: &Path) -> DiskReach {
+    let mounted = mounts_on(&disk_under(mount_point).units);
+    disk_reach::reach_of(scope, mount_point, &mounted, |_| true)
+}
+
+/// Takes volume `index` down the way the flight does when its disk keeps others: `diskutil unmount`,
+/// done when that one mount left.
+async fn eject_alone_through_the_production_retries(image: &DiskImage, index: usize) -> Result<(), EjectError> {
+    let mount_point = image.volumes()[index].mount_point.clone();
+    let mount_path = mount_point.to_string_lossy().to_string();
+    let teardown = DiskTeardown::new(vec![mount_point], || false);
+    let settled = unmount_tool::settle_with_retries(
+        Target {
+            volume_id: "real-image-alone-pin",
+            verb: UnmountVerb::Unmount,
+            mount_path: &mount_path,
+        },
+        || {
+            std::future::ready(match image.unmount_volume(index) {
+                Ok(_) => ToolOutcome::Succeeded,
+                Err(HarnessError::Failed { code, stderr, .. }) => ToolOutcome::Exited { code, stderr },
+                Err(HarnessError::TimedOut { .. }) => ToolOutcome::TimedOut,
+                Err(other) => ToolOutcome::CouldNotStart {
+                    detail: other.to_string(),
+                },
+            })
+        },
+        || teardown.is_still_mounted(),
+    )
+    .await;
+    name_the_holders("real-image-alone-pin", settled, teardown.captured(), LANE_HOLDER_BUDGET).await
+}
+
+/// ❗ Finder's model, end to end on one disk: Eject takes one volume, its sibling and the disk stay,
+/// and the sibling, now last, takes the disk.
+async fn one_volume_goes_alone_and_the_last_one_takes_the_disk(spec: ImageSpec) {
+    let session = DiskImageSession::acquire();
+    let image = DiskImage::attach(&session, spec).expect("attach the image");
+    let (a, b) = (
+        image.volumes()[0].mount_point.clone(),
+        image.volumes()[1].mount_point.clone(),
+    );
+    assert_eq!(reach_on_this_disk(EjectScope::Volume, &a), DiskReach::ThisVolume);
+
+    let result = eject_alone_through_the_production_retries(&image, 0).await;
+
+    assert!(result.is_ok(), "got {result:?}");
+    assert!(!is_mounted(&a), "A left the mount table");
+    assert!(is_mounted(&b), "its sibling stayed");
+    assert!(image.is_attached().expect("hdiutil info"), "and so did the disk");
+
+    assert_eq!(
+        reach_on_this_disk(EjectScope::Volume, &b),
+        DiskReach::WholeDisk,
+        "B is the last one now, so its Eject takes the disk"
+    );
+    let siblings = [sibling("vol-b", &b)];
+    let teardown = disk_teardown(&disk_under(&b), &siblings);
+    let result = eject_the_disk_through_the_production_retries(&image, &b, &teardown).await;
+    assert!(result.is_ok(), "got {result:?}");
+    assert!(!is_mounted(&b));
+    assert!(
+        !image.is_attached().expect("hdiutil info"),
+        "the last Eject detached the disk"
+    );
+}
+
+#[tokio::test]
+#[ignore = "attaches a real APFS disk image via hdiutil; run with --run-ignored"]
+async fn one_apfs_volume_goes_alone_and_the_last_one_takes_the_disk() {
+    one_volume_goes_alone_and_the_last_one_takes_the_disk(ImageSpec::ApfsTwoVolumes).await;
+}
+
+#[tokio::test]
+#[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
+async fn one_hfs_partition_goes_alone_and_the_last_one_takes_the_disk() {
+    one_volume_goes_alone_and_the_last_one_takes_the_disk(ImageSpec::HfsTwoPartitions).await;
+}
+
+/// The reported bug's shape: a holder on the volume asked about refuses that volume, and ❗ its
+/// sibling stays mounted, where a `diskutil eject` would already have taken it.
+#[tokio::test]
+#[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
+async fn a_held_volume_refuses_its_eject_and_its_sibling_stays_mounted() {
+    let session = DiskImageSession::acquire();
+    let image = DiskImage::attach(&session, ImageSpec::HfsTwoPartitions).expect("attach the image");
+    let (a, b) = (
+        image.volumes()[0].mount_point.clone(),
+        image.volumes()[1].mount_point.clone(),
+    );
+    let held = a.join("held.txt");
+    std::fs::write(&held, b"held").expect("write the held file");
+    let holder = FileHolder::hold(&held).expect("hold the file open");
+
+    let result = eject_alone_through_the_production_retries(&image, 0).await;
+
+    assert_eq!(
+        kind_of(holders_of(&result), holder.pid()),
+        Some(HolderKind::Cmdr),
+        "the holder is named, and it descends from us"
+    );
+    assert!(is_mounted(&a), "A is held");
+    assert!(is_mounted(&b), "and nothing touched its sibling");
+    drop(holder);
+}
+
+/// A hold on a sibling is none of this volume's business.
+#[tokio::test]
+#[ignore = "attaches a real APFS disk image via hdiutil; run with --run-ignored"]
+async fn a_held_sibling_doesnt_stop_one_volume_going_alone() {
+    let session = DiskImageSession::acquire();
+    let image = DiskImage::attach(&session, ImageSpec::ApfsTwoVolumes).expect("attach the image");
+    let (a, b) = (
+        image.volumes()[0].mount_point.clone(),
+        image.volumes()[1].mount_point.clone(),
+    );
+    let held = b.join("held.txt");
+    std::fs::write(&held, b"held").expect("write the held file");
+    let holder = FileHolder::hold(&held).expect("hold the file open");
+
+    let result = eject_alone_through_the_production_retries(&image, 0).await;
+
+    assert!(result.is_ok(), "got {result:?}");
+    assert!(!is_mounted(&a));
+    assert!(is_mounted(&b));
+    drop(holder);
+}
+
+/// ❗ Eject all's whole point: a held sibling is found BEFORE anything unmounts, so no half-ejected
+/// disk. Once the holder lets go, the same disk goes down whole.
+#[tokio::test]
+#[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
+async fn eject_all_with_a_held_volume_refuses_before_anything_unmounts() {
+    let session = DiskImageSession::acquire();
+    let image = DiskImage::attach(&session, ImageSpec::HfsTwoPartitions).expect("attach the image");
+    let (a, b) = (
+        image.volumes()[0].mount_point.clone(),
+        image.volumes()[1].mount_point.clone(),
+    );
+    let held = b.join("held.txt");
+    std::fs::write(&held, b"held").expect("write the held file");
+    let holder = FileHolder::hold(&held).expect("hold the file open");
+    assert_eq!(reach_on_this_disk(EjectScope::Disk, &a), DiskReach::WholeDisk);
+    let siblings = [sibling("vol-a", &a), sibling("vol-b", &b)];
+    let teardown = disk_teardown(&disk_under(&a), &siblings);
+
+    let found = pre_check::held_before_eject(teardown.captured(), LANE_HOLDER_BUDGET)
+        .await
+        .expect("a process holding a file on a sibling keeps the disk up");
+
+    assert_eq!(kind_of(&found, holder.pid()), Some(HolderKind::Cmdr), "got {found}");
+    assert!(is_mounted(&a) && is_mounted(&b), "nothing unmounted");
+    assert!(image.is_attached().expect("hdiutil info"));
+
+    // Dropping it ends the process and reaps it, so nobody's left for the next scan to name.
+    drop(holder);
+    assert_eq!(
+        pre_check::held_before_eject(teardown.captured(), LANE_HOLDER_BUDGET).await,
+        None,
+        "with nobody holding it, Eject all goes ahead"
+    );
+    let result = eject_the_disk_through_the_production_retries(&image, &a, &teardown).await;
+    assert!(result.is_ok(), "got {result:?}");
+    assert!(!image.is_attached().expect("hdiutil info"), "and takes the disk");
+}
+
+/// A mount with no switcher row doesn't keep the disk up: the harness mounts `-nobrowse`, which is
+/// the real shape of one, and the real mount table says so.
+#[tokio::test]
+#[ignore = "attaches a real APFS disk image via hdiutil; run with --run-ignored"]
+async fn a_nobrowse_sibling_has_no_row_so_it_doesnt_keep_the_disk_up() {
+    let session = DiskImageSession::acquire();
+    let image = DiskImage::attach(&session, ImageSpec::ApfsTwoVolumes).expect("attach the image");
+    let a = image.volumes()[0].mount_point.clone();
+    let rows = crate::volumes::mount_points_with_rows().expect("the mount table answers");
+
+    let reach = disk_reach::reach_of(EjectScope::Volume, &a, &mounts_on(&disk_under(&a).units), |path| {
+        rows.iter().any(|row| row == path)
+    });
+
+    assert_eq!(reach, DiskReach::WholeDisk);
 }
 
 /// A refused disk eject hands back the index of the sibling that's STILL mounted, and

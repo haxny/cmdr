@@ -52,7 +52,14 @@ struct InFlightSet {
         all(not(test), not(target_os = "macos")),
         expect(dead_code, reason = "only macOS ejects per physical disk")
     )]
-    disks: HashMap<DiskKey, InFlight>,
+    disks: HashMap<DiskKey, DiskClaim>,
+}
+
+/// The flight holding a physical disk, and how much of it that flight takes down.
+struct DiskClaim {
+    flight: InFlight,
+    /// The one volume this flight takes down, leaving the disk up. `None` for a whole-disk flight.
+    alone: Option<String>,
 }
 
 static IN_FLIGHT: LazyLock<Mutex<InFlightSet>> = LazyLock::new(Mutex::default);
@@ -105,6 +112,18 @@ pub(super) fn is_ejecting_by_another(volume_id: &str, flight_id: u64) -> bool {
         .volumes
         .get(volume_id)
         .is_some_and(|running| running.flight_id != flight_id)
+}
+
+/// Whether Cmdr's own eject is taking `volume_id` down and leaving the rest of its disk up. The
+/// unmount approver reads it: such an ask is about this one volume, so its siblings keep their
+/// indexes.
+#[cfg_attr(not(target_os = "macos"), expect(dead_code, reason = "only macOS has the approver"))]
+pub(crate) fn is_ejecting_alone(volume_id: &str) -> bool {
+    IN_FLIGHT
+        .lock_ignore_poison()
+        .disks
+        .values()
+        .any(|claim| claim.alone.as_deref() == Some(volume_id))
 }
 
 /// Joins the eject in flight for `volume_id`, or starts one from `start`.
@@ -168,9 +187,14 @@ pub(super) enum DiskFlight {
     /// This flight owns the disk: it took every sibling into the ejecting set and
     /// runs the one teardown. Dropping the ownership hands the adopted ids back.
     Owner(DiskOwnership),
-    /// Another flight owns the disk. Await it and answer what it answers, so one
+    /// Another flight is taking the whole disk down. Await it and answer what it answers, so one
     /// `diskutil eject` serves every volume of the disk.
     Joined(Flight),
+    /// Another flight is taking ONE volume of the disk down. Its answer isn't this flight's, and
+    /// its landing changes what this flight should do, so await it and decide again. ❗ That wait
+    /// is what stops two siblings ejected together from each reading the other as still mounted
+    /// and leaving an empty disk powered on.
+    DecideAgainAfter(Flight),
 }
 
 /// A flight's claim on one physical disk, plus the siblings it adopted.
@@ -208,7 +232,7 @@ impl Drop for DiskOwnership {
         if in_flight
             .disks
             .get(&self.key)
-            .is_some_and(|owner| owner.flight_id == self.flight_id)
+            .is_some_and(|owner| owner.flight.flight_id == self.flight_id)
         {
             in_flight.disks.remove(&self.key);
         }
@@ -243,14 +267,17 @@ pub(super) fn join_or_own_disk(key: DiskKey, volume_id: &str, sibling_ids: &[Str
             landings: Vec::new(),
         });
     };
-    if let Some(owner) = in_flight.disks.get(&key)
-        && owner.flight_id != mine.flight_id
-    {
-        log::info!(target: "eject", "The disk under {volume_id} is already coming down; joining that flight");
-        return DiskFlight::Joined(owner.flight.clone());
+    if let Some(answer) = another_flights_claim(&in_flight, key, mine.flight_id, volume_id) {
+        return answer;
     }
 
-    in_flight.disks.insert(key, mine.clone());
+    in_flight.disks.insert(
+        key,
+        DiskClaim {
+            flight: mine.clone(),
+            alone: None,
+        },
+    );
     let mut landings = Vec::new();
     for sibling_id in sibling_ids {
         if sibling_id == volume_id || in_flight.volumes.contains_key(sibling_id) {
@@ -267,6 +294,59 @@ pub(super) fn join_or_own_disk(key: DiskKey, volume_id: &str, sibling_ids: &[Str
         key,
         flight_id: mine.flight_id,
         landings,
+    })
+}
+
+/// What a flight does about another flight's claim on its disk, `None` when there's no such claim.
+#[cfg_attr(
+    all(not(test), not(target_os = "macos")),
+    expect(dead_code, reason = "only macOS ejects per physical disk")
+)]
+fn another_flights_claim(in_flight: &InFlightSet, key: DiskKey, mine: u64, volume_id: &str) -> Option<DiskFlight> {
+    let owner = in_flight
+        .disks
+        .get(&key)
+        .filter(|owner| owner.flight.flight_id != mine)?;
+    let running = owner.flight.flight.clone();
+    if owner.alone.is_some() {
+        log::info!(target: "eject", "A sibling of {volume_id} is ejecting; deciding what to do once it lands");
+        return Some(DiskFlight::DecideAgainAfter(running));
+    }
+    log::info!(target: "eject", "The disk under {volume_id} is already coming down; joining that flight");
+    Some(DiskFlight::Joined(running))
+}
+
+/// Claims `key` for the flight running for `volume_id`, which takes that one volume down and leaves
+/// the disk up. It adopts nobody, so a sibling's row stays usable.
+#[cfg_attr(
+    all(not(test), not(target_os = "macos")),
+    expect(dead_code, reason = "only macOS ejects per physical disk")
+)]
+pub(super) fn own_disk_for_one_volume(key: DiskKey, volume_id: &str) -> DiskFlight {
+    let mut in_flight = IN_FLIGHT.lock_ignore_poison();
+    let Some(mine) = in_flight.volumes.get(volume_id).cloned() else {
+        log::warn!(target: "eject", "The eject of {volume_id} isn't in the ejecting set");
+        return DiskFlight::Owner(DiskOwnership {
+            key,
+            flight_id: NEXT_FLIGHT_ID.fetch_add(1, Ordering::Relaxed),
+            landings: Vec::new(),
+        });
+    };
+    if let Some(answer) = another_flights_claim(&in_flight, key, mine.flight_id, volume_id) {
+        return answer;
+    }
+    let flight_id = mine.flight_id;
+    in_flight.disks.insert(
+        key,
+        DiskClaim {
+            flight: mine,
+            alone: Some(volume_id.to_string()),
+        },
+    );
+    DiskFlight::Owner(DiskOwnership {
+        key,
+        flight_id,
+        landings: Vec::new(),
     })
 }
 
@@ -412,7 +492,7 @@ mod tests {
     fn owned(flight: DiskFlight) -> DiskOwnership {
         match flight {
             DiskFlight::Owner(ownership) => ownership,
-            DiskFlight::Joined(_) => panic!("expected to own the disk"),
+            DiskFlight::Joined(_) | DiskFlight::DecideAgainAfter(_) => panic!("expected to own the disk"),
         }
     }
 
@@ -497,6 +577,7 @@ mod tests {
             move || async move {
                 match join_or_own_disk(key, a, &[a.to_string(), b.to_string()]) {
                     DiskFlight::Joined(running) => running.await,
+                    DiskFlight::DecideAgainAfter(_) => panic!("B's flight takes the whole disk down"),
                     DiskFlight::Owner(_) => {
                         teardowns.fetch_add(1, Ordering::SeqCst);
                         panic!("B's flight already owns this disk")
@@ -538,6 +619,81 @@ mod tests {
         let _ = is_done.await;
         let _ = release.send(());
         assert!(flight.await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn a_sibling_of_a_volume_ejecting_alone_waits_and_decides_again_rather_than_taking_its_answer() {
+        // A and B ejected together, one volume each: reading each other as still mounted, both
+        // would unmount alone and leave an empty disk powered on. So B waits, then sees it's last.
+        let (a, b) = ("volumes-cmdr-test-alone-a", "volumes-cmdr-test-alone-b");
+        let key = DiskKey(7001);
+        let (a_owns, a_owned_it) = tokio::sync::oneshot::channel::<()>();
+        let (release, held) = tokio::sync::oneshot::channel::<()>();
+
+        let a_flight = as_a_flight(a, move || async move {
+            let ownership = owned(own_disk_for_one_volume(key, a));
+            assert!(ownership.adopted().is_empty(), "a sibling's row stays usable");
+            assert!(is_ejecting_alone(a), "the approver reads this ask as about A alone");
+            let _ = a_owns.send(());
+            let _ = held.await;
+            drop(ownership);
+            Ok(EjectOutcome::VolumeEjectedDiskStays)
+        });
+        let _ = a_owned_it.await;
+        assert!(!ejecting_volume_ids().contains(&b.to_string()), "B wasn't adopted");
+        assert!(!is_ejecting_alone(b));
+
+        let b_flight = as_a_flight(b, move || async move {
+            let DiskFlight::DecideAgainAfter(running) = own_disk_for_one_volume(key, b) else {
+                panic!("A holds the disk for one volume, so B waits");
+            };
+            assert!(matches!(running.await, Ok(EjectOutcome::VolumeEjectedDiskStays)));
+            // A landed, so B may claim the disk: all of it, as its last volume.
+            let ownership = owned(join_or_own_disk(key, b, &[b.to_string()]));
+            assert!(!is_ejecting_alone(b), "a whole-disk flight isn't alone");
+            drop(ownership);
+            Ok(EjectOutcome::DiskEjected)
+        });
+
+        let _ = release.send(());
+        let (a_result, b_result) = tokio::join!(a_flight, b_flight);
+        assert!(
+            matches!(a_result, Ok(EjectOutcome::VolumeEjectedDiskStays)),
+            "got {a_result:?}"
+        );
+        assert!(matches!(b_result, Ok(EjectOutcome::DiskEjected)), "got {b_result:?}");
+        assert!(!is_ejecting_alone(a), "the claim leaves with its flight");
+    }
+
+    #[tokio::test]
+    async fn eject_all_waits_for_a_volume_ejecting_alone_rather_than_taking_its_answer() {
+        let (a, b) = ("volumes-cmdr-test-all-a", "volumes-cmdr-test-all-b");
+        let key = DiskKey(7002);
+        let (a_owns, a_owned_it) = tokio::sync::oneshot::channel::<()>();
+        let (release, held) = tokio::sync::oneshot::channel::<()>();
+        let a_flight = as_a_flight(a, move || async move {
+            let ownership = owned(own_disk_for_one_volume(key, a));
+            let _ = a_owns.send(());
+            let _ = held.await;
+            drop(ownership);
+            Ok(EjectOutcome::VolumeEjectedDiskStays)
+        });
+        let _ = a_owned_it.await;
+        let b_flight = as_a_flight(b, move || async move {
+            assert!(
+                matches!(
+                    join_or_own_disk(key, b, &[a.to_string(), b.to_string()]),
+                    DiskFlight::DecideAgainAfter(_)
+                ),
+                "one volume's answer isn't this request's"
+            );
+            Ok(EjectOutcome::DiskEjected)
+        });
+        let b_result = b_flight.await;
+        assert!(b_result.is_ok(), "got {b_result:?}");
+        let _ = release.send(());
+        let a_result = a_flight.await;
+        assert!(a_result.is_ok(), "got {a_result:?}");
     }
 
     #[tokio::test]

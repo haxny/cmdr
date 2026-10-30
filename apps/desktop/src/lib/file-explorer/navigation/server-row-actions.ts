@@ -265,6 +265,7 @@ export async function runServerRowAction(payload: {
       await editServer(volumeId, volumeName)
       return
     case 'eject':
+    case 'eject-all':
     case 'rename-favorite':
     case 'remove-favorite':
       // Owned elsewhere: `runDetach`, and the favorites menu.

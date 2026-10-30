@@ -290,6 +290,27 @@
   "@fileExplorer.paneBoundary.reload": {
     "description": "Button under \"This pane hit a problem\" that rebuilds the broken file pane and opens its folder again. A verb phrase; \"pane\" is one of the two side-by-side file lists."
   },
+  "fileExplorer.pane.ejectedDriveStaysToast": "{volumeName} is ejected, but keep the drive plugged in: other volumes on it are still mounted.",
+  "@fileExplorer.pane.ejectedDriveStaysToast": {
+    "description": "Information toast after ejecting ONE volume of a physical drive that has several. The volume is gone from Cmdr, but the drive isn't safe to unplug yet, and that warning is the point of this message. A \"volume\" is one of the separately named parts of a drive; use the word your macOS Finder uses.",
+    "placeholders": {
+      "volumeName": "the display name of the volume that was ejected"
+    }
+  },
+  "fileExplorer.pane.ejectAllFailedToast": "Couldn’t eject everything on this drive: {message}",
+  "@fileExplorer.pane.ejectAllFailedToast": {
+    "description": "Error toast when \"Eject all\" didn't finish: some volumes of the drive may have been ejected, and at least one is still mounted. {message} is one sentence saying why, which may name an app.",
+    "placeholders": {
+      "message": "the reason, already translated, one sentence that reads after a colon"
+    }
+  },
+  "fileExplorer.pane.ejectAllHeldToast": "Nothing on this drive was ejected: {message}",
+  "@fileExplorer.pane.ejectAllHeldToast": {
+    "description": "Error toast when \"Eject all\" found something using one of the drive's volumes and stopped BEFORE ejecting any of them, so the whole drive is exactly as it was. Saying that nothing changed is the point of this message. {message} is one sentence naming who's using it.",
+    "placeholders": {
+      "message": "the reason, already translated, one sentence that reads after a colon"
+    }
+  },
   "fileExplorer.pane.ejectFailedToast": "Couldn’t eject {volumeName}: {message}",
   "@fileExplorer.pane.ejectFailedToast": {
     "description": "Error toast when ejecting a drive or volume did not work. {volumeName} is the drive’s display name; {message} is the underlying reason text.",
@@ -2739,6 +2760,14 @@
     "placeholders": {
       "name": "the server's display name, like \"Naspolya\""
     }
+  },
+  "fileExplorer.navigation.ejectOneVolumeTooltip": "Ejects only this volume. Its drive stays connected until the other volumes are ejected too.",
+  "@fileExplorer.navigation.ejectOneVolumeTooltip": {
+    "description": "Tooltip on the Eject item in a volume's menu, shown only when its physical drive has other volumes mounted. It explains that the drive can't be unplugged yet. A \"volume\" is one of the separately named parts of a drive; use the word your macOS Finder uses."
+  },
+  "fileExplorer.navigation.ejectAllTooltip": "Ejects every volume on this drive, so you can unplug it.",
+  "@fileExplorer.navigation.ejectAllTooltip": {
+    "description": "Tooltip on the \"Eject all\" item in a volume's menu, shown only when its physical drive has several volumes mounted. A \"volume\" is one of the separately named parts of a drive; use the word your macOS Finder uses."
   },
   "fileExplorer.navigation.ejectVolumeAriaLabel": "Eject {name}",
   "@fileExplorer.navigation.ejectVolumeAriaLabel": {

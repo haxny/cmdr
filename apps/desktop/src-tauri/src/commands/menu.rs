@@ -328,6 +328,7 @@ pub fn show_file_context_menu<R: Runtime>(
 /// `eject_volume_id` + `eject_volume_name` are set when the breadcrumb represents an
 /// ejectable volume; both must be present (or both absent) — the command stashes the
 /// id in `MenuState.volume_row_context` so `on_menu_event` can dispatch the click.
+/// `offer_eject_all` is the row's own `shares_disk_with_others`, which adds "Eject all".
 #[tauri::command]
 #[specta::specta]
 pub fn show_breadcrumb_context_menu<R: Runtime>(
@@ -335,6 +336,7 @@ pub fn show_breadcrumb_context_menu<R: Runtime>(
     shortcuts: ContextMenuShortcuts,
     eject_volume_id: Option<String>,
     eject_volume_name: Option<String>,
+    offer_eject_all: bool,
 ) -> Result<(), String> {
     let app = window.app_handle();
     // Disable the eject item while a write op touches this volume or its eject is
@@ -345,8 +347,15 @@ pub fn show_breadcrumb_context_menu<R: Runtime>(
     let detach_word = eject_volume_id
         .as_deref()
         .map_or(DetachWord::Eject, DetachWord::for_volume_id);
-    let menu = build_breadcrumb_context_menu(app, &shortcuts, eject_volume_name.as_deref(), eject_busy, detach_word)
-        .map_err(|e| e.to_string())?;
+    let menu = build_breadcrumb_context_menu(
+        app,
+        &shortcuts,
+        eject_volume_name.as_deref(),
+        eject_busy,
+        detach_word,
+        offer_eject_all,
+    )
+    .map_err(|e| e.to_string())?;
 
     // Stash eject target so on_menu_event can read it back when the user clicks
     // the "Eject (name)" item. If only one of the two args is present, treat as no

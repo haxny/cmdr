@@ -7,13 +7,15 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
 
-const ejectVolume = vi.fn(() => Promise.resolve())
+const ejectVolume = vi.fn(() => Promise.resolve('diskEjected'))
+const ejectAllOnDisk = vi.fn(() => Promise.resolve('diskEjected'))
 const disconnectPlace = vi.fn(() => Promise.resolve(true))
 const setPlacePinned = vi.fn(() => Promise.resolve(true))
 const busy = new Set<string>()
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   ejectVolume: (...args: unknown[]) => ejectVolume(...(args as [])),
+  ejectAllOnDisk: (...args: unknown[]) => ejectAllOnDisk(...(args as [])),
   disconnectPlace: (...args: unknown[]) => disconnectPlace(...(args as [])),
   setPlacePinned: (...args: unknown[]) => setPlacePinned(...(args as [])),
   listSavedServers: () => Promise.resolve([]),
@@ -129,6 +131,27 @@ describe('volumeRowMenu', () => {
     expect(shape(menu)).toEqual({ actions: ['eject'] })
     expect(entry(menu, 'eject')).toMatchObject({ label: 'Eject (Stick)', icon: 'eject', keepsMenuOpen: true })
     expect(entry(menu, 'eject')).not.toMatchObject({ disabled: true })
+  })
+
+  it('offers Eject all under Eject on a drive with several volumes, and says what each does', () => {
+    const menu = volumeRowMenu({ ...usbDrive, sharesDiskWithOthers: true }, idle)
+    expect(shape(menu)).toEqual({ actions: ['eject', 'eject-all'] })
+    expect(entry(menu, 'eject')).toMatchObject({
+      tooltip: 'Ejects only this volume. Its drive stays connected until the other volumes are ejected too.',
+    })
+    expect(entry(menu, 'eject-all')).toMatchObject({
+      label: 'Eject all',
+      tooltip: 'Ejects every volume on this drive, so you can unplug it.',
+    })
+  })
+
+  it('leaves the plain Eject without a tooltip on a drive with one volume', () => {
+    expect(entry(volumeRowMenu(usbDrive, idle), 'eject')).not.toHaveProperty('tooltip', expect.any(String))
+  })
+
+  it('greys Eject all with Eject', () => {
+    const menu = volumeRowMenu({ ...usbDrive, sharesDiskWithOthers: true }, { ...idle, busy: true })
+    expect(entry(menu, 'eject-all')).toMatchObject({ label: 'Eject all (busy)', disabled: true })
   })
 
   it('greys Eject while a transfer touches the drive, and says why', () => {
@@ -333,6 +356,16 @@ describe('runVolumeRowAction', () => {
   it('ejects a drive through the same guarded path as the row’s eject button', async () => {
     await runVolumeRowAction({ volume: usbDrive, action: 'eject' })
     expect(ejectVolume).toHaveBeenCalledWith('usb-stick')
+  })
+
+  it('asks for the whole disk on Eject all, and refuses under a running transfer', async () => {
+    await runVolumeRowAction({ volume: usbDrive, action: 'eject-all' })
+    expect(ejectAllOnDisk).toHaveBeenCalledWith('usb-stick')
+    ejectAllOnDisk.mockClear()
+    busy.add(usbDrive.id)
+    await runVolumeRowAction({ volume: usbDrive, action: 'eject-all' })
+    expect(ejectAllOnDisk).not.toHaveBeenCalled()
+    busy.delete(usbDrive.id)
   })
 
   it('refuses to disconnect a server under a running transfer, whatever the menu showed', async () => {

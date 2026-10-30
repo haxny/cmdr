@@ -136,6 +136,8 @@ pub(crate) async fn discover_local(timeout: Duration) -> ListingOutcome {
 /// over a local listing and get the finished list back; they can't get the order
 /// wrong.
 pub(crate) async fn complete(local: Vec<LocationInfo>) -> Vec<LocationInfo> {
+    #[cfg(target_os = "macos")]
+    let local = mark_shared_disks(local).await;
     let mut volumes = local;
 
     crate::device_volumes::append_device_volumes(&mut volumes).await;
@@ -163,6 +165,37 @@ pub(crate) async fn complete(local: Vec<LocationInfo>) -> Vec<LocationInfo> {
     }
 
     volumes
+}
+
+/// How long asking which rows share a physical disk may hold a listing up. The answer is IOKit and
+/// the mount table, so only a wedged daemon gets near this.
+#[cfg(target_os = "macos")]
+const SHARED_DISK_DEADLINE: Duration = Duration::from_secs(2);
+
+/// Says which rows share a physical disk, off this task, under a deadline. A stalled answer leaves
+/// every row reading "shares nothing": that costs the "Eject all" item for one listing, and each
+/// Eject still reads the disk for itself.
+#[cfg(target_os = "macos")]
+async fn mark_shared_disks(local: Vec<LocationInfo>) -> Vec<LocationInfo> {
+    // The usual listing: rows carry their icons, so don't copy them for nothing.
+    if local.iter().filter(|row| row.is_ejectable).count() < 2 {
+        return local;
+    }
+    let fallback = local.clone();
+    let marked = cmdr_fs::deadline::timeout_detached_typed(SHARED_DISK_DEADLINE, || (), |_detail| (), async move {
+        tokio::task::spawn_blocking(move || {
+            let mut rows = local;
+            crate::file_system::volume::eject::mark_shared_disks(&mut rows, crate::file_system::volume::eject::disk_at);
+            rows
+        })
+        .await
+        .map_err(|_join_err| ())
+    })
+    .await;
+    marked.unwrap_or_else(|()| {
+        log::warn!(target: "eject", "Couldn't tell which volumes share a disk in time, so none offers Eject all this time");
+        fallback
+    })
 }
 
 /// Discovers and completes in one call: what a caller with nowhere to fall back

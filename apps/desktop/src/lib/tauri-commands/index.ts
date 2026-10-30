@@ -230,6 +230,7 @@ export {
   resolvePathVolume,
   resolveLocation,
   getVolumeSpace,
+  ejectAllOnDisk,
   ejectVolume,
   getBusyVolumeIds,
   getEjectingVolumeIds,

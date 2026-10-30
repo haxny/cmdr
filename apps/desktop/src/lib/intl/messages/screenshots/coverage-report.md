@@ -16,8 +16,8 @@ Per catalog area, each renderable key is one of three:
 
 Coverage is PARTIAL by design. Uncoupled keys are expected, not bugs.
 
-**Total: 3139 / 5202 keys have a screenshot (60%):** 1804 direct (35%) and 1335 representative (26%). 1873 remain
-uncoupled, and 190 are native surfaces a webview capture cannot reach.
+**Total: 3139 / 5209 keys have a screenshot (60%):** 1804 direct (35%) and 1335 representative (26%). 1878 remain
+uncoupled, and 192 are native surfaces a webview capture cannot reach.
 
 | Area            | Direct | Representative | Uncoupled | Native | Total | Any % |
 | --------------- | -----: | -------------: | --------: | -----: | ----: | ----: |
@@ -32,14 +32,14 @@ uncoupled, and 190 are native surfaces a webview capture cannot reach.
 | errorReporter   |     16 |              0 |        43 |      0 |    59 |   27% |
 | errors          |    154 |            461 |         0 |      0 |   615 |  100% |
 | feedback        |      8 |              6 |         2 |      0 |    16 |   88% |
-| fileExplorer    |    125 |             65 |       338 |      0 |   528 |   36% |
+| fileExplorer    |    125 |             65 |       343 |      0 |   533 |   36% |
 | fileOperations  |    137 |             87 |       114 |      0 |   338 |   66% |
 | goToPath        |      5 |              6 |         2 |      0 |    13 |   85% |
 | indexing        |     34 |             17 |        19 |      0 |    70 |   73% |
 | licensing       |     49 |             35 |        25 |      0 |   109 |   77% |
 | lowDiskSpace    |      0 |              0 |         5 |      0 |     5 |    0% |
 | main            |      7 |              0 |        46 |      2 |    55 |   13% |
-| menu            |      4 |              0 |         0 |    188 |   192 |    2% |
+| menu            |      4 |              0 |         0 |    190 |   194 |    2% |
 | mtp             |     18 |              2 |         0 |      0 |    20 |  100% |
 | multiRename     |      0 |              0 |       231 |      0 |   231 |    0% |
 | notifications   |      0 |              0 |         1 |      0 |     1 |    0% |

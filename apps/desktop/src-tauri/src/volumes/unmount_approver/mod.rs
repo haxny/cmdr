@@ -274,6 +274,10 @@ impl Host for AppHost {
         crate::file_system::volume::eject::is_ejecting(volume_id)
     }
 
+    fn is_ejecting_alone(&self, volume_id: &str) -> bool {
+        crate::file_system::volume::eject::is_ejecting_alone(volume_id)
+    }
+
     fn let_go_of_repos(&self, mount_roots: &[PathBuf], deadline: Instant) -> bool {
         let portal = crate::file_system::git::wiring::portal();
         // Every root is released, even after one couldn't let go in time: ❌ no `all`, which

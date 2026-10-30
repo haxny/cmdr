@@ -24,9 +24,18 @@ pub async fn execute_eject(params: &Value) -> ToolResult {
 
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
-        use crate::file_system::volume::eject::EjectError;
+        use crate::file_system::volume::eject::{EjectError, EjectScope};
 
-        match crate::file_system::volume::eject::eject(volume_id).await {
+        let scope = match params.get("scope").and_then(|v| v.as_str()) {
+            None | Some("volume") => EjectScope::Volume,
+            Some("disk") => EjectScope::Disk,
+            Some(other) => {
+                return Err(ToolError::invalid_params(format!(
+                    "Unknown scope '{other}': use 'volume' or 'disk'"
+                )));
+            }
+        };
+        match crate::file_system::volume::eject::eject_scoped(volume_id, scope).await {
             Ok(outcome) => Ok(json!({
                 "outcome": outcome_tag(outcome),
                 "volumeId": volume_id,
@@ -38,7 +47,7 @@ pub async fn execute_eject(params: &Value) -> ToolResult {
                 // which is why a failed conversion omits it rather than writing a null.
                 // The holders carry that same distinction in their own tag.
                 match &error {
-                    EjectError::UnmountRefused { holders, .. } => {
+                    EjectError::UnmountRefused { holders, .. } | EjectError::HeldBeforeEject { holders } => {
                         if let Ok(holders) = serde_json::to_value(holders) {
                             data["holders"] = holders;
                         }
@@ -76,6 +85,7 @@ fn outcome_tag(outcome: crate::file_system::volume::eject::EjectOutcome) -> &'st
         EjectOutcome::Unmounted => "unmounted",
         EjectOutcome::DiskEjected => "diskEjected",
         EjectOutcome::AlreadyGone => "alreadyGone",
+        EjectOutcome::VolumeEjectedDiskStays => "volumeEjectedDiskStays",
     }
 }
 
@@ -92,6 +102,9 @@ fn success_message(outcome: crate::file_system::volume::eject::EjectOutcome, vol
             format!("Ejecting the whole disk under {volume_id}, every volume on it included.")
         }
         EjectOutcome::AlreadyGone => format!("{volume_id} was already gone, so there was nothing to detach."),
+        EjectOutcome::VolumeEjectedDiskStays => {
+            format!("Unmounted {volume_id}. Its disk stays attached, since other volumes on it are still mounted.")
+        }
     }
 }
 
@@ -112,6 +125,7 @@ fn refusal_tag(error: &crate::file_system::volume::eject::EjectError) -> &'stati
         EjectError::RemoteNotConnected { .. } => "remoteNotConnected",
         EjectError::DeviceDisconnectRefused { .. } => "deviceDisconnectRefused",
         EjectError::UnmountRefused { .. } => "unmountRefused",
+        EjectError::HeldBeforeEject { .. } => "heldBeforeEject",
         EjectError::TimedOut => "timedOut",
         EjectError::NotResponding { .. } => "notResponding",
         EjectError::Unexpected { .. } => "unexpected",

@@ -10,12 +10,18 @@ use crate::file_system::volume::eject::{self, EjectError, EjectOutcome};
 /// frontend shouldn't wait for the volume to fully disappear: `volume-unmounted`
 /// (for disk volumes) or `mtp-device-disconnected` (for MTP) will fire shortly
 /// after and panes rooted at the volume redirect to root. It reads the outcome
-/// for nothing today, and passing it through rather than dropping it is what
-/// keeps the MCP tool's typed answer honest.
+/// to say when a drive stays attached.
 #[tauri::command]
 #[specta::specta]
 pub async fn eject_volume(volume_id: String) -> Result<EjectOutcome, EjectError> {
     eject::eject(&volume_id).await
+}
+
+/// Ejects every volume on `volume_id`'s physical disk, and the disk: the volume menu's "Eject all".
+#[tauri::command]
+#[specta::specta]
+pub async fn eject_all_on_disk(volume_id: String) -> Result<EjectOutcome, EjectError> {
+    eject::eject_all(&volume_id).await
 }
 
 /// Returns the IDs of volumes that currently have a write op (copy / move /

@@ -324,6 +324,11 @@ export interface VolumeInfo {
   /** Whether this volume is a mounted disk image (.dmg): no indexing affordances, no space bars. */
   isDiskImage?: boolean
   /**
+   * Whether another row sits on this volume's physical disk, so its Eject leaves the disk attached
+   * and its menu also offers "Eject all". Rust's answer (`volume_listing::complete`).
+   */
+  sharesDiskWithOthers?: boolean
+  /**
    * Whether a cloud provider's own filesystem serves this mount (pCloud's `pcloudfs`, CloudMounter, …),
    * so every entry read costs a round trip to that provider's daemon: grouped under CLOUD, and no
    * indexing affordances. ❗ `false` for a `~/Library/CloudStorage` folder, which is an ordinary

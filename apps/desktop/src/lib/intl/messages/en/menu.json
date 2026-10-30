@@ -675,6 +675,14 @@
       "name": "the disk's own name as the system reports it, uncontrolled and possibly long (e.g. \"Backup Drive\")"
     }
   },
+  "menu.volume.ejectAll": "Eject all",
+  "@menu.volume.ejectAll": {
+    "description": "VERB (imperative). Item on a disk in the path bar's right-click menu and in the volume dropdown, shown only when that physical drive has several volumes mounted: it ejects all of them and then the drive, so it can be unplugged. The item above it, menu.volume.eject, ejects one volume and leaves the drive connected. Use the exact wording your macOS Finder uses for its Eject All button. Very short label."
+  },
+  "menu.volume.ejectAllBusy": "Eject all (busy)",
+  "@menu.volume.ejectAllBusy": {
+    "description": "The grayed-out form of menu.volume.ejectAll, shown while a copy or move is still using the volume or its eject is running. \"busy\" means occupied with work. Keep the base wording identical to menu.volume.ejectAll so the two read as one item in two states, and keep the trailing parenthetical short."
+  },
   "menu.volume.renameFavorite": "Rename",
   "@menu.volume.renameFavorite": {
     "description": "VERB (imperative). Right-click item on a favorite in the volume dropdown: lets the user give that saved folder a different display name. It renames the SHORTCUT, not the folder on disk. Very short label in a narrow dropdown.",

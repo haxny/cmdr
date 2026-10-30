@@ -556,6 +556,18 @@ through one `detachButton` snippet, and its words, glyph, and three states (ejec
 compiling until it has words for it. Backend classification and the variant list:
 `src-tauri/src/file_system/volume/DETAILS.md`; the whole error-path map is `docs/guides/error-handling.md`.
 
+**Eject and Eject all** (`src-tauri/src/file_system/volume/DETAILS.md` § "How far an eject reaches"). A row whose
+`sharesDiskWithOthers` is set gets "Eject all" under its Eject, in the row menu (`row-menu.ts`) and the breadcrumb's
+native menu, plus a tooltip on each saying what stays. The inline button stays plain Eject. `ejectAndSay` /
+`ejectAllAndSay` (`detach-volume.ts`) are the two doors every surface goes through. One success has words:
+`volumeEjectedDiskStays` toasts "keep the drive plugged in", since the row leaving the list otherwise reads as safe to
+unplug. Eject all's refusal picks its lead-in from the variant: `heldBeforeEject` says nothing was ejected, and anything
+else says it couldn't eject everything, which may mean some volumes went.
+
+**"Send error report…" isn't on every refusal** (`ejectRefusalReport`). It stays where something may really be broken:
+Cmdr held the drive (its sentence asks for one), the scan named nobody, and what nothing classifies. A refusal that
+names a holder, or a known cause like a running transfer, isn't a bug, and offering a report read as if it were.
+
 #### A refused unmount names who held the drive
 
 `unmountRefused` carries `holders`, a `HolderScan` of the processes the backend found holding the drive
@@ -591,11 +603,15 @@ about what a person should go and close. The sentence says outright that it's on
 `System`, `Cmdr`, and `DiskImage` because each of those carries more advice than a cryptic name does. These are RAW
 `errors.*` values (no ICU), so singular and plural are two keys, like the app pair.
 
-❗ **Every refusal sentence names neither the volume kind nor the verb** ("…still has files open there. Close them, then
-try again."). The same sentence follows both `fileExplorer.pane.ejectFailedToast` ("Couldn't eject {volumeName}: …", any
-detachable kind, shares and phones included) and `disconnectFailedToast` ("Couldn't disconnect: …", the SMB reconnect
-view, whose holder scan runs on the share's mount path), and the prefix already says both. "This drive" or "eject again"
-would read wrong after a share's disconnect.
+**The sentences say "using something there", ❌ never "has files open"**: the walk can't tell an open file from a shell
+`cd`'d into the folder, and calling that shell's terminal a holder of open files sent people hunting for a file (GitHub
+#839).
+
+❗ **Every refusal sentence names neither the volume kind nor the verb** ("…is still using something there. Close it,
+then try again."). The same sentence follows both `fileExplorer.pane.ejectFailedToast` ("Couldn't eject {volumeName}:
+…", any detachable kind, shares and phones included) and `disconnectFailedToast` ("Couldn't disconnect: …", the SMB
+reconnect view, whose holder scan runs on the share's mount path), and the prefix already says both. "This drive" or
+"eject again" would read wrong after a share's disconnect.
 
 ❗ **The two `HolderScan` arms word the same while they carry names, and neither ever says the drive is free.**
 `Incomplete` means the scan couldn't cover every mount, so its names are worth saying while its emptiness says nothing

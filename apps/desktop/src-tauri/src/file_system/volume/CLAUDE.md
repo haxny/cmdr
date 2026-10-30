@@ -41,8 +41,8 @@ App-side backend, registry, and eject wiring. Every operation goes through a `Vo
   its CALLER, ❌ never the backend (§ Path handling gotchas).
 - **Every app-side index stop of a removable drive and every non-root index start goes through `drive_release`**, ❌
   never a bare `Index::start_volume` / `rescan_volume` / `cover` / `stop_removable_volume`; every teardown goes through
-  `run_teardown`. `eject/` stops through the gate BEFORE `diskutil` runs (FSKit wedge: kernel-panic risk), and an eject
-  is **per PHYSICAL disk, ❌ never per volume**. ❗ `DiskMounts` and `HolderScan` each carry a "couldn't tell", ❌ never
+  `run_teardown`. `eject/` stops through the gate BEFORE `diskutil` (FSKit wedge: kernel panic), and `diskutil eject`
+  **takes the PHYSICAL disk**: a last volume or Eject all (`disk_reach`). ❗ `DiskMounts` and `HolderScan` each carry a "couldn't tell", ❌ never
   an empty one.
 
 Every rule above owns a `DETAILS.md` section carrying its rationale and edge cases. Read the one you're touching, and

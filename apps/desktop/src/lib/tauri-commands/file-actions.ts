@@ -274,17 +274,20 @@ export async function cloudRemoveDownload(path: string): Promise<void> {
  *                    reads its accelerator label out of it.
  * @param ejectVolumeId - Volume to eject when the user clicks the eject item.
  * @param ejectVolumeName - Display name for the "Eject ({name})" label.
+ * @param offerEjectAll - Adds "Eject all", for a volume whose physical disk has others mounted.
  */
 export async function showBreadcrumbContextMenu(
   shortcuts: Record<string, string>,
   ejectVolumeId?: string,
   ejectVolumeName?: string,
+  offerEjectAll = false,
 ): Promise<void> {
   // eslint-disable-next-line cmdr/no-raw-tauri-invoke -- generic <R: Runtime> command, excluded from specta bindings (see the `ipc.rs` manifest)
   await invoke('show_breadcrumb_context_menu', {
     shortcuts,
     ejectVolumeId: ejectVolumeId ?? null,
     ejectVolumeName: ejectVolumeName ?? null,
+    offerEjectAll,
   })
 }
 

@@ -30,6 +30,7 @@ fn volume(id: &str) -> LocationInfo {
         is_ejectable: false,
         mount_is_read_only: false,
         is_disk_image: false,
+        shares_disk_with_others: false,
         is_cloud_mount: false,
         fs_type: None,
         supports_trash: true,

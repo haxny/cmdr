@@ -322,7 +322,10 @@ DiskArbitration-535.0.10, 2026-09-14).
    `AskGroup` has TWO answers, ❌ never one list**, the same rule `DiskMounts` and `HolderScan` carry: a mount table
    that wouldn't answer sets `unit_unreadable`, and step 7 then dissents whatever the volumes it COULD see said. Reading
    it as an empty unit would let the ask stop only the volume that was clicked and approve an unmount that takes a
-   sibling down under its live FSEvents watcher.
+   sibling down under its live FSEvents watcher. ❗ The one exception is Cmdr's own one-volume eject
+   (`Host::is_ejecting_alone`): that ask is known not to be a whole-disk request's first, so the group is that volume
+   and its siblings keep their indexes. Any other one-volume unmount (Finder's) can't be told apart, so its siblings
+   stop and come back at idle.
 4. Marks the group unmount-pending at the drive-release gate, so no start lands on it meanwhile, then lets go of the git
    repos on the group's volumes (`Host::let_go_of_repos` → `cmdr_git::GitPortal::release_volume`, under the same
    deadline): a plain unmount FAILS while any repo there has a pack file mapped, which used to make an open repo block

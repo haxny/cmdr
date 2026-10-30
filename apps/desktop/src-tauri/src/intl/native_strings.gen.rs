@@ -405,6 +405,8 @@ pub(crate) const NATIVE_STRINGS: &[LocaleStrings] = &[
             ("menu.volume.disconnectBusy", "Disconnect (busy)"),
             ("menu.volume.editFavoriteShortcut", "Set shortcut key…"),
             ("menu.volume.eject", "Eject ({name})"),
+            ("menu.volume.ejectAll", "Eject all"),
+            ("menu.volume.ejectAllBusy", "Eject all (busy)"),
             ("menu.volume.ejectBusy", "Eject ({name}) (busy)"),
             ("menu.volume.forgetSavedPasswordBusy", "Forget saved password (busy)"),
             ("menu.volume.forgetServerBusy", "Forget server (busy)"),

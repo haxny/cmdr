@@ -664,6 +664,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::volume_sign_in::get_volume_sign_in_state,
                     crate::commands::network::disconnect_smb_volume,
                     crate::commands::eject::eject_volume,
+                    crate::commands::eject::eject_all_on_disk,
                     crate::commands::eject::get_ejecting_volume_ids,
                     crate::commands::network::set_smb_account_preference,
                     crate::commands::network::disconnect_network_host,

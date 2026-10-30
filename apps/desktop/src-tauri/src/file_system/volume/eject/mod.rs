@@ -19,7 +19,9 @@
 //! - **Physical or disk-image volume** (NSURL reports `isEjectable`): runs
 //!   `diskutil eject`. On USB drives this also powers the device down so it's
 //!   safe to unplug; on DMG-mounted disk images, `eject` is the verb that
-//!   detaches the image (`unmount` would leave it attached).
+//!   detaches the image (`unmount` would leave it attached). While the disk keeps
+//!   other volumes mounted, one volume goes alone with `diskutil unmount`, Finder's
+//!   model (`disk_reach`), and [`eject_all`] takes them all.
 //!
 //! Volumes that can't be detached at all return an error.
 //!
@@ -37,10 +39,14 @@ mod deadlines;
 #[cfg(target_os = "macos")]
 mod disk_flight;
 #[cfg(target_os = "macos")]
+mod disk_reach;
+#[cfg(target_os = "macos")]
 mod disk_target;
 mod escalate;
 pub mod holders;
 mod in_flight;
+#[cfg(target_os = "macos")]
+mod pre_check;
 mod unmount_tool;
 
 // Real-image pins of today's eject; `#[ignore]`d, hand-run (see the module).
@@ -58,9 +64,11 @@ use unmount_tool::UnmountVerb;
 // knowing which file inside the module holds it.
 pub use answers::*;
 pub(crate) use deadlines::INDEX_STOP_DEADLINE;
+#[cfg(target_os = "macos")]
+pub(crate) use disk_reach::{disk_at, mark_shared_disks};
 pub use escalate::{TakenDown, take_down_smb_mount, take_down_smb_volume};
-pub(crate) use in_flight::is_ejecting;
 pub use in_flight::{VolumesEjectingChanged, ejecting_volume_ids, init_ejecting_volume_emitter};
+pub(crate) use in_flight::{is_ejecting, is_ejecting_alone};
 pub(in crate::file_system::volume) use unmount_tool::is_still_mounted;
 
 /// Ejects a volume. Picks the right teardown for the volume's kind.
@@ -73,13 +81,33 @@ pub(in crate::file_system::volume) use unmount_tool::is_still_mounted;
 /// is initiated. The frontend shouldn't wait for the volume to fully disappear:
 /// `volume-unmounted` (for disk volumes) or `mtp-device-disconnected` (for MTP)
 /// will fire shortly after and panes rooted at the volume redirect to root.
+///
+/// A disk's volume goes alone while the disk keeps others mounted, and its disk goes with the
+/// last one. [`eject_all`] is the separate request for all of them.
 pub async fn eject(volume_id: &str) -> Result<EjectOutcome, EjectError> {
+    eject_scoped(volume_id, EjectScope::Volume).await
+}
+
+/// Ejects every volume on `volume_id`'s physical disk, and the disk. Anything no disk backs (a
+/// share, a phone, a server) has only itself to take down, so this is [`eject`] there.
+///
+/// Refuses with [`EjectError::HeldBeforeEject`], nothing unmounted, when it can tell that someone
+/// is holding one of them. Joins an eject already running for `volume_id`, even one that takes that
+/// volume alone: its answer then says so.
+pub async fn eject_all(volume_id: &str) -> Result<EjectOutcome, EjectError> {
+    eject_scoped(volume_id, EjectScope::Disk).await
+}
+
+/// [`eject`] or [`eject_all`], which a caller holding a typed scope picks between.
+pub async fn eject_scoped(volume_id: &str, scope: EjectScope) -> Result<EjectOutcome, EjectError> {
     let owned_id = volume_id.to_string();
-    in_flight::join_or_start(volume_id, move || eject_now(owned_id)).await
+    in_flight::join_or_start(volume_id, move || eject_now(owned_id, scope)).await
 }
 
 /// The eject itself. [`eject`] runs at most one of these per volume at a time.
-async fn eject_now(volume_id: String) -> Result<EjectOutcome, EjectError> {
+async fn eject_now(volume_id: String, scope: EjectScope) -> Result<EjectOutcome, EjectError> {
+    #[cfg(not(target_os = "macos"))]
+    let _ = scope;
     use crate::file_system::volume::manager::get_volume_manager;
 
     let volume_id = volume_id.as_str();
@@ -167,8 +195,9 @@ async fn eject_now(volume_id: String) -> Result<EjectOutcome, EjectError> {
             eject_one_volume(volume_id, &mount_path, UnmountVerb::Unmount).await?;
             Ok(EjectOutcome::Unmounted)
         }
-        // A `diskutil eject` takes the whole PHYSICAL disk down, so every volume on it
-        // is gated and stopped first, and success means the whole disk went.
+        // A `diskutil eject` takes the whole PHYSICAL disk down, so every volume on it is gated and
+        // stopped first, and success means the whole disk went. One volume of a disk that keeps
+        // others takes `diskutil unmount` instead (`disk_reach`).
         #[cfg(target_os = "macos")]
         EjectAction::DiskutilEject => {
             let resolved =
@@ -179,7 +208,7 @@ async fn eject_now(volume_id: String) -> Result<EjectOutcome, EjectError> {
                 .await?;
             match resolved {
                 Ok(disk_target::Resolution::Disk(target)) => {
-                    disk_flight::eject_disk(volume_id, &mount_path, target).await
+                    disk_flight::eject_on_disk(volume_id, &mount_path, target, scope).await
                 }
                 // Its root left the mount table while the eject was getting ready: the
                 // person's goal is met, the same as `is_already_unmounted`.

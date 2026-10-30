@@ -108,7 +108,12 @@ export function createBreadcrumbHandlers(deps: BreadcrumbHandlerDeps): Breadcrum
     // dispatches the click to `ejectVolume`.
     const v = deps.getCurrentVolumeInfo()
     const ejectable = v && isVolumeEjectable(v)
-    void showBreadcrumbContextMenu(boundShortcuts(), ejectable ? v.id : undefined, ejectable ? v.name : undefined)
+    void showBreadcrumbContextMenu(
+      boundShortcuts(),
+      ejectable ? v.id : undefined,
+      ejectable ? v.name : undefined,
+      ejectable === true && v.sharesDiskWithOthers === true,
+    )
   }
 
   function handleVolumeChange(change: VolumeChangePayload): void {

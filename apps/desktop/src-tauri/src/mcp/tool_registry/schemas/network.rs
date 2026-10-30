@@ -48,6 +48,11 @@ pub fn eject_schema() -> Value {
             "volumeId": {
                 "type": "string",
                 "description": "Volume ID to detach (for example 'vol-…', 'smb-…', 'mtp-…:1', or 'sftp-…'). See cmdr://state volumes."
+            },
+            "scope": {
+                "type": "string",
+                "enum": ["volume", "disk"],
+                "description": "How much of a physical disk to take down. 'volume' (the default) takes this volume alone while its disk keeps others mounted, and the disk with the last one. 'disk' takes every volume on the disk and the disk, refusing first with outcome 'heldBeforeEject' when someone is holding one."
             }
         },
         "required": ["volumeId"]

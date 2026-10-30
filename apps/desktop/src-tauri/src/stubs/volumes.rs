@@ -37,6 +37,9 @@ pub struct VolumeInfo {
     /// Whether this volume is a mounted disk image (`.dmg`). Always `false` on stub platforms;
     /// mirrors the macOS shape so the shared `LocationInfo`/`VolumeInfo` type stays identical.
     pub is_disk_image: bool,
+    /// Twin of the macOS field: whether another row sits on this volume's physical disk, which
+    /// offers "Eject all". Always `false` here: only macOS ejects per physical disk.
+    pub shares_disk_with_others: bool,
     /// Twin of the macOS field: whether a cloud provider's own filesystem serves this mount, so
     /// every entry read costs a round trip to that provider's daemon. Groups the row under CLOUD
     /// and suppresses the index affordances. Always `false` here today: the Linux cloud clients
@@ -104,6 +107,7 @@ pub fn list_volumes() -> Vec<VolumeInfo> {
                 supports_trash: true,
                 mount_is_read_only: false,
                 is_disk_image: false,
+                shares_disk_with_others: false,
                 is_cloud_mount: false,
                 connection_state: None,
                 pinned: None,
@@ -128,6 +132,7 @@ pub fn list_volumes() -> Vec<VolumeInfo> {
         supports_trash: true,
         mount_is_read_only: false,
         is_disk_image: false,
+        shares_disk_with_others: false,
         is_cloud_mount: false,
         connection_state: None,
         pinned: None,
@@ -150,6 +155,7 @@ pub fn list_volumes() -> Vec<VolumeInfo> {
         supports_trash: true,
         mount_is_read_only: false,
         is_disk_image: false,
+        shares_disk_with_others: false,
         is_cloud_mount: false,
         connection_state: None,
         pinned: None,

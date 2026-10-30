@@ -303,7 +303,7 @@ pub fn emit_server_place_moved(moved: ServerPlaceMoved) {
 /// The action vocabulary of a volume, server, or favorite row: what the user can
 /// pick from its menu.
 ///
-/// Rust emits only `Eject`, from the native breadcrumb menu. Every other variant
+/// Rust emits only `Eject` and `EjectAll`, from the native breadcrumb menu. Every other variant
 /// is picked in the frontend, from a row's in-app menu (the volume switcher's and
 /// the favorites menu's → submenus, the servers hub's right-click:
 /// `apps/desktop/src/lib/file-explorer/navigation/row-menu.ts`), and from the
@@ -321,6 +321,8 @@ pub enum VolumeContextActionKind {
     Open,
     /// Unmount a removable disk, or retire a device session.
     Eject,
+    /// Take every volume on this row's physical disk down, and the disk.
+    EjectAll,
     /// Drop a server's session and leave it as a `saved` row.
     Disconnect,
     /// Put a saved place in the switcher.

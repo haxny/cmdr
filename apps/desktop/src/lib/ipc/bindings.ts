@@ -4638,10 +4638,12 @@ export const commands = {
    *  frontend shouldn't wait for the volume to fully disappear: `volume-unmounted`
    *  (for disk volumes) or `mtp-device-disconnected` (for MTP) will fire shortly
    *  after and panes rooted at the volume redirect to root. It reads the outcome
-   *  for nothing today, and passing it through rather than dropping it is what
-   *  keeps the MCP tool's typed answer honest.
+   *  to say when a drive stays attached.
    */
   ejectVolume: (volumeId: string) => typedError<EjectOutcome, EjectError>(__TAURI_INVOKE('eject_volume', { volumeId })),
+  // Ejects every volume on `volume_id`'s physical disk, and the disk: the volume menu's "Eject all".
+  ejectAllOnDisk: (volumeId: string) =>
+    typedError<EjectOutcome, EjectError>(__TAURI_INVOKE('eject_all_on_disk', { volumeId })),
   /**
    *  Returns the IDs of volumes whose eject is still running. The volume picker
    *  bootstraps its ejecting set from this once on startup, then keeps it live via
@@ -8758,6 +8760,16 @@ export type EjectError =
       detail: string
     }
   /**
+   *  An eject taking several volumes down stopped before it unmounted anything, since someone
+   *  is holding one of them. ❗ Nothing changed, where [`Self::UnmountRefused`] from the same
+   *  eject can mean some volumes already went.
+   */
+  | {
+      type: 'heldBeforeEject'
+      // Who's holding the disk.
+      holders: HolderScan
+    }
+  /**
    *  The `diskutil` / `umount` subprocess (or a device provider's eject) didn't
    *  finish within the timeout. ❗ The unmount was NOT cancelled; it may still land.
    */
@@ -8802,6 +8814,12 @@ export type EjectOutcome =
   | 'diskEjected'
   // Nothing was left to do: the volume had already gone before the teardown ran.
   | 'alreadyGone'
+  /**
+   *  One volume of a disk left the mount table, and the disk stays attached because other
+   *  volumes on it are still mounted. ❗ The drive is NOT safe to unplug, which is what the
+   *  frontend tells the person.
+   */
+  | 'volumeEjectedDiskStays'
 
 // Which pre-unmount step stalled, for [`EjectError::NotResponding`].
 export type EjectStep =
@@ -11718,6 +11736,12 @@ export type LocationInfo = {
    *  `disk_image::is_disk_image_mount`. Always `false` off macOS and for non-volume locations.
    */
   isDiskImage: boolean
+  /**
+   *  Whether another switcher row sits on this volume's physical disk, so Eject leaves the disk
+   *  attached and the row's menu also offers "Eject all". Set only by the listing
+   *  (`volume_listing::complete`), since no one row can answer it.
+   */
+  sharesDiskWithOthers: boolean
   /**
    *  Whether a cloud provider's own filesystem serves this mount (pCloud's `pcloudfs`,
    *  CloudMounter, …), so every entry read costs a round trip to that provider's daemon.
@@ -20324,7 +20348,7 @@ export type VolumeContextAction = {
  *  The action vocabulary of a volume, server, or favorite row: what the user can
  *  pick from its menu.
  *
- *  Rust emits only `Eject`, from the native breadcrumb menu. Every other variant
+ *  Rust emits only `Eject` and `EjectAll`, from the native breadcrumb menu. Every other variant
  *  is picked in the frontend, from a row's in-app menu (the volume switcher's and
  *  the favorites menu's → submenus, the servers hub's right-click:
  *  `apps/desktop/src/lib/file-explorer/navigation/row-menu.ts`), and from the
@@ -20341,6 +20365,8 @@ export type VolumeContextActionKind =
   | 'open'
   // Unmount a removable disk, or retire a device session.
   | 'eject'
+  // Take every volume on this row's physical disk down, and the disk.
+  | 'eject-all'
   // Drop a server's session and leave it as a `saved` row.
   | 'disconnect'
   // Put a saved place in the switcher.

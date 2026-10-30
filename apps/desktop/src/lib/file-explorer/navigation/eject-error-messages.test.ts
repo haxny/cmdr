@@ -11,7 +11,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
 import type { EjectError, HolderKind, HolderScan, VolumeHolder } from '#lib/ipc/bindings.js'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
-import { renderEjectError, ejectTechnicalDetail, wordEjectRefusal } from './eject-error-messages'
+import { ejectRefusalReport, renderEjectError, ejectTechnicalDetail, wordEjectRefusal } from './eject-error-messages'
 import { EjectFailure, asEjectError, throwEjectError } from './eject-error'
 
 // One stable spy, so the Cmdr-holder warn can be asserted on.
@@ -46,6 +46,7 @@ const EJECT_CASES: EjectError[] = [
     holders: NOBODY_NAMED,
     detail: 'Unmount failed for /Volumes/Trip: in use by process 1234 (mds)',
   },
+  { type: 'heldBeforeEject', holders: NOBODY_NAMED },
   { type: 'timedOut' },
   { type: 'notResponding', step: 'indexStop' },
   { type: 'unexpected', detail: 'the eject task panicked' },
@@ -98,6 +99,43 @@ describe('renderEjectError', () => {
     expect(renderEjectError({ type: 'busy' })).not.toBe(
       renderEjectError({ type: 'unmountRefused', holders: NOBODY_NAMED, detail: 'x' }),
     )
+  })
+})
+
+describe('ejectRefusalReport', () => {
+  const refused = (holders: HolderScan): EjectFailure =>
+    new EjectFailure({ type: 'unmountRefused', holders, detail: 'x' })
+  const named = (kind: VolumeHolder['kind']): VolumeHolder => ({ pid: 1, name: 'Warp', bundleId: null, kind })
+
+  it('offers no report when the sentence says who to close, since nothing is broken', () => {
+    for (const kind of ['app', 'tool', 'diskImage', 'system', 'unclassified'] as const) {
+      expect(ejectRefusalReport(refused({ type: 'complete', named: [named(kind)] })), kind).toBe(false)
+    }
+    expect(ejectRefusalReport(new EjectFailure({ type: 'heldBeforeEject', holders: NOBODY_NAMED }))).toBeUndefined()
+    expect(
+      ejectRefusalReport(
+        new EjectFailure({ type: 'heldBeforeEject', holders: { type: 'complete', named: [named('app')] } }),
+      ),
+    ).toBe(false)
+  })
+
+  it('offers no report for a cause that needs no fixing on our side', () => {
+    expect(ejectRefusalReport(new EjectFailure({ type: 'busy' }))).toBe(false)
+    expect(ejectRefusalReport(new EjectFailure({ type: 'notEjectable', volumeId: 'root' }))).toBe(false)
+  })
+
+  it('keeps the offer where Cmdr held the drive, since its sentence asks for one', () => {
+    expect(ejectRefusalReport(refused({ type: 'complete', named: [named('cmdr')] }))).toBeUndefined()
+  })
+
+  it('keeps the offer when nobody could be named, and for what nothing classifies', () => {
+    expect(ejectRefusalReport(refused(NOBODY_NAMED))).toBeUndefined()
+    expect(ejectRefusalReport(new EjectFailure({ type: 'unexpected', detail: 'x' }))).toBeUndefined()
+    expect(ejectRefusalReport(new Error('IPC channel closed'))).toBeUndefined()
+  })
+
+  it('drops it for a complete scan that named nobody, which words as macOS', () => {
+    expect(ejectRefusalReport(refused({ type: 'complete', named: [] }))).toBe(false)
   })
 })
 
@@ -160,13 +198,13 @@ function refusedBy(named: VolumeHolder[]): EjectError {
 describe('a refused unmount names who held the drive', () => {
   it('names the one app, so the person knows what to close', () => {
     expect(renderEjectError(refusedBy([holder('app', 'Preview')]))).toBe(
-      'Preview still has files open there. Close them, then try again.',
+      'Preview is still using something there. Close it, then try again.',
     )
   })
 
   it('joins two names with "and"', () => {
     expect(renderEjectError(refusedBy([holder('app', 'Preview'), holder('app', 'Warp')]))).toBe(
-      'Preview and Warp still have files open there. Close them, then try again.',
+      'Preview and Warp are still using something there. Close it, then try again.',
     )
   })
 
@@ -174,13 +212,13 @@ describe('a refused unmount names who held the drive', () => {
     const rendered = renderEjectError(
       refusedBy([holder('app', 'Preview'), holder('app', 'Warp'), holder('app', 'Photos')]),
     )
-    expect(rendered).toBe('Preview, Warp, and Photos still have files open there. Close them, then try again.')
+    expect(rendered).toBe('Preview, Warp, and Photos are still using something there. Close it, then try again.')
   })
 
   it('stops at three names and says "other apps" for the rest, so the toast stays one line', () => {
     const four = [holder('app', 'Preview'), holder('app', 'Warp'), holder('app', 'Photos'), holder('app', 'Music')]
     expect(renderEjectError(refusedBy(four))).toBe(
-      'Preview, Warp, Photos, and other apps still have files open there. Close them, then try again.',
+      'Preview, Warp, Photos, and other apps are still using something there. Close it, then try again.',
     )
     const six = [...four, holder('app', 'Mail'), holder('app', 'Notes')]
     expect(renderEjectError(refusedBy(six))).toBe(renderEjectError(refusedBy(four)))
@@ -188,7 +226,7 @@ describe('a refused unmount names who held the drive', () => {
 
   it('words a tool exactly like an app, because a name is a name to the person reading it', () => {
     expect(renderEjectError(refusedBy([holder('tool', 'mds_stores')]))).toBe(
-      'mds_stores still has files open there. Close them, then try again.',
+      'mds_stores is still using something there. Close it, then try again.',
     )
   })
 
@@ -205,13 +243,13 @@ describe('a refused unmount names who held the drive', () => {
 
   it('tells someone to wait when macOS itself is the holder, because there is nothing to close', () => {
     expect(renderEjectError(refusedBy([holder('system', 'mds_stores')]))).toBe(
-      'macOS still has files open there. Wait a minute, then try again.',
+      'macOS is still using something there. Wait a minute, then try again.',
     )
   })
 
   it('owns it when Cmdr is the holder, and invites a report', () => {
     expect(renderEjectError(refusedBy([holder('cmdr', 'cmdr')]))).toBe(
-      'Cmdr itself still has files open there. Wait a moment and try again, or send a report if it keeps happening.',
+      'Cmdr itself is still using something there. Wait a moment and try again, or send a report if it keeps happening.',
     )
   })
 
@@ -228,13 +266,13 @@ describe('a refused unmount names who held the drive', () => {
 
   it('falls back to the unnamed sentence when a scan that could not finish named nobody', () => {
     expect(renderEjectError({ type: 'unmountRefused', holders: NOBODY_NAMED, detail: 'x' })).toBe(
-      'Something still has files open there. Close any open files and apps, then try again.',
+      'Something is still in use there. Close any open files and apps, then try again.',
     )
   })
 
   it('names the one process when nothing said what kind it is, and says it is only a process name', () => {
     expect(renderEjectError(refusedBy([holder('unclassified', 'mdworker')]))).toBe(
-      'A process called mdworker still has files open there. (Cmdr doesn’t have an app name, only the process name.)',
+      'A process called mdworker is still using something there. (Cmdr doesn’t have an app name, only the process name.)',
     )
   })
 
@@ -243,9 +281,9 @@ describe('a refused unmount names who held the drive', () => {
       refusedBy([holder('unclassified', 'some-helper'), holder('unclassified', 'mdworker')]),
     )
     expect(rendered).toBe(
-      '2 processes called some-helper and mdworker still have files open there. (Cmdr doesn’t have app names, only the process names.)',
+      '2 processes called some-helper and mdworker are still using something there. (Cmdr doesn’t have app names, only the process names.)',
     )
-    expect(rendered).not.toContain('apps still have')
+    expect(rendered).not.toContain('apps are still')
   })
 
   it('counts two processes of one name once, like an app', () => {
@@ -258,7 +296,7 @@ describe('a refused unmount names who held the drive', () => {
   it('stops at three process names and says "others" for the rest, counting them all', () => {
     const five = ['a-helper', 'b-helper', 'c-helper', 'd-helper', 'e-helper'].map((n) => holder('unclassified', n))
     expect(renderEjectError(refusedBy(five))).toBe(
-      '5 processes called a-helper, b-helper, c-helper, and others still have files open there. (Cmdr doesn’t have app names, only the process names.)',
+      '5 processes called a-helper, b-helper, c-helper, and others are still using something there. (Cmdr doesn’t have app names, only the process names.)',
     )
   })
 

@@ -472,7 +472,7 @@ destination goes through, plus `path_exists`.
 
 `eject/` (macOS+Linux) owns volume teardown across every kind, so it lives next to the `VolumeManager` and `Volume`
 trait it dispatches over: `mod.rs` holds the pipeline and `EjectError`, `unmount_tool.rs` the `diskutil` / `umount`
-subprocess, `disk_target.rs` + `disk_flight.rs` (macOS) the per-physical-disk eject below, `holders/` the scan that
+subprocess, `disk_reach.rs` + `disk_target.rs` + `disk_flight.rs` + `pre_check.rs` (macOS) the per-physical-disk eject below, `holders/` the scan that
 names a refusal's holders, and `escalate.rs` the normal-then-force takedown of an SMB mount that may be dead ("Eject and
 save" below).
 ❗ **`disk_target.rs` asks IOKit for the default port with the literal 0, ❌ never `kIOMainPortDefault`.** That global
@@ -521,7 +521,7 @@ holding the drive ("Unmount was dissented by PID 51419"). It has to be Rust's lo
 `wordEjectRefusal` is a warn, and production frontend logging keeps errors only. `unmount_tool::run` answers a
 `ToolOutcome` rather than an `EjectError` so the exit status survives to that line, and `unmount_tool::settle` maps it
 onto the wire type: only a tool that EXITED with a code is `UnmountRefused`. One that couldn't start or died to a
-signal is `Unexpected`, since "something still has files open there" would be a lie there.
+signal is `Unexpected`, since "something is still in use there" would be a lie there.
 
 **A failure for a volume that's no longer mounted counts as done.** When the tool doesn't succeed, `settle` asks
 whether the mount root is still in the OS mount table (`volumes::is_mount_point`, the non-blocking
@@ -550,7 +550,10 @@ answers `Ok` only once both volumes went and the image detached; ejecting A whil
 `UnmountRefused` with the disk still attached, naming the holder that sits on the SIBLING (which is what proves the
 scan covers every captured mount, not just the volume clicked), on a two-volume APFS container and on two HFS+
 partitions of one disk; and after that partial unmount the sibling still mounted gets its index back while the one that
-really went stays stopped (verified on macOS 27.0, hand run, 2026-09-16). They run in the opt-in disk-image lane: `pnpm check
+really went stays stopped (verified on macOS 27.0, hand run, 2026-09-16). More pin Finder's model (Darwin 27.0.0, hand
+run, 2026-10-30): one volume goes alone with its sibling and disk staying and the last one takes the disk, on APFS and on
+HFS+; a held volume refuses with its sibling still mounted; a held sibling doesn't stop one volume going alone; Eject
+all's pre-check finds a held sibling with nothing unmounted, and goes ahead once it lets go. They run in the opt-in disk-image lane: `pnpm check
 disk-images`, or any `pnpm check --only-slow` on a Mac (`scripts/check/checks/DETAILS.md` § "The disk-image lane").
 
 **A refusal is retried before anyone hears about it.** When `settle` answers `UnmountRefused`,
@@ -600,8 +603,8 @@ answer rides on `EjectError::UnmountRefused`, and the MCP `eject` tool repeats i
 - **Linux answers `Incomplete`**, having no walk at all: ❌ not an empty `Complete`, which would claim nothing holds the
   drive.
 
-**What KIND of holder each one is** (`holders/facts.rs`) is what picks the sentence: "macOS still has files open
-there. Wait a minute…" and "Photos still has files open there. Close them…" are different actions. ❌ Never decided from a process name, a path
+**What KIND of holder each one is** (`holders/facts.rs`) is what picks the sentence: "macOS is still using something
+there. Wait a minute…" and "Photos is still using something there. Close it…" are different actions. ❌ Never decided from a process name, a path
 prefix, or a message. The rules run in order and the first that answers wins:
 
 1. Cmdr's own process, or one it started (its whole ancestor chain, up to eight levels, stopping at launchd) → `Cmdr`.
@@ -725,11 +728,44 @@ reads a panic as still releasing, and `stop_index_blocking` remembers it): ❌ n
 `stop_indexes_blocking` underneath it stops a whole disk's volumes under that one deadline, answering an `IndexStopped`
 that still names which volumes DID let go, so the flight below can hand those back.
 
+**How far an eject reaches: Finder's model** (macOS; David's decision, GitHub #839). `disk_reach.rs` decides, per request:
+
+- **Eject** (`eject`, `EjectScope::Volume`) with another row-earning volume mounted on the disk: `DiskReach::ThisVolume`.
+  `diskutil unmount` of that one mount, only that volume gated and stopped, answering `EjectOutcome::VolumeEjectedDiskStays`,
+  which the frontend turns into "keep the drive plugged in". As its disk's last volume: `DiskReach::WholeDisk`, the
+  flight below, `DiskEjected`.
+- **Eject all** (`eject_all`, `EjectScope::Disk`): always `WholeDisk`. Offered where the listing set
+  `LocationInfo::shares_disk_with_others` (two or more rows on one `DiskKey`, asked of IOKit only when a listing has two
+  ejectable rows, under a 2 s deadline; a stall costs the item for one listing).
+- Decision: **only a mount that earns a switcher row keeps the disk up** (`mounts::mount_points_with_rows`). Why: a hidden
+  mount has no row to eject it from, so counting one would leave the person's last visible volume unable to power the
+  disk down. `diskutil eject` takes it along, and refuses honestly if it's held. The disk-image lane's mounts are all
+  `-nobrowse`, so its pins answer that question with "yes" for each, plus one pin of the real answer.
+- ❗ **One flight per disk at a time, and a one-volume flight's answer is nobody else's** (`in_flight::DiskClaim`). A
+  second eject on the disk awaits it and then decides again (`DiskFlight::DecideAgainAfter`). Why: two siblings ejected
+  together would each read the other as still mounted, unmount alone, and leave an empty disk powered on. A whole-disk
+  flight is still joined.
+- ❗ **A one-volume flight's unmount approval asks about that volume alone** (`in_flight::is_ejecting_alone`, read by the
+  approver's `group_of`), so siblings keep their indexes, watchers, and repos. A Finder unmount of one volume can't be
+  told from a whole-disk request's first ask, so it still stops the unit and resumes at idle
+  (`volumes/DETAILS.md` § "The unmount approver").
+
+**Eject all asks before it unmounts anything** (`pre_check.rs`). `diskutil eject` isn't atomic: it unmounts what it can and
+stops at a held volume, so a refusal alone leaves a half-ejected disk (verified on macOS 27.0.1, a GPT stick with APFS and
+exFAT volumes, 2026-10-30). Whenever a teardown captures more than one mount, the flight scans them after the index stop:
+a holder that outlasts `REFUSAL_RETRY_BACKOFF`'s pauses answers `EjectError::HeldBeforeEject` with nothing unmounted, and
+what the stop took is handed back. Only `App`, `Tool`, `DiskImage`, and a process Cmdr started block. ❌ Not `System`
+(it lets go as the unmount starts), ❌ not `Unclassified` (it says nothing, and refusing over a daemon nobody can close
+strands the drive), ❌ not this process (the approver lets go of its repos when asked), and ❌ not an empty `Incomplete`
+scan. It only narrows the race: a holder arriving after the scan, or one the same-uid walk can't see, still gets the honest
+`UnmountRefused` with some volumes gone.
+
 **Cmdr's own eject, per physical disk.** `diskutil eject` works per DISK, so an eject aimed at one volume takes the
 whole disk down: a sibling partition or APFS volume Cmdr indexes would meet that unmount with a live FSEvents watcher on
 it, and an eject that unmounts the volume clicked while a held sibling keeps the disk up must never answer `Ok` with the
 drive still powered on. `disk_target.rs` and `disk_flight.rs` (macOS; Linux and SMB keep the per-volume path) make the
-flight match the tool:
+flight match the tool. A `ThisVolume` flight runs the same steps with one sibling, `diskutil unmount`, and "done" meaning
+that one mount left:
 
 1. **Resolve** (`disk_target::resolve`, under `DISK_RESOLVE_DEADLINE`): the non-blocking mount table names the volume's
    BSD node, then IOKit's `IOService` plane is walked up to the topmost WHOLE media and back down (recursively) for
@@ -804,7 +840,7 @@ answering `Ok` would hand automation a false success. The UI's own controls reac
 The MCP `eject` tool wraps `eject::eject` directly (not the command), surfacing `Busy` / non-ejectable as honest tool errors; see `mcp/DETAILS.md`.
 
 Errors are the typed `EjectError` (`Busy`, `VolumeNotFound`, `NotEjectable`,
-`NotAnSmbVolume`, `DeviceDisconnectRefused`, `UnmountRefused`, `TimedOut`, `NotResponding`, `Unexpected`), and it IS the wire type:
+`NotAnSmbVolume`, `DeviceDisconnectRefused`, `UnmountRefused`, `HeldBeforeEject`, `TimedOut`, `NotResponding`, `Unexpected`), and it IS the wire type:
 `commands::eject` passes it straight through, so nothing is flattened on the way out and the frontend words each
 variant from `errors.eject.*` (`src/lib/file-explorer/navigation/DETAILS.md` § "Eject button + row context menu").
 `diskutil`'s own stderr rides in the `detail` field of `UnmountRefused` / `DeviceDisconnectRefused` and goes to the LOG,
