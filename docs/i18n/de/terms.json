@@ -4145,5 +4145,23 @@
     "chosen": "Denkstufe",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
+  },
+  "shared-storage": {
+    "accept": ["gemeinsamen Speicher"],
+    "chosen": "gemeinsamer Speicher",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-de storage_internal (read 2026-10-30): Interner gemeinsamer Speicher"
+  },
+  "this-computer": {
+    "accept": ["Computer"],
+    "chosen": "dieser Computer",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
+  },
+  "busy": {
+    "chosen": "in Benutzung",
+    "confidence": "high",
+    "forms": "the greyed menu marker: the base label word for word, then (in Benutzung)",
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)"
   }
 }

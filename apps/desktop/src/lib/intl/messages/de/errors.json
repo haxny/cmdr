@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "Dieses Telefon hält diesen Ordner privat",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android reserviert diesen Ordner für das System und seine Apps, deshalb kann Cmdr ihn nicht öffnen. Mit deinem Telefon und der Verbindung ist alles in Ordnung.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "Deine Fotos, Downloads und anderen Dateien liegen im gemeinsamen Speicher des Telefons. Versuche es also mit einem Ordner dort.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "Der Server lässt diesen Ordner nicht öffnen",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "Dieser Ordner liegt auf einem Server, und das Konto, mit dem du verbunden bist, hat keine Berechtigung, den Ordner zu öffnen. Das entscheidet der Server, deshalb ändert keine Einstellung auf diesem Computer etwas daran.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Das kannst du versuchen:\n- Prüfe die Zugriffsrechte des Ordners auf dem Server\n- Manche Ordner gehören dem Systemkonto des Servers selbst und bleiben für alle anderen verschlossen\n- Verbinde dich mit einem Konto, das Zugriff hat",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "Existiert bereits",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -1729,6 +1753,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Android reserviert diesen Ort für das System und seine Apps. Deine Fotos, Downloads und anderen Dateien liegen im gemeinsamen Speicher des Telefons. Versuche es also mit einem Ordner dort.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "Der Server hat das für das Konto abgelehnt, mit dem du verbunden bist. Prüfe die Zugriffsrechte des Ordners auf dem Server, oder verbinde dich mit einem Konto, das Zugriff hat.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "Der Anbieter hat abgelehnt, und das kann zweierlei bedeuten. Prüfe die Berechtigungen des Zugriffsschlüssels oder sieh in der Konsole deines Anbieters nach einem Nutzungslimit oder einem Hinweis zur Abrechnung.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2261,29 +2293,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "Dort sind noch Dateien geöffnet. Schließe offene Dateien und beende laufende Apps, dann versuche es erneut.",
+  "errors.eject.unmountRefused": "Dort wird noch etwas verwendet. Schließe offene Dateien und beende laufende Apps, dann versuche es erneut.",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} hat dort noch Dateien geöffnet. Schließe sie, dann versuche es erneut.",
+  "errors.eject.unmountRefusedByApp": "{app} verwendet dort noch etwas. Schließe die App, dann versuche es erneut.",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} haben dort noch Dateien geöffnet. Schließe sie, dann versuche es erneut.",
+  "errors.eject.unmountRefusedByApps": "{apps} verwenden dort noch etwas. Schließe diese Apps, dann versuche es erneut.",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "andere Apps",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "Ein Prozess namens {process} hat dort noch Dateien geöffnet. (Cmdr kennt keinen App-Namen, nur den Prozessnamen.)",
+  "errors.eject.unmountRefusedByProcess": "Ein Prozess namens {process} verwendet dort noch etwas. (Cmdr kennt keinen App-Namen, nur den Prozessnamen.)",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "{countText} Prozesse namens {processes} haben dort noch Dateien geöffnet. (Cmdr kennt keine App-Namen, nur die Prozessnamen.)",
+  "errors.eject.unmountRefusedByProcesses": "{countText} Prozesse namens {processes} verwenden dort noch etwas. (Cmdr kennt keine App-Namen, nur die Prozessnamen.)",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "weitere",
   "@errors.eject.otherProcesses": {
@@ -2293,13 +2325,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "macOS hat dort noch Dateien geöffnet. Warte eine Minute, dann versuche es erneut.",
+  "errors.eject.unmountRefusedBySystem": "macOS verwendet dort noch etwas. Warte eine Minute, dann versuche es erneut.",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "Cmdr selbst hat dort noch Dateien geöffnet. Warte einen Moment und versuche es erneut, oder sende einen Fehlerbericht, wenn das immer wieder passiert.",
+  "errors.eject.unmountRefusedByCmdr": "Cmdr selbst verwendet dort noch etwas. Warte einen Moment und versuche es erneut, oder sende einen Fehlerbericht, wenn das immer wieder passiert.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "Das Laufwerk hat noch nicht geantwortet, das Auswerfen klappt also womöglich trotzdem noch.",
   "@errors.eject.timedOut": {

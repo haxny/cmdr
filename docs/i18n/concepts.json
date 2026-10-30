@@ -3203,6 +3203,13 @@
     "match": ["=share", "share options"],
     "sense": "The Share submenu that hands files to other apps (AirDrop, Mail)."
   },
+  "shared-storage": {
+    "distinct": ["storage"],
+    "en": "shared storage",
+    "match": ["shared storage"],
+    "note": "Use the wording Android uses in the locale (AOSP frameworks/base storage_internal).",
+    "sense": "The part of an Android phone that holds a person's own files (photos, downloads, music)."
+  },
   "sharing-and-permissions": {
     "distinct": ["get-info", "permission"],
     "en": "Sharing & Permissions",
