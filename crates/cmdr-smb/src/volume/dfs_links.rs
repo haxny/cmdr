@@ -17,7 +17,7 @@
 //!
 //! - **Main-session calls** (listings, `stat`s, the copy scan, create,
 //!   delete) go through [`SmbVolume::or_through_link`], a rename through
-//!   [`SmbVolume::or_following_link`] (both ends are share paths); the scan
+//!   [`SmbVolume::around_link`] with `LinkRoute::ShareTree` (both ends are share paths); the scan
 //!   pool's listings through their member's own client (`scan_pool.rs`).
 //! - **A link a call followed is remembered** by its link folder
 //!   ([`LinkPaths`]): the next call under it skips the refusal, and the
@@ -135,28 +135,17 @@ impl SmbVolume {
     where
         F: for<'c> FnOnce(&'c mut SmbClient, &'c mut Tree, &'c str) -> LinkCall<'c, T>,
     {
-        if self.inner.link_paths.covers(smb_path) {
-            return match self.on_link_target(generation, smb_path, op).await {
-                Some(result) => result,
-                None => first.await,
-            };
-        }
-        let refusal = match first.await {
-            Err(e) if is_behind_dfs_link(&e) => e,
-            answered => return answered,
-        };
-        self.on_link_target(generation, smb_path, op)
+        self.around_link(LinkRoute::Target, generation, smb_path, first, op)
             .await
-            .unwrap_or(Err(refusal))
     }
 
-    /// [`or_through_link`](Self::or_through_link) for a rename, whose
-    /// destination is a share path too: `op` gets the share's own tree and
-    /// path, and smb2 follows the link with both ends (a move between folders
-    /// inside one link included, smb2 0.36.2). A path under a known link skips
-    /// `first`.
-    pub(super) async fn or_following_link<T, F>(
+    /// The decision behind [`or_through_link`](Self::or_through_link), with
+    /// where `op` runs as `route`. A rename takes [`LinkRoute::ShareTree`]: its
+    /// destination is a share path too, so smb2 follows the link with both ends
+    /// (a move between folders inside one link included, smb2 0.36.2).
+    pub(super) async fn around_link<T, F>(
         &self,
+        route: LinkRoute,
         generation: SessionGeneration,
         smb_path: &str,
         first: impl Future<Output = Result<T, smb2::Error>>,
@@ -166,7 +155,7 @@ impl SmbVolume {
         F: for<'c> FnOnce(&'c mut SmbClient, &'c mut Tree, &'c str) -> LinkCall<'c, T>,
     {
         if self.inner.link_paths.covers(smb_path) {
-            return match self.on_share_client(generation, smb_path, op).await {
+            return match self.on_main_session(route, generation, smb_path, op).await {
                 Some(result) => result,
                 None => first.await,
             };
@@ -175,15 +164,19 @@ impl SmbVolume {
             Err(e) if is_behind_dfs_link(&e) => e,
             answered => return answered,
         };
-        self.on_share_client(generation, smb_path, op)
+        self.on_main_session(route, generation, smb_path, op)
             .await
             .unwrap_or(Err(refusal))
     }
 
-    /// Runs `op` through the main client on the share's own tree and path, or
-    /// `None` once a reconnect replaced the session `generation` names.
-    async fn on_share_client<T, F>(
+    /// Runs `op` through the main client where `route` says, or `None` once a
+    /// reconnect replaced the session `generation` names. For
+    /// [`LinkRoute::Target`] it's also `None` when there's no link to follow
+    /// (none there, or the referral failed); a link with no reachable target
+    /// is that error, as smb2 answers it.
+    async fn on_main_session<T, F>(
         &self,
+        route: LinkRoute,
         generation: SessionGeneration,
         smb_path: &str,
         op: F,
@@ -193,25 +186,10 @@ impl SmbVolume {
     {
         let mut guard = self.inner.session.lock().await;
         let session = guard.as_mut().filter(|s| s.generation == generation)?;
-        let mut tree = Tree::clone(&session.tree);
-        Some(op(&mut session.client, &mut tree, smb_path).await)
-    }
-
-    /// Resolves the link `smb_path` sits behind on the main session and runs
-    /// `op` on its target, or `None` when there's no link to follow (none
-    /// there, the referral failed, or the session was replaced). A link with
-    /// no reachable target is that error, as smb2 answers it.
-    async fn on_link_target<T, F>(
-        &self,
-        generation: SessionGeneration,
-        smb_path: &str,
-        op: F,
-    ) -> Option<Result<T, smb2::Error>>
-    where
-        F: for<'c> FnOnce(&'c mut SmbClient, &'c mut Tree, &'c str) -> LinkCall<'c, T>,
-    {
-        let mut guard = self.inner.session.lock().await;
-        let session = guard.as_mut().filter(|s| s.generation == generation)?;
+        if route == LinkRoute::ShareTree {
+            let mut tree = Tree::clone(&session.tree);
+            return Some(op(&mut session.client, &mut tree, smb_path).await);
+        }
         let link = match resolve_link(&mut session.client, &session.tree, smb_path).await {
             Ok(link) => link?,
             Err(e) => return Some(Err(e)),
@@ -226,6 +204,16 @@ impl SmbVolume {
         }
         Some(result)
     }
+}
+
+/// Where a call through a DFS link runs on the main client.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum LinkRoute {
+    /// On the link's target tree, at the path behind the link.
+    Target,
+    /// On the share's own tree and path, for a call smb2 follows the link for
+    /// itself (a rename, whose destination is a share path too).
+    ShareTree,
 }
 
 /// smb2's resolver: where `smb_path` on `tree` really lives, `Ok(None)` when

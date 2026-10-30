@@ -215,7 +215,8 @@ impl SmbVolume {
         } = self.clone_session().await?;
         let to = smb_to.to_string();
         let r = self
-            .or_following_link(
+            .around_link(
+                super::dfs_links::LinkRoute::ShareTree,
                 generation,
                 smb_from,
                 tree.rename(&mut conn, smb_from, smb_to),
@@ -246,7 +247,8 @@ impl SmbVolume {
             } = self.clone_session().await?;
             let to = smb_to.to_string();
             let r = self
-                .or_following_link(
+                .around_link(
+                    super::dfs_links::LinkRoute::ShareTree,
                     generation,
                     smb_from,
                     tree.rename_with(&mut conn, smb_from, smb_to, replace),

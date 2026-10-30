@@ -723,10 +723,10 @@ the transfers, vdavid/cmdr#815 for the rest):
 - **Main-session calls** (listings, every `stat`, `exists`, `entry_kind`, the copy scan and the batch scan's pipelined
   stats, `find_stored_spelling`, attributes, the random reader and `read_range`, create, `set_times`, rename, delete) go
   through `SmbVolume::or_through_link`, which takes the main client only while the lease's generation is still
-  installed; after a reconnect the refusal stands. A rename goes through `or_following_link` instead: its destination is
-  a share path too, so it runs on the share's own tree and smb2 places both ends. The `op` it runs owns everything but
-  the client, the tree clone, and the path, because rustc can't prove a borrowing future `Send` across that
-  higher-ranked closure.
+  installed; after a reconnect the refusal stands. A rename goes through `around_link` with `LinkRoute::ShareTree`
+  instead: its destination is a share path too, so it runs on the share's own tree and smb2 places both ends. The `op`
+  it runs owns everything but the client, the tree clone, and the path, because rustc can't prove a borrowing future
+  `Send` across that higher-ranked closure.
 - **The scan pool's listings follow through their member's own client** (`ScanPool::open_through_link`, resolved the
   same way), so an index walk into a link stays off the main session. An enrichment prefetch refused at a link breaks to
   the streamed read, which follows it on the transfer session.
