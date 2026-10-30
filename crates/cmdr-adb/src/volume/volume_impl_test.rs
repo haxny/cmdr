@@ -337,7 +337,9 @@ async fn an_index_walk_records_a_directory_the_phone_wont_open_as_unreadable() {
         matches!(scanned, Err(cmdr_fs::volume::VolumeError::PermissionDenied { .. })),
         "{scanned:?}"
     );
-    let walked = volume.list_directory_for_scan(&data, None).await;
+    let walked = volume
+        .list_directory_for_scan(&data, None, &cmdr_fs::volume::ScanListingClock::start())
+        .await;
     assert!(
         matches!(walked, Err(cmdr_fs::volume::VolumeError::PermissionDenied { .. })),
         "{walked:?}"

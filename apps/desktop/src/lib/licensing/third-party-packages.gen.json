@@ -1241,12 +1241,6 @@
     },
     {
       "name": "foldhash",
-      "version": "0.1.5",
-      "license": "Zlib",
-      "url": "https://github.com/orlp/foldhash"
-    },
-    {
-      "name": "foldhash",
       "version": "0.2.0",
       "license": "Zlib",
       "url": "https://github.com/orlp/foldhash"
@@ -1752,12 +1746,6 @@
     {
       "name": "hashbrown",
       "version": "0.14.5",
-      "license": "MIT OR Apache-2.0",
-      "url": "https://github.com/rust-lang/hashbrown"
-    },
-    {
-      "name": "hashbrown",
-      "version": "0.15.5",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/hashbrown"
     },
@@ -2381,7 +2369,7 @@
     },
     {
       "name": "mtp-rs",
-      "version": "0.36.0",
+      "version": "0.36.1",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/vdavid/mtp-rs"
     },

@@ -17,8 +17,6 @@
 //!
 //! MTP works on macOS and Linux; `stubs::mtp` serves the commands elsewhere.
 
-/// Auto-connect retried while the device stays plugged in (a phone waiting on
-/// Android's "Allow access" prompt times out the first open).
 mod auto_connect;
 pub mod events;
 #[cfg(target_os = "macos")]
