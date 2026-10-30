@@ -6,7 +6,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
 
 const { getVolumeSpace } = await import('#lib/tauri-commands/index.js')
 
-import { createVolumeSpaceManager } from './volume-space-manager.svelte'
+import { createVolumeSpaceManager, spaceRefreshKey } from './volume-space-manager.svelte'
 import type { VolumeInfo } from '../types'
 
 const mockGetVolumeSpace = vi.mocked(getVolumeSpace)
@@ -24,6 +24,43 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
+})
+
+describe('device rows', () => {
+  function phone(deviceReadiness: VolumeInfo['deviceReadiness']): VolumeInfo {
+    return { ...makeVolume('adb-phone', 'adb://phone', 'mobile_device'), deviceReadiness, fsType: 'adb' }
+  }
+
+  it('asks about a ready phone', async () => {
+    mockGetVolumeSpace.mockResolvedValue({ data: spaceInfo, timedOut: false })
+    const mgr = createVolumeSpaceManager()
+
+    await mgr.fetchVolumeSpaces([phone({ kind: 'ready' })])
+
+    expect(mgr.volumeSpaceMap.get('adb-phone')).toEqual(spaceInfo)
+  })
+
+  it('leaves a phone that can not answer out of it, with no retry to schedule', async () => {
+    const mgr = createVolumeSpaceManager()
+
+    await mgr.fetchVolumeSpaces([
+      phone({ kind: 'waiting_for_authorization' }),
+      phone({ kind: 'unavailable', reason: 'offline' }),
+    ])
+
+    expect(mockGetVolumeSpace).not.toHaveBeenCalled()
+    expect(mgr.spaceTimedOutSet.has('adb-phone')).toBe(false)
+  })
+
+  it('refreshes when a phone turns ready, which keeps its id', () => {
+    const before = spaceRefreshKey([phone({ kind: 'waiting_for_authorization' })])
+    expect(spaceRefreshKey([phone({ kind: 'ready' })])).not.toBe(before)
+  })
+
+  it('does not refresh when the list comes back unchanged', () => {
+    const vols = [makeVolume('disk1'), phone({ kind: 'ready' })]
+    expect(spaceRefreshKey([...vols])).toBe(spaceRefreshKey(vols))
+  })
 })
 
 describe('fetchVolumeSpaces', () => {

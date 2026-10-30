@@ -952,7 +952,8 @@ Gotchas for the four other places that name has to match, one of which is Rust.
 1. Favorites: no checkmark shown even if current path is a favorite
 2. main_volume + attached_volume: merged into one group
 3. Cloud drives
-4. Mobile (MTP) devices: filtered from unified volume list (`category === 'mobile_device'`)
+4. Mobile devices: filtered from unified volume list (`category === 'mobile_device'`), minus an ADB row that can't be
+   used yet while the same phone has an MTP row (`deviceRowDefersToMtpTwin`, `#lib/adb/DETAILS.md`)
 5. Network: always includes the synthetic `'network'` hub row (`smb://`, labelled "Servers") plus any mounted SMB shares
    and every SFTP or WebDAV place the listing carried. ❗ The row is there whatever `network.enabled` says, and opening
    it always navigates. That switch gates mDNS discovery and SMB, which is what the macOS Local Network permission is
@@ -1001,6 +1002,13 @@ are removed from there, so the switcher's unpin has nothing to say about them.
 
 Reactive state machine for fetching, retrying, and caching disk space info per volume. Created via
 `createVolumeSpaceManager()` (functional factory, no classes).
+
+The switcher's rows read this one-shot fetch on open, ❌ not `volume-space-changed`: the poller only watches what a pane
+stands on. A phone that isn't `ready` isn't asked, and `spaceRefreshKey` re-asks when it turns ready, since its id
+stays.
+
+A phone's row (`category === 'mobile_device'`) shows the figure or nothing: no dashed bar, spinner, or "Unavailable",
+which read as broken on a phone that's only waiting for its Allow tap. Everything below is every other volume's.
 
 `getVolumeSpace()` returns `TimedOut<T>` wrappers. The manager tracks timeout state and exposes reactive sets for the
 component to render inline indicators (no toasts):

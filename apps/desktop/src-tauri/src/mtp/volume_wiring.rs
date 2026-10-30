@@ -105,6 +105,7 @@ impl DeviceVolumeProvider for MtpDeviceProvider {
                         // left to wait for.
                         device_readiness: Some(DeviceReadiness::Ready),
                         usb_speed: device.device.usb_speed,
+                        device_serial: device.device.serial_number.clone(),
                     });
                 }
             }

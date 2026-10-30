@@ -167,6 +167,27 @@ pub struct SpaceParts {
     pub available_bytes: u64,
 }
 
+/// The device path of the phone's shared storage, the one filesystem a user
+/// fills: `/sdcard` links to it on every Android since 4.2.
+pub(crate) const SHARED_STORAGE: &str = "/sdcard";
+
+/// One `df -k <device>`: its figures, or `None` when it exited non-zero or
+/// printed none.
+pub(crate) async fn df_k(endpoint: &AdbEndpoint, serial: &str, device: &str) -> Result<Option<SpaceParts>, AdbError> {
+    let outcome = run(endpoint, serial, &["df", "-k", device]).await?;
+    if !outcome.succeeded() {
+        return Ok(None);
+    }
+    Ok(parse_df_k(&outcome.stdout_text()))
+}
+
+/// The phone's figure, the same one `AdbVolume::get_space_info` shows, for a phone
+/// no volume stands for yet. One socket, gone when this returns: it dials nothing,
+/// so a list row can say how full a phone is without opening it.
+pub async fn shared_storage_space(endpoint: &AdbEndpoint, serial: &str) -> Result<Option<SpaceParts>, AdbError> {
+    df_k(endpoint, serial, SHARED_STORAGE).await
+}
+
 /// Parses `df -k <path>` output: the numbers on the last data line, in 1 KiB
 /// blocks, as `total used available`.
 ///

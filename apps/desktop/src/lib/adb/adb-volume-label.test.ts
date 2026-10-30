@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
 import type { VolumeInfo } from '#lib/file-explorer/types.js'
-import { deviceVolumeLabel } from './adb-volume-label'
+import { deviceRowDefersToMtpTwin, deviceVolumeLabel } from './adb-volume-label'
 
 // The suffixed label resolves through the i18n catalog (`tString`); pin the
 // base locale so the asserted en copy is deterministic.
@@ -24,6 +24,29 @@ function volume(overrides: Partial<VolumeInfo> & Pick<VolumeInfo, 'id' | 'name'>
 
 const ADB_PIXEL = volume({ id: 'adb-R58M12345', name: 'Pixel 9', path: 'adb://R58M12345', fsType: 'adb' })
 const MTP_PIXEL = volume({ id: 'mtp-dev:65537', name: 'Pixel 9' })
+
+describe('deviceRowDefersToMtpTwin', () => {
+  const WAITING = { ...ADB_PIXEL, deviceReadiness: { kind: 'waiting_for_authorization' } as const }
+  const OFFLINE = { ...ADB_PIXEL, deviceReadiness: { kind: 'unavailable', reason: 'offline' } as const }
+  const READY = { ...ADB_PIXEL, deviceReadiness: { kind: 'ready' } as const }
+
+  it('defers an ADB row that can not be used yet to the MTP row of the same phone', () => {
+    expect(deviceRowDefersToMtpTwin(WAITING, [WAITING, MTP_PIXEL])).toBe(true)
+    expect(deviceRowDefersToMtpTwin(OFFLINE, [OFFLINE, MTP_PIXEL])).toBe(true)
+  })
+
+  it('keeps an ADB row that is ready: one row per protocol', () => {
+    expect(deviceRowDefersToMtpTwin(READY, [READY, MTP_PIXEL])).toBe(false)
+  })
+
+  it('keeps a waiting row with no twin: it is the only way to see that phone', () => {
+    expect(deviceRowDefersToMtpTwin(WAITING, [WAITING])).toBe(false)
+  })
+
+  it('never defers the MTP row', () => {
+    expect(deviceRowDefersToMtpTwin(MTP_PIXEL, [WAITING, MTP_PIXEL])).toBe(false)
+  })
+})
 
 describe('deviceVolumeLabel', () => {
   it('suffixes the ADB entry when an MTP twin shares its name', () => {

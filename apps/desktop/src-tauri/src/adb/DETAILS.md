@@ -143,8 +143,11 @@ registered volume), and a pane standing on it holds its listing and dials again 
   (`apps/desktop/src/lib/adb/DETAILS.md`, `src/lib/file-explorer/pane/DETAILS.md` § "A pane on a phone").
 - `owns_volume_id`: any cached serial's id matches.
 - `space_for_path`: the connected volume's `get_space_info` (the phone's shared storage, whatever path on it is
-  asked), `None` until it is dialed. It feeds the pane's indicator, which the poller keys by volume, so it stays one
-  figure per phone; the copy pre-flight asks the volume per folder instead. `crates/cmdr-adb/DETAILS.md` § "The
+  asked), or for a ready phone nobody dialed, one bounded `cmdr_adb::shell::shared_storage_space`. ❗ That `df` dials and
+  registers nothing, since only the pane dials, yet the switcher's row is the one reader that runs with no pane on the
+  phone, so without it a connected phone reads as having no figure. `None` for a phone that isn't ready. It feeds the
+  pane's indicator, which the poller keys by volume, so it stays one figure per phone; the copy pre-flight asks the
+  volume per folder instead. `crates/cmdr-adb/DETAILS.md` § "The
   `Volume` answers, and why" has the `df` side.
 - `eject`: above.
 

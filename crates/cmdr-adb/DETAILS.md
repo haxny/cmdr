@@ -233,7 +233,8 @@ The volume is device-anchored, the same shape MTP has, and every answer below fo
   `DeviceGone` into `VolumeError::DeviceDisconnected` and emits the transition once (`state.rs`). `track-devices`
   additionally retires the volume when its serial leaves the list, which is the push channel MTP never had.
 - **Space**: two answers, both `df -k`. `get_space_info` is the phone's figure, asked of the shared storage (`/sdcard`),
-  and is what the pane's indicator and the poller show, polled at `space_poll_interval` = 30 s.
+  and is what the pane's indicator and the poller show, polled at `space_poll_interval` = 30 s. Before a volume exists,
+  `shell::shared_storage_space` asks the same thing for the app's switcher row, dialing nothing.
   `get_space_info_at(path)` asks about `path` itself, so an SD card answers for what's on it; the transfer pre-flight
   asks this of the destination folder. ❌ Never ask about the device root: `/` is a read-only system image reporting 0
   free, which put "0 bytes" in the pane and refused every copy onto a phone (observed on a Pixel 9 Pro XL, the dev log's

@@ -73,7 +73,7 @@
     import { listSavedPlaces, setServerAutoReconnect, type SavedPlaceFacts } from './server-row-actions'
     import { shouldShowCheckmark } from './volume-checkmark'
     import { groupByCategory } from './volume-grouping'
-    import { createVolumeSpaceManager } from './volume-space-manager.svelte'
+    import { createVolumeSpaceManager, spaceRefreshKey } from './volume-space-manager.svelte'
     import type { DriveBadges } from './drive-badges.svelte'
 
     interface Props {
@@ -444,16 +444,16 @@
         })
     })
 
-    // Clear cached space info when the volume list changes (mount/unmount/MTP connect) and
-    // re-fetch if the menu is open.
-    let prevVolumeIds = ''
+    // Clear cached space info when the volume list changes (mount/unmount/MTP connect, a phone
+    // turning ready) and re-fetch if the menu is open.
+    let prevSpaceKey = ''
     $effect(() => {
-        const ids = volumes.map((v) => v.id).join(',')
-        if (prevVolumeIds && ids !== prevVolumeIds) {
+        const key = spaceRefreshKey(volumes)
+        if (prevSpaceKey && key !== prevSpaceKey) {
             spaceManager.clearAll()
             if (untrack(() => menu.isOpen)) void spaceManager.fetchVolumeSpaces(volumes)
         }
-        prevVolumeIds = ids
+        prevSpaceKey = key
     })
 
     onDestroy(() => {

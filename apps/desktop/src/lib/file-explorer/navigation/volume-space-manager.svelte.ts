@@ -20,6 +20,14 @@ export interface VolumeSpaceManager {
   destroy: () => void
 }
 
+/**
+ * What has to move for the cached figures to be worth re-asking: the volume set, plus each
+ * phone's readiness, since a phone turning ready keeps its id.
+ */
+export function spaceRefreshKey(vols: readonly VolumeInfo[]): string {
+  return vols.map((v) => `${v.id}:${v.deviceReadiness?.kind ?? ''}`).join(',')
+}
+
 export function createVolumeSpaceManager(): VolumeSpaceManager {
   const volumeSpaceMap = new SvelteMap<string, SpaceInfo>()
   const spaceTimedOutSet = new SvelteSet<string>()
@@ -82,7 +90,9 @@ export function createVolumeSpaceManager(): VolumeSpaceManager {
     const physicalVolumes = vols.filter(
       (v) =>
         !v.isDiskImage &&
-        (v.category === 'main_volume' || v.category === 'attached_volume' || v.category === 'mobile_device'),
+        (v.category === 'main_volume' || v.category === 'attached_volume' || v.category === 'mobile_device') &&
+        // A phone owing its Allow tap can't answer yet. `spaceRefreshKey` brings it back when it can.
+        (!v.deviceReadiness || v.deviceReadiness.kind === 'ready'),
     )
     await Promise.all(
       physicalVolumes

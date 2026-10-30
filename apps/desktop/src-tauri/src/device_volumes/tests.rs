@@ -40,7 +40,85 @@ fn entry(id: &str, path: &str, fs_type: &'static str) -> DeviceVolumeEntry {
         mount_is_read_only: false,
         device_readiness: Some(DeviceReadiness::Ready),
         usb_speed: None,
+        device_serial: None,
     }
+}
+
+/// A provider's row for one phone: `name` over `fs_type`, with `serial` as its identity.
+fn phone_entry(fs_type: &'static str, name: &str, serial: &str) -> DeviceVolumeEntry {
+    DeviceVolumeEntry {
+        name: name.to_string(),
+        device_serial: Some(serial.to_string()),
+        ..entry(
+            &format!("{fs_type}-{serial}"),
+            &format!("{fs_type}://{serial}"),
+            fs_type,
+        )
+    }
+}
+
+/// The row names the listing ends up with for `mtp`'s and `adb`'s entries, in that order.
+async fn names_after_fold(mtp: Vec<DeviceVolumeEntry>, adb: Vec<DeviceVolumeEntry>) -> Vec<String> {
+    let providers: Vec<Arc<dyn DeviceVolumeProvider>> = vec![
+        Arc::new(FakeProvider {
+            id: "mtp",
+            entries: mtp,
+        }),
+        Arc::new(FakeProvider {
+            id: "adb",
+            entries: adb,
+        }),
+    ];
+    let mut volumes = Vec::new();
+    append_from(&mut volumes, &providers).await;
+    volumes.into_iter().map(|v| v.name).collect()
+}
+
+/// `adb devices -l` names no model for an `unauthorized` phone, so its row is the bare serial
+/// (verified on a Pixel 9 Pro XL, adb 37.0.0, `adb devices -l`, 2026-10-30), and nothing then
+/// says it's the same phone as the MTP row beside it.
+#[tokio::test]
+async fn a_serial_only_row_takes_the_name_of_the_phone_it_is() {
+    let names = names_after_fold(
+        vec![phone_entry("mtp", "Pixel 9 Pro XL", "46061FDAS000A4")],
+        vec![phone_entry("adb", "46061FDAS000A4", "46061FDAS000A4")],
+    )
+    .await;
+
+    assert_eq!(names, ["Pixel 9 Pro XL", "Pixel 9 Pro XL"]);
+}
+
+#[tokio::test]
+async fn a_serial_only_row_matches_whatever_case_each_side_reports_the_serial_in() {
+    let names = names_after_fold(
+        vec![phone_entry("mtp", "Pixel 9 Pro XL", "46061fdas000a4")],
+        vec![phone_entry("adb", "46061FDAS000A4", "46061FDAS000A4")],
+    )
+    .await;
+
+    assert_eq!(names[1], "Pixel 9 Pro XL");
+}
+
+#[tokio::test]
+async fn a_serial_only_row_keeps_its_serial_when_nothing_else_knows_the_phone() {
+    let names = names_after_fold(
+        vec![phone_entry("mtp", "Galaxy S24", "OTHER")],
+        vec![phone_entry("adb", "46061FDAS000A4", "46061FDAS000A4")],
+    )
+    .await;
+
+    assert_eq!(names[1], "46061FDAS000A4");
+}
+
+#[tokio::test]
+async fn a_row_that_already_has_a_name_keeps_it() {
+    let names = names_after_fold(
+        vec![phone_entry("mtp", "Pixel 9 Pro XL", "46061FDAS000A4")],
+        vec![phone_entry("adb", "Pixel 9 Pro", "46061FDAS000A4")],
+    )
+    .await;
+
+    assert_eq!(names[1], "Pixel 9 Pro");
 }
 
 #[tokio::test]

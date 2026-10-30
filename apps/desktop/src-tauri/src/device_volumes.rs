@@ -45,6 +45,9 @@ pub(crate) struct DeviceVolumeEntry {
     pub device_readiness: Option<DeviceReadiness>,
     /// The USB link speed, when the backend can see it.
     pub usb_speed: Option<UsbSpeed>,
+    /// The serial the device itself reports, when it reports one: what says two
+    /// providers' entries are one phone. [`append_from`] reads it and it stops there.
+    pub device_serial: Option<String>,
 }
 
 /// What every [`DeviceVolumeProvider`] method returns: a boxed future borrowing
@@ -54,8 +57,8 @@ pub(crate) type ProviderFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 
 
 /// A backend that turns attached devices into volumes.
 ///
-/// Every method answers from the provider's own cached state. The registry
-/// holds `Arc<dyn DeviceVolumeProvider>`.
+/// Everything but the space figure answers from the provider's own cached state.
+/// The registry holds `Arc<dyn DeviceVolumeProvider>`.
 pub(crate) trait DeviceVolumeProvider: Send + Sync + 'static {
     /// The provider's stable name (`"mtp"`, `"adb"`), the key the registry
     /// dedupes on and what eject reports back.
@@ -112,9 +115,38 @@ pub(crate) async fn append_device_volumes(volumes: &mut Vec<LocationInfo>) {
 /// trash, no icon, not a disk image, no session state, and `capabilities: None`
 /// because enrichment fills that from the registered `Volume` afterwards.
 pub(crate) async fn append_from(volumes: &mut Vec<LocationInfo>, providers: &[Arc<dyn DeviceVolumeProvider>]) {
+    let mut entries = Vec::new();
     for provider in providers {
-        for entry in provider.entries().await {
-            volumes.push(location_from_entry(entry));
+        entries.extend(provider.entries().await);
+    }
+    name_serial_only_entries(&mut entries);
+    volumes.extend(entries.into_iter().map(location_from_entry));
+}
+
+/// Gives an entry named only by its serial the name another provider has for the same
+/// phone, so the frontend's by-name twin rule (`adb-volume-label.ts`) sees one phone.
+///
+/// A phone that hasn't authorized this computer tells the `adb` server its serial and
+/// nothing else, so its row has no model to go by. ❗ Only that row: a phone already
+/// named keeps the name its own provider gave it. Case-insensitive because the two
+/// protocols report the same serial through different stacks.
+fn name_serial_only_entries(entries: &mut [DeviceVolumeEntry]) {
+    let named: Vec<(String, String)> = entries
+        .iter()
+        .filter_map(|e| {
+            let serial = e.device_serial.as_deref()?;
+            (e.name != serial).then(|| (serial.to_string(), e.name.clone()))
+        })
+        .collect();
+    for entry in entries {
+        let Some(serial) = entry.device_serial.as_deref() else {
+            continue;
+        };
+        if entry.name != serial {
+            continue;
+        }
+        if let Some((_, name)) = named.iter().find(|(other, _)| other.eq_ignore_ascii_case(serial)) {
+            entry.name = name.clone();
         }
     }
 }

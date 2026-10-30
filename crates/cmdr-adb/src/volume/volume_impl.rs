@@ -441,7 +441,7 @@ impl Volume for AdbVolume {
     /// The phone's figure: `df -k` on its shared storage. ❌ Never the device
     /// root, which is a read-only system image reporting 0 free.
     fn get_space_info<'a>(&'a self) -> Pin<Box<dyn Future<Output = Result<SpaceInfo, VolumeError>> + Send + 'a>> {
-        Box::pin(self.noting(self.df_space(SHARED_STORAGE)))
+        Box::pin(self.noting(self.df_space(shell::SHARED_STORAGE)))
     }
 
     /// `df -k` on `path` itself, so an SD card or the system image answers for
@@ -490,10 +490,6 @@ impl Volume for AdbVolume {
     }
 }
 
-/// The device path of the phone's shared storage, the one filesystem a user
-/// fills: `/sdcard` links to it on every Android since 4.2.
-const SHARED_STORAGE: &str = "/sdcard";
-
 impl AdbVolume {
     /// `df -k <device>`, parsed by the shell module.
     ///
@@ -516,14 +512,10 @@ impl AdbVolume {
     /// One `df -k`: its figures, or `None` when it exited non-zero or printed
     /// none.
     async fn df_k(&self, device: &str) -> Result<Option<SpaceInfo>, VolumeError> {
-        let outcome = shell::run(&self.inner.endpoint, &self.inner.serial, &["df", "-k", device])
+        let parts = shell::df_k(&self.inner.endpoint, &self.inner.serial, device)
             .await
             .map_err(|e| self.inner.map_adb_error(e, device))?;
-        if !outcome.succeeded() {
-            return Ok(None);
-        }
-        Ok(shell::parse_df_k(&String::from_utf8_lossy(&outcome.stdout))
-            .map(|parts| SpaceInfo::bounded(parts.total_bytes, parts.available_bytes)))
+        Ok(parts.map(|parts| SpaceInfo::bounded(parts.total_bytes, parts.available_bytes)))
     }
 
     /// `device` when the sync service finds it, else its nearest ancestor that

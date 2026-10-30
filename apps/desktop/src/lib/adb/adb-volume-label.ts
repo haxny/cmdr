@@ -14,6 +14,20 @@ function hasMtpTwin(volume: VolumeInfo, volumes: readonly VolumeInfo[]): boolean
   )
 }
 
+/**
+ * Whether the switcher leaves this row out because the phone already has a row it can open:
+ * the ADB half of a phone listed over MTP, while that half can't be used (it owes the Allow
+ * tap, or the daemon can't reach it). It comes back the moment it turns ready.
+ *
+ * ❗ The switcher's call alone: the row stays in the volume list, so a pane waiting on it still
+ * walks in by itself when the user taps Allow. Once both halves can be opened, both show (one
+ * row per protocol, decided in #192).
+ */
+export function deviceRowDefersToMtpTwin(volume: VolumeInfo, volumes: readonly VolumeInfo[]): boolean {
+  if (volume.fsType !== 'adb' || !volume.deviceReadiness || volume.deviceReadiness.kind === 'ready') return false
+  return hasMtpTwin(volume, volumes)
+}
+
 /** The switcher label: the volume's name, suffixed with "ADB" when an MTP twin shares it. */
 export function deviceVolumeLabel(volume: VolumeInfo, volumes: readonly VolumeInfo[]): string {
   if (volume.fsType !== 'adb' || !hasMtpTwin(volume, volumes)) return volume.name

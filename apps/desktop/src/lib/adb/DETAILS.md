@@ -35,6 +35,13 @@ it: the keyboard path and the pointer path refuse together, with nothing to keep
 a user needs feedback silent, and a row you can see but cannot open reproduces that silence one step later. Opening it
 is what resolves it: the pane lands on the waiting state, and the tap on Allow walks it in.
 
+**Decision / the exception: a phone that already has a row it can open.** A phone that hasn't authorized this computer
+is listed with no model, so its row is the bare serial; beside the same phone's MTP row that reads as a second device
+(#840). The backend names it after its twin by serial (`device_volumes.rs::name_serial_only_entries`), and
+`deviceRowDefersToMtpTwin` keeps it out of the switcher until it's ready, when it returns as "(ADB)" (one row per
+protocol, #192). The silence above doesn't apply: the phone is visible and open-able, and its own screen is asking. ❗
+It stays in the volume list, so a pane already waiting on it still walks in.
+
 **Decision / the tooltips are ANDROID's words, in a generic type.** `DeviceReadiness` is provider-agnostic and ADB is
 its only producer, so `adb.readiness.*` is where the wording lives. A second provider answering readiness moves them
 behind a per-provider lookup rather than bending Android's phrasing onto it.

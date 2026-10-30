@@ -1,5 +1,6 @@
 import { tString } from '#lib/intl/messages.svelte.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { deviceRowDefersToMtpTwin } from '#lib/adb/adb-volume-label.js'
 import type { VolumeInfo, LocationCategory } from '../types'
 import { hasReconnectLoop, isLiveSession } from './connection-state'
 
@@ -29,7 +30,7 @@ export function groupByCategory(vols: VolumeInfo[]): VolumeGroup[] {
   for (const { category, labelKey } of categoryOrder) {
     const label = labelKey ? tString(labelKey) : ''
     if (category === 'mobile_device') {
-      const mobileItems = vols.filter((v) => v.category === 'mobile_device')
+      const mobileItems = vols.filter((v) => v.category === 'mobile_device' && !deviceRowDefersToMtpTwin(v, vols))
       if (mobileItems.length > 0) {
         groups.push({ category, label, items: mobileItems })
       }
