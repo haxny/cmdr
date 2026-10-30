@@ -33,8 +33,8 @@ keychain, mounts, and human-facing words stay in the app's `network/`.
   non-scratch name never streams (`one_frame_write_limit`).
 - **A streamed read ends at its last byte**: ❌ don't wait for `None` to drop `chunk_tx`.
 - **`scan_recursive` asks its `ScanBoundary` per entry, `dir()` BEFORE the listing** (`DETAILS.md` § "Scanning").
-- **Bulk work rides EXTRA sessions** (scans: `scan_pool.rs`; bytes: `transfer_session.rs`); a loss there ❌ never moves
-  the MAIN state.
+- **Bulk work rides EXTRA sessions** (scans: `scan_pool.rs`; bytes: `transfer_session.rs`; a shown DFS link's watch:
+  `link_watch.rs`); a loss there ❌ never moves the MAIN state.
 - **An error funnels with its lease's generation**, ❌ never a fresh read (DETAILS § "Which session a loss is about").
 - **A rebuilt session names only its OWN dead predecessor** (`retired_session_id`), ❌ never a live one.
 - **smb2 bounds every wait itself**: ❌ no timeout layer of ours.
@@ -42,8 +42,8 @@ keychain, mounts, and human-facing words stay in the app's `network/`.
 - **A link is `is_link()`, ❌ never the `REPARSE_POINT` bit** (dedup and cloud files carry it; DETAILS § "Junctions and
   symlinks").
 - **Path conversion matches whole COMPONENTS both ways** (`to_smb_path` / `to_display_path` join and strip
-  `share_root`). ❌ Build a volume through `MountAnchor`, never a bare mount path: an anchored mount that loses its
-  anchor addresses the share's top (ERR-48RZX).
+  `share_root`). ❌ Build a volume through `MountAnchor`, never a bare mount path (ERR-48RZX: it addresses the share's
+  top).
 - **SMB names are opaque bytes** (ERR-VETBX): ❌ never normalize a share path, wire or watcher key (a `\` in a watcher
   filename is NAME). A foreign path gets exact only via `find_stored_spelling`, ❌ never a fold inside an operation (a
   delete could hit a look-alike). New names compose in the app's write layer, ❌ never here.

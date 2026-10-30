@@ -158,12 +158,13 @@ on", not by watching a number.
   `session_build` (opens a fresh smb2 session, for every owner of one), `reconnect`, `state`, `read_stream` (a file read
   as chunks), `write_stream` (a stream written into a file), `random_reader` (one held-open `FileReader` read by offset,
   which the file viewer keeps for a whole session, #303), `scan`, `scan_pool`, `transfer_session` (the extra session
-  byte-moving calls ride), `dfs_links` (any call through a DFS link inside the share), `watcher`, `foreground_yield`,
-  `links` (what a stat reads as through a link), `slow_calls` (the rolled-up `warn` for a metadata call the server held
-  over a second), `attributes` (Hidden and Locked by path), and the stateless `mapping`. Splitting further needs a
-  responsibility you can name the same way; a line count is not one. `e5ea10d02` reverted four splits invented to
-  satisfy the counter, and every one of them had widened a visibility or torn a struct from its trait impl to do it.
-  These carry the same `pub(super)` the crate already used and leave no module reaching into another's internals.
+  byte-moving calls ride), `dfs_links` (any call through a DFS link inside the share), `link_watch` (a shown link's own
+  watch), `watcher`, `foreground_yield`, `links` (what a stat reads as through a link), `slow_calls` (the rolled-up
+  `warn` for a metadata call the server held over a second), `attributes` (Hidden and Locked by path), and the stateless
+  `mapping`. Splitting further needs a responsibility you can name the same way; a line count is not one. `e5ea10d02`
+  reverted four splits invented to satisfy the counter, and every one of them had widened a visibility or torn a struct
+  from its trait impl to do it. These carry the same `pub(super)` the crate already used and leave no module reaching
+  into another's internals.
 - **`volume/foreground_yield.rs` answers "should a background transfer stand aside?" from the WORK, not the transport.**
   MTP has an explicit holder for its single scarce USB pipe; SMB frames just interleave over a connection, so there is
   nothing on the transport to count. It survives the transfer session because the copy and the pane still share the link
@@ -433,7 +434,8 @@ smb2 session (its own `SmbClient`, so its own TCP connection), and the main sess
   one is up, else the main one's. A promise made on main and written on a fresh transfer session is covered: the real
   name keeps `max_write`, the same on both sessions of one server (`one_frame_write_limit`).
 - **Footprint**: a share holds up to three sessions during a copy (main, watcher, transfer), seven while an index scan
-  runs too. Steady state between transfers is unchanged.
+  runs too, plus a session per DFS link a pane shows (§ "A DFS link inside the share"). Steady state between transfers
+  is unchanged.
 - ❗ **What it can't fix: the link.** Two TCP connections over one saturated Wi-Fi or WAN hop still share its queue
   (bufferbloat). The transfer session removes SMB-level and server-level head-of-line blocking, not physics, so a browse
   during a copy on a slow link still waits for the link's queue, just no longer for whatever the copy had in flight.
@@ -737,24 +739,44 @@ the transfers, vdavid/cmdr#815 for the rest):
   client (and so every listing) for as long as the file takes. The hinted compound read refused at a link falls through
   to it.
 - **The server-side copy** answers `NotSupported` through a link (`handle_copy_result`), and the engine streams.
-- ❗ **No watch behind a link.** The share's `CHANGE_NOTIFY` runs on the share's own server, and a link's target never
-  reports to it. So every path a call followed a link from is remembered (`LinkPaths`, one entry per link a person
-  walked into, kept for the share's life), and `listing_watch_coverage` answers `None` at or below one: the
-  fresh-listing oracle reads again there instead of trusting a cache nobody refreshes. Cmdr's own mutations still patch
-  the pane (`notify_mutation`); another client's change shows on the next read, and the index's entries there freshen on
-  rescans only. Rejected for now: a second watch per link (smb2's `SmbClient::watch` follows one), which needs its own
-  lifecycle and a death that must not read as the share's.
+- ❗ **A link is watched only while a pane shows a folder behind it** (`link_watch.rs`, vdavid/cmdr#822). The share's
+  `CHANGE_NOTIFY` runs on the share's own server, and a link's target never reports to it. So every path a call followed
+  a link from is remembered (`LinkPaths`, one entry per link a person walked into, kept for the share's life), and:
+  - **The listing engine holds a watch per open listing** through `Volume::watch_listing` (taken on open, dropped on
+    close: `crates/cmdr-listing/src/host/DETAILS.md` § "Observers"). `LinkWatches` counts the holds per `LinkPaths`
+    entry; the first starts a task, the last stops it.
+  - **Its own session**: the task opens a dedicated session to the share's server (`build_session`) and calls smb2's
+    `SmbClient::watch` on the link path, which follows the link and runs the `CHANGE_NOTIFY` on the target's connection,
+    pooled inside that client. Two connections per watched link (share server, target), for as long as it's shown.
+  - **The same pipeline as the share's watch** (`watcher::pump_events`, with the link path as the events' `root`), so a
+    change lands under the path the pane keyed its listing on and its `stat` rides the main session through the link. An
+    overflow re-reads the open listings behind the link.
+  - **Coverage**: `listing_watch_coverage` answers `EveryWriter` at or below a link only while that link's watch is LIVE
+    (armed, and the share `Direct`), `None` otherwise, so the fresh-listing oracle reads again while it arms, after a
+    loss, and once it gives up.
+  - **A loss is the link's alone**: ❌ it never marks the main session lost or the index stale (neither relied on it).
+    The task re-arms on `WATCHER_DEATH_RECONNECT_BACKOFF` (starting over only after a watch that ran 60 s), names its
+    own dead session, and re-reads the open listings behind the link once back, since their changes went unheard. An
+    auth refusal or an exhausted backoff ends the task; the next listing to open there starts a new one. Unmount and
+    supersede stop every link watch.
+  - **Gaps**: a change between the listing's read and the watch arming goes unheard, as with the share's watch.
+    `LinkPaths` keys on the first path followed, so a watch can sit below the link folder itself, and a later listing
+    higher up the same link starts a second, overlapping watch (duplicate events are idempotent at the cache). The
+    index's entries behind a link still freshen on rescans only, unless a pane happens to show them.
 - ❗ **A move between two folders behind one link is refused.** smb2 follows a rename through a link only within one
   directory: SET_INFO's destination is relative to the TARGET share, and smb2 can't tell where the link folder ends in a
   destination elsewhere. Same-directory renames (a copy's landing rename, a forced swap) work.
   `smb_dfs_a_move_between_folders_behind_a_link_is_refused` pins it.
-- Verified against smb2's `smb-dfs-root` fixture (Samba on Alpine 3.21, smb2 0.36.0, 2026-10-29).
+- Verified against smb2's `smb-dfs-root` fixture (Samba on Alpine 3.21, smb2 0.36.0, 2026-10-29; the link watch against
+  smb2 0.36.1, 2026-10-30).
 - Pinned by `dfs_links_integration_test.rs` against smb2's INTERNAL DFS fixtures (`smb-dfs-root` → `smb-dfs-target`),
   which Cmdr's vendored stack doesn't carry, one cell per call family. The fixture lane runs every ignored cell in this
   package, so each cell also skips (prints "skipped", passes) unless `CMDR_SMB_DFS_FIXTURE` is set; set and unreachable,
   it fails. The file's header says how to start the two containers. `LinkPaths` and the coverage answer are pinned
-  server-free in `dfs_links_test.rs`. The target's container name reaches loopback through
-  `session::TEST_DFS_TARGET_OVERRIDES` (`testing` builds only; a shipped build overrides nothing).
+  server-free in `dfs_links_test.rs`, the link watches' hold counting in `link_watch_test.rs`, and another client's
+  change reaching a shown folder behind a link in `smb_dfs_a_shown_folder_behind_a_link_hears_another_clients_change`.
+  The target's container name reaches loopback through `session::TEST_DFS_TARGET_OVERRIDES` (`testing` builds only; a
+  shipped build overrides nothing).
 
 ## Re-rooting a share
 

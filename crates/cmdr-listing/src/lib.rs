@@ -154,6 +154,10 @@ pub(crate) struct Inner {
     hung_reads: Arc<HungReads>,
     /// One collator per locale tag (`Inner::collator`).
     collators: RwLock<HashMap<String, Arc<NameCollator>>>,
+    /// What each open listing's volume keeps alive while it's shown
+    /// (`Volume::watch_listing`), by listing id; dropped on close
+    /// (`host/observers.rs`).
+    volume_watches: std::sync::Mutex<HashMap<String, cmdr_fs::volume::ListingWatch>>,
 }
 
 impl Inner {

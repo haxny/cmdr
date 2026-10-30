@@ -156,6 +156,7 @@ impl ListingsBuilder {
                 read_generations: AtomicU64::new(0),
                 hung_reads: Arc::new(HungReads::new()),
                 collators: RwLock::new(HashMap::new()),
+                volume_watches: std::sync::Mutex::new(HashMap::new()),
             }),
         }
     }

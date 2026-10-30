@@ -19,7 +19,8 @@ use super::session_build::TEST_DFS_TARGET_OVERRIDES;
 use super::test_support::*;
 use super::*;
 use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::volume::{StreamLength, WriteMode};
+use cmdr_fs::volume::host::listings::{ListingHost, RecordingListings};
+use cmdr_fs::volume::{DirectoryChange, StreamLength, WriteMode};
 use std::path::Path;
 
 const DFS_ROOT_PORT: u16 = 10456;
@@ -47,6 +48,11 @@ fn dfs_fixture_not_requested() -> bool {
 /// A volume on the DFS root share, with the link's target name pointed at the
 /// target container's port-mapped address.
 async fn dfs_volume() -> SmbVolume {
+    dfs_volume_with_host(VolumeHost::detached()).await
+}
+
+/// [`dfs_volume`] reporting to `host`.
+async fn dfs_volume_with_host(host: VolumeHost) -> SmbVolume {
     TEST_DFS_TARGET_OVERRIDES
         .lock_ignore_poison()
         .get_or_insert_with(Default::default)
@@ -57,7 +63,7 @@ async fn dfs_volume() -> SmbVolume {
         MountAnchor::at_share_root(TEST_MOUNT_ROOT),
         &cmdr_fs::volume::smb_volume_id("127.0.0.1", DFS_ROOT_PORT, "dfs"),
         params,
-        VolumeHost::detached(),
+        host,
     )
     .await
     .unwrap_or_else(|e| {
@@ -390,6 +396,69 @@ async fn smb_dfs_a_listing_behind_a_link_claims_no_watch() {
         WatchCoverage::EveryWriter,
         "the share itself stays watched"
     );
+}
+
+/// While a pane shows a folder behind a link, the link's target is watched:
+/// another client's change there reaches the pane under the path the pane
+/// keyed it on, the listing claims the watch, and once the last listing behind
+/// the link closes the watch goes and the claim with it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
+async fn smb_dfs_a_shown_folder_behind_a_link_hears_another_clients_change() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
+    let listings = Arc::new(RecordingListings::new());
+    let host = VolumeHost::builder()
+        .listings(Arc::clone(&listings) as Arc<dyn ListingHost>)
+        .build();
+    let vol = dfs_volume_with_host(host).await;
+    let other_client = dfs_volume().await;
+    let folder = run_folder();
+    other_client.create_directory(Path::new(&folder)).await.unwrap();
+
+    // The pane's read, which follows the link, then what the listing engine
+    // asks for while the listing is open.
+    vol.list_directory(Path::new(&folder), None).await.unwrap();
+    let hold = vol
+        .watch_listing(Path::new(&folder))
+        .expect("a listing behind a link keeps a watch on it");
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(10), "the link watch is live", || {
+        vol.listing_watch_coverage(Path::new(&folder)) == WatchCoverage::EveryWriter
+    })
+    .await;
+
+    // The watch arms on its own session before it says it's live, so one write
+    // is enough; the loop only rides out the server's notify fan-out.
+    let pane_path = Path::new(TEST_MOUNT_ROOT).join(&folder);
+    let name = "from-another-client.txt";
+    other_client
+        .create_file(Path::new(&format!("{folder}/{name}")), b"outside")
+        .await
+        .unwrap();
+    cmdr_fs::testing::wait_until_async(
+        Duration::from_secs(20),
+        "another client's file reaches the pane",
+        || {
+            listings.changes().iter().any(|(_, parent, change)| {
+                matches!(change, DirectoryChange::Added(entry) if entry.name == name) && *parent == pane_path
+            })
+        },
+    )
+    .await;
+
+    drop(hold);
+    assert_eq!(
+        vol.listing_watch_coverage(Path::new(&folder)),
+        WatchCoverage::None,
+        "with no listing behind the link left, nothing watches it"
+    );
+
+    other_client
+        .delete(Path::new(&format!("{folder}/{name}")))
+        .await
+        .unwrap();
+    other_client.delete(Path::new(&folder)).await.unwrap();
 }
 
 #[tokio::test]

@@ -67,7 +67,7 @@ fn needs_stat(action: FileNotifyAction) -> bool {
 /// rest of it too. Those belong to no listing under this mount, and joining them
 /// on anyway would invalidate a path that doesn't exist while leaving the one
 /// that changed stale.
-fn to_display_path(anchor: &MountAnchor, relative: &str) -> Option<PathBuf> {
+pub(super) fn to_display_path(anchor: &MountAnchor, relative: &str) -> Option<PathBuf> {
     let below = super::paths::below_share_root(&anchor.share_root, relative)?;
     Some(match below.is_empty() {
         true => anchor.mount_path.clone(),
@@ -390,7 +390,7 @@ pub(super) async fn run_smb_watcher(
     // `Watcher` is `'static` (owns a `Connection` clone of `client`'s), and
     // keeps one CHANGE_NOTIFY request pre-issued at all times so events that
     // arrive while we process the previous batch don't fall in a re-arm gap.
-    let mut watcher = match client.watch(&tree, "", true).await {
+    let watcher = match client.watch(&tree, "", true).await {
         Ok(w) => {
             info!(
                 "smb_watcher share={:?}: connected, starting watch",
@@ -411,177 +411,238 @@ pub(super) async fn run_smb_watcher(
         }
     };
 
+    let feed = EventFeed {
+        host: &host,
+        volume_id: &volume_id,
+        share: &share,
+        mount_path: &active_mount_path,
+        root: "",
+        label: &share_name,
+    };
+    let end = pump_events(watcher, &mut cancel_rx, &feed, |anchor| {
+        debug!(
+            "smb_watcher(share={:?}): STATUS_NOTIFY_ENUM_DIR, emitting FullRefresh for share root",
+            LogPrivate::volume(&share_name)
+        );
+        host.listings()
+            .directory_changed(&volume_id, &anchor.mount_path, DirectoryChange::FullRefresh);
+        // Any directory may have changed unseen, so no remembered spelling
+        // correction can be trusted to still name its entry.
+        if let Some(inner) = share.live() {
+            inner.spellings.forget_all();
+        }
+        // Index freshness: overflow means the server dropped change records we
+        // can't recover, so the index may have drifted. Mark it Stale (the
+        // index's overflow policy; the watcher itself keeps running — a
+        // different path from a disconnect).
+        host.indexing().watch_gap(&volume_id, WatchGap::EventsOverflowed);
+    })
+    .await;
+    let WatchEnd::Lost { error: e, watcher } = end else {
+        return; // cancelled; `pump_events` closed the watch
+    };
+
+    // The session is likely dead. Bail; the SmbVolume reconnect cycle will
+    // respawn us with a fresh session.
+    warn!(
+        "smb_watcher(share={:?}): next_events failed: {} — bailing, SmbVolume reconnect will respawn",
+        LogPrivate::volume(&share_name),
+        e
+    );
+    // Index freshness: the live watch broke, so a Fresh index can no longer be
+    // trusted. Flip it Stale (the `WatcherDied` freshness seam). A later
+    // reconnect respawns the watcher but does NOT restore Fresh — only a rescan
+    // does (the "admittedly stale" model).
+    host.indexing().watch_gap(&volume_id, WatchGap::WatcherStopped);
+    let _ = watcher.close().await;
+    // Before the reconnect below, whose new watcher names this session to the
+    // server so it frees the watch handle at once.
+    if let Some(id) = super::session_build::retired_session_id(&client)
+        && let Some(inner) = share.live()
+    {
+        *inner.retired_watcher_session.lock_ignore_poison() = Some(id);
+    }
+    // Backend-autonomous recovery: the watcher's dedicated session dying proves
+    // the server connection broke. Drive a bounded-backoff reconnect (single
+    // source of truth: `SmbVolume::do_attempt_reconnect`), which rebuilds the
+    // session, respawns this watcher, and resumes the drive index — so an enabled
+    // NAS index doesn't go dark until the user intervenes. Coalesces with any
+    // FE-driven reconnect.
+    super::spawn_watcher_death_reconnect(share.clone(), generation);
+}
+
+/// Where one watch's events land: the share they belong to, and the share path
+/// their names are relative to.
+pub(super) struct EventFeed<'a> {
+    pub(super) host: &'a VolumeHost,
+    pub(super) volume_id: &'a str,
+    pub(super) share: &'a SelfHandle<SmbVolumeInner>,
+    /// The share's current mount root, re-read once per batch (see
+    /// [`WatchedVolume::mount_path`]).
+    pub(super) mount_path: &'a RwLock<PathBuf>,
+    /// The share path the watched directory sits at: empty for the share's own
+    /// watch, the link's path for a DFS link's (`link_watch.rs`). An event names
+    /// its entry relative to the watched directory, so this goes in front of it
+    /// before anything else reads it.
+    pub(super) root: &'a str,
+    /// What the log lines call this watch (the share's name).
+    pub(super) label: &'a str,
+}
+
+impl EventFeed<'_> {
+    /// The share's mount root and anchor as of now. One snapshot per batch: a
+    /// promotion between batches moves the share's active root, and every path
+    /// built from a batch has to come from the same one. The anchor comes with
+    /// it, because a promotion can move the share to a root sitting somewhere
+    /// else inside it.
+    pub(super) fn anchor(&self) -> MountAnchor {
+        let mount_path = self.mount_path.read_ignore_poison().clone();
+        let share_root = self
+            .share
+            .live()
+            .and_then(|inner| inner.share_root_for(&mount_path))
+            .unwrap_or_default();
+        MountAnchor { mount_path, share_root }
+    }
+
+    /// Files each event under the display path of its parent, its name readdressed
+    /// to the share path ([`Self::root`] in front).
+    fn collect(
+        &self,
+        events: &[smb2::FileNotifyEvent],
+        anchor: &MountAnchor,
+        events_by_dir: &mut HashMap<PathBuf, Vec<(FileNotifyAction, String)>>,
+    ) {
+        for event in events {
+            // smb2 >= 0.18 decodes `FileNotifyEvent::filename` to `/` separators,
+            // so a `\` left in one is a real character in a file's NAME. ❌ Don't
+            // re-normalize it away: that renames the file into a path and the
+            // cache lookup misses forever.
+            let share_path = readdress(self.root, &event.filename);
+            let parent = Path::new(&share_path)
+                .parent()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default();
+            forget_spellings_in(self.share, &parent);
+            let Some(parent_display) = to_display_path(anchor, &parent) else {
+                continue;
+            };
+            events_by_dir
+                .entry(parent_display)
+                .or_default()
+                .push((event.action, share_path));
+        }
+    }
+}
+
+/// `name`, an event's path relative to the watched directory, as a share path:
+/// `root` in front, byte for byte (SMB names are opaque).
+fn readdress(root: &str, name: &str) -> String {
+    match (root.is_empty(), name.is_empty()) {
+        (true, _) => name.to_string(),
+        (false, true) => root.to_string(),
+        (false, false) => format!("{root}/{name}"),
+    }
+}
+
+/// Why [`pump_events`] stopped.
+pub(super) enum WatchEnd {
+    /// The owner cancelled; the watch handle is already closed.
+    Cancelled,
+    /// `next_events` failed with something other than an overflow: the watch's
+    /// session is most likely gone. The caller closes the watch and decides.
+    Lost {
+        error: smb2::Error,
+        watcher: Box<smb2::Watcher>,
+    },
+}
+
+/// Feeds a watch's events to the host until it's cancelled or lost: batched per
+/// directory with a short debounce, stat'ed over the share's main session, and
+/// readdressed through `feed`. An overflow (`STATUS_NOTIFY_ENUM_DIR`) goes to
+/// `on_overflow` with the batch's anchor, and the watch keeps going.
+pub(super) async fn pump_events(
+    mut watcher: smb2::Watcher,
+    cancel_rx: &mut tokio::sync::oneshot::Receiver<()>,
+    feed: &EventFeed<'_>,
+    mut on_overflow: impl FnMut(&MountAnchor),
+) -> WatchEnd {
+    let label = feed.label;
     loop {
         let events_result = tokio::select! {
             result = watcher.next_events() => result,
-            _ = &mut cancel_rx => {
-                debug!("smb_watcher(share={:?}): cancelled, closing watcher", LogPrivate::volume(&share_name));
+            _ = &mut *cancel_rx => {
+                debug!("smb_watcher(share={:?}): cancelled, closing watcher", LogPrivate::volume(label));
                 if let Err(e) = watcher.close().await {
-                    debug!("smb_watcher(share={:?}): error closing watcher: {}", LogPrivate::volume(&share_name), e);
+                    debug!("smb_watcher(share={:?}): error closing watcher: {}", LogPrivate::volume(label), e);
                 }
-                return;
+                return WatchEnd::Cancelled;
             }
         };
 
-        // One snapshot per batch: a promotion between batches moves the share's
-        // active root, and every path built below has to come from the same one.
-        // The anchor comes with it, because a promotion can move the share to a
-        // root sitting somewhere else inside it.
-        let anchor = {
-            let mount_path = active_mount_path.read_ignore_poison().clone();
-            let share_root = share
-                .live()
-                .and_then(|inner| inner.share_root_for(&mount_path))
-                .unwrap_or_default();
-            MountAnchor { mount_path, share_root }
-        };
-
-        match events_result {
-            Ok(events) => {
-                // Collect events by parent directory, debouncing with a short wait.
-                let mut events_by_dir: HashMap<PathBuf, Vec<(FileNotifyAction, String)>> = HashMap::new();
-
-                for event in &events {
-                    // smb2 >= 0.18 decodes `FileNotifyEvent::filename` to `/`
-                    // separators, so a `\` left in one is a real character in a
-                    // file's NAME. ❌ Don't re-normalize it away: that renames the
-                    // file into a path and the cache lookup misses forever.
-                    let normalized_filename = event.filename.clone();
-                    let parent = Path::new(&normalized_filename)
-                        .parent()
-                        .map(|p| p.to_string_lossy().to_string())
-                        .unwrap_or_default();
-                    forget_spellings_in(&share, &parent);
-                    let Some(parent_display) = to_display_path(&anchor, &parent) else {
-                        continue;
-                    };
-
-                    events_by_dir
-                        .entry(parent_display)
-                        .or_default()
-                        .push((event.action, normalized_filename));
-                }
-
-                // Debounce: wait briefly for more events in the same batch. The
-                // smb2 0.10 watcher already keeps one CHANGE_NOTIFY pre-issued
-                // on the wire, so events that arrive during this debounce
-                // window land in the next response, not a server-side gap.
-                // The debounce here exists only to batch FE notifications.
-                loop {
-                    let more = tokio::select! {
-                        result = tokio::time::timeout(WATCHER_DEBOUNCE, watcher.next_events()) => {
-                            match result {
-                                Ok(Ok(more_events)) => Some(more_events),
-                                Ok(Err(_)) => None,
-                                Err(_) => None, // timeout: done debouncing
-                            }
-                        },
-                        _ = &mut cancel_rx => {
-                            // Process what we have, then exit
-                            process_event_batch(&host, events_by_dir, &volume_id, &share, &anchor).await;
-                            debug!("smb_watcher(share={:?}): cancelled during debounce, closing", LogPrivate::volume(&share_name));
-                            if let Err(e) = watcher.close().await {
-                                debug!("smb_watcher(share={:?}): error closing watcher: {}", LogPrivate::volume(&share_name), e);
-                            }
-                            return;
-                        }
-                    };
-
-                    match more {
-                        Some(more_events) => {
-                            for event in &more_events {
-                                let normalized_filename = event.filename.clone();
-                                let parent = Path::new(&normalized_filename)
-                                    .parent()
-                                    .map(|p| p.to_string_lossy().to_string())
-                                    .unwrap_or_default();
-                                forget_spellings_in(&share, &parent);
-                                let Some(parent_display) = to_display_path(&anchor, &parent) else {
-                                    continue;
-                                };
-
-                                events_by_dir
-                                    .entry(parent_display)
-                                    .or_default()
-                                    .push((event.action, normalized_filename));
-                            }
-                        }
-                        None => break, // timeout or error: process batch
-                    }
-                }
-
-                let total_events: usize = events_by_dir.values().map(|v| v.len()).sum();
-                debug!(
-                    "smb_watcher(share={:?}): processing {} event(s) across {} dir(s)",
-                    LogPrivate::volume(&share_name),
-                    total_events,
-                    events_by_dir.len()
-                );
-
-                process_event_batch(&host, events_by_dir, &volume_id, &share, &anchor).await;
-            }
+        let anchor = feed.anchor();
+        let events = match events_result {
+            Ok(events) => events,
             Err(e) => {
-                // Check for STATUS_NOTIFY_ENUM_DIR (buffer overflow).
                 let is_enum_dir = matches!(
                     &e,
                     smb2::Error::Protocol { status, .. }
                         if *status == smb2::types::status::NtStatus::NOTIFY_ENUM_DIR
                 );
+                if !is_enum_dir {
+                    return WatchEnd::Lost {
+                        error: e,
+                        watcher: Box::new(watcher),
+                    };
+                }
+                on_overflow(&anchor);
+                // The pipelined-next CHANGE_NOTIFY is already outstanding, so
+                // events arriving during the consumer's re-scan land in it.
+                continue;
+            }
+        };
 
-                if is_enum_dir {
-                    debug!(
-                        "smb_watcher(share={:?}): STATUS_NOTIFY_ENUM_DIR, emitting FullRefresh for share root",
-                        LogPrivate::volume(&share_name)
-                    );
-                    host.listings()
-                        .directory_changed(&volume_id, &anchor.mount_path, DirectoryChange::FullRefresh);
-                    // Any directory may have changed unseen, so no remembered
-                    // spelling correction can be trusted to still name its entry.
-                    if let Some(inner) = share.live() {
-                        inner.spellings.forget_all();
+        let mut events_by_dir: HashMap<PathBuf, Vec<(FileNotifyAction, String)>> = HashMap::new();
+        feed.collect(&events, &anchor, &mut events_by_dir);
+
+        // Debounce: wait briefly for more events in the same batch. The smb2 0.10
+        // watcher already keeps one CHANGE_NOTIFY pre-issued on the wire, so
+        // events that arrive during this debounce window land in the next
+        // response, not a server-side gap. The debounce here exists only to batch
+        // FE notifications.
+        loop {
+            let more = tokio::select! {
+                result = tokio::time::timeout(WATCHER_DEBOUNCE, watcher.next_events()) => {
+                    match result {
+                        Ok(Ok(more_events)) => Some(more_events),
+                        Ok(Err(_)) => None,
+                        Err(_) => None, // timeout: done debouncing
                     }
-                    // Index freshness: overflow means the server dropped change
-                    // records we can't recover, so the index may have drifted.
-                    // Mark it Stale (the index's overflow policy; the watcher
-                    // itself keeps running — a different path from a disconnect).
-                    host.indexing().watch_gap(&volume_id, WatchGap::EventsOverflowed);
-                    // The pipelined-next CHANGE_NOTIFY is already outstanding,
-                    // so events arriving during the consumer's re-scan land in
-                    // it. Keep watching.
-                    continue;
+                },
+                _ = &mut *cancel_rx => {
+                    // Process what we have, then exit
+                    process_event_batch(feed.host, events_by_dir, feed.volume_id, feed.share, &anchor).await;
+                    debug!("smb_watcher(share={:?}): cancelled during debounce, closing", LogPrivate::volume(label));
+                    if let Err(e) = watcher.close().await {
+                        debug!("smb_watcher(share={:?}): error closing watcher: {}", LogPrivate::volume(label), e);
+                    }
+                    return WatchEnd::Cancelled;
                 }
-
-                // Other errors mean the session is likely dead. Bail; the
-                // SmbVolume reconnect cycle will respawn us with a fresh
-                // session.
-                warn!(
-                    "smb_watcher(share={:?}): next_events failed: {} — bailing, SmbVolume reconnect will respawn",
-                    LogPrivate::volume(&share_name),
-                    e
-                );
-                // Index freshness: the live watch broke, so a Fresh index can no
-                // longer be trusted. Flip it Stale (the `WatcherDied` freshness
-                // seam). A later reconnect respawns the watcher but does NOT restore Fresh
-                // — only a rescan does (the "admittedly stale" model).
-                host.indexing().watch_gap(&volume_id, WatchGap::WatcherStopped);
-                let _ = watcher.close().await;
-                // Before the reconnect below, whose new watcher names this session
-                // to the server so it frees the watch handle at once.
-                if let Some(id) = super::session_build::retired_session_id(&client)
-                    && let Some(inner) = share.live()
-                {
-                    *inner.retired_watcher_session.lock_ignore_poison() = Some(id);
-                }
-                // Backend-autonomous recovery: the watcher's dedicated session
-                // dying proves the server connection broke. Drive a bounded-backoff
-                // reconnect (single source of truth: `SmbVolume::do_attempt_reconnect`),
-                // which rebuilds the session, respawns this watcher, and resumes the
-                // drive index — so an enabled NAS index doesn't go dark until the
-                // user intervenes. Coalesces with any FE-driven reconnect.
-                super::spawn_watcher_death_reconnect(share.clone(), generation);
-                return;
+            };
+            match more {
+                Some(more_events) => feed.collect(&more_events, &anchor, &mut events_by_dir),
+                None => break, // timeout or error: process batch
             }
         }
+
+        let total_events: usize = events_by_dir.values().map(|v| v.len()).sum();
+        debug!(
+            "smb_watcher(share={:?}): processing {} event(s) across {} dir(s)",
+            LogPrivate::volume(label),
+            total_events,
+            events_by_dir.len()
+        );
+        process_event_batch(feed.host, events_by_dir, feed.volume_id, feed.share, &anchor).await;
     }
 }
 
@@ -590,3 +651,20 @@ mod archive_refresh_test;
 
 #[cfg(test)]
 mod stat_concurrency_test;
+
+#[cfg(test)]
+mod readdress_test {
+    use super::readdress;
+
+    #[test]
+    fn an_event_name_becomes_a_share_path_under_the_watched_root() {
+        assert_eq!(readdress("", "a/b.txt"), "a/b.txt", "the share's own watch");
+        assert_eq!(readdress("data/sub", "b.txt"), "data/sub/b.txt", "a link's watch");
+        assert_eq!(readdress("data/sub", ""), "data/sub", "the watched folder itself");
+        assert_eq!(
+            readdress("data", "a\\b.txt"),
+            "data/a\\b.txt",
+            "a backslash stays part of the name"
+        );
+    }
+}

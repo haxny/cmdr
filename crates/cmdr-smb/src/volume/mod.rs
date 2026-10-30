@@ -27,6 +27,7 @@ mod attributes;
 mod copy;
 mod dfs_links;
 mod foreground_yield;
+mod link_watch;
 mod links;
 mod liveness;
 mod mapping;
@@ -327,6 +328,9 @@ struct SmbVolumeInner {
     /// The share paths a call followed a DFS link from, so a listing behind one
     /// claims no watch (`dfs_links.rs`).
     link_paths: dfs_links::LinkPaths,
+    /// The watches on DFS links a pane shows a folder behind, each held by the
+    /// listings open there (`link_watch.rs`).
+    link_watches: Arc<link_watch::LinkWatches>,
     /// The connection the current `client` owns, readable without the client
     /// mutex, so the transfer watchdog can ask whether the server is still talking
     /// (`Volume::connection_liveness`) and how many bytes it has sent. Swapped in
@@ -405,6 +409,7 @@ impl SmbVolume {
                 credit_copy_capacity: AtomicUsize::new(0),
                 spellings: spelling::SpellingCache::default(),
                 link_paths: dfs_links::LinkPaths::default(),
+                link_watches: Arc::default(),
                 live_connection,
                 transfer,
                 active_mount_path: Arc::new(StdRwLock::new(mount_path)),

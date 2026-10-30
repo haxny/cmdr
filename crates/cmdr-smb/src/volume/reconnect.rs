@@ -350,7 +350,7 @@ impl SmbVolumeInner {
 /// share runs its own while it waits; this is the no-pane / background /
 /// restart safety net, coalesced with both through `do_attempt_reconnect`'s
 /// single-flight.
-const WATCHER_DEATH_RECONNECT_BACKOFF: [Duration; 6] = [
+pub(super) const WATCHER_DEATH_RECONNECT_BACKOFF: [Duration; 6] = [
     Duration::from_secs(2),
     Duration::from_secs(5),
     Duration::from_secs(15),

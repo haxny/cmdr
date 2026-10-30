@@ -23,7 +23,7 @@ use cmdr_fs::volume::{
     ServerCopyProgress, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume,
     VolumeError, VolumeRandomReader, VolumeReadStream, WatchCoverage, WriteMode,
 };
-use cmdr_fs::volume::{ListingProgress, Retirement};
+use cmdr_fs::volume::{ListingProgress, ListingWatch, Retirement};
 use log::debug;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -288,19 +288,13 @@ impl Volume for SmbVolume {
     }
 
     fn listing_watch_coverage(&self, path: &Path) -> WatchCoverage {
-        if self.to_smb_path(path).is_ok_and(|p| self.inner.link_paths.covers(&p)) {
-            return WatchCoverage::None; // A DFS link's target never reports to our watch.
+        if let Some(behind_a_link) = self.link_watch_coverage(path) {
+            return behind_a_link;
         }
-        // SMB watching is volume-level: the smb_watcher monitors the whole share
-        // via CHANGE_NOTIFY, which the SERVER raises, so it reports every client's
-        // writes and not only ours. That's what earns `EveryWriter` here while the
-        // same share seen through an OS mount only earns `ThisMachineOnly`.
-        //
-        // `watcher_cancel` is a std `Mutex` (not async): use `try_lock` and treat
-        // contention as "no coverage" to keep the oracle out of the lock-wait path.
-        // The oracle will simply fall through to a real read; that's the safe
-        // direction. Don't hold the lock across awaits (we never `.await` here
-        // anyway: this is a sync method).
+        // The SERVER raises CHANGE_NOTIFY, so it reports every client's writes:
+        // `EveryWriter`, where an OS mount of the share earns `ThisMachineOnly`.
+        // `try_lock` reads contention as "no coverage": the oracle then falls
+        // through to a real read, the safe direction, without waiting on a lock.
         let has_watcher = match self.inner.watcher_cancel.try_lock() {
             Ok(guard) => guard.is_some(),
             Err(_) => return WatchCoverage::None,
@@ -310,6 +304,10 @@ impl Volume for SmbVolume {
         } else {
             WatchCoverage::None
         }
+    }
+
+    fn watch_listing(&self, path: &Path) -> Option<ListingWatch> {
+        self.hold_link_watch(path)
     }
 
     fn notify_mutation<'a>(
@@ -733,6 +731,7 @@ impl Volume for SmbVolume {
     fn on_superseded(&self) {
         self.inner.retirement.retire();
         self.inner.stop_watcher();
+        self.inner.link_watches.stop_all();
         debug!(
             "SmbVolume share={:?}: superseded by a newer instance; session left up for in-flight work",
             LogPrivate::volume(&self.inner.share_name)
@@ -763,6 +762,7 @@ impl Volume for SmbVolume {
             );
         }
 
+        self.inner.link_watches.stop_all(); // and every DFS link's watch, on its own session
         // Tear down any live scan pool: a member session must not keep walking an
         // unmounted volume. Sync (no runtime here): flip its `closed` flag so
         // reconnect loops bail and drop this reference; the member sessions close

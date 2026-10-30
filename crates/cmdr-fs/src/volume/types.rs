@@ -259,6 +259,22 @@ pub enum WatchCoverage {
     EveryWriter,
 }
 
+/// Whatever a backend keeps alive while a pane shows one of its directories,
+/// from [`Volume::watch_listing`](super::Volume::watch_listing). Dropping it
+/// releases that.
+///
+/// Opaque on purpose: the listing engine only holds it for the listing's life,
+/// and the backend decides what it keeps (the SMB backend: a watch on the DFS
+/// link the directory sits behind).
+pub struct ListingWatch(#[allow(dead_code, reason = "held for its Drop alone")] Box<dyn std::any::Any + Send + Sync>);
+
+impl ListingWatch {
+    /// Wraps `hold`, whose `Drop` releases what the backend keeps for the listing.
+    pub fn new(hold: impl std::any::Any + Send + Sync) -> Self {
+        Self(Box::new(hold))
+    }
+}
+
 /// Describes a change to a directory's contents on a specific volume.
 ///
 /// Used by `cmdr_listing::Listings::directory_changed` to apply targeted cache updates

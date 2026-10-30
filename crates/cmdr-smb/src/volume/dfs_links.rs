@@ -73,6 +73,16 @@ impl LinkPaths {
         paths.push(smb_path.to_string());
     }
 
+    /// The remembered path `smb_path` is at or below, which is where a watch
+    /// for it sits (`link_watch.rs`).
+    pub(super) fn root_for(&self, smb_path: &str) -> Option<String> {
+        self.0
+            .lock_ignore_poison()
+            .iter()
+            .find(|known| is_at_or_below(smb_path, known))
+            .cloned()
+    }
+
     /// Whether `smb_path` is at or below a path that followed a link.
     pub(super) fn covers(&self, smb_path: &str) -> bool {
         self.0
@@ -84,7 +94,7 @@ impl LinkPaths {
 
 /// Whether share path `path` is `ancestor` or inside it, by whole components
 /// (`data2` isn't inside `data`). Byte-exact: SMB names are opaque.
-fn is_at_or_below(path: &str, ancestor: &str) -> bool {
+pub(super) fn is_at_or_below(path: &str, ancestor: &str) -> bool {
     path.strip_prefix(ancestor)
         .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
 }

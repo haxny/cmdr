@@ -1059,6 +1059,23 @@ pub trait Volume: Send + Sync {
         WatchCoverage::None
     }
 
+    /// Keeps whatever this backend arms on demand alive while a pane shows the
+    /// directory at `path`; the listing engine drops the answer when the
+    /// listing closes.
+    ///
+    /// For a watch that can't cover the whole volume up front: an SMB share's
+    /// `CHANGE_NOTIFY` never hears a DFS link's target, so the SMB backend
+    /// watches the link here for as long as a listing behind it is open. Report
+    /// what it covers through
+    /// [`listing_watch_coverage`](Self::listing_watch_coverage), which stays
+    /// `None` until the watch is live.
+    ///
+    /// Called on the listing open path, after the read: cheap and non-blocking,
+    /// detach any I/O. Default `None`: nothing to keep.
+    fn watch_listing(&self, _path: &Path) -> Option<ListingWatch> {
+        None
+    }
+
     /// The one spelling a cached pane listing of `path` is keyed under.
     ///
     /// The app's listing cache stores every listing and answers every lookup (a
