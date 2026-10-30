@@ -16,23 +16,23 @@ Per catalog area, each renderable key is one of three:
 
 Coverage is PARTIAL by design. Uncoupled keys are expected, not bugs.
 
-**Total: 3025 / 5202 keys have a screenshot (58%):** 1680 direct (32%) and 1345 representative (26%). 1987 remain
+**Total: 3139 / 5202 keys have a screenshot (60%):** 1804 direct (35%) and 1335 representative (26%). 1873 remain
 uncoupled, and 190 are native surfaces a webview capture cannot reach.
 
 | Area            | Direct | Representative | Uncoupled | Native | Total | Any % |
 | --------------- | -----: | -------------: | --------: | -----: | ----: | ----: |
 | adb             |      3 |              0 |        17 |      0 |    20 |   15% |
 | ai              |      0 |            138 |         0 |      0 |   138 |  100% |
-| askCmdr         |     64 |              0 |       281 |      0 |   345 |   19% |
+| askCmdr         |     86 |              0 |       259 |      0 |   345 |   25% |
 | commandPalette  |      3 |              2 |         2 |      0 |     7 |   71% |
-| commands        |    224 |              1 |        95 |      0 |   320 |   70% |
+| commands        |    225 |              1 |        94 |      0 |   320 |   71% |
 | common          |      8 |              1 |        10 |      0 |    19 |   47% |
 | crashReporter   |     12 |             11 |         0 |      0 |    23 |  100% |
 | downloads       |     10 |              5 |        21 |      0 |    36 |   42% |
 | errorReporter   |     16 |              0 |        43 |      0 |    59 |   27% |
-| errors          |    151 |            464 |         0 |      0 |   615 |  100% |
+| errors          |    154 |            461 |         0 |      0 |   615 |  100% |
 | feedback        |      8 |              6 |         2 |      0 |    16 |   88% |
-| fileExplorer    |    122 |             65 |       341 |      0 |   528 |   35% |
+| fileExplorer    |    125 |             65 |       338 |      0 |   528 |   36% |
 | fileOperations  |    137 |             87 |       114 |      0 |   338 |   66% |
 | goToPath        |      5 |              6 |         2 |      0 |    13 |   85% |
 | indexing        |     34 |             17 |        19 |      0 |    70 |   73% |
@@ -51,10 +51,10 @@ uncoupled, and 190 are native surfaces a webview capture cannot reach.
 | securityNotices |      0 |              0 |        13 |      0 |    13 |    0% |
 | selection       |     14 |              0 |         1 |      0 |    15 |   93% |
 | servers         |     84 |             27 |       117 |      0 |   228 |   49% |
-| settings        |    422 |             45 |       408 |      0 |   875 |   53% |
+| settings        |    433 |             38 |       404 |      0 |   875 |   54% |
 | shortcuts       |     35 |             28 |         0 |      0 |    63 |  100% |
 | stateRecovery   |      0 |              0 |        32 |      0 |    32 |    0% |
-| suggestedOps    |      0 |              0 |       110 |      0 |   110 |    0% |
+| suggestedOps    |     84 |              0 |        26 |      0 |   110 |   76% |
 | transfer        |      2 |             22 |         0 |      0 |    24 |  100% |
 | ui              |      8 |              0 |        20 |      0 |    28 |   29% |
 | updates         |      5 |             27 |         0 |      0 |    32 |  100% |
@@ -63,19 +63,23 @@ uncoupled, and 190 are native surfaces a webview capture cannot reach.
 
 ## Surfaces to review
 
-The run captured 205 surfaces. This section is regenerated every run, so it stays true as the UI changes.
+The run captured 216 surfaces. This section is regenerated every run, so it stays true as the UI changes.
 
-### No unique keys (30)
+### No unique keys (34)
 
 Every key on these surfaces also renders on another captured surface, so dropping one costs no coverage: its keys would
 simply couple to whichever surface keeps them. Worth considering, NOT an automatic delete. A surface can be the clearest
 picture of a key several surfaces share, and being the clearest is reason enough to keep it. To drop one, remove its
 staging (or add it to `DROPPED_GALLERY_STATES` for a gallery state) in `test/e2e-playwright/`.
 
-- `search-dialog` (123 keys, none unique)
-- `select-dialog` (116 keys, none unique)
-- `onboarding-optional` (110 keys, none unique)
+- `search-dialog` (122 keys, none unique)
+- `select-dialog` (115 keys, none unique)
+- `onboarding-optional` (109 keys, none unique)
 - `transfer-confirmation-copy` (105 keys, none unique)
+- `suggested-ops-servers` (102 keys, none unique)
+- `transfer-dialog` (100 keys, none unique)
+- `ask-cmdr-empty` (96 keys, none unique)
+- `ask-cmdr-chat` (96 keys, none unique)
 - `bulk-rename-review-all-allowed` (96 keys, none unique)
 - `server-sign-in-add` (94 keys, none unique)
 - `delete-confirm` (93 keys, none unique)
@@ -84,7 +88,7 @@ staging (or add it to `DROPPED_GALLERY_STATES` for a gallery state) in `test/e2e
 - `trash-confirm` (91 keys, none unique)
 - `new-file-dialog` (89 keys, none unique)
 - `onboarding-fda` (89 keys, none unique)
-- `whats-new` (88 keys, none unique)
+- `whats-new` (87 keys, none unique)
 - `new-folder-dialog` (86 keys, none unique)
 - `expiration` (86 keys, none unique)
 - `mkdir-confirmation-empty` (85 keys, none unique)
@@ -103,7 +107,7 @@ staging (or add it to `DROPPED_GALLERY_STATES` for a gallery state) in `test/e2e
 - `empty-pane` (74 keys, none unique)
 - `viewer-encoding` (20 keys, none unique)
 
-### Captured at a reduced UI zoom (4)
+### Captured at a reduced UI zoom (5)
 
 ❗ These surfaces are taller than the display allows even with the window grown to full height, so the driver reduced
 the UI zoom to fit the whole surface in frame. **The text in these images is smaller than what a user sees.** Judge
@@ -113,3 +117,4 @@ length against the other screenshots, not these.
 - `bulk-rename-review-why-this-name`: captured at 75% zoom
 - `selection-add-snapshot-pane`: captured at 90% zoom
 - `server-sign-in-add-s3`: captured at 90% zoom
+- `suggested-ops-servers`: captured at 80% zoom

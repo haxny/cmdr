@@ -73,8 +73,7 @@
     "description": "For screen readers only (never shown): what the pane says when the keyboard arrives in a folder with nothing in it, as in “Left pane, Downloads, empty folder”. Same moment as fileExplorer.pane.location, which it wraps.",
     "placeholders": {
       "location": "the pane and folder, already worded by fileExplorer.pane.location (e.g. Left pane, Downloads)"
-    },
-    "screenshot": "transfer-dialog.png"
+    }
   },
   "fileExplorer.pane.selectedCount": "{count, plural, =0 {Nothing selected} one {{countText} selected} other {{countText} selected}}",
   "@fileExplorer.pane.selectedCount": {
@@ -2285,7 +2284,8 @@
     "placeholders": {
       "kind": "what is being renamed: \"folder\" for a folder, anything else for a file",
       "oldExt": "the current extension without the dot (e.g. txt, app)"
-    }
+    },
+    "screenshot": "extension-change-removed-extension.png"
   },
   "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Are you sure you want to add the “.{newExt}” extension? macOS may show this folder as a single item instead.} other {Are you sure you want to add the “.{newExt}” extension? Your file may open in a different app next time you open it.}}",
   "@fileExplorer.extensionChange.descriptionAdd": {
@@ -2293,18 +2293,21 @@
     "placeholders": {
       "kind": "what is being renamed: \"folder\" for a folder, anything else for a file",
       "newExt": "the new extension without the dot (e.g. md, app)"
-    }
+    },
+    "screenshot": "extension-change-added-extension.png"
   },
   "fileExplorer.extensionChange.keepNone": "Keep no extension",
   "@fileExplorer.extensionChange.keepNone": {
-    "description": "Button in the extension-change confirmation that keeps the name without an extension, as it was before the rename (the user had added one). Pairs with “Use .{newExt}”."
+    "description": "Button in the extension-change confirmation that keeps the name without an extension, as it was before the rename (the user had added one). Pairs with “Use .{newExt}”.",
+    "screenshot": "extension-change-added-extension.png"
   },
   "fileExplorer.extensionChange.removeExtension": "Remove .{oldExt}",
   "@fileExplorer.extensionChange.removeExtension": {
     "description": "Button in the extension-change confirmation that applies the rename and so removes the extension (the user deleted it from the name). Pairs with “Keep .{oldExt}”. The leading dot is part of the displayed extension.",
     "placeholders": {
       "oldExt": "the current extension without the dot (e.g. txt, app)"
-    }
+    },
+    "screenshot": "extension-change-removed-extension.png"
   },
   "fileExplorer.extensionChange.alwaysAllow": "Always allow extension changes",
   "@fileExplorer.extensionChange.alwaysAllow": {

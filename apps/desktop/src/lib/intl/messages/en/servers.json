@@ -579,7 +579,7 @@
   "servers.sheet.address": "Address",
   "@servers.sheet.address": {
     "description": "Label of the field where the user types where the server lives. One word, NOUN.",
-    "screenshot": "server-sign-in-add.png"
+    "screenshot": "suggested-ops-servers.png"
   },
   "servers.sheet.addressPlaceholder": "nas.local",
   "@servers.sheet.addressPlaceholder": {
@@ -766,7 +766,7 @@
   "servers.sheet.name": "Name",
   "@servers.sheet.name": {
     "description": "Label of the field for what to call this server in the app. One word, NOUN.",
-    "screenshot": "server-sign-in-add.png"
+    "screenshot": "suggested-ops-servers.png"
   },
   "servers.sheet.protocolS3": "S3",
   "@servers.sheet.protocolS3": {
@@ -914,7 +914,7 @@
   "servers.sheet.rootFolder": "Root folder",
   "@servers.sheet.rootFolder": {
     "description": "Label of the field for the folder ON THE SERVER this saved server is limited to: Cmdr never shows anything above it. Two words, NOUN phrase. The refusal messages and the start folder help reuse this term, so keep it consistent.",
-    "screenshot": "server-sign-in-add-prefilled.png"
+    "screenshot": "suggested-ops-servers.png"
   },
   "servers.sheet.rootFolderHelp": "Cmdr never goes above this folder on the server.",
   "@servers.sheet.rootFolderHelp": {

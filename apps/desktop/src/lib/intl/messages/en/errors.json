@@ -3818,8 +3818,7 @@
   "errors.write.namedLeavesRefused.title": "These new names can’t be used",
   "@errors.write.namedLeavesRefused.title": {
     "description": "Title. Shown when Ask Cmdr's suggestion to move or copy files, each under a new name the AI chose, can't use those names. Cmdr refuses before anything is moved or copied. Plain text. This is a raw errors.* string (no ICU).",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-named_leaves_refused.png"
   },
   "errors.write.namedLeavesRefused.message.notASource": "One of the new names is for {path}, which isn’t part of this suggestion, so nothing started.",
   "@errors.write.namedLeavesRefused.message.notASource": {
@@ -3833,8 +3832,7 @@
   "errors.write.namedLeavesRefused.message.sameName": "Two items would end up as {path}. Many disks treat those as one name, so one would replace the other.",
   "@errors.write.namedLeavesRefused.message.sameName": {
     "description": "Explanation, when two items would get the same name, ignoring upper/lower case and accents written two ways; {path} is where both would land. Shown when Ask Cmdr's suggestion to move or copy files, each under a new name the AI chose, can't use those names. Cmdr refuses before anything is moved or copied. Plain text. This is a raw errors.* string (no ICU), so {path} is a literal replacement target, not ICU syntax: keep it spelled exactly and move it freely to suit your grammar.",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is.",
+    "screenshot": "transfer-error-named_leaves_refused.png",
     "placeholders": {
       "path": "a full file or folder path"
     }
@@ -3875,8 +3873,7 @@
   "errors.write.namedLeavesRefused.suggestion.sameName": "Ask Cmdr for a different name for each item.",
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "description": "Recovery suggestion for the reason this one's explanation gives (sameName). Shown when Ask Cmdr's suggestion to move or copy files, each under a new name the AI chose, can't use those names. Cmdr refuses before anything is moved or copied. Plain text. This is a raw errors.* string (no ICU).",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-named_leaves_refused.png"
   },
   "errors.write.namedLeavesRefused.suggestion.ontoASource": "Ask Cmdr for names that don’t match the items being moved or copied.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {

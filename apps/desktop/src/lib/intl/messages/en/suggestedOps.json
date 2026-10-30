@@ -1,15 +1,18 @@
 {
   "suggestedOps.title": "AI suggestions",
   "@suggestedOps.title": {
-    "description": "Title of the dialog listing the file actions (move, trash, rename, and so on) Ask Cmdr has suggested for the user to approve or reject."
+    "description": "Title of the dialog listing the file actions (move, trash, rename, and so on) Ask Cmdr has suggested for the user to approve or reject.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.description": "The agent suggested the actions below. Apply them only if you agree.",
   "@suggestedOps.description": {
-    "description": "Warning note at the top of the AI suggestions dialog, above the suggested actions: the AI agent made these suggestions, and nothing happens unless the person approves one. It only shows when there is something to approve. The user can close it for good with its × (suggestedOps.approvalNoticeDismiss), and bring it back in Settings > Advanced."
+    "description": "Warning note at the top of the AI suggestions dialog, above the suggested actions: the AI agent made these suggestions, and nothing happens unless the person approves one. It only shows when there is something to approve. The user can close it for good with its × (suggestedOps.approvalNoticeDismiss), and bring it back in Settings > Advanced.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.approvalNoticeDismiss": "Don’t show this again",
   "@suggestedOps.approvalNoticeDismiss": {
-    "description": "Tooltip and screen-reader name of the × that closes the note at the top of the AI suggestions dialog (suggestedOps.description) for good. It can be turned back on in Settings > Advanced."
+    "description": "Tooltip and screen-reader name of the × that closes the note at the top of the AI suggestions dialog (suggestedOps.description) for good. It can be turned back on in Settings > Advanced.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.sweepWhen.justNow": "Suggested just now",
   "@suggestedOps.sweepWhen.justNow": {
@@ -21,7 +24,8 @@
   },
   "suggestedOps.sweepWhen.today": "Suggested today at {time}",
   "@suggestedOps.sweepWhen.today": {
-    "description": "Heading above a batch of AI suggestions made earlier today. {time} is the time of day in the user's format, for example \"14:04\" or \"2:04 PM\"."
+    "description": "Heading above a batch of AI suggestions made earlier today. {time} is the time of day in the user's format, for example \"14:04\" or \"2:04 PM\".",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.sweepWhen.yesterday": "Suggested yesterday at {time}",
   "@suggestedOps.sweepWhen.yesterday": {
@@ -29,55 +33,68 @@
   },
   "suggestedOps.sweepWhen.earlier": "Suggested {date}",
   "@suggestedOps.sweepWhen.earlier": {
-    "description": "Heading above a batch of AI suggestions made before yesterday. {date} is a date and time already formatted in the user's chosen date format, for example \"2026-10-20 12:22\". {date} always starts with the date (never a weekday or a word like \"on\")."
+    "description": "Heading above a batch of AI suggestions made before yesterday. {date} is a date and time already formatted in the user's chosen date format, for example \"2026-10-20 12:22\". {date} always starts with the date (never a weekday or a word like \"on\").",
+    "screenshot": "suggested-ops-hard-cases.png"
   },
   "suggestedOps.empty": "Nothing is waiting for you right now.",
   "@suggestedOps.empty": {
-    "description": "Shown in the dialog body when the agent has no pending suggestions."
+    "description": "Shown in the dialog body when the agent has no pending suggestions.",
+    "screenshot": "suggested-ops-empty.png"
   },
   "suggestedOps.loadFailed": "Cmdr couldn’t read the suggestions. Close this dialog and open it again.",
   "@suggestedOps.loadFailed": {
-    "description": "Shown when reading the suggestion list threw. Distinct from the empty state, which would read as the agent having suggested nothing."
+    "description": "Shown when reading the suggestion list threw. Distinct from the empty state, which would read as the agent having suggested nothing.",
+    "screenshot": "suggested-ops-load-error.png"
   },
   "suggestedOps.agentReason": "Why:",
   "@suggestedOps.agentReason": {
-    "description": "Bold label leading the AI's own explanation of a suggestion, on the same line as the explanation. Short on purpose; its tooltip (suggestedOps.agentReasonTooltip) and its screen-reader form (suggestedOps.agentReasonSpoken) say the words are the AI's. Keep the colon or your language's equivalent."
+    "description": "Bold label leading the AI's own explanation of a suggestion, on the same line as the explanation. Short on purpose; its tooltip (suggestedOps.agentReasonTooltip) and its screen-reader form (suggestedOps.agentReasonSpoken) say the words are the AI's. Keep the colon or your language's equivalent.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.agentReasonTooltip": "The AI’s own words. Cmdr didn’t check them.",
   "@suggestedOps.agentReasonTooltip": {
-    "description": "Tooltip on the \"Why:\" label (suggestedOps.agentReason) before the AI's explanation of a suggestion. Load-bearing: it marks the text as the AI's claim rather than something Cmdr verified."
+    "description": "Tooltip on the \"Why:\" label (suggestedOps.agentReason) before the AI's explanation of a suggestion. Load-bearing: it marks the text as the AI's claim rather than something Cmdr verified.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.agentReasonSpoken": "Why, according to the AI:",
   "@suggestedOps.agentReasonSpoken": {
-    "description": "What a screen reader says in place of the visible \"Why:\" label (suggestedOps.agentReason), before the AI's explanation of a suggestion. It must start with the same words as the visible label (WCAG 2.5.3, label in name), then name the AI as the source, which the short visible label leaves to its tooltip."
+    "description": "What a screen reader says in place of the visible \"Why:\" label (suggestedOps.agentReason), before the AI's explanation of a suggestion. It must start with the same words as the visible label (WCAG 2.5.3, label in name), then name the AI as the source, which the short visible label leaves to its tooltip.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.fileCount": "{countText} {count, plural, one {file} other {files}}",
   "@suggestedOps.fileCount": {
-    "description": "How many files a suggestion group covers, beside the group's title."
+    "description": "How many files a suggestion group covers, beside the group's title.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.action.move": "Move",
   "@suggestedOps.action.move": {
-    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Move Old installers\"). This one moves files to another folder. A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves."
+    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Move Old installers\"). This one moves files to another folder. A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.action.copy": "Copy",
   "@suggestedOps.action.copy": {
-    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Copy Old installers\"). This one copies files to another folder. A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves."
+    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Copy Old installers\"). This one copies files to another folder. A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.action.trash": "Move to Trash",
   "@suggestedOps.action.trash": {
-    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Move to Trash Old installers\"). This one moves files to the Trash. Use the same name for the Trash as the macOS Finder does. A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves."
+    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Move to Trash Old installers\"). This one moves files to the Trash. Use the same name for the Trash as the macOS Finder does. A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.action.delete": "Delete",
   "@suggestedOps.action.delete": {
-    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Delete Old installers\"). This one deletes files permanently, skipping the Trash. A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves."
+    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Delete Old installers\"). This one deletes files permanently, skipping the Trash. A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.action.rename": "Rename",
   "@suggestedOps.action.rename": {
-    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Rename Old installers\"). This one renames files in place. A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves."
+    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Rename Old installers\"). This one renames files in place. A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.action.compress": "Compress",
   "@suggestedOps.action.compress": {
-    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Compress Old installers\"). This one packs files into one archive (a zip). A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves."
+    "description": "The action a suggestion takes, leading its title in the AI suggestions dialog, before the name the AI gave it (for example \"Compress Old installers\"). This one packs files into one archive (a zip). A short VERB phrase in the imperative, like a menu command; it must read as what happens when the person approves.",
+    "screenshot": "suggested-ops-hard-cases.png"
   },
   "suggestedOps.action.extract": "Extract",
   "@suggestedOps.action.extract": {
@@ -85,27 +102,33 @@
   },
   "suggestedOps.approve.move": "Move {countText} {count, plural, one {file} other {files}}",
   "@suggestedOps.approve.move": {
-    "description": "Primary button on a suggestion that moves files to another folder. Pressing it starts the move. {countText} is how many files would run (the ones the user left ticked), already formatted."
+    "description": "Primary button on a suggestion that moves files to another folder. Pressing it starts the move. {countText} is how many files would run (the ones the user left ticked), already formatted.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.approve.copy": "Copy {countText} {count, plural, one {file} other {files}}",
   "@suggestedOps.approve.copy": {
-    "description": "Primary button on a suggestion that copies files to another folder. Pressing it starts the copy. {countText} is how many files would run, already formatted."
+    "description": "Primary button on a suggestion that copies files to another folder. Pressing it starts the copy. {countText} is how many files would run, already formatted.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.approve.trash": "Move {countText} {count, plural, one {file} other {files}} to Trash",
   "@suggestedOps.approve.trash": {
-    "description": "Primary button on a suggestion that moves files to the Trash. Use the same name for the Trash as the macOS Finder does in your language. {countText} is how many files would run, already formatted."
+    "description": "Primary button on a suggestion that moves files to the Trash. Use the same name for the Trash as the macOS Finder does in your language. {countText} is how many files would run, already formatted.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.approve.delete": "Delete {countText} {count, plural, one {file} other {files}}",
   "@suggestedOps.approve.delete": {
-    "description": "Primary button on a suggestion that deletes files permanently (not to the Trash). {countText} is how many files would run, already formatted."
+    "description": "Primary button on a suggestion that deletes files permanently (not to the Trash). {countText} is how many files would run, already formatted.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.approve.rename": "Rename {countText} {count, plural, one {file} other {files}}",
   "@suggestedOps.approve.rename": {
-    "description": "Primary button on a suggestion that renames files in place. {countText} is how many files would run, already formatted."
+    "description": "Primary button on a suggestion that renames files in place. {countText} is how many files would run, already formatted.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.approve.compress": "Compress {countText} {count, plural, one {file} other {files}}",
   "@suggestedOps.approve.compress": {
-    "description": "Primary button on a suggestion that packs files into one archive (a zip). {countText} is how many files would go in, already formatted."
+    "description": "Primary button on a suggestion that packs files into one archive (a zip). {countText} is how many files would go in, already formatted.",
+    "screenshot": "suggested-ops-hard-cases.png"
   },
   "suggestedOps.approve.extract": "Extract {countText} {count, plural, one {archive} other {archives}}",
   "@suggestedOps.approve.extract": {
@@ -113,55 +136,68 @@
   },
   "suggestedOps.approve.addServer": "Save server",
   "@suggestedOps.approve.addServer": {
-    "description": "Primary button on a suggestion to save a new server (a NAS, an SFTP or WebDAV server, and the like) in Cmdr's server list. Pressing it saves the server without connecting to it. Takes no count. It sits on the same card as the suggestedOps.server.add tag, so keep the two worded differently."
+    "description": "Primary button on a suggestion to save a new server (a NAS, an SFTP or WebDAV server, and the like) in Cmdr's server list. Pressing it saves the server without connecting to it. Takes no count. It sits on the same card as the suggestedOps.server.add tag, so keep the two worded differently.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.approve.editServer": "Save changes",
   "@suggestedOps.approve.editServer": {
-    "description": "Primary button on a suggestion to change the settings of a server already saved in Cmdr's server list (its name, folder, or account). Pressing it saves the changes. Takes no count."
+    "description": "Primary button on a suggestion to change the settings of a server already saved in Cmdr's server list (its name, folder, or account). Pressing it saves the changes. Takes no count.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.reject": "Reject",
   "@suggestedOps.reject": {
-    "description": "Button that turns one suggestion down. Nothing happens to the files."
+    "description": "Button that turns one suggestion down. Nothing happens to the files.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.facts.from": "From",
   "@suggestedOps.facts.from": {
-    "description": "Short label before the folder the suggested files are in now, in the fact lines under a suggestion's title. Followed by a folder path. The label sits in its own column with no colon or other separator after it, the way Finder's Get Info labels do."
+    "description": "Short label before the folder the suggested files are in now, in the fact lines under a suggestion's title. Followed by a folder path. The label sits in its own column with no colon or other separator after it, the way Finder's Get Info labels do.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.facts.to": "To",
   "@suggestedOps.facts.to": {
-    "description": "Short label before where the files would go (a drive name and a folder path, or the Trash), in the fact lines under a suggestion's title. The label sits in its own column with no colon or other separator after it."
+    "description": "Short label before where the files would go (a drive name and a folder path, or the Trash), in the fact lines under a suggestion's title. The label sits in its own column with no colon or other separator after it.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.facts.folder": "Folder",
   "@suggestedOps.facts.folder": {
-    "description": "Short label before the folder whose files a rename suggestion would rename in place. Followed by a folder path."
+    "description": "Short label before the folder whose files a rename suggestion would rename in place. Followed by a folder path.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.facts.archive": "Archive",
   "@suggestedOps.facts.archive": {
-    "description": "Short label before the archive file (for example a .zip) a compress suggestion would create. Followed by a drive name and a file path."
+    "description": "Short label before the archive file (for example a .zip) a compress suggestion would create. Followed by a drive name and a file path.",
+    "screenshot": "suggested-ops-hard-cases.png"
   },
   "suggestedOps.facts.trash": "The Trash",
   "@suggestedOps.facts.trash": {
-    "description": "Shown after the \"To\" label (suggestedOps.facts.to) when the suggestion moves files to the Trash. Use the same name for the Trash as the macOS Finder does in your language."
+    "description": "Shown after the \"To\" label (suggestedOps.facts.to) when the suggestion moves files to the Trash. Use the same name for the Trash as the macOS Finder does in your language.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.facts.severalFolders": "Several folders",
   "@suggestedOps.facts.severalFolders": {
-    "description": "Shown after the \"From\" label (suggestedOps.facts.from) when the suggested files sit in different folders, so there's no one folder to name. Each file's folder then shows in the list."
+    "description": "Shown after the \"From\" label (suggestedOps.facts.from) when the suggested files sit in different folders, so there's no one folder to name. Each file's folder then shows in the list.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.reversible.trash": "You can undo this: {count, plural, one {it goes} other {they go}} to the Trash",
   "@suggestedOps.reversible.trash": {
-    "description": "Note under a suggestion’s file list, beside its buttons on a suggestion that moves files to the Trash, saying the user can take it back and why. {count} is the number of files, only used to pick \"it\" or \"they\". Use the same name for the Trash as the macOS Finder does. \"It\" and \"they\" are the suggested files; a language that needs a noun can say \"the file\" / \"the files\". The items can be files or folders."
+    "description": "Note under a suggestion’s file list, beside its buttons on a suggestion that moves files to the Trash, saying the user can take it back and why. {count} is the number of files, only used to pick \"it\" or \"they\". Use the same name for the Trash as the macOS Finder does. \"It\" and \"they\" are the suggested files; a language that needs a noun can say \"the file\" / \"the files\". The items can be files or folders.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.reversible.moveBack": "You can undo this: Cmdr can move {count, plural, one {it} other {them}} back",
   "@suggestedOps.reversible.moveBack": {
-    "description": "Note under a suggestion’s file list, beside its buttons on a suggestion that moves files, saying the user can take it back because Cmdr can move the files back where they were. {count} only picks \"it\" or \"them\". The items can be files or folders."
+    "description": "Note under a suggestion’s file list, beside its buttons on a suggestion that moves files, saying the user can take it back because Cmdr can move the files back where they were. {count} only picks \"it\" or \"them\". The items can be files or folders.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.reversible.renameBack": "You can undo this: Cmdr can change the {count, plural, one {name} other {names}} back",
   "@suggestedOps.reversible.renameBack": {
-    "description": "Note under a suggestion’s file list, beside its buttons on a rename suggestion, saying the user can take it back because Cmdr can restore the old names. {count} only picks \"name\" or \"names\"."
+    "description": "Note under a suggestion’s file list, beside its buttons on a rename suggestion, saying the user can take it back because Cmdr can restore the old names. {count} only picks \"name\" or \"names\".",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.reversible.removeCopies": "You can undo this: Cmdr deletes the copies",
   "@suggestedOps.reversible.removeCopies": {
-    "description": "Note under a suggestion’s file list, beside its buttons on a copy suggestion, saying the user can take it back: undoing deletes the copies it made, and the originals were never touched."
+    "description": "Note under a suggestion’s file list, beside its buttons on a copy suggestion, saying the user can take it back: undoing deletes the copies it made, and the originals were never touched.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.reversible.removeArchive": "You can undo this: Cmdr deletes the new archive",
   "@suggestedOps.reversible.removeArchive": {
@@ -173,19 +209,23 @@
   },
   "suggestedOps.irreversible.delete": "This can’t be undone: the files are deleted for good",
   "@suggestedOps.irreversible.delete": {
-    "description": "Warning note under a suggestion’s file list, beside its buttons on a suggestion that deletes files permanently, skipping the Trash. Disclosure only: the user can still approve it."
+    "description": "Warning note under a suggestion’s file list, beside its buttons on a suggestion that deletes files permanently, skipping the Trash. Disclosure only: the user can still approve it.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.noTrash": "This drive has no Trash",
   "@suggestedOps.noTrash": {
-    "description": "Pill beside the title of a suggestion to move files to the Trash when the files are on a drive or server that keeps no Trash. The suggestion then deletes the files permanently instead, and its title and button say \"Delete\". Use the same name for the Trash as the macOS Finder does. The tooltip is suggestedOps.noTrashTooltip."
+    "description": "Pill beside the title of a suggestion to move files to the Trash when the files are on a drive or server that keeps no Trash. The suggestion then deletes the files permanently instead, and its title and button say \"Delete\". Use the same name for the Trash as the macOS Finder does. The tooltip is suggestedOps.noTrashTooltip.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.noTrashTooltip": "The drive these files are on keeps no Trash, so approving this deletes them for good.",
   "@suggestedOps.noTrashTooltip": {
-    "description": "Tooltip on the suggestedOps.noTrash pill. Use the same name for the Trash as the macOS Finder does."
+    "description": "Tooltip on the suggestedOps.noTrash pill. Use the same name for the Trash as the macOS Finder does.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.irreversible.overwrite": "This can’t be undone: it replaces an existing archive",
   "@suggestedOps.irreversible.overwrite": {
-    "description": "Warning note under a suggestion’s file list, beside its buttons on a compress suggestion whose archive file already exists, so approving overwrites it and the old archive is gone."
+    "description": "Warning note under a suggestion’s file list, beside its buttons on a compress suggestion whose archive file already exists, so approving overwrites it and the old archive is gone.",
+    "screenshot": "suggested-ops-hard-cases.png"
   },
   "suggestedOps.irreversible.other": "This can’t be undone",
   "@suggestedOps.irreversible.other": {
@@ -193,23 +233,28 @@
   },
   "suggestedOps.reversible.forgetServer": "You can undo this: forget the server in Servers",
   "@suggestedOps.reversible.forgetServer": {
-    "description": "Note under a suggestion’s file list, beside its buttons on a suggestion to save a new server, saying the user can take it back: they can remove (forget) the saved server again in the Servers view. Same “You can undo this:” frame as the other suggestedOps.reversible.* pills. “Forget” is the word on the menu item that removes a saved server (menu.network.forgetServer), so use the same word your translation uses there. \"Servers\" is the name of that view in Cmdr; translate it the same way as there."
+    "description": "Note under a suggestion’s file list, beside its buttons on a suggestion to save a new server, saying the user can take it back: they can remove (forget) the saved server again in the Servers view. Same “You can undo this:” frame as the other suggestedOps.reversible.* pills. “Forget” is the word on the menu item that removes a saved server (menu.network.forgetServer), so use the same word your translation uses there. \"Servers\" is the name of that view in Cmdr; translate it the same way as there.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.reversible.changeServerBack": "You can undo this: change the server back in Servers",
   "@suggestedOps.reversible.changeServerBack": {
-    "description": "Note under a suggestion’s file list, beside its buttons on a suggestion to change a saved server's settings, saying the user can take it back by editing the server again in the Servers view. Same “You can undo this:” frame as the other suggestedOps.reversible.* pills. “Change the server back” means putting its settings back the way they were. \"Servers\" is the name of that view in Cmdr; translate it the same way as there."
+    "description": "Note under a suggestion’s file list, beside its buttons on a suggestion to change a saved server's settings, saying the user can take it back by editing the server again in the Servers view. Same “You can undo this:” frame as the other suggestedOps.reversible.* pills. “Change the server back” means putting its settings back the way they were. \"Servers\" is the name of that view in Cmdr; translate it the same way as there.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.folderWillBeCreated": "Cmdr will create this folder",
   "@suggestedOps.folderWillBeCreated": {
-    "description": "Shown beside the target folder’s path, after a folder-with-a-plus icon, when that folder doesn’t exist yet."
+    "description": "Shown beside the target folder’s path, after a folder-with-a-plus icon, when that folder doesn’t exist yet.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.folderWillBeCreatedTooltip": "The target folder is not there yet. Approving creates it, exactly as it would if you started the move yourself.",
   "@suggestedOps.folderWillBeCreatedTooltip": {
-    "description": "Tooltip explaining the folder-creation pill."
+    "description": "Tooltip explaining the folder-creation pill.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.destinationUnknown": "Cmdr couldn’t check the target folder",
   "@suggestedOps.destinationUnknown": {
-    "description": "Shown beside the target folder’s path when the destination drive or server didn’t answer in time, so whether the folder exists is genuinely unknown rather than assumed."
+    "description": "Shown beside the target folder’s path when the destination drive or server didn’t answer in time, so whether the folder exists is genuinely unknown rather than assumed.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.destinationNotConnected": "The target isn’t connected",
   "@suggestedOps.destinationNotConnected": {
@@ -221,67 +266,83 @@
   },
   "suggestedOps.fromPattern": "Matched by a pattern",
   "@suggestedOps.fromPattern": {
-    "description": "Pill on a suggestion whose file list a pattern produced, so the user knows the list was matched rather than named one by one."
+    "description": "Pill on a suggestion whose file list a pattern produced, so the user knows the list was matched rather than named one by one.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.changedUnderReview": "The AI changed this suggestion while you were reading it.",
   "@suggestedOps.changedUnderReview": {
-    "description": "Notice shown when the agent amended a suggestion the user is looking at. The rows on screen stay put until the user asks for the new version."
+    "description": "Notice shown when the agent amended a suggestion the user is looking at. The rows on screen stay put until the user asks for the new version.",
+    "screenshot": "suggested-ops-changed-and-refused.png"
   },
   "suggestedOps.showNewVersion": "Show the new version",
   "@suggestedOps.showNewVersion": {
-    "description": "Button that reloads a suggestion the agent changed while the user was reading it."
+    "description": "Button that reloads a suggestion the agent changed while the user was reading it.",
+    "screenshot": "suggested-ops-changed-and-refused.png"
   },
   "suggestedOps.filesLabel": "Files in “{name}”",
   "@suggestedOps.filesLabel": {
-    "description": "Accessible name of one suggestion's file list, read by screen readers. {name} is the suggestion's title. Use your language's quotation marks."
+    "description": "Accessible name of one suggestion's file list, read by screen readers. {name} is the suggestion's title. Use your language's quotation marks.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.columnInclude": "Include",
   "@suggestedOps.columnInclude": {
-    "description": "Screen-reader-only heading of the tick-box column in a suggestion's file list. A ticked file is part of the approval."
+    "description": "Screen-reader-only heading of the tick-box column in a suggestion's file list. A ticked file is part of the approval.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.includeAll": "Include all files",
   "@suggestedOps.includeAll": {
-    "description": "Screen-reader name of the tick box in the header of a suggestion's file list. Ticking it includes every file in the approval, unticking it includes none; it shows a dash when only some are ticked."
+    "description": "Screen-reader name of the tick box in the header of a suggestion's file list. Ticking it includes every file in the approval, unticking it includes none; it shows a dash when only some are ticked.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.columnName": "Name",
   "@suggestedOps.columnName": {
-    "description": "Column heading for the name of each file a suggestion would touch."
+    "description": "Column heading for the name of each file a suggestion would touch.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.columnFolder": "Folder",
   "@suggestedOps.columnFolder": {
-    "description": "Column heading for the folder each file is in. Only shown when a suggestion's files sit in different folders."
+    "description": "Column heading for the folder each file is in. Only shown when a suggestion's files sit in different folders.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.columnNewName": "New name",
   "@suggestedOps.columnNewName": {
-    "description": "Screen-reader text between a file's current name and the name a suggestion would give it, read as \"invoice.pdf, New name, Invoice 2026-07.pdf\". Visually an arrow stands in for it. A short noun phrase."
+    "description": "Screen-reader text between a file's current name and the name a suggestion would give it, read as \"invoice.pdf, New name, Invoice 2026-07.pdf\". Visually an arrow stands in for it. A short noun phrase.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.columnSize": "Size",
   "@suggestedOps.columnSize": {
-    "description": "Column heading for each file's size as Cmdr finds it on disk now."
+    "description": "Column heading for each file's size as Cmdr finds it on disk now.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.columnModified": "Last modified",
   "@suggestedOps.columnModified": {
-    "description": "Column heading for when each file was last changed, as Cmdr finds it on disk now."
+    "description": "Column heading for when each file was last changed, as Cmdr finds it on disk now.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.factChanged": "Changed since the suggestion",
   "@suggestedOps.factChanged": {
-    "description": "Screen-reader name of a small warning glyph beside a file's size or date when the value on disk now differs from what it was when the AI made the suggestion. The tooltip (suggestedOps.factChangedTooltip) shows both values."
+    "description": "Screen-reader name of a small warning glyph beside a file's size or date when the value on disk now differs from what it was when the AI made the suggestion. The tooltip (suggestedOps.factChangedTooltip) shows both values.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.factChangedTooltip": "When suggested: {then} / Now: {now}",
   "@suggestedOps.factChangedTooltip": {
-    "description": "Tooltip on the warning glyph beside a file's size or date that changed since the AI made the suggestion. {then} and {now} are both sizes (like \"1.2 MB\") or both dates, already formatted."
+    "description": "Tooltip on the warning glyph beside a file's size or date that changed since the AI made the suggestion. {then} and {now} are both sizes (like \"1.2 MB\") or both dates, already formatted.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.fileMissing": "Moved or deleted",
   "@suggestedOps.fileMissing": {
-    "description": "Shown in a file's Size column when the file isn't where the suggestion says any more: something moved or deleted it since. Approving skips it. The row can be a file or a folder."
+    "description": "Shown in a file's Size column when the file isn't where the suggestion says any more: something moved or deleted it since. Approving skips it. The row can be a file or a folder.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.snapshotOnly": "From when the AI suggested this",
   "@suggestedOps.snapshotOnly": {
-    "description": "Screen-reader name of a small clock glyph beside a file's size or date when Cmdr couldn't look at the file just now, so the value is what it was when the AI made the suggestion. The tooltip is suggestedOps.snapshotOnlyTooltip."
+    "description": "Screen-reader name of a small clock glyph beside a file's size or date when Cmdr couldn't look at the file just now, so the value is what it was when the AI made the suggestion. The tooltip is suggestedOps.snapshotOnlyTooltip.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.snapshotOnlyTooltip": "Cmdr couldn’t check this file just now, so this is what it was when the AI suggested it.",
   "@suggestedOps.snapshotOnlyTooltip": {
-    "description": "Tooltip on the clock glyph beside a file's size or date that Cmdr couldn't check live, explaining the value is from suggestion time."
+    "description": "Tooltip on the clock glyph beside a file's size or date that Cmdr couldn't check live, explaining the value is from suggestion time.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.sourceNotConnected": "Cmdr isn’t connected to the drive these files are on, so their sizes and dates are from when the AI suggested this.",
   "@suggestedOps.sourceNotConnected": {
@@ -297,15 +358,18 @@
   },
   "suggestedOps.includeFile": "Include {name}",
   "@suggestedOps.includeFile": {
-    "description": "Screen-reader name of the tick box on each file row. Ticked means the file is part of the approval. {name} is the file's name."
+    "description": "Screen-reader name of the tick box on each file row. Ticked means the file is part of the approval. {name} is the file's name.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.showMore": "Show {countText} more",
   "@suggestedOps.showMore": {
-    "description": "Button under a suggestion's file list that shows the next few files. {countText} is how many it adds, already formatted."
+    "description": "Button under a suggestion's file list that shows the next few files. {countText} is how many it adds, already formatted.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.showAll": "Show all {countText}",
   "@suggestedOps.showAll": {
-    "description": "Button under a suggestion's file list that shows every file. {countText} is the total number of files, already formatted (it can be tens of thousands)."
+    "description": "Button under a suggestion's file list that shows every file. {countText} is the total number of files, already formatted (it can be tens of thousands).",
+    "screenshot": "suggested-ops-hard-cases.png"
   },
   "suggestedOps.loadingFiles": "Loading the files…",
   "@suggestedOps.loadingFiles": {
@@ -325,19 +389,23 @@
   },
   "suggestedOps.approvalUnsure": "Cmdr isn’t sure the approval went through. Check the operation queue before you approve it again.",
   "@suggestedOps.approvalUnsure": {
-    "description": "Notice at the top of the AI suggestions dialog when an approval stopped answering partway, so whether its files started moving is unknown. \"Operation queue\" names the queue window by its title (queue.windowTitle); keep the two matching. The point is to stop the person running the same files twice."
+    "description": "Notice at the top of the AI suggestions dialog when an approval stopped answering partway, so whether its files started moving is unknown. \"Operation queue\" names the queue window by its title (queue.windowTitle); keep the two matching. The point is to stop the person running the same files twice.",
+    "screenshot": "suggested-ops-changed-and-refused.png"
   },
   "suggestedOps.refusal.label": "Why this didn’t start",
   "@suggestedOps.refusal.label": {
-    "description": "Small label above the reason shown under a suggestion whose approval didn't start. The suggestion is back on the list as waiting, nothing ran, and the person can approve or reject it again. The reason itself sits below this label."
+    "description": "Small label above the reason shown under a suggestion whose approval didn't start. The suggestion is back on the list as waiting, nothing ran, and the person can approve or reject it again. The reason itself sits below this label.",
+    "screenshot": "suggested-ops-changed-and-refused.png"
   },
   "suggestedOps.refusal.nothingToRun.message": "Cmdr couldn’t read any of these files when you approved, so nothing ran.",
   "@suggestedOps.refusal.nothingToRun.message": {
-    "description": "Reason shown under a suggestion whose approval didn't start because every file it names was gone or unreadable at that moment. The suggestion is back on the list, waiting for an answer. Followed by suggestedOps.refusal.nothingToRun.suggestion."
+    "description": "Reason shown under a suggestion whose approval didn't start because every file it names was gone or unreadable at that moment. The suggestion is back on the list, waiting for an answer. Followed by suggestedOps.refusal.nothingToRun.suggestion.",
+    "screenshot": "suggested-ops-changed-and-refused.png"
   },
   "suggestedOps.refusal.nothingToRun.suggestion": "Check that they’re still there, then approve it again, or reject it.",
   "@suggestedOps.refusal.nothingToRun.suggestion": {
-    "description": "What to do next, under suggestedOps.refusal.nothingToRun.message. \"It\" is the suggestion; the approve button and Reject are on it."
+    "description": "What to do next, under suggestedOps.refusal.nothingToRun.message. \"It\" is the suggestion; the approve button and Reject are on it.",
+    "screenshot": "suggested-ops-changed-and-refused.png"
   },
   "suggestedOps.refusal.nothingSelected.message": "None of the files you ticked are in this suggestion any more, so nothing ran.",
   "@suggestedOps.refusal.nothingSelected.message": {
@@ -357,15 +425,18 @@
   },
   "suggestedOps.refusal.serverLabel": "Why this wasn’t saved",
   "@suggestedOps.refusal.serverLabel": {
-    "description": "Small label above the reason shown under a suggestion to add or change a server, when pressing its button saved nothing. The suggestion is back on the list as waiting, and the person can approve or reject it again. The reason itself sits below this label. Counterpart of suggestedOps.refusal.label for file suggestions."
+    "description": "Small label above the reason shown under a suggestion to add or change a server, when pressing its button saved nothing. The suggestion is back on the list as waiting, and the person can approve or reject it again. The reason itself sits below this label. Counterpart of suggestedOps.refusal.label for file suggestions.",
+    "screenshot": "suggested-ops-server-refused.png"
   },
   "suggestedOps.refusal.serverChanged.message": "This server changed since the AI suggested this, so Cmdr saved nothing.",
   "@suggestedOps.refusal.serverChanged.message": {
-    "description": "Reason shown under a suggestion to change a saved server's settings, when the saved server itself was changed (by the person, or by another approved suggestion) after the AI suggested this. Saving would overwrite a change the suggestion doesn't show, so nothing was saved. Followed by suggestedOps.refusal.serverChanged.suggestion."
+    "description": "Reason shown under a suggestion to change a saved server's settings, when the saved server itself was changed (by the person, or by another approved suggestion) after the AI suggested this. Saving would overwrite a change the suggestion doesn't show, so nothing was saved. Followed by suggestedOps.refusal.serverChanged.suggestion.",
+    "screenshot": "suggested-ops-server-refused.png"
   },
   "suggestedOps.refusal.serverChanged.suggestion": "Ask Cmdr to suggest it again, or edit the server in Servers.",
   "@suggestedOps.refusal.serverChanged.suggestion": {
-    "description": "What to do next, under suggestedOps.refusal.serverChanged.message. \"Ask Cmdr to\" means asking in the Ask Cmdr chat, the same phrasing as the other suggestedOps.refusal.*.suggestion keys; \"Servers\" is the name of the view listing saved servers, translated the same way as there."
+    "description": "What to do next, under suggestedOps.refusal.serverChanged.message. \"Ask Cmdr to\" means asking in the Ask Cmdr chat, the same phrasing as the other suggestedOps.refusal.*.suggestion keys; \"Servers\" is the name of the view listing saved servers, translated the same way as there.",
+    "screenshot": "suggested-ops-server-refused.png"
   },
   "suggestedOps.refusal.alreadySaved.message": "This server is already in your servers list, so Cmdr saved nothing.",
   "@suggestedOps.refusal.alreadySaved.message": {
@@ -380,27 +451,33 @@
     "description": "Reason shown under a suggestion to add or rename a server, when another saved server took the same name after the AI suggested this. Two servers with one name could be mistaken for each other, so nothing was saved. Followed by suggestedOps.refusal.nameTaken.suggestion.",
     "placeholders": {
       "name": "the name the other saved server already has, like Naspolya; never translated"
-    }
+    },
+    "screenshot": "suggested-ops-server-refused.png"
   },
   "suggestedOps.refusal.nameTaken.suggestion": "Ask Cmdr to suggest another name.",
   "@suggestedOps.refusal.nameTaken.suggestion": {
-    "description": "What to do next, under suggestedOps.refusal.nameTaken.message. \"Ask Cmdr to\" means asking in the Ask Cmdr chat, the same phrasing as the other suggestedOps.refusal.*.suggestion keys."
+    "description": "What to do next, under suggestedOps.refusal.nameTaken.message. \"Ask Cmdr to\" means asking in the Ask Cmdr chat, the same phrasing as the other suggestedOps.refusal.*.suggestion keys.",
+    "screenshot": "suggested-ops-server-refused.png"
   },
   "suggestedOps.server.add": "Add a server",
   "@suggestedOps.server.add": {
-    "description": "Leads the title of a suggestion to save a new server (a NAS, an SFTP or WebDAV server, and the like) in Cmdr’s server list, before the server’s name. It names the action, like the suggestedOps.action.* keys do for file suggestions; the button on the same card is suggestedOps.approve.addServer, so keep the two worded differently."
+    "description": "Leads the title of a suggestion to save a new server (a NAS, an SFTP or WebDAV server, and the like) in Cmdr’s server list, before the server’s name. It names the action, like the suggestedOps.action.* keys do for file suggestions; the button on the same card is suggestedOps.approve.addServer, so keep the two worded differently.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.server.change": "Change server settings",
   "@suggestedOps.server.change": {
-    "description": "Leads the title of a suggestion to change the settings of a server already saved in Cmdr’s server list, before the server’s name. It means editing that server’s settings, not swapping it for another server. It names the action, like the suggestedOps.action.* keys do for file suggestions."
+    "description": "Leads the title of a suggestion to change the settings of a server already saved in Cmdr’s server list, before the server’s name. It means editing that server’s settings, not swapping it for another server. It names the action, like the suggestedOps.action.* keys do for file suggestions.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.server.field.port": "Port",
   "@suggestedOps.server.field.port": {
-    "description": "Label of a row on a suggestion to add or change a server: the network port number Cmdr connects to. One word, NOUN."
+    "description": "Label of a row on a suggestion to add or change a server: the network port number Cmdr connects to. One word, NOUN.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.server.field.account": "Account",
   "@suggestedOps.server.field.account": {
-    "description": "Label of a row on a suggestion to add or change a server: the account (username) Cmdr signs in as, or for an S3 server, the saved S3 account it belongs to. One word, NOUN."
+    "description": "Label of a row on a suggestion to add or change a server: the account (username) Cmdr signs in as, or for an S3 server, the saved S3 account it belongs to. One word, NOUN.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.server.field.share": "Shared folder",
   "@suggestedOps.server.field.share": {
@@ -412,26 +489,31 @@
   },
   "suggestedOps.server.notSet": "Not set",
   "@suggestedOps.server.notSet": {
-    "description": "Shown in place of a value on a suggestion to change a server, when a setting had no value before, or the change clears it (a start folder back to the default). It stands in for any field (a port, a folder, an account), so it can't agree with one noun's gender: pick a form that needs no agreement, like “no value”. Short."
+    "description": "Shown in place of a value on a suggestion to change a server, when a setting had no value before, or the change clears it (a start folder back to the default). It stands in for any field (a port, a folder, an account), so it can't agree with one noun's gender: pick a form that needs no agreement, like “no value”. Short.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.server.changesTo": "changes to",
   "@suggestedOps.server.changesTo": {
-    "description": "Read by screen readers only, between a server setting's old value and its new one on a suggestion to change a server (\"/srv, changes to, /srv/backups\"). Sighted people see an arrow instead. Lowercase, VERB phrase."
+    "description": "Read by screen readers only, between a server setting's old value and its new one on a suggestion to change a server (\"/srv, changes to, /srv/backups\"). Sighted people see an arrow instead. Lowercase, VERB phrase.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.server.newAddress": "A new address",
   "@suggestedOps.server.newAddress": {
-    "description": "Small tag beside the address on a suggestion to add a server, when no server Cmdr has saved is at that address. It warns that the AI is pointing at a place the person hasn't used in Cmdr before. Three words, NOUN phrase. The tooltip is suggestedOps.server.newAddressTooltip."
+    "description": "Small tag beside the address on a suggestion to add a server, when no server Cmdr has saved is at that address. It warns that the AI is pointing at a place the person hasn't used in Cmdr before. Three words, NOUN phrase. The tooltip is suggestedOps.server.newAddressTooltip.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.server.newAddressTooltip": "None of your saved servers is at this address. Check that it’s the one you mean.",
   "@suggestedOps.server.newAddressTooltip": {
-    "description": "Tooltip on the \"A new address\" tag (suggestedOps.server.newAddress) beside a suggested server's address."
+    "description": "Tooltip on the \"A new address\" tag (suggestedOps.server.newAddress) beside a suggested server's address.",
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.server.sharesAffected": "This changes {countText} saved {count, plural, one {share} other {shares}} on this server.",
   "@suggestedOps.server.sharesAffected": {
     "description": "Line on a suggestion to change an SMB server (a NAS, a Windows PC), under its settings: the change applies to the whole server, so it reaches every shared folder saved under it. Counted when the dialog opened.",
     "placeholders": {
       "countText": "the number of shares, already formatted for the locale"
-    }
+    },
+    "screenshot": "suggested-ops-servers.png"
   },
   "suggestedOps.indicatorTooltip": "AI suggestions are waiting. Click to review them.",
   "@suggestedOps.indicatorTooltip": {
@@ -439,10 +521,12 @@
   },
   "suggestedOps.newNameTaken": "Name already taken",
   "@suggestedOps.newNameTaken": {
-    "description": "Screen-reader name of a small warning glyph beside the new name a suggestion gives a file, when a file or folder with that name is already where the file would land. The tooltip is suggestedOps.newNameTakenTooltip."
+    "description": "Screen-reader name of a small warning glyph beside the new name a suggestion gives a file, when a file or folder with that name is already where the file would land. The tooltip is suggestedOps.newNameTakenTooltip.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   },
   "suggestedOps.newNameTakenTooltip": "Something called “{name}” is already there.",
   "@suggestedOps.newNameTakenTooltip": {
-    "description": "Tooltip on the warning glyph beside a suggested new name that is already taken where the file would land (the target folder, or the file’s own folder for a rename). {name} is that new name, never translated. Use your language’s quotation marks."
+    "description": "Tooltip on the warning glyph beside a suggested new name that is already taken where the file would land (the target folder, or the file’s own folder for a rename). {name} is that new name, never translated. Use your language’s quotation marks.",
+    "screenshot": "suggested-ops-downloads-cleanup.png"
   }
 }
