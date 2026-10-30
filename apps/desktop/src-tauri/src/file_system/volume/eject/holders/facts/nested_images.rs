@@ -14,6 +14,14 @@
 //! is the pid `lsof` showed holding the outer volume's `inner.dmg`; `hdiutil info
 //! -plist` answered in 18 ms.)
 //!
+//! ❗ **The server isn't always a process the walk can see.** `hdiutil attach` gets a
+//! same-uid `diskimages-helper`, but an image Finder opens (DiskImages2) gets a
+//! `diskimagesiod` of its own under uid 271, which `hdid-pid` still names and which
+//! `CHECK_SAME_USER` hides from the walk. So [`unseen_on`] answers for those from this list
+//! alone. (Verified on macOS 27.0.1, 2026-10-30: `open -g` and `diskutil image attach` of
+//! an image on another image's volume, `diskutil unmount` of the outer volume answering
+//! "dissented by PID 53397 (/usr/libexec/diskimagesiod)".)
+//!
 //! Whether an image sits on the drive is its backing file's `st_dev` against the target
 //! roots' own — ❌ never a path prefix, which a firmlink or a symlinked `/Volumes` entry
 //! breaks silently.
@@ -46,7 +54,34 @@ pub(super) fn stored_on<'a>(
     images
         .iter()
         .filter(|image| image.pid == pid)
-        .find(|image| device_of(&image.backing_file).is_some_and(|device| targets.contains(&device)))
+        .find(|image| sits_on(image, targets, &device_of))
+}
+
+/// The images on `targets` that no pid in `walked` serves, one per serving process.
+///
+/// This is how an image reaches a refusal when the walk can't see its server at all:
+/// `diskimagesiod` runs under its own uid. Holding the drive needs no further proof, since
+/// an attached image keeps the volume its backing file sits on busy by construction. The
+/// `device_of` and "couldn't tell" rules are [`stored_on`]'s.
+pub(super) fn unseen_on<'a>(
+    images: &'a [AttachedImage],
+    walked: &[u32],
+    targets: &[u64],
+    device_of: impl Fn(&Path) -> Option<u64>,
+) -> Vec<&'a AttachedImage> {
+    let mut unseen: Vec<&AttachedImage> = Vec::new();
+    for image in images {
+        let already_named = walked.contains(&image.pid) || unseen.iter().any(|seen| seen.pid == image.pid);
+        if !already_named && sits_on(image, targets, &device_of) {
+            unseen.push(image);
+        }
+    }
+    unseen
+}
+
+/// Whether `image`'s backing file sits on one of `targets`, by its device.
+fn sits_on(image: &AttachedImage, targets: &[u64], device_of: &impl Fn(&Path) -> Option<u64>) -> bool {
+    device_of(&image.backing_file).is_some_and(|device| targets.contains(&device))
 }
 
 /// Every image attached on this machine, `None` when nothing could be read.
@@ -73,10 +108,9 @@ mod macos {
 
     /// Every image attached on this machine, `None` when nothing could be read.
     ///
-    /// ❗ Runs on the holder scan's own abandonable thread, and only for a holder no
-    /// earlier rule answered for, so a machine with no images attached pays for it at
-    /// most once per refusal. The scan's budget IS its timeout: nobody joins that
-    /// thread, so a wedged `hdiutil` costs the answer and never the eject.
+    /// ❗ Runs on the holder scan's own abandonable thread, at most once per refusal. The
+    /// scan's budget IS its timeout: nobody joins that thread, so a wedged `hdiutil` costs
+    /// the answer and never the eject.
     pub(in crate::file_system::volume::eject::holders::facts) fn attached() -> Option<Vec<AttachedImage>> {
         Some(
             list()?
@@ -264,6 +298,33 @@ mod macos {
             assert!(listed.images.is_empty());
         }
 
+        /// An image opened from Finder: `diskimagesiod` under its own uid 271, whose pid
+        /// `hdid-pid` still names (recorded on macOS 27.0.1, 2026-10-30).
+        #[test]
+        fn an_image_served_by_the_daemon_still_names_its_pid() {
+            let listed = parsed(
+                br#"<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict><key>images</key><array>
+  <dict>
+    <key>diskimages2</key><true/>
+    <key>hdid-pid</key><integer>53397</integer>
+    <key>image-path</key><string>/Volumes/CMDRDIOUT/inner.dmg</string>
+    <key>owner-uid</key><integer>501</integer>
+    <key>system-entities</key>
+    <array>
+      <dict><key>dev-entry</key><string>/dev/disk7</string></dict>
+      <dict>
+        <key>dev-entry</key><string>/dev/disk7s1</string>
+        <key>mount-point</key><string>/Volumes/CMDRDIIN</string>
+      </dict>
+    </array>
+  </dict>
+</array></dict></plist>"#,
+            );
+            assert_eq!(listed.images[0].pid, Some(53397));
+            assert_eq!(name_of(&listed.images[0]), "CMDRDIIN");
+        }
+
         /// The real tool, on whatever this Mac has attached: the parse has to survive
         /// every key a live `hdiutil` adds, and the call has to be cheap enough to sit
         /// inside a 1.5 s budget.
@@ -334,6 +395,35 @@ mod tests {
     fn a_backing_file_that_wouldnt_stat_answers_for_nobody() {
         // ❗ A device nobody could read is "couldn't tell", ❌ never "it's on the drive".
         assert_eq!(stored_on(&nested(), 12984, &[16], |_| None), None);
+    }
+
+    #[test]
+    fn an_image_the_walk_never_named_answers_for_itself() {
+        let images = nested();
+        let unseen = unseen_on(&images, &[], &[16], device_of);
+        assert_eq!(unseen, [&images[1]], "the image on the drive, and not the one off it");
+    }
+
+    #[test]
+    fn an_image_the_walk_already_named_isnt_added_twice() {
+        // A same-uid helper reached the classifier by its pid, and rule 3 answered there.
+        assert!(unseen_on(&nested(), &[12984], &[16], device_of).is_empty());
+    }
+
+    #[test]
+    fn one_daemon_serving_two_images_on_the_drive_is_one_holder() {
+        // The walk and the scan both dedupe by pid, and so does this.
+        let images = [
+            image(53397, "/Volumes/CMDRPROBEOUT/one.dmg", "ONE"),
+            image(53397, "/Volumes/CMDRPROBEOUT/two.dmg", "TWO"),
+        ];
+        assert_eq!(unseen_on(&images, &[], &[16], device_of), [&images[0]]);
+    }
+
+    #[test]
+    fn an_unseen_image_whose_backing_file_wouldnt_stat_answers_for_nobody() {
+        // ❗ Same rule as `stored_on`: "couldn't tell" must not become a `DiskImage`.
+        assert!(unseen_on(&nested(), &[], &[16], |_| None).is_empty());
     }
 
     #[test]

@@ -579,9 +579,10 @@ runs most-actionable first over `holders.named`:
 6. **A `complete` scan that named nobody** → `errors.eject.unmountRefusedBySystem`, the same "wait" as rule 4. The walk
    sees same-uid processes only, so a refusal it can't name came from a holder it can't see, almost always a root
    daemon: ERR-ZPABB was `diskutil` naming a launchd child (likely `syspolicyd` scanning a freshly mounted DMG) while
-   the scan found nobody. The other ways to land here (a holder that let go before the scan ran, a memory-map-only
-   holder) are served by "wait, then try again" too. Naming the daemon itself is the deferred DiskArbitration teardown
-   (GitHub [#249](https://github.com/vdavid/cmdr/issues/249)).
+   the scan found nobody. A `diskimagesiod` is the exception: it's invisible to the walk too, but the backend names its
+   image as a `DiskImage` holder, so that refusal reads rule 2. The other ways to land here (a holder that let go before
+   the scan ran, a memory-map-only holder) are served by "wait, then try again" too. Naming the daemon itself is the
+   deferred DiskArbitration teardown (GitHub [#249](https://github.com/vdavid/cmdr/issues/249)).
 7. Otherwise (an `incomplete` scan that named nobody) the unnamed `errors.eject.unmountRefused` line.
 
 ❗ **`Unclassified` is worded as a PROCESS, ❌ never an app or a tool.** It means "named, but nothing said what kind"

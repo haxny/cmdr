@@ -543,7 +543,8 @@ own before every attempt. An idle APFS volume ejects and its image detaches; a f
 answers `UnmountRefused` after the retries, still mounted, and NAMES that child's pid AND its kind, which is `Cmdr`
 because a holder this test started really is Cmdr's own descendant. One more pins the disk-image rule: the process
 serving an attached image reads `DiskImage` against the drive its backing file sits on, and doesn't against a drive it
-doesn't. Five more pin the per-disk eject: both volumes of an APFS
+doesn't. Another runs that shape through the whole retries-and-scan path with `diskimagesiod` serving the image
+(`attach_stored_here`), and reads `DiskImage` for a pid the walk can't see. Five more pin the per-disk eject: both volumes of an APFS
 container resolve to one `DiskKey` whose units carry the physical disk and the container; an idle two-volume disk
 answers `Ok` only once both volumes went and the image detached; ejecting A while a file on B is held answers
 `UnmountRefused` with the disk still attached, naming the holder that sits on the SIBLING (which is what proves the
@@ -607,7 +608,7 @@ prefix, or a message. The rules run in order and the first that answers wins:
 2. An app this process or an ancestor belongs to (`NSRunningApplication`, any activation policy but prohibited) →
    `App`. This is what names Warp for a `zsh` a person `cd`'d into the drive.
 3. A disk image whose backing `.dmg` sits on the drive → `DiskImage`, the one a person frees by ejecting the image
-   rather than by closing anything.
+   rather than by closing anything. These rules only see a process the walk named; a server it can't see is below.
 4. The app macOS holds RESPONSIBLE for it (`responsibility_get_pid_responsible_for_pid`, through `dlsym`) → `App`,
    which turns a `com.apple.WebKit.WebContent` helper into the browser behind it. A responsible process with no
    `NSRunningApplication` (Google Drive's is one) still names itself, from the display name its signature seals.
@@ -629,9 +630,19 @@ prefix, or a message. The rules run in order and the first that answers wins:
   never reached keeps its name and stays `Unclassified`, where facts inside the walk would have taken its whole path's
   list with them.
 - **Disk images come from `hdiutil info -plist`**, whose `hdid-pid` IS the process holding the backing file, so an
-  image lands on a pid the walk already named instead of an invented one. ❌ Not IOKit's `IOHDIXHDDriveOutKernel`
-  `image-path`, which names the image but carries no pid. Read at most once per refusal, and only for a holder no
-  earlier rule answered for (18 ms with two images attached, macOS 27.0, 2026-09-16).
+  image lands on a real pid instead of an invented one. ❌ Not IOKit's `IOHDIXHDDriveOutKernel` `image-path`, which names
+  the image but carries no pid. Read at most once per refusal (18 ms with two images attached, macOS 27.0, 2026-09-16).
+- ❗ **An image's server can be invisible to the walk, so images also join the answer on their own.** `hdiutil attach`
+  gets a same-uid `diskimages-helper`, which the walk names and rule 3 classifies. An image opened from Finder gets a
+  `diskimagesiod` of its own under uid 271 (parent launchd), which `CHECK_SAME_USER` hides, so that refusal read
+  "held by nobody" and worded "wait a minute", which never frees the drive (verified on macOS 27.0.1, `open -g` and
+  `diskutil image attach` of an image on another image's volume, `diskutil unmount` naming `diskimagesiod` as
+  dissenter, 2026-10-30). So after the facts, `facts::images_the_walk_missed` adds every attached image whose backing
+  file's device is one of the drive's and whose `hdid-pid` the walk didn't name, as a `DiskImage` holder. An attached
+  image holds its backing file's volume by construction, so that's no guess. ❌ Not from `diskutil`'s stderr: it names
+  only one dissenter, and it's prose. It runs last on the abandonable thread, because each `lstat` of a backing file
+  can hang on a wedged share, and the arm of `HolderScan` doesn't change: it still says only whether the walk covered
+  every mount.
 - **Responsibility is INHERITED, and launchd adopting a process doesn't clear it** (verified on macOS 27.0,
   2026-09-16): a holder started through a shell that exited, `PPID` 1, still answered the terminal app behind it. So
   rule 4 names the app a drive-resident tool was STARTED from, and rule 5 answers for a holder no app ever launched.

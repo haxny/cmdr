@@ -266,6 +266,13 @@ sources: DiskArbitration-535.0.10.
   outer volume's `inner.dmg` — uid 501, so a same-uid walk sees it. The tool answers in 18 ms. IOKit carries the same
   image under `IOHDIXController` → `IOHDIXHDDriveOutKernel`, whose `image-path` property names the backing file but
   carries no pid; its user client's `IOUserClientCreator` does, as a sentence, which is why the plist won.
+- **The DiskImages2 server is a different process, under a different uid** (macOS 27.0.1, 2026-10-30; first seen on a
+  real USB stick, #246). `open -g` of a `.dmg` on another image's volume, and `diskutil image attach` of one, each start
+  a `/usr/libexec/diskimagesiod` of its own: uid 271, parent launchd, and one process per image (pids 53397 and 55913
+  side by side). `hdiutil attach` keeps its uid 501 `diskimages-helper`. `hdiutil info -plist` reads `diskimages2` true
+  and `hdid-pid` the daemon's pid, and `diskutil unmount` of the outer volume says
+  `dissented by PID 53397 (/usr/libexec/diskimagesiod)`, parent `/sbin/launchd`. A same-uid walk can't see it, so only
+  the image list names it.
 - **Not run** (new risk): the self-holder reproduction.
 
 ## What the landed approver confirmed

@@ -27,6 +27,9 @@ pub(super) struct AttachedImage {
     /// open. Absent for an image nothing backs.
     #[serde(rename = "hdid-pid")]
     pub hdid_pid: Option<u32>,
+    /// Whether DiskImages2 serves it, which makes `hdid_pid` a `diskimagesiod`.
+    #[serde(default)]
+    pub diskimages2: bool,
     #[serde(rename = "system-entities", default)]
     pub entities: Vec<SystemEntity>,
 }
@@ -571,6 +574,7 @@ mod tests {
         attached.images.push(AttachedImage {
             image_path: inner.clone(),
             hdid_pid: None,
+            diskimages2: false,
             entities: vec![SystemEntity {
                 dev_entry: "/dev/disk7".to_string(),
                 mount_point: None,
@@ -604,6 +608,7 @@ mod tests {
         AttachedImage {
             image_path: PathBuf::from(path),
             hdid_pid: None,
+            diskimages2: false,
             entities: entities
                 .iter()
                 .map(|(dev_entry, mount_point)| SystemEntity {

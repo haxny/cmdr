@@ -179,6 +179,46 @@ async fn a_disk_image_stored_on_the_drive_is_named_as_one() {
     );
 }
 
+/// ❗ The same shape, opened the way Finder opens an image: `diskimagesiod` serves it under
+/// its own uid, so the holder walk can't see it and the classifier above never gets a pid
+/// to ask about. The refusal still has to say "eject that image first", because "wait a
+/// minute" never frees the drive.
+///
+/// Through the whole production path, unlike the pin above, because here the drive is a
+/// volume of its own.
+#[tokio::test]
+#[ignore = "attaches two real HFS+ disk images, one stored on the other; run with --run-ignored"]
+async fn an_image_a_daemon_of_another_uid_serves_still_reads_as_a_disk_image() {
+    let session = DiskImageSession::acquire();
+    let drive = DiskImage::attach(&session, ImageSpec::Hfs).expect("attach the drive");
+    let stored = drive
+        .attach_stored_here(&session)
+        .expect("attach the image stored on it");
+    assert!(
+        stored.served_by_diskimages2().expect("hdiutil info"),
+        "this pin is about the daemon, and a same-uid helper would prove nothing"
+    );
+    let serving = stored
+        .serving_pid()
+        .expect("hdiutil names the daemon serving the image");
+    let mount_point = drive.volumes()[0].mount_point.clone();
+
+    let result = eject_through_the_production_retries(&drive, &mount_point).await;
+
+    let holders = holders_of(&result);
+    assert_eq!(
+        kind_of(holders, serving),
+        Some(HolderKind::DiskImage),
+        "the daemon the walk can't see still answers as the image it serves, got {holders}"
+    );
+    assert!(
+        matches!(holders, HolderScan::Complete { .. }),
+        "and the scan covered the one mount it was asked about, got {holders}"
+    );
+    assert!(is_mounted(&mount_point), "a refused eject leaves the drive mounted");
+    drop(stored);
+}
+
 // ── The whole physical disk (M12) ─────────────────────────────────
 
 /// The physical disk under `mount_point`, as `eject_now` resolves it.

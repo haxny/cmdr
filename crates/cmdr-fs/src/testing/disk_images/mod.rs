@@ -311,8 +311,9 @@ pub struct DiskImage {
     /// how `hdiutil info` spells it back.
     image_path: PathBuf,
     volumes: Vec<MountedVolume>,
-    /// Dropped after `Drop::drop` runs, so the file outlives the detach.
-    _dir: TestDir,
+    /// Dropped after `Drop::drop` runs, so the file outlives the detach. `None` for an
+    /// image stored on another image's volume, whose teardown takes the file with it.
+    _dir: Option<TestDir>,
 }
 
 impl DiskImage {
@@ -433,10 +434,52 @@ impl DiskImage {
             session: Arc::clone(session),
             image_path,
             volumes: Vec::new(),
-            _dir: dir,
+            _dir: Some(dir),
         };
         image.volumes = image.mounted_volumes(&[volume_name])?;
         Ok(image)
+    }
+
+    /// Attaches a fresh image whose backing file sits on this image's first volume, the
+    /// way Finder attaches one: through DiskImages2, so a `diskimagesiod` the same-uid
+    /// holder walk can't see serves it. That's the shape of a `.dmg` opened from a USB
+    /// stick.
+    ///
+    /// ❗ Drop it BEFORE this image: while it's attached, this one can't detach.
+    pub fn attach_stored_here(&self, session: &Arc<DiskImageSession>) -> Result<Self, HarnessError> {
+        let volume_name = session.unique_volume_name();
+        let image_path = self.volume(0)?.mount_point.join("image.dmg");
+        session.run(
+            &image_path,
+            Call::Create {
+                image: &image_path,
+                size: "16m",
+                fs: CreateFs::HfsPlus,
+                layout: CreateLayout::Gpt,
+                volume_name: &volume_name,
+                sparse: false,
+            },
+        )?;
+        session.run(&image_path, Call::AttachThroughDaemon { image: &image_path })?;
+        session.images.lock_ignore_poison().push(image_path.clone());
+        // Attached from here on: the guard exists before anything else can fail.
+        let mut image = Self {
+            session: Arc::clone(session),
+            image_path,
+            volumes: Vec::new(),
+            _dir: None,
+        };
+        image.volumes = image.mounted_volumes(&[&volume_name])?;
+        Ok(image)
+    }
+
+    /// Whether DiskImages2 serves this image, so its serving process is a `diskimagesiod`.
+    pub fn served_by_diskimages2(&self) -> Result<bool, HarnessError> {
+        let attached = self.session.attached_images()?;
+        Ok(attached
+            .images
+            .iter()
+            .any(|image| image.image_path == self.image_path && image.diskimages2))
     }
 
     /// The mounted volumes, in the order the spec names them.

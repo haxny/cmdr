@@ -219,7 +219,7 @@ fn a_deadline_that_has_already_passed_classifies_nobody_rather_than_running_over
     let mut named = Vec::new();
     name_the_kinds(
         &[std::process::id()],
-        &[],
+        &Surroundings::new(Some(Vec::new())),
         Instant::now() - Duration::from_secs(1),
         |pid, what| named.push((pid, what)),
     );
@@ -232,10 +232,32 @@ fn a_deadline_that_has_already_passed_classifies_nobody_rather_than_running_over
 #[test]
 fn asking_about_no_holders_at_all_does_nothing() {
     let mut named = Vec::new();
-    name_the_kinds(&[], &[], Instant::now() + Duration::from_secs(30), |pid, what| {
-        named.push((pid, what));
-    });
+    name_the_kinds(
+        &[],
+        &Surroundings::new(Some(Vec::new())),
+        Instant::now() + Duration::from_secs(30),
+        |pid, what| named.push((pid, what)),
+    );
     assert!(named.is_empty());
+}
+
+#[test]
+fn a_deadline_that_has_already_passed_adds_no_images() {
+    let missed = images_the_walk_missed(
+        &[],
+        &Surroundings::new(Some(vec![1])),
+        Instant::now() - Duration::from_secs(1),
+    );
+    assert!(missed.is_empty(), "got {missed:?}");
+}
+
+#[test]
+fn a_drive_nothing_could_identify_adds_no_images() {
+    // ❗ Asking `hdiutil` here would have nothing to compare a backing file against, and an
+    // unreadable target is "couldn't tell", ❌ never a reason to name an image.
+    let later = Instant::now() + Duration::from_secs(30);
+    assert!(images_the_walk_missed(&[], &Surroundings::new(None), later).is_empty());
+    assert!(images_the_walk_missed(&[], &Surroundings::new(Some(Vec::new())), later).is_empty());
 }
 
 // ── The real signals ──────────────────────────────────────────────
@@ -246,7 +268,7 @@ fn the_running_process_classifies_itself_as_cmdr() {
     let mut named = Vec::new();
     name_the_kinds(
         &[std::process::id()],
-        &[],
+        &Surroundings::new(Some(Vec::new())),
         Instant::now() + Duration::from_secs(30),
         |pid, what| named.push((pid, what.kind)),
     );

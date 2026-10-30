@@ -227,6 +227,32 @@ fn a_holder_the_facts_never_reached_keeps_its_name_and_stays_unclassified() {
     );
 }
 
+#[test]
+fn a_holder_the_walk_couldnt_see_joins_after_the_ones_it_named_and_keeps_the_arm() {
+    let image = VolumeHolder {
+        pid: 53397,
+        name: "Installer".to_string(),
+        bundle_id: None,
+        kind: HolderKind::DiskImage,
+    };
+
+    let mut complete = HolderScan::Complete {
+        named: vec![holder(7, "sleep")],
+    };
+    add_holders(&mut complete, std::slice::from_ref(&image));
+    assert_eq!(
+        complete,
+        HolderScan::Complete {
+            named: vec![holder(7, "sleep"), image.clone()]
+        }
+    );
+
+    // ❗ An image found doesn't make a scan that ran out of budget the whole story.
+    let mut incomplete = HolderScan::Incomplete { named: Vec::new() };
+    add_holders(&mut incomplete, std::slice::from_ref(&image));
+    assert_eq!(incomplete, HolderScan::Incomplete { named: vec![image] });
+}
+
 // ── The words a log and an MCP reply read ─────────────────────────
 
 #[test]

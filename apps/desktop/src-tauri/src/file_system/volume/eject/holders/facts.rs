@@ -22,6 +22,11 @@
 //!    [`HolderKind::Tool`]. A signature nothing could read stays
 //!    [`HolderKind::Unclassified`], since "tool" would be a guess.
 //!
+//! ❗ **Those rules only ever see a process the walk could name**, and the walk sees
+//! same-uid processes alone. An image's server can run under another uid, so
+//! [`images_the_walk_missed`] adds those images as holders of their own, from the attached
+//! image list. Rule 3 answers for the servers the walk does see.
+//!
 //! ❗ **Run a code-signing query only when the executable is known to be off every target
 //! mount.** `SecCodeCopyGuestWithAttributes` reads the binary, which puts Cmdr itself in
 //! the kernel's holder list for the very volume it's letting go of: measured at 4.5 s,
@@ -161,15 +166,11 @@ pub(super) fn rename(holder: &mut VolumeHolder, what: &Classified) {
 /// `Unclassified`.
 pub(super) fn name_the_kinds(
     pids: &[u32],
-    paths: &[PathBuf],
+    about: &Surroundings,
     deadline: Instant,
     mut record: impl FnMut(u32, Classified),
 ) {
-    if pids.is_empty() {
-        return;
-    }
     let ours = std::process::id();
-    let about = Surroundings::new(target_devices(paths));
     for (done, pid) in pids.iter().enumerate() {
         if Instant::now() >= deadline {
             log::info!(
@@ -181,8 +182,20 @@ pub(super) fn name_the_kinds(
         }
         // Every AppKit and Core Foundation object below is autoreleased, and this thread
         // has no run loop to drain a pool of its own.
-        record(*pid, platform::within_pool(|| classify(&gather(*pid, ours, &about))));
+        record(*pid, platform::within_pool(|| classify(&gather(*pid, ours, about))));
     }
+}
+
+/// Every disk image stored on the drive whose server the walk didn't name, as a holder.
+///
+/// ❗ Runs after [`name_the_kinds`] on the same thread: it `lstat`s each attached image's
+/// backing file, which can hang on one stored on a wedged share, and by then every other
+/// answer has already landed. Stops at `deadline` like the facts do.
+pub(super) fn images_the_walk_missed(walked: &[u32], about: &Surroundings, deadline: Instant) -> Vec<VolumeHolder> {
+    if Instant::now() >= deadline {
+        return Vec::new();
+    }
+    about.images_unseen_by(walked)
 }
 
 /// The devices of the mounts being torn down, for rule 5's "is this executable on the
@@ -194,7 +207,7 @@ pub(super) fn name_the_kinds(
 /// names the sealed system snapshot rather than the mount (§ "Spike results" 8). `None`
 /// means at least one root couldn't be identified, ❌ never that the known roots are the
 /// whole drive.
-fn target_devices(paths: &[PathBuf]) -> Option<Vec<u64>> {
+pub(super) fn target_devices(paths: &[PathBuf]) -> Option<Vec<u64>> {
     paths.iter().map(|path| super::root_device(path)).collect()
 }
 
@@ -203,8 +216,8 @@ fn target_devices(paths: &[PathBuf]) -> Option<Vec<u64>> {
 pub(super) struct Surroundings {
     /// The device of every mount being torn down, or `None` when any was unreadable.
     targets: Option<Vec<u64>>,
-    /// The attached disk images, read at most once per scan and only when a holder gets
-    /// as far as rule 3. `None` inside means nothing could be read.
+    /// The attached disk images, read at most once per scan. `None` inside means nothing
+    /// could be read.
     images: std::cell::OnceCell<Option<Vec<nested_images::AttachedImage>>>,
 }
 
@@ -225,6 +238,25 @@ impl Surroundings {
         }
         let images = self.images.get_or_init(nested_images::attached).as_ref()?;
         nested_images::stored_on(images, pid, targets, device_of).map(|image| image.name.clone())
+    }
+
+    /// The images stored on the drive that no pid in `walked` serves, as holders.
+    fn images_unseen_by(&self, walked: &[u32]) -> Vec<VolumeHolder> {
+        let Some(targets) = self.targets.as_ref().filter(|targets| !targets.is_empty()) else {
+            return Vec::new();
+        };
+        let Some(images) = self.images.get_or_init(nested_images::attached).as_ref() else {
+            return Vec::new();
+        };
+        nested_images::unseen_on(images, walked, targets, device_of)
+            .into_iter()
+            .map(|image| VolumeHolder {
+                pid: image.pid,
+                name: image.name.clone(),
+                bundle_id: None,
+                kind: HolderKind::DiskImage,
+            })
+            .collect()
     }
 
     /// Whether `pid`'s executable lives on the drive being ejected, or `None` when
