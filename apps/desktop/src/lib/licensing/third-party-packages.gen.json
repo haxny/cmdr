@@ -1241,6 +1241,12 @@
     },
     {
       "name": "foldhash",
+      "version": "0.1.5",
+      "license": "Zlib",
+      "url": "https://github.com/orlp/foldhash"
+    },
+    {
+      "name": "foldhash",
       "version": "0.2.0",
       "license": "Zlib",
       "url": "https://github.com/orlp/foldhash"
@@ -1746,6 +1752,12 @@
     {
       "name": "hashbrown",
       "version": "0.14.5",
+      "license": "MIT OR Apache-2.0",
+      "url": "https://github.com/rust-lang/hashbrown"
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.15.5",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/rust-lang/hashbrown"
     },
@@ -3941,7 +3953,7 @@
     },
     {
       "name": "tauri-plugin-updater",
-      "version": "2.14.0",
+      "version": "2.14.1",
       "license": "Apache-2.0 OR MIT",
       "url": "https://github.com/tauri-apps/plugins-workspace"
     },
