@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "Ez a telefon privátként kezeli ezt a mappát",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Az Android ezt a mappát a rendszernek és az appjainak tartja fenn, ezért a Cmdr nem tudja megnyitni. A telefonoddal és a kapcsolattal nincs semmi probléma.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "A fotóid, a letöltéseid és a többi fájlod a telefon közös tárhelyén van, ezért próbálj ott egy mappát.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "A szerver nem nyitja meg ezt a mappát",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "Ez a mappa egy szerveren van, és annak a fióknak, amellyel csatlakoztál, nincs engedélye megnyitni. Ezt a szerver dönti el, ezért ezen a számítógépen semmilyen beállítás nem változtat rajta.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Ezeket próbálhatod:\n- Ellenőrizd a mappa engedélyeit a szerveren\n- Egyes mappák a szerver saját rendszerfiókjához tartoznak, és mindenki más elől zárva maradnak\n- Csatlakozz egy olyan fiókkal, amelynek van hozzáférése",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "Már létezik",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -1729,6 +1753,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Az Android ezt a helyet a rendszernek és az appjainak tartja fenn. A fotóid, a letöltéseid és a többi fájlod a telefon közös tárhelyén van, ezért próbálj ott egy mappát.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "A szerver elutasította ezt annál a fióknál, amellyel csatlakoztál. Ellenőrizd a mappa engedélyeit a szerveren, vagy csatlakozz egy olyan fiókkal, amelynek van hozzáférése.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "A szolgáltató elutasította, és ez kétfélét jelenthet. Ellenőrizd a hozzáférési kulcs engedélyeit, vagy nézd meg a szolgáltatód konzolján, nincs-e felhasználási korlát vagy számlázási értesítés.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2261,29 +2293,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "Valami még nyitva tart ott fájlokat. Zárd be a nyitott fájlokat és alkalmazásokat, majd próbáld újra.",
+  "errors.eject.unmountRefused": "Ott még használatban van valami. Zárd be a nyitott fájlokat és alkalmazásokat, majd próbáld újra.",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} még nyitva tart ott fájlokat. Zárd be őket, majd próbáld újra.",
+  "errors.eject.unmountRefusedByApp": "{app} még használ ott valamit. Zárd be az appot, majd próbáld újra.",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} még nyitva tartanak ott fájlokat. Zárd be őket, majd próbáld újra.",
+  "errors.eject.unmountRefusedByApps": "{apps} még használnak ott valamit. Zárd be ezeket az appokat, majd próbáld újra.",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "egyéb alkalmazások",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "Egy {process} nevű folyamat még nyitva tart ott fájlokat. (A Cmdr nem ismeri az app nevét, csak a folyamatét.)",
+  "errors.eject.unmountRefusedByProcess": "Egy {process} nevű folyamat még használ ott valamit. (A Cmdr nem ismeri az app nevét, csak a folyamatét.)",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "{countText} folyamat még nyitva tart ott fájlokat: {processes}. (A Cmdr nem ismeri az appok nevét, csak a folyamatokét.)",
+  "errors.eject.unmountRefusedByProcesses": "{countText} folyamat még használ ott valamit: {processes}. (A Cmdr nem ismeri az appok nevét, csak a folyamatokét.)",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "egyéb folyamatok",
   "@errors.eject.otherProcesses": {
@@ -2293,13 +2325,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "A macOS még nyitva tart ott fájlokat. Várj egy percet, majd próbáld újra.",
+  "errors.eject.unmountRefusedBySystem": "A macOS még használ ott valamit. Várj egy percet, majd próbáld újra.",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "Maga a Cmdr még nyitva tart ott fájlokat. Várj egy pillanatot, és próbáld újra, vagy küldj jelentést, ha továbbra is előfordul.",
+  "errors.eject.unmountRefusedByCmdr": "Maga a Cmdr még használ ott valamit. Várj egy pillanatot, és próbáld újra, vagy küldj jelentést, ha továbbra is előfordul.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "A meghajtó még nem válaszolt, de a kiadás magától is befejeződhet.",
   "@errors.eject.timedOut": {

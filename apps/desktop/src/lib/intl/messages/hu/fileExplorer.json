@@ -196,6 +196,18 @@
   "@fileExplorer.paneBoundary.reload": {
     "sourceHash": "a53cfeb"
   },
+  "fileExplorer.pane.ejectedDriveStaysToast": "{volumeName} kiadva, de hagyd csatlakoztatva a meghajtót: a rajta lévő többi kötet még csatolva van.",
+  "@fileExplorer.pane.ejectedDriveStaysToast": {
+    "sourceHash": "12eac5d"
+  },
+  "fileExplorer.pane.ejectAllFailedToast": "Nem sikerült mindent kiadni ezen a meghajtón: {message}",
+  "@fileExplorer.pane.ejectAllFailedToast": {
+    "sourceHash": "d824a11"
+  },
+  "fileExplorer.pane.ejectAllHeldToast": "Ezen a meghajtón semmit sem adott ki a Cmdr: {message}",
+  "@fileExplorer.pane.ejectAllHeldToast": {
+    "sourceHash": "9ef094c"
+  },
   "fileExplorer.pane.ejectFailedToast": "Nem sikerült kiadni: {volumeName}: {message}",
   "@fileExplorer.pane.ejectFailedToast": {
     "sourceHash": "f4072a7"
@@ -1879,6 +1891,14 @@
   "fileExplorer.navigation.forgetSecretNoneToast": "Nem volt mentett jelszó ehhez: „{name}”.",
   "@fileExplorer.navigation.forgetSecretNoneToast": {
     "sourceHash": "3d40a09"
+  },
+  "fileExplorer.navigation.ejectOneVolumeTooltip": "Csak ezt a kötetet adja ki. A meghajtó addig csatlakoztatva marad, amíg a többi kötetet is ki nem adod.",
+  "@fileExplorer.navigation.ejectOneVolumeTooltip": {
+    "sourceHash": "e1dd1cc"
+  },
+  "fileExplorer.navigation.ejectAllTooltip": "Kiadja a meghajtó összes kötetét, így kihúzhatod.",
+  "@fileExplorer.navigation.ejectAllTooltip": {
+    "sourceHash": "9e86249"
   },
   "fileExplorer.navigation.ejectVolumeAriaLabel": "{name} kiadása",
   "@fileExplorer.navigation.ejectVolumeAriaLabel": {
