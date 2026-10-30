@@ -1125,7 +1125,10 @@ also ADB, whose errno is the DEVICE's) carries `None`. A path whose scheme names
 its refusal from there, errno or not (`WriteOperationError::refused_by`, so NFS's `EACCES` isn't read as this Mac's
 folder permissions): `Phone` and `Server`, whose advice can't mention this Mac, and `ObjectStoreAccount`, where the
 key's permissions or a provider that paused the account (a usage cap, a billing hold) answer alike, so its advice names
-both. The rest with no errno stays `Unclassified`.
+both. A mounted SMB, AFP, or NFS share has no scheme, so `WriteOperationError::permission_denied` asks
+`tcc_paths::mounted_share_refused` (`statfs`, with TCC ruled out, the same answer the pane's `RemotePermissionDenied`
+gives): it's `Server` too, whatever the errno, and names no folder, or a refused delete sends someone to Finder's Locked
+box for a file on a NAS. The rest with no errno stays `Unclassified`.
 
 **Why the folder is PROVED, never inferred.** A `rename(2)` needs write access to both parent folders, a `unlink(2)` to
 the one it removes from, and a `create_dir_all` to the deepest ancestor that exists; no errno says which refused. So

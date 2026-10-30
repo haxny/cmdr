@@ -114,9 +114,9 @@ pub enum PermissionRefusal {
     /// A phone (ADB, MTP) refused: Android keeps the path for the system and its
     /// apps. ❌ Never macOS or Finder advice.
     Phone,
-    /// A connected server (SFTP, WebDAV, NFS) refused the account or identity it
-    /// was connected with. ❌ Never macOS or Finder advice, even when the backend
-    /// carries an errno (NFS's `NFS3ERR_ACCES` is `EACCES`).
+    /// A connected server (SFTP, WebDAV, NFS, or a mounted SMB/AFP/NFS share) refused
+    /// the account or identity it was connected with. ❌ Never macOS or Finder advice,
+    /// even when the backend carries an errno (NFS's `NFS3ERR_ACCES` is `EACCES`).
     Server,
 }
 
@@ -762,7 +762,11 @@ impl WriteOperationError {
     /// The one way to build [`PermissionDenied`](Self::PermissionDenied).
     ///
     /// It derives `refusal` from `errno`, so no caller can ship a variant whose
-    /// advice contradicts the errno it was built from.
+    /// advice contradicts the errno it was built from. ❗ Except on a mounted network
+    /// share, which has no scheme for [`refused_by`](Self::refused_by) to read: there
+    /// the file server said no, whatever the errno, and Finder's Locked box or this
+    /// Mac's folder permissions are the wrong advice. Costs a `statfs` (and a directory
+    /// read on the share) on a refusal under `/Volumes`, and nothing elsewhere.
     pub fn permission_denied(
         path: String,
         message: String,
@@ -770,11 +774,31 @@ impl WriteOperationError {
         refused_folder: Option<String>,
         side: Option<PermissionSide>,
     ) -> Self {
+        let server_refused = cmdr_fs::tcc_paths::mounted_share_refused(std::path::Path::new(&path));
+        Self::permission_denied_on(path, message, errno, refused_folder, side, server_refused)
+    }
+
+    /// [`permission_denied`](Self::permission_denied) with the mount's answer passed in,
+    /// so a test needs no live share.
+    fn permission_denied_on(
+        path: String,
+        message: String,
+        errno: Option<i32>,
+        refused_folder: Option<String>,
+        side: Option<PermissionSide>,
+        server_refused: bool,
+    ) -> Self {
+        let (refusal, refused_folder) = if server_refused {
+            // No folder: `access(W_OK)` only speaks for this Mac's view of a share.
+            (PermissionRefusal::Server, None)
+        } else {
+            (PermissionRefusal::from_errno(errno), refused_folder)
+        };
         Self::PermissionDenied {
             path,
             message: message.into(),
             errno,
-            refusal: PermissionRefusal::from_errno(errno),
+            refusal,
             refused_folder,
             side,
         }
@@ -843,3 +867,6 @@ pub struct OversizedFile {
     pub name: String,
     pub size: u64,
 }
+
+#[cfg(test)]
+mod permission_denied_tests;

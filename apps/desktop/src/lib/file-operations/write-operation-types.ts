@@ -172,9 +172,9 @@ export type UnwritableReason = 'readOnlyFilesystem' | 'noPermission' | 'unexplai
  * backend that words its own refusals (MTP, SMB) or an errno outside the two.
  * `objectStoreAccount` is an S3 account refusing: its keys, or a provider that
  * paused it (a usage cap, a billing hold), which one answer covers. `phone` and
- * `server` are a phone or a connected server refusing, whose advice can't mention
- * this Mac. The backend derives it from the errno and the path's scheme, and the
- * frontend ❌ never re-derives one.
+ * `server` are a phone or a connected server (a mounted share included) refusing,
+ * whose advice can't mention this Mac. The backend derives it from the errno, the
+ * path's scheme, and the mount, and the frontend ❌ never re-derives one.
  */
 export type PermissionRefusal =
   | 'folderPermissions'

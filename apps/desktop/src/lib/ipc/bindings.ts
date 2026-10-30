@@ -14487,9 +14487,9 @@ export type PermissionRefusal =
    */
   | 'phone'
   /**
-   *  A connected server (SFTP, WebDAV, NFS) refused the account or identity it
-   *  was connected with. ❌ Never macOS or Finder advice, even when the backend
-   *  carries an errno (NFS's `NFS3ERR_ACCES` is `EACCES`).
+   *  A connected server (SFTP, WebDAV, NFS, or a mounted SMB/AFP/NFS share) refused
+   *  the account or identity it was connected with. ❌ Never macOS or Finder advice,
+   *  even when the backend carries an errno (NFS's `NFS3ERR_ACCES` is `EACCES`).
    */
   | 'server'
 
