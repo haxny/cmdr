@@ -43,9 +43,11 @@ chain materialization uses for a single path):
   spawned only once it holds a budget slot, so it's never the wait for a slot that burns the clock; it's the in-flight
   listings parked inside the backend. On a Pixel, a walk throttled 64 → 1 timed out 26 healthy folders exactly 120 s
   after the throttle began, and each became `Abandoned` for up to a day (#835, verified on Pixel 9 Pro XL, dev build,
-  2026-10-30). A round trip the device never answers runs the clock, so it still times out; a sibling queued behind that
-  wedged lock gives up on MTP's own `DEVICE_LOCK_WAIT_SECS` (300 s) instead. A backend that never pauses (SMB, ADB,
-  in-memory) keeps plain wall-clock behavior. Pinned by `tests/listing_timeout.rs`.
+  2026-10-30). ❗ A pause has no bound of its own, so a backend's wake has to reach every parked listing: MTP's once
+  reached one, and the rest stalled the walk until the next foreground op (`cmdr-mtp` `connection/DETAILS.md`). A round
+  trip the device never answers runs the clock, so it still times out; a sibling queued behind that wedged lock gives up
+  on MTP's own `DEVICE_LOCK_WAIT_SECS` (300 s) instead. A backend that never pauses (SMB, ADB, in-memory) keeps plain
+  wall-clock behavior. Pinned by `tests/listing_timeout.rs`.
 - **`autoreleasepool`-drained per listing on macOS**: the SMB listing path touches NSURL/`NSString`-adjacent ObjC, and
   unpooled autoreleases leak multi-GB over a long walk (same rule as the writer thread). We can't hold an
   `autoreleasepool` guard across an `.await` (it isn't `Send`), so we drain AFTER the await resolves

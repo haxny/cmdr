@@ -28,16 +28,20 @@ already protocol-serial-correct via its per-transaction `operation_lock`):
 plus a `tokio::sync::Notify`. It owns no device handle and does no I/O, so its ordering is unit-tested with synthetic
 counters (`scheduler.rs` tests).
 
-- `foreground_guard()` (RAII): increments the counter on entry, decrements on drop, and `notify_one`s when it hits zero.
-  Every foreground device op takes one for its whole lifetime (`MtpConnectionManager::foreground_guard(device_id)`).
-- `background_yield_point()`: `while foreground_pending > 0 { drained.notified().await }`. The scan calls it between
-  units. Returns immediately at zero pending, so an idle scan never stalls.
+- `foreground_guard()` (RAII): increments the counter on entry, decrements on drop, and `notify_waiters`es when it hits
+  zero. Every foreground device op takes one for its whole lifetime
+  (`MtpConnectionManager::foreground_guard(device_id)`).
+- `background_yield_point()`: in a loop, registers a `drained.notified()` future (`enable`), returns if the counter is
+  zero, else awaits it. The scan calls it between units. Returns immediately at zero pending, so an idle scan never
+  stalls.
 
-We use `notify_one`, NOT `notify_waiters`: `notify_one` STORES a permit when no waiter is parked, so a foreground drain
-that races the yield point's check-then-await is not lost (the stored permit makes the `.await` return, and the `while`
-re-reads the counter). A leftover permit at most causes one extra wake on a later yield, which re-checks and re-parks —
-never a wrong "proceed", since the loop gates on the counter, not the wake. `notify_waiters` keeps no permit and would
-deadlock on that race.
+**The drain wakes EVERY parked unit, ❌ never `notify_one`.** A walk keeps many listings in flight and each parks here
+on its own, so `notify_one` freed one and left the rest asleep until the next foreground op. On an idle pane that's
+never: the walk froze the moment browsing stopped, and before the clock below stopped counting the wait, those sleepers
+were the healthy folders timing out exactly `LIST_TIMEOUT` after the throttle began (verified on Pixel 9 Pro XL, Android
+17, dev build, the log's `reconciling…` line stopping until the next pane listing, 2026-10-30). `notify_waiters` keeps
+no permit, which is why a unit registers BEFORE reading the counter: a drain after the read reaches the registered
+future, and a drain before it reads as zero. The loop gates on the counter, not the wake, so a stale wake just re-parks.
 
 **Per-unit scan listing (`list_directory_for_scan`).** Splits one folder into bounded UNITS, each a separate device-lock
 acquisition with a yield point between:
@@ -145,7 +149,7 @@ resolve fails cleanly, matching the existing per-storage skip.
 only OS lock and always released at a unit boundary — no lock-ordering cycle. Foreground never waits on
 `background_yield_point` (it only raises the counter and contends for the device lock, which the scan holds for ≤ one
 batch). Background always progresses when idle (the yield returns at zero pending) and a parked scan is always woken
-(the last guard drop decrements to zero and `notify_one`s). No priority inversion: the scan yields at every unit
+(the last guard drop decrements to zero and wakes them all). No priority inversion: the scan yields at every unit
 boundary and foreground gets the device after the current in-flight transaction (mtp-rs guarantees it's atomic and
 bounded). The scan's `cancelled` flag is checked at every unit boundary AND threaded into `mtp-rs` per `GetObjectInfo`,
 so a cancel stops within one round trip; heal-to-rescan, freshness, and buffer/replay/overflow are untouched.
