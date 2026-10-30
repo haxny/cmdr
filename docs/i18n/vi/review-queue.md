@@ -104,3 +104,7 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   (`fileOperations.delete.cloudOnlineOnly*Warning`).
 - **Multi-rename media button** (`multiRename.mediaButton` = `đa phương tiện`): about 3× the English `media` in a tight
   row of bracket buttons; if it clips, the fallback is the loanword `media` (with `Trường media` for the aria sibling).
+
+- **`phần của ổ đĩa`** (`fileExplorer.navigation.ejectOneVolumeTooltip`, `.ejectAllTooltip`,
+  `fileExplorer.pane.ejectedDriveStaysToast`): vi uses `ổ đĩa` for both drive and volume, so these say "part of the
+  drive" where a volume stands beside its drive. Confirm it reads naturally.

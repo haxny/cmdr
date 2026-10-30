@@ -7,6 +7,12 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 
 ## Open
 
+- `fileExplorer.pane.ejectAllFailedToast`, `.ejectAllHeldToast`: the descriptions call `{message}` one sentence, but the
+  `errors.eject.unmountRefused*` reasons they carry run to two ("… is still using something there. Close it, then try
+  again."). Say so, or pick a one-sentence variant. (all)
+- `errors.eject.unmountRefusedByApp`, `…ByApps`: nothing in the descriptions says "it" / "them" now means the app, and
+  `{app}` may be a command-line tool, so "close it" is loose for those. Locales repeat the noun "app" (no pronoun for an
+  insert). (all)
 - `servers.sheet.nfsExportsEmptyList`: one string covers "the server listed none" and "not asked yet"; split the key if
   the two should read differently. (hu, nl, ru, vi)
 - The termbase matcher now skips paths and domains, but it still can't tell one sense of a word from another (verb

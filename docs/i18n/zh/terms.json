@@ -2246,7 +2246,7 @@
     "sources": "Finder wording for evicted files"
   },
   "open": {
-    "accept": ["开着"],
+    "accept": ["开着", "打不开"],
     "chosen": "打开",
     "confidence": "high",
     "exceptions": {
@@ -3982,6 +3982,7 @@
     "chosen": "占用中",
     "confidence": "high",
     "forms": "the greyed menu marker: base label + （占用中）",
-    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)"
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)",
+    "accept": ["忙"]
   }
 }

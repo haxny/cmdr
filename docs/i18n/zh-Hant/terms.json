@@ -2637,7 +2637,7 @@
     "sources": "catalog fileOperations.delete.cloudOnlineOnly* (draft, not yet reviewed); Finder 僅限線上"
   },
   "open": {
-    "accept": ["打開", "開著", "開了"],
+    "accept": ["打開", "開著", "開了", "打不開"],
     "avoid": [
       {
         "form": "打開",
@@ -4567,6 +4567,7 @@
     "chosen": "使用中",
     "confidence": "high",
     "forms": "the greyed menu marker: base label + （使用中）",
-    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)"
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)",
+    "accept": ["忙"]
   }
 }

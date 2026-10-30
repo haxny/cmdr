@@ -4153,7 +4153,7 @@
     "sources": "AOSP frameworks/base core/res values-de storage_internal (read 2026-10-30): Interner gemeinsamer Speicher"
   },
   "this-computer": {
-    "accept": ["Computer"],
+    "accept": ["Computer", "Mac"],
     "chosen": "dieser Computer",
     "confidence": "high",
     "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
@@ -4162,6 +4162,7 @@
     "chosen": "in Benutzung",
     "confidence": "high",
     "forms": "the greyed menu marker: the base label word for word, then (in Benutzung)",
-    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)"
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)",
+    "accept": ["ausgelastet"]
   }
 }

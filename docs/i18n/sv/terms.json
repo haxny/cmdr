@@ -1088,7 +1088,7 @@
     "sources": "macOS Finder (Redigera)"
   },
   "eject": {
-    "accept": ["matar ut", "matas ut", "matades ut", "utmatning", "mata sedan ut"],
+    "accept": ["matar ut", "matas ut", "matades ut", "utmatning", "mata sedan ut", "matats ut", "utmatad"],
     "chosen": "mata ut",
     "confidence": "high",
     "decision": "Eject and disconnect errors",

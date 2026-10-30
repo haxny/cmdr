@@ -108,3 +108,7 @@ item once settled, and record the outcome in `terms.json` or `decisions.md`.
 
 - **security advisory → `бюллетень безопасности`** (`updates.toast.readAdvisory`, `whatsNew.securityNotice.*`):
   Microsoft says `советы по безопасности`, which reads as tips; `уведомление о безопасности` is the alternative.
+
+- **`общий накопитель`** (`errors.listing.phoneRefused.suggestion`, `errors.write.permissionDenied.suggestion.phone`):
+  Android's own `storage_internal` wording, against the storage ruling's `память телефона`. Confirm which a Russian
+  phone owner expects.

@@ -3319,7 +3319,7 @@
   },
   "unplug": {
     "chosen": "desconectado",
-    "accept": ["desconect"],
+    "accept": ["desconect", "conectado"],
     "forms": "was disconnected → foi desconectado (the noun disco first, so the participle agrees with it)",
     "confidence": "high",
     "sources": "shipped pt catalog",
@@ -3698,7 +3698,7 @@
     "sources": "English `shared storage` over AOSP values-pt-rBR storage_internal (read 2026-10-30): Divisão interna de armazenamento, which reads as a partition"
   },
   "this-computer": {
-    "accept": ["computador"],
+    "accept": ["computador", "máquina"],
     "chosen": "este computador",
     "confidence": "high",
     "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"

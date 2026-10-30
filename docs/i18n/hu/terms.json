@@ -110,7 +110,12 @@
     "sources": "ms (client: an entity that connects to another over a network → kliens)"
   },
   "ai-context": {
-    "avoid": [{ "form": "környezet", "why": "reads as environment, the MS execution-context sense" }],
+    "avoid": [
+      {
+        "form": "környezet",
+        "why": "reads as environment, the MS execution-context sense"
+      }
+    ],
     "chosen": "kontextus",
     "confidence": "tentative",
     "sources": "MS terminology has only környezet (the execution-environment sense); kontextus is the AI-context word; askCmdr.cost.estimateTooltip"
@@ -1261,7 +1266,7 @@
   },
   "eject": {
     "chosen": "kiadás",
-    "accept": ["kiad", "add ki", "adható ki"],
+    "accept": ["kiad", "add ki", "adható ki", "adja ki", "ki nem adod", "adott ki"],
     "forms": "Eject → Kiadás; imperative add ki; can't be ejected → nem adható ki; aria {name} kiadása",
     "confidence": "high",
     "sources": "macOS Finder (Kiadás, Egy kiadása, Összes kiadása, NE66)"
@@ -4252,7 +4257,7 @@
     "sources": "AOSP frameworks/base core/res values-hu storage_internal (read 2026-10-30): Belső közös tárhely"
   },
   "this-computer": {
-    "accept": ["számítógép"],
+    "accept": ["számítógép", "gép"],
     "chosen": "ez a számítógép",
     "confidence": "high",
     "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
