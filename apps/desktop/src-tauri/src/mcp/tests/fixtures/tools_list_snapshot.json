@@ -1156,13 +1156,21 @@
     },
     {
       "name": "eject",
-      "description": "Detach a volume by id: eject a disk or disk image, unmount an SMB share, disconnect a phone, or close a connection to an SFTP or WebDAV server. The server stays saved. Answers which teardown ran, and refuses honestly (with a typed outcome in the error data) while an operation is reading from or writing to the volume, and for a volume that can't be detached at all. See cmdr://state volumes for ids.",
+      "description": "Detach a volume by id: eject a disk or disk image, unmount an SMB share, disconnect a phone, or close a connection to an SFTP or WebDAV server. The server stays saved. A volume of a disk that keeps others mounted goes alone, so that disk stays attached unless scope is disk. Answers which teardown ran, and refuses honestly (with a typed outcome in the error data) while an operation is reading from or writing to the volume, and for a volume that can't be detached at all. See cmdr://state volumes for ids.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "volumeId": {
             "type": "string",
             "description": "Volume ID to detach (for example 'vol-…', 'smb-…', 'mtp-…:1', or 'sftp-…'). See cmdr://state volumes."
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "volume",
+              "disk"
+            ],
+            "description": "How much of a physical disk to take down. 'volume' (the default) takes this volume alone while its disk keeps others mounted, and the disk with the last one. 'disk' takes every volume on the disk and the disk, refusing first with outcome 'heldBeforeEject' when someone is holding one."
           }
         },
         "required": [

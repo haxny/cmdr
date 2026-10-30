@@ -352,7 +352,7 @@ mcp_tools! {
         desc: "Detach a volume by id: eject a disk or disk image, unmount an SMB share, disconnect \
                a phone, or close a connection to an SFTP or WebDAV server. The server stays saved. \
                A volume of a disk that keeps others mounted goes alone, so that disk stays attached \
-               unless `scope` is `disk`. Answers which teardown ran, and refuses honestly (with a typed outcome in the error \
+               unless scope is disk. Answers which teardown ran, and refuses honestly (with a typed outcome in the error \
                data) while an operation is reading from or writing to the volume, and for a volume \
                that can't be detached at all. See cmdr://state volumes for ids.",
         schema: schemas::eject_schema(),

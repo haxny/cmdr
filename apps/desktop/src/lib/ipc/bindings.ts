@@ -10011,8 +10011,8 @@ export type HolderKind =
 export type HolderScan =
   /**
    *  Every still-listed mount of the teardown was scanned, so `named` is the whole
-   *  story. Empty means no same-uid process held the drive (a root-owned holder is
-   *  invisible to this scan).
+   *  story. Empty means no same-uid process held the drive and no disk image is stored
+   *  on it (any other holder under another uid is invisible to this scan).
    */
   | {
       type: 'complete'

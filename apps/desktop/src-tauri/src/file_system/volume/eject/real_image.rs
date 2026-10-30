@@ -522,12 +522,10 @@ async fn a_held_volume_refuses_its_eject_and_its_sibling_stays_mounted() {
     drop(holder);
 }
 
-/// A hold on a sibling is none of this volume's business.
-#[tokio::test]
-#[ignore = "attaches a real APFS disk image via hdiutil; run with --run-ignored"]
-async fn a_held_sibling_doesnt_stop_one_volume_going_alone() {
-    let session = DiskImageSession::acquire();
-    let image = DiskImage::attach(&session, ImageSpec::ApfsTwoVolumes).expect("attach the image");
+/// A two-volume APFS image with a file on its second volume held open. Answers the
+/// image, both mount points, and the holder.
+fn two_volumes_with_b_held(session: &Arc<DiskImageSession>) -> (DiskImage, PathBuf, PathBuf, FileHolder) {
+    let image = DiskImage::attach(session, ImageSpec::ApfsTwoVolumes).expect("attach the image");
     let (a, b) = (
         image.volumes()[0].mount_point.clone(),
         image.volumes()[1].mount_point.clone(),
@@ -535,6 +533,15 @@ async fn a_held_sibling_doesnt_stop_one_volume_going_alone() {
     let held = b.join("held.txt");
     std::fs::write(&held, b"held").expect("write the held file");
     let holder = FileHolder::hold(&held).expect("hold the file open");
+    (image, a, b, holder)
+}
+
+/// A hold on a sibling is none of this volume's business.
+#[tokio::test]
+#[ignore = "attaches a real APFS disk image via hdiutil; run with --run-ignored"]
+async fn a_held_sibling_doesnt_stop_one_volume_going_alone() {
+    let session = DiskImageSession::acquire();
+    let (image, a, b, holder) = two_volumes_with_b_held(&session);
 
     let result = eject_alone_through_the_production_retries(&image, 0).await;
 
@@ -608,14 +615,7 @@ async fn a_nobrowse_sibling_has_no_row_so_it_doesnt_keep_the_disk_up() {
 #[ignore = "attaches a real APFS disk image via hdiutil; run with --run-ignored"]
 async fn a_refused_disk_eject_hands_back_only_the_sibling_that_stayed_mounted() {
     let session = DiskImageSession::acquire();
-    let image = DiskImage::attach(&session, ImageSpec::ApfsTwoVolumes).expect("attach the image");
-    let (a, b) = (
-        image.volumes()[0].mount_point.clone(),
-        image.volumes()[1].mount_point.clone(),
-    );
-    let held = b.join("held.txt");
-    std::fs::write(&held, b"held").expect("write the held file");
-    let holder = FileHolder::hold(&held).expect("hold the file open");
+    let (image, a, b, holder) = two_volumes_with_b_held(&session);
 
     let index = Arc::new(FakeIndex::default());
     index.indexes("vol-a");
