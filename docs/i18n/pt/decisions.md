@@ -96,8 +96,9 @@ The non-obvious why behind `terms.json` rulings. Forms: `terms.json`; voice: `st
 
 - Each value follows a colon in `fileExplorer.pane.ejectFailedToast` / `disconnectFailedToast`: a full, capitalized
   sentence. Either may concern a share or a phone, so the frame is
-  `<sujeito> ainda está com arquivos abertos lá. <ação>, depois tente de novo.`, never `este disco` or `ejete-o`.
-- `{app}` opens bare (`mds_stores` isn't an app); `Feche-os` points at `arquivos`. A disk image `ainda está montada`.
+  `<sujeito> ainda está usando algo lá. <ação>, depois tente de novo.`, never `este disco` or `ejete-o`.
+- `{app}` opens bare (`mds_stores` isn't an app); `Feche o app` / `esses apps`. Eject all → `Ejetar tudo` (Finder
+  `N199.1`, in sentence case). A disk image `ainda está montada`.
 
 ## Trash buttons and refusals (`fileOperations.trash.*`, `commands.fileGoToTrash.*`, `errors.write.trashRefused.*`, `fileOperations.delete.cloudOnlineOnly*`)
 

@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "Este celular mantém esta pasta privada",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "O Android reserva esta pasta para o sistema e os apps dele, então o Cmdr não consegue abri-la. Não há nada de errado com o seu celular nem com a conexão.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "Suas fotos, downloads e outros arquivos estão no armazenamento compartilhado do celular, então tente uma pasta lá.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "O servidor não abre esta pasta",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "Esta pasta está em um servidor, e a conta com que você se conectou não tem permissão para abri-la. Quem decide é o servidor, então nenhum ajuste neste computador muda isso.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Veja o que tentar:\n- Verifique as permissões da pasta no servidor\n- Algumas pastas pertencem à conta de sistema do próprio servidor e continuam fechadas para todo mundo\n- Conecte-se com uma conta que tenha acesso",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "Já existe",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -1729,6 +1753,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "O Android reserva esta localização para o sistema e os apps dele. Suas fotos, downloads e outros arquivos estão no armazenamento compartilhado do celular, então tente uma pasta lá.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "O servidor recusou isso para a conta com que você se conectou. Verifique as permissões da pasta no servidor ou conecte-se com uma conta que tenha acesso.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "O provedor recusou, e isso pode significar duas coisas. Confira as permissões da chave de acesso ou procure no console do seu provedor um limite de uso ou um aviso de cobrança.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2261,29 +2293,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "Algo ainda está com arquivos abertos lá. Feche os arquivos e apps abertos, depois tente de novo.",
+  "errors.eject.unmountRefused": "Algo ainda está em uso lá. Feche os arquivos e apps abertos, depois tente de novo.",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} ainda está com arquivos abertos lá. Feche-os, depois tente de novo.",
+  "errors.eject.unmountRefusedByApp": "{app} ainda está usando algo lá. Feche o app, depois tente de novo.",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} ainda estão com arquivos abertos lá. Feche-os, depois tente de novo.",
+  "errors.eject.unmountRefusedByApps": "{apps} ainda estão usando algo lá. Feche esses apps, depois tente de novo.",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "outros apps",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "Um processo chamado {process} ainda está com arquivos abertos lá. (O Cmdr não tem o nome do app, só o nome do processo.)",
+  "errors.eject.unmountRefusedByProcess": "Um processo chamado {process} ainda está usando algo lá. (O Cmdr não tem o nome do app, só o nome do processo.)",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "{countText} processos chamados {processes} ainda estão com arquivos abertos lá. (O Cmdr não tem os nomes dos apps, só os nomes dos processos.)",
+  "errors.eject.unmountRefusedByProcesses": "{countText} processos chamados {processes} ainda estão usando algo lá. (O Cmdr não tem os nomes dos apps, só os nomes dos processos.)",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "outros",
   "@errors.eject.otherProcesses": {
@@ -2293,13 +2325,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "O macOS ainda está com arquivos abertos lá. Espere um minuto, depois tente de novo.",
+  "errors.eject.unmountRefusedBySystem": "O macOS ainda está usando algo lá. Espere um minuto, depois tente de novo.",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "O próprio Cmdr ainda está com arquivos abertos lá. Espere um momento e tente de novo, ou envie um relatório se isso continuar acontecendo.",
+  "errors.eject.unmountRefusedByCmdr": "O próprio Cmdr ainda está usando algo lá. Espere um momento e tente de novo, ou envie um relatório se isso continuar acontecendo.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "O disco ainda não respondeu, então a ejeção ainda pode ser concluída sozinha.",
   "@errors.eject.timedOut": {

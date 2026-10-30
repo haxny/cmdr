@@ -3691,5 +3691,22 @@
     "chosen": "Nível de pensamento",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (Pensamento do Gemini)"
+  },
+  "shared-storage": {
+    "chosen": "armazenamento compartilhado",
+    "confidence": "tentative",
+    "sources": "English `shared storage` over AOSP values-pt-rBR storage_internal (read 2026-10-30): Divisão interna de armazenamento, which reads as a partition"
+  },
+  "this-computer": {
+    "accept": ["computador"],
+    "chosen": "este computador",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
+  },
+  "busy": {
+    "chosen": "ocupado",
+    "confidence": "high",
+    "forms": "the greyed menu marker: the base label word for word, then (ocupado), invariable",
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)"
   }
 }
