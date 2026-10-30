@@ -245,8 +245,9 @@ isn't load-bearing); `试试直接连接` over `尝试` (keeps Try's "might not 
 - These continue `fileExplorer.pane.ejectFailedToast` / `.disconnectFailedToast` after the colon, so they don't echo its
   verb (`没法断开它`, `没有连接需要断开`).
 - Unplug `拔下线缆` (subject `设备`); a timeout isn't failure, `可能过一会儿它会自己推出`.
-- Either wrapper may be a share or a phone: `X 还开着那里的文件。…，然后再试一次。`, never `这个驱动器` or `再次推出`.
-  `请把它们关掉` points at the files (one or several apps). Cmdr stays subject, never `我们`.
+- Either wrapper may be a share or a phone: `X 还在使用那里的某些内容。…，然后再试一次。`, never `这个驱动器` or
+  `再次推出`. `请把它关掉` / `请把它们关掉` point at the app or apps. Eject all → `全部推出` (Finder `N199.1`). Cmdr
+  stays subject, never `我们`.
 - A disk image `还开着` (English "open", unlike `挂载着`); `那里存放的`. `请稍等一会儿` / `请稍等片刻` mirror two
   lengths. Cmdr's bug `发送一份报告`, never `发送错误报告`. Processes last, `分别是 {processes}` (`名为…的` can't hold
   `其他`).

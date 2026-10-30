@@ -3966,5 +3966,22 @@
     "chosen": "思考级别",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (支持的级别)"
+  },
+  "shared-storage": {
+    "chosen": "共享存储空间",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-zh-rCN storage_internal (read 2026-10-30): 内部共享存储空间"
+  },
+  "this-computer": {
+    "accept": ["电脑"],
+    "chosen": "这台电脑",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
+  },
+  "busy": {
+    "chosen": "占用中",
+    "confidence": "high",
+    "forms": "the greyed menu marker: base label + （占用中）",
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)"
   }
 }

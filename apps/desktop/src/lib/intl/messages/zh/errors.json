@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "这部手机不公开这个文件夹",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android 把这个文件夹留给系统和系统的 App，所以 Cmdr 打不开它。你的手机和连接都没有问题。",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "你的照片、下载内容和其他文件都在手机的共享存储空间里，试试那里的文件夹吧。",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "服务器不让打开这个文件夹",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "这个文件夹在服务器上，而你连接时用的账户没有打开它的权限。这由服务器决定，所以这台电脑上的任何设置都改变不了。",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "可以这样试试：\n- 在服务器上查看这个文件夹的权限\n- 有些文件夹属于服务器自己的系统账户，对其他所有人都是关闭的\n- 用有访问权限的账户连接",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "已存在",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -1728,6 +1752,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Android 把这个位置留给系统和系统的 App。你的照片、下载内容和其他文件都在手机的共享存储空间里，试试那里的文件夹吧。",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "服务器拒绝了你连接时用的账户。请在服务器上查看这个文件夹的权限，或者用有访问权限的账户连接。",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "提供方拒绝了，这可能有两种情况。请检查访问密钥的权限，或者到提供方的控制台看看有没有用量上限或账单通知。",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2260,29 +2292,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "还有东西开着那里的文件。请关闭打开的文件和 App，然后再试一次。",
+  "errors.eject.unmountRefused": "那里还有东西在使用中。请关闭打开的文件和 App，然后再试一次。",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} 还开着那里的文件。请把它们关掉，然后再试一次。",
+  "errors.eject.unmountRefusedByApp": "{app} 还在使用那里的某些内容。请把它关掉，然后再试一次。",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} 还开着那里的文件。请把它们关掉，然后再试一次。",
+  "errors.eject.unmountRefusedByApps": "{apps} 还在使用那里的某些内容。请把它们关掉，然后再试一次。",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "其他 App",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "有一个名为 {process} 的进程还开着那里的文件。（Cmdr 拿不到 App 名称，只有进程名。）",
+  "errors.eject.unmountRefusedByProcess": "有一个名为 {process} 的进程还在使用那里的某些内容。（Cmdr 拿不到 App 名称，只有进程名。）",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "有 {countText} 个进程还开着那里的文件，分别是 {processes}。（Cmdr 拿不到 App 名称，只有进程名。）",
+  "errors.eject.unmountRefusedByProcesses": "有 {countText} 个进程还在使用那里的某些内容，分别是 {processes}。（Cmdr 拿不到 App 名称，只有进程名。）",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "其他进程",
   "@errors.eject.otherProcesses": {
@@ -2292,13 +2324,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "macOS 还开着那里的文件。请稍等一会儿，然后再试一次。",
+  "errors.eject.unmountRefusedBySystem": "macOS 还在使用那里的某些内容。请稍等一会儿，然后再试一次。",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "Cmdr 自己还开着那里的文件。请稍等片刻，然后再试一次；如果一直这样，请发送一份报告。",
+  "errors.eject.unmountRefusedByCmdr": "Cmdr 自己还在使用那里的某些内容。请稍等片刻，然后再试一次；如果一直这样，请发送一份报告。",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "这个驱动器还没有响应，可能过一会儿它会自己推出。",
   "@errors.eject.timedOut": {
