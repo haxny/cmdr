@@ -506,6 +506,17 @@ mod tests {
     }
 
     #[test]
+    fn a_disconnect_keeps_its_own_variant() {
+        // mtp-rs maps a pulled cable (on macOS too, since mtp-rs#53) to
+        // `Disconnected`; it must reach the volume as the device leaving, not `Other`.
+        let mapped = map_mtp_error(mtp_rs::Error::Disconnected, "mtp-1-5");
+        assert!(
+            matches!(&mapped, MtpConnectionError::Disconnected { device_id } if device_id == "mtp-1-5"),
+            "got {mapped:?}"
+        );
+    }
+
+    #[test]
     fn device_reset_is_not_a_disconnect() {
         // mtp-rs is explicit that the device is still present and reopenable
         // after a reset, and `Error::is_disconnected()` is deliberately false for

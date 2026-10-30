@@ -21,6 +21,17 @@ fn same_named_siblings_map_to_a_duplicate_name() {
     );
 }
 
+/// A phone that went away mid-copy (a pulled cable) reads as the device leaving,
+/// ❌ never the generic `IoError` "Couldn't copy the file" with a report button
+/// (mtp-rs#53).
+#[test]
+fn a_dropped_session_maps_to_device_disconnected() {
+    let mapped = map_mtp_error(MtpConnectionError::Disconnected {
+        device_id: "mtp-1".to_string(),
+    });
+    assert!(matches!(mapped, VolumeError::DeviceDisconnected(_)), "got {mapped:?}");
+}
+
 /// A name past what a PTP string holds can only fail again under the same name, so
 /// it's the destination's name refusal (ADB's `ENAMETOOLONG` lands on the same
 /// variant), ❌ never the retryable `IoError`.
