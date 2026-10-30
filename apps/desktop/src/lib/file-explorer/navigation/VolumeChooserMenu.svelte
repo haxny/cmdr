@@ -485,10 +485,11 @@
             <span
                 class="volume-label"
                 class:is-restricted={volume ? isRestricted(volume.path) : false}
-                class:is-saved-place={volume?.connectionState === 'saved'}>{ctx.item.label}{#if deviceStatus}<span
-                        class="sr-only">{deviceStatus}</span
-                    >{/if}</span
+                class:is-saved-place={volume?.connectionState === 'saved'}>{ctx.item.label}</span
             >
+            <!-- A sibling, ❌ not inside `.volume-label`: that text is the row's name, and whatever
+                 reads it (a test, a lookup) must not get the status glued on. -->
+            {#if deviceStatus}<span class="sr-only">{deviceStatus}</span>{/if}
         {/if}
     {/snippet}
 
