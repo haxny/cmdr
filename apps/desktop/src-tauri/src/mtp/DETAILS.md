@@ -75,6 +75,31 @@ restores ptpcamerad on macOS; enabling re-runs `check_for_device_changes()`. The
 (`OnceLock`, no shutdown channel) and `check_for_device_changes()` returns early when the flag is off. The persisted
 key is `fileOperations.mtpEnabled` in `settings.json`, read by `settings/loader.rs` at startup.
 
+**Auto-connect retries while the device stays plugged in.** A replugged Android phone can hold its MTP session back
+until the user answers "Allow access to phone data?" on the phone; the open runs out its 30 s transfer bound and fails
+with `Timeout`, and the phone stays enumerated throughout, so no hotplug event comes to trigger another try. Before the
+retry, the only way back was toggling the phone's USB mode (verified on Pixel 9 Pro XL, Android 17, macOS 27.0.1, dev
+build, 2026-10-30, issue #834: arrival 08:21:55, timeout 08:22:26, nothing further until a USB-mode toggle at 08:24:48,
+connected in 0.4 s). `auto_connect.rs` holds the fix, pure and injectable so it tests without a device or a clock:
+
+- `KnownDevices` replaces the old `HashSet`: each device carries the `Arrival` token of the diff that saw it come. A
+  retry loop holds its arrival and keeps going only while `is_still_present(id, arrival)` and MTP is on. An unplug ends
+  the arrival; a replug is a NEW arrival that starts its own loop, so the old loop retires instead of doubling up.
+- `is_worth_retrying` is an exhaustive match: `Timeout`, `DeviceBusy`, and `SessionReset` retry. **Why not
+  `ExclusiveAccess` / `PermissionDenied`:** `connect()` emits their dialog event on every attempt, and both dialogs
+  carry their own Retry button, so a loop would re-raise the dialog every few seconds. The rest mean the device is gone
+  or a wait won't change the answer.
+- `connect_while_present` runs attempts back to back with `retry_delay` between them (2 s, growing 1.5x, capped at
+  15 s, never zero), with no attempt budget: a phone left locked costs one USB open roughly every 45 s, and connects
+  within seconds of the next try once unlocked. Per-attempt logging drops to `debug` after the fifth attempt.
+- **The presence and enabled checks run between attempts, never during one.** An attempt in flight always finishes,
+  because dropping an mtp-rs future mid-transaction wedges the phone (`crates/cmdr-mtp/CLAUDE.md`). The cost: an attempt
+  that succeeds after the user switched MTP off lands on a device the disable path couldn't see, so the watcher checks
+  the flag again on success and disconnects it.
+- `connect()` is idempotent, so a manual connect from the frontend that wins the race just makes the loop's next attempt
+  report `Connected`. ptpcamerad suppression needs nothing new: it stays on while any device is known, and the loop only
+  runs while its device is.
+
 **No double-count at startup:** `start_mtp_watcher` enumerates and seeds `KNOWN_DEVICES` synchronously, *before* it
 spawns the watcher task, so the stream's initial already-connected `Arrived` burst diffs to nothing. When MTP is
 disabled at startup the seed is deliberately left empty (we're not connecting those devices), so a later
@@ -123,7 +148,7 @@ USB plug-in
   → HotplugEvent::Arrived (watcher.rs; mtp-rs filters to MTP devices and owns the settle delay)
   → check is_mtp_enabled() (the manager's flag), skip if disabled
   → list_mtp_devices() (discovery.rs)
-  → auto_connect_device() (watcher.rs)
+  → auto_connect_device() (watcher.rs; retries Timeout/DeviceBusy/SessionReset while the arrival is current)
     → MtpConnectionManager::connect()
     → open_device() via MtpDeviceBuilder
     → probe_write_capability() per storage
