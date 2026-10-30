@@ -3641,7 +3641,7 @@
     },
     {
       "name": "smb2",
-      "version": "0.36.1",
+      "version": "0.36.2",
       "license": "MIT OR Apache-2.0",
       "url": "https://github.com/vdavid/smb2"
     },
