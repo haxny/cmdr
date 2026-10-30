@@ -18,6 +18,7 @@ use cmdr_fs::volume::{Volume, VolumeError};
 use cmdr_s3::S3Volume;
 use cmdr_s3::volume::testing::{
     GARAGE, S3Target, VERSITYGW, object, recorded_uploads_under, self_describing_bytes, take_sent_requests,
+    wait_for_the_ledger_to_settle,
 };
 
 use super::network_gated_source_test_support::{gated_files, gated_upload};
@@ -118,15 +119,14 @@ pub(super) async fn a_cancel_mid_multipart_leaves_no_object_and_no_upload(target
         !volume.exists(&dir.join("big.bin")).await,
         "a cancelled multipart upload publishes nothing"
     );
+    // The cancel answers once its first abort is sent; the confirming rounds run after it,
+    // and only a confirmed abort clears the record. So wait for the record, THEN the server
+    // listing is guaranteed clean (asserting the listing first races the rounds).
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert_eq!(
         target.unfinished_uploads(target.bucket(), &prefix).await,
         Vec::<(String, String)>::new(),
         "the cancel aborts the upload, so no part stays billed"
-    );
-    assert_eq!(
-        recorded_uploads_under(&volume, &prefix),
-        0,
-        "the ledger forgets the upload once the abort is confirmed"
     );
 }
 
@@ -175,8 +175,8 @@ pub(super) async fn a_cancelled_overwrite_keeps_the_original(target: &S3Target) 
         sha256(&original),
         "a cut-off overwrite keeps the original whole"
     );
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert!(target.unfinished_uploads(target.bucket(), &prefix).await.is_empty());
-    assert_eq!(recorded_uploads_under(&volume, &prefix), 0);
 }
 
 // ── Pause between parts ──────────────────────────────────────────────
@@ -384,6 +384,7 @@ pub(super) async fn a_cancel_with_rollback_takes_back_what_landed(target: &S3Tar
         Vec::<String>::new(),
         "a rollback takes back every file that landed, and its folder"
     );
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert!(target.unfinished_uploads(target.bucket(), &prefix).await.is_empty());
 }
 
