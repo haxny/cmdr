@@ -245,8 +245,9 @@ Waiting can't help: no `現在`, no `再試一次`; `這種情況等下去也不
 ## Eject refused (`errors.eject.unmountRefusedBy*`, `errors.eject.otherApps`, `.otherProcesses`)
 
 - Names stay bare, against AppKit's `「%@」`: a joined list can't be quoted per item.
-- A wrapper may concern a share or a phone: `X 還開著那裡的檔案。…，然後再試一次。`, ❌ `這個磁碟機` / `再退出一次`.
-  `請把它們關掉` points at the files; the aside keeps Cmdr as subject, ❌ `我們`.
+- A wrapper may concern a share or a phone: `X 還在使用那裡的某些內容。…，然後再試一次。`, ❌ `這個磁碟機` /
+  `再退出一次`. `請把它關掉` / `請把它們關掉` point at the app or apps; Eject all → `全部退出` (Finder `N199.1`); the
+  aside keeps Cmdr as subject, ❌ `我們`.
 - `磁碟映像檔` (AP-TW = AP-HK), then `那個映像檔`. `…，分別是 {processes}。`, ❌ `名為…的程序` (the list can end
   `其他程序`).
 
