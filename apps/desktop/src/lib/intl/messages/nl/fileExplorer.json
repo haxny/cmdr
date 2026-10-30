@@ -196,6 +196,18 @@
   "@fileExplorer.paneBoundary.reload": {
     "sourceHash": "a53cfeb"
   },
+  "fileExplorer.pane.ejectedDriveStaysToast": "{volumeName} is uitgeworpen, maar laat de schijf aangesloten: andere volumes erop zijn nog gekoppeld.",
+  "@fileExplorer.pane.ejectedDriveStaysToast": {
+    "sourceHash": "12eac5d"
+  },
+  "fileExplorer.pane.ejectAllFailedToast": "Alles op deze schijf uitwerpen lukte niet: {message}",
+  "@fileExplorer.pane.ejectAllFailedToast": {
+    "sourceHash": "d824a11"
+  },
+  "fileExplorer.pane.ejectAllHeldToast": "Er is niets op deze schijf uitgeworpen: {message}",
+  "@fileExplorer.pane.ejectAllHeldToast": {
+    "sourceHash": "9ef094c"
+  },
   "fileExplorer.pane.ejectFailedToast": "{volumeName} uitwerpen lukte niet: {message}",
   "@fileExplorer.pane.ejectFailedToast": {
     "sourceHash": "f4072a7"
@@ -1892,6 +1904,14 @@
   "fileExplorer.navigation.forgetSecretNoneToast": "Er was geen opgeslagen wachtwoord voor {name}.",
   "@fileExplorer.navigation.forgetSecretNoneToast": {
     "sourceHash": "3d40a09"
+  },
+  "fileExplorer.navigation.ejectOneVolumeTooltip": "Werpt alleen dit volume uit. De schijf blijft aangesloten tot ook de andere volumes zijn uitgeworpen.",
+  "@fileExplorer.navigation.ejectOneVolumeTooltip": {
+    "sourceHash": "e1dd1cc"
+  },
+  "fileExplorer.navigation.ejectAllTooltip": "Werpt alle volumes op deze schijf uit, zodat je hem kunt loskoppelen.",
+  "@fileExplorer.navigation.ejectAllTooltip": {
+    "sourceHash": "9e86249"
   },
   "fileExplorer.navigation.ejectVolumeAriaLabel": "Werp {name} uit",
   "@fileExplorer.navigation.ejectVolumeAriaLabel": {
