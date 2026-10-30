@@ -18,6 +18,18 @@ use crate::sync::{SyncDirEntry, SyncEntryKind, SyncSession, SyncStat};
 /// report looks exactly like a device that stopped answering.
 const PROGRESS_EVERY: usize = 256;
 
+/// What an EMPTY `LIST` is taken to mean, since the phone answers the same for a
+/// folder it refused.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum EmptyListing {
+    /// Ask the shell whether the folder could be opened at all: someone is looking,
+    /// or a copy is about to act on the answer.
+    Probe,
+    /// Believe it. A drive-index walk meets hundreds of empty folders, and a shell
+    /// round trip for each took a real Pixel's walk from 4 s to 22 s.
+    Believe,
+}
+
 impl AdbVolume {
     /// One `LIST` walk, as the device streams it.
     ///
@@ -28,6 +40,18 @@ impl AdbVolume {
         path: &Path,
         on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
         cancel: Option<&CancellationToken>,
+    ) -> Result<Vec<FileEntry>, VolumeError> {
+        self.list_directory_taking_empty_as(path, on_progress, cancel, EmptyListing::Probe)
+            .await
+    }
+
+    /// [`list_directory_impl`](Self::list_directory_impl), saying what an empty answer means.
+    pub(super) async fn list_directory_taking_empty_as(
+        &self,
+        path: &Path,
+        on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
+        cancel: Option<&CancellationToken>,
+        empty: EmptyListing,
     ) -> Result<Vec<FileEntry>, VolumeError> {
         let device = self.to_device_path(path)?;
         let mut session = self.open_sync(&device).await?;
@@ -99,6 +123,7 @@ impl AdbVolume {
             return Err(VolumeError::Cancelled(device.into()));
         }
         if entries.is_empty()
+            && empty == EmptyListing::Probe
             && let Err(e) = self.refuse_if_unreadable(&mut session, &device).await
         {
             session.quit().await;
