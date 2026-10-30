@@ -35,7 +35,7 @@ Sources that produce a `ListingError`:
   parsing. The FE routes the `Git` reason to its parallel git factory (`git-error-messages.ts`).
 - **`listing_error_from_volume_error(err, path)`** (`volume_error.rs`): the entry point. Maps typed `VolumeError`
   variants through the shared `kinds::*` constructors, and dispatches `IoError { raw_os_error: Some(_) }` to
-  `errno::listing_error_from_errno`. The permission-denied arm splits three ways (see § The permission-denied three-way
+  `errno::listing_error_from_errno`. The permission-denied arm splits by who refused (see § The permission-denied split
   below), since one errno hides three unrelated fixes.
 - **`errno::listing_error_from_errno`** (`errno.rs`): macOS errno → reason, one reason per distinct outcome (errnos with
   identical FE copy collapse to one reason). Non-macOS falls back to `CouldntReadUnknown`.
@@ -51,15 +51,22 @@ Sources that produce a `ListingError`:
 The write path is separate: `write-error` events ship only the typed `WriteOperationError`, and the FE renders its copy
 and classification (`transfer-error-messages.ts`). There is no `friendly_error` involvement on the write path.
 
-## The permission-denied three-way
+## The permission-denied split
 
-`VolumeError::PermissionDenied` is one errno covering three problems with nothing in common but the word "permission",
-so `volume_error.rs` picks between four reasons:
+`VolumeError::PermissionDenied` is one errno covering problems with nothing in common but the word "permission", so
+`volume_error.rs` picks between six reasons. The first three read the app path's own scheme (`refuser_of_path` in
+`remote_paths.rs`, which the transfer path's `PermissionRefusal` asks too, so a pane and a copy can't disagree): no TCC
+gate or mount is involved, so they come first. None has an `action_kind`, and ❌ none is told apart by a message.
 
-- **`ObjectStoreRefused`** first, when the path is an S3 app path (`server_of_path`, its own `s3://` scheme): no TCC
-  gate or mount is involved, and the account refused, either for its keys' permissions or because the provider paused it
-  (a usage cap, a billing hold; B2's daily cap answers `403 AccessDenied`, live 2026-10-02). One answer covers both, so
-  the FE names both. NO `action_kind`. ❌ Never told apart by the response's message.
+- **`PhoneRefused`** for `adb://` and `mtp://`: Android keeps the folder for the system and its apps (`/data` on a
+  non-rooted phone). Carries no path: the pane shows it, and a phone's app path holds its serial. MTP's own per-object
+  refusal arrives as `StoreReadOnly` (`VolumeError::ReadOnly`), so what reaches this arm over MTP is rarer.
+- **`ServerRefused`** for `sftp://`, `webdav://`, and `nfs://`: the server refused the account. Its own reason because
+  `RemotePermissionDenied` talks about a mount, and nothing is mounted here. NFS's `NFS3ERR_ACCES` carries `EACCES`, and
+  still lands here: the scheme outranks the errno.
+- **`ObjectStoreRefused`** for `s3://`: the account refused, either for its keys' permissions or because the provider
+  paused it (a usage cap, a billing hold; B2's daily cap answers `403 AccessDenied`, live 2026-10-02). One answer covers
+  both, so the FE names both.
 - **`TccRestricted`** when `tcc_paths::tcc_denial_is_plausible(path)` holds: a TCC gate covers the path AND that gate is
   itself shut. Carries `OpenPrivacySettings`, and the FE offers both escape hatches (Full Disk Access, per-folder Files
   & Folders).
@@ -67,7 +74,7 @@ so `volume_error.rs` picks between four reasons:
   the file server is the one refusing. NO `action_kind`, because System Settings has nothing that would help.
 - **`PermissionDenied`** otherwise: ordinary local filesystem permissions.
 
-The order matters, and so does the strictness of the first test. TCC gates a whole volume or folder tree, never an
+The order matters, and so does the strictness of the TCC test. TCC gates a whole volume or folder tree, never an
 individual subfolder, so "the path is under a TCC-gated tree" is not evidence that TCC is what refused: a root-owned
 `lost+found` on an otherwise-readable SMB share is a plain server-side denial. Classifying on the coarse path filter
 alone is what used to send those users to Full Disk Access for a grant they already held. `tcc_paths` splits the coarse
@@ -83,8 +90,8 @@ and this classification can't disagree about a path.
 
 ## The Rust/FE split (what lives where)
 
-- **Rust keeps**: errno → reason mapping, the `kinds.rs` constructors, the permission-denied three-way, category / retry
-  / `action_kind` assignment, `enrich_with_provider` detection, the Layer-0 git pass-through and its ordering, and the
+- **Rust keeps**: errno → reason mapping, the `kinds.rs` constructors, the permission-denied split, category / retry /
+  `action_kind` assignment, `enrich_with_provider` detection, the Layer-0 git pass-through and its ordering, and the
   `raw_detail` technical string.
 - **FE gains** (`src/lib/error-messages/`): all titles / explanations / suggestions, the provider-suggestion table,
   provider display / app names, the reason / git / provider message factories, the markdown escaper (the XSS boundary),

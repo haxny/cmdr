@@ -188,8 +188,10 @@ Every listing failure renders through the one `ErrorPane`, so its action row is 
 for all ~60 error reasons at once. Only two reason-groups carry a CTA of their own (`Try again` for `retryHint`,
 `Open System Settings` for `actionKind === 'open_privacy_settings'` on macOS); the rest have none, which is why the row
 always renders at least one way out. All five buttons share ONE `.cta` row, above the Technical details disclosure. The
-last is "Send error report…" (`ReportOffer`), on every reason: it reports `FriendlyError.listingReason`, the typed
-reason `renderListingError` keeps from the wire, so the note never has to be parsed out of the title.
+last is "Send error report…" (`ReportOffer`): it reports `FriendlyError.listingReason`, the typed reason
+`renderListingError` keeps from the wire, so the note never has to be parsed out of the title. A refusal from the far
+side (a phone, a server, a share, a storage account) offers no report (`offersErrorReport` in `listing-error.ts`):
+nothing in Cmdr broke, and the report would say only what the screen does.
 
 - **`Try again` keys on `retryHint` ALONE.** That flag is the backend's "retrying might help" signal and is set across
   categories on purpose: `friendly_error/errno.rs`'s `serious` helper carries it (`diskReadProblem`,

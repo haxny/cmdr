@@ -375,3 +375,30 @@ fn text_without_an_s3_account_comes_back_untouched() {
         );
     }
 }
+
+/// Both halves of an app's refusal copy (a pane and a transfer) ask this, so they
+/// can't disagree about who said no. Purely the scheme: a local path, even one that
+/// spells a scheme inside it, has no refuser.
+#[test]
+fn a_refusal_names_the_backend_the_path_is_on() {
+    for (path, refuser) in [
+        ("adb://R58M123/data", RemoteRefuser::Phone),
+        ("adb://R58M123", RemoteRefuser::Phone),
+        ("mtp://pixel/65537/DCIM", RemoteRefuser::Phone),
+        ("sftp://ada@nas.local:22/etc", RemoteRefuser::Server),
+        ("webdav://ada@nas.local:443/a", RemoteRefuser::Server),
+        ("nfs://nas.local:2049/%2Fexport/a", RemoteRefuser::Server),
+        ("s3://AKIATEST@s3.example.com:443/photos/a", RemoteRefuser::ObjectStore),
+    ] {
+        assert_eq!(refuser_of_path(path), Some(refuser), "{path}");
+    }
+    for path in [
+        "/Users/me/a",
+        "/Volumes/naspi/adb://x",
+        "smb://nas/share",
+        "adb://",
+        "mtp://",
+    ] {
+        assert_eq!(refuser_of_path(path), None, "{path}");
+    }
+}

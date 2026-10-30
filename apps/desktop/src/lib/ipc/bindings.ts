@@ -11323,6 +11323,20 @@ export type ListingErrorReason =
       // The path the failure was about.
       path: string
     }
+  /**
+   *  A phone (ADB, MTP) refused a folder: Android keeps it for the system and its
+   *  apps. Nothing on this Mac, and no retry, changes the answer. The pane shows
+   *  the path already, and a phone's app path carries its serial, so the words
+   *  don't take it.
+   */
+  | { reason: 'phoneRefused' }
+  /**
+   *  A connected server (SFTP, WebDAV, NFS) refused a folder for the account or
+   *  identity it was connected with. Unlike [`Self::RemotePermissionDenied`],
+   *  nothing is mounted, so there's no share to eject and mount again. The pane
+   *  shows the path already, and its app path is all scheme and account.
+   */
+  | { reason: 'serverRefused' }
   // `VolumeError::AlreadyExists`: the destination is taken.
   | {
       reason: 'alreadyExists'
@@ -14455,6 +14469,17 @@ export type PermissionRefusal =
    *  One answer covers both, so the advice names both.
    */
   | 'objectStoreAccount'
+  /**
+   *  A phone (ADB, MTP) refused: Android keeps the path for the system and its
+   *  apps. ❌ Never macOS or Finder advice.
+   */
+  | 'phone'
+  /**
+   *  A connected server (SFTP, WebDAV, NFS) refused the account or identity it
+   *  was connected with. ❌ Never macOS or Finder advice, even when the backend
+   *  carries an errno (NFS's `NFS3ERR_ACCES` is `EACCES`).
+   */
+  | 'server'
 
 /**
  *  Which half of a transfer refused on permission grounds, for

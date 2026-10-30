@@ -84,6 +84,26 @@ describe('ErrorPane action row', () => {
 })
 
 describe('ErrorPane Send error report…', () => {
+  // The other side said no on purpose, so there's no bug to report.
+  it.each(['phoneRefused', 'serverRefused', 'remotePermissionDenied', 'objectStoreRefused'] as const)(
+    'offers no report when %s',
+    async (listingReason) => {
+      const target = mountPane({ friendly: { ...base, category: 'needs_action', retryHint: false, listingReason } })
+      await tick()
+      expect(buttonTexts(target)).not.toContain('Send error report…')
+    },
+  )
+
+  it('still offers a report for a local permission refusal, and for an untyped failure', async () => {
+    const local = mountPane({
+      friendly: { ...base, category: 'needs_action', retryHint: false, listingReason: 'permissionDenied' },
+    })
+    const untyped = mountPane({ friendly: { ...base, category: 'serious', retryHint: false } })
+    await tick()
+    expect(buttonTexts(local)).toContain('Send error report…')
+    expect(buttonTexts(untyped)).toContain('Send error report…')
+  })
+
   it('offers a report naming the typed listing reason and the title it shows', async () => {
     const target = mountPane({
       friendly: { ...base, category: 'transient', retryHint: true, listingReason: 'networkDown' },

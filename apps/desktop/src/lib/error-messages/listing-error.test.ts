@@ -47,6 +47,28 @@ describe('renderListingError', () => {
     expect(message.suggestion).toContain('usage cap')
   })
 
+  // A phone's refusal is Android's call: none of the macOS page's advice applies, and
+  // the words carry no path, since a phone's app path carries its serial.
+  it('words a folder a phone refuses without any macOS advice', () => {
+    const message = getListingErrorMessage({ reason: 'phoneRefused' })
+    expect(message.title).toBe('This phone keeps this folder private')
+    expect(message.message).toContain('Android')
+    expect(message.suggestion).toContain('shared storage')
+    for (const text of [message.title, message.message, message.suggestion]) {
+      expect(text).not.toMatch(/macOS|System Settings|Finder|Terminal|ls -la|\{/)
+    }
+  })
+
+  // A connected server has no mount, so the mounted share's "eject it" advice can't help.
+  it('words a folder a connected server refuses without any mount or macOS advice', () => {
+    const message = getListingErrorMessage({ reason: 'serverRefused' })
+    expect(message.title).toBe('The server won’t open this folder')
+    expect(message.suggestion).toContain('account')
+    for (const text of [message.title, message.message, message.suggestion]) {
+      expect(text).not.toMatch(/macOS|System Settings|Finder|Terminal|[Ee]ject|mount|\{/)
+    }
+  })
+
   it('renders the git reason from the git factory', () => {
     const error: ListingError = {
       category: 'needs_action',

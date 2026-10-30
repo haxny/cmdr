@@ -780,6 +780,42 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
+  "errors.listing.phoneRefused.title": "This phone keeps this folder private",
+  "errors.listing.phoneRefused.explanation": "Android reserves this folder for the system and its apps, so Cmdr can’t open it. Nothing’s wrong with your phone or the connection.",
+  "errors.listing.phoneRefused.suggestion": "Your photos, downloads, and other files are in the phone’s shared storage, so try a folder there.",
+  "@errors.listing.phoneRefused.title": {
+    "description": "Title of the listing error panel when a phone connected over USB refuses to open a folder, usually a system folder like /data. This is normal Android behavior, not a problem. Plain text.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.phoneRefused.explanation": {
+    "description": "Body of the listing error panel for a folder an Android phone refuses. Markdown. \"Android\" is a proper name; do NOT translate. The reassurance is the point: nothing is broken, and no setting on the computer would change this.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.phoneRefused.suggestion": {
+    "description": "Recovery suggestion for a folder an Android phone refuses. Markdown. \"Shared storage\" is the part of the phone that holds a person's own files (photos, downloads, music); use the wording Android uses in your locale.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.listing.serverRefused.title": "The server won’t open this folder",
+  "errors.listing.serverRefused.explanation": "This folder is on a server, and the account you connected with doesn’t have permission to open it. The server makes that call, so no setting on this computer changes it.",
+  "errors.listing.serverRefused.suggestion": "Here’s what to try:\n- Check the folder’s permissions on the server\n- Some folders belong to the server’s own system account and stay closed to everyone else\n- Connect with an account that has access",
+  "@errors.listing.serverRefused.title": {
+    "description": "Title of the listing error panel when a server Cmdr connected to directly (SFTP, WebDAV, or NFS) refuses a folder. Plain text.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.serverRefused.explanation": {
+    "description": "Body of the listing error panel for a folder a connected server (SFTP, WebDAV, or NFS) refuses. Markdown. The contrast with a setting on the computer is the point of the sentence: the user can't fix this on their own machine.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.serverRefused.suggestion": {
+    "description": "Recovery suggestion for a folder a connected server (SFTP, WebDAV, or NFS) refuses. Markdown bullet list. Nothing is mounted here, so don't word it as ejecting or remounting a share.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
   "errors.listing.alreadyExists.title": "Already exists",
   "errors.listing.alreadyExists.explanation": "A file or folder already exists at `{path}`, so Cmdr can’t create a new one there.",
   "errors.listing.alreadyExists.suggestion": "Rename the existing item or choose a different name for the new one.",
@@ -2513,9 +2549,21 @@
   "errors.write.permissionDenied.suggestion.deleteOther": "Check that you have write access to the parent folder. The file may be protected. Check its permissions (e.g. via chmod or your file manager) and try again.",
   "errors.write.permissionDenied.suggestion.default": "Check that you have write access to the destination folder. You may need to unlock the device or change folder permissions.",
   "errors.write.permissionDenied.message.named": "Your macOS user can’t change {folder}.",
+  "errors.write.permissionDenied.suggestion.phone": "Android reserves this location for the system and its apps. Your photos, downloads, and other files are in the phone’s shared storage, so try a folder there.",
+  "errors.write.permissionDenied.suggestion.server": "The server turned this down for the account you connected with. Check the folder’s permissions on the server, or connect with an account that has access.",
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "The provider refused, and that can mean two things. Check the access key’s permissions, or your provider’s console for a usage cap or a billing notice.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "description": "Recovery suggestion in the copy/move/delete dialog when cloud object storage (Amazon S3, Cloudflare R2, Backblaze B2, Wasabi, and similar) refuses. The provider gives the same answer for missing permissions and for a paused account (a usage cap or a billing problem), so the sentence names both. Plain text. \"Access key\" is the credential the user entered when connecting; \"console\" is the provider's web dashboard.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "description": "Recovery suggestion in the copy/move/delete dialog when an Android phone connected over USB refuses, usually because the location is a system folder. Plain text. \"Android\" is a proper name; do NOT translate. \"Shared storage\" is the part of the phone that holds a person's own files (photos, downloads, music); use the wording Android uses in your locale.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.write.permissionDenied.suggestion.server": {
+    "description": "Recovery suggestion in the copy/move/delete dialog when a server Cmdr connected to directly (SFTP, WebDAV, or NFS) refuses. Plain text. \"The account you connected with\" is the sign-in the user chose when connecting to the server.",
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },

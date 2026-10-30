@@ -1120,11 +1120,12 @@ and it's what `docs/specs/elevated-file-operations.md` decision 12 branches on w
 The errno survives the volume layer too: `VolumeError::PermissionDenied { path, raw_os_error }` carries it from
 `VolumeError::from_io_at`, and `map_volume_error` hands it to the constructor, so a volume-routed refusal (a
 cross-volume move's source delete hitting a Finder-locked file, cmdr-reports#17) gets the same advice as a local one and
-the details block shows the OS's sentence rather than the path twice. A backend that words its own refusals (SMB, MTP,
-and ADB, whose errno is the DEVICE's and would earn macOS advice for an Android file) carries `None` and stays
-`Unclassified`. An errno-less refusal on an S3 app path (`server_of_path`) is `ObjectStoreAccount` instead
-(`WriteOperationError::object_store_refused`): the key's permissions or a provider that paused the account (a usage cap,
-a billing hold) answer alike, so its advice names both.
+the details block shows the OS's sentence rather than the path twice. A backend that words its own refusals (SMB, and
+also ADB, whose errno is the DEVICE's) carries `None`. A path whose scheme names its backend (`refuser_of_path`) takes
+its refusal from there, errno or not (`WriteOperationError::refused_by`, so NFS's `EACCES` isn't read as this Mac's
+folder permissions): `Phone` and `Server`, whose advice can't mention this Mac, and `ObjectStoreAccount`, where the
+key's permissions or a provider that paused the account (a usage cap, a billing hold) answer alike, so its advice names
+both. The rest with no errno stays `Unclassified`.
 
 **Why the folder is PROVED, never inferred.** A `rename(2)` needs write access to both parent folders, a `unlink(2)` to
 the one it removes from, and a `create_dir_all` to the deepest ancestor that exists; no errno says which refused. So

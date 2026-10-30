@@ -106,6 +106,8 @@ const LISTING_REASONS: ListingErrorReason[] = [
   { reason: 'permissionDenied', path: PATH },
   { reason: 'remotePermissionDenied', path: PATH },
   { reason: 'objectStoreRefused', path: PATH },
+  { reason: 'phoneRefused' },
+  { reason: 'serverRefused' },
   { reason: 'alreadyExists', path: PATH },
   { reason: 'cancelled' },
   { reason: 'deviceDisconnected', path: PATH },

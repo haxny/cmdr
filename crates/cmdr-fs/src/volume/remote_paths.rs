@@ -476,6 +476,38 @@ pub fn adb_serial_of_path(path: &str) -> Option<&str> {
     (!serial.is_empty()).then_some(serial)
 }
 
+/// Who said no when a backend refuses a path: the question a refusal's advice
+/// turns on, since the fix is in a different place for each.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RemoteRefuser {
+    /// A phone (ADB, MTP): Android keeps the path for the system and its apps.
+    Phone,
+    /// A connected server (SFTP, WebDAV, NFS): the path's permissions, or the
+    /// account or identity it was connected with.
+    Server,
+    /// An object store account (S3): its keys, or a provider that paused it.
+    ObjectStore,
+}
+
+/// Who refuses for an app path, or `None` for a path this host's own OS answers
+/// for (a local path, or a mounted share, which only `statfs` can tell apart).
+///
+/// Reads the path's scheme and nothing else, so it's pure, and ❌ a refusal is never
+/// classified from its message.
+pub fn refuser_of_path(path: &str) -> Option<RemoteRefuser> {
+    if adb_serial_of_path(path).is_some() || path.strip_prefix(MTP_PATH_SCHEME).is_some_and(|rest| !rest.is_empty()) {
+        return Some(RemoteRefuser::Phone);
+    }
+    // `server_of_path` names only sftp, webdav, s3, and nfs.
+    server_of_path(path).map(|server| match server.kind {
+        super::BackendKind::S3 => RemoteRefuser::ObjectStore,
+        _ => RemoteRefuser::Server,
+    })
+}
+
+/// The scheme every MTP app path starts with (`mtp://{device_id}/{storage_id}[/…]`).
+const MTP_PATH_SCHEME: &str = "mtp://";
+
 #[cfg(test)]
 #[path = "remote_paths_test.rs"]
 mod remote_paths_test;

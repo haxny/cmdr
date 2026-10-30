@@ -430,14 +430,11 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
                 PathRole::Source => PermissionSide::Source,
                 PathRole::Destination => PermissionSide::Destination,
             });
-            // An S3 refusal is the account's (its keys, or a provider that paused
-            // it over a usage cap or billing), read off the app path's own
-            // scheme, ❌ never the message.
-            if raw_os_error.is_none()
-                && cmdr_fs::volume::server_of_path(context_path)
-                    .is_some_and(|server| server.kind == cmdr_fs::volume::BackendKind::S3)
-            {
-                return WriteOperationError::object_store_refused(context_path.to_string(), message, side);
+            // A phone's, a server's, or an S3 account's refusal (its keys, or a
+            // provider that paused it), read off the app path's own scheme, ❌ never
+            // the message.
+            if let Some(refuser) = cmdr_fs::volume::refuser_of_path(context_path) {
+                return WriteOperationError::refused_by(context_path.to_string(), message, raw_os_error, refuser, side);
             }
             WriteOperationError::permission_denied(context_path.to_string(), message, raw_os_error, None, side)
         }

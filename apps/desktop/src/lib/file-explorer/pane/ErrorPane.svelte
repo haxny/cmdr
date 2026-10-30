@@ -13,6 +13,7 @@
     import { systemStrings } from '#lib/system-strings.svelte.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { getAppLogger } from '#lib/logging/logger.js'
+    import { offersErrorReport } from '#lib/error-messages/listing-error.js'
     import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
 
     const log = getAppLogger('errorPane')
@@ -191,7 +192,9 @@
                 {tString('fileExplorer.errorPane.goHome')}
             </Button>
 
-            <ReportOffer incident={reportIncident} />
+            {#if offersErrorReport(friendly.listingReason)}
+                <ReportOffer incident={reportIncident} />
+            {/if}
         </div>
 
         <details class="technical-details" bind:open={detailsOpen}>

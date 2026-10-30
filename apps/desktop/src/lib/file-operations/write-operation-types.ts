@@ -171,10 +171,18 @@ export type UnwritableReason = 'readOnlyFilesystem' | 'noPermission' | 'unexplai
  * rights change nothing, so the advice has to be different. `unclassified` is a
  * backend that words its own refusals (MTP, SMB) or an errno outside the two.
  * `objectStoreAccount` is an S3 account refusing: its keys, or a provider that
- * paused it (a usage cap, a billing hold), which one answer covers. The
- * backend derives it from the errno and the frontend ❌ never re-derives one.
+ * paused it (a usage cap, a billing hold), which one answer covers. `phone` and
+ * `server` are a phone or a connected server refusing, whose advice can't mention
+ * this Mac. The backend derives it from the errno and the path's scheme, and the
+ * frontend ❌ never re-derives one.
  */
-export type PermissionRefusal = 'folderPermissions' | 'systemProtected' | 'unclassified' | 'objectStoreAccount'
+export type PermissionRefusal =
+  | 'folderPermissions'
+  | 'systemProtected'
+  | 'unclassified'
+  | 'objectStoreAccount'
+  | 'phone'
+  | 'server'
 
 /** Error types for write operations (discriminated union). */
 export type WriteOperationError =

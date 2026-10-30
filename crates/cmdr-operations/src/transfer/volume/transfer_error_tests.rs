@@ -165,6 +165,42 @@ fn test_map_volume_error_permission_denied() {
     );
 }
 
+/// ❗ A phone's or a server's refusal gets its own advice whichever errno rides along:
+/// NFS's `NFS3ERR_ACCES` carries `EACCES`, which read as `FolderPermissions` would send
+/// someone to Finder for a folder on a server. The errno stays for the details block.
+#[test]
+fn a_phones_or_a_servers_refusal_names_who_refused() {
+    for (path, raw_os_error, expected) in [
+        ("adb://R58M123/data/a.txt", None, PermissionRefusal::Phone),
+        ("mtp://pixel/65537/a.txt", None, PermissionRefusal::Phone),
+        ("sftp://ada@nas.local:22/etc/a.txt", None, PermissionRefusal::Server),
+        ("webdav://ada@nas.local:443/a.txt", None, PermissionRefusal::Server),
+        (
+            "nfs://nas.local:2049/%2Fexport/a.txt",
+            Some(libc::EACCES),
+            PermissionRefusal::Server,
+        ),
+    ] {
+        let err = map_volume_error(
+            path,
+            PathRole::Destination,
+            VolumeError::PermissionDenied {
+                path: path.to_string(),
+                raw_os_error,
+            },
+        );
+        let WriteOperationError::PermissionDenied {
+            refusal, errno, side, ..
+        } = err
+        else {
+            panic!("{path}: expected PermissionDenied, got {err:?}");
+        };
+        assert_eq!(refusal, expected, "{path}");
+        assert_eq!(errno, raw_os_error, "{path}");
+        assert_eq!(side, Some(PermissionSide::Destination), "{path}");
+    }
+}
+
 /// ❗ An S3 refusal can be the key's permissions OR the provider pausing the
 /// account (a usage cap, a billing hold: B2's daily cap answers `403
 /// AccessDenied`, live), and the answer can't say which, so the refusal is

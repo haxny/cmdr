@@ -11,6 +11,10 @@
         name: string
         category: ErrorCategory
         title: string
+        /** The `VolumeError` variant, when `name` needs to tell two rows of one variant apart. */
+        variant?: string
+        /** A path the classification reads, for a reason a backend's scheme picks. */
+        path?: string
     }
 
     const providerNames = [
@@ -89,6 +93,20 @@
     const volumeErrors: ErrorState[] = [
         { name: 'NotFound', category: 'needs_action', title: 'Path not found' },
         { name: 'PermissionDenied', category: 'needs_action', title: 'No permission' },
+        {
+            name: 'PermissionDenied (phone)',
+            variant: 'PermissionDenied',
+            path: 'adb://R58M123/data',
+            category: 'needs_action',
+            title: 'This phone keeps this folder private',
+        },
+        {
+            name: 'PermissionDenied (server)',
+            variant: 'PermissionDenied',
+            path: 'sftp://demo@nas.local:22/etc/ssl',
+            category: 'needs_action',
+            title: 'The server won’t open this folder',
+        },
         { name: 'AlreadyExists', category: 'needs_action', title: 'Already exists' },
         { name: 'NotSupported', category: 'needs_action', title: 'Not supported' },
         { name: 'DeviceDisconnected', category: 'needs_action', title: 'Device disconnected' },
@@ -123,13 +141,13 @@
     async function triggerError(pane: 'left' | 'right', state: ErrorState) {
         const providerIndex = providerSelections[state.name] ?? 0
         const providerName = providerNames[providerIndex]
-        const providerPath = providerName !== 'None' ? (providerPathMap[providerName] ?? null) : null
+        const providerPath = (providerName !== 'None' ? providerPathMap[providerName] : null) ?? state.path ?? null
 
         try {
             const { invoke } = await import('@tauri-apps/api/core')
             const listingError = await invoke<ListingError>('preview_friendly_error', {
                 errorCode: state.code ?? null,
-                variant: state.code === undefined ? state.name : null,
+                variant: state.code === undefined ? (state.variant ?? state.name) : null,
                 providerPath,
             })
             const friendly = renderListingError(listingError)

@@ -392,9 +392,10 @@ function permissionDeniedMessage(
 
 /** The advice half of `permissionDeniedMessage`: the errno's answer first, then the operation's. */
 function permissionSuggestionKey(refusal: PermissionRefusal, op: TransferOperationType, sourceSide: boolean): string {
-  // An object store account's refusal has the same advice whichever side or
-  // operation met it: the key, or a provider that paused the account.
-  if (refusal === 'objectStoreAccount') return 'objectStoreAccount'
+  // A refusal from the far side has the same advice whichever side or operation
+  // met it: an object store's key or paused account, Android's reserved folders,
+  // or a server's account. None of it can mention this Mac.
+  if (refusal === 'objectStoreAccount' || refusal === 'phone' || refusal === 'server') return refusal
   const mac = isMacOS()
   if (refusal === 'folderPermissions') return mac ? 'needsAdminMac' : 'needsAdminOther'
   if (refusal === 'systemProtected') return mac ? 'systemProtectedMac' : 'systemProtectedOther'

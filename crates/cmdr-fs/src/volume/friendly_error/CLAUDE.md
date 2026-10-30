@@ -39,7 +39,7 @@ trait's app-side wiring, backends, capability matrix). App-wide error convention
 - **A path under a TCC gate is NOT proof TCC refused it.** TCC gates whole trees, so the permission-denied arm must ask
   `tcc_paths::tcc_denial_is_plausible` (which probes the gate), never the coarse `is_potentially_tcc_restricted` filter.
   Swapping in the filter sends everyone whose share has a root-owned folder to Full Disk Access for a grant they hold.
-  The three reasons and why they differ: `DETAILS.md` § The permission-denied three-way.
+  The reasons and why they differ: `DETAILS.md` § The permission-denied split.
 - **`raw_detail` is plain text, never markdown** (errno name + code, or the git kind token). It's rendered verbatim in
   the technical-details disclosure, not through snarkdown.
 

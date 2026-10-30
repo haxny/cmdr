@@ -78,6 +78,32 @@ pub(super) fn object_store_refused(path_display: &str, raw_detail: String) -> Li
     }
 }
 
+/// A phone said no. No `action_kind` (System Settings holds no grant for it) and no
+/// retry hint (Android answers the same way every time).
+pub(super) fn phone_refused(raw_detail: String) -> ListingError {
+    ListingError {
+        category: ErrorCategory::NeedsAction,
+        reason: ListingErrorReason::PhoneRefused,
+        provider: None,
+        action_kind: None,
+        retry_hint: false,
+        raw_detail,
+    }
+}
+
+/// A connected server said no: the fix lives on the server or in the account, so no
+/// `action_kind` and no retry hint.
+pub(super) fn server_refused(raw_detail: String) -> ListingError {
+    ListingError {
+        category: ErrorCategory::NeedsAction,
+        reason: ListingErrorReason::ServerRefused,
+        provider: None,
+        action_kind: None,
+        retry_hint: false,
+        raw_detail,
+    }
+}
+
 pub(super) fn permission_denied(path_display: &str, raw_detail: String) -> ListingError {
     ListingError {
         category: ErrorCategory::NeedsAction,

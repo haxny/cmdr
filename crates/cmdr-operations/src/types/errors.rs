@@ -111,6 +111,23 @@ pub enum PermissionRefusal {
     /// the provider may have paused the account (a usage cap, a billing hold).
     /// One answer covers both, so the advice names both.
     ObjectStoreAccount,
+    /// A phone (ADB, MTP) refused: Android keeps the path for the system and its
+    /// apps. ❌ Never macOS or Finder advice.
+    Phone,
+    /// A connected server (SFTP, WebDAV, NFS) refused the account or identity it
+    /// was connected with. ❌ Never macOS or Finder advice, even when the backend
+    /// carries an errno (NFS's `NFS3ERR_ACCES` is `EACCES`).
+    Server,
+}
+
+impl From<cmdr_fs::volume::RemoteRefuser> for PermissionRefusal {
+    fn from(refuser: cmdr_fs::volume::RemoteRefuser) -> Self {
+        match refuser {
+            cmdr_fs::volume::RemoteRefuser::Phone => Self::Phone,
+            cmdr_fs::volume::RemoteRefuser::Server => Self::Server,
+            cmdr_fs::volume::RemoteRefuser::ObjectStore => Self::ObjectStoreAccount,
+        }
+    }
 }
 
 impl PermissionRefusal {
@@ -763,15 +780,24 @@ impl WriteOperationError {
         }
     }
 
-    /// [`PermissionDenied`](Self::PermissionDenied) from an object store
-    /// account (S3), which carries no errno: the refusal names the account, so
-    /// the advice covers both of its causes (`PermissionRefusal::ObjectStoreAccount`).
-    pub fn object_store_refused(path: String, message: String, side: Option<PermissionSide>) -> Self {
+    /// [`PermissionDenied`](Self::PermissionDenied) from a backend whose own scheme
+    /// says who refused ([`cmdr_fs::volume::refuser_of_path`]). That beats the errno
+    /// for advice: NFS's `EACCES` is the server's, and reading it as this Mac's folder
+    /// permissions would send someone to Finder. The errno still rides for the details
+    /// block. No folder: proving one takes `access(W_OK)`, which only speaks for
+    /// local paths.
+    pub fn refused_by(
+        path: String,
+        message: String,
+        errno: Option<i32>,
+        refuser: cmdr_fs::volume::RemoteRefuser,
+        side: Option<PermissionSide>,
+    ) -> Self {
         Self::PermissionDenied {
             path,
             message: message.into(),
-            errno: None,
-            refusal: PermissionRefusal::ObjectStoreAccount,
+            errno,
+            refusal: refuser.into(),
             refused_folder: None,
             side,
         }

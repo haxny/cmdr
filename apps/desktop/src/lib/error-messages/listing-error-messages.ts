@@ -104,6 +104,8 @@ export type ListingErrorReason =
   | { reason: 'permissionDenied'; path: string }
   | { reason: 'remotePermissionDenied'; path: string }
   | { reason: 'objectStoreRefused'; path: string }
+  | { reason: 'phoneRefused' }
+  | { reason: 'serverRefused' }
   | { reason: 'alreadyExists'; path: string }
   | { reason: 'cancelled' }
   | { reason: 'deviceDisconnected'; path: string }
