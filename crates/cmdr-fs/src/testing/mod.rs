@@ -5,7 +5,9 @@
 //! [`wait_until_async`] serves `#[tokio::test]`s; both poll a condition to a
 //! deadline and panic when it never holds, so a wait can't silently pass.
 //! [`wait_until_async_while_moving`] is the one for throughput-bound work: it
-//! fails when the work stops moving, not when a stopwatch runs out. Don't
+//! fails when the work stops moving, not when a stopwatch runs out.
+//! [`holds_within`] is [`wait_until`] answering `false` rather than panicking,
+//! for a caller (a `Drop`) that must raise its own error. Don't
 //! hand-roll a poll loop, and don't sleep a fixed span hoping the work landed:
 //! the sleep inside those helpers is the only sanctioned one in Rust test
 //! code, and the `test-sleep` check enforces that.
@@ -135,13 +137,22 @@ const POLL_INTERVAL: Duration = Duration::from_millis(5);
 /// ❌ Don't call this from an `async` test: `std::thread::sleep` blocks the runtime worker and
 /// deadlocks a current-thread scheduler. Use [`wait_until_async`] there.
 #[track_caller]
-pub fn wait_until(timeout: Duration, description: &str, mut condition: impl FnMut() -> bool) {
+pub fn wait_until(timeout: Duration, description: &str, condition: impl FnMut() -> bool) {
+    assert!(holds_within(timeout, condition), "{}", timed_out(timeout, description));
+}
+
+/// [`wait_until`] that answers instead of panicking: `true` once `condition` holds, `false` if it
+/// still doesn't after `timeout`. For a caller that must turn the timeout into its own error, like a
+/// `Drop` that may already be unwinding, where a second panic aborts the process.
+pub fn holds_within(timeout: Duration, mut condition: impl FnMut() -> bool) -> bool {
     let deadline = Instant::now() + timeout;
     loop {
         if condition() {
-            return;
+            return true;
         }
-        assert!(Instant::now() < deadline, "{}", timed_out(timeout, description));
+        if Instant::now() >= deadline {
+            return false;
+        }
         // allowed-test-sleep: the sanctioned poll interval; every sync test wait routes through here
         std::thread::sleep(POLL_INTERVAL);
     }
@@ -254,6 +265,16 @@ mod tests {
     #[should_panic(expected = "timed out after 20.0ms waiting for a condition that never holds")]
     fn a_condition_that_never_holds_panics_with_the_description() {
         wait_until(Duration::from_millis(20), "a condition that never holds", || false);
+    }
+
+    #[test]
+    fn holds_within_answers_false_instead_of_panicking_at_the_deadline() {
+        assert!(!holds_within(Duration::from_millis(20), || false));
+        let mut polls = 0;
+        assert!(holds_within(Duration::from_secs(5), || {
+            polls += 1;
+            polls >= 3
+        }));
     }
 
     #[tokio::test]

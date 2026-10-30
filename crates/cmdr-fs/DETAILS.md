@@ -1283,9 +1283,12 @@ would drift apart.
   mounts both browsable, so each is unmounted and remounted nobrowse. A volume `addVolume` or `partitionDisk` made is
   found by its unique name among the nodes `hdiutil info` lists under the image (it lists them at once), ❌ never parsed
   from the tool's text. Names are `CMDR<pid><n>`.
-- **Teardown.** `DiskImage`'s `Drop` resolves the whole disk fresh, detaches, falls back to a guarded `-force`, and then
-  its `TestDir` deletes the file. An image that's already gone (an eject detached it) is fine; one that won't detach
-  panics the test unless it's already panicking, so a leak never passes silently.
+- **Teardown.** `DiskImage`'s `Drop` resolves the whole disk fresh, detaches, falls back to a guarded `-force`, waits
+  until `hdiutil info` stops listing the image, and then its `TestDir` deletes the file. The wait is load-bearing: a
+  detach can exit 0 while `hdiutil info` still lists the image, which flaked a test asserting "detached" right after the
+  drop under load (#830, the sparse two-volume image, about 1 run in 100). An image that's already gone (an eject
+  detached it) is fine; one that won't detach panics the test unless it's already panicking, so a leak never passes
+  silently.
 - **Leftovers are reclaimed at `acquire`**, because no `Drop` runs when the test process is SIGKILLed — which is what
   nextest does to a test past its cap, and what left six images attached on 2026-09-16. `reclaim_orphans` detaches only
   what `facts::orphan_verdict` proves is ours on EVERY count: the backing file under this process's temp dir, in a
