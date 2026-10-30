@@ -138,8 +138,11 @@ What this means for automation:
 - `OK` is now a meaningful contract: the FE accepted the action. The downstream operation may still be running (a copy
   of 10 GB returns `OK` when the FE accepts the dialog, not when bytes finish).
 - For long-running operations, poll completion via the `await` tool just like before.
-- Timeouts surface as JSON-RPC errors with a clear message ("Action not acknowledged by backend within 1500 ms (waiting
-  for: …)"). Treat them as real failures — don't retry blindly; check `cmdr://state` to triage.
+- A timeout is an UNKNOWN outcome, not a failure: the action was dispatched and may still run (under heavy load, a
+  `copy` started 2 s after its 10 s budget ran out). It surfaces as a JSON-RPC error with `data.outcome: "unknown"` and
+  a message saying so ("Frontend did not respond within…", "Action not acknowledged by backend within 1500 ms (waiting
+  for: …)"). Don't retry blindly: read `cmdr://state?include=operations` first, since a retried copy that did start runs
+  twice.
 - `dialog close file-viewer` on a path that isn't open returns an `invalid_params` error fast ("No file viewer windows
   are open"); closing one of multiple viewers acks as soon as the count drops by one, not when all viewers vanish.
 - Very slow remote shares can still exceed even the 5 s nav budget. If a nav tool times out but the navigation actually

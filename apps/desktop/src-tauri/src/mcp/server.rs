@@ -823,8 +823,13 @@ async fn process_request<R: Runtime>(
                     )
                 }
                 Err(e) => {
+                    let verdict = if e.outcome_is_unknown() {
+                        "outcome unknown"
+                    } else {
+                        "failed"
+                    };
                     // allowed-log-private: an MCP tool name of our own
-                    log::warn!("MCP: tool {name} failed, code={}, message={}", e.code, e.message);
+                    log::warn!("MCP: tool {name} {verdict}, code={}, message={}", e.code, e.message);
                     (
                         McpResponse::error_with_data(request.id, e.code, e.message, e.data),
                         None,

@@ -79,12 +79,33 @@ impl ToolError {
         }
     }
 
+    /// The action was sent and nothing said what became of it, so it may still go
+    /// ahead. Not a failure: a frontend under load answers late, and a caller that
+    /// reads this as "it didn't happen" retries a copy that's already running. The
+    /// typed `data.outcome` is `unknown`; the message says how to check.
+    pub fn outcome_unknown(msg: impl Into<String>) -> Self {
+        Self::internal(msg).with_data(json!({ "outcome": OUTCOME_UNKNOWN }))
+    }
+
+    /// Whether this is an [`outcome_unknown`](Self::outcome_unknown) rather than a
+    /// known refusal or failure.
+    pub fn outcome_is_unknown(&self) -> bool {
+        self.data
+            .as_ref()
+            .and_then(|data| data.get("outcome"))
+            .and_then(Value::as_str)
+            == Some(OUTCOME_UNKNOWN)
+    }
+
     /// Attaches structured detail to an error the caller is expected to act on.
     pub fn with_data(mut self, data: Value) -> Self {
         self.data = Some(data);
         self
     }
 }
+
+/// The `data.outcome` token of [`ToolError::outcome_unknown`].
+const OUTCOME_UNKNOWN: &str = "unknown";
 
 impl From<tauri::Error> for ToolError {
     fn from(e: tauri::Error) -> Self {
@@ -641,17 +662,24 @@ fn parse_round_trip_hold(payload: &str, expected_id: &str) -> Option<std::time::
 }
 
 /// The timeout, saying how long it waited and, when the frontend asked for longer,
-/// that it did.
+/// that it did. ❗ The event went out, so the action may still run: an unknown
+/// outcome, ❌ never worded as a failure.
 fn round_trip_timeout(waited: std::time::Duration, held: Option<std::time::Duration>) -> ToolError {
     let waited = pluralize(waited.as_secs(), "second");
-    ToolError::internal(match held {
-        None => format!("Frontend did not respond within {waited}"),
+    ToolError::outcome_unknown(match held {
+        None => format!("Frontend did not respond within {waited}, so the outcome is unknown: it may still go ahead"),
         Some(hold) => format!(
-            "Frontend did not respond within {waited}, though it asked to wait up to {} for a check before starting",
+            "Frontend did not respond within {waited}, though it asked to wait up to {} for a check before starting, \
+             so the outcome is unknown: it may still go ahead",
             pluralize(hold.as_secs(), "second")
         ),
     })
 }
+
+/// How to resolve an operation start's unknown outcome, added to the timeout's own
+/// wording, since blindly retrying a copy that did start runs it twice.
+const OPERATION_START_CHECK: &str =
+    ". Read `cmdr://state?include=operations` to see whether it started before trying again";
 
 /// Emit an autoConfirm file-op event and wait for the FE to reply with the
 /// spawned `operationId`.
@@ -673,7 +701,14 @@ async fn mcp_await_operation_start<R: Runtime>(
     payload: Value,
     timeout_secs: u64,
 ) -> Result<Option<String>, ToolError> {
-    let ack = mcp_round_trip_parsed(app, event, payload, timeout_secs, parse_operation_start_response).await?;
+    let ack = mcp_round_trip_parsed(app, event, payload, timeout_secs, parse_operation_start_response)
+        .await
+        .map_err(|mut err| {
+            if err.outcome_is_unknown() {
+                err.message.push_str(OPERATION_START_CHECK);
+            }
+            err
+        })?;
     operation_start_result(verb, ack)
 }
 

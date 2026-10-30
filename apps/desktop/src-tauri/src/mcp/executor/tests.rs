@@ -748,6 +748,49 @@ fn parse_operation_start_response_ignores_other_requests_and_junk() {
     assert_eq!(parse_operation_start_response("not json", "r-1"), None);
 }
 
+// ── A silent frontend is an unknown outcome ───────────────────────────────────
+
+/// ❗ A start the frontend didn't answer in time may still go ahead: the log that
+/// found this had the copy starting 2 s after the tool said it failed. So the reply
+/// says the outcome is unknown, in the typed `data` an agent reads, and sends the
+/// agent to `cmdr://state` before a retry starts the operation twice.
+#[tokio::test]
+async fn an_operation_start_the_frontend_didnt_answer_has_an_unknown_outcome() {
+    let app = tauri::test::mock_app();
+
+    let err = mcp_await_operation_start(app.handle(), "copy", "mcp-copy", json!({}), 0)
+        .await
+        .expect_err("nothing answers on a mock app");
+
+    assert!(err.outcome_is_unknown(), "got {err:?}");
+    assert_eq!(err.data, Some(json!({ "outcome": "unknown" })));
+    assert!(err.message.contains("cmdr://state"), "{}", err.message);
+}
+
+/// The other round-trips start no operation, and they still don't claim a failure
+/// nobody observed.
+#[tokio::test]
+async fn any_round_trip_the_frontend_didnt_answer_has_an_unknown_outcome() {
+    let app = tauri::test::mock_app();
+
+    let err = mcp_round_trip_with_timeout(app.handle(), "mcp-refresh", json!({}), "OK".to_string(), 0)
+        .await
+        .expect_err("nothing answers on a mock app");
+
+    assert!(err.outcome_is_unknown(), "got {err:?}");
+}
+
+/// A refusal the frontend DID send is a known outcome, and it stays one.
+#[test]
+fn a_tool_error_with_no_unknown_outcome_doesnt_claim_one() {
+    assert!(!ToolError::internal("Nothing to copy").outcome_is_unknown());
+    assert!(
+        !ToolError::internal("x")
+            .with_data(json!({ "outcome": "timed_out" }))
+            .outcome_is_unknown()
+    );
+}
+
 // ── Fitting a result to the caller's context ──────────────────────────────────
 
 #[test]
