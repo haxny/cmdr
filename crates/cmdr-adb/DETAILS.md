@@ -3,8 +3,7 @@
 The depth behind `CLAUDE.md`: the shape of the crate, the wire contract it implements, what the `Volume` impl answers
 and why, the error policy, where a test lives, and what is deliberately not done yet. The app-side half (the tracker
 task, the device provider, eject, the IPC commands) is `apps/desktop/src-tauri/src/adb/DETAILS.md`; what the backend
-still owes is in GitHub issues [#190](https://github.com/vdavid/cmdr/issues/190) (the real-device pass) and
-[#191](https://github.com/vdavid/cmdr/issues/191) (`sendrecv_v2` compression).
+still owes is in GitHub issue [#190](https://github.com/vdavid/cmdr/issues/190) (the real-device pass).
 
 ## Why a second Android backend
 
@@ -92,11 +91,35 @@ only the low nine bits anyway.
   len + message. `SND2` (feature `sendrecv_v2`) sends `SND2` + len + path then `SND2` + mode(u32) + flags(u32), then the
   same data stream. `SEND` truncates on open, which is why every write here stages (§ "The `Volume` answers").
 
+**Compression** (`lz4.rs`, on when the device advertises `sendrecv_v2_lz4`). `sendrecv_v2` alone doesn't promise it:
+each algorithm is its own feature, and a device that doesn't know a flag answers `FAIL` + `unknown flags`, so the flag
+goes out only on that word and everything else stays plain `SND2`/`RCV2` or `SEND`/`RECV`, with no retry. Flag bits:
+brotli 1, lz4 2, zstd 4, dry run `0x80000000`; one compression bit at most. Under the flag, the file is ONE LZ4 frame
+across the transfer's `DATA` payloads, cut at arbitrary bytes; the packet framing and the `DONE` are otherwise the same.
+adbd writes linked 64 KiB blocks with no checksums (`LZ4F_compressBegin` with null preferences). The reader takes any
+valid frame (block mode, up to the format's 4 MiB blocks, the optional checksums and content size) and refuses a
+dictionary or a second frame. (All verified against `client/file_sync_client.cpp`, `daemon/file_sync_service.cpp`,
+`compression_utils.h`, and `file_sync_protocol.h` in AOSP `packages/modules/adb` main, 2026-10-30.) Why LZ4 and not the
+other two: `docs/notes/adb-sendrecv-compression-2026-10-30.md`.
+
+- ❗ **A `DONE` before the frame's end mark is `AdbError::Protocol`**, never a clean end: that's a truncated file, and
+  on a stream of unknown length nothing downstream would catch it. `lz4_flex`'s `FrameDecoder` takes a frame cut at a
+  block boundary as finished, one of the two reasons the reader is ours (the other: it's a blocking `Read` that can't
+  resume a partial block over an async socket).
+- ❗ **A push owes a whole frame even for an empty file.** adbd's decoder reports `Done` only after the end mark, so a
+  `DONE` without one spins its decode loop forever. `Lz4Writer::finish` always emits a header and an end mark.
+- **A compression bomb** (255:1 at best, so one 64 KiB packet decodes to 16 MiB) stays bounded three ways: the size word
+  is refused past the frame's declared maximum before a byte of the block is buffered, a block that decodes past that
+  maximum fails inside the codec at the end of its buffer, and decoded bytes leave at most `MAX_DATA_CHUNK` per
+  `recv_chunk`, so the next block decodes only when the consumer has room. Peak per stream: one block in, one block out,
+  a 64 KiB window, and the read stream's channel. The total a device sends is unbounded, exactly as on an uncompressed
+  pull.
+
 **Every length word is the device's to choose, so each is bounded before its buffer exists.** A sync payload (name,
 `DATA`, `FAIL` message) past `MAX_DATA_CHUNK` (64 KiB) and a shell frame past `shell::MAX_FRAME_PAYLOAD` (1 MiB, adbd's
-own buffer) are `AdbError::Protocol`. Before the caps, one hostile `DNT2` or stderr frame allocated 4 GiB; the
-`adb_sync` and `adb_shell` fuzz targets (`fuzz/DETAILS.md`) found both within a few hundred runs, and `sync_test.rs` /
-`shell_test.rs` pin them.
+own buffer) are `AdbError::Protocol`, and so is an LZ4 block past its frame's maximum. Before the caps, one hostile
+`DNT2` or stderr frame allocated 4 GiB; the `adb_sync` and `adb_shell` fuzz targets (`fuzz/DETAILS.md`) found both
+within a few hundred runs, and `sync_test.rs` / `shell_test.rs` pin them. `adb_lz4` holds the frame reader to the same.
 
 **Shell** (`shell.rs`): `shell,v2,raw:<cmd>` (feature `shell_v2`) frames stdout, stderr, and the exit code as packets
 `[id: u8][len: u32 LE][payload]` with ids `0` stdin, `1` stdout, `2` stderr, `3` exit (payload one byte). A device
@@ -316,8 +339,10 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
   shell verbs in `shell.rs`, a real phone's `df -k` output in `pixel_captures.rs`): a loopback `TcpListener` speaking
   the host framing, `host:transport`, `host-serial:<serial>:features`, `sync:` (both v1 and v2 verbs; `SEND` creates its
   file at open, as a device's does, so an upload that stops short leaves a torn file for the writer's cleanup to remove,
-  and a cell can watch that cleanup fail), and `shell,v2,raw:` over an in-memory `FakeTree`. The tree resolves links as
-  the kernel does: a read follows every link along the path (`canonical`, up to `MAX_LINK_HOPS`, then `ELOOP`), `STAT`
+  and a cell can watch that cleanup fail; `RCV2`/`SND2` honor the LZ4 flag, refuse it where `set_features` doesn't list
+  `sendrecv_v2_lz4`, and record each flags word for `transfer_flags`, so every volume-level cell runs compressed and a
+  fallback cell means something), and `shell,v2,raw:` over an in-memory `FakeTree`. The tree resolves links as the
+  kernel does: a read follows every link along the path (`canonical`, up to `MAX_LINK_HOPS`, then `ELOOP`), `STAT`
   leaves the last one unfollowed, `LIST` of a link lists its target (with no `.`/`..`, and nothing at all for a
   `deny_read` folder, as a phone answers), and a write stays literal; `FakeTree::android_layout` builds the `/sdcard` →
   `/storage/self/primary` → `/storage/emulated/0` chain the index cells walk (a phone's own, verified on Pixel 9 Pro XL,
@@ -346,8 +371,10 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
 - **No ranged read in the sync service.** `RECV` has no offset; `open_read_stream_at_offset` reads and discards up to
   it. A resumed pane read on a phone is rare, and a resume from the middle of a 2 GB file re-reads the first half. If it
   matters, route resumable streams through the bounded `read_range` primitive instead.
-- **`sendrecv_v2` compression flags** (brotli, lz4, zstd) are off on purpose; measure before enabling, since the device
-  does the compressing.
+- **`sendrecv_v2` compression is LZ4 only.** brotli and zstd stay off: both cost real speed pulling photos for little or
+  no gain elsewhere (`docs/notes/adb-sendrecv-compression-2026-10-30.md`). LZ4 has no opt-out and no per-file choice;
+  the numbers show it neutral on already-compressed data, from one idle phone on AC power, so a phone on battery is the
+  open question.
 - **Bulk writes run at `adb push` speed; small files pay about 260 ms EACH.** `SEND` frames at the protocol's 64 KiB
   maximum with no per-chunk round trip, so one large file lands as fast as the CLI does (about 28 MB/s through Cmdr
   against 31 to 35 MB/s for `adb push`, same cable, same minute). A copy of many small files is another story: 200 files
@@ -363,8 +390,7 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
 - **Wireless debugging** (`adb pair`) is out of scope: the server owns pairing, and a paired device appears in
   `track-devices` like any other.
 - **Real-device pass pending**: the authorize prompt, an `unauthorized` → `device` transition mid-session, a 2 GB `RECV`
-  / `SEND`, and a re-check of the `/data` listing's `PermissionDenied` (§ "The error policy"; its `test -r`/`-x` exit
-  codes are toybox's documented ones, not yet watched on a phone).
+  / `SEND`, and a re-check of the `/data` listing's `PermissionDenied` (§ "The error policy").
 
 ## The public surface
 

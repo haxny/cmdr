@@ -37,6 +37,13 @@ serde = { version = "1", features = ["derive"] }
 # transitively.
 specta = { version = "=2.0.0-rc.24", features = ["derive"] }
 log = "0.4"
+# `sendrecv_v2` compression: the LZ4 block codec and the frame encoder. `src/lz4.rs`
+# reads the frame itself and says why. Already in the graph through `smb2`. Why LZ4
+# over brotli and zstd: `docs/notes/adb-sendrecv-compression-2026-10-30.md`.
+lz4_flex = "0.14"
+# The frame format's header, block, and content checksums. Already in the graph
+# through `lz4_flex`, which doesn't expose its own use of it.
+twox-hash = { version = "2", default-features = false, features = ["xxhash32"] }
 # The backend's own async surface. `net` is the whole transport (the ADB server
 # is a TCP socket on loopback, nothing else), `process` starts an absent server
 # through the platform `adb` binary once, and the rest is what `cmdr-sftp` takes:

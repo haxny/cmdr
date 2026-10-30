@@ -1,4 +1,5 @@
 use super::*;
+use crate::lz4::Lz4Writer;
 use crate::testing::{FAKE_SERIAL, FakeAdbServer, FakeTree};
 
 fn seeded() -> FakeTree {
@@ -236,4 +237,200 @@ fn the_done_word_carries_whole_seconds_clamped_to_u32() {
         done_mtime_word(UNIX_EPOCH + Duration::from_secs(5_000_000_000)),
         u32::MAX
     );
+}
+
+// The features string decides, read the way a connect reads it: `all()` here would
+// prove nothing about what a real device's list turns on.
+async fn session_for(server: &FakeAdbServer) -> SyncSession {
+    let features = DeviceFeatures::fetch(&server.endpoint(), FAKE_SERIAL).await.unwrap();
+    SyncSession::open(&server.endpoint(), FAKE_SERIAL, features)
+        .await
+        .unwrap()
+}
+
+async fn pull(session: &mut SyncSession, path: &str) -> Vec<u8> {
+    session.recv_start(path).await.unwrap();
+    let mut got = Vec::new();
+    while let Some(chunk) = session.recv_chunk().await.unwrap() {
+        assert!(chunk.len() <= MAX_DATA_CHUNK, "a chunk of {} bytes", chunk.len());
+        got.extend_from_slice(&chunk);
+    }
+    got
+}
+
+async fn push(session: &mut SyncSession, path: &str, bytes: &[u8]) {
+    session.send_start(path, 0o644).await.unwrap();
+    session.send_chunk(bytes).await.unwrap();
+    session.send_finish(1_700_000_000).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_device_that_advertises_lz4_gets_it_both_ways() {
+    let server = FakeAdbServer::start(seeded()).await;
+    let mut session = session_for(&server).await;
+
+    assert_eq!(pull(&mut session, "/sdcard/hello.txt").await, b"hello, phone");
+    let bytes: Vec<u8> = (0..MAX_DATA_CHUNK * 5).map(|i| (i / 300) as u8).collect();
+    push(&mut session, "/sdcard/DCIM/big.bin", &bytes).await;
+    assert_eq!(pull(&mut session, "/sdcard/DCIM/big.bin").await, bytes);
+    session.quit().await;
+
+    assert_eq!(server.transfer_flags(), [("RCV2", 2), ("SND2", 2), ("RCV2", 2)]);
+    let tree = server.tree();
+    assert_eq!(tree.lock().unwrap().file_bytes("/sdcard/DCIM/big.bin").unwrap(), bytes);
+}
+
+// The fake refuses the flag from a device without the feature, as an older `adbd`
+// answers `unknown flags`, so a client that sent it anyway would fail here.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_device_without_the_lz4_feature_gets_plain_v2_transfers() {
+    let server = FakeAdbServer::start(seeded()).await;
+    server.set_features("shell_v2,stat_v2,ls_v2,sendrecv_v2,sendrecv_v2_brotli,sendrecv_v2_zstd");
+    let mut session = session_for(&server).await;
+
+    assert_eq!(pull(&mut session, "/sdcard/hello.txt").await, b"hello, phone");
+    push(&mut session, "/sdcard/DCIM/x.bin", b"plain").await;
+    session.quit().await;
+
+    assert_eq!(server.transfer_flags(), [("RCV2", 0), ("SND2", 0)]);
+    let tree = server.tree();
+    assert_eq!(tree.lock().unwrap().file_bytes("/sdcard/DCIM/x.bin").unwrap(), b"plain");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_device_without_sendrecv_v2_uses_the_v1_verbs_whatever_else_it_lists() {
+    let server = FakeAdbServer::start(seeded()).await;
+    server.set_features("shell_v2,sendrecv_v2_lz4");
+    let mut session = session_for(&server).await;
+
+    assert_eq!(pull(&mut session, "/sdcard/hello.txt").await, b"hello, phone");
+    push(&mut session, "/sdcard/DCIM/x.bin", b"plain").await;
+    session.quit().await;
+
+    assert!(server.transfer_flags().is_empty(), "no flags word on the v1 verbs");
+}
+
+// ❗ adbd hangs on a `DONE` with no end mark before it, so zero bytes still owe a
+// whole frame. The fake answers `decompress failed` instead of spinning.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_empty_file_travels_compressed_both_ways() {
+    let server = FakeAdbServer::start(seeded()).await;
+    let mut session = session_for(&server).await;
+
+    push(&mut session, "/sdcard/DCIM/empty.bin", b"").await;
+    assert_eq!(pull(&mut session, "/sdcard/DCIM/empty.bin").await, b"");
+    session.quit().await;
+
+    assert_eq!(server.transfer_flags(), [("SND2", 2), ("RCV2", 2)]);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_small_push_held_back_by_the_compressor_arrives_by_the_finish() {
+    let server = FakeAdbServer::start(seeded()).await;
+    let mut session = session_for(&server).await;
+
+    session.send_start("/sdcard/DCIM/x.bin", 0o644).await.unwrap();
+    for piece in [&b"one "[..], b"two ", b"three"] {
+        session.send_chunk(piece).await.unwrap();
+    }
+    session.send_finish(1_700_000_000).await.unwrap();
+    session.quit().await;
+
+    let tree = server.tree();
+    assert_eq!(
+        tree.lock().unwrap().file_bytes("/sdcard/DCIM/x.bin").unwrap(),
+        b"one two three"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_missing_file_still_answers_fail_under_the_flag() {
+    let server = FakeAdbServer::start(seeded()).await;
+    let mut session = session_for(&server).await;
+    session.recv_start("/sdcard/nope").await.unwrap();
+    assert!(matches!(session.recv_chunk().await, Err(AdbError::Refused(_))));
+}
+
+/// What a device says to `RCV2` under the flag: `frame` cut into `DATA` packets,
+/// then `DONE`.
+fn compressed_answer(frame: &[u8]) -> Vec<u8> {
+    let mut device = Vec::new();
+    for packet in frame.chunks(MAX_DATA_CHUNK) {
+        device.extend(b"DATA");
+        device.extend(u32::try_from(packet.len()).unwrap().to_le_bytes());
+        device.extend(packet);
+    }
+    device.extend(b"DONE");
+    device.extend(0u32.to_le_bytes());
+    device
+}
+
+fn frame_of(data: &[u8]) -> Vec<u8> {
+    let mut writer = Lz4Writer::new();
+    let mut wire = writer.write(data).unwrap();
+    wire.extend(writer.finish().unwrap());
+    wire
+}
+
+// The compression bomb: 64 MiB of zeros in a few hundred KiB on the wire. Whatever
+// it expands to has to come out one capped chunk per call.
+#[tokio::test]
+async fn a_compression_bomb_comes_out_in_capped_chunks() {
+    const BOMB: usize = 64 * 1024 * 1024;
+    let frame = frame_of(&vec![0u8; BOMB]);
+    assert!(frame.len() < BOMB / 100, "not much of a bomb: {} bytes", frame.len());
+    let device = compressed_answer(&frame);
+    let mut session = SyncSession::from_connection(AdbConnection::scripted(&device), DeviceFeatures::all());
+
+    session.recv_start("/sdcard/bomb").await.unwrap();
+    let (mut total, mut chunks) = (0, 0);
+    while let Some(chunk) = session.recv_chunk().await.unwrap() {
+        assert!(chunk.len() <= MAX_DATA_CHUNK, "a chunk of {} bytes", chunk.len());
+        total += chunk.len();
+        chunks += 1;
+    }
+
+    assert_eq!(total, BOMB);
+    assert!(chunks >= BOMB / MAX_DATA_CHUNK);
+}
+
+// A device that stops early must not read as a file that was shorter: on a stream
+// of unknown length nothing downstream would notice.
+#[tokio::test]
+async fn a_done_before_the_frames_end_mark_is_refused() {
+    let frame = frame_of(&vec![7u8; MAX_DATA_CHUNK * 2]);
+    let device = compressed_answer(&frame[..frame.len() - 4]);
+    let mut session = SyncSession::from_connection(AdbConnection::scripted(&device), DeviceFeatures::all());
+
+    session.recv_start("/sdcard/a").await.unwrap();
+    let outcome = loop {
+        match session.recv_chunk().await {
+            Ok(Some(_)) => {}
+            other => break other,
+        }
+    };
+
+    assert!(matches!(outcome, Err(AdbError::Protocol(_))), "got {outcome:?}");
+}
+
+#[tokio::test]
+async fn a_compressed_pull_still_refuses_an_oversized_packet() {
+    let mut device = b"DATA".to_vec();
+    device.extend(u32::MAX.to_le_bytes());
+    let mut session = SyncSession::from_connection(AdbConnection::scripted(&device), DeviceFeatures::all());
+
+    session.recv_start("/sdcard/a").await.unwrap();
+
+    assert!(matches!(session.recv_chunk().await, Err(AdbError::Protocol(_))));
+}
+
+// A session reuses its socket, and the second pull's frame must start clean.
+#[tokio::test]
+async fn a_second_compressed_pull_on_a_session_starts_a_new_frame() {
+    let mut device = compressed_answer(&frame_of(b"first"));
+    device.extend(compressed_answer(&frame_of(b"second")));
+    let mut session = SyncSession::from_connection(AdbConnection::scripted(&device), DeviceFeatures::all());
+
+    assert_eq!(pull(&mut session, "/sdcard/a").await, b"first");
+    assert_eq!(pull(&mut session, "/sdcard/b").await, b"second");
 }

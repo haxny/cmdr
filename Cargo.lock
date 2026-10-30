@@ -1613,10 +1613,12 @@ dependencies = [
  "cmdr-adb",
  "cmdr-fs",
  "log",
+ "lz4_flex",
  "serde",
  "specta",
  "tokio",
  "tokio-util",
+ "twox-hash",
  "unicase",
  "unicode-normalization",
 ]

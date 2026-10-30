@@ -2,7 +2,7 @@
 //!
 //! `host-serial:<serial>:features` answers the comma-separated list `adbd`
 //! advertised at connect (`shell_v2,cmd,stat_v2,ls_v2,fixed_push_mkdir,…`).
-//! The four that change what this crate sends are recorded; the rest are
+//! The five that change what this crate sends are recorded; the rest are
 //! ignored.
 
 use crate::errors::AdbError;
@@ -21,6 +21,9 @@ pub struct DeviceFeatures {
     pub ls_v2: bool,
     /// `SND2`/`RCV2`: transfers with a flags word (compression, dry-run).
     pub sendrecv_v2: bool,
+    /// `SND2`/`RCV2` take the LZ4 flag. Its own feature: `sendrecv_v2` alone
+    /// doesn't promise it, and a device that lacks it answers the flag with `FAIL`.
+    pub sendrecv_v2_lz4: bool,
 }
 
 impl DeviceFeatures {
@@ -34,6 +37,7 @@ impl DeviceFeatures {
                 "stat_v2" => features.stat_v2 = true,
                 "ls_v2" => features.ls_v2 = true,
                 "sendrecv_v2" => features.sendrecv_v2 = true,
+                "sendrecv_v2_lz4" => features.sendrecv_v2_lz4 = true,
                 _ => {}
             }
         }
@@ -47,7 +51,14 @@ impl DeviceFeatures {
             stat_v2: true,
             ls_v2: true,
             sendrecv_v2: true,
+            sendrecv_v2_lz4: true,
         }
+    }
+
+    /// Whether transfers go compressed: the verbs that carry the flag, and the
+    /// device's word that it takes this one.
+    pub(crate) fn lz4_transfers(&self) -> bool {
+        self.sendrecv_v2 && self.sendrecv_v2_lz4
     }
 
     /// Asks the server what the device with `serial` supports.

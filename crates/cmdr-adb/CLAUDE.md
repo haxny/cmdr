@@ -8,8 +8,9 @@ words.
 
 - `server.rs` (endpoint + the one `start-server` attempt), `transport.rs` (the ONLY module that knows the wire framing),
   `devices.rs` (`host:devices-l` + the `host:track-devices` hotplug stream), `features.rs` (read once per session),
-  `sync.rs` (`STAT`/`LIST`/`RECV`/`SEND`), `shell.rs` (`mkdir`/`rm`/`mv`/`cp`/`df`), `errors.rs`, `params.rs`,
-  `testing/` (the fake ADB server), `fuzzing.rs` (the fuzz targets' entry points, `fuzzing` feature).
+  `sync.rs` (`STAT`/`LIST`/`RECV`/`SEND`), `lz4.rs` (their frame), `shell.rs` (`mkdir`/`rm`/`mv`/`cp`/`df`),
+  `errors.rs`, `params.rs`, `testing/` (the fake ADB server), `fuzzing.rs` (the fuzz targets' entry points, `fuzzing`
+  feature).
 - `volume/`: the `Volume` impl by job: `paths`, `query`, `streams`, `writes`, `mapping`, `state`, `volume_impl`,
   `testing`, `index_scope` (which directories a drive-index walk descends), plus `scan` and `mutation`, which are just
   this backend's `ScanSource` / `PatchSource` impls.
@@ -18,7 +19,8 @@ words.
 
 - **❗ Host framing (hex lengths, `OKAY`/`FAIL`) lives only in `transport.rs`**; `sync.rs` / `shell.rs` decode the
   device's packets through its raw helpers. **Every device-chosen length is capped BEFORE its buffer exists**
-  (`MAX_DATA_CHUNK`, `MAX_FRAME_PAYLOAD`), or a hostile phone allocates 4 GiB. DETAILS § "Wire contract".
+  (`MAX_DATA_CHUNK`, `MAX_FRAME_PAYLOAD`), decompressed bytes included, or a hostile phone allocates 4 GiB. DETAILS §
+  "Wire contract".
 - **❗ The peer is the server, not the phone.** A refused loopback connect earns exactly one `adb start-server` per
   process, ❌ never a retry loop.
 - **❗ `shell_v2` is required; a device without it is `AdbConnectError::DeviceTooOld`.** Legacy `shell:` has no exit

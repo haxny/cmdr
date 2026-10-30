@@ -27,7 +27,8 @@ use crate::errors::{ENOENT, volume_error_from_errno};
 use crate::sync::{MAX_DATA_CHUNK, SyncEntryKind, SyncSession, done_mtime_word};
 
 /// Chunks buffered between the producer and the consumer. Peak memory per
-/// stream is `this * MAX_DATA_CHUNK`, regardless of file size.
+/// stream is `this * MAX_DATA_CHUNK` plus a compressed pull's frame state
+/// (`lz4.rs`), regardless of file size.
 const STREAM_CHANNEL_CAPACITY: usize = 4;
 
 /// Device-side `dd` range reads align down to this block. Toybox seeks over
