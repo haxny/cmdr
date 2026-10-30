@@ -76,6 +76,14 @@
   "@mtp.ptpcameradDialog.retry": {
     "sourceHash": "eccee4e"
   },
+  "mtp.readiness.connecting": "Ansluter fortfarande. Lås upp telefonen och tryck på Tillåt om den frågar.",
+  "@mtp.readiness.connecting": {
+    "sourceHash": "389b779"
+  },
+  "mtp.readiness.connectingTooltip": "Cmdr fortsätter att försöka så länge telefonen är ansluten, och du kan öppna den så snart anslutningen är klar.",
+  "@mtp.readiness.connectingTooltip": {
+    "sourceHash": "4f4066b"
+  },
   "mtp.deviceFallbackName": "MTP-enhet",
   "@mtp.deviceFallbackName": {
     "sourceHash": "8ba7a69"

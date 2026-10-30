@@ -43,6 +43,14 @@
   "@adb.readiness.waitingForAuthorization": {
     "sourceHash": "679558e"
   },
+  "adb.readiness.tapAllow": "Koppints az „Engedélyezés” gombra a telefonodon",
+  "@adb.readiness.tapAllow": {
+    "sourceHash": "68c770f"
+  },
+  "adb.unnamedPhone": "Android-telefon",
+  "@adb.unnamedPhone": {
+    "sourceHash": "fae4ea5"
+  },
   "adb.readiness.offline": "A telefonod nem válaszol. Ébreszd fel a kijelzőjét, vagy húzd ki és dugd vissza a kábelt.",
   "@adb.readiness.offline": {
     "sourceHash": "6061885"

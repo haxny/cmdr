@@ -43,6 +43,14 @@
   "@adb.readiness.waitingForAuthorization": {
     "sourceHash": "679558e"
   },
+  "adb.readiness.tapAllow": "在手機上輕觸「允許」",
+  "@adb.readiness.tapAllow": {
+    "sourceHash": "68c770f"
+  },
+  "adb.unnamedPhone": "Android 手機",
+  "@adb.unnamedPhone": {
+    "sourceHash": "fae4ea5"
+  },
   "adb.readiness.offline": "你的手機沒有回應。請喚醒螢幕，或把連接線拔掉再插上。",
   "@adb.readiness.offline": {
     "sourceHash": "6061885"

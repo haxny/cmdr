@@ -43,6 +43,14 @@
   "@adb.readiness.waitingForAuthorization": {
     "sourceHash": "679558e"
   },
+  "adb.readiness.tapAllow": "Tryck på Tillåt i telefonen",
+  "@adb.readiness.tapAllow": {
+    "sourceHash": "68c770f"
+  },
+  "adb.unnamedPhone": "Android-telefon",
+  "@adb.unnamedPhone": {
+    "sourceHash": "fae4ea5"
+  },
   "adb.readiness.offline": "Din telefon svarar inte. Väck skärmen eller dra ur och sätt i kabeln igen.",
   "@adb.readiness.offline": {
     "sourceHash": "6061885"

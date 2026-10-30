@@ -76,6 +76,14 @@
   "@mtp.ptpcameradDialog.retry": {
     "sourceHash": "eccee4e"
   },
+  "mtp.readiness.connecting": "Vẫn đang kết nối. Hãy mở khóa điện thoại và nhấn vào Cho phép nếu điện thoại hỏi.",
+  "@mtp.readiness.connecting": {
+    "sourceHash": "389b779"
+  },
+  "mtp.readiness.connectingTooltip": "Cmdr vẫn tiếp tục thử miễn là điện thoại của bạn còn cắm, và bạn có thể mở điện thoại ngay khi kết nối xong.",
+  "@mtp.readiness.connectingTooltip": {
+    "sourceHash": "4f4066b"
+  },
   "mtp.deviceFallbackName": "Thiết bị MTP",
   "@mtp.deviceFallbackName": {
     "sourceHash": "8ba7a69"

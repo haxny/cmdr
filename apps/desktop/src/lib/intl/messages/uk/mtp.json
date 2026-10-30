@@ -76,6 +76,14 @@
   "@mtp.ptpcameradDialog.retry": {
     "sourceHash": "eccee4e"
   },
+  "mtp.readiness.connecting": "Підʼєднання ще триває. Відімкніть телефон і торкніться «Дозволити», якщо він попросить.",
+  "@mtp.readiness.connecting": {
+    "sourceHash": "389b779"
+  },
+  "mtp.readiness.connectingTooltip": "Cmdr і далі пробує, поки телефон підʼєднано, а відкрити його можна буде, щойно він підʼєднається.",
+  "@mtp.readiness.connectingTooltip": {
+    "sourceHash": "4f4066b"
+  },
   "mtp.deviceFallbackName": "MTP-пристрій",
   "@mtp.deviceFallbackName": {
     "sourceHash": "8ba7a69"

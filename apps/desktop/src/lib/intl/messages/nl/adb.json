@@ -43,6 +43,14 @@
   "@adb.readiness.waitingForAuthorization": {
     "sourceHash": "679558e"
   },
+  "adb.readiness.tapAllow": "Tik op ‘Toestaan’ op je telefoon",
+  "@adb.readiness.tapAllow": {
+    "sourceHash": "68c770f"
+  },
+  "adb.unnamedPhone": "Android-telefoon",
+  "@adb.unnamedPhone": {
+    "sourceHash": "fae4ea5"
+  },
   "adb.readiness.offline": "Je telefoon reageert niet. Zet het scherm aan of sluit de kabel opnieuw aan.",
   "@adb.readiness.offline": {
     "sourceHash": "6061885"

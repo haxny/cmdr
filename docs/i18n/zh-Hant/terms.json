@@ -4129,10 +4129,10 @@
     "sources": "AP live Finder + AppKit TW 14 / HK 14 (macOS 27.0.1, loctable scan, 2026-10-10); catalog uses it for archives, phones, and the keychain"
   },
   "unplug": {
-    "accept": ["斷線", "中斷", "接上", "沒有連接", "插上"],
+    "accept": ["斷線", "中斷", "接上", "沒有連接", "插上", "插著"],
     "chosen": "拔",
     "confidence": "high",
-    "forms": "reseat the cable → 把連接線拔掉再插上; a drive pulled mid-transfer → 斷線了",
+    "forms": "reseat the cable → 把連接線拔掉再插上; a drive pulled mid-transfer → 斷線了; still plugged in → 還插著",
     "sources": "catalog errors.provider.macDroid.transient, errors.write.deviceDisconnected.*"
   },
   "unreachable": {

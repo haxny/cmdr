@@ -7,6 +7,8 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 
 ## Open
 
+- `mtp.readiness.connecting`: "Unlock your phone" matches the `unlock` concept (password-protected archives), while
+  `unlock-device` stays out of the batch. Add it to `unlock`'s `notMatch`. `mtp-browse.png` doesn't show the row. (all)
 - `fileExplorer.pane.ejectAllFailedToast`, `.ejectAllHeldToast`: the descriptions call `{message}` one sentence, but the
   `errors.eject.unmountRefused*` reasons they carry run to two ("… is still using something there. Close it, then try
   again."). Say so, or pick a one-sentence variant. (all)
