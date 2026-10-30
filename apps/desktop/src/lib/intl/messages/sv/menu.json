@@ -650,6 +650,14 @@
   "@menu.volume.ejectBusy": {
     "sourceHash": "e2145a6"
   },
+  "menu.volume.ejectAll": "Mata ut alla",
+  "@menu.volume.ejectAll": {
+    "sourceHash": "7adbe9a"
+  },
+  "menu.volume.ejectAllBusy": "Mata ut alla (upptagen)",
+  "@menu.volume.ejectAllBusy": {
+    "sourceHash": "8b91f8f"
+  },
   "menu.volume.renameFavorite": "Byt namn",
   "@menu.volume.renameFavorite": {
     "sourceHash": "3064d79"

@@ -231,9 +231,9 @@ bundle), Microsoft, file managers, the catalog.
 - in use → `används` (Finder; `upptagen` is the menu marker); idle → `när den inte används`. removable → `borttagbar`
   (Finder), ❌ `flyttbar`. disk image → `skivavbild` / `avbilden`, ❌ `avbildning`.
 - `timedOut` uses the noun `utmatningen`: `så den kan fortfarande matas ut` reads "you can still eject it".
-- `unmountRefused*` share `X har fortfarande filer öppna där.` + `… och försök sedan igen.`, never `den här enheten` or
-  `mata ut igen` (share or phone). Bare active `{app}`, unquoted per `@key`; `Stäng dem` → `filer`; never `Vi`;
-  `andra appar` vs bare `andra` for processes.
+- `unmountRefused*` share `X använder fortfarande något där.` + `… och försök sedan igen.`, never `den här enheten` or
+  `mata ut igen` (share or phone). Bare active `{app}`, unquoted per `@key`; `Stäng appen` / `apparna`; Eject all →
+  `Mata ut alla` (Finder `N199.1`); never `Vi`; `andra appar` vs bare `andra` for processes.
 
 ## Trash toast (`fileOperations.trash.*`, `commands.fileGoToTrash.*`, `menu.edit.undoTrash`)
 

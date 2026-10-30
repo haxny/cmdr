@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "Den här telefonen håller den här mappen privat",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android reserverar den här mappen för systemet och dess appar, så Cmdr kan inte öppna den. Det är inget fel på telefonen eller anslutningen.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "Dina bilder, hämtningar och andra filer finns i telefonens delade lagringsutrymme, så prova en mapp där.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "Servern öppnar inte den här mappen",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "Mappen finns på en server, och kontot du anslöt med har inte behörighet att öppna den. Det är servern som bestämmer, så ingen inställning på den här datorn ändrar det.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Så här kan du prova:\n- Kontrollera mappens behörigheter på servern\n- Vissa mappar tillhör serverns eget systemkonto och förblir stängda för alla andra\n- Anslut med ett konto som har åtkomst",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "Finns redan",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -1729,6 +1753,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Android reserverar den här platsen för systemet och dess appar. Dina bilder, hämtningar och andra filer finns i telefonens delade lagringsutrymme, så prova en mapp där.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "Servern nekade detta för kontot du anslöt med. Kontrollera mappens behörigheter på servern eller anslut med ett konto som har åtkomst.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "Leverantören nekade, och det kan betyda två saker. Kontrollera åtkomstnyckelns behörigheter, eller titta i din leverantörs konsol efter en användningsgräns eller ett faktureringsmeddelande.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2261,29 +2293,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "Något har fortfarande filer öppna där. Stäng öppna filer och appar och försök sedan igen.",
+  "errors.eject.unmountRefused": "Något används fortfarande där. Stäng öppna filer och appar och försök sedan igen.",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} har fortfarande filer öppna där. Stäng dem och försök sedan igen.",
+  "errors.eject.unmountRefusedByApp": "{app} använder fortfarande något där. Stäng appen och försök sedan igen.",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} har fortfarande filer öppna där. Stäng dem och försök sedan igen.",
+  "errors.eject.unmountRefusedByApps": "{apps} använder fortfarande något där. Stäng apparna och försök sedan igen.",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "andra appar",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "En process som heter {process} har fortfarande filer öppna där. (Cmdr har inget appnamn, bara processnamnet.)",
+  "errors.eject.unmountRefusedByProcess": "En process som heter {process} använder fortfarande något där. (Cmdr har inget appnamn, bara processnamnet.)",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "{countText} processer som heter {processes} har fortfarande filer öppna där. (Cmdr har inga appnamn, bara processnamnen.)",
+  "errors.eject.unmountRefusedByProcesses": "{countText} processer som heter {processes} använder fortfarande något där. (Cmdr har inga appnamn, bara processnamnen.)",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "andra",
   "@errors.eject.otherProcesses": {
@@ -2293,13 +2325,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "macOS har fortfarande filer öppna där. Vänta en minut och försök sedan igen.",
+  "errors.eject.unmountRefusedBySystem": "macOS använder fortfarande något där. Vänta en minut och försök sedan igen.",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "Cmdr själv har fortfarande filer öppna där. Vänta en stund och försök igen, eller skicka en rapport om det fortsätter.",
+  "errors.eject.unmountRefusedByCmdr": "Cmdr själv använder fortfarande något där. Vänta en stund och försök igen, eller skicka en rapport om det fortsätter.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "Enheten har inte svarat än, så utmatningen kan fortfarande gå igenom.",
   "@errors.eject.timedOut": {
