@@ -4945,5 +4945,11 @@
     "exceptions": {
       "menu.window.zoom": "the Window menu Zoom: macOS Finder MenuBar 300667 says «Оптимізувати», which this ruling reserves for exactly this action"
     }
+  },
+  "shared-storage": {
+    "accept": ["спільному сховищі"],
+    "chosen": "спільне сховище",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-uk storage_internal (read 2026-10-30): Внутрішнє спільне сховище"
   }
 }

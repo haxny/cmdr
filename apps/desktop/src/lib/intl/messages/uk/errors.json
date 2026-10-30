@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "Цей телефон тримає цю папку закритою",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android резервує цю папку для системи та її програм, тому Cmdr не може її відкрити. З телефоном і підʼєднанням усе гаразд.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "Ваші фото, викачане й інші файли зберігаються у спільному сховищі телефону, тож спробуйте папку там.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "Сервер не відкриває цю папку",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "Ця папка на сервері, і обліковий запис, з яким ви підʼєдналися, не має привілеїв, щоб відкрити цю папку. Це вирішує сервер, тому жоден параметр на цьому компʼютері цього не змінить.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Що можна спробувати:\n- Перевірте привілеї папки на сервері\n- Деякі папки належать власному системному обліковому запису сервера і закриті для всіх інших\n- Підʼєднайтеся обліковим записом, який має доступ",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "Уже існує",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -1729,6 +1753,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Android резервує це розташування для системи та її програм. Ваші фото, викачане й інші файли зберігаються у спільному сховищі телефону, тож спробуйте папку там.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "Сервер відмовив обліковому запису, з яким ви підʼєдналися. Перевірте привілеї папки на сервері або підʼєднайтеся обліковим записом, який має доступ.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "Постачальник відмовив, і це може означати дві речі. Перевірте привілеї ключа доступу або подивіться в консолі постачальника, чи немає там повідомлення про ліміт використання чи оплату.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2261,29 +2293,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "Там досі щось тримає файли відкритими. Закрийте всі відкриті файли й програми, а тоді спробуйте ще раз.",
+  "errors.eject.unmountRefused": "Там досі щось використовується. Закрийте всі відкриті файли й програми, а тоді спробуйте ще раз.",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} досі тримає там файли відкритими. Закрийте їх, а тоді спробуйте ще раз.",
+  "errors.eject.unmountRefusedByApp": "{app} досі щось там використовує. Закрийте цю програму, а тоді спробуйте ще раз.",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} досі тримають там файли відкритими. Закрийте їх, а тоді спробуйте ще раз.",
+  "errors.eject.unmountRefusedByApps": "{apps} досі щось там використовують. Закрийте ці програми, а тоді спробуйте ще раз.",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "інші програми",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "Процес {process} досі тримає там файли відкритими. (Cmdr не знає назви програми, лише назву процесу.)",
+  "errors.eject.unmountRefusedByProcess": "Процес {process} досі щось там використовує. (Cmdr не знає назви програми, лише назву процесу.)",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "Процеси {processes} (усього: {countText}) досі тримають там файли відкритими. (Cmdr не знає назв програм, лише назви процесів.)",
+  "errors.eject.unmountRefusedByProcesses": "Процеси {processes} (усього: {countText}) досі щось там використовують. (Cmdr не знає назв програм, лише назви процесів.)",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "інші",
   "@errors.eject.otherProcesses": {
@@ -2293,13 +2325,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "macOS досі тримає там файли відкритими. Зачекайте хвилину, а тоді спробуйте ще раз.",
+  "errors.eject.unmountRefusedBySystem": "macOS досі щось там використовує. Зачекайте хвилину, а тоді спробуйте ще раз.",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "Сам Cmdr досі тримає там файли відкритими. Зачекайте трохи й спробуйте ще раз, а якщо це повторюється, надішліть звіт.",
+  "errors.eject.unmountRefusedByCmdr": "Сам Cmdr досі щось там використовує. Зачекайте трохи й спробуйте ще раз, а якщо це повторюється, надішліть звіт.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "Диск ще не відповів, тож він, можливо, ще вийметься сам.",
   "@errors.eject.timedOut": {

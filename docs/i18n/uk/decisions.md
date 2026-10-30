@@ -100,7 +100,8 @@ needs-action/serious lines follows «сервіс».
 
 ### Eject reasons start capitalized (`errors.eject.*`, `fileExplorer.rename.needsOwnMoveDialog`)
 
-Over the usual uk lowercase after a colon: the reasons can be two sentences and MCP reads them standalone.
+Over the usual uk lowercase after a colon: the reasons can be two sentences and MCP reads them standalone. Holders:
+`X досі щось там використовує.`, `Закрийте цю програму` / `ці програми`. Eject all → `Вийняти всі` (Finder `N199.1`).
 
 ### Raw-error suggestion with technical details (`errors.write.writeError.suggestion`, `readError.suggestion`, `ioError.suggestion`)
 
