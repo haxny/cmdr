@@ -115,6 +115,7 @@ impl Volume for MtpVolume {
         &'a self,
         path: &'a Path,
         cancel: Option<&'a CancellationToken>,
+        clock: &'a cmdr_fs::volume::ScanListingClock,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             let mtp_path = self.to_mtp_path(path);
@@ -129,6 +130,7 @@ impl Volume for MtpVolume {
                     self.storage_id,
                     &mtp_path,
                     bridge.as_ref().map(MtpCancelBridge::token),
+                    clock,
                 )
                 .await
                 .map_err(map_mtp_error)

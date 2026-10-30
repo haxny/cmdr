@@ -36,8 +36,16 @@ chain materialization uses for a single path):
 - **Timeout-wrapped, but DETACHING**: each listing runs in its OWN task and `LIST_TIMEOUT` (120 s) races that task's
   JOIN HANDLE, so a wedged mount yields `VolumeScanError::Timeout` instead of parking forever. ❌ Never wrap the listing
   future directly: dropping the handle detaches the task, dropping the future cancels it mid-round-trip, and on MTP that
-  abandons a PTP transaction and wedges the phone (`crates/cmdr-mtp/src/connection/CLAUDE.md`). A background MTP scan
-  crosses 120 s routinely, since it parks at `background_yield_point` while the user is active.
+  abandons a PTP transaction and wedges the phone (`crates/cmdr-mtp/src/connection/CLAUDE.md`).
+- **The timeout counts ACTIVE time only** (`race_with_active_time` over a `cmdr_fs::volume::ScanListingClock` handed to
+  `list_directory_for_scan`). A backend pauses the clock around waits it chose: MTP at `background_yield_point` and
+  while queued for the device lock behind a foreground op or the walk's own sibling listings. **Why:** a listing is
+  spawned only once it holds a budget slot, so it's never the wait for a slot that burns the clock; it's the in-flight
+  listings parked inside the backend. On a Pixel, a walk throttled 64 → 1 timed out 26 healthy folders exactly 120 s
+  after the throttle began, and each became `Abandoned` for up to a day (#835, verified on Pixel 9 Pro XL, dev build,
+  2026-10-30). A round trip the device never answers runs the clock, so it still times out; a sibling queued behind that
+  wedged lock gives up on MTP's own `DEVICE_LOCK_WAIT_SECS` (300 s) instead. A backend that never pauses (SMB, ADB,
+  in-memory) keeps plain wall-clock behavior. Pinned by `tests/listing_timeout.rs`.
 - **`autoreleasepool`-drained per listing on macOS**: the SMB listing path touches NSURL/`NSString`-adjacent ObjC, and
   unpooled autoreleases leak multi-GB over a long walk (same rule as the writer thread). We can't hold an
   `autoreleasepool` guard across an `.await` (it isn't `Send`), so we drain AFTER the await resolves

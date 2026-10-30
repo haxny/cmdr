@@ -17,7 +17,7 @@
 //!
 //! - **is cancelable at every round trip**: the cancel flag is checked before
 //!   each directory listing and the BFS bails immediately when set;
-//! - **wraps each listing in a timeout** (`LIST_TIMEOUT`): a wedged mount yields
+//! - **wraps each listing in a timeout of ACTIVE time** (`LIST_TIMEOUT`, not counting what the backend spends parked by its own choice): a wedged mount yields
 //!   a typed `VolumeScanError::Timeout` rather than parking forever;
 //! - **wraps each round trip in `objc2::rc::autoreleasepool` on macOS**: the SMB
 //!   listing path touches NSURL/`NSString`-adjacent code, and unpooled ObjC
@@ -67,7 +67,7 @@ pub(crate) use system_dirs::{exclusion_stamp_message, index_predates_exclusion_l
 
 use cmdr_fs::log_error::{ErrorLogText, ErrorText, LogError, write_plain};
 use cmdr_fs::log_private::LogPrivate;
-use cmdr_fs::volume::Volume;
+use cmdr_fs::volume::{ScanListingClock, Volume};
 
 use super::scanner::ScanSummary;
 use super::writer::IndexWriter;
@@ -260,18 +260,24 @@ impl std::error::Error for VolumeScanError {}
 /// wrapping the listing future directly would drop it mid-round-trip, and on MTP
 /// that abandons an in-flight PTP transaction and wedges the phone
 /// (`mtp/connection/CLAUDE.md`). The walk gives up on the directory either way;
-/// the difference is whether the device survives it. A background MTP scan hits
-/// this routinely: it parks at `background_yield_point` while the user is
-/// active, so a big folder easily outlives `LIST_TIMEOUT`.
+/// the difference is whether the device survives it.
+///
+/// The timeout counts ACTIVE time only ([`ScanListingClock`]): a backend pauses
+/// the clock while it parks the listing by its own choice (MTP at
+/// `background_yield_point` while the user is active, or queued behind the
+/// device lock), so a throttled walk doesn't turn healthy folders into timeouts
+/// (#835), while a round trip the device never answers still times out.
 async fn list_one_directory(
     volume: Arc<dyn Volume>,
     dir_path: PathBuf,
     cancel: CancellationToken,
 ) -> Result<Vec<cmdr_fs::entry::FileEntry>, VolumeScanError> {
     let listing_path = dir_path.clone();
+    let clock = ScanListingClock::start();
+    let listing_clock = clock.clone();
     let listing = tokio::spawn(async move {
         let result = volume
-            .list_directory_for_scan(&listing_path, Some(&cancel))
+            .list_directory_for_scan(&listing_path, Some(&cancel), &listing_clock)
             .await
             .map(|entries| walked_links_as_directories(volume.as_ref(), entries));
         // Drain the autoreleased ObjC objects this listing created before the
@@ -280,14 +286,38 @@ async fn list_one_directory(
         result
     });
 
-    match tokio::time::timeout(LIST_TIMEOUT, listing).await {
-        Ok(Ok(Ok(entries))) => Ok(entries),
-        Ok(Ok(Err(e))) => Err(VolumeScanError::Volume(e)),
-        Ok(Err(join_err)) => Err(VolumeScanError::Volume(cmdr_fs::volume::VolumeError::IoError {
+    match race_with_active_time(listing, &clock).await {
+        Some(Ok(Ok(entries))) => Ok(entries),
+        Some(Ok(Err(e))) => Err(VolumeScanError::Volume(e)),
+        Some(Err(join_err)) => Err(VolumeScanError::Volume(cmdr_fs::volume::VolumeError::IoError {
             message: format!("Directory listing task failed: {join_err}").into(),
             raw_os_error: None,
         })),
-        Err(_elapsed) => Err(VolumeScanError::Timeout(dir_path)),
+        None => Err(VolumeScanError::Timeout(dir_path)),
+    }
+}
+
+/// Wait on a listing's JOIN HANDLE until it finishes or its clock has RUN for
+/// [`LIST_TIMEOUT`]; `None` on timeout. Time the backend kept the clock paused
+/// (parked at a yield point, queued behind a lock its own scan holds) doesn't
+/// count, so a walk throttled to one listing never mistakes its own pacing for
+/// a wedge (#835). Each wait is bounded by the active time still left, and a
+/// wait that ends while the clock was paused just waits again.
+///
+/// ❌ Only ever borrows the handle: returning `None` drops it, which DETACHES the
+/// task and never cancels the round trip inside it.
+async fn race_with_active_time<T>(
+    mut listing: tokio::task::JoinHandle<T>,
+    clock: &ScanListingClock,
+) -> Option<Result<T, tokio::task::JoinError>> {
+    loop {
+        let left = LIST_TIMEOUT.saturating_sub(clock.active());
+        if left.is_zero() {
+            return None;
+        }
+        if let Ok(joined) = tokio::time::timeout(left, &mut listing).await {
+            return Some(joined);
+        }
     }
 }
 

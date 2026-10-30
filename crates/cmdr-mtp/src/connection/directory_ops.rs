@@ -17,6 +17,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
+use cmdr_fs::volume::ScanListingClock;
 use cmdr_fs::volume::host::indexing::WatchGap;
 
 /// Global counter for generating unique request IDs for debugging.
@@ -203,6 +204,11 @@ impl MtpConnectionManager {
     /// round trip. It populates the same path/listing caches as `list_directory`
     /// via `finalize_listing`.
     ///
+    /// `clock` is the walk's wedge timer: it stops while this listing parks at a
+    /// yield point or waits for the device lock (held by a foreground op or by
+    /// the walk's own sibling listings), and runs during every PTP transaction,
+    /// so only a round trip the phone doesn't answer can time the listing out.
+    ///
     /// Foreground listings deliberately do NOT use this path: the user wants the
     /// whole listing now, and a foreground listing isn't the thing being starved.
     pub async fn list_directory_for_scan(
@@ -211,6 +217,7 @@ impl MtpConnectionManager {
         storage_id: u32,
         path: &str,
         cancel: Option<&CancelToken>,
+        clock: &ScanListingClock,
     ) -> Result<Vec<FileEntry>, MtpConnectionError> {
         let parent_path = normalize_mtp_path(path);
 
@@ -233,12 +240,18 @@ impl MtpConnectionManager {
 
         // Unit 0: get the handle list (one GetObjectHandles), holding the lock
         // only for that single transaction.
-        self.background_yield_point(device_id).await;
+        clock.paused(self.background_yield_point(device_id)).await;
         if cancel.is_some_and(CancelToken::is_cancelled) {
             return Err(scan_cancelled(device_id));
         }
         let mut listing = {
-            let device = acquire_device_lock(&device_arc, device_id, "list_directory_for_scan[handles]").await?;
+            let device = clock
+                .paused(acquire_device_lock(
+                    &device_arc,
+                    device_id,
+                    "list_directory_for_scan[handles]",
+                ))
+                .await?;
             let storage = device
                 .storage(StorageId(u64::from(storage_id)))
                 .await
@@ -259,12 +272,18 @@ impl MtpConnectionManager {
         // Units 1..n: fetch metadata in bounded batches, releasing the lock and
         // yielding to foreground between each.
         loop {
-            self.background_yield_point(device_id).await;
+            clock.paused(self.background_yield_point(device_id)).await;
             if cancel.is_some_and(CancelToken::is_cancelled) {
                 return Err(scan_cancelled(device_id));
             }
 
-            let device = acquire_device_lock(&device_arc, device_id, "list_directory_for_scan[meta]").await?;
+            let device = clock
+                .paused(acquire_device_lock(
+                    &device_arc,
+                    device_id,
+                    "list_directory_for_scan[meta]",
+                ))
+                .await?;
             let mut done = false;
             for _ in 0..SCAN_METADATA_BATCH {
                 match listing.next().await {

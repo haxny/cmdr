@@ -396,7 +396,13 @@ async fn smb_dfs_the_index_scan_pool_lists_behind_a_link() {
         vol.inner.scan_pool.read().await.is_some(),
         "the pool is open, so the listing rides a member"
     );
-    let listed = vol.list_directory_for_scan(Path::new("data/subdir"), None).await;
+    let listed = vol
+        .list_directory_for_scan(
+            Path::new("data/subdir"),
+            None,
+            &cmdr_fs::volume::ScanListingClock::start(),
+        )
+        .await;
     let prefetched = vol
         .open_read_stream_for_scan(Path::new("data/subdir/nested.txt"), Some(12))
         .await;

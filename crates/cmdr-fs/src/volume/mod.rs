@@ -211,11 +211,18 @@ pub trait Volume: Send + Sync {
     /// which is just `list_directory_with_cancel`. The scanner
     /// (`indexing::network_scanner`) calls THIS, not `list_directory`, for every
     /// directory it walks.
+    ///
+    /// `clock` times the listing for the walk's wedge timeout. A backend that
+    /// parks the listing by its own choice (a yield point, a lock its own scan
+    /// holds) pauses it around that wait, so pacing never reads as a dead
+    /// device; ❌ never around a device round trip (`ScanListingClock`).
     fn list_directory_for_scan<'a>(
         &'a self,
         path: &'a Path,
         cancel: Option<&'a CancellationToken>,
+        clock: &'a ScanListingClock,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        let _ = clock;
         self.list_directory_with_cancel(path, None, cancel)
     }
 
@@ -2216,6 +2223,7 @@ mod retirement;
 mod root_echo;
 mod routed;
 mod scan_boundary;
+mod scan_listing_clock;
 mod scan_outages;
 mod scan_recorder;
 pub mod scan_stop;
@@ -2278,6 +2286,7 @@ pub use retirement::{Retirement, Retires, SelfHandle};
 pub use root_echo::{RootEcho, root_echo};
 pub use routed::{ResolvedVolume, RoutedKind};
 pub use scan_boundary::{ScanBoundary, stopped as scan_stopped};
+pub use scan_listing_clock::{ScanListingClock, ScanListingClockPause};
 pub use scan_outages::{ScanOutages, ScanReadJudge, ScanReadNext};
 pub use scan_recorder::ScanRecorder;
 pub use scan_stop::{ScanStop, ScanStopSignal};

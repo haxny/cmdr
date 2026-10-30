@@ -536,10 +536,11 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         &'a self,
         path: &'a Path,
         cancel: Option<&'a CancellationToken>,
+        clock: &'a cmdr_fs::volume::ScanListingClock,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         match self.fault_for(FaultyOp::ListDirectory, path) {
             Some(e) => Box::pin(async move { Err(e) }),
-            None => self.inner.list_directory_for_scan(path, cancel),
+            None => self.inner.list_directory_for_scan(path, cancel, clock),
         }
     }
 

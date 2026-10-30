@@ -47,6 +47,10 @@ acquisition with a yield point between:
   release/re-acquire.
 - Units 1..n: yield → lock → up to `SCAN_METADATA_BATCH` (32) `listing.next()` calls (each one `GetObjectInfo`) →
   release.
+- The walk's `ScanListingClock` is PAUSED around every yield and every device-lock wait, and runs during each PTP
+  transaction, so the index walk's `LIST_TIMEOUT` counts only time the phone was asked something. Without it, a walk
+  throttled while the user browsed turned dozens of healthy folders into timeouts (#835). ❌ Never pause it around a
+  transaction: that hides the wedge the timeout catches.
 
 **Batch sizing.** Worst-case foreground wait is one in-flight unit = one metadata batch. A `GetObjectInfo` is
 single-digit-to-low-tens of ms over USB, so 32 keeps a unit well under ~1 s while keeping lock-acquire overhead

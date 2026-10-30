@@ -119,6 +119,7 @@ impl Volume for AdbVolume {
         &'a self,
         path: &'a Path,
         cancel: Option<&'a CancellationToken>,
+        _clock: &'a cmdr_fs::volume::ScanListingClock,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         Box::pin(self.noting(self.list_directory_impl(path, None, cancel)))
     }

@@ -103,13 +103,13 @@ impl Volume for SmbVolume {
         Box::pin(self.list_directory_with_cancel_impl(path, on_progress, cancel))
     }
 
-    /// Draws from the per-scan connection pool when one is active (`scan_pool.rs`),
-    /// and stops between server batches when `cancel` fires, like the pane's
-    /// listing.
+    /// Draws from the per-scan connection pool when one is active (`scan_pool.rs`), and stops between
+    /// server batches when `cancel` fires, like the pane's listing. Nothing here parks, so `clock` runs.
     fn list_directory_for_scan<'a>(
         &'a self,
         path: &'a Path,
         cancel: Option<&'a tokio_util::sync::CancellationToken>,
+        _clock: &'a cmdr_fs::volume::ScanListingClock,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         Box::pin(self.list_directory_for_scan_impl(path, cancel))
     }
