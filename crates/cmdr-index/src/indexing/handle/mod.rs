@@ -337,13 +337,19 @@ impl Index {
 
     /// Index one volume again from scratch.
     ///
-    /// An already-indexing volume gets a fresh full walk; one that isn't indexing
-    /// yet is started, since its first walk is the rescan.
+    /// An already-indexing volume gets a fresh full walk. One that isn't indexing
+    /// yet is started first, and then gets the same walk: ❗ a start alone doesn't
+    /// promise one, since a trait-scanned volume with a finished index on disk
+    /// resumes into Stale and waits for exactly this call. A start that did begin a
+    /// walk answers `Started` here too (`AlreadyScanning`), so nothing walks twice.
     pub async fn rescan_volume(&self, volume_id: &str) -> Result<StartOutcome, IndexError> {
-        if state::is_active(volume_id) {
-            return Ok(started_or_deferred(state::force_scan(volume_id)?));
+        if !state::is_active(volume_id) {
+            let started = self.start_volume(volume_id).await?;
+            if started != StartOutcome::Started {
+                return Ok(started);
+            }
         }
-        self.start_volume(volume_id).await
+        Ok(started_or_deferred(state::force_scan(volume_id)?))
     }
 
     /// Stop the walk that's running on a volume, keeping its index and its

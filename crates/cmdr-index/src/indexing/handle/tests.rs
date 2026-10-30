@@ -145,6 +145,51 @@ async fn a_phone_over_adb_finishes_its_scan_stale_because_nothing_watches_it() {
     assert_eq!(children.len(), 2, "the walk read both files: {children:?}");
 }
 
+/// ❗ A rescan of a drive with no manager running has to WALK. Starting it isn't
+/// enough: a trait-scanned volume with a finished index on disk resumes into Stale
+/// and waits for somebody to ask for a rescan, and this IS that somebody. Without
+/// the walk, `indexing rescan` answered OK ("status now stale") having read nothing.
+#[tokio::test(flavor = "multi_thread")]
+#[allow(
+    clippy::await_holding_lock,
+    reason = "the lock serializes the process-wide seams for the whole scan; holding it across the awaits IS the point"
+)]
+async fn a_rescan_of_a_volume_with_no_running_manager_walks_it() {
+    let _serialized = crate::indexing::handle::test_lock();
+    let data = tempfile::tempdir().expect("index data dir");
+    let serial = "RESCANSTOPPED1";
+    let root = cmdr_fs::volume::adb_app_root(serial);
+    let volume_id = cmdr_fs::volume::adb_volume_id(serial);
+
+    let volumes = FakeVolumeProvider::shared();
+    volumes.register(&volume_id, in_memory_phone(&root));
+
+    let events = Arc::new(RecordingSink::new());
+    let (index, _installed) = Index::builder()
+        .data_dir(data.path())
+        .volumes(Arc::clone(&volumes) as Arc<_>)
+        .events(Arc::clone(&events) as Arc<dyn EventSink>)
+        .install_for_test();
+    let scans = || {
+        events
+            .kinds_for(&volume_id)
+            .iter()
+            .filter(|kind| **kind == IndexEventKind::ScanComplete)
+            .count()
+    };
+
+    index.start_volume(&volume_id).await.expect("the phone starts indexing");
+    wait_until_async(Duration::from_secs(20), "the first scan to finish", || scans() == 1).await;
+
+    index.disable_volume(&volume_id).expect("the phone stops indexing");
+
+    assert_eq!(
+        index.rescan_volume(&volume_id).await.expect("the rescan starts"),
+        StartOutcome::Started
+    );
+    wait_until_async(Duration::from_secs(20), "the rescan's walk to finish", || scans() == 2).await;
+}
+
 /// The acceptance test for the whole extraction: a full scan, start to finish,
 /// driven through the public handle over an `InMemoryVolume`, reporting into a
 /// `RecordingSink`. Nothing app-side is in the room — no `AppHandle`, no

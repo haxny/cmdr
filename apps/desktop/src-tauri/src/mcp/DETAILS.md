@@ -196,7 +196,8 @@ provider-egress question and `CLOUD_AI_CONSENT_VERSION` are unchanged by this ti
   away, saying which holder the scan is waiting on: the index remembers the request and runs it when that holder ends
   (model: `crates/cmdr-index/src/indexing/lifecycle/DETAILS.md` § The one walk a volume remembers), so the freshness the
   ordering contract waits for isn't going to move yet and waiting for it would just burn the budget and then lie.
-  `DriveLeaving` (an unmount of the drive was under way, so the drive-release gate ran no start) is a tool error. Because the generic executor can't supply the concrete `AppHandle` that
+  `DriveLeaving` (an unmount of the drive was under way, so the drive-release gate ran no start) and `IndexingDisabled`
+  (the master switch) are tool errors. A `rescan` whose freshness never moved answers `outcome_unknown`, ❌ never `OK`. Because the generic executor can't supply the concrete `AppHandle` that
   `enable`/`rescan` need, they route through handle-free `*_via_handle` wrappers backed by a startup-cached handle
   (`set_app_handle` in `setup()`). Status is NOT an action — it lives in `cmdr://indexing`.
 - Queue (1): `queue` (`action` = `pause` | `resume` | `cancel` | `pause_all` | `resume_all`; `operationId` for the
@@ -399,7 +400,7 @@ follow-up `await index_status <volume> fresh` can't instantly match the pre-resc
 freshness before the backend call, then polls until it differs (bounded 5 s, timeout-tolerant); a pre-state that's
 already `scanning` needs no wait.
 
-**Why it's not a spurious ack.** `force_scan` (the active-index rescan path) fires `ScanStarted` → `Scanning`
+**Why it's not a spurious ack.** `force_scan` (every rescan's walk, `Index::rescan_volume`) fires `ScanStarted` → `Scanning`
 synchronously before returning, so the first poll already differs and the handler returns immediately. Only the
 enable-first-scan path (a not-yet-active volume, especially async SMB via `start_indexing_for_smb`) can lag the flip,
 and that's exactly where the wait earns its keep. This replaces a generation counter for the new `await` condition (the
