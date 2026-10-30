@@ -2,8 +2,7 @@
 
 The depth behind `CLAUDE.md`: the shape of the crate, the wire contract it implements, what the `Volume` impl answers
 and why, the error policy, where a test lives, and what is deliberately not done yet. The app-side half (the tracker
-task, the device provider, eject, the IPC commands) is `apps/desktop/src-tauri/src/adb/DETAILS.md`; what the backend
-still owes is in GitHub issue [#190](https://github.com/vdavid/cmdr/issues/190) (the real-device pass).
+task, the device provider, eject, the IPC commands) is `apps/desktop/src-tauri/src/adb/DETAILS.md`.
 
 ## Why a second Android backend
 
@@ -264,8 +263,8 @@ The volume is device-anchored, the same shape MTP has, and every answer below fo
   `FakeTree::new` and `FakeTree::android_layout` mount `/` read-only (`FakeMount::read_only`), so a write under it
   answers `EROFS` and `test -w` exits 1 there, as the kernel does under a read-only mount. The mount is matched after
   following links (`FakeTree::writes_refused_at`), so a write through the layout's `/sdcard` link lands on shared
-  storage rather than under `/`. `test -w /` exiting 1 on a real phone is not yet verified on a device (the Pixel was
-  unplugged); `classify_failed_verb` already relies on the same verb.
+  storage rather than under `/`. `classify_failed_verb` relies on the same verb, whose exit 1 on `/` is verified (§
+  "Verified on a real phone").
 
 ## The error policy
 
@@ -365,8 +364,8 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
 - **Codec cells that need exact bytes, not a conversation**, script the peer: `AdbConnection::scripted` plays a fixed
   byte string and discards what we write (`AdbConnection` holds any `AsyncRead + AsyncWrite` stream for this). The
   `fuzzing` feature's `fuzzing` module drives the sync and shell readers the same way for the fuzz targets.
-- **A real-device pass is pending** (§ "Known gaps"). The fake server implements what the AOSP docs say; the documented
-  differences between the docs and a phone's `adbd` are what that pass is for.
+- **The fake implements what the AOSP docs say**, so a phone can still surprise it. What a real one did: § "Verified on
+  a real phone".
 
 ## Known gaps and follow-ups
 
@@ -391,8 +390,22 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
   write mode, or a capability the engine reads), which touches the `Volume` trait.
 - **Wireless debugging** (`adb pair`) is out of scope: the server owns pairing, and a paired device appears in
   `track-devices` like any other.
-- **Real-device pass pending**: the authorize prompt, an `unauthorized` → `device` transition mid-session, a 2 GB `RECV`
-  / `SEND`, and a re-check of the `/data` listing's `PermissionDenied` (§ "The error policy").
+
+## Verified on a real phone
+
+Pixel 9 Pro XL, Android 17 (`CP3A.261005.005`), adb 37.0.0, macOS 27.0.1, dev build, 2026-10-30:
+
+- **Authorizing**: revoking USB debugging drops the phone's whole USB session. The row waits while unauthorized, and
+  tapping Allow brings ADB back with nothing else pressed. Android falls back to "No data transfer", so MTP stays away
+  until something sets File transfer.
+- **2 GB each way**: `RECV` and `SEND` both byte-identical by SHA-256, with the modified date kept.
+- **Compressed transfers** against a real `adbd`: round trips from 0 bytes to 20 MiB, including the empty file. Numbers:
+  `docs/notes/adb-sendrecv-compression-2026-10-30.md`.
+- **Refusals**: `/data` answers `PermissionDenied` carrying the path, and `test -w /` exits 1 where a readable folder
+  exits 0.
+- **Drive-index walk of `/sdcard`**: 23,553 entries and 2,205 folders in 5.1 s, 4 s on a rescan. Pane listings stay
+  responsive under the eight-listing ceiling: a median of 50 ms during a walk against 36 ms idle. Unplugging mid-walk
+  ends it with a typed disconnect, and the in-flight listings aren't held against their folders.
 
 ## The public surface
 

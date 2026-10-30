@@ -22,8 +22,8 @@ rules (`resources/99-cmdr-mtp.rules`). The frontend (`src/lib/mtp/CLAUDE.md`) is
 - **Hotplug events are a TRIGGER, never the source of truth.** ❌ Don't auto-connect off a `HotplugEvent` payload: that
   watch is USB-only, so E2E's virtual device would never connect. Every event funnels into
   `check_for_device_changes()`, which re-enumerates and diffs `KNOWN_DEVICES`.
-- **Auto-connect retries `Timeout` / `DeviceBusy` / `SessionReset` while the same ARRIVAL stays plugged in** (Android
-  holds the session behind its "Allow access" prompt, and no hotplug event follows). ❌ Never retry `ExclusiveAccess` or
+- **Auto-connect retries `Timeout` / `DeviceBusy` / `SessionReset` while the same ARRIVAL stays plugged in** (a phone
+  can leave an open unanswered for 30 s, and no hotplug event follows). ❌ Never retry `ExclusiveAccess` or
   `PermissionDenied`: each attempt re-raises their dialog. Checks run between attempts, never during one.
 - **A phone auto-connecting past `WAITING_ROW_DELAY` gets a `Connecting` row**, held on its arrival in `KnownDevices`. ❌
   Its words never claim a prompt: `DETAILS.md`.

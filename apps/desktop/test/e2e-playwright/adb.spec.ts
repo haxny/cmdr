@@ -21,9 +21,9 @@
  * what makes the ready transition assertable — the pane moving off the waiting
  * sentence with nothing pressed is the whole claim, whatever it moves onto.
  *
- * The real-device pass (the authorize prompt on hardware, an `unauthorized` →
- * `device` transition mid-session, a 2 GB transfer) stays a by-hand job:
- * GitHub #190.
+ * The real-device half (the authorize prompt on hardware, an `unauthorized` →
+ * `device` transition mid-session, a 2 GB transfer) is a by-hand job, recorded
+ * in `crates/cmdr-adb/DETAILS.md` § "Verified on a real phone".
  */
 
 import { waitBudget } from './wait-budget.js'

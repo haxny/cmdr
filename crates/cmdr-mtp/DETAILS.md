@@ -317,6 +317,20 @@ cargo nextest run --workspace --features cmdr/virtual-mtp -E 'package(cmdr-mtp) 
 Why the feature is package-qualified, why `cargo test` is not a substitute, and which door each side reaches a device
 through: `docs/tooling/virtual-mtp.md` § "Running the Rust suites against it".
 
+## Verified on a real phone
+
+Pixel 9 Pro XL, Android 17, macOS 27.0.1, dev build, 2026-10-30:
+
+- **Registration order**: the storage registers before the event loop spawns, on every connect.
+- **Copies each way** are byte-identical. A same-phone move with a skipped clash keeps the skipped file's only copy: its
+  cleanup logs `MTP delete refused (folder still has 1 entries)`.
+- **A cable pulled mid-upload** leaves nothing behind: Android drops the incomplete object, and the sweep reports it
+  already gone on reconnect. macOS reports the pull as `kIOReturnNotResponding`, which `mtp-rs` 0.36.1 reads as a
+  disconnect.
+- **A replug into another port** gets a new location id and the same serial-based device id, with no rescan. Turning the
+  MTP setting off and on reconnects within 0.5 s.
+- **Not exercised**: session reset. Locking this phone's screen doesn't trigger one.
+
 ## Dependencies
 
 - `mtp-rs`: the PTP session, object listing, transfers, hotplug events, and the virtual device. Pinned to the version

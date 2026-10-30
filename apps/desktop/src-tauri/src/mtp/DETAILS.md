@@ -75,12 +75,13 @@ restores ptpcamerad on macOS; enabling re-runs `check_for_device_changes()`. The
 (`OnceLock`, no shutdown channel) and `check_for_device_changes()` returns early when the flag is off. The persisted
 key is `fileOperations.mtpEnabled` in `settings.json`, read by `settings/loader.rs` at startup.
 
-**Auto-connect retries while the device stays plugged in.** A replugged Android phone can hold its MTP session back
-until the user answers "Allow access to phone data?" on the phone; the open runs out its 30 s transfer bound and fails
-with `Timeout`, and the phone stays enumerated throughout, so no hotplug event comes to trigger another try. Before the
-retry, the only way back was toggling the phone's USB mode (verified on Pixel 9 Pro XL, Android 17, macOS 27.0.1, dev
-build, 2026-10-30, issue #834: arrival 08:21:55, timeout 08:22:26, nothing further until a USB-mode toggle at 08:24:48,
-connected in 0.4 s). `auto_connect.rs` holds the fix, pure and injectable so it tests without a device or a clock:
+**Auto-connect retries while the device stays plugged in.** A replugged Android phone can leave an open unanswered: it runs
+out its 30 s transfer bound and fails with `Timeout`, and the phone stays enumerated throughout, so no hotplug event
+comes to trigger another try. Before the retry, the only way back was toggling the phone's USB mode (Pixel 9 Pro XL,
+Android 17, macOS 27.0.1, dev build, 2026-10-30, issue #834: arrival 08:21:55, timeout 08:22:26, nothing further until a
+USB-mode toggle at 08:24:48, connected in 0.4 s). Why the phone was silent is open: that replug followed a cable pull
+mid-upload, while a later plain replug with Android's prompts unanswered connected at once, so a prompt alone isn't the
+cause. `auto_connect.rs` holds the fix, pure and injectable so it tests without a device or a clock:
 
 - `KnownDevices` replaces the old `HashSet`: each device carries the `Arrival` token of the diff that saw it come. A
   retry loop holds its arrival and keeps going only while `is_still_present(id, arrival)` and MTP is on. An unplug ends
