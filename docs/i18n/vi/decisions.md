@@ -440,10 +440,12 @@ Server dialog (`NetAuthAgent.app`).
 
 ## macOS từ chối tháo ổ đĩa (`errors.eject.unmountRefusedBy*`, `errors.eject.otherApps`, `errors.eject.otherProcesses`)
 
-- Shared ACTIVE frame `… vẫn đang mở tệp ở đó. Hãy …, rồi thử lại.` over AppKit's passive `đang được “%@” sử dụng`
-  (needs quotes); `{app}` bare. A share or phone may be meant, so `ở đó`, never `ổ đĩa này` / `tháo lại`.
-- `…ByApp` / `…ByApps` share `Hãy đóng các tệp đó`; `otherProcesses` → `các tiến trình khác`. called → `có tên`
-  (Finder); the "(We don’t have …)" aside matches in `…ByProcess(es)`.
+- Shared ACTIVE frame `… vẫn đang dùng thứ gì đó ở đó. Hãy …, rồi thử lại.` over AppKit's passive
+  `đang được “%@” sử dụng` (needs quotes); `{app}` bare. A share or phone may be meant, so `ở đó`, never `ổ đĩa này` /
+  `tháo lại`.
+- `…ByApp` / `…ByApps`: `Hãy đóng ứng dụng này` / `các ứng dụng này`; Eject all → `Tháo tất cả` (Finder `N199.1`); a
+  volume beside its drive → `phần của ổ đĩa`, since both are `ổ đĩa`; `otherProcesses` → `các tiến trình khác`. called →
+  `có tên` (Finder); the "(We don’t have …)" aside matches in `…ByProcess(es)`.
 - `ảnh đĩa`: Disk Utility, `DiskImages.framework` (sweep 2026-09-16). stored there → `nằm ở đó` over `lưu trữ`. Busy
   tooltips: `vẫn đang làm việc với` (macOS `Đang làm việc với %@`), `một phút` / `một chút` kept apart. send a report →
   `gửi báo cáo` (the button).

@@ -3647,5 +3647,22 @@
     "chosen": "Mức suy nghĩ",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
+  },
+  "shared-storage": {
+    "chosen": "bộ nhớ dùng chung",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-vi storage_internal (read 2026-10-30): Bộ nhớ trong dùng chung"
+  },
+  "this-computer": {
+    "accept": ["máy tính"],
+    "chosen": "máy tính này",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
+  },
+  "busy": {
+    "chosen": "đang bận",
+    "confidence": "high",
+    "forms": "the greyed menu marker: the base label word for word, then (đang bận)",
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)"
   }
 }
