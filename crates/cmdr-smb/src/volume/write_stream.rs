@@ -173,7 +173,8 @@ impl SmbVolume {
     }
 
     /// [`open_file_writer`] on the lease's tree, or through the DFS link the
-    /// path sits behind (`dfs_links.rs`).
+    /// path sits behind (`dfs_links.rs`): first, under a known link, skipping
+    /// the refused open.
     async fn open_writer(
         &self,
         tree: &Arc<smb2::client::Tree>,
@@ -182,6 +183,11 @@ impl SmbVolume {
         path: &str,
         mode: WriteMode,
     ) -> Result<smb2::client::stream::FileWriter, smb2::Error> {
+        if self.inner.link_paths.covers(path)
+            && let Some(opened) = self.inner.open_link_writer(lease.0, lease.1, tree, path, mode).await
+        {
+            return opened;
+        }
         match open_file_writer(tree, conn, path, mode).await {
             Err(e) if is_behind_dfs_link(&e) => self
                 .inner

@@ -712,25 +712,33 @@ path (0.27.0, vdavid/smb2#15), but Cmdr drives the lock-free `Tree` API on clone
 `SmbClient` calls take `&mut SmbClient`. `dfs_links.rs` bridges it for every call that takes a path (vdavid/cmdr#133 for
 the transfers, vdavid/cmdr#815 for the rest):
 
-- **Tree first, link on refusal.** Each call runs on the `Tree` as always; only a CREATE refused with
-  `STATUS_PATH_NOT_COVERED` (`is_behind_dfs_link`, the trigger smb2 uses) runs again through the `SmbClient` its session
-  belongs to. A refused CREATE wrote nothing, so the retry is safe. The client is held for that one call (for anything
-  that streams, the OPEN only: the handle owns the target's connection, pooled on that client).
+- **A known link goes straight to its target; any other path, Tree first.** Every path a call followed a link from is
+  remembered by its link folder (`LinkPaths`). A call under one asks smb2's resolver (`SmbClient::resolve_dfs_link`,
+  smb2 0.36.2, vdavid/smb2#27), which answers from its referral cache with nothing on the wire, and runs on the target's
+  tree directly. Any other path runs on the `Tree` as always; only a CREATE refused with `STATUS_PATH_NOT_COVERED`
+  (`is_behind_dfs_link`, the trigger smb2 uses) resolves the link (one referral round trip, then cached) and runs again
+  there. A refused CREATE wrote nothing, so the retry is safe. A link the resolver no longer finds runs the call as
+  given. The client is held for the resolve and that one call (for anything that streams, the OPEN only: the handle owns
+  the target's connection, pooled on that client).
 - **Main-session calls** (listings, every `stat`, `exists`, `entry_kind`, the copy scan and the batch scan's pipelined
   stats, `find_stored_spelling`, attributes, the random reader and `read_range`, create, `set_times`, rename, delete) go
   through `SmbVolume::or_through_link`, which takes the main client only while the lease's generation is still
-  installed; after a reconnect the refusal stands. The `op` it runs owns everything but the client, the tree clone, and
-  the path, because rustc can't prove a borrowing future `Send` across that higher-ranked closure.
-- **The scan pool's listings follow through their member's own client** (`ScanPool::open_through_link`), so an index
-  walk into a link stays off the main session. An enrichment prefetch refused at a link breaks to the streamed read,
-  which follows it on the transfer session.
+  installed; after a reconnect the refusal stands. A rename goes through `or_following_link` instead: its destination is
+  a share path too, so it runs on the share's own tree and smb2 places both ends. The `op` it runs owns everything but
+  the client, the tree clone, and the path, because rustc can't prove a borrowing future `Send` across that
+  higher-ranked closure.
+- **The scan pool's listings follow through their member's own client** (`ScanPool::open_through_link`, resolved the
+  same way), so an index walk into a link stays off the main session. An enrichment prefetch refused at a link breaks to
+  the streamed read, which follows it on the transfer session.
 - **Errors funnel as the session the client belongs to** (`RanOn::Main` for the main client). Decision: a link's target
   connection lives INSIDE that client, and with `auto_reconnect: false` nothing revives it but rebuilding the session,
   so a target drop that ends the main session is what brings the link back. Why not a separate "link" `RanOn`: a failure
   out of smb2's follow can also be the share's own connection (it re-sends to the share's tree first).
-- **Cost**: a call behind a link pays the refused CREATE twice (ours, then smb2's own first try) before the referral
-  (cached after the first) and the real call, and holds the main client meanwhile. A link is the rare case. A public
-  link resolver in smb2 (path → target tree and connection) would let a known link go straight to its target.
+- **Cost**: under a known link, nothing extra on the share's connection
+  (`smb_dfs_a_call_under_a_known_link_skips_the_refused_round_trip`: 0 requests there, 6 before the resolver). The first
+  call into a link pays one refused CREATE and the referral. A streamed read or write under a known link opens through
+  the link first; the hinted compound read and the one-frame write still try the tree first, then fall through. Every
+  call through a link holds the client it runs on meanwhile. A link is the rare case.
 - **Writes**: `create_file_writer[_exclusive]` and the one-frame `write_file_compound[_exclusive]` through the link,
   then the frame's date by path through the same client; a failed write's partial goes the same way.
 - **Reads**: smb2's own adaptive `FileDownload` through the link, opened by `SmbClient::open_file_download` (smb2
@@ -745,9 +753,9 @@ the transfers, vdavid/cmdr#815 for the rest):
   - **The listing engine holds a watch per open listing** through `Volume::watch_listing` (taken on open, dropped on
     close: `crates/cmdr-listing/src/host/DETAILS.md` § "Observers"). `LinkWatches` counts the holds per `LinkPaths`
     entry; the first starts a task, the last stops it.
-  - **Its own session**: the task opens a dedicated session to the share's server (`build_session`) and calls smb2's
-    `SmbClient::watch` on the link path, which follows the link and runs the `CHANGE_NOTIFY` on the target's connection,
-    pooled inside that client. Two connections per watched link (share server, target), for as long as it's shown.
+  - **Its own session**: the task opens a dedicated session to the share's server (`build_session`), resolves the link
+    through it (`dfs_links::target_of`), and runs the `CHANGE_NOTIFY` on the target's connection, pooled inside that
+    client. Two connections per watched link (share server, target), for as long as it's shown.
   - **The same pipeline as the share's watch** (`watcher::pump_events`, with the link path as the events' `root`), so a
     change lands under the path the pane keyed its listing on and its `stat` rides the main session through the link. An
     overflow re-reads the open listings behind the link.
@@ -759,16 +767,14 @@ the transfers, vdavid/cmdr#815 for the rest):
     own dead session, and re-reads the open listings behind the link once back, since their changes went unheard. An
     auth refusal or an exhausted backoff ends the task; the next listing to open there starts a new one. Unmount and
     supersede stop every link watch.
-  - **Gaps**: a change between the listing's read and the watch arming goes unheard, as with the share's watch.
-    `LinkPaths` keys on the first path followed, so a watch can sit below the link folder itself, and a later listing
-    higher up the same link starts a second, overlapping watch (duplicate events are idempotent at the cache). The
+  - **Gaps**: a change between the listing's read and the watch arming goes unheard, as with the share's watch. The
     index's entries behind a link still freshen on rescans only, unless a pane happens to show them.
 - **A move between two folders behind one link lands** (smb2 0.36.2, vdavid/smb2#21): smb2 places the SET_INFO's
   destination on the target when it sits inside the same link. A destination outside the link still answers
   `STATUS_PATH_NOT_COVERED`. `smb_dfs_a_move_between_folders_behind_a_link_lands` pins both the plain and the forced
   move.
-- Verified against smb2's `smb-dfs-root` fixture (Samba on Alpine 3.21, smb2 0.36.0, 2026-10-29; the link watch against
-  smb2 0.36.1, 2026-10-30).
+- Verified against smb2's `smb-dfs-root` fixture (Samba on Alpine 3.21, smb2 0.36.0, 2026-10-29; the link watch, the
+  resolver, and moves inside a link against smb2 0.36.2, 2026-10-30).
 - Pinned by `dfs_links_integration_test.rs` against smb2's INTERNAL DFS fixtures (`smb-dfs-root` → `smb-dfs-target`),
   which Cmdr's vendored stack doesn't carry, one cell per call family. The fixture lane runs every ignored cell in this
   package, so each cell also skips (prints "skipped", passes) unless `CMDR_SMB_DFS_FIXTURE` is set; set and unreachable,

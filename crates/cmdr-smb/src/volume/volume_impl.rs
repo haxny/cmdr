@@ -584,9 +584,9 @@ impl Volume for SmbVolume {
             // central-directory parse to ~1). Caching an open `FileReader` per path
             // is the future optimization; see the archive backend DETAILS.
             let SessionLease { tree, conn, generation } = self.clone_session().await?;
-            let opened = tree.open_file_reader(conn, &smb_path).await;
+            let first = tree.open_file_reader(conn, &smb_path);
             let opened = self
-                .or_through_link(generation, &smb_path, opened, link_open_reader)
+                .or_through_link(generation, &smb_path, first, link_open_reader)
                 .await;
             let reader = self.handle_smb_result("read_range(open)", &smb_path, generation, opened)?;
 

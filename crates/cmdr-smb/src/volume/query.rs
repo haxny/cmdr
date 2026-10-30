@@ -127,11 +127,13 @@ impl SmbVolume {
         let start = std::time::Instant::now();
 
         let SessionLease { tree, conn, generation } = self.clone_session().await?;
-        let opened = tree.open_directory_reader(conn, &smb_path).await;
         let opened = self
-            .or_through_link(generation, &smb_path, opened, |client, tree, path| {
-                Box::pin(client.open_directory_reader(tree, path))
-            })
+            .or_through_link(
+                generation,
+                &smb_path,
+                tree.open_directory_reader(conn, &smb_path),
+                |client, tree, path| Box::pin(client.open_directory_reader(tree, path)),
+            )
             .await;
         let listed = match opened {
             Ok(reader) => {
@@ -195,8 +197,14 @@ impl SmbVolume {
                 mut conn,
                 generation,
             } = self.clone_session().await?;
-            let r = stat_through_link(&tree, &mut conn, &smb_path).await;
-            let r = self.or_through_link(generation, &smb_path, r, link_stat).await;
+            let r = self
+                .or_through_link(
+                    generation,
+                    &smb_path,
+                    stat_through_link(&tree, &mut conn, &smb_path),
+                    link_stat,
+                )
+                .await;
             slow_calls::note(&self.inner.share_name, "get_metadata", start.elapsed());
             if let Err(e) = &r
                 && e.status() == Some(smb2::types::status::NtStatus::DELETE_PENDING)
@@ -240,9 +248,8 @@ impl SmbVolume {
                 mut conn,
                 generation,
             }) => {
-                let r = tree.stat(&mut conn, &smb_path).await;
                 let found = self
-                    .or_through_link(generation, &smb_path, r, link_bare_stat)
+                    .or_through_link(generation, &smb_path, tree.stat(&mut conn, &smb_path), link_bare_stat)
                     .await
                     .is_ok();
                 slow_calls::note(&self.inner.share_name, "exists", start.elapsed());
@@ -266,8 +273,14 @@ impl SmbVolume {
                 mut conn,
                 generation,
             } = self.clone_session().await?;
-            let r = stat_through_link(&tree, &mut conn, &smb_path).await;
-            let r = self.or_through_link(generation, &smb_path, r, link_stat).await;
+            let r = self
+                .or_through_link(
+                    generation,
+                    &smb_path,
+                    stat_through_link(&tree, &mut conn, &smb_path),
+                    link_stat,
+                )
+                .await;
             slow_calls::note(&self.inner.share_name, "is_directory", start.elapsed());
             self.handle_smb_result("is_directory", &smb_path, generation, r)?
         };
@@ -292,8 +305,9 @@ impl SmbVolume {
             mut conn,
             generation,
         } = self.clone_session().await?;
-        let r = tree.stat(&mut conn, &smb_path).await;
-        let r = self.or_through_link(generation, &smb_path, r, link_bare_stat).await;
+        let r = self
+            .or_through_link(generation, &smb_path, tree.stat(&mut conn, &smb_path), link_bare_stat)
+            .await;
         slow_calls::note(&self.inner.share_name, "entry_kind", start.elapsed());
         let info = self.handle_smb_result("entry_kind", &smb_path, generation, r)?;
 

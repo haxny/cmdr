@@ -275,8 +275,13 @@ impl ScanPool {
     async fn open_through_link(&self, idx: usize, smb_path: &str) -> Option<Result<DirectoryReader, smb2::Error>> {
         let mut guard = self.members[idx].session.lock().await;
         let sess = guard.as_mut()?;
-        let mut tree = Tree::clone(&sess.tree);
-        Some(sess.client.open_directory_reader(&mut tree, smb_path).await)
+        // Straight to the target (smb2's resolver, cached per member client),
+        // or as given and smb2 follows.
+        let (mut tree, path) = match super::dfs_links::target_of(&mut sess.client, &sess.tree, smb_path).await {
+            Ok(target) => target,
+            Err(e) => return Some(Err(e)),
+        };
+        Some(sess.client.open_directory_reader(&mut tree, &path).await)
     }
 
     /// A listing on member `idx` failed with a connection-lost/expired error: drop

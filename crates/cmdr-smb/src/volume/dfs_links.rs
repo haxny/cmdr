@@ -4,21 +4,25 @@
 //!
 //! A share can hold an `msdfs:` link to a folder on another server (smb2's
 //! `smb-dfs-root` fixture is one). smb2 follows a link on every `SmbClient`
-//! call that takes a path (vdavid/smb2#15), but those take `&mut SmbClient`, so
-//! they'd hold the session's client for the whole call. So every call runs on
-//! the `Tree` first, the way it always has, and only a CREATE the server
-//! refuses with `STATUS_PATH_NOT_COVERED` (the one answer that means "behind a
-//! link", [`is_behind_dfs_link`]) runs again through the `SmbClient`, holding
-//! the client for that one call (an open, for anything that streams): smb2
-//! resolves the referral, connects the target (pooled on that client), and
-//! hands back the answer, or a handle that owns the target's connection.
+//! call that takes a path (vdavid/smb2#15), and resolves one on request
+//! (`SmbClient::resolve_dfs_link`, vdavid/smb2#27), but both take
+//! `&mut SmbClient`, so they hold the session's client. So a path under a link
+//! already known ([`LinkPaths`]) resolves from smb2's referral cache and goes
+//! straight to the target; any other path runs on the `Tree` first, the way it
+//! always has, and only a CREATE the server refuses with
+//! `STATUS_PATH_NOT_COVERED` (the one answer that means "behind a link",
+//! [`is_behind_dfs_link`]) resolves the link and runs again there, holding the
+//! client for that one call (an open, for anything that streams): the answer,
+//! or a handle that owns the target's connection.
 //!
-//! - **Main-session calls** (listings, `stat`s, the copy scan, create, rename,
-//!   delete) go through [`SmbVolume::or_through_link`]; the scan pool's
-//!   listings through their member's own client (`scan_pool.rs`).
-//! - **A path that followed a link is remembered** ([`LinkPaths`]): the share's
-//!   watch never hears its target, so `listing_watch_coverage` answers `None`
-//!   there.
+//! - **Main-session calls** (listings, `stat`s, the copy scan, create,
+//!   delete) go through [`SmbVolume::or_through_link`], a rename through
+//!   [`SmbVolume::or_following_link`] (both ends are share paths); the scan
+//!   pool's listings through their member's own client (`scan_pool.rs`).
+//! - **A link a call followed is remembered** by its link folder
+//!   ([`LinkPaths`]): the next call under it skips the refusal, and the
+//!   share's watch never hears its target, so `link_watch.rs` watches it while
+//!   a pane shows a folder there.
 //!
 //! - **Writes** open a `FileWriter` there (`'static`), or send the one compound
 //!   frame there, and set the dates through the same client.
@@ -50,14 +54,15 @@ use super::{SmbVolume, SmbVolumeInner};
 /// needs, so its future borrows only those three.
 pub(super) type LinkCall<'c, T> = Pin<Box<dyn Future<Output = Result<T, smb2::Error>> + Send + 'c>>;
 
-/// The share paths a call followed a link from, each with no remembered
-/// ancestor, so the list stays about one entry per link a person walked into.
+/// The link folders a call followed a link through, each with no remembered
+/// ancestor, so the list stays one entry per link a person walked into.
 ///
-/// What it's for: the share's `CHANGE_NOTIFY` watch runs on the share's own
-/// server, and a link's target is another server (or share) that never reports
-/// to it, so a listing at or below one of these isn't kept fresh. Kept for the
-/// share's life: a link that disappears only costs a re-read the oracle could
-/// have saved.
+/// What it's for: a call under one goes straight to the target
+/// ([`SmbVolume::or_through_link`]), and the share's `CHANGE_NOTIFY` watch
+/// never hears a link's target, so a listing at or below one is kept fresh
+/// only by the link's own watch (`link_watch.rs`). Kept for the share's life:
+/// a link that disappears only costs a resolve that finds nothing and a re-read
+/// the oracle could have saved.
 #[derive(Default)]
 pub(super) struct LinkPaths(std::sync::Mutex<Vec<String>>);
 
@@ -100,45 +105,163 @@ pub(super) fn is_at_or_below(path: &str, ancestor: &str) -> bool {
 }
 
 impl SmbVolume {
-    /// `first`, the answer a main-session call got on the share's tree, or,
-    /// when the server refused it as behind a DFS link, the same call again
-    /// through the main session's `SmbClient`, which follows the link.
+    /// A main-session call on `smb_path`, followed through the DFS link it
+    /// sits behind: `first` (the call on the share's tree), or `op` on the
+    /// link's target.
     ///
-    /// Holds the session's client for `op`'s round trips only (an open, for a
-    /// listing or a reader, whose handle then owns the target's connection).
-    /// `generation` is the lease's: once a reconnect replaced that session, its
-    /// tree means nothing on the new client, so the refusal stands. Whatever
-    /// `op` answers funnels as the main session's (`RanOn::Main`): a link's
-    /// target connection lives inside the main client, and only rebuilding the
-    /// session revives one that dropped.
+    /// - **A path under a known link** ([`LinkPaths`]) skips `first`: smb2's
+    ///   resolver answers from its referral cache, and `op` goes straight to
+    ///   the target, with no refused round trip. A link that's gone runs
+    ///   `first` after all.
+    /// - **Any other path** runs `first`; only a refusal as behind a link
+    ///   ([`is_behind_dfs_link`]) resolves the link (one referral round trip,
+    ///   cached) and runs `op` there, noting the link folder.
+    ///
+    /// `op` gets the main client, the TARGET's tree, and the path on it. Holds
+    /// the session's client for the resolve and `op`'s round trips only (an
+    /// open, for a listing or a reader, whose handle then owns the target's
+    /// connection). `generation` is the lease's: once a reconnect replaced that
+    /// session, its tree means nothing on the new client, so the call stands as
+    /// it came. Whatever `op` answers funnels as the main session's
+    /// (`RanOn::Main`): a link's target connection lives inside the main
+    /// client, and only rebuilding the session revives one that dropped.
     pub(super) async fn or_through_link<T, F>(
         &self,
         generation: SessionGeneration,
         smb_path: &str,
-        first: Result<T, smb2::Error>,
+        first: impl Future<Output = Result<T, smb2::Error>>,
         op: F,
     ) -> Result<T, smb2::Error>
     where
         F: for<'c> FnOnce(&'c mut SmbClient, &'c mut Tree, &'c str) -> LinkCall<'c, T>,
     {
-        let refusal = match first {
+        if self.inner.link_paths.covers(smb_path) {
+            return match self.on_link_target(generation, smb_path, op).await {
+                Some(result) => result,
+                None => first.await,
+            };
+        }
+        let refusal = match first.await {
             Err(e) if is_behind_dfs_link(&e) => e,
             answered => return answered,
         };
-        let mut guard = self.inner.session.lock().await;
-        let Some(session) = guard.as_mut().filter(|s| s.generation == generation) else {
-            return Err(refusal);
+        self.on_link_target(generation, smb_path, op)
+            .await
+            .unwrap_or(Err(refusal))
+    }
+
+    /// [`or_through_link`](Self::or_through_link) for a rename, whose
+    /// destination is a share path too: `op` gets the share's own tree and
+    /// path, and smb2 follows the link with both ends (a move between folders
+    /// inside one link included, smb2 0.36.2). A path under a known link skips
+    /// `first`.
+    pub(super) async fn or_following_link<T, F>(
+        &self,
+        generation: SessionGeneration,
+        smb_path: &str,
+        first: impl Future<Output = Result<T, smb2::Error>>,
+        op: F,
+    ) -> Result<T, smb2::Error>
+    where
+        F: for<'c> FnOnce(&'c mut SmbClient, &'c mut Tree, &'c str) -> LinkCall<'c, T>,
+    {
+        if self.inner.link_paths.covers(smb_path) {
+            return match self.on_share_client(generation, smb_path, op).await {
+                Some(result) => result,
+                None => first.await,
+            };
+        }
+        let refusal = match first.await {
+            Err(e) if is_behind_dfs_link(&e) => e,
+            answered => return answered,
         };
+        self.on_share_client(generation, smb_path, op)
+            .await
+            .unwrap_or(Err(refusal))
+    }
+
+    /// Runs `op` through the main client on the share's own tree and path, or
+    /// `None` once a reconnect replaced the session `generation` names.
+    async fn on_share_client<T, F>(
+        &self,
+        generation: SessionGeneration,
+        smb_path: &str,
+        op: F,
+    ) -> Option<Result<T, smb2::Error>>
+    where
+        F: for<'c> FnOnce(&'c mut SmbClient, &'c mut Tree, &'c str) -> LinkCall<'c, T>,
+    {
+        let mut guard = self.inner.session.lock().await;
+        let session = guard.as_mut().filter(|s| s.generation == generation)?;
         let mut tree = Tree::clone(&session.tree);
-        let result = op(&mut session.client, &mut tree, smb_path).await;
+        Some(op(&mut session.client, &mut tree, smb_path).await)
+    }
+
+    /// Resolves the link `smb_path` sits behind on the main session and runs
+    /// `op` on its target, or `None` when there's no link to follow (none
+    /// there, the referral failed, or the session was replaced). A link with
+    /// no reachable target is that error, as smb2 answers it.
+    async fn on_link_target<T, F>(
+        &self,
+        generation: SessionGeneration,
+        smb_path: &str,
+        op: F,
+    ) -> Option<Result<T, smb2::Error>>
+    where
+        F: for<'c> FnOnce(&'c mut SmbClient, &'c mut Tree, &'c str) -> LinkCall<'c, T>,
+    {
+        let mut guard = self.inner.session.lock().await;
+        let session = guard.as_mut().filter(|s| s.generation == generation)?;
+        let link = match resolve_link(&mut session.client, &session.tree, smb_path).await {
+            Ok(link) => link?,
+            Err(e) => return Some(Err(e)),
+        };
+        let mut target = link.tree;
+        let result = op(&mut session.client, &mut target, &link.path).await;
         drop(guard);
         // Only a call that got through says where a link is: a refusal from
-        // the link's far side may be the referral itself failing.
+        // the link's far side may be its target refusing the referral's path.
         if result.is_ok() {
-            self.inner.link_paths.note(smb_path);
+            self.inner.link_paths.note(&link.link_path);
         }
-        result
+        Some(result)
     }
+}
+
+/// smb2's resolver: where `smb_path` on `tree` really lives, `Ok(None)` when
+/// it sits behind no link or the referral couldn't be had (the caller's own
+/// answer stands, as smb2's follow keeps it), and an error only for a link
+/// whose targets all failed (`DfsNoReachableTarget`).
+pub(super) async fn resolve_link(
+    client: &mut SmbClient,
+    tree: &Tree,
+    smb_path: &str,
+) -> Result<Option<smb2::DfsLink>, smb2::Error> {
+    match client.resolve_dfs_link(tree, smb_path).await {
+        Ok(link) => Ok(link),
+        Err(e @ smb2::Error::DfsNoReachableTarget { .. }) => Err(e),
+        Err(e) => {
+            log::debug!(
+                "dfs: couldn't resolve the link, keeping the server's answer ({:?})",
+                e.kind()
+            );
+            Ok(None)
+        }
+    }
+}
+
+/// The tree and path a client call on `smb_path` should go to: the link's
+/// target when it sits behind one, else `tree` and `smb_path` as given (and
+/// smb2's own follow takes over).
+pub(super) async fn target_of(
+    client: &mut SmbClient,
+    tree: &Tree,
+    smb_path: &str,
+) -> Result<(Tree, String), smb2::Error> {
+    Ok(match resolve_link(client, tree, smb_path).await? {
+        Some(link) => (link.tree, link.path),
+        None => (tree.clone(), smb_path.to_string()),
+    })
 }
 
 /// [`SmbVolume::or_through_link`]'s `op` for a bare `stat`: the entry itself,
@@ -254,7 +377,11 @@ impl SmbVolumeInner {
         smb_path: &str,
     ) -> Option<Result<FileDownload<'static>, smb2::Error>> {
         let mut client = self.link_client(ran_on, on).await?;
-        Some(client.client().open_file_download(tree, smb_path).await)
+        let client = client.client();
+        Some(match target_of(client, tree, smb_path).await {
+            Ok((tree, path)) => client.open_file_download(&tree, &path).await,
+            Err(e) => Err(e),
+        })
     }
 
     /// Opens the streaming writer `mode` asks for through the DFS link
@@ -270,11 +397,15 @@ impl SmbVolumeInner {
     ) -> Option<Result<FileWriter, smb2::Error>> {
         let mut client = self.link_client(ran_on, on).await?;
         let client = client.client();
+        let (tree, path) = match target_of(client, tree, smb_path).await {
+            Ok(target) => target,
+            Err(e) => return Some(Err(e)),
+        };
         Some(match mode {
             WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder => {
-                client.create_file_writer_exclusive(tree, smb_path).await
+                client.create_file_writer_exclusive(&tree, &path).await
             }
-            WriteMode::CreateOrReplace => client.create_file_writer(tree, smb_path).await,
+            WriteMode::CreateOrReplace => client.create_file_writer(&tree, &path).await,
         })
     }
 
@@ -291,11 +422,15 @@ impl SmbVolumeInner {
     ) -> Option<Result<u64, smb2::Error>> {
         let mut client = self.link_client(ran_on, on).await?;
         let client = client.client();
+        let (tree, path) = match target_of(client, tree, smb_path).await {
+            Ok(target) => target,
+            Err(e) => return Some(Err(e)),
+        };
         Some(match mode {
             WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder => {
-                client.write_file_compound_exclusive(tree, smb_path, data).await
+                client.write_file_compound_exclusive(&tree, &path, data).await
             }
-            WriteMode::CreateOrReplace => client.write_file_compound(tree, smb_path, data).await,
+            WriteMode::CreateOrReplace => client.write_file_compound(&tree, &path, data).await,
         })
     }
 
@@ -309,7 +444,11 @@ impl SmbVolumeInner {
         times: smb2::FileTimes,
     ) -> Option<Result<(), smb2::Error>> {
         let mut client = self.link_client(ran_on, on).await?;
-        Some(client.client().set_times(tree, smb_path, times).await)
+        let client = client.client();
+        Some(match target_of(client, tree, smb_path).await {
+            Ok((tree, path)) => client.set_times(&tree, &path, times).await,
+            Err(e) => Err(e),
+        })
     }
 
     /// Deletes `smb_path` through the DFS link it sits behind, for a failed
@@ -322,7 +461,11 @@ impl SmbVolumeInner {
         smb_path: &str,
     ) -> Option<Result<(), smb2::Error>> {
         let mut client = self.link_client(ran_on, on).await?;
-        Some(client.client().delete_file(tree, smb_path).await)
+        let client = client.client();
+        Some(match target_of(client, tree, smb_path).await {
+            Ok((tree, path)) => client.delete_file(&tree, &path).await,
+            Err(e) => Err(e),
+        })
     }
 }
 

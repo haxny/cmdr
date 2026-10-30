@@ -39,11 +39,13 @@ impl SmbVolume {
             // smb2 crate maps to `ErrorKind::AlreadyExists`. The earlier
             // stat-then-write workaround left a microsecond TOCTOU
             // window; this closes it atomically at the protocol layer.
-            let writer_result = tree.create_file_writer_exclusive(conn, &smb_path).await;
             let writer_result = self
-                .or_through_link(generation, &smb_path, writer_result, |client, tree, path| {
-                    Box::pin(client.create_file_writer_exclusive(tree, path))
-                })
+                .or_through_link(
+                    generation,
+                    &smb_path,
+                    tree.create_file_writer_exclusive(conn, &smb_path),
+                    |client, tree, path| Box::pin(client.create_file_writer_exclusive(tree, path)),
+                )
                 .await;
             let mut writer = self.handle_smb_result("create_file(open)", &smb_path, generation, writer_result)?;
             if !data.is_empty() {
@@ -74,11 +76,13 @@ impl SmbVolume {
                 mut conn,
                 generation,
             } = self.clone_session().await?;
-            let result = tree.create_directory(&mut conn, &smb_path).await;
             let result = self
-                .or_through_link(generation, &smb_path, result, |client, tree, path| {
-                    Box::pin(client.create_directory(tree, path))
-                })
+                .or_through_link(
+                    generation,
+                    &smb_path,
+                    tree.create_directory(&mut conn, &smb_path),
+                    |client, tree, path| Box::pin(client.create_directory(tree, path)),
+                )
                 .await;
             self.handle_smb_result("create_directory", &smb_path, generation, result)?;
         }
@@ -106,11 +110,13 @@ impl SmbVolume {
                 mut conn,
                 generation,
             } = self.clone_session().await?;
-            let result = tree.set_times(&mut conn, &smb_path, times).await;
             let result = self
-                .or_through_link(generation, &smb_path, result, move |client, tree, path| {
-                    Box::pin(client.set_times(tree, path, times))
-                })
+                .or_through_link(
+                    generation,
+                    &smb_path,
+                    tree.set_times(&mut conn, &smb_path, times),
+                    move |client, tree, path| Box::pin(client.set_times(tree, path, times)),
+                )
                 .await;
             self.handle_smb_result("set_times", &smb_path, generation, result)?;
         }
@@ -149,8 +155,14 @@ impl SmbVolume {
                 mut conn,
                 generation,
             } = self.clone_session().await?;
-            let r = tree.delete_link(&mut conn, &smb_path).await;
-            let r = self.or_through_link(generation, &smb_path, r, link_delete).await;
+            let r = self
+                .or_through_link(
+                    generation,
+                    &smb_path,
+                    tree.delete_link(&mut conn, &smb_path),
+                    link_delete,
+                )
+                .await;
             self.handle_smb_result("delete", &smb_path, generation, r)?;
         }
 
@@ -201,12 +213,14 @@ impl SmbVolume {
             mut conn,
             generation,
         } = self.clone_session().await?;
-        let r = tree.rename(&mut conn, smb_from, smb_to).await;
         let to = smb_to.to_string();
         let r = self
-            .or_through_link(generation, smb_from, r, move |client, tree, from| {
-                Box::pin(async move { client.rename(tree, from, &to).await })
-            })
+            .or_following_link(
+                generation,
+                smb_from,
+                tree.rename(&mut conn, smb_from, smb_to),
+                move |client, tree, from| Box::pin(async move { client.rename(tree, from, &to).await }),
+            )
             .await;
         self.handle_rename_result(smb_from, smb_to, generation, r)
     }
@@ -230,12 +244,16 @@ impl SmbVolume {
                 mut conn,
                 generation,
             } = self.clone_session().await?;
-            let r = tree.rename_with(&mut conn, smb_from, smb_to, replace).await;
             let to = smb_to.to_string();
             let r = self
-                .or_through_link(generation, smb_from, r, move |client, tree, from| {
-                    Box::pin(async move { client.rename_with(tree, from, &to, replace).await })
-                })
+                .or_following_link(
+                    generation,
+                    smb_from,
+                    tree.rename_with(&mut conn, smb_from, smb_to, replace),
+                    move |client, tree, from| {
+                        Box::pin(async move { client.rename_with(tree, from, &to, replace).await })
+                    },
+                )
                 .await;
             (r, generation)
         };
@@ -266,8 +284,9 @@ impl SmbVolume {
                 Ok(lease) => lease,
                 Err(_) => return false,
             };
-            let r = tree.stat(&mut conn, path).await;
-            let r = self.or_through_link(generation, path, r, link_bare_stat).await;
+            let r = self
+                .or_through_link(generation, path, tree.stat(&mut conn, path), link_bare_stat)
+                .await;
             if r.is_ok_and(|info| info.is_directory) {
                 return true;
             }
@@ -302,8 +321,7 @@ impl SmbVolume {
                 mut conn,
                 generation,
             } = self.clone_session().await?;
-            let r = tree.stat(&mut conn, smb_to).await;
-            self.or_through_link(generation, smb_to, r, link_bare_stat)
+            self.or_through_link(generation, smb_to, tree.stat(&mut conn, smb_to), link_bare_stat)
                 .await
                 .is_ok()
         };
@@ -318,8 +336,9 @@ impl SmbVolume {
             mut conn,
             generation,
         } = self.clone_session().await?;
-        let r = tree.delete_link(&mut conn, smb_to).await;
-        let r = self.or_through_link(generation, smb_to, r, link_delete).await;
+        let r = self
+            .or_through_link(generation, smb_to, tree.delete_link(&mut conn, smb_to), link_delete)
+            .await;
         self.handle_smb_result("rename(delete_dest)", smb_to, generation, r)
     }
 

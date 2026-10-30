@@ -298,6 +298,33 @@ async fn smb_dfs_mutations_behind_a_link_land_on_the_target() {
     );
 }
 
+/// Once a call has followed a link, a call under it goes straight to the
+/// target: smb2's resolver answers from its referral cache, so the share's own
+/// connection sends nothing, where each call used to pay a refused CREATE there
+/// (twice: ours, then smb2's own first try).
+#[tokio::test]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
+async fn smb_dfs_a_call_under_a_known_link_skips_the_refused_round_trip() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
+    let vol = dfs_volume().await;
+    vol.list_directory(Path::new("data"), None).await.unwrap();
+
+    let before = request_counts(&vol).await;
+    let file = vol.get_metadata(Path::new("data/hello.txt")).await.unwrap();
+    let nested = vol.list_directory(Path::new("data/subdir"), None).await.unwrap();
+    let after = request_counts(&vol).await;
+
+    assert_eq!(file.size, Some(23));
+    assert_eq!(names(&nested), vec!["nested.txt".to_string()]);
+    assert_eq!(
+        after.0 - before.0,
+        0,
+        "the share's connection sends nothing for a path under a known link"
+    );
+}
+
 /// A move between two folders behind one link lands on the target (smb2
 /// 0.36.2 places a SET_INFO's destination inside the link), both with a free
 /// destination and replacing a taken one. Before it, smb2 could follow a rename

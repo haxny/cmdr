@@ -319,13 +319,22 @@ impl SmbVolume {
                 on,
             } = lease;
             // A file behind a DFS link opens through the link, and that
-            // download owns the target's connection (`dfs_links.rs`).
-            let opened = match tree.download(&mut conn, &smb_path_owned).await {
-                Err(e) if is_behind_dfs_link(&e) => share
-                    .open_link_download(ran_on, &on, &tree, &smb_path_owned)
-                    .await
-                    .unwrap_or(Err(e)),
-                opened => opened,
+            // download owns the target's connection (`dfs_links.rs`). Under a
+            // known link it goes there first, skipping the refused open.
+            let known_link = share.link_paths.covers(&smb_path_owned);
+            let through_link = match known_link {
+                true => share.open_link_download(ran_on, &on, &tree, &smb_path_owned).await,
+                false => None,
+            };
+            let opened = match through_link {
+                Some(opened) => opened,
+                None => match tree.download(&mut conn, &smb_path_owned).await {
+                    Err(e) if is_behind_dfs_link(&e) => share
+                        .open_link_download(ran_on, &on, &tree, &smb_path_owned)
+                        .await
+                        .unwrap_or(Err(e)),
+                    opened => opened,
+                },
             };
             let mut download = match opened {
                 Ok(d) => d,

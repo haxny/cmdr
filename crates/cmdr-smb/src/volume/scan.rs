@@ -80,8 +80,14 @@ impl SmbVolume {
                             mut conn,
                             generation,
                         } = self.clone_session().await?;
-                        let r = stat_through_link(&tree, &mut conn, smb_path).await;
-                        let r = self.or_through_link(generation, smb_path, r, link_stat).await;
+                        let r = self
+                            .or_through_link(
+                                generation,
+                                smb_path,
+                                stat_through_link(&tree, &mut conn, smb_path),
+                                link_stat,
+                            )
+                            .await;
                         self.handle_smb_result("scan_for_copy(stat)", smb_path, generation, r)
                     })
                     .await?;
@@ -440,7 +446,7 @@ impl SmbVolume {
             // link is the rare case, and the others keep draining meanwhile.
             let result = match result {
                 Err(e) => self
-                    .or_through_link(generation, &smb_path, Err(e), link_stat)
+                    .or_through_link(generation, &smb_path, std::future::ready(Err(e)), link_stat)
                     .await
                     .map(StatOutcome::Entry),
                 answered => answered,

@@ -101,9 +101,13 @@ impl SmbVolume {
             LogPrivate::file_path(&smb_path)
         );
         let SessionLease { tree, conn, generation } = self.clone_session().await?;
-        let opened = tree.open_file_reader(conn, &smb_path).await;
         let opened = self
-            .or_through_link(generation, &smb_path, opened, link_open_reader)
+            .or_through_link(
+                generation,
+                &smb_path,
+                tree.open_file_reader(conn, &smb_path),
+                link_open_reader,
+            )
             .await;
         let reader = self.handle_smb_result("open_random_reader", &smb_path, generation, opened)?;
         if reader.info().is_directory {

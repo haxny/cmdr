@@ -10,9 +10,9 @@
 //!   watch when the last one goes. Nothing is watched behind a link nobody
 //!   shows.
 //! - **Its own session.** Each watched link opens a dedicated session to the
-//!   share's server (`build_session`) and asks smb2 to watch the link path
-//!   through it; smb2 follows the link and runs the `CHANGE_NOTIFY` on the
-//!   target's connection, pooled inside that client. Like the share's watcher,
+//!   share's server (`build_session`), resolves the link through it (smb2's
+//!   `resolve_dfs_link`), and runs the `CHANGE_NOTIFY` on the target's
+//!   connection, pooled inside that client. Like the share's watcher,
 //!   it never multiplexes with the main session's traffic.
 //! - **Same pipeline.** Events go through `watcher::pump_events` with the link
 //!   path as their root, so a change lands under the path the pane keyed its
@@ -40,7 +40,7 @@ use log::{debug, info, warn};
 use smb2::SmbClient;
 use tokio::sync::oneshot;
 
-use super::dfs_links::is_at_or_below;
+use super::dfs_links::{is_at_or_below, target_of};
 use super::reconnect::WATCHER_DEATH_RECONNECT_BACKOFF;
 use super::session_build::{build_session, retired_session_id};
 use super::state::ConnectionState;
@@ -261,16 +261,18 @@ impl Drop for Running {
     }
 }
 
-/// Opens a session for the watch and watches `root` through it, recursively.
-/// smb2 follows the link, so the watch runs on the target's connection inside
-/// the returned client, which has to outlive it.
+/// Opens a session for the watch, resolves the link `root` sits behind
+/// (`dfs_links::target_of`), and watches its target recursively. The watch
+/// runs on the target's connection, pooled inside the returned client, which
+/// has to outlive it.
 async fn arm(
     params: &SmbConnectionParams,
     replaces: Option<smb2::types::SessionId>,
     root: &str,
 ) -> Result<(SmbClient, smb2::Watcher), smb2::Error> {
-    let (mut client, tree) = build_session(params, replaces).await?;
-    let watcher = client.watch(&tree, root, true).await?;
+    let (mut client, share) = build_session(params, replaces).await?;
+    let (tree, path) = target_of(&mut client, &share, root).await?;
+    let watcher = client.watch(&tree, &path, true).await?;
     Ok((client, watcher))
 }
 

@@ -32,8 +32,9 @@ impl SmbVolume {
             mut conn,
             generation,
         } = self.clone_session().await?;
-        let r = tree.stat(&mut conn, &smb_path).await;
-        let r = self.or_through_link(generation, &smb_path, r, link_bare_stat).await;
+        let r = self
+            .or_through_link(generation, &smb_path, tree.stat(&mut conn, &smb_path), link_bare_stat)
+            .await;
         Ok(self
             .handle_smb_result("attributes", &smb_path, generation, r)?
             .attributes)
