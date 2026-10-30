@@ -196,6 +196,18 @@
   "@fileExplorer.paneBoundary.reload": {
     "sourceHash": "a53cfeb"
   },
+  "fileExplorer.pane.ejectedDriveStaysToast": "Le volume {volumeName} est éjecté, mais laissez le disque branché : d’autres volumes y sont encore montés.",
+  "@fileExplorer.pane.ejectedDriveStaysToast": {
+    "sourceHash": "12eac5d"
+  },
+  "fileExplorer.pane.ejectAllFailedToast": "Impossible d’éjecter tout le contenu de ce disque : {message}",
+  "@fileExplorer.pane.ejectAllFailedToast": {
+    "sourceHash": "d824a11"
+  },
+  "fileExplorer.pane.ejectAllHeldToast": "Rien n’a été éjecté sur ce disque : {message}",
+  "@fileExplorer.pane.ejectAllHeldToast": {
+    "sourceHash": "9ef094c"
+  },
   "fileExplorer.pane.ejectFailedToast": "Impossible d’éjecter {volumeName} : {message}",
   "@fileExplorer.pane.ejectFailedToast": {
     "sourceHash": "f4072a7"
@@ -1887,6 +1899,14 @@
   "fileExplorer.navigation.forgetSecretNoneToast": "Aucun mot de passe n’était enregistré pour {name}.",
   "@fileExplorer.navigation.forgetSecretNoneToast": {
     "sourceHash": "3d40a09"
+  },
+  "fileExplorer.navigation.ejectOneVolumeTooltip": "Éjecte uniquement ce volume. Le disque reste connecté jusqu’à l’éjection des autres volumes.",
+  "@fileExplorer.navigation.ejectOneVolumeTooltip": {
+    "sourceHash": "e1dd1cc"
+  },
+  "fileExplorer.navigation.ejectAllTooltip": "Éjecte tous les volumes de ce disque pour que vous puissiez le débrancher.",
+  "@fileExplorer.navigation.ejectAllTooltip": {
+    "sourceHash": "9e86249"
   },
   "fileExplorer.navigation.ejectVolumeAriaLabel": "Éjecter {name}",
   "@fileExplorer.navigation.ejectVolumeAriaLabel": {

@@ -3966,5 +3966,16 @@
     "chosen": "Niveau de réflexion",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (Gemini avec réflexion)"
+  },
+  "shared-storage": {
+    "chosen": "stockage partagé",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-fr storage_internal (read 2026-10-30): Espace de stockage interne partagé"
+  },
+  "this-computer": {
+    "accept": ["ordinateur"],
+    "chosen": "cet ordinateur",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
   }
 }

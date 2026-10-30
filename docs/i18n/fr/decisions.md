@@ -243,8 +243,8 @@ and the top traps live in `style.md`; don't repeat them here.
   `il n’y a donc rien à éjecter`. `Cmdr n’a pas reconnu cet appareil et ne peut donc pas le déconnecter` (a second `il`
   would bind to `cet appareil`). `timedOut` is no failure: `… donc l’éjection peut encore aboutir d’elle-même.`
 - Who holds it: the place may be a disk, share, or phone, so `y` (never `ce disque`) and `puis réessayez` (never
-  `éjectez-le à nouveau`). `X y garde encore des fichiers ouverts.` (`{app} y a…` reads as `il y a`); `{app}` is a bare
-  subject; `Fermez-les` points at `fichiers`; `Cmdr n’a pas de nom d’app`, never `Nous`. `d’autres apps` (lowercase, no
+  `éjectez-le à nouveau`). `X y utilise encore quelque chose.`; `{app}` is a bare subject; `Fermez cette app` /
+  `ces apps`, no pronoun for an insert; `Cmdr n’a pas de nom d’app`, never `Nous`. `d’autres apps` (lowercase, no
   period; `Intl.ListFormat` joins); stored there → `qui s’y trouve`; `envoyez un rapport`, never `un retour`.
 
 ## Compléter un rapport déjà envoyé (`errorReporter.amend*`)
