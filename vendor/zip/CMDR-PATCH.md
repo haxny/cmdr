@@ -13,9 +13,7 @@ and the files left out:
 `ZipReadOptions::enforce_header_consistency` and `ZipArchive::validate_header_consistency`). Cmdr doesn't opt in, because
 it never reads by local-header name: `crates/cmdr-archive/src/read/DETAILS.md` § "Zip cloaking".
 
-The `zip` 4.6.1 that `tauri-plugin-updater` 2.14.0 pulls in stays on crates.io: a `[patch]` only replaces the line it
-vendors, and that copy is Windows-only and only reads update bundles. Its advisories (GHSA-m665-v7pm-7grj and
-RUSTSEC-2026-0367..0369) are ignored in the root `osv-scanner.toml` until the plugin bump to 2.14.1 (zip ^9).
+`tauri-plugin-updater` 2.14.1 depends on `zip` ^9 too, so this vendored copy is the only `zip` in the graph.
 
 ## The change
 
