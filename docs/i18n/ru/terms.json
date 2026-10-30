@@ -6220,5 +6220,12 @@
     "chosen": "Уровень размышлений",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
+  },
+  "shared-storage": {
+    "accept": ["общем накопителе"],
+    "chosen": "общий накопитель",
+    "confidence": "high",
+    "note": "Android's own word, over the storage ruling's «память телефона»; накопитель stays avoided for a drive.",
+    "sources": "AOSP frameworks/base core/res values-ru storage_internal (read 2026-10-30): Внутренний общий накопитель"
   }
 }

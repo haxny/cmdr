@@ -196,6 +196,18 @@
   "@fileExplorer.paneBoundary.reload": {
     "sourceHash": "a53cfeb"
   },
+  "fileExplorer.pane.ejectedDriveStaysToast": "Том {volumeName} извлечен, но не отсоединяйте диск: другие тома на нем еще подключены.",
+  "@fileExplorer.pane.ejectedDriveStaysToast": {
+    "sourceHash": "12eac5d"
+  },
+  "fileExplorer.pane.ejectAllFailedToast": "Не удалось извлечь все с этого диска: {message}",
+  "@fileExplorer.pane.ejectAllFailedToast": {
+    "sourceHash": "d824a11"
+  },
+  "fileExplorer.pane.ejectAllHeldToast": "С этого диска ничего не извлечено: {message}",
+  "@fileExplorer.pane.ejectAllHeldToast": {
+    "sourceHash": "9ef094c"
+  },
   "fileExplorer.pane.ejectFailedToast": "Том {volumeName} не извлечен: {message}",
   "@fileExplorer.pane.ejectFailedToast": {
     "sourceHash": "f4072a7"
@@ -1878,6 +1890,14 @@
   "fileExplorer.navigation.forgetSecretNoneToast": "Для {name} не было сохраненного пароля.",
   "@fileExplorer.navigation.forgetSecretNoneToast": {
     "sourceHash": "3d40a09"
+  },
+  "fileExplorer.navigation.ejectOneVolumeTooltip": "Извлекает только этот том. Диск останется подключенным, пока не будут извлечены и другие тома.",
+  "@fileExplorer.navigation.ejectOneVolumeTooltip": {
+    "sourceHash": "e1dd1cc"
+  },
+  "fileExplorer.navigation.ejectAllTooltip": "Извлекает все тома на этом диске, чтобы его можно было отсоединить.",
+  "@fileExplorer.navigation.ejectAllTooltip": {
+    "sourceHash": "9e86249"
   },
   "fileExplorer.navigation.ejectVolumeAriaLabel": "Извлечь «{name}»",
   "@fileExplorer.navigation.ejectVolumeAriaLabel": {
