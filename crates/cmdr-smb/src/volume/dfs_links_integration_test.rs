@@ -298,13 +298,13 @@ async fn smb_dfs_mutations_behind_a_link_land_on_the_target() {
     );
 }
 
-/// smb2 follows a rename through a link only within one directory: a
-/// SET_INFO's destination is relative to the TARGET share, and smb2 can't tell
-/// where the link folder ends in a destination elsewhere. So a move between two
-/// folders behind one link is refused, pinned so the gap can't pass for done.
+/// A move between two folders behind one link lands on the target (smb2
+/// 0.36.2 places a SET_INFO's destination inside the link), both with a free
+/// destination and replacing a taken one. Before it, smb2 could follow a rename
+/// only within one directory and refused this.
 #[tokio::test]
 #[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
-async fn smb_dfs_a_move_between_folders_behind_a_link_is_refused() {
+async fn smb_dfs_a_move_between_folders_behind_a_link_lands() {
     if dfs_fixture_not_requested() {
         return;
     }
@@ -312,19 +312,31 @@ async fn smb_dfs_a_move_between_folders_behind_a_link_is_refused() {
     let folder = run_folder();
     let inner = format!("{folder}/inner");
     let file = format!("{folder}/moved.txt");
+    let moved = format!("{inner}/moved.txt");
     vol.create_directory(Path::new(&folder)).await.unwrap();
     vol.create_directory(Path::new(&inner)).await.unwrap();
-    vol.create_file(Path::new(&file), b"x").await.unwrap();
+    vol.create_file(Path::new(&file), b"first").await.unwrap();
 
-    let moved = vol
-        .rename(Path::new(&file), Path::new(&format!("{inner}/moved.txt")), false)
-        .await;
-    assert!(
-        moved.is_err(),
-        "smb2 can't place this rename on the target, got {moved:?}"
+    vol.rename(Path::new(&file), Path::new(&moved), false)
+        .await
+        .unwrap_or_else(|e| panic!("a move inside the link lands: {e:?}"));
+    assert!(!vol.exists(Path::new(&file)).await, "the source is gone");
+    assert_eq!(
+        vol.read_range(Path::new(&moved), 0, 5).await.unwrap(),
+        b"first".to_vec()
     );
 
-    vol.delete(Path::new(&file)).await.unwrap();
+    vol.create_file(Path::new(&file), b"again").await.unwrap();
+    vol.rename(Path::new(&file), Path::new(&moved), true)
+        .await
+        .unwrap_or_else(|e| panic!("a forced move inside the link replaces: {e:?}"));
+    assert_eq!(
+        vol.read_range(Path::new(&moved), 0, 5).await.unwrap(),
+        b"again".to_vec(),
+        "the forced move swapped the new file in"
+    );
+
+    vol.delete(Path::new(&moved)).await.unwrap();
     vol.delete(Path::new(&inner)).await.unwrap();
     vol.delete(Path::new(&folder)).await.unwrap();
 }

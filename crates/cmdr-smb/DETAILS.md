@@ -763,10 +763,10 @@ the transfers, vdavid/cmdr#815 for the rest):
     `LinkPaths` keys on the first path followed, so a watch can sit below the link folder itself, and a later listing
     higher up the same link starts a second, overlapping watch (duplicate events are idempotent at the cache). The
     index's entries behind a link still freshen on rescans only, unless a pane happens to show them.
-- ❗ **A move between two folders behind one link is refused.** smb2 follows a rename through a link only within one
-  directory: SET_INFO's destination is relative to the TARGET share, and smb2 can't tell where the link folder ends in a
-  destination elsewhere. Same-directory renames (a copy's landing rename, a forced swap) work.
-  `smb_dfs_a_move_between_folders_behind_a_link_is_refused` pins it.
+- **A move between two folders behind one link lands** (smb2 0.36.2, vdavid/smb2#21): smb2 places the SET_INFO's
+  destination on the target when it sits inside the same link. A destination outside the link still answers
+  `STATUS_PATH_NOT_COVERED`. `smb_dfs_a_move_between_folders_behind_a_link_lands` pins both the plain and the forced
+  move.
 - Verified against smb2's `smb-dfs-root` fixture (Samba on Alpine 3.21, smb2 0.36.0, 2026-10-29; the link watch against
   smb2 0.36.1, 2026-10-30).
 - Pinned by `dfs_links_integration_test.rs` against smb2's INTERNAL DFS fixtures (`smb-dfs-root` → `smb-dfs-target`),
