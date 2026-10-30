@@ -3509,7 +3509,7 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
-  "errors.eject.unmountRefusedByApps": "{apps} are still using something there. Close it, then try again.",
+  "errors.eject.unmountRefusedByApps": "{apps} are still using something there. Close them, then try again.",
   "@errors.eject.unmountRefusedByApps": {
     "description": "The same message as the one-app version, for TWO OR MORE apps or tools holding the drive. Surface: a brief error toast in the top-right of Cmdr's main window, shown after someone asks to eject a drive or disconnect a network share. Your string is dropped into \"Couldn't eject {volumeName}: …\" or \"Couldn't disconnect: …\", so it reads as the sentence AFTER a colon; start it lowercase if your language does that after a colon. The same sentence follows both, and the lead-in already says which action it was and what it was done to, so name neither: no \"drive\", no \"share\", no \"eject\" or \"disconnect\". Point at the place with a plain \"there\" and ask to \"try again\". Plain text, one or two short sentences, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "placeholders": {
