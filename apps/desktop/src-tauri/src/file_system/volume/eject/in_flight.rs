@@ -117,7 +117,10 @@ pub(super) fn is_ejecting_by_another(volume_id: &str, flight_id: u64) -> bool {
 /// Whether Cmdr's own eject is taking `volume_id` down and leaving the rest of its disk up. The
 /// unmount approver reads it: such an ask is about this one volume, so its siblings keep their
 /// indexes.
-#[cfg_attr(not(target_os = "macos"), expect(dead_code, reason = "only macOS has the approver"))]
+#[cfg_attr(
+    all(not(target_os = "macos"), not(test)),
+    expect(dead_code, reason = "only macOS has the approver")
+)]
 pub(crate) fn is_ejecting_alone(volume_id: &str) -> bool {
     IN_FLIGHT
         .lock_ignore_poison()

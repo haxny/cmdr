@@ -67,8 +67,10 @@ pub(crate) use deadlines::INDEX_STOP_DEADLINE;
 #[cfg(target_os = "macos")]
 pub(crate) use disk_reach::{disk_at, mark_shared_disks};
 pub use escalate::{TakenDown, take_down_smb_mount, take_down_smb_volume};
+pub(crate) use in_flight::is_ejecting;
+#[cfg(target_os = "macos")]
+pub(crate) use in_flight::is_ejecting_alone;
 pub use in_flight::{VolumesEjectingChanged, ejecting_volume_ids, init_ejecting_volume_emitter};
-pub(crate) use in_flight::{is_ejecting, is_ejecting_alone};
 pub(in crate::file_system::volume) use unmount_tool::is_still_mounted;
 
 /// Ejects a volume. Picks the right teardown for the volume's kind.
