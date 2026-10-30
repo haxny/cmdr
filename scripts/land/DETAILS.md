@@ -19,8 +19,12 @@ GitHub by name and leaves every other ruleset alone.
   `pnpm land -merge` (`docs/guides/releasing.md` § Merging the release back into `main`).
 - `main-no-force-push.json` ("main: no force-push or deletion"): no bypass, so nobody rewrites or deletes `main`.
 - `release-tags.json` ("Release tags (v*)"): only the repository admin role creates, moves, or deletes a `v*` tag.
-- All four live here so a repo move or a lost setting can be restored with `-apply` (exported from the live rulesets,
-  2026-10-22, where `pnpm land rulesets` reported all four matching).
+- `main-signed-commits.json` ("main: signed commits"): every commit reaching `main` carries a verified signature (§
+  Decision: every commit on `main` is signed). Bypass: the repository admin role only, so a contributor's unsigned
+  commits can still arrive through a `-record` land (that push reads "Bypassed rule violations"). Renovate needs no
+  bypass: its squash merges are signed by GitHub.
+- All five live here so a repo move or a lost setting can be restored with `-apply` (the first four exported from the
+  live rulesets, 2026-10-22, where `pnpm land rulesets` reported all four matching).
 - `pnpm land rulesets` compares each file with GitHub's copy and names only the ones that drifted. GitHub answers with
   defaults the files leave out, so a field missing from a file isn't drift.
 
@@ -196,7 +200,8 @@ cost of a non-linear history.
   (`TestBuildRecordSignsWhenCommitsAreSigned`).
 - **A contributor's record brings their commits onto `main`** as the `ours` merge's second parent, and GitHub checks
   every commit a push adds to `main`, so an unsigned contributor commit blocks the record under a required-signatures
-  rule unless the ruleset lets the admin bypass it. Open: David's call (§ Open points).
+  rule. The signatures ruleset lets the admin bypass it for exactly this (David, 2026-10-30): the Merged badge is worth
+  more than a fully signed history.
 
 ## Decision: `-merge` keeps a release commit's SHA
 
@@ -266,7 +271,3 @@ So `finish` cancels every unfinished run on the branch (`leftoverRuns`: this rep
   Renovate merges through the API itself. Its merges so far are GitHub squash commits, signed by GitHub (PR #485,
   `3b903143a`, `committer: GitHub`, verified, 2026-10-30), so they pass a required-signatures rule; keep `squash` in
   `allowed_merge_methods` for it.
-- **A contributor's unsigned commits under a required-signatures rule**: the `-record` merge adds them to `main`'s
-  history (§ Decision: every commit on `main` is signed). Either the signatures ruleset lets the admin bypass it (that
-  push then reads "Bypassed rule violations", like the approval rule's), or a contributor PR gets closed with a
-  thank-you instead of a Merged badge. Not chosen yet.

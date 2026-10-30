@@ -35,8 +35,8 @@ a contributor PR in its own land.
   carries only the ancestry. Don't "clean it up".
 - ❌ **Don't put the merge on the content branch.** A merge commit can't ride a rebase, so `land` refuses such a branch
   whenever a conflict with a moved `main` needs one.
-- **Gotcha / Why:** the record brings the contributor's own commits into `main`'s history, so a required-signatures rule
-  on `main` refuses it when they're unsigned (open: `scripts/land/DETAILS.md` § Open points).
+- **Gotcha / Why:** the record brings the contributor's own commits into `main`'s history, so their unsigned commits
+  land unsigned. The signatures ruleset lets the admin bypass it for this (`scripts/land/DETAILS.md` § The rulesets).
 
 We take these record merges on purpose: the Merged badge is part of what a contributor gets for the work, and a gray
 "Closed" reads as a rejection.
