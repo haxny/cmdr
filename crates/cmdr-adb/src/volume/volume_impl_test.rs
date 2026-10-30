@@ -324,26 +324,35 @@ async fn a_listing_of_a_directory_the_phone_wont_open_is_refused_not_empty() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn an_index_walk_records_a_directory_the_phone_wont_open_as_unreadable() {
-    // The walk's own read path (`ScanSource::scan_list` and
-    // `list_directory_for_scan`) must refuse too, or the index stores the folder
-    // as empty with size 0.
+async fn a_copy_scan_refuses_a_directory_the_phone_wont_open() {
+    // A copy that reads a refused folder as empty would quietly make an empty one.
     use cmdr_fs::volume::scan_walk::ScanSource;
 
     let (_server, volume) = phone_with_unreadable_data().await;
-    let data = fixture_path("/data");
-    let scanned = volume.scan_list(&data).await;
+    let scanned = volume.scan_list(&fixture_path("/data")).await;
     assert!(
         matches!(scanned, Err(cmdr_fs::volume::VolumeError::PermissionDenied { .. })),
         "{scanned:?}"
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_index_walk_pays_no_shell_round_trip_for_an_empty_folder() {
+    // A phone has hundreds of empty folders, and one probe each took a real Pixel's walk
+    // from 4 s to 22 s. A refused folder costs the index nothing worse than a size of 0.
+    let (server, volume) = phone_with_unreadable_data().await;
+    let shells = || server.requests().iter().filter(|r| r.starts_with("shell")).count();
+    let before = shells();
     let walked = volume
-        .list_directory_for_scan(&data, None, &cmdr_fs::volume::ScanListingClock::start())
-        .await;
-    assert!(
-        matches!(walked, Err(cmdr_fs::volume::VolumeError::PermissionDenied { .. })),
-        "{walked:?}"
-    );
+        .list_directory_for_scan(
+            &fixture_path("/sdcard/empty"),
+            None,
+            &cmdr_fs::volume::ScanListingClock::start(),
+        )
+        .await
+        .expect("an empty folder lists");
+    assert!(walked.is_empty());
+    assert_eq!(shells(), before, "the walk runs no shell");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

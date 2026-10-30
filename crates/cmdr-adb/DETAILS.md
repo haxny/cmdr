@@ -312,10 +312,11 @@ empty folder, and `/sdcard/nope-xyz`, 2026-10-30, #836). `list_directory_impl`'s
 comes back EMPTY runs one `test -r '<p>' && test -x '<p>'` (`shell::run_chain`, one round trip, only for empty
 listings): exit 1 re-stats the folder and answers `PermissionDenied { path, raw_os_error: None }`, or `NotFound` if it
 went away meanwhile; any other exit can't tell and leaves the listing empty. `-x` counts too: a folder with `r` but no
-`x` opens, but `adbd` can't stat what's inside and drops every entry. The drive-index walk reads through the same
-`list_directory_impl` (`scan_list`, `list_directory_for_scan`), so it records such a folder as unreadable
-(`unreadable_cause = Abandoned`, `cmdr-index`'s `network_scanner/DETAILS.md`) rather than empty with size 0. The fake
-models it with `FakeTree::deny_read`.
+`x` opens, but `adbd` can't stat what's inside and drops every entry. A copy scan (`scan_list`) asks too, or a copy
+would quietly make an empty folder. **❌ The drive-index walk (`list_directory_for_scan`, `EmptyListing::Believe`)
+doesn't:** a phone holds hundreds of empty folders, and one shell round trip each took a walk of 2,213 folders from 4 s
+to about 22 s (Pixel 9 Pro XL, dev build, 2026-10-30). The price is a refused folder indexed as empty, with size 0,
+which misleads nobody the way a pane would. The fake models refusal with `FakeTree::deny_read`.
 
 **`create_directory_all` names a file in the way** as `NotADirectory(device_path)`, the contract every backend keeps
 (`conformance::assert_create_directory_all_refuses_a_file_in_the_way`). `mkdir -p` says "File exists" or "Not a
