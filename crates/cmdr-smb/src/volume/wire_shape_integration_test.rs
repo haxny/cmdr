@@ -465,31 +465,38 @@ async fn smb_integration_a_warm_uplink_lifts_the_promise_and_the_promised_write_
     ensure_clean(&vol, &dir).await;
     vol.create_directory(Path::new(&dir)).await.unwrap();
 
+    let data: Vec<u8> = (0..=240u8).cycle().take(4 * 1024 * 1024).collect();
+    let size = data.len() as u64;
+
     // Warm the uplink with a staged 8 MiB stream (loopback moves it at hundreds
-    // of MB/s, so 250 ms of it clears `compound_write_limit`).
-    let warm: Vec<u8> = vec![0x3C; 8 * 1024 * 1024];
+    // of MB/s, so 250 ms of it clears `compound_write_limit`). The promise reads
+    // the rate the LAST upload measured, so one a loaded machine starved promises
+    // nothing, and the next upload is a fresh measurement. Bounded: an uplink that
+    // never clears 4 MiB in 250 ms is the failure this cell exists to see.
     let temp = format!(
         "{}/warm.bin{}{}",
         dir,
         cmdr_fs::staging::STAGING_TEMP_MARKER,
         "warm-test"
     );
-    vol.write_from_stream(
-        Path::new(&temp),
-        WriteMode::CreateOrReplace,
-        StreamLength::Known(warm.len() as u64),
-        Box::new(InlineReadStream::new(warm, None)),
-        &|_| std::ops::ControlFlow::Continue(()),
-    )
-    .await
-    .unwrap();
-
-    let data: Vec<u8> = (0..=240u8).cycle().take(4 * 1024 * 1024).collect();
-    let size = data.len() as u64;
-    assert!(
-        vol.write_is_single_shot(StreamLength::Known(size)).await,
-        "a warm loopback uplink moves 4 MiB in well under 250 ms"
-    );
+    let mut promised = false;
+    for _ in 0..5 {
+        let warm: Vec<u8> = vec![0x3C; 8 * 1024 * 1024];
+        vol.write_from_stream(
+            Path::new(&temp),
+            WriteMode::CreateOrReplace,
+            StreamLength::Known(warm.len() as u64),
+            Box::new(InlineReadStream::new(warm, None)),
+            &|_| std::ops::ControlFlow::Continue(()),
+        )
+        .await
+        .unwrap();
+        promised = vol.write_is_single_shot(StreamLength::Known(size)).await;
+        if promised {
+            break;
+        }
+    }
+    assert!(promised, "a warm loopback uplink moves 4 MiB in well under 250 ms");
 
     let path = format!("{}/promised.bin", dir);
     let (requests_before, compounds_before) = request_counts(&vol).await;
