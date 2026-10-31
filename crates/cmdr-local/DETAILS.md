@@ -322,6 +322,16 @@ FAT image, so `rename_exclusive_with` takes the attempt as a parameter and `loca
 so nothing a test can set up fails one without failing the other, and only a transient failure separates them.
 `local_posix_test.rs` hands `rename_if_free` the verdict directly instead.
 
+## Landing a link
+
+`read_link_target` and `create_symlink` are the local half of `Volume`'s link seam, and they store and read a target
+verbatim, ❌ never resolved (the transfer side: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A copy
+carries a link as the link"). `readlink`'s `EINVAL` means "no link here" (`None`). `can_hold_links` answers for the
+backend, but exFAT under a local volume refuses with `EPERM`, `ENOTSUP`, or `EOPNOTSUPP`, so `create_symlink` turns
+those into `NotSupported`. ❗ `ENOTSUP` and `EOPNOTSUPP` are one number on Linux and two on macOS, so that test compares
+values: a `matches!` pattern naming both doesn't compile on Linux. The copy scan counts a nested link, so totals agree
+with the preview and `scan_walk`.
+
 ## Testing
 
 - `local_posix_test.rs`: real-FS cells (write ops, symlinks, copy, space info, the rename's degradation) on scratch

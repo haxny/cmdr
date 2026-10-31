@@ -1645,6 +1645,10 @@ snapshot because the operation queue window is its own webview: it never sees th
 dialog decides from, and two surfaces disagreeing about whether an operation is reversible is the kind of drift that
 ends with a button that lies.
 
+A symlink a volume copy landed is `WrittenIdentity::VolumeLink`: its target IS its content, since a link has no size
+worth comparing, so `reversal::recheck_volume_link` removes it only while it still holds the target it landed with, and
+the journal's read-back dates it. The landing: `src/transfer/volume/DETAILS.md` § "A copy carries a link as the link".
+
 Every construction site states its own verdict (a struct literal, so a new spawn path can't forget to decide):
 
 - **`Supported`**: local copy/move via `start_write_operation` (`CopyTransaction` deletes the copies it made;
