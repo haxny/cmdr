@@ -16,6 +16,12 @@
  *   indicator entirely. The two timers are independent; the indicator-hide timer
  *   always wins eventually because it runs longer.
  *
+ * ## Held (⌃S)
+ *
+ * `hold` turns the buffer into a pattern that outlasts everything above: no timers, and `clear`
+ * ignores it, since every reset trigger calls that. Only `release` ends it
+ * (`quick-filter-session.svelte.ts` owns when).
+ *
  * ## Generation counter (race protection)
  *
  * `appendChar` returns a generation number that callers attach to their async
@@ -49,8 +55,16 @@ export interface TypeToJumpState {
   readonly generation: number
   /** Appends a single character to the buffer and (re)starts the timers. Returns the new generation tag. */
   appendChar: (char: string) => number
-  /** Clears the buffer + indicator + timers immediately. Idempotent. */
+  /** Clears the buffer + indicator + timers immediately. Idempotent. A no-op while held. */
   clear: () => void
+  /** Whether the buffer is held (see § Held). */
+  readonly held: boolean
+  /** Holds `pattern` as the buffer, shown with no timers, without matching it. */
+  hold: (pattern: string) => void
+  /** Drops the held pattern's last character and matches what's left, if anything. */
+  backspaceHeld: () => void
+  /** Ends a hold and clears, however it stands. */
+  release: () => void
   /**
    * Stops any pending timers so they can't fire after the owning component is gone.
    * Call from the component's destroy hook. Idempotent; safe to call alongside `clear`.
@@ -66,6 +80,7 @@ export function createTypeToJumpState(options: TypeToJumpStateOptions): TypeToJu
   let indicatorVisible = $state(false)
   let indicatorStale = $state(false)
   let generation = $state(0)
+  let held = $state(false)
 
   // Timers live outside $state (they're handles, not reactive values).
   let bufferResetTimer: ReturnType<typeof setTimeout> | null = null
@@ -119,12 +134,32 @@ export function createTypeToJumpState(options: TypeToJumpStateOptions): TypeToJu
     buffer = buffer + char.toLowerCase()
     indicatorVisible = true
     generation = generation + 1
-    scheduleTimers()
+    if (!held) scheduleTimers()
     onMatch(buffer, generation)
     return generation
   }
 
+  function hold(pattern: string) {
+    clearTimers()
+    held = true
+    buffer = pattern
+    indicatorVisible = true
+    indicatorStale = false
+  }
+
+  function backspaceHeld() {
+    buffer = Array.from(buffer).slice(0, -1).join('')
+    generation = generation + 1
+    if (buffer !== '') onMatch(buffer, generation)
+  }
+
+  function release() {
+    held = false
+    clear()
+  }
+
   function clear() {
+    if (held) return
     clearTimers()
     buffer = ''
     indicatorVisible = false
@@ -155,8 +190,14 @@ export function createTypeToJumpState(options: TypeToJumpStateOptions): TypeToJu
     get generation() {
       return generation
     },
+    get held() {
+      return held
+    },
     appendChar,
     clear,
+    hold,
+    backspaceHeld,
+    release,
     dispose,
   }
 }

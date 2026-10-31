@@ -94,6 +94,10 @@ export function typingFilters(mode: 'filter' | 'jump', isNetworkView: boolean): 
  * and Esc clears it, both consumed while a pattern is active, so Backspace only
  * goes to the parent folder once the filter is empty. Arrows, Enter, and the rest
  * fall through and leave the filter alone: you navigate within the filtered list.
+ *
+ * A ⌃S session (`quick-filter-session.svelte.ts`) takes this same Filter route on both of its
+ * kinds, even with an empty pattern: `isQuickFilterMode` and `isQuickFilterActive` say yes, and
+ * the session sends the pattern's edits to whichever controller is on.
  */
 export function routeTypingKey(pane: TypingKeyTarget, e: KeyboardEvent): boolean {
   if (pane.isRenaming()) return false

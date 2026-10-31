@@ -58,6 +58,18 @@ export interface TypeToJumpController {
   clear: () => void
   /** Clear the buffer AND the last-matched name (+ MCP sync). The `FilePaneAPI` `clearJumpState`. */
   clearJumpState: () => void
+  /** Whether there's anything to jump within right now. */
+  canMatch: () => boolean
+  /**
+   * ⌃S on Jump: holds `pattern` as the buffer, which the timeout and the reset triggers leave
+   * alone until `release`. Lowercased, as typed characters are: the backend's fuzzy match turns
+   * case-sensitive on an uppercase query, and the filter it came from ignored case.
+   */
+  hold: (pattern: string) => void
+  /** Drops the held pattern's last character and matches what's left. */
+  backspaceHeld: () => void
+  /** Ends a hold: clears the buffer and the last-matched name. */
+  release: () => void
   /** Stop pending timers so they can't fire after the pane is gone. Call from `onDestroy`. */
   dispose: () => void
 }
@@ -125,11 +137,14 @@ export function createTypeToJumpController(deps: TypeToJumpControllerDeps): Type
     }
   }
 
+  /** Nothing to jump within (search results, a network view with no rows, a load) folds in here. */
+  function canMatch(): boolean {
+    const hasListing = deps.getListingId() !== '' && !deps.getLoading() && deps.getHasBackendListing()
+    return hasListing || deps.getInMemoryJump() !== null
+  }
+
   function handleJumpKeystroke(char: string): void {
-    // Nothing to jump within (search results, a network view with no rows) folds into
-    // no in-memory matcher plus `!getHasBackendListing()`.
-    const canMatch = deps.getListingId() !== '' && !deps.getLoading() && deps.getHasBackendListing()
-    if (!canMatch && !deps.getInMemoryJump()) return
+    if (!canMatch()) return
     typeToJump.appendChar(char)
     // Surface the buffer change to MCP (`runJumpMatch` syncs again on success, but
     // a no-match keystroke would otherwise leave MCP stale).
@@ -137,6 +152,7 @@ export function createTypeToJumpController(deps: TypeToJumpControllerDeps): Type
   }
 
   function clearJumpState(): void {
+    if (typeToJump.held) return
     typeToJump.clear()
     // Clearing the buffer invalidates whatever the last match landed on.
     if (lastMatchedName !== null) {
@@ -164,6 +180,19 @@ export function createTypeToJumpController(deps: TypeToJumpControllerDeps): Type
       typeToJump.clear()
     },
     clearJumpState,
+    canMatch,
+    hold: (pattern) => {
+      typeToJump.hold(pattern.toLowerCase())
+    },
+    backspaceHeld: () => {
+      typeToJump.backspaceHeld()
+      deps.onSyncMcp()
+    },
+    release: () => {
+      typeToJump.release()
+      lastMatchedName = null
+      deps.onSyncMcp()
+    },
     dispose: () => {
       typeToJump.dispose()
     },

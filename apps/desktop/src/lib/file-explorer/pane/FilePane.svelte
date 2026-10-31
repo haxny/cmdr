@@ -24,6 +24,7 @@
     import { createQuickFilterController } from './quick-filter-controller.svelte'
     import { createListingUpdateQueue } from './listing-update-queue'
     import { maybeShowQuickFilterIntro } from './quick-filter-intro'
+    import { createQuickFilterSession } from './quick-filter-session.svelte'
     import type { ViewMode } from '#lib/app-status-store.js'
     import type { CommandId } from '#lib/commands/index.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
@@ -338,6 +339,13 @@
             void selectionInfo.fetchStats()
             debouncedSyncMcp.call()
         },
+    })
+
+    const quickFilterSession = createQuickFilterSession({
+        filter: quickFilter,
+        jump,
+        announce: (message) => { announcer?.announce(message) },
+        onPlainFilterStarted: maybeShowQuickFilterIntro,
     })
 
     const rename = createRenameState()
@@ -958,36 +966,42 @@
         jump.clearJumpState()
     }
 
-    // Quick filter delegates (`FilePaneAPI`), driven by `routeTypingKey`.
+    // Quick filter delegates (`FilePaneAPI`), driven by `routeTypingKey` and `pane.quickFilter`.
     export function isQuickFilterMode(): boolean {
-        return typingFilters(getTypeToJumpMode(), isNetworkView)
+        return quickFilterSession.kind !== null || typingFilters(getTypeToJumpMode(), isNetworkView)
     }
     export function isQuickFilterActive(): boolean {
-        return quickFilter.isActive()
+        return quickFilterSession.kind !== null || quickFilter.isActive()
     }
     export function appendQuickFilter(char: string): void {
-        const starting = !quickFilter.isActive()
-        quickFilter.append(char)
-        // The first time typing ever narrows a pane, say what happened and how to undo it.
-        if (starting && quickFilter.isActive()) maybeShowQuickFilterIntro()
+        quickFilterSession.append(char)
     }
     export function backspaceQuickFilter(): void {
-        quickFilter.backspace()
+        quickFilterSession.backspace()
     }
     export function clearQuickFilter(): void {
-        quickFilter.clear()
+        quickFilterSession.clear()
+    }
+    export function cycleQuickFilter(): void {
+        if (!rename.active) quickFilterSession.cycle()
     }
 
-    // A pattern belongs to its listing; a new one starts unfiltered on the backend.
+    // A pattern belongs to its listing; a new one starts unfiltered on the backend. A network
+    // view has no listing, so its session goes with the list it was opened on.
     $effect(() => {
-        dependOn(listingId)
-        untrack(() => { quickFilter.reset(); })
+        dependOn(listingId, networkHost.host)
+        untrack(() => {
+            quickFilter.reset()
+            quickFilterSession.end()
+        })
     })
 
-    // Leaving Filter mode takes its pattern along: in Jump mode nothing could clear it.
+    // Changing the setting ends a session, and leaving Filter mode takes its pattern along: in
+    // Jump mode nothing could clear it.
     $effect(() => {
         const mode = getTypeToJumpMode()
         untrack(() => {
+            quickFilterSession.end()
             if (mode !== 'filter') quickFilter.clear()
         })
     })
@@ -2148,13 +2162,16 @@
             buffer={jump.buffer}
             visible={jump.indicatorVisible}
             stale={jump.indicatorStale}
+            caret={quickFilterSession.kind === 'jump'}
+            onClear={quickFilterSession.kind === 'jump' ? quickFilterSession.clear : undefined}
         />
         <TypeToJumpIndicator
             buffer={quickFilter.pattern}
-            visible={quickFilter.isActive()}
+            visible={quickFilter.isActive() || quickFilterSession.kind === 'filter'}
             stale={false}
             kind="filter"
-            onClear={quickFilter.clear}
+            caret={quickFilterSession.kind === 'filter'}
+            onClear={quickFilterSession.clear}
         />
         {#if unreachable}
             <VolumeUnreachableBanner

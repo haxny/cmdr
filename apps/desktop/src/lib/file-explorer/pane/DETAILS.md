@@ -356,6 +356,15 @@ filtered row space.
   refresh never restores an old count. `listing-filter-sync.svelte.test.ts` pins both delivery orders.
 - **The pattern belongs to its listing and its mode**: a new listing starts unfiltered (`reset()`, no IPC), and leaving
   Filter mode clears it, since in Jump mode nothing could.
+- **⌃S (`pane.quickFilter`) opens a session** (`quick-filter-session.svelte.ts`, the rules are in its header): the badge
+  with a caret after the pattern, then each press switches that pattern between Filter and Jump, in a cycle. It sits
+  above the setting for this pane until Esc, the ×, or the folder changing, and it has to survive the jump reset
+  triggers, so on Jump the buffer is HELD (`hold` in `type-to-jump-state.svelte.ts`): no timers, and `clear` is a no-op
+  until `release`. Both kinds take `routeFilterKey`, so Backspace edits and arrows navigate either way; Backspace on an
+  empty badge closes it. The network views open on Jump and stay there; a load or search results ignores the key.
+- **Decision: the caret is drawn, ❌ not a text field.** A real input would take DOM focus off the list (the focus model
+  above) and the arrows with it, and moving around while the pattern stays editable is the point of ⌃S. So edits happen
+  at the end only. It doesn't blink, which would keep the compositor awake while a badge is up.
 - **Seen from outside**: the "Filter: …" badge (`TypeToJumpIndicator kind="filter"`) carries a × that clears by mouse
   without taking focus; MCP's pane state carries `quickFilter` while one is on; the first filter ever shown raises a
   once-ever toast (`quick-filter-intro.ts`, stamped on the way up) saying what happened, that Esc brings every file

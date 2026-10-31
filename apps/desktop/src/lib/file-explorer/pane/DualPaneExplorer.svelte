@@ -937,6 +937,11 @@
         paneCommands.closeHeaderMenus()
     }
 
+    /** Open the FOCUSED pane's filter badge or switch it (⌃S), the `pane.quickFilter` command. */
+    export function cycleQuickFilter() {
+        paneCommands.cycleQuickFilter()
+    }
+
     /** Open/toggle the FOCUSED pane's favorites menu (⌃D), the `favorites.open` command. */
     export function toggleFavoritesMenu() {
         paneCommands.toggleFavoritesMenu()

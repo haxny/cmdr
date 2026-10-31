@@ -590,6 +590,14 @@
     "description": "Command name that renames the selected file or folder. Appears in the command palette. A terse control label.",
     "screenshot": "settings-keyboard-shortcuts.png"
   },
+  "commands.paneQuickFilter.label": "Quick filter",
+  "@commands.paneQuickFilter.label": {
+    "description": "Command name (Ctrl+S, like Total Commander) in the command palette and the keyboard-shortcuts list: opens the small badge in the pane that holds the typed text which narrows the file list, or, pressed again, switches that badge between filtering and jumping. Same words as fileExplorer.quickFilter.prefix (Filter) and fileExplorer.typeToJump.prefix (Jump)."
+  },
+  "commands.paneQuickFilter.description": "Opens the filter badge on the current pattern. Press again to switch between Filter and Jump",
+  "@commands.paneQuickFilter.description": {
+    "description": "Longer help text for \"Quick filter\", shown as a secondary line in the command palette. Filter hides the names that don't match the typed text; Jump shows every name and puts the cursor on the match. Use the same words as fileExplorer.quickFilter.prefix and fileExplorer.typeToJump.prefix."
+  },
   "commands.fileMultiRename.label": "Multi-rename",
   "@commands.fileMultiRename.label": {
     "description": "Command name (Ctrl+M, like Total Commander) in the command palette and File menu: opens the tool that renames many files at once with a name mask.",

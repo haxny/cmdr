@@ -83,6 +83,11 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     access.getPaneRef(access.getFocusedPane())?.toggleFavoritesMenu()
   }
 
+  /** `pane.quickFilter` (⌃S), on the FOCUSED pane. */
+  function cycleQuickFilter() {
+    access.getPaneRef(access.getFocusedPane())?.cycleQuickFilter()
+  }
+
   /**
    * Close whichever header menu is open, on both panes.
    */
@@ -613,6 +618,7 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     toggleVolumeChooser,
     openVolumeChooser,
     toggleFavoritesMenu,
+    cycleQuickFilter,
     closeHeaderMenus,
     getFileAndPathUnderCursor,
     getPathToCopyUnderCursor,

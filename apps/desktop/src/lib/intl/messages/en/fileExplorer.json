@@ -3074,6 +3074,18 @@
       "count": "how many folders couldn't be read, wholly or in part"
     }
   },
+  "fileExplorer.quickFilter.modeFilter": "Filter: only matching names show",
+  "@fileExplorer.quickFilter.modeFilter": {
+    "description": "For screen readers only (never shown): said when the Quick filter command opens the badge in a pane or switches it to filtering, so typed text now hides the files and folders whose names don't match. On screen only the badge's word changes, to fileExplorer.quickFilter.prefix; start with that same word."
+  },
+  "fileExplorer.typeToJump.modeJump": "Jump: all names show, and the cursor goes to the match",
+  "@fileExplorer.typeToJump.modeJump": {
+    "description": "For screen readers only (never shown): said when the Quick filter command switches the badge in a pane to jumping, so every file and folder shows and typed text moves the cursor to the matching name. On screen only the badge's word changes, to fileExplorer.typeToJump.prefix; start with that same word."
+  },
+  "fileExplorer.typeToJump.clear": "Clear jump",
+  "@fileExplorer.typeToJump.clear": {
+    "description": "Accessible name of the small × button on the Jump badge in a file pane, which removes the typed text so the pane goes back to how plain typing works. Sits next to fileExplorer.typeToJump.prefix; the Filter badge's own button says fileExplorer.quickFilter.clear."
+  },
   "fileExplorer.quickFilter.clear": "Clear filter",
   "@fileExplorer.quickFilter.clear": {
     "description": "Accessible name and tooltip-less label of the small × on the \"Filter: …\" badge in a pane's corner. Clicking it shows every file again (same as Esc)."

@@ -71,6 +71,8 @@ export interface ExplorerAPI {
   copyPathBetweenPanes: (args: CopyPathBetweenPanesArgs) => void
   toggleVolumeChooser: (pane: 'left' | 'right') => void
   openVolumeChooser: () => void
+  /** Open the focused pane's filter badge or switch it between Filter and Jump (⌃S), the `pane.quickFilter` command. */
+  cycleQuickFilter: () => void
   /** Open/toggle the focused pane's favorites menu (⌃D), the `favorites.open` command. */
   toggleFavoritesMenu: () => void
   closeHeaderMenus: () => void

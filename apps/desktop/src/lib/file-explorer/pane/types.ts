@@ -325,9 +325,11 @@ export interface FilePaneAPI {
   /** Type-to-jump: clear the buffer + hide the indicator immediately. */
   clearJumpState(): void
 
-  /** Quick filter: true when typing in this pane narrows the list instead of jumping (the setting). */
+  /** Quick filter: `pane.quickFilter` (⌃S), which opens the badge or switches it between Filter and Jump. */
+  cycleQuickFilter(): void
+  /** Quick filter: true when typing in this pane edits a pattern (the setting, or an open ⌃S badge). */
   isQuickFilterMode(): boolean
-  /** Quick filter: true while a pattern narrows the list. */
+  /** Quick filter: true while a pattern narrows the list or a ⌃S badge is open. */
   isQuickFilterActive(): boolean
   /** Quick filter: append one printable character to the pattern. */
   appendQuickFilter(char: string): void
