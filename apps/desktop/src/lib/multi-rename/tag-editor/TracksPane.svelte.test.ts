@@ -433,16 +433,16 @@ describe('TracksPane double-click', () => {
 
 describe('TracksPane header alignment', () => {
   it('the header’s scroll bar width is the scroller’s offsetWidth minus clientWidth', async () => {
-    const offset = vi
-      .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
-      .mockImplementation(function (this: HTMLElement) {
-        return this.classList.contains('full-list') ? 316 : 0
-      })
-    const client = vi
-      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
-      .mockImplementation(function (this: HTMLElement) {
-        return this.classList.contains('full-list') ? 306 : 0
-      })
+    const offset = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains('full-list') ? 316 : 0
+    })
+    const client = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains('full-list') ? 306 : 0
+    })
     try {
       const { root } = await mountPane()
       const header = root.querySelector<HTMLElement>('.tag-pane-header')

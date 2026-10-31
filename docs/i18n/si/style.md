@@ -83,8 +83,8 @@ Write both branches.
 
 - **Don't auto-pluralize off the singular.** Sinhala plural morphology correlates with **animacy** and is often
   _subtractive_ for inanimate nouns: the plural can be **shorter** than the singular (counter-iconic), the opposite of
-  English "+s". Animate nouns take suffixes like `-වරු`/`-යන්`. So the translator must supply both forms explicitly;
-  never derive the plural mechanically. The two-bucket `one`/`other` structure still holds for message authoring.
+  English "+s". Animate nouns take suffixes like `-වරු`/`-යන්`. So the translator must supply both forms explicitly; never
+  derive the plural mechanically. The two-bucket `one`/`other` structure still holds for message authoring.
 - The `desktop-i18n-plural` check requires every plural message to cover both categories.
 
 ## Notes and decisions

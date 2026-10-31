@@ -9,27 +9,26 @@ pitfalls (Marathi-only letters) and the formality default dominate the rest.
 
 Friendly, concise, calm, active. Same register Cmdr uses in English: a helpful peer, never bureaucratic or alarmist.
 Error and warning copy stays calm and actionable; never use a Marathi equivalent of "error" or "failed" as a scare word
-(prefer plain phrasings like `अडचण आली` "ran into a problem" over `त्रुटी` / `अयशस्वी`). Prefer plain everyday Marathi
-(the register of a well-made consumer app), not heavily Sanskritized prose. Marathi is verb-final (SOV); let the action
-verb close the sentence rather than forcing English word order.
+(prefer plain phrasings like `अडचण आली` "ran into a problem" over `त्रुटी` / `अयशस्वी`). Prefer plain everyday Marathi (the
+register of a well-made consumer app), not heavily Sanskritized prose. Marathi is verb-final (SOV); let the action verb
+close the sentence rather than forcing English word order.
 
 ## Formality
 
-Marathi marks respect through the second-person PRONOUN and the verb ending: `तू` (informal) vs `तुम्ही`
-(polite/plural).
+Marathi marks respect through the second-person PRONOUN and the verb ending: `तू` (informal) vs `तुम्ही` (polite/plural).
 
-- **Use the `तुम्ही` register.** Crucially, unlike Hindi, Marathi `तू` is the everyday default among family and peers
-  and is NOT inherently disrespectful, but addressing a stranger (which every app user is) with `तू` reads too familiar
-  and can offend. `तुम्ही` is the safe, neutral choice for someone whose age and status you don't know, and it's what
-  Google and Microsoft use in their Marathi UIs.
+- **Use the `तुम्ही` register.** Crucially, unlike Hindi, Marathi `तू` is the everyday default among family and peers and
+  is NOT inherently disrespectful, but addressing a stranger (which every app user is) with `तू` reads too familiar and
+  can offend. `तुम्ही` is the safe, neutral choice for someone whose age and status you don't know, and it's what Google
+  and Microsoft use in their Marathi UIs.
 - **Prefer pronoun-free phrasing.** Most UI copy needs no "you" at all; Marathi drops the subject readily. "Are you sure
   you want to delete?" reads best without a pronoun. This also sidesteps gender agreement (see Decision points).
-- **Imperatives for actions (buttons, menu items): use the `तुम्ही`-imperative `-आ` ending** (e.g. `कॉपी करा` copy,
-  `उघडा` open, `चिकटवा` paste, `काढून टाका` delete, `बदला`/`नाव बदला` rename, `शोधा` search). This is the
-  register-neutral command form every major Marathi UI uses for action labels (Microsoft `रद्द करा` cancel, `बंद करा`
-  close, `क्रमवारी लावा` sort; Nautilus `उघडा`, `चिकटवा`, `कापा`). The plain `-ए`/`-` stem (`कर` "do") is the `तू` form
-  and reads rude on a button; never use it. Don't pile on `कृपया` ("please") on ordinary buttons; reserve a softener
-  only where the English is itself softened.
+- **Imperatives for actions (buttons, menu items): use the `तुम्ही`-imperative `-आ` ending** (e.g. `कॉपी करा` copy, `उघडा`
+  open, `चिकटवा` paste, `काढून टाका` delete, `बदला`/`नाव बदला` rename, `शोधा` search). This is the register-neutral
+  command form every major Marathi UI uses for action labels (Microsoft `रद्द करा` cancel, `बंद करा` close, `क्रमवारी लावा`
+  sort; Nautilus `उघडा`, `चिकटवा`, `कापा`). The plain `-ए`/`-` stem (`कर` "do") is the `तू` form and reads rude on a
+  button; never use it. Don't pile on `कृपया` ("please") on ordinary buttons; reserve a softener only where the English
+  is itself softened.
 
 ## Decision points
 
@@ -81,9 +80,9 @@ stay English-in-script, while common actions and well-rooted concepts use native
 follow this split.
 
 - **Transliterate (keep the English word, write it in Devanagari)** for terms users actually say: `फाइल` / `फाईल`
-  (file), `फोल्डर` (folder), `टॅब` (tab), `रीसायकल बिन` (Microsoft's Recycle Bin), `ड्रायव्हर` (driver). The native
-  coinages exist (`संचिका` file, `धारिका`/`निर्देशिका` folder) but read academic/officialese in a consumer app; both
-  Microsoft and Nautilus transliterate file/folder. Default to the transliteration.
+  (file), `फोल्डर` (folder), `टॅब` (tab), `रीसायकल बिन` (Microsoft's Recycle Bin), `ड्रायव्हर` (driver). The native coinages
+  exist (`संचिका` file, `धारिका`/`निर्देशिका` folder) but read academic/officialese in a consumer app; both Microsoft and
+  Nautilus transliterate file/folder. Default to the transliteration.
 - **Use the native Marathi word** for actions and concepts with a clear common term: `शोधा` (search, both Google and
   Microsoft), `चिकटवा` (paste), `काढून टाका` (delete), `उघडा` (open), `बंद करा` (close), `रद्द करा` (cancel),
   `क्रमवारी लावा` (sort). Copy is borderline: Nautilus uses native `प्रत बनवा` while many UIs use transliterated
@@ -142,26 +141,26 @@ plus the `{system_settings}`-style tokens. The curated list is enforced by `desk
 
 Build this up as terms come up. Starting set:
 
-| English term                                   | Marathi              | Notes                                                             |
-| ---------------------------------------------- | -------------------- | ----------------------------------------------------------------- |
-| File                                           | फाइल                 | Transliterated; what users say. Watch `ळ` if a spelling needs it. |
+| English term                                   | Marathi             | Notes                                                             |
+| ---------------------------------------------- | ------------------- | ----------------------------------------------------------------- |
+| File                                           | फाइल                | Transliterated; what users say. Watch `ळ` if a spelling needs it. |
 | Folder                                         | फोल्डर               | Transliterated.                                                   |
-| Open                                           | उघडा                 | Native; `-आ` imperative.                                          |
+| Open                                           | उघडा                | Native; `-आ` imperative.                                          |
 | Copy                                           | कॉपी करा / प्रत बनवा | Borderline: transliterated vs Nautilus's native. Pick one.        |
-| Paste                                          | चिकटवा               | Native.                                                           |
-| Cut                                            | कापा                 | Native (Nautilus).                                                |
+| Paste                                          | चिकटवा              | Native.                                                           |
+| Cut                                            | कापा                | Native (Nautilus).                                                |
 | Delete                                         | काढून टाका           | Native.                                                           |
-| Rename                                         | नाव बदला             | Native.                                                           |
-| Search                                         | शोधा                 | Native; matches Google + Microsoft.                               |
+| Rename                                         | नाव बदला            | Native.                                                           |
+| Search                                         | शोधा                | Native; matches Google + Microsoft.                               |
 | Cancel                                         | रद्द करा             | Native (Microsoft).                                               |
 | Close                                          | बंद करा              | Native (Microsoft).                                               |
 | Sort                                           | क्रमवारी लावा        | Native (Microsoft).                                               |
-| Name                                           | नाव                  |                                                                   |
-| Size                                           | आकार                 |                                                                   |
+| Name                                           | नाव                 |                                                                   |
+| Size                                           | आकार                |                                                                   |
 | Trash                                          | कचरापेटी             | Native (Nautilus); confirm vs matching macOS "Trash".             |
-| Recycle Bin                                    | रीसायकल बिन          | Microsoft transliterates.                                         |
+| Recycle Bin                                    | रीसायकल बिन         | Microsoft transliterates.                                         |
 | Tab                                            | टॅब                  | Transliterated.                                                   |
-| Pane, Volume, Drive, Viewer, Listing, Transfer | (to decide)          | Flag to David: borderline transliterate-vs-coin calls.            |
+| Pane, Volume, Drive, Viewer, Listing, Transfer | (to decide)         | Flag to David: borderline transliterate-vs-coin calls.            |
 
 ## Notes and decisions
 

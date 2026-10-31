@@ -79,10 +79,10 @@ it can, but the judgment is yours.
    against the shipped Finder bundle, plus the caveat that these labels follow the SYSTEM language while our catalog
    follows the APP language, are in `../i18n/translation-learnings.md` § "Quoting a macOS UI label".
 2. **Prefer the macOS Finder term when macOS and Windows/Microsoft differ.** Cmdr is a macOS app, so the native-OS term
-   wins over the Windows convention. For example, pt-BR delete = "Apagar" (Finder), not "Excluir" (Windows); German move
-   = "Bewegen" (Finder), not "Verschieben" (Microsoft). The Microsoft terminology entry is the Windows wording, not ours
-   — use it only as a tiebreak below macOS. (Same shape as the formality trap in `../i18n/reference-pile/how-to-mine.md`
-   § "Source-quality traps", trap 5.)
+   wins over the Windows convention. For example, pt-BR delete = "Apagar" (Finder), not "Excluir" (Windows); German
+   move = "Bewegen" (Finder), not "Verschieben" (Microsoft). The Microsoft terminology entry is the Windows wording, not
+   ours — use it only as a tiebreak below macOS. (Same shape as the formality trap in
+   `../i18n/reference-pile/how-to-mine.md` § "Source-quality traps", trap 5.)
 3. **Brand/product names may inflect.** In agglutinative/inflecting languages, let the brand take its natural
    inflectional suffix rather than forcing an unnatural bare form: Hungarian "Cmdrben" (in Cmdr), Swedish genitive
    "Cmdrs". Keep the brand recognizable but grammatical. Pick the suffix by how the name is PRONOUNCED, not spelled:

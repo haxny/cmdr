@@ -31,11 +31,9 @@ Evidence this plan stands on, read before touching the matching milestone:
 - **Space**: `get_space_info` answers `VolumeError::NotSupported`.
 - **Delete is permanent** (S3 has no trash), and the delete dialog says so. When the bucket keeps versions (AWS/R2
   versioning on, and B2 by default), it says the bytes stay billed.
-- **Cost estimates** before costly operations, at list prices: "About
-  $0.02 at AWS list prices", with an (i) explaining
-  free tiers, discounts, and minimums. Hidden when it rounds to $0.00.
-  ❌ None on rollbacks: those just run. The price table is served by `apps/api-server` so a price change needs no
-  release.
+- **Cost estimates** before costly operations, at list prices: "About $0.02 at AWS list prices", with an (i) explaining
+  free tiers, discounts, and minimums. Hidden when it rounds to $0.00. ❌ None on rollbacks: those just run. The price
+  table is served by `apps/api-server` so a price change needs no release.
 - **No-overwrite races**: where a provider lacks `If-None-Match: *`, we check then write, and when a clash is noticed
   afterwards we tell the user plainly what happened and what survived.
 - **Overwrites never risk the original (decided 2026-10-01, the safer option)**: a server that publishes a PUT cut off

@@ -1,7 +1,6 @@
 # Bodo (brx) translation style guide
 
-Working notes for translating Cmdr into Bodo (बड़ो / बर'). Read `../README.md` for how this fits the translation
-process.
+Working notes for translating Cmdr into Bodo (बड़ो / बर'). Read `../README.md` for how this fits the translation process.
 
 `brx` is the language base, written in the Devanagari script. Bodo is a Sino-Tibetan language, one of India's scheduled
 languages, spoken mainly in Assam. The reference pile has only the Microsoft style guide for `brx` (Tier 2); no macOS,
@@ -62,8 +61,8 @@ brand words sit inside Devanagari runs; verify they render cleanly.
 ## Plurals
 
 CLDR categories: `one`, `other` (verified with `new Intl.PluralRules('brx')`, 2026-06-20). Two branches. The Microsoft
-guide notes distinct honorific singular (नोंथां) and plural (नोंथांमोन) address forms, so mind that plural agreement
-shows up in the pronoun/verb; write both count branches with correct agreement. A native reviewer confirms.
+guide notes distinct honorific singular (नोंथां) and plural (नोंथांमोन) address forms, so mind that plural agreement shows
+up in the pronoun/verb; write both count branches with correct agreement. A native reviewer confirms.
 
 ## Notes and decisions
 

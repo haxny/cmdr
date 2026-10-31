@@ -28,8 +28,8 @@ register system built from pronoun choice, vocabulary level, and sentence-final 
   addressing a user, used by Microsoft's Thai style guide and macOS. Don't use formal/deferential ท่าน (reads stiff and
   corporate) or any familiar/intimate pronoun. Often the pronoun is dropped entirely in UI, which is natural and fine.
 - **Imperatives for buttons and menu items: bare verb, no particle, no politener.** macOS Finder labels actions as plain
-  verbs (คัดลอก "Copy", ย้ายไป "Move to", เปิด "Open", ทิ้ง…ลงในถังขยะ "Move…to Trash"). This is the correct register
-  for Cmdr's buttons and menus: concise, direct, polite by default in Thai because a bare verb isn't rude.
+  verbs (คัดลอก "Copy", ย้ายไป "Move to", เปิด "Open", ทิ้ง…ลงในถังขยะ "Move…to Trash"). This is the correct register for
+  Cmdr's buttons and menus: concise, direct, polite by default in Thai because a bare verb isn't rude.
 - **No sentence-final politeness particles (ครับ/ค่ะ) in standard UI.** See the decision point below; this is the single
   highest-stakes register call and macOS/Microsoft both omit them.
 
@@ -59,8 +59,8 @@ register system built from pronoun choice, vocabulary level, and sentence-final 
 
 ### Sentence-final particles ครับ / ค่ะ in UI
 
-- In spoken and conversational written Thai, the politeness particles ครับ (male speaker) and ค่ะ/คะ (female speaker)
-  end polite sentences, and they carry the speaker's gender.
+- In spoken and conversational written Thai, the politeness particles ครับ (male speaker) and ค่ะ/คะ (female speaker) end
+  polite sentences, and they carry the speaker's gender.
 - In software UI, the majors omit them: macOS Finder and AppKit Thai strings carry no politeness particles, and the tone
   stays polite through word choice alone. Adding them would (a) force a speaker gender onto the app's voice, and (b)
   read as chatty/spoken in a place that should be neutral product copy.
@@ -97,24 +97,24 @@ register system built from pronoun choice, vocabulary level, and sentence-final 
 - Thai nouns and verbs have no grammatical gender, and the standard UI pronoun คุณ is gender-neutral, so Thai UI is
   inherently gender-neutral as long as you avoid the gendered politeness particles (covered above). There's no he/she
   agreement to resolve.
-- **Recommendation (high):** no special handling needed beyond "no ครับ/ค่ะ." Avoid gendered speaker particles and Thai
-  UI stays neutral by construction.
+- **Recommendation (high):** no special handling needed beyond "no ครับ/ค่ะ." Avoid gendered speaker particles and Thai UI
+  stays neutral by construction.
 
 ## Terminology and glossary
 
 Early high-confidence terms (macOS Finder + Microsoft agree). Expand during the first translation pass.
 
-| English term     | Thai          | Notes                                                               |
-| ---------------- | ------------- | ------------------------------------------------------------------- |
-| file             | ไฟล์          | macOS, Microsoft. Loanword, standard.                               |
-| folder           | โฟลเดอร์      | macOS, Microsoft. Loanword, standard.                               |
-| Trash            | ถังขยะ        | macOS Finder. "Move to Trash" = ทิ้ง…ลงในถังขยะ / ย้าย…ไปยังถังขยะ. |
-| copy (verb)      | คัดลอก        | macOS Finder.                                                       |
-| move (verb)      | ย้าย / ย้ายไป | macOS Finder ("move to" = ย้ายไปยัง).                               |
-| open (verb)      | เปิด          | macOS Finder.                                                       |
-| tab              | แท็บ          | macOS, Microsoft. Loanword.                                         |
-| eject            | นำออก         | macOS (verify against Cmdr's eject context).                        |
-| you (2nd person) | คุณ           | Polite, neutral, gender-neutral. Often dropped in UI.               |
+| English term     | Thai        | Notes                                                         |
+| ---------------- | ----------- | ------------------------------------------------------------- |
+| file             | ไฟล์         | macOS, Microsoft. Loanword, standard.                         |
+| folder           | โฟลเดอร์     | macOS, Microsoft. Loanword, standard.                         |
+| Trash            | ถังขยะ       | macOS Finder. "Move to Trash" = ทิ้ง…ลงในถังขยะ / ย้าย…ไปยังถังขยะ. |
+| copy (verb)      | คัดลอก       | macOS Finder.                                                 |
+| move (verb)      | ย้าย / ย้ายไป | macOS Finder ("move to" = ย้ายไปยัง).                           |
+| open (verb)      | เปิด         | macOS Finder.                                                 |
+| tab              | แท็บ         | macOS, Microsoft. Loanword.                                   |
+| eject            | นำออก       | macOS (verify against Cmdr's eject context).                  |
+| you (2nd person) | คุณ          | Polite, neutral, gender-neutral. Often dropped in UI.         |
 
 Pane, volume, listing, transfer, viewer: not yet confirmed; triangulate during the first pass and record here with
 sources + confidence.
@@ -146,8 +146,8 @@ inflection.
   (Microsoft Thai voice and macOS both favor this). Stiff formal vocabulary is the most common Thai-translation
   mis-register.
 - **Quotation marks:** Thai commonly uses the same ASCII/curly double quotes as English for quoted names; macOS Thai
-  Finder quotes filenames with " " (for example คัดลอก "บางสิ่ง" ไปยัง "บางที่"). Keep whatever quote style the English
-  source uses unless it reads wrong.
+  Finder quotes filenames with " " (for example คัดลอก "บางสิ่ง" ไปยัง "บางที่"). Keep whatever quote style the English source
+  uses unless it reads wrong.
 - **Spaces around inserts:** because Thai has no word spaces, be careful where a `{placeholder}` meets Thai text. A path
   or filename insert may need a surrounding space or quote to stay readable against adjacent Thai characters; follow
   macOS Finder's pattern (it quotes inserted names). Verify per string during review.

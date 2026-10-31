@@ -22,19 +22,19 @@ relaxed", "crisp and clear", everyday conversational Tamil over formal/technical
 pile, `ta/microsoft-style-guides/StyleGuide.pdf`, 2026-06-20). That voice carries Cmdr's English over cleanly: keep
 sentences short and spoken, avoid the heavy Sanskritized register.
 
-Error messages stay calm and actionable. Don't reach for a "பிழை" (error) or "தோல்வி" (failure) label; phrase the
-problem and the next step, the way the English voice avoids "error" / "failed".
+Error messages stay calm and actionable. Don't reach for a "பிழை" (error) or "தோல்வி" (failure) label; phrase the problem
+and the next step, the way the English voice avoids "error" / "failed".
 
 ## Formality
 
-- **Address the user as `நீங்கள்` (polite/plural), high.** Tamil has a strong T-V split: `நீ` (familiar singular) vs
-  `நீங்கள்` (polite/plural). Microsoft's Tamil style guide states outright to address the user as `நீங்கள்`, directly or
-  indirectly (verified against the reference pile, 2026-06-20). Never use `நீ` in UI: it reads as curt or talking down.
-  Keep verb endings and pronouns in the `நீங்கள்` register consistently.
+- **Address the user as `நீங்கள்` (polite/plural), high.** Tamil has a strong T-V split: `நீ` (familiar singular) vs `நீங்கள்`
+  (polite/plural). Microsoft's Tamil style guide states outright to address the user as `நீங்கள்`, directly or indirectly
+  (verified against the reference pile, 2026-06-20). Never use `நீ` in UI: it reads as curt or talking down. Keep verb
+  endings and pronouns in the `நீங்கள்` register consistently.
 - **Buttons and menu items: imperative in the polite register.** Tamil UI uses the polite imperative for actions: "சேமி"
-  (save), "ரத்து செய்" (cancel), "நீக்கு" (delete), "நகலெடு" (copy), "நகர்த்து" (move), "திற" (open), "மூடு" (close).
-  These short imperative forms are the established UI norm; keep them concise, don't expand to full polite request forms
-  on buttons.
+  (save), "ரத்து செய்" (cancel), "நீக்கு" (delete), "நகலெடு" (copy), "நகர்த்து" (move), "திற" (open), "மூடு" (close). These
+  short imperative forms are the established UI norm; keep them concise, don't expand to full polite request forms on
+  buttons.
 
 ## Decision points
 
@@ -69,8 +69,8 @@ problem and the next step, the way the English voice avoids "error" / "failed".
   - They agree on file → `கோப்பு`, delete → `நீக்கு`, copy → `நகலெடு`, move → `நகர்த்து`, settings → `அமைப்புகள்`.
 - **Recommendation:** prefer the established native Tamil term over an English loan (Tamil has strong, widely-understood
   native IT vocabulary, unlike lower-resource languages). For the folder/trash split, lean Microsoft for product-term
-  consistency (`கோப்புறை`, and a trash term, see glossary) since Cmdr has no macOS Tamil to defer to, but the GNOME
-  forms are the file-manager-native alternatives if David prefers a plainer register. `tentative` on the split (flagged
+  consistency (`கோப்புறை`, and a trash term, see glossary) since Cmdr has no macOS Tamil to defer to, but the GNOME forms
+  are the file-manager-native alternatives if David prefers a plainer register. `tentative` on the split (flagged
   above); the agreed terms are `high`.
 
 ### Gender: grammatical gender in 3rd person, keep UI gender-neutral
@@ -94,10 +94,10 @@ copyrighted; GNOME is GPL). Top source for Tamil is Microsoft terminology (no ma
 file-manager cross-check. Evidence verified against the reference pile (`_ignored/i18n/ta/`) on 2026-06-20.
 
 - **file: `கோப்பு`** · Microsoft terminology, GNOME agree. `high`.
-- **folder: `கோப்புறை`** · Microsoft terminology (GNOME uses `அடைவு`; prefer the Microsoft form for product
-  consistency). `high` for the Microsoft choice; the split itself is flagged above.
-- **directory: `கோப்பகம்`** · Microsoft terminology. Use only where the technical directory sense matters, else
-  `கோப்புறை`. `high`.
+- **folder: `கோப்புறை`** · Microsoft terminology (GNOME uses `அடைவு`; prefer the Microsoft form for product consistency).
+  `high` for the Microsoft choice; the split itself is flagged above.
+- **directory: `கோப்பகம்`** · Microsoft terminology. Use only where the technical directory sense matters, else `கோப்புறை`.
+  `high`.
 - **copy: `நகலெடு`** · Microsoft terminology. Imperative on buttons. `high`.
 - **move: `நகர்த்து`** · Microsoft terminology. `high`.
 - **delete: `நீக்கு`** · Microsoft terminology. `high`.
@@ -124,8 +124,8 @@ tokens. The curated list (BRAND_WORDS + SYSTEM_TOKENS) is enforced by `desktop-i
 
 CLDR categories: `one`, `other` (verified with `new Intl.PluralRules('ta')`, 2026-06-20). Write both branches.
 
-- Tamil pluralizes with the `-கள்` suffix (கோப்பு → கோப்புகள்), but the suffix triggers sandhi and form changes, so
-  write the natural plural for each noun rather than appending mechanically.
+- Tamil pluralizes with the `-கள்` suffix (கோப்பு → கோப்புகள்), but the suffix triggers sandhi and form changes, so write
+  the natural plural for each noun rather than appending mechanically.
 - The non-rational (neuter) class covers files/folders/items; keep verb and pronoun agreement in that class inside each
   branch (`அது` singular / `அவை` plural).
 
