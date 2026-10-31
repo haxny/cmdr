@@ -19,6 +19,7 @@
     import MultiRenameDialog from '#lib/multi-rename/MultiRenameDialog.svelte'
     import type { MultiRenameRun } from '#lib/multi-rename/last-run.svelte.js'
     import { closeMultiRename as endMultiRenameSession, openMultiRename as openMultiRenameSession } from '#lib/tauri-commands/index.js'
+    import { openSettled } from '#lib/multi-rename/open-settled.js'
     import type { MultiRenameOpened, MultiRenameStarted } from '#lib/tauri-commands/index.js'
     import GoToPathDialog from '#lib/go-to-path/GoToPathDialog.svelte'
     import WhatsNewDialog from '#lib/whats-new/WhatsNewDialog.svelte'
@@ -578,21 +579,24 @@
      * selection, or the file under the cursor, into its files once, here. A read-only
      * pane (an archive, the `.git` portal) refuses with F2's alert before any session
      * opens. `resolveMultiRenameTarget` answers `null` when there's nothing to open,
-     * and says why; rows the listing moved past are refused, as F5 refuses them.
+     * and says why; rows the listing moved past wait to settle, as F5 waits.
      */
     async function openMultiRename(): Promise<void> {
         if (multiRenameSession || openingMultiRename || !explorerRef) return
         if (explorerRef.refuseMultiRename()) return
-        const target = explorerRef.resolveMultiRenameTarget()
-        if (!target) return
         openingMultiRename = true
         try {
-            const opened = await openMultiRenameSession(
-                target.listingId,
-                getShowHiddenFiles(),
-                target.selectedIndices,
-                target.expectedSequence,
+            const opened = await openSettled(
+                () => explorerRef?.resolveMultiRenameTarget() ?? null,
+                (target) =>
+                    openMultiRenameSession(
+                        target.listingId,
+                        getShowHiddenFiles(),
+                        target.selectedIndices,
+                        target.expectedSequence,
+                    ),
             )
+            if (!opened) return
             if (opened.ok) {
                 multiRenameSession = opened.value
                 return

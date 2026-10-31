@@ -115,9 +115,10 @@
   results), with the rows-settling toast while rows settle (`isRowStateReady`), and with the five-second
   `multiRename.noFileSelected` error toast when there's no file to take (the cursor on `..`, an empty folder, which has
   cursor 0 and no row there when it has no `..` either). That toast offers no report: the press was the user's, nothing
-  broke. `routes/(main)/+page.svelte` opens the session (`openMultiRename`) before the sheet mounts. A read-only pane
-  (any archive, the `.git` portal, a read-only volume) gets `refuseMultiRename`’s alert instead; the backend’s
-  `ReadOnly` at Start is the safety net.
+  broke. `routes/(main)/+page.svelte` opens the session (`openMultiRename`) before the sheet mounts, through
+  `open-settled.ts`, which waits out a `selectionChanged` like `readPressedRows` does. A read-only pane (any archive,
+  the `.git` portal, a read-only volume) gets `refuseMultiRename`’s alert instead; the backend’s `ReadOnly` at Start is
+  the safety net.
 - **Start's toast** says how many files are renaming; a batch that ran as a move on S3 adds a warning for the swaps it
   left out (`swapsLeftOut`), as Ask Cmdr does.
 - **Gallery**: `not-triggerable`, since the preview is computed from a real listing.

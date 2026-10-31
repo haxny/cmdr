@@ -248,7 +248,7 @@ const EXPECTED_DESCRIPTIONS: Record<string, string | undefined> = {
   'view.calculateFolderSizes':
     'Shows the size of every folder in this pane that doesn’t have one yet. Esc stops the calculation.',
   'file.multiRename':
-    'Renames the selected files (or the whole folder) with a name mask, counter, and search & replace',
+    'Renames the selected files (or the file under the cursor) with a name mask, counter, and search & replace',
   'app.checkForUpdates': 'Check whether a newer version of Cmdr is available, and download it if so',
   'app.toggleCliCommand': 'Type cmdr and a path in a terminal to open that file or folder in Cmdr',
   'cmdr.openOnboarding': 'Reopen the onboarding wizard to review or change first-launch setup options',
