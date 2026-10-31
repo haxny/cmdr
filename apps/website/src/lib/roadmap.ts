@@ -750,6 +750,12 @@ export const roadmapSections: RoadmapSection[] = [
             description: 'Full revamp: more capable agent, transparent tool calls, new suggestions UI.',
             done: true,
           },
+          {
+            date: '(Oct 29)',
+            title: 'Ukrainian',
+            description: 'The whole app and its native menus, in Ukrainian. Cmdr has 16 langs now.',
+            done: true,
+          },
         ],
       },
     ],

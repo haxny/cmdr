@@ -18,7 +18,7 @@
  */
 
 /** The release and date the page's claims were checked against. */
-export const verifiedAgainst = { version: '0.57.0', date: '2026-10-29' }
+export const verifiedAgainst = { version: '0.58.0', date: '2026-10-31' }
 
 export interface NetworkConnection {
   id: string
@@ -123,9 +123,10 @@ export const networkConnections: NetworkConnection[] = [
     id: 'file-access',
     name: 'Remote files the user opens',
     destination:
-      'Only servers and devices the user connects to: SMB, SFTP, NFS, and WebDAV servers, S3-compatible storage, and phones over USB.',
+      'Only servers and devices the user connects to: SMB, SFTP, NFS, and WebDAV servers, S3-compatible storage, and phones over USB, plus any server an SMB share links a folder to, once the user allows it.',
     when: 'When the user browses them. To find SMB servers on the local network, Cmdr uses Bonjour (mDNS). It runs only while the Servers view is open, while Cmdr looks up the server behind an SMB share (including shares already mounted at launch), and for about 20 seconds after launch once the user has used network features. Each search stops 10 seconds after nothing needs it.',
-    sends: 'What the protocol needs: credentials the user entered and the file operations the user asked for.',
+    sends:
+      'What the protocol needs: credentials the user entered and the file operations the user asked for. An SMB share can point a folder at another server (a DFS link). Cmdr contacts that server only after the user allows that pair of servers, and then signs in with the same credentials. A share on the macOS mount follows such links itself, without asking.',
     control:
       'SMB, phone (MTP), and Android (ADB) support are on by default and each can be turned off in Settings &gt; File systems. Git support is local only and never fetches or pushes.',
   },

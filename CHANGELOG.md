@@ -5,6 +5,108 @@ This file holds all notable changes to Cmdr over time.
 The format is based on [keep a changelog](https://keepachangelog.com/en/1.1.0/), and we use
 [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+## [0.58.0] - 2026-10-31
+
+About 50 bug fixes and small improvements, lots of them for phones, ejecting, and the drive index. Ukrainian lang added.
+
+Thanks for the reports and requests, keep them coming!
+
+### Added
+
+- Show images, HEIC, and PDFs in F3 on every server and phone, with progress and Cancel on slow ones (6c3baa9b3)
+- Add Ukrainian: the whole app and its native menus (26eeec774, d33353cd8, 449904bf3, 739edf04e, b5b4f0545)
+- Browse DFS links inside an SMB share: listings, copies, moves, and live updates follow the link, a dead link only
+  blocks what's behind it, and Cmdr asks before signing in to a different server (6cade254b, 8469bd011, 3aa95835a,
+  1b1d5b138, 5af4634f9, df64facf0, afb538163, f2384758b, 45d49a770)
+- Ask Skip or Skip all when the destination refuses a name, for a file or a whole folder (de5c6bf46, 7d6f7b352,
+  f92d6a9e8, 33789657e)
+- Copy symlinks as symlinks between volumes where the destination can hold them, and count them as skips where nothing
+  can land (0893e5ecb)
+- Switch the filter badge between Filter and Jump with ⌃S (fc087e093)
+- Jump by typing in the Servers view and a server's share list (b475192c2)
+- Add "Eject all", which refuses before unmounting anything while an app holds one of the drive's volumes (3c162454a,
+  6a2abe66a)
+- Show a phone Cmdr is waiting on in the volume switcher, with what to do next (10eddb3e1, 9c48105de)
+- Add other group IDs to saved NFS places, so files readable only through one of them open (b5856b175)
+
+### Changed
+
+- Keep browsing an SMB share responsive while a copy runs on it (c88ec30b9)
+- Copy compressible files to and from Android phones faster (up to 2.3× pushing, 30% pulling) (0e9eb3713)
+- Eject only that volume while its drive keeps others mounted, like Finder (3c162454a)
+- Make ⌃M with nothing selected rename only the file under the cursor, and wait for a changing folder to settle
+  (f94671ffd, 203d9eff4)
+- Bring back F2 cycling the rename selection, stop ⌥← / ⌥→ at the extension's dot, and show `tar.gz` as one extension
+  (45ea6a500)
+- Say so in a calm note when items you delete are already gone, with no error dialog or report (311732271, df6905529,
+  208f7cc5f, dd8d56095)
+- Give every click target a 24-by-24 square, including one-letter folders and the foot of the pane divider (1ed5ae00b)
+- Show packages macOS knows about, like `Logo.sketchbundle`, with their icon, and warn when renaming them (9fc810139,
+  10f9beddf)
+- Let Ask Cmdr's rename check run as long as a slow NAS needs, with progress and Stop, and say why nothing happened
+  (73903a612)
+- Make Ask Cmdr cheaper on GPT-5.6+ and OpenRouter-to-Claude with prompt caching, and price cached tokens right in the
+  cost meter (6d57d5ead)
+- Keep thinking on in Ask Cmdr: the Effort picker has no "Off" anymore (40dd813d8)
+- Offer local AI only on macOS 14 or later, where its server can start (83b5a0219, 4103a95eb, 9047e500a)
+- Explain in your language why only one Cmdr can run when you open a second (b71b3b34f, 592f2bc05, d1994fb77)
+- Allow no outside host at all in the app's content security policy (971549b6e)
+
+### Fixed
+
+- Fix right-click Services showing only a few items on macOS 27 (6554cc87f)
+- Fix a crash from toggling a drive's indexing off, forgetting it, and turning it back on during its first index
+  (8d1f97c2b)
+- Fix forgetting a drive while its indexing was stopping leaving the index on disk (3bddd5ff7)
+- Fix a relaunch after a long compile re-walking the whole drive (b6e0892f4, aff7e0d81, d13df193d)
+- Fix the index trusting old rows after a drive's change journal was wiped (ebbbd3df4)
+- Fix an interrupted folder read dropping real files from the index (2a2792fad)
+- Fix a pane keeping a stale row for minutes when macOS lost its change history (53d9d37db)
+- Fix Rescan doing nothing on a drive whose index wasn't running (60f651335)
+- Fix a phone's index walk freezing or marking healthy folders unreadable while you browse (09b344739, 85f646bc4)
+- Fix a replugged phone staying missing after you tap Allow (47fb02232)
+- Fix a USB cable pulled mid-copy reading as a failed copy with a report button (6873c9c2e)
+- Fix one broken file name failing a whole phone folder (f5317ff25)
+- Fix folders an Android phone won't open showing as empty (dcef1a33d, d87973e7c)
+- Fix Android phones showing no free space until opened, and appearing twice while waiting for Allow (8fded62b5)
+- Fix refusals from phones and servers giving macOS privacy advice instead of saying who refused (8d446900a, 3ea2fb82f,
+  c08f1c97a)
+- Fix ejecting a drive with an open disk image on it saying to wait, when the image has to go first (5edfe3ffd)
+- Fix two Cmdrs sharing one drive index or splitting each other's logs (6b9176b14, eae610e1a, 0d4be5e1f, e2e86b548)
+- Fix a retried copy leaving its temp file behind until the next launch (d9ac9506d)
+- Fix canceled Nextcloud uploads sometimes leaving chunks on the server for a day (ea6b2ccda)
+- Fix "file already exists" prompts showing two identical-looking sizes: now exact bytes, or "(same size)" (fb4db79c5)
+- Fix the extension-change dialog reading "Use ." and its "Keep" button sometimes doing nothing (c997aa30e, 45ea6a500)
+- Fix AI search showing the previous query's steps, and a slow old answer overwriting newer filters (d21304545,
+  9206b8570)
+- Fix Stop on an Ask Cmdr turn picked up after a reload (ba4fb9bea)
+- Fix folders with a Finder symbol or emoji missing Cmdr gold (75e1244da, 36f69b242)
+- Fix a window-sized focus ring when switching a Markdown file to formatted view (64b8c0903)
+- Fix the mouse wheel and file drops doing nothing on the right pane's first 8 px (85eef9daf, 1ed5ae00b)
+- Fix keyboards not being able to remove a shortcut, and VoiceOver missing controls nested in Settings and Search
+  (4059d3d4c)
+- Fix VoiceOver not reading the Servers view's hosts and shares as lists (96ebeec63)
+- Fix error reports dropping the log lines right before the failure (726a7bfd1)
+- Fix a harmless browser notice sending automatic error reports (e18bac741, 40dd627bd)
+- Fix MCP reporting failure for a copy that went ahead when the UI answered slowly (aa9f6f6bd)
+- Fix Linux boot indexing crawling network shares under the home folder, and counting reserved space as used (f38059e17,
+  2cab6c139)
+
+### Security
+
+- Stop a malicious SFTP server from exhausting memory or stalling uploads: `russh` GHSA-4p9f-7p9m-5vfg (medium) and
+  GHSA-fw5c-8223-6h42 (medium), Cmdr 0.40.0–0.57.0 (5d53602ab)
+
+### Non-app
+
+- Sign every commit `pnpm land` puts on `main`, and require signed commits there (1d0532457, 5b3100f98)
+- Re-verify getcmdr.com/trust on every release, and re-evaluate the accessibility report (1cf3010fe, 069538e8d,
+  d05f02c45)
+- Gate every release tag on the pre-release checks and on complete Security lines (b8e59e480, 94974cc1a, 4b4df6bf5)
+- Copy the whole Homebrew cask into the tap on each release (791180f91)
+- Drop the last `zip` 4.6.1 from the dependency graph (9eb5857c1, e935c66d3)
+- Speed up local checks and Playwright builds (2cbde144b, 91fef8999, d22357d3d, 485d4d9cc)
+
 ## [0.57.0] - 2026-10-28
 
 The three highlights:

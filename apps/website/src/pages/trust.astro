@@ -154,9 +154,8 @@ const toc = [
     <h2 id="network">What the app sends over the network</h2>
     <p>
         This is every connection a release build of the app makes. All of it comes from the app's native code. The
-        app's user interface makes no network requests, and its content security policy would block any except to
-        <code>getcmdr.com</code>. There are no ads, no third-party trackers, and no remote fonts or scripts in the
-        app.
+        app's user interface makes no network requests, and its content security policy would block any to an outside
+        host. There are no ads, no third-party trackers, and no remote fonts or scripts in the app.
     </p>
     {
         networkConnections.map((connection) => (
@@ -667,8 +666,8 @@ const toc = [
     </p>
     <ul>
         <li>
-            <strong>Local AI</strong>: Cmdr's own model, which runs on the Mac (downloaded on request). Nothing leaves
-            the Mac.
+            <strong>Local AI</strong>: Cmdr's own model, which runs on the Mac (macOS 14 or later, downloaded on
+            request). Nothing leaves the Mac.
         </li>
         <li>
             <strong>Cloud AI</strong>, with the user's own API key where the service needs one: OpenAI, Anthropic, Google Gemini, Groq, Together AI,

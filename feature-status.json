@@ -54,7 +54,7 @@
       "id": "network-drives",
       "name": "Network drives (SMB)",
       "status": "beta",
-      "note": "Browsing and fast direct transfers work on common NAS setups, with server-side copies within a share, saved servers and shares, account switching, accented names, DFS namespace roots, and unreliable servers. Constantly testing with more real-world servers."
+      "note": "Browsing and fast direct transfers work on common NAS setups, with server-side copies within a share, saved servers and shares, account switching, accented names, DFS namespace roots and links, browsing during a copy, and unreliable servers. Constantly testing with more real-world servers."
     },
     {
       "id": "android-devices",
@@ -138,7 +138,7 @@
       "id": "file-viewer",
       "name": "File viewer",
       "status": "stable",
-      "note": "Opens even 10+ GB files instantly in Text, Binary, Hex, and Media modes, shows Markdown formatted with working links, and has search, word wrap, and support for single lines of any length."
+      "note": "Opens even 10+ GB files instantly in Text, Binary, Hex, and Media modes, shows Markdown formatted with working links, and has search, word wrap, and support for single lines of any length. Images and PDFs render on servers and phones too."
     },
     {
       "id": "tabs",
