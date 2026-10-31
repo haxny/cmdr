@@ -584,10 +584,11 @@
     async function openMultiRename(): Promise<void> {
         if (multiRenameSession || openingMultiRename || !explorerRef) return
         if (explorerRef.refuseMultiRename()) return
+        const explorer = explorerRef
         openingMultiRename = true
         try {
             const opened = await openSettled(
-                () => explorerRef?.resolveMultiRenameTarget() ?? null,
+                () => explorer.resolveMultiRenameTarget(),
                 (target) =>
                     openMultiRenameSession(
                         target.listingId,
