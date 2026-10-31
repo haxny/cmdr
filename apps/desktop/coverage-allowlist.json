@@ -40,9 +40,6 @@
     "file-explorer/pane/FilePane.svelte": {
       "reason": "Tested in integration.test.ts, complex component"
     },
-    "file-explorer/pane/PaneResizer.svelte": {
-      "reason": "Mouse drag UI component, difficult to unit test"
-    },
     "file-explorer/pane/debug-emitters.svelte.ts": {
       "reason": "Dev-only debug-window Tauri emit inside $effect factories; both effects no-op outside import.meta.env.DEV and in test mode"
     },
