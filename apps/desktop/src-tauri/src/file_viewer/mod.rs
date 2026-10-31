@@ -298,6 +298,9 @@ pub enum ViewerError {
     /// Deep Archive) and can't be read until someone restores it, so there's
     /// nothing to preview yet and a Retry can't help.
     ColdStorage,
+    /// The file sits behind a link to another server (a DFS link in an SMB share), and that
+    /// server is out of reach. Retry can help; nothing was deleted, so ❌ never `NotFound`.
+    LinkTargetUnreachable,
     NotEnoughSpace {
         needed: u64,
         available: u64,
@@ -342,6 +345,7 @@ impl ErrorLogText for ViewerError {
             Self::DestinationIsReadOnly => write!(out, "Can't save into a read-only location"),
             Self::Archive { message, .. } => out.error(message),
             Self::ColdStorage => write!(out, "The file is archived and needs a restore before it can be read"),
+            Self::LinkTargetUnreachable => write!(out, "A link's other server is out of reach"),
             Self::NotEnoughSpace { needed, available } => {
                 write!(
                     out,

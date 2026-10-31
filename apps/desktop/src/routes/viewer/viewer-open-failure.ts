@@ -30,6 +30,9 @@ function openFailureCopy(e: unknown): OpenFailure {
     if (ve.kind === 'tooLargeToPreview') return { message: tString('viewer.error.tooLargeToPreview'), canRetry: false }
     if (ve.kind === 'archive') return { message: tString('viewer.error.archiveUnreadable'), canRetry: false }
     if (ve.kind === 'coldStorage') return { message: tString('viewer.error.coldStorage'), canRetry: false }
+    if (ve.kind === 'linkTargetUnreachable') {
+      return { message: tString('viewer.error.linkTargetUnreachable'), canRetry: true }
+    }
   }
   return { message: tString('viewer.error.readFailed'), canRetry: true }
 }
@@ -54,6 +57,7 @@ function logLevelFor(ve: ViewerError): 'warn' | 'error' {
     case 'tooLargeToPreview':
     case 'archive':
     case 'coldStorage':
+    case 'linkTargetUnreachable':
     case 'notEnoughSpace': // only an "Open with" pull checks for room, so a viewer open never meets it
     case 'cancelled':
     case 'io':

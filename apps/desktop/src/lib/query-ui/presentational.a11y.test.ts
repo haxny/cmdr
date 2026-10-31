@@ -13,7 +13,7 @@
  * file-wide, and the components here use all three for real.
  */
 
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, afterEach } from 'vitest'
 import { mount, tick, type ComponentProps } from 'svelte'
 import AiTransparencyStrip from './AiPromptStrip.svelte'
 import EmptyState from './EmptyState.svelte'

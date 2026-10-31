@@ -20191,6 +20191,11 @@ export type ViewerError =
    *  nothing to preview yet and a Retry can't help.
    */
   | { kind: 'coldStorage' }
+  /**
+   *  The file sits behind a link to another server (a DFS link in an SMB share), and that
+   *  server is out of reach. Retry can help; nothing was deleted, so ❌ never `NotFound`.
+   */
+  | { kind: 'linkTargetUnreachable' }
   | { kind: 'notEnoughSpace'; needed: number; available: number }
 
 /**

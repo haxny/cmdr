@@ -192,6 +192,8 @@ viewer only opens after the user picked the file (so FDA is already decided). Th
 2. **`read_range`** (`open_ranged_for_media`, `PositionedRead::Ranged`, on a volume whose paths the OS can't open: S3, SFTP, NFS, WebDAV, MTP, ADB): `RangeReader` stats the file, the head decides, and media stays on the volume. Anything else drops this open and carries on to the temp. A sniff the volume can't answer (no `read_range`, no size, a read refused) reads as "not media", so the pull still gets its say and its typed errors.
 3. **The temp** (`materialize_for_viewer`): a route (zip, `.git`, restic) or a volume with neither. The bytes are a local file by the time anyone classifies them, so they render through the local path, under `PREVIEW_CAP_BYTES`.
 
+A dead DFS link (`VolumeError::LinkTargetUnreachable`) is the one open refusal that skips ways 2 and 3 and any mount fallback: it answers `ViewerError::LinkTargetUnreachable`, with Retry, because the session is fine and a mount could answer `NotFound`.
+
 `try_open_media` reads through the session's `OpenedFile` in all three, and through `LocalFileSource` for a local path too, so there is one classifier call and one place for dimensions.
 
 **Decision**: media reads by position wherever the volume can, and text keeps its temp on ranged volumes. **Why**: a picture wants one sequential read and a PDF a few windows, which suit `read_range`; the text path scrolls under a 2 s per-fetch deadline with a background index scan, which a phone or a far-away bucket can't promise. Moving text over is its own decision. Cost of the sniff: one stat and one 256 KiB read on each text open on those volumes.

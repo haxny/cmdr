@@ -35,6 +35,8 @@ enum Reads {
     Held,
     /// `read_range` only, like S3, SFTP, NFS, WebDAV, ADB, and MTP.
     Ranged,
+    /// A held reader that can't open: the file sits behind a dead DFS link.
+    DeadLink,
 }
 
 #[derive(Default)]
@@ -142,6 +144,9 @@ impl Volume for OneFileVolume {
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeRandomReader>, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
+            if self.reads == Reads::DeadLink {
+                return Err(VolumeError::LinkTargetUnreachable(path.display().to_string()));
+            }
             if self.reads != Reads::Held {
                 return Err(VolumeError::NotSupported);
             }
@@ -209,6 +214,19 @@ fn a_heic_on_a_share_opens_as_an_image() {
     assert_eq!(result.kind, ViewerContentKind::Image);
     assert!(result.media_token.is_some());
     session::close_session(&result.session_id).unwrap();
+    get_volume_manager().unregister(id);
+}
+
+/// The file's own trouble reaches the window: falling back to the mount could answer
+/// `NotFound`, which reads as a deleted file.
+#[test]
+fn a_file_behind_a_dead_link_says_so() {
+    let id = "viewer-media-dead-link";
+    let (path, _bytes, _counters) = a_volume(id, "photo.HEIC", a_heic(2048), Reads::DeadLink);
+    assert!(matches!(
+        session::open_session(&path, id),
+        Err(super::ViewerError::LinkTargetUnreachable)
+    ));
     get_volume_manager().unregister(id);
 }
 

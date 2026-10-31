@@ -316,7 +316,7 @@ fn open_session_core(
     // `volume_source`.
     let on_volume = match reuse {
         Some(_) => None,
-        None => open_for_viewer(&requested, volume_id),
+        None => open_for_viewer(&requested, volume_id)?,
     };
 
     // A volume with no held reader and no OS path may still read by position. Sniff
@@ -326,7 +326,7 @@ fn open_session_core(
     if !force_text
         && reuse.is_none()
         && on_volume.is_none()
-        && let Some(found) = open_ranged_for_media(&requested, volume_id)
+        && let Some(found) = open_ranged_for_media(&requested, volume_id)?
         && let Some(result) = media_session::try_open_media(media_session::MediaOpen {
             requested: &requested,
             file_path: &requested,

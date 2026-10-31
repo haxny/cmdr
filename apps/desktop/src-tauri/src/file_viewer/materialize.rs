@@ -619,6 +619,7 @@ pub(super) fn map_volume_error(err: VolumeError, routed: Option<RoutedKind>) -> 
         // Whichever route read it: a zip in cold storage is as unreadable as a
         // file there, and the fix is the same restore.
         VolumeError::ColdStorage(_) => ViewerError::ColdStorage,
+        VolumeError::LinkTargetUnreachable(_) => ViewerError::LinkTargetUnreachable,
         other => match routed {
             Some(RoutedKind::Archive) => ViewerError::Archive {
                 failure: match other {

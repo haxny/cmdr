@@ -752,6 +752,14 @@ fn an_archived_file_says_so_whatever_route_it_came_through() {
     }
 }
 
+#[test]
+fn a_dead_link_target_says_so_rather_than_a_bare_read_failure() {
+    assert!(matches!(
+        map_volume_error(VolumeError::LinkTargetUnreachable("/smb/nas/data/a.jpg".into()), None),
+        ViewerError::LinkTargetUnreachable
+    ));
+}
+
 /// A refusal the viewer has no twin for keeps the volume error typed, so a log line marks the
 /// path it names; its plain text, the technical details, stays the volume error's own words.
 #[test]

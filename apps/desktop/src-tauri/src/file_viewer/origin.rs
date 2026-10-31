@@ -68,8 +68,10 @@ pub(super) struct VolumeOpen {
 /// A routed path (inside a `.zip`, a `.git` portal tree) goes to the materializer:
 /// its route mints the volume that serves it. Any open error falls back too, so a share
 /// whose smb2 session is down still opens through a live mount, and a missing file gets
-/// the same `NotFound` the old path gives.
-pub(super) fn open_for_viewer(requested: &Path, volume_id: &str) -> Option<VolumeOpen> {
+/// the same `NotFound` the old path gives. The exception is a dead DFS link: the session
+/// is fine and already named the trouble, and a mount's answer could be a `NotFound`, which
+/// reads as "this file was deleted".
+pub(super) fn open_for_viewer(requested: &Path, volume_id: &str) -> Result<Option<VolumeOpen>, ViewerError> {
     open_through_volume(requested, volume_id, PositionedRead::Held)
 }
 
@@ -78,18 +80,27 @@ pub(super) fn open_for_viewer(requested: &Path, volume_id: &str) -> Option<Volum
 /// pull (`media_session.rs`). Text keeps its temp copy, so a caller that finds no media
 /// drops this. `None` under the same rules as [`open_for_viewer`], plus any volume whose
 /// paths `std::fs` already opens.
-pub(super) fn open_ranged_for_media(requested: &Path, volume_id: &str) -> Option<VolumeOpen> {
-    if get_volume_manager().get(volume_id)?.paths_are_os_visible() {
-        return None;
+pub(super) fn open_ranged_for_media(requested: &Path, volume_id: &str) -> Result<Option<VolumeOpen>, ViewerError> {
+    let os_visible = get_volume_manager()
+        .get(volume_id)
+        .is_none_or(|volume| volume.paths_are_os_visible());
+    if os_visible {
+        return Ok(None);
     }
     open_through_volume(requested, volume_id, PositionedRead::Ranged)
 }
 
-fn open_through_volume(requested: &Path, volume_id: &str, way: PositionedRead) -> Option<VolumeOpen> {
+fn open_through_volume(
+    requested: &Path,
+    volume_id: &str,
+    way: PositionedRead,
+) -> Result<Option<VolumeOpen>, ViewerError> {
     if path_routes_over_its_parent(requested) {
-        return None;
+        return Ok(None);
     }
-    let volume = get_volume_manager().get(volume_id)?;
+    let Some(volume) = get_volume_manager().get(volume_id) else {
+        return Ok(None);
+    };
     let os_visible = volume.paths_are_os_visible();
     let origin = SourceOrigin::Volume {
         volume,
@@ -97,19 +108,20 @@ fn open_through_volume(requested: &Path, volume_id: &str, way: PositionedRead) -
         way,
     };
     match origin.open_volume() {
-        Ok(opened) => Some(VolumeOpen {
+        Ok(opened) => Ok(Some(VolumeOpen {
             origin,
             opened,
             os_visible,
-        }),
-        Err(VolumeError::NotSupported) => None,
+        })),
+        Err(VolumeError::NotSupported) => Ok(None),
+        Err(e @ VolumeError::LinkTargetUnreachable(_)) => Err(map_volume_error(e, None)),
         Err(e) => {
             debug!(
                 "viewer: {} doesn't open through its volume ({e}); opening it the usual way",
                 cmdr_fs::log_private::LogPrivate::file_path(requested),
                 e = cmdr_fs::log_error::LogError(&e)
             );
-            None
+            Ok(None)
         }
     }
 }
