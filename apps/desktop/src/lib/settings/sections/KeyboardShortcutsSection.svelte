@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, type Snippet } from 'svelte'
+    import { onMount, tick, type Snippet } from 'svelte'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import SettingsSection from '../components/SettingsSection.svelte'
     import Button from '#lib/ui/Button.svelte'
@@ -51,6 +51,19 @@
             controller.bumpShortcutChangeCounter()
         })
     })
+
+    /**
+     * Rows re-key on every shortcut change, so a removal destroys the × that has focus. A
+     * keyboard user lands on the row's + instead of the top of the window. A mouse press never
+     * focuses the × (WebKit), so it moves nothing.
+     */
+    async function removeKeepingFocus(commandId: string, index: number): Promise<void> {
+        const hadFocus = document.activeElement?.classList.contains('remove-shortcut') === true
+        controller.handleRemoveShortcutAtIndex(commandId, index)
+        if (!hadFocus) return
+        await tick()
+        document.getElementById(shortcutAnchorId(commandId))?.querySelector<HTMLElement>('.add-shortcut')?.focus()
+    }
 
     // Deep-link arrival flash: the settings page sets the target command id in the
     // shared module (`pending-shortcut-highlight`) after scrolling its row into
@@ -302,7 +315,7 @@
                                             ? {
                                                   tooltip: tString('shortcuts.section.removeShortcutTooltip'),
                                                   onRemove: () => {
-                                                      controller.handleRemoveShortcutAtIndex(command.id, i)
+                                                      void removeKeepingFocus(command.id, i)
                                                   },
                                               }
                                             : undefined}

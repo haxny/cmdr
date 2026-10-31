@@ -3503,7 +3503,6 @@ export type MessageKey =
   | 'queryUi.mode.filename.label'
   | 'queryUi.mode.groupAria'
   | 'queryUi.mode.regex.label'
-  | 'queryUi.pathPills.hiddenAria'
   | 'queryUi.recent.allButtonAria'
   | 'queryUi.recent.caseSensitive'
   | 'queryUi.recent.chipTooltipHeader'

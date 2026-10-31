@@ -495,15 +495,6 @@
     "screenshot": "search-dialog.png",
     "screenshotNote": "Cmdr’s search, select, and filter surfaces are one shared dialog: a mode row at the top, the query bar, the scope and filter controls under it, and results below. This shows that dialog; your string is one of those controls, one of the filter or date options, or a line in the results area."
   },
-  "queryUi.pathPills.hiddenAria": "Hidden path segments: {segments}",
-  "@queryUi.pathPills.hiddenAria": {
-    "description": "Accessibility label for the '…' collapse pill in a result row's path, listing the folder names hidden behind it.",
-    "placeholders": {
-      "segments": "the hidden folder names, comma-separated, shown verbatim and not translated"
-    },
-    "screenshot": "search-dialog.png",
-    "screenshotNote": "Cmdr’s search, select, and filter surfaces are one shared dialog: a mode row at the top, the query bar, the scope and filter controls under it, and results below. This shows that dialog; your string is one of those controls, one of the filter or date options, or a line in the results area."
-  },
   "queryUi.recent.trailingTooltip": "Show all recent searches",
   "@queryUi.recent.trailingTooltip": {
     "description": "Tooltip on the small chevron button inside the search dialog's query field, which opens the recent-searches dropdown. A keyboard-shortcut glyph appears next to it.",

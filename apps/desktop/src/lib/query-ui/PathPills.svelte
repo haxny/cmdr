@@ -2,9 +2,9 @@
     /**
      * PathPills: A path rendered as a strip of clickable ancestor pills.
      *
-     * Replaces the flat `parentPath` string in `SearchResults` rows. Each segment is a
-     * small button; clicking navigates the active pane to that ancestor folder AND closes
-     * the dialog (the parent wires both via `onPick`).
+     * Replaces the flat `parentPath` string in `SearchResults` rows. Clicking a segment
+     * navigates the active pane to that ancestor folder AND closes the dialog (the parent
+     * wires both via `onPick`).
      *
      * The strip NEVER wraps to two lines. When the full path doesn't fit its container,
      * the middle pills collapse into a single "…" pill; hovering that pill shows a tooltip
@@ -13,16 +13,16 @@
      * without DOM reflow.
      *
      * Load-bearing rules:
-     *   - Pills are NOT in the keyboard Tab order (`tabindex="-1"`) — would break the row's
-     *     arrow-down keyboard flow inside virtualized rows. Mouse-only, no keyboard equivalent:
-     *     ⌥← / ⌥→ stay native move-by-word in the query input. See `lib/query-ui/CLAUDE.md`.
+     *   - The strip is `aria-hidden` plain spans, ❌ never buttons: a row is a `role="option"`,
+     *     whose children are presentational, and Tab stops would break its arrow-key flow. The
+     *     row reads the path from the `sr-only` copy, and the keyboard route to a result's
+     *     folder is Enter on the row, then going up. `lib/query-ui/DETAILS.md`.
      *   - macOS and Linux only: split strictly on `/`. No `\` handling.
      *   - Pill chrome: `--radius-sm`, `--spacing-xxs / --spacing-xs` padding,
      *     `--font-size-xs`, hover background = `--color-bg-tertiary`.
      */
     import { onDestroy, tick } from 'svelte'
     import { tooltip } from '#lib/tooltip/tooltip.js'
-    import { tString } from '#lib/intl/messages.svelte.js'
     import { createPretextMeasure } from '#lib/utils/shorten-middle.js'
     import {
         computePathPillsLayout,
@@ -117,6 +117,14 @@
             .replace(/'/g, '&#39;')
     }
 
+    /** A press on a pill navigates and stays out of the row's own click; the `…` pill only shows its tooltip. */
+    function handleStripClick(e: MouseEvent): void {
+        const pill = (e.target as HTMLElement).closest<HTMLElement>('.pill')
+        if (!pill) return
+        e.stopPropagation()
+        if (pill.dataset.path) onPick(pill.dataset.path)
+    }
+
     /**
      * Delegated mousedown handler for the tooltip's hidden-pill buttons. The tooltip
      * body lives in a singleton container appended to `<body>`; we route any click
@@ -178,59 +186,26 @@
 </script>
 
 {#if segments.length > 0}
-    <span class="path-pills" bind:this={container} aria-label={path}>
+    <!-- The row's option reads the whole path from here; the strip below is the mouse's. -->
+    <span class="sr-only">{path}</span>
+    <span class="path-pills" bind:this={container} aria-hidden="true" onclick={handleStripClick}>
         {#each layout.leading as seg, i (seg.fullPath)}
             {#if i > 0}
-                <span class="sep" aria-hidden="true">/</span>
+                <span class="sep">/</span>
             {/if}
-            <button
-                type="button"
-                class="pill"
-                tabindex="-1"
-                use:tooltip={seg.fullPath}
-                onclick={(e) => {
-                    e.stopPropagation()
-                    onPick(seg.fullPath)
-                }}
-            >
-                {seg.label}
-            </button>
+            <span class="pill" data-path={seg.fullPath} use:tooltip={seg.fullPath}>{seg.label}</span>
         {/each}
         {#if layout.collapsed.length > 0}
             {#if layout.leading.length > 0}
-                <span class="sep" aria-hidden="true">/</span>
+                <span class="sep">/</span>
             {/if}
-            <button
-                type="button"
-                class="pill pill-ellipsis"
-                tabindex="-1"
-                aria-label={tString('queryUi.pathPills.hiddenAria', {
-                    segments: layout.collapsed.map((s) => s.label).join(', '),
-                })}
-                use:tooltip={{ html: collapsedTooltipHtml }}
-                onclick={(e) => {
-                    e.stopPropagation()
-                }}
-            >
-                …
-            </button>
+            <span class="pill pill-ellipsis" use:tooltip={{ html: collapsedTooltipHtml }}>…</span>
         {/if}
         {#each layout.trailing as seg, i (seg.fullPath)}
             {#if i > 0 || layout.leading.length > 0 || layout.collapsed.length > 0}
-                <span class="sep" aria-hidden="true">/</span>
+                <span class="sep">/</span>
             {/if}
-            <button
-                type="button"
-                class="pill"
-                tabindex="-1"
-                use:tooltip={seg.fullPath}
-                onclick={(e) => {
-                    e.stopPropagation()
-                    onPick(seg.fullPath)
-                }}
-            >
-                {seg.label}
-            </button>
+            <span class="pill" data-path={seg.fullPath} use:tooltip={seg.fullPath}>{seg.label}</span>
         {/each}
     </span>
 {/if}
@@ -292,14 +267,6 @@
     .pill-ellipsis {
         background: var(--color-bg-tertiary);
         color: var(--color-text-secondary);
-    }
-
-    /* Mouse focus ring: standard 2-layer accent ring (matches the rest of the app).
-       Pills aren't in Tab order, so the keyboard branch never reaches this rule;
-       click-driven focus still benefits from a visible ring. */
-    .pill:focus-visible {
-        outline: 2px solid var(--color-accent);
-        outline-offset: 1px;
     }
 
     /* Styles for the hidden-pill list rendered inside the tooltip body. The

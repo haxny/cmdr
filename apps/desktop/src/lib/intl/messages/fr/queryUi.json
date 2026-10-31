@@ -303,10 +303,6 @@
   "@queryUi.results.countOnly.soFar": {
     "sourceHash": "dbdb208"
   },
-  "queryUi.pathPills.hiddenAria": "Segments de chemin masqués : {segments}",
-  "@queryUi.pathPills.hiddenAria": {
-    "sourceHash": "f62e273"
-  },
   "queryUi.recent.trailingTooltip": "Afficher toutes les recherches récentes",
   "@queryUi.recent.trailingTooltip": {
     "sourceHash": "e0de323"

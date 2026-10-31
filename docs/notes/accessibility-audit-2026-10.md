@@ -37,14 +37,14 @@ downloaded INT `.docx` (itic.org, `VPAT2.5RevINT`).
 
 Counts per table (rows marked "see WCAG section" aren't counted):
 
-- **WCAG 2.2 Level A (32)**: 22 Supports, 4 Partially supports, 0 Does not support, 6 Not applicable.
+- **WCAG 2.2 Level A (32)**: 24 Supports, 2 Partially supports, 0 Does not support, 6 Not applicable.
 - **WCAG 2.2 Level AA (24)**: 13 Supports, 6 Partially supports, 0 Does not support, 5 Not applicable.
 - **Section 508 chapter 3 (9)**: 5 Supports, 4 Partially supports.
-- **Section 508 chapter 5 (26)**: 12 Supports, 4 Partially supports, 10 Not applicable.
+- **Section 508 chapter 5 (26)**: 13 Supports, 3 Partially supports, 10 Not applicable.
 - **Section 508 chapter 6 (5)**: 4 Supports, 1 Not applicable.
 - **EN 301 549 clause 4 (11)**: 7 Supports, 4 Partially supports.
 - **EN 301 549 clause 5 (11)**: 2 Supports, 9 Not applicable.
-- **EN 301 549 clause 11 (19)**: 11 Supports, 4 Partially supports, 4 Not applicable.
+- **EN 301 549 clause 11 (19)**: 12 Supports, 3 Partially supports, 4 Not applicable.
 - **EN 301 549 clause 12 (5)**: 5 Supports.
 - **No row waits on a screen-reader test.** The rows the code review found supported (1.3.2, 3.3.1, 4.1.3, 502.3.2,
   502.3.4–502.3.6, 502.3.8, 502.3.10–502.3.12, 502.3.14, and their clause 11 mirrors) were confirmed by V4–V9, V11, and
@@ -91,11 +91,10 @@ Top gaps, each with its issue:
    native viewer right-click menu read their rows.
 9. **Label in name** (#450, fixed in `d565214b8a`, released in 0.57.0): seven controls' accessible names didn't contain
    their visible text (found once the rule ran for real, 2026-10-15). No `skipLabelInName` opt-out is left.
-10. **Controls nested in controls** (#824, found 2026-10-30): the Settings shortcut pill's remove × (a `role="button"`
-    span inside the pill's `<button>`, hover-only, with no keyboard path to remove one binding), and Search's `Custom…`
-    size and date fields (an `<input>` inside the cell's button). Search result path pills sit in their `option` too,
-    mouse-only with a keyboard route elsewhere. All were known to the tests (skips and `nested-interactive` opt-outs) at
-    0.53.0 already; the first audit missed them.
+10. **Controls nested in controls** (#824, found 2026-10-30, fixed in code 2026-10-31, after 0.57.0): the Settings
+    shortcut pill's remove × is now a sibling button in the tab order, Search's `Custom…` size and date fields sit in a
+    label where the cell's button was, and Search result path pills are `aria-hidden` spans with the path as `sr-only`
+    text. No `nested-interactive` opt-out or skip is left. The first audit missed these at 0.53.0.
 
 Strengths a buyer can rely on: everything core runs from the keyboard (every action is a command with a rebindable
 shortcut and a command palette entry); all dialogs share one primitive with correct roles, focus trap, Escape, and focus
@@ -141,19 +140,18 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   `--color-cursor-outline-unfocused`, `--color-tab-band*`; `app-file-list.css` marked-row and cursor rules;
   `views/mark-run.ts`; `tabs/TabBar.svelte`; `--color-text-quiet`; `git/status-column.ts`. #452, #454.
 - **1.4.2 Audio control**: Not applicable. Cmdr plays no audio.
-- **2.1.1 Keyboard**: Partially supports (Supports until 2026-10-30, when #824's gap was counted). Removing one binding
-  in Settings > Keyboard shortcuts is mouse-only: the pill's × is a `tabindex="-1"` span shown on hover
-  (`settings/sections/ShortcutPill.svelte`); Enter on the pill records a replacement and the row's reset button restores
-  the default, but nothing removes a binding from the keyboard. Every core action is a command with a shortcut and a
-  command palette entry: pane switch, navigation, marking, open, go up, go to path, volume chooser, tabs, sort, divider,
-  view mode, all file operations, settings. "Move focus to the notifications" (⌃F6) reaches every toast's buttons, and
-  Undo trash is also Edit > Undo move to trash (#439, 2026-10-15). Tabs reorder with `tab.moveLeft` / `tab.moveRight`
-  (⌘⌃⇧← / →) and cross with `tab.moveToOtherPane` (palette), the drag's rules through `moveTabToPane` (#441,
-  2026-10-15). Evidence: `lib/commands/sources/*.ts`, `pane/tab-operations.ts` (`moveActiveTab`),
-  `ui/toast/toast-focus.ts`, `delete/trash-undo.ts` (`undoLastTrash`). Since 0.53.0: Tab and ⇧Tab walk the notifications
-  after ⌃F6 and wrap until Escape (`16d818a36f`), Escape cancels a running transfer and focus opens on Pause
-  (`bf6a0f3bcd`), the queue reorders with ⌥↑ / ⌥↓ beside its new drag (`67edbd06ac`), and every date sort is in the
-  header's Sort by menu (`98ab349179`). #824.
+- **2.1.1 Keyboard**: Supports (#824 closed the one gap, 2026-10-31). The shortcut pill's × is a tabbable sibling
+  button, shown while the pill or the × has focus, and removing with it hands focus to the row's `+`
+  (`settings/sections/ShortcutPill.svelte`). Search result path pills stay mouse-only; the keyboard reaches a result's
+  folder by opening the result, then going up. Every core action is a command with a shortcut and a command palette
+  entry: pane switch, navigation, marking, open, go up, go to path, volume chooser, tabs, sort, divider, view mode, all
+  file operations, settings. "Move focus to the notifications" (⌃F6) reaches every toast's buttons, and Undo trash is
+  also Edit > Undo move to trash (#439, 2026-10-15). Tabs reorder with `tab.moveLeft` / `tab.moveRight` (⌘⌃⇧← / →) and
+  cross with `tab.moveToOtherPane` (palette), the drag's rules through `moveTabToPane` (#441, 2026-10-15). Evidence:
+  `lib/commands/sources/*.ts`, `pane/tab-operations.ts` (`moveActiveTab`), `ui/toast/toast-focus.ts`,
+  `delete/trash-undo.ts` (`undoLastTrash`). Since 0.53.0: Tab and ⇧Tab walk the notifications after ⌃F6 and wrap until
+  Escape (`16d818a36f`), Escape cancels a running transfer and focus opens on Pause (`bf6a0f3bcd`), the queue reorders
+  with ⌥↑ / ⌥↓ beside its new drag (`67edbd06ac`), and every date sort is in the header's Sort by menu (`98ab349179`).
 - **2.1.2 No keyboard trap**: Supports. Dialog focus traps always release on Escape or their buttons; nested traps
   stack. Evidence: `lib/ui/focus-trap.ts`, `ModalDialog.svelte`, lint `cmdr/dialog-needs-focus-trap`.
 - **2.1.4 Character key shortcuts**: Supports. File-list single keys (`*`, `+`, `-`) are rebindable and active only with
@@ -226,26 +224,27 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **3.3.7 Redundant entry**: Supports. The contact email is stored and prefilled for feedback, error reports, and
   onboarding; server credentials stay in the Keychain. Evidence: `attach-email/attach-email.svelte.ts`.
 - **4.1.1 Parsing**: Supports. Obsolete in WCAG 2.2 and always satisfied; the DOM is generated by Svelte.
-- **4.1.2 Name, role, value**: Partially supports. Dialogs, settings controls (Ark UI-based checkbox, switch, select,
-  slider), tabs, the command palette, the queue grid, and menus expose name, role, and state. The Search result cursor
-  and the Settings sidebar selection are conveyed as `aria-activedescendant` on the focused field or list, landing a
-  frame after focus (#438). Since #437 and #267 (2026-10-15): DOM focus sits on the focused pane's listbox, whose
+- **4.1.2 Name, role, value**: Supports. Dialogs, settings controls (Ark UI-based checkbox, switch, select, slider),
+  tabs, the command palette, the queue grid, and menus expose name, role, and state. The Search result cursor and the
+  Settings sidebar selection are conveyed as `aria-activedescendant` on the focused field or list, landing a frame after
+  focus (#438). Since #437 and #267 (2026-10-15): DOM focus sits on the focused pane's listbox, whose
   `aria-activedescendant` names the cursor row by a per-list id (`$props.id()`) a frame after focus and after every
   navigation commit; `aria-selected` = marked; the container is `role="group"`; submenu rows have ids, an entered
   submenu takes focus with its own `aria-activedescendant` and its parent row's name, and the parent row gets
   `aria-controls`; the volume chooser is a `<button aria-haspopup="menu" aria-expanded>`. Since 0.57.0 the inline rename
   `<input>` is the listbox's sibling, laid over the row's empty name slot (`rename/RenameOverlay.svelte`, #449 closed,
   `a7b318620e`), and Brief view's `role="listbox"` moved to an inner `.listbox-region` to make room; axe is clean with
-  rename open in both views. Left (#824): the Settings shortcut pill's remove × is a `role="button"` span inside the
-  pill's `<button>` (`settings/sections/ShortcutPill.svelte`, both `sections.a11y.test.ts` audits skipped), Search's
-  `Custom…` size and date fields render inside their cell's button (`query-ui/filter-chips/`, `nested-interactive` off
-  in `filter-chips.a11y.test.ts`), and Search result path pills are buttons inside the row's option (mouse-only by
-  decision, `query-ui/DETAILS.md`). Evidence: `pane/active-pane-focus.ts` (`focusActivePane`), `pane/key-dispatch.ts`
-  `handleFocusGuard`, `views/list-focus.svelte.ts`, `views/file-row-a11y.ts`, `ui/Menu.svelte`,
-  `ui/deferred-active-descendant.svelte.ts`, `navigation/VolumeBreadcrumb.svelte`, `query-ui/QueryBar.svelte`,
-  `SettingsSidebar.svelte`; virtual-screen-reader tests `file-list.vsr.svelte.test.ts`, `Menu.vsr.test.ts`,
-  `QueryBar.vsr.svelte.test.ts`, `SettingsSidebar.vsr.svelte.test.ts`, `rename/rename.a11y.test.ts` (overlay block). V1,
-  V3, V6, V7, and V10 heard on 0.53.0-era `main`; the rename overlay is unheard (V5, § Re-hear). #824.
+  rename open in both views. Since #824 (2026-10-31) no control sits inside another: the shortcut pill's × is its
+  sibling (`settings/sections/ShortcutPill.svelte`), Search's `Custom…` fields sit in a label
+  (`query-ui/filter-chips/`), and Search result path pills are `aria-hidden` spans (`query-ui/PathPills.svelte`). The
+  Servers view's host and share rows also gained their missing `role="list"` parent (an uncounted
+  `aria-required-parent`, skipped audits in `network.a11y.test.ts`). None of it is heard yet (§ Re-hear). Evidence:
+  `pane/active-pane-focus.ts` (`focusActivePane`), `pane/key-dispatch.ts` `handleFocusGuard`,
+  `views/list-focus.svelte.ts`, `views/file-row-a11y.ts`, `ui/Menu.svelte`, `ui/deferred-active-descendant.svelte.ts`,
+  `navigation/VolumeBreadcrumb.svelte`, `query-ui/QueryBar.svelte`, `SettingsSidebar.svelte`; virtual-screen-reader
+  tests `file-list.vsr.svelte.test.ts`, `Menu.vsr.test.ts`, `QueryBar.vsr.svelte.test.ts`,
+  `SettingsSidebar.vsr.svelte.test.ts`, `rename/rename.a11y.test.ts` (overlay block). V1, V3, V6, V7, and V10 heard on
+  0.53.0-era `main`; the rename overlay is unheard (V5, § Re-hear).
 
 ## WCAG 2.2 Level AA
 
@@ -367,8 +366,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **302.1 Without vision**: Partially supports. Dialogs, settings, menus, and forms are built for screen readers; since
   #437 (2026-10-15) the file list exposes its cursor row with kind and position, marked files, and the pane and folder
   (see 4.1.2), and since 0.57.0 the rename field is a real text field (#449 closed). Left: Full view's columns not being
-  a table (#451), and the controls nested in controls (#824, see 4.1.2). V1–V12 heard on 0.53.0-era `main`; § Re-hear
-  lists what changed since. #451, #824.
+  a table (#451). V1–V12 heard on 0.53.0-era `main`; § Re-hear lists what changed since. #451.
 - **302.2 With limited vision**: Partially supports. App zoom alone to 200%, past it with macOS text size, dark mode, AA
   text contrast in CI. Weak focused-pane and focus-ring contrast with some accents unless Increase contrast or
   Differentiate without color is on. #454.
@@ -382,8 +380,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **302.7 With limited manipulation**: Partially supports. Full keyboard operation with rebindable shortcuts and no
   simultaneous-key requirement beyond modifiers (Sticky Keys works). Toast actions are reachable with "Move focus to the
   notifications" (#439, 2026-10-15), and tabs reorder and move from the keyboard (#441, 2026-10-15). A one-letter
-  breadcrumb segment and the pane divider are still under 24 px. Removing one keyboard-shortcut binding in Settings is
-  mouse-only (#824); it's not a core action, so the remark still says everything core works from the keyboard. #817.
+  breadcrumb segment and the pane divider are still under 24 px. #817.
 - **302.8 With limited reach and strength**: Supports. Software only; no physical reach.
 - **302.9 With limited language, cognitive, and learning abilities**: Supports. Plain, conversational copy
   (`docs/style-guide.md`), confirmations, undo and rollback, consistent menus, and a setting that keeps toasts until
@@ -402,10 +399,10 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   Keyboard Access off the pane chrome; `pane.focusControls` (⌃F5, remappable; `⌘⇧F5` off macOS) moves focus into it, and
   the arrows walk it (#437, 2026-10-15). Evidence: `pane/type-to-jump-keys.ts`, `commands/sources/main-window.ts`,
   `pane/pane-chrome.ts`.
-- **502.3.1 Object information**: Partially supports. Standard controls expose name, role, and state through WebKit;
-  file rows expose name, kind, position, and marked state (#437, 2026-10-15), and since 0.57.0 the inline rename field
-  sits beside the listbox as a real text field (#449 closed). Left: the controls nested in controls (#824, see 4.1.2).
-  V1 and V3 heard on 0.53.0-era `main` (re-hear, § Re-hear). #824.
+- **502.3.1 Object information**: Supports. Standard controls expose name, role, and state through WebKit; file rows
+  expose name, kind, position, and marked state (#437, 2026-10-15), the inline rename field sits beside the listbox as a
+  real text field (#449 closed), and no control sits inside another (#824, see 4.1.2). V1 and V3 heard on 0.53.0-era
+  `main` (re-hear, § Re-hear).
 - **502.3.2 Modification of object information**: Supports. States set by the user (checkboxes, switches, selects) are
   standard ARIA controls that assistive tech can change. V7 heard.
 - **502.3.3 Row, column, and headers**: Partially supports. The queue window is a `role="grid"`; the Full view file list
@@ -474,7 +471,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 
 ### Clause 4: functional performance statements
 
-- **4.2.1 Usage without vision**: Partially supports. See 508 302.1. #451, #824.
+- **4.2.1 Usage without vision**: Partially supports. See 508 302.1. #451.
 - **4.2.2 Usage with limited vision**: Partially supports. See 508 302.2. #454.
 - **4.2.3 Usage without perception of colour**: Partially supports. See 508 302.3. #452, #454.
 - **4.2.4 Usage without hearing**: Supports. No audio.
@@ -515,7 +512,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **11.5.2.1–11.5.2.3 Platform accessibility service support and use**: See 11.5.2.5–11.5.2.17. Cmdr uses the platform
   service through WebKit's NSAccessibility bridge.
 - **11.5.2.4 Assistive technology**: Not applicable. Cmdr isn't assistive technology.
-- **11.5.2.5 Object information**: Partially supports. See 508 502.3.1. #824.
+- **11.5.2.5 Object information**: Supports. See 508 502.3.1.
 - **11.5.2.6 Row, column, and headers**: Partially supports. See 508 502.3.3. #451.
 - **11.5.2.7 Values**: Supports. See 508 502.3.4.
 - **11.5.2.8 Label relationships**: Supports. See 508 502.3.6.
@@ -668,7 +665,20 @@ wording stays, but David's 2026-10-15 run didn't hear it. Re-hear on 0.57.0 or l
 - **V11 Read text** (502.3.8, 11.5.2.10): the viewer gained Back / Forward and a formatted Markdown view. Re-read a
   `.txt`, then open a `.md` and read it with VO-A (the guide has no Markdown step yet; add one).
 
+- **Nested controls (#824, new)** (2.1.1, 4.1.2, 502.3.1): in Settings > Keyboard shortcuts, Tab from a pill to its ×,
+  hear "Remove shortcut, button", press Space, and land on the row's add button. In Search's Size filter, pick `Custom…`
+  and hear a number field with its name. On a Search result, hear the path in the row's reading, without any "button".
+- **Servers view lists (new)** (4.1.2): hear "list" with an item count on the host list and a host's share list.
+
 Not changed, no re-hear needed: V7, V8, V10, and V12.
+
+### After 0.57.0 (2026-10-31, on `main`)
+
+`report.version` still says 0.57.0, but #824's level changes describe the next release, so the page is ahead of the
+shipped build until then:
+
+- **2.1.1, 4.1.2, 502.3.1, 11.5.2.5**: Partially supports → Supports. 302.1 and 4.2.1 lose #824 and stay "Partially
+  supports" for #451.
 
 ## How to re-evaluate
 

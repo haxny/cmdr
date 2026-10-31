@@ -303,10 +303,6 @@
   "@queryUi.results.countOnly.soFar": {
     "sourceHash": "dbdb208"
   },
-  "queryUi.pathPills.hiddenAria": "Dolda sökvägssegment: {segments}",
-  "@queryUi.pathPills.hiddenAria": {
-    "sourceHash": "f62e273"
-  },
   "queryUi.recent.trailingTooltip": "Visa alla senaste sökningar",
   "@queryUi.recent.trailingTooltip": {
     "sourceHash": "e0de323"

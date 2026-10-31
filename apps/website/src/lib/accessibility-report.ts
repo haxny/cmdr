@@ -151,10 +151,9 @@ const wcagA: CriterionRow[] = [
     id: '2.1.1',
     name: 'Keyboard',
     level: 'A',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      'Every core action has a keyboard shortcut and a command palette entry: switching panes, navigating, marking, opening, every file operation, tabs (including reordering them and moving one to the other pane), sorting, view modes, and Settings. "Move focus to the notifications" reaches the buttons in notifications, and Undo after moving files to the trash is also in the Edit menu. One gap: in Settings > Keyboard shortcuts, a shortcut can be changed or reset from the keyboard, but removing one takes the mouse.',
-    issues: [824],
+      'Every core action has a keyboard shortcut and a command palette entry: switching panes, navigating, marking, opening, every file operation, tabs (including reordering them and moving one to the other pane), sorting, view modes, and Settings. "Move focus to the notifications" reaches the buttons in notifications, and Undo after moving files to the trash is also in the Edit menu. Going straight to a Search result\'s folder by clicking part of its path takes the mouse; from the keyboard, open the result, then go up.',
   },
   {
     id: '2.1.2',
@@ -320,10 +319,9 @@ const wcagA: CriterionRow[] = [
     id: '4.1.2',
     name: 'Name, role, value',
     level: 'A',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      "Dialogs, Settings controls, tabs, the command palette, the queue, and in-app menus (submenus included) expose their name, role, and state, and the file list, Search results, and the Settings sidebar convey the highlighted item as you arrow. The file list also conveys which files are marked, the volume switcher is a menu button, and the name field for renaming a file in place is a real text field. A few controls still sit inside another control, which hides their role from some assistive technology: the custom size and date fields in Search's filters, and the button that removes a keyboard shortcut in Settings.",
-    issues: [824],
+      'Dialogs, Settings controls, tabs, the command palette, the queue, and in-app menus (submenus included) expose their name, role, and state, and the file list, Search results, and the Settings sidebar convey the highlighted item as you arrow. The file list also conveys which files are marked, the volume switcher is a menu button, and the name field for renaming a file in place is a real text field.',
   },
 ]
 
@@ -523,8 +521,8 @@ const section508Ch3: CriterionRow[] = [
     name: 'Without vision',
     conformance: 'partially-supports',
     remark:
-      "Cmdr works with VoiceOver. The file list reads the file under the cursor with its kind and position, and says which files are marked and which pane and folder you're in. In-app menus read every row, submenus included, and dialogs, Settings, Search, file operation progress, notifications, and the file viewer read in full. The Full view's columns aren't a table, and a few controls sit inside another control: the custom size and date fields in Search's filters, and the button that removes a keyboard shortcut.",
-    issues: [451, 824],
+      "Cmdr works with VoiceOver. The file list reads the file under the cursor with its kind and position, and says which files are marked and which pane and folder you're in. In-app menus read every row, submenus included, and dialogs, Settings, Search, file operation progress, notifications, and the file viewer read in full. The Full view's columns aren't a table.",
+    issues: [451],
   },
   {
     id: '302.2',
@@ -592,10 +590,9 @@ const section508Ch5: CriterionRow[] = [
   {
     id: '502.3.1',
     name: 'Object information',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      'Standard controls expose their name, role, and state to VoiceOver. VoiceOver reads each file row\'s name, kind, and position, like "notes.txt, 3 of 8", and says "selected" on marked files. The name field for renaming a file in place is a real text field. A few controls sit inside another control, which hides their role from some assistive technology: the custom size and date fields in Search\'s filters, and the button that removes a keyboard shortcut.',
-    issues: [824],
+      'Standard controls expose their name, role, and state to VoiceOver. VoiceOver reads each file row\'s name, kind, and position, like "notes.txt, 3 of 8", and says "selected" on marked files. The name field for renaming a file in place is a real text field.',
   },
   {
     id: '502.3.2',
@@ -767,7 +764,7 @@ const enClause4: CriterionRow[] = [
     name: 'Usage without vision',
     conformance: 'partially-supports',
     remark: 'See Section 508 302.1.',
-    issues: [451, 824],
+    issues: [451],
   },
   {
     id: '4.2.2',
@@ -902,9 +899,8 @@ const enClause11: CriterionRow[] = [
   {
     id: '11.5.2.5',
     name: 'Object information',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark: 'See Section 508 502.3.1.',
-    issues: [824],
   },
   {
     id: '11.5.2.6',
@@ -1101,10 +1097,6 @@ export const gapIssues: { number: number; title: string }[] = [
     number: 454,
     title:
       'By default, the focused-pane cues, some focus rings, and the optional App date and size colors are under 3:1 contrast',
-  },
-  {
-    number: 824,
-    title: 'A few controls sit inside another control, and removing a keyboard shortcut needs the mouse',
   },
   { number: 452, title: 'Hidden files differ from other files only by a dimmer color' },
   {

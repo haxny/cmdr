@@ -11,6 +11,7 @@
      * The `FilterPopover` shell (positioning, focus trap, Esc-scoped close, labelled header) is
      * wrapped here so the parent only threads `anchor` / `open` / `onClose`.
      */
+    import { tick } from 'svelte'
     import FilterPopover from '#lib/ui/FilterPopover.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { SizeFilter, SizeUnit } from '../query-filter-state.svelte'
@@ -81,6 +82,8 @@
      */
     let sizeIsCustomLower = $state(false)
     let sizeIsCustomUpper = $state(false)
+    let customLowerInput = $state<HTMLInputElement | undefined>()
+    let customUpperInput = $state<HTMLInputElement | undefined>()
 
     /** Re-sync the "custom" flag against an externally-set value (AI mode, MCP prefill). */
     $effect(() => {
@@ -124,11 +127,21 @@
         setSizeUnit(unit)
         scheduleSearch()
     }
-    function pickSizeCustomLower(): void {
+    /** One press picks Custom AND puts the caret in the field the press just brought up. */
+    async function pickSizeCustomLower(): Promise<void> {
         if (sizeFilter === 'any') setSizeFilter('gte')
         sizeIsCustomLower = true
         setSizeValue('')
         scheduleSearch()
+        await tick()
+        customLowerInput?.focus()
+    }
+    async function pickSizeCustomUpper(): Promise<void> {
+        sizeIsCustomUpper = true
+        setSizeValueMax('')
+        scheduleSearch()
+        await tick()
+        customUpperInput?.focus()
     }
 </script>
 
@@ -154,7 +167,7 @@
             <!-- Col 1: comparator -->
             <div class="list-col" role="radiogroup" aria-label={tString('queryUi.size.aria.comparator')}>
                 {#each SIZE_COMPARATORS as opt (opt.value)}
-                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                     <button
                         type="button"
                         class="list-cell"
@@ -173,12 +186,10 @@
 
             <!-- Col 2: lower-bound value. Cells stay clickable when the
                  comparator is `any`; clicking promotes the comparator to
-                 `gte` and applies the chosen value. The Custom <input>
-                 renders INSIDE the Custom cell so one click both selects
-                 it AND focuses the input. -->
+                 `gte` and applies the chosen value. -->
             <div class="list-col" role="radiogroup" aria-label={tString('queryUi.size.aria.minValue')}>
                 {#each SIZE_PRESETS as preset (preset)}
-                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                     <button
                         type="button"
                         class="list-cell"
@@ -193,52 +204,39 @@
                         {preset}
                     </button>
                 {/each}
-                <!-- Custom cell holds the inline number input. Selected only
-                     when the user explicitly clicked Custom (or the AI /
-                     history set a custom value via the `sizeIsCustomLower`
-                     effect above). -->
-                <button
-                    type="button"
-                    class="list-cell list-cell-custom"
-                    class:is-selected={sizeIsCustomLower}
-                    class:is-disabled-look={isSizeRangeDisabled(sizeFilter)}
-                    onclick={(e) => {
-                        // Don't re-pick if the click is on the inner input
-                        // (it bubbles up through the button).
-                        if ((e.target as HTMLElement).tagName === 'INPUT') return
-                        pickSizeCustomLower()
-                        // Focus the inner input on the next tick so the
-                        // user can type immediately.
-                        void Promise.resolve().then(() => {
-                            ;(
-                                e.currentTarget as HTMLElement | null
-                            )?.querySelector<HTMLInputElement>('input')?.focus()
-                        })
-                    }}
-                >
-                    {#if sizeIsCustomLower}
+                <!-- The Custom cell is a button until it's picked, or the AI / history set
+                     a custom value (the `sizeIsCustomLower` effect above). Then it becomes a
+                     label holding the field: a button's children are presentational, and the
+                     label keeps a press on the cell's padding focusing the field. -->
+                {#if sizeIsCustomLower}
+                    <label class="list-cell list-cell-custom is-selected" class:is-disabled-look={isSizeRangeDisabled(sizeFilter)}>
                         <input
+                            bind:this={customLowerInput}
                             type="number"
                             class="popover-input size-input custom-input-inline"
                             value={sizeValue}
                             oninput={onInput(setSizeValue)}
-                            onclick={(e) => {
-                                e.stopPropagation()
-                            }}
                             aria-label={tString('queryUi.size.aria.customMin')}
                             min="0"
                             step="any"
                             placeholder={tString('queryUi.size.customInputPlaceholder')}
                         />
-                    {:else}
+                    </label>
+                {:else}
+                    <button
+                        type="button"
+                        class="list-cell list-cell-custom"
+                        class:is-disabled-look={isSizeRangeDisabled(sizeFilter)}
+                        onclick={() => void pickSizeCustomLower()}
+                    >
                         {tString('queryUi.size.customCell')}
-                    {/if}
-                </button>
+                    </button>
+                {/if}
             </div>
 
             <!-- Col 3: lower-bound unit -->
             <div class="list-col" role="radiogroup" aria-label={tString('queryUi.size.aria.minUnit')}>
-                <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                 <button
                     type="button"
                     class="list-cell"
@@ -252,7 +250,7 @@
                 >
                     {byteUnitLabel(sizeValue)}
                 </button>
-                <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                 <button
                     type="button"
                     class="list-cell"
@@ -267,7 +265,7 @@
                     {unitLabel('kB', getFileSizeFormat())}
                 </button>
                 {#each LARGER_UNITS as larger (larger)}
-                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                     <button
                         type="button"
                         class="list-cell"
@@ -285,10 +283,10 @@
             </div>
 
             {#if showsUpperBound(sizeFilter)}
-                <!-- Col 4: upper-bound value. Custom input is inline. -->
+                <!-- Col 4: upper-bound value, with the same Custom cell. -->
                 <div class="list-col" role="radiogroup" aria-label={tString('queryUi.size.aria.maxValue')}>
                     {#each SIZE_PRESETS as preset (preset)}
-                        <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                        <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                         <button
                             type="button"
                             class="list-cell"
@@ -303,45 +301,34 @@
                             {preset}
                         </button>
                     {/each}
-                    <button
-                        type="button"
-                        class="list-cell list-cell-custom"
-                        class:is-selected={sizeIsCustomUpper}
-                        onclick={(e) => {
-                            if ((e.target as HTMLElement).tagName === 'INPUT') return
-                            sizeIsCustomUpper = true
-                            setSizeValueMax('')
-                            scheduleSearch()
-                            void Promise.resolve().then(() => {
-                                ;(
-                                    e.currentTarget as HTMLElement | null
-                                )?.querySelector<HTMLInputElement>('input')?.focus()
-                            })
-                        }}
-                    >
-                        {#if sizeIsCustomUpper}
+                    {#if sizeIsCustomUpper}
+                        <label class="list-cell list-cell-custom is-selected">
                             <input
+                                bind:this={customUpperInput}
                                 type="number"
                                 class="popover-input size-input custom-input-inline"
                                 value={sizeValueMax}
                                 oninput={onInput(setSizeValueMax)}
-                                onclick={(e) => {
-                                    e.stopPropagation()
-                                }}
                                 aria-label={tString('queryUi.size.aria.customMax')}
                                 min="0"
                                 step="any"
                                 placeholder={tString('queryUi.size.customInputPlaceholder')}
                             />
-                        {:else}
+                        </label>
+                    {:else}
+                        <button
+                            type="button"
+                            class="list-cell list-cell-custom"
+                            onclick={() => void pickSizeCustomUpper()}
+                        >
                             {tString('queryUi.size.customCell')}
-                        {/if}
-                    </button>
+                        </button>
+                    {/if}
                 </div>
 
                 <!-- Col 5: upper-bound unit -->
                 <div class="list-col" role="radiogroup" aria-label={tString('queryUi.size.aria.maxUnit')}>
-                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                     <button
                         type="button"
                         class="list-cell"
@@ -355,7 +342,7 @@
                     >
                         {byteUnitLabel(sizeValueMax)}
                     </button>
-                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                     <button
                         type="button"
                         class="list-cell"
@@ -370,7 +357,7 @@
                         {unitLabel('kB', getFileSizeFormat())}
                     </button>
                     {#each LARGER_UNITS as larger (larger)}
-                        <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                        <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                         <button
                             type="button"
                             class="list-cell"
