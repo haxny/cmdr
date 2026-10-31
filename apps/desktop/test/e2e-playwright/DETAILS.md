@@ -654,8 +654,8 @@ never granted Full Disk Access to the process launching the run): 88 of 290 test
 
 - **All 35 MTP specs die in `beforeEach`** on `Virtual MTP device not found`. `lib.rs` skips `start_mtp_watcher` while
   the gate is pending, and that watcher's startup auto-connect is the only thing that opens a session with the virtual
-  device. `mtp_rs::rescan_virtual_device` looks the device up in the ACTIVE-transport registry, which only an open
-  session fills: registered is not connected.
+  device. `mtp_rs::virtual_device::rescan_virtual_device` looks the device up in the ACTIVE-transport registry, which
+  only an open session fills: registered is not connected.
 - **The onboarding wizard opens on its not-granted step-1 variant**, whose primary button opens System Settings instead
   of advancing. `accessibility.spec.ts`'s `advanceTo(2)` times out, the wizard is left standing, and a modal on screen
   swallows every later keystroke on that shard: rename (`F2` never opens `.rename-input`), the dialog specs, and the MCP

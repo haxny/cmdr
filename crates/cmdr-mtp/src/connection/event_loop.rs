@@ -197,6 +197,9 @@ impl MtpConnectionManager {
             DeviceEvent::Unknown { code, params } => {
                 debug!("MTP unknown event {:04x} {:?} on {}", code, params, device_id);
             }
+            other => {
+                debug!("MTP unhandled event {:?} on {}", other, device_id);
+            }
         }
     }
 
@@ -718,7 +721,7 @@ mod device_tests {
 
         std::fs::write(fixture.root().join("internal/Documents/arrived.txt"), b"from the phone")
             .expect("writing into the backing dir");
-        mtp_rs::rescan_virtual_device(VIRTUAL_DEVICE_SERIAL).expect("the device must be rescannable");
+        mtp_rs::virtual_device::rescan_virtual_device(VIRTUAL_DEVICE_SERIAL).expect("the device must be rescannable");
 
         // Under nextest's 8 s per-test cap, so a broken chain fails with this
         // message rather than being killed without one. The happy path is ~1.5 s.

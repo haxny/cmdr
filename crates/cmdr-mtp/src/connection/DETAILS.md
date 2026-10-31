@@ -419,14 +419,14 @@ Inserting a reset converts a self-healing situation into a replug.
 **The Galaxy evidence doesn't outweigh that**, even though the reset appeared to help there: the control was never run,
 so spaced reopens alone may well have carried it. Ambiguous evidence on one device loses to a proven kill on another.
 
-**Coverage** (`session_reset.rs` § `device_tests`). `mtp_rs::force_operation_wedge(serial)` (mtp-rs ≥ 0.29.0, feature
-`virtual-device`) arms a one-shot so the next PTP operation returns `DeviceReset`, which is what makes
-`a_wedged_listing_recovers_without_dropping_the_device` a real end-to-end run through Cmdr's own path: an ordinary
-`list_directory` trips it, and the test asserts the whole chain (mapped to `SessionReset`, recovery ran, the volume
-stayed in the sidebar, the disconnect teardown never ran, the caches came back empty, the device serves listings again).
-❌ Don't reach for the older `force_cancel_wedge`: it arms on `cancel_transfer`, which Cmdr never calls. What the
-virtual device CANNOT model is the aftermath: a real session stays dead until a spaced-retry reopen, while the virtual
-one is healthy on the very next call, so the test proves the plumbing, not the timing.
+**Coverage** (`session_reset.rs` § `device_tests`). `mtp_rs::virtual_device::force_operation_wedge(serial)` (mtp-rs ≥
+0.37.0 at this path, feature `virtual-device`) arms a one-shot so the next PTP operation returns `DeviceReset`, which is
+what makes `a_wedged_listing_recovers_without_dropping_the_device` a real end-to-end run through Cmdr's own path: an
+ordinary `list_directory` trips it, and the test asserts the whole chain (mapped to `SessionReset`, recovery ran, the
+volume stayed in the sidebar, the disconnect teardown never ran, the caches came back empty, the device serves listings
+again). ❌ Don't reach for the older `force_cancel_wedge`: it arms on `cancel_transfer`, which Cmdr never calls. What
+the virtual device CANNOT model is the aftermath: a real session stays dead until a spaced-retry reopen, while the
+virtual one is healthy on the very next call, so the test proves the plumbing, not the timing.
 
 **The failing operation is not retried, and reports a RECOVERABLE reason.** `MtpConnectionError::SessionReset` maps to
 `VolumeError::DeviceSessionReset` → the `DeviceReconnecting` listing reason (`Transient`, retry hint) and

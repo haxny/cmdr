@@ -506,7 +506,7 @@ impl MtpConnectionManager {
             .ok()
             .and_then(|devs| devs.into_iter().find(|d| d.location_id == location_id))
             .and_then(|d| d.speed)
-            .map(crate::types::usb_speed_from_device);
+            .and_then(crate::types::usb_speed_from_device);
 
         let device_info = MtpDeviceInfo {
             id: device_id.to_string(),

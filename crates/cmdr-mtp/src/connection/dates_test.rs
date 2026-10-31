@@ -6,15 +6,15 @@ use mtp_rs::UtcOffset;
 use super::*;
 
 fn at(year: u16, month: u8, day: u8, hour: u8, minute: u8, second: u8) -> DateTime {
-    DateTime {
-        year,
-        month,
-        day,
-        hour,
-        minute,
-        second,
-        offset: None,
-    }
+    // Field by field, since a cell below needs impossible dates that `DateTime::new` refuses.
+    let mut date = DateTime::new(2000, 1, 1, 0, 0, 0).expect("a real date");
+    date.year = year;
+    date.month = month;
+    date.day = day;
+    date.hour = hour;
+    date.minute = minute;
+    date.second = second;
+    date
 }
 
 /// Stockholm's rules as a POSIX TZ string, so a cell reads the same on every

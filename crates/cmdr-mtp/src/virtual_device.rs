@@ -11,7 +11,7 @@
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use log::info;
-use mtp_rs::{VirtualDeviceConfig, VirtualStorageConfig, WatcherGuard};
+use mtp_rs::virtual_device::{VirtualDeviceConfig, VirtualStorageConfig, WatcherGuard};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -237,7 +237,7 @@ fn register_virtual_mtp_device_at(root: &Path, watch_backing_dirs: bool) -> u64 
         ..Default::default()
     };
 
-    let device_info = mtp_rs::register_virtual_device(&config);
+    let device_info = mtp_rs::virtual_device::register_virtual_device(&config);
     let location_id = device_info.location_id;
 
     info!(
@@ -269,7 +269,7 @@ pub fn virtual_device_id() -> String {
 /// Re-exported from `mtp-rs` so a caller doesn't need its own dependency on it.
 /// The one way to reach the stale-handle path deliberately: an upload whose
 /// cached parent handle the device has since re-keyed.
-pub use mtp_rs::rekey_virtual_object;
+pub use mtp_rs::virtual_device::rekey_virtual_object;
 
 /// Forces the virtual MTP device to rescan its backing directories, syncing
 /// its in-memory object tree with the actual filesystem state.
@@ -277,7 +277,7 @@ pub use mtp_rs::rekey_virtual_object;
 /// Call this after recreating test fixtures to avoid waiting for the file watcher.
 /// Returns the number of objects added and removed, or None if the device wasn't found.
 pub fn rescan_virtual_device() -> Option<(usize, usize)> {
-    let summary = mtp_rs::rescan_virtual_device(VIRTUAL_DEVICE_SERIAL)?;
+    let summary = mtp_rs::virtual_device::rescan_virtual_device(VIRTUAL_DEVICE_SERIAL)?;
     info!(
         "Virtual MTP device rescan: {} added, {} removed",
         summary.added, summary.removed
@@ -293,7 +293,7 @@ pub fn rescan_virtual_device() -> Option<(usize, usize)> {
 /// see `apps/desktop/src-tauri/src/mtp/DETAILS.md` § "Virtual device watcher in
 /// E2E".
 pub fn pause_virtual_watcher() -> bool {
-    let guard = mtp_rs::pause_watcher(VIRTUAL_DEVICE_SERIAL);
+    let guard = mtp_rs::virtual_device::pause_watcher(VIRTUAL_DEVICE_SERIAL);
     let paused = guard.is_some();
     if paused {
         *WATCHER_GUARD.lock_ignore_poison() = guard;
@@ -335,7 +335,7 @@ pub fn virtual_device_test_lock() -> &'static tokio::sync::Mutex<()> {
 /// backing dir. Pairs with [`setup_virtual_mtp_device_at`].
 #[cfg(any(test, feature = "testing"))]
 pub fn unregister_virtual_mtp_device(location_id: u64) {
-    mtp_rs::unregister_virtual_device(location_id);
+    mtp_rs::virtual_device::unregister_virtual_device(location_id);
 }
 
 #[cfg(test)]
