@@ -262,16 +262,36 @@ pub(super) fn volume_uses_local_paths(volume_id: &str) -> bool {
     volume_id == "root"
 }
 
+/// What a check knows before it touches a file: the rows, the ones allowed, and their sources.
+struct CheckedRows<'a> {
+    rows: HashMap<String, BulkRenamePreflightRow>,
+    allowed: Vec<&'a RenameProposalRow>,
+    allowed_sources: HashSet<&'a str>,
+}
+
+fn name_level_checks<'a>(proposal: &'a RenameProposal, allowed_row_ids: &[String]) -> CheckedRows<'a> {
+    let mut rows = initial_rows(proposal, allowed_row_ids);
+    let allowed = allowed_rows(proposal, allowed_row_ids, &mut rows);
+    mark_duplicate_destinations(&allowed, &mut rows);
+    let allowed_sources = allowed.iter().map(|row| row.source_path.as_str()).collect();
+    CheckedRows {
+        rows,
+        allowed,
+        allowed_sources,
+    }
+}
+
 /// `None` when the check was stopped partway.
 pub(super) fn preflight_local(
     proposal: &RenameProposal,
     allowed_row_ids: &[String],
     tally: &CheckTally,
 ) -> Option<PreflightOutcome> {
-    let mut rows = initial_rows(proposal, allowed_row_ids);
-    let allowed = allowed_rows(proposal, allowed_row_ids, &mut rows);
-    mark_duplicate_destinations(&allowed, &mut rows);
-    let allowed_sources: HashSet<&str> = allowed.iter().map(|row| row.source_path.as_str()).collect();
+    let CheckedRows {
+        mut rows,
+        allowed,
+        allowed_sources,
+    } = name_level_checks(proposal, allowed_row_ids);
     let mut fingerprints = Vec::new();
 
     for (rows_before, row) in allowed.iter().enumerate() {
@@ -315,10 +335,11 @@ async fn preflight_remote(
     allowed_row_ids: &[String],
     tally: &CheckTally,
 ) -> Option<PreflightOutcome> {
-    let mut rows = initial_rows(proposal, allowed_row_ids);
-    let allowed = allowed_rows(proposal, allowed_row_ids, &mut rows);
-    mark_duplicate_destinations(&allowed, &mut rows);
-    let allowed_sources: HashSet<&str> = allowed.iter().map(|row| row.source_path.as_str()).collect();
+    let CheckedRows {
+        mut rows,
+        allowed,
+        allowed_sources,
+    } = name_level_checks(proposal, allowed_row_ids);
     let mut fingerprints = Vec::new();
     let Some(volume) = crate::file_system::volume::manager::get_volume_manager().get(&proposal.volume_id) else {
         for status in rows.values_mut() {
