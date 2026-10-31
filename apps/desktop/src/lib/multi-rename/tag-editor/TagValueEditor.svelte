@@ -258,6 +258,8 @@
         display: block;
         box-sizing: border-box;
         width: 100%;
+        /* Never thinner than a line of text plus its padding, whatever box the pane sends: a typed text must show. */
+        min-height: calc(1.2em + 0.4em);
         margin: 0;
         padding: 0.2em 0;
         font: inherit;

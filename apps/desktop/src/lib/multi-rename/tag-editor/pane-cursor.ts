@@ -68,15 +68,21 @@ export interface EditorPlace {
 /** The narrowest the editor gets, so a squeezed column still leaves room to type. */
 const EDITOR_MIN_WIDTH = 40
 
-/** Where the in-place editor sits: exactly over `cell`, in the coordinates of the scrolling `container`. */
+/**
+ * Where the in-place editor sits, in the coordinates of the scrolling `container`: the cell's left edge and width, and
+ * the height and top of the cell's ROW (`.file-entry`). An EMPTY cell has no line box, so it is only its block padding
+ * tall (a few px); sizing the editor from it left a thin strip where the typed text could not be seen. The row is
+ * always as tall as a line of text, and an input centres its text in it, so the text lands where the cell's would.
+ */
 export function editorBox(container: HTMLElement, cell: HTMLElement): EditorPlace {
   const outer = container.getBoundingClientRect()
   const inner = cell.getBoundingClientRect()
+  const row = cell.closest<HTMLElement>('.file-entry')?.getBoundingClientRect() ?? inner
   return {
-    top: inner.top - outer.top + container.scrollTop,
+    top: row.top - outer.top + container.scrollTop,
     left: inner.left - outer.left + container.scrollLeft,
     width: Math.max(inner.width, EDITOR_MIN_WIDTH),
-    height: inner.height,
+    height: Math.max(row.height, inner.height),
   }
 }
 

@@ -186,6 +186,10 @@ describe('TagValueEditor looks like the cell', () => {
     expect(rule).toContain('border: 0')
     expect(rule).toMatch(/padding: 0\.2em 0;/)
     expect(rule).not.toMatch(/border: [1-9]/)
+    // A box a pane sizes too thin (an empty cell) still leaves a full line of text visible.
+    expect(rule).toMatch(/min-height: calc\(1\.2em \+ 0\.4em\);/)
+    expect(rule).toContain('color: var(--color-text-primary)')
+    expect(rule).toContain('background: var(--color-bg-primary)')
   })
 
   it('shows focus as the accent glow inside the cell, calmed by reduced motion', () => {

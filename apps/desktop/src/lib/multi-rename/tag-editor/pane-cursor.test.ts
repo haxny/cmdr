@@ -71,6 +71,19 @@ describe('editorBox', () => {
     expect(boxes(0, 0, rect(30, 70, 120, 22))).toEqual({ top: 50, left: 20, width: 120, height: 22 })
   })
 
+  it('takes the ROW height and top when the cell is empty and only its padding tall (the thin-strip bug)', () => {
+    const container = document.createElement('div')
+    const row = document.createElement('div')
+    row.className = 'file-entry'
+    const el = document.createElement('span')
+    row.append(el)
+    container.append(row)
+    container.getBoundingClientRect = () => rect(10, 20, 400, 300)
+    row.getBoundingClientRect = () => rect(14, 60, 380, 22)
+    el.getBoundingClientRect = () => rect(30, 65, 120, 5)
+    expect(editorBox(container, el)).toEqual({ top: 40, left: 20, width: 120, height: 22 })
+  })
+
   it('adds the scroll offsets so the box scrolls with its row', () => {
     const place = boxes(40, 0, rect(30, 70, 120, 22))
     expect(place.top).toBe(90)
