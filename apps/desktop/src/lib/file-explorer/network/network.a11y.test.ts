@@ -5,10 +5,8 @@
  * One file per component would cost about five times as much: `svelte-tests`
  * charges per test FILE, not per test (`docs/testing.md` § "What a test actually
  * costs"). Each block below keeps its component's own doc comment, props, and
- * assertions, including the three `it.skip`s parked on a real, unfixed
- * `aria-required-parent` violation. Adding a server and signing in to one both
- * live in the sign-in sheet now; its own blocks are
- * `#lib/servers/servers.a11y.test.ts`.
+ * assertions. Adding a server and signing in to one both live in the sign-in
+ * sheet now; its own blocks are `#lib/servers/servers.a11y.test.ts`.
  *
  * One stub genuinely disagrees between blocks: `getShareState` is `undefined` for
  * the host list and a loaded result for the share list, so it reads a mutable each
@@ -47,6 +45,8 @@ vi.mock('./network-store.svelte', () => ({
   getNetworkHosts: () => mockHosts,
   getDiscoveryState: () => 'idle',
   isHostResolving: () => false,
+  getListedAccount: () => null,
+  noteCachedCredentials: vi.fn(() => Promise.resolve()),
   getShareState: () => mockShareState,
   getShareCount: () => null,
   isListingShares: () => false,
@@ -123,13 +123,7 @@ describe('ServersHub a11y', () => {
     mockShareState = undefined
   })
 
-  // TODO: Host rows are `<div role="listitem">` but their parent container
-  // has no `role="list"` (see ServersHub.svelte around the .host-list
-  // block). Axe flags every row including the "Connect to server..."
-  // pseudo-row as `aria-required-parent`. Fix: add `role="list"` to the
-  // parent `.host-list` `<div>` (or replace with a proper `<ul>/<li>`
-  // structure). Leaving skipped until fixed so the suite stays green.
-  it.skip('empty host list (only connect row) has no a11y violations (BLOCKED: aria-required-parent)', async () => {
+  it('empty host list (only connect row) has no a11y violations', async () => {
     mockHosts = []
     const target = document.createElement('div')
     document.body.appendChild(target)
@@ -141,7 +135,7 @@ describe('ServersHub a11y', () => {
     await expectNoA11yViolations(target)
   })
 
-  it.skip('populated host list has no a11y violations (BLOCKED: aria-required-parent)', async () => {
+  it('populated host list has no a11y violations', async () => {
     mockHosts = [
       { id: 'h1', name: 'nas.local', hostname: 'nas.local', ipAddress: '10.0.0.10', port: 445 },
       { id: 'h2', name: 'printer.local', hostname: 'printer.local', ipAddress: '10.0.0.20', port: 445 },
@@ -181,11 +175,7 @@ describe('PlacesBrowser a11y', () => {
     }
   })
 
-  // TODO: Share rows are `<div role="listitem">` without a parent
-  // `role="list"` (PlacesBrowser.svelte around the .share-list block).
-  // Same fix as ServersHub: add `role="list"` to the container
-  // or replace with a proper `<ul>/<li>` structure.
-  it.skip('loaded with shares has no a11y violations (BLOCKED: aria-required-parent)', async () => {
+  it('loaded with shares has no a11y violations', async () => {
     const target = document.createElement('div')
     document.body.appendChild(target)
     mount(PlacesBrowser, {

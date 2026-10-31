@@ -272,6 +272,10 @@ Exports for parent: `setCursorIndex(index)`, `findItemIndex(name)`, `handleKeyDo
 count the full list (§ "The nearby group"). `refresh()` is `pane.refresh`'s entry point from the command layer and is
 the same body ⌘R runs locally, which is why the local branch stops propagation (see § Gotchas).
 
+**Decision**: `.row-list` is a `role="list"` and everything directly in it is a `listitem`, the hint lines (searching,
+discovery off, NFS, empty state) too. **Why**: a list may only hold items, so a hint's bare `LinkButton` trips axe's
+`aria-required-children`. `network.a11y.test.ts` pins it.
+
 ## `PlacesBrowser.svelte`
 
 The places under ONE account: an SMB host's shares today, a storage account's buckets later. ❗ Its `account` prop is a

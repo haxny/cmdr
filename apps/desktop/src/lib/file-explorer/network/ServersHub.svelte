@@ -507,7 +507,7 @@
         <span class="col-status">{tString('servers.hub.colStatus')}</span>
         <span class="col-last-used">{tString('servers.hub.colLastUsed')}</span>
     </div>
-    <div class="row-list" bind:this={listContainer} bind:clientHeight={containerHeight}>
+    <div class="row-list" role="list" bind:this={listContainer} bind:clientHeight={containerHeight}>
         {#each visibleItems as item, index (item.id)}
             {#if item.kind === 'nearby_group'}
                 <!--
@@ -608,7 +608,7 @@
 
         <!-- The search is for nearby servers, so a collapsed group says it on its own header. -->
         {#if isSearching && (!nearbyGroup || list.nearbyExpanded)}
-            <div class="searching-indicator">
+            <div class="searching-indicator" role="listitem">
                 <Spinner size="sm" />
                 {tString('fileExplorer.network.browser.searching')}
             </div>
@@ -620,7 +620,7 @@
                 never needed the macOS Local Network permission), so this line replaces
                 the nearby hosts and nothing else.
             -->
-            <div class="discovery-off">
+            <div class="discovery-off" role="listitem">
                 <span>{tString('servers.hub.discoveryOff')}</span>
                 <LinkButton onclick={openDiscoverySetting}
                     >{tString('servers.hub.discoveryOffLink')}</LinkButton
@@ -647,13 +647,13 @@
 
         <!-- NFS has no discovery, so a NAS that serves only NFS would never show up here.
              The line says so, and its link opens the sheet already on NFS. -->
-        <div class="nfs-hint">
+        <div class="nfs-hint" role="listitem">
             <span>{tString('servers.hub.nfsHint')}</span>
             <LinkButton onclick={() => onConnectToServer?.('nfs')}>{tString('servers.hub.nfsHintLink')}</LinkButton>
         </div>
 
         {#if list.isKnown && !isSearching && rows.length === 0}
-            <div class="empty-state">
+            <div class="empty-state" role="listitem">
                 <img class="empty-icon" src="/icons/network-no-hosts.svg" alt="" />
                 <div class="empty-title">{tString('servers.hub.emptyTitle')}</div>
                 <div class="empty-message">{tString('servers.hub.emptyMessage')}</div>

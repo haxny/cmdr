@@ -663,7 +663,7 @@
             onUseGuest={listedAccount?.kind === 'user' && guestListingWorked(host.id) ? () => void useGuest() : undefined}
             onForgetPassword={() => void handleForgetPassword()}
         />
-        <div class="share-list" bind:this={listContainer} bind:clientHeight={containerHeight}>
+        <div class="share-list" role="list" bind:this={listContainer} bind:clientHeight={containerHeight}>
             {#each sortedShares as share, index (share.name)}
                 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                 <div
