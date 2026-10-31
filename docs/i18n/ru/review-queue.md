@@ -103,6 +103,10 @@ item once settled, and record the outcome in `terms.json` or `decisions.md`.
   "What goes" / "What stays". Natural pair, or would `Что удалится` read lighter?
 - **NFS export** (`servers.sheet.nfsExport`): an NFS export is `общая папка`, as Synology DSM ru says, so it shares a
   word with SMB shares. Would NFS users rather see `экспорт`?
+- **Filter badge** (`commands.paneQuickFilter.description`): `Открыть значок фильтра` follows the `badge` ruling, but
+  the badge is a small box holding typed text, and opening a `значок` reads oddly. Is `поле фильтра` better?
+- **DFS link wording** (`*.linkTargetUnreachable*`): `К папке … ведет ссылка на другой сервер` for "sits behind a link".
+  Clear to SMB users, or does `ссылка` read as a web link?
 
 ## Terms
 

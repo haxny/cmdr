@@ -663,7 +663,7 @@
   "link": {
     "chosen": "liên kết",
     "confidence": "high",
-    "forms": "web link → liên kết web",
+    "forms": "web link → liên kết web; sits behind a DFS link → nằm sau một liên kết, as the catalog's nằm sau tường lửa; errors.volume.linkTargetUnreachable opens Vị trí này because a new folder isn't a mục yet",
     "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
   },
   "mcp-server": {
@@ -1975,6 +1975,12 @@
     "confidence": "high",
     "sources": "macOS Finder N220 (Name → Tên)"
   },
+  "name-mask": {
+    "chosen": "mặt nạ tên",
+    "confidence": "high",
+    "forms": "the field label → Mặt nạ tên",
+    "sources": "Total Commander WCMD.LNG 6602 (Mặt nạ đổi tên); MS terminology (mask → mặt nạ); catalog (multiRename.nameMask); absent from macOS, Thunar, Dolphin, and Nautilus"
+  },
   "nas": {
     "chosen": "NAS",
     "confidence": "high",
@@ -3188,6 +3194,13 @@
     "chosen": "Loại",
     "confidence": "high",
     "sources": "macOS Finder N224 (Kind → Loại)"
+  },
+  "type-to-jump": {
+    "accept": ["gõ-để-nhảy"],
+    "chosen": "Nhảy tới",
+    "confidence": "tentative",
+    "forms": "the mode and badge → Nhảy tới (Nhảy tới: …), quoted inside a sentence (Chuyển sang “Nhảy tới”); Clear jump → Xóa nội dung “Nhảy tới” over Xóa nhảy tới, since the button removes the typed text; the buffer setting → gõ-để-nhảy",
+    "sources": "catalog (settings.fileExplorer.typeToJump.mode.opt.jump, fileExplorer.typeToJump.prefix); TC has only Tìm nhanh for its own quick search, a different feature"
   },
   "typo": {
     "accept": ["nhập nhầm"],

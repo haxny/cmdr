@@ -2103,6 +2103,18 @@
   "@fileExplorer.folderSizes.unreadable": {
     "sourceHash": "ad31a56"
   },
+  "fileExplorer.quickFilter.modeFilter": "Lọc: chỉ hiển thị các tên khớp",
+  "@fileExplorer.quickFilter.modeFilter": {
+    "sourceHash": "3febd29"
+  },
+  "fileExplorer.typeToJump.modeJump": "Nhảy tới: hiển thị tất cả tên và đưa con trỏ tới tên khớp",
+  "@fileExplorer.typeToJump.modeJump": {
+    "sourceHash": "292fdf5"
+  },
+  "fileExplorer.typeToJump.clear": "Xóa nội dung “Nhảy tới”",
+  "@fileExplorer.typeToJump.clear": {
+    "sourceHash": "42ec82f"
+  },
   "fileExplorer.quickFilter.clear": "Xóa bộ lọc",
   "@fileExplorer.quickFilter.clear": {
     "sourceHash": "ba59e2d"

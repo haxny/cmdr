@@ -2116,6 +2116,18 @@
   "@fileExplorer.folderSizes.unreadable": {
     "sourceHash": "ad31a56"
   },
+  "fileExplorer.quickFilter.modeFilter": "Filter: alleen overeenkomende namen worden getoond",
+  "@fileExplorer.quickFilter.modeFilter": {
+    "sourceHash": "3febd29"
+  },
+  "fileExplorer.typeToJump.modeJump": "Ga naar: alle namen worden getoond en de cursor gaat naar de overeenkomende naam",
+  "@fileExplorer.typeToJump.modeJump": {
+    "sourceHash": "292fdf5"
+  },
+  "fileExplorer.typeToJump.clear": "Getypte tekst wissen",
+  "@fileExplorer.typeToJump.clear": {
+    "sourceHash": "42ec82f"
+  },
   "fileExplorer.quickFilter.clear": "Filter wissen",
   "@fileExplorer.quickFilter.clear": {
     "sourceHash": "ba59e2d"

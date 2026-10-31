@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "Den här mappens server går inte att nå",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` ligger bakom en länk till en annan server, och Cmdr kan inte nå den servern just nu. Resten av den här delade mappen fungerar, och inget har raderats.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Så här kan du prova:\n- Kontrollera att den andra servern är igång och att ditt nätverk kan nå den\n- Gå hit igen för att försöka på nytt",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "Återansluter till enheten",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2156,6 +2168,10 @@
   "errors.volume.notConnected": "Cmdr har inte anslutit till den här telefonen eller servern än, så öppna den först.",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "Den här platsen ligger bakom en länk till en annan server, och Cmdr kan inte nå den servern just nu.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "Enheten startade om sin anslutning. Vänta några sekunder och försök igen.",
   "@errors.volume.deviceSessionReset": {

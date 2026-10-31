@@ -519,6 +519,18 @@
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
+  "servers.sheet.nfsOtherGids": "Другие ID групп",
+  "@servers.sheet.nfsOtherGids": {
+    "sourceHash": "f9276b8"
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "Укажите числовые ID групп через запятую, например 100, 1001.",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "sourceHash": "a67ce61"
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "NFS передает не больше 16 других групп, а в этом списке их {count}.",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "sourceHash": "dc277f3"
+  },
   "servers.sheet.nfsIdentityHelp": "По этим числам сервер решает, что вам можно открывать. NFS не спрашивает пароль.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"

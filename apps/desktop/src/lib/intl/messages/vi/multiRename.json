@@ -3,6 +3,10 @@
   "@multiRename.title": {
     "sourceHash": "5ceb1a2"
   },
+  "multiRename.noFileSelected": "Chưa chọn tệp nào",
+  "@multiRename.noFileSelected": {
+    "sourceHash": "26bfbd5"
+  },
   "multiRename.nameMask": "Mặt nạ tên",
   "@multiRename.nameMask": {
     "sourceHash": "3dcc6e4"

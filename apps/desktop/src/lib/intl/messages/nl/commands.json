@@ -490,13 +490,21 @@
   "@commands.fileRename.label": {
     "sourceHash": "3064d79"
   },
+  "commands.paneQuickFilter.label": "Snelfilter",
+  "@commands.paneQuickFilter.label": {
+    "sourceHash": "e731882"
+  },
+  "commands.paneQuickFilter.description": "Opent de filtermarkering met het huidige patroon. Druk nog eens om te schakelen tussen ‘Filter’ en ‘Ga naar’",
+  "@commands.paneQuickFilter.description": {
+    "sourceHash": "2778526"
+  },
   "commands.fileMultiRename.label": "Wijzig meerdere namen",
   "@commands.fileMultiRename.label": {
     "sourceHash": "5ceb1a2"
   },
-  "commands.fileMultiRename.description": "Wijzigt de namen van de geselecteerde bestanden (of van de hele map) met een naammasker, een teller en zoeken en vervangen",
+  "commands.fileMultiRename.description": "Wijzigt de namen van de geselecteerde bestanden (of van het bestand onder de cursor) met een naammasker, een teller en zoeken en vervangen",
   "@commands.fileMultiRename.description": {
-    "sourceHash": "d294fb1"
+    "sourceHash": "d3a52f1"
   },
   "commands.queueCursorUp.label": "Vorige bewerking",
   "@commands.queueCursorUp.label": {

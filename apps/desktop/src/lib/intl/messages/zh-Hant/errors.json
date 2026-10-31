@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "連不上這個資料夾所在的伺服器",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` 要透過連結連到另一個伺服器，而 Cmdr 現在連不上那個伺服器。這個共享資料夾的其他地方都沒問題，也沒有任何東西被刪除。",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "可以這樣試試：\n- 確認另一個伺服器正在執行，而且你的網路連得上它\n- 再次進入這裡重試",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "正在重新連線到裝置",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2156,6 +2168,10 @@
   "errors.volume.notConnected": "Cmdr 還沒有連線到這支手機或伺服器，請先開啟它。",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "這裡要透過連結連到另一個伺服器，而 Cmdr 現在連不上那個伺服器。",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "裝置重新建立了連線。等個幾秒再試一次。",
   "@errors.volume.deviceSessionReset": {

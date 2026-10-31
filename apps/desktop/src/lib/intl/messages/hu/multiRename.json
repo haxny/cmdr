@@ -3,6 +3,10 @@
   "@multiRename.title": {
     "sourceHash": "5ceb1a2"
   },
+  "multiRename.noFileSelected": "Nincs kijelölt fájl",
+  "@multiRename.noFileSelected": {
+    "sourceHash": "26bfbd5"
+  },
   "multiRename.nameMask": "Névmaszk",
   "@multiRename.nameMask": {
     "sourceHash": "3dcc6e4"

@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "Сервер цієї папки недоступний",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "Шлях `{path}` веде через посилання на інший сервер, і Cmdr зараз не вдається звʼязатися з цим сервером. З рештою цієї спільної папки все гаразд, і нічого не видалено.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Що можна спробувати:\n- Перевірте, чи інший сервер працює і чи доступний він із вашої мережі\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "Повторне підʼєднання до пристрою",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2156,6 +2168,10 @@
   "errors.volume.notConnected": "Cmdr ще не підʼєднався до цього телефона чи сервера, тож спершу відкрийте його.",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "Цей шлях веде через посилання на інший сервер, і Cmdr зараз не вдається звʼязатися з цим сервером.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "Пристрій перезапустив підʼєднання. Зачекайте кілька секунд і спробуйте ще раз.",
   "@errors.volume.deviceSessionReset": {

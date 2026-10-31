@@ -1129,6 +1129,42 @@
   "@askCmdr.renameReview.expired": {
     "sourceHash": "4e6482a"
   },
+  "askCmdr.renameReview.checking": "Перевірено {checkedText} з {totalText} {total, plural, one {файлу} few {файлів} many {файлів} other {файлу}}",
+  "@askCmdr.renameReview.checking": {
+    "sourceHash": "92a4d6f"
+  },
+  "askCmdr.renameReview.checkingLabel": "Перевірка файлів",
+  "@askCmdr.renameReview.checkingLabel": {
+    "sourceHash": "03f0bc5"
+  },
+  "askCmdr.renameReview.stopChecking": "Зупинити перевірку",
+  "@askCmdr.renameReview.stopChecking": {
+    "sourceHash": "4373037"
+  },
+  "askCmdr.renameReview.checkUnfinished": "Cmdr ще не перевірив {count, plural, one {# файл} few {# файли} many {# файлів} other {# файлу}}, тож поки що не може перейменовувати.",
+  "@askCmdr.renameReview.checkUnfinished": {
+    "sourceHash": "c3c05ce"
+  },
+  "askCmdr.renameReview.checkAgain": "Перевірити ще раз",
+  "@askCmdr.renameReview.checkAgain": {
+    "sourceHash": "fb7099a"
+  },
+  "askCmdr.renameReview.needsAnotherLook": "Щось змінилося після того, як Cmdr перевірив ці назви, тож нічого не перейменовано. Перегляньте їх знову й спробуйте ще раз.",
+  "@askCmdr.renameReview.needsAnotherLook": {
+    "sourceHash": "36c6050"
+  },
+  "askCmdr.renameReview.couldntStart": "Cmdr не вдалося запустити це перейменування, і нічого не змінилося. Спробуйте ще раз за мить.",
+  "@askCmdr.renameReview.couldntStart": {
+    "sourceHash": "3ca2b21"
+  },
+  "askCmdr.renameReview.nothingToApply": "Тут більше немає чого перейменовувати.",
+  "@askCmdr.renameReview.nothingToApply": {
+    "sourceHash": "9c63cc7"
+  },
+  "askCmdr.renameReview.nameNotSaved": "Cmdr не вдалося зберегти цю назву. З назвою все гаразд, тож спробуйте ще раз.",
+  "@askCmdr.renameReview.nameNotSaved": {
+    "sourceHash": "daff211"
+  },
   "askCmdr.renameReview.status": "{allowed, plural, one {Дозволено # перейменування} few {Дозволено # перейменування} many {Дозволено # перейменувань} other {Дозволено # перейменування}}; {blocked, plural, one {заблоковано #} few {заблоковано #} many {заблоковано #} other {заблоковано #}}",
   "@askCmdr.renameReview.status": {
     "sourceHash": "9f70789"

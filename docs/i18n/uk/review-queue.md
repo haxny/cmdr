@@ -190,3 +190,8 @@ record the outcome in `terms.json` or `decisions.md`).
 - **Already-gone toast** (`settings.fileOperations.showAlreadyGoneToast.label`, `fileOperations.alreadyGone.many`):
   «Повідомляти, якщо видаленого елемента вже не було» and the «Уже немає {countText} елемента» frame for 21, 31… need a
   native check; confirm, or suggest a «зник» frame.
+- **DFS link frame** (`errors.listing.linkTargetUnreachable.explanation`, `errors.volume.linkTargetUnreachable`,
+  `viewer.error.linkTargetUnreachable`): «Шлях … веде через посилання на інший сервер» needs a native check for how
+  natural it reads.
+- **Jump badge clear** (`fileExplorer.typeToJump.clear`): «Очистити «Перехід»» needs a native check, since a screen
+  reader drops the quotes.

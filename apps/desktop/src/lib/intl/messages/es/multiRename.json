@@ -3,6 +3,10 @@
   "@multiRename.title": {
     "sourceHash": "5ceb1a2"
   },
+  "multiRename.noFileSelected": "Ningún archivo seleccionado",
+  "@multiRename.noFileSelected": {
+    "sourceHash": "26bfbd5"
+  },
   "multiRename.nameMask": "Máscara de nombre",
   "@multiRename.nameMask": {
     "sourceHash": "3dcc6e4"

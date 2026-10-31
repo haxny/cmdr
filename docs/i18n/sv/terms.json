@@ -2034,6 +2034,18 @@
     "forms": "column Namn; Det här filnamnet kan inte användas",
     "sources": "macOS"
   },
+  "name-mask": {
+    "avoid": [
+      {
+        "form": "omdöpningsmask",
+        "why": "Total Commander's word, but the catalog says byt namn, never döp om, for its own commands"
+      }
+    ],
+    "chosen": "namnmask",
+    "confidence": "high",
+    "forms": "definite namnmasken; the field label Namnmask",
+    "sources": "shipped catalog (multiRename.nameMask Namnmask, commands.fileMultiRename.description); Total Commander sv (6602 Omdöpningsmask: filnamn), the feature's origin; no macOS, Thunar, Dolphin, or Nautilus term for it, since Finder and Thunar build new names without a mask"
+  },
   "nas": {
     "chosen": "NAS",
     "confidence": "high",
@@ -2326,7 +2338,7 @@
     "sources": "macOS Finder, MS"
   },
   "pattern": {
-    "accept": ["namnmönster", "sökmönster", "filnamnsmönster"],
+    "accept": ["namnmönster", "sökmönster", "filnamnsmönster", "mönstret"],
     "chosen": "mönster",
     "confidence": "high",
     "exceptions": {
@@ -2647,6 +2659,7 @@
       "omdöpt",
       "byta namn",
       "byter bara namn",
+      "bytte inte namn",
       "byta tillbaka",
       "byter tillbaka",
       "massbyte av namn",

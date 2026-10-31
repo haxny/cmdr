@@ -1131,6 +1131,42 @@
   "@askCmdr.renameReview.expired": {
     "sourceHash": "4e6482a"
   },
+  "askCmdr.renameReview.checking": "{checkedText} von {totalText} {total, plural, one {Datei} other {Dateien}} geprüft",
+  "@askCmdr.renameReview.checking": {
+    "sourceHash": "92a4d6f"
+  },
+  "askCmdr.renameReview.checkingLabel": "Dateien werden geprüft",
+  "@askCmdr.renameReview.checkingLabel": {
+    "sourceHash": "03f0bc5"
+  },
+  "askCmdr.renameReview.stopChecking": "Prüfung stoppen",
+  "@askCmdr.renameReview.stopChecking": {
+    "sourceHash": "4373037"
+  },
+  "askCmdr.renameReview.checkUnfinished": "Cmdr hat {count, plural, one {# Datei} other {# Dateien}} nicht fertig geprüft und kann deshalb noch nicht umbenennen.",
+  "@askCmdr.renameReview.checkUnfinished": {
+    "sourceHash": "c3c05ce"
+  },
+  "askCmdr.renameReview.checkAgain": "Erneut prüfen",
+  "@askCmdr.renameReview.checkAgain": {
+    "sourceHash": "fb7099a"
+  },
+  "askCmdr.renameReview.needsAnotherLook": "Seit Cmdr diese Namen geprüft hat, hat sich etwas geändert, deshalb hat Cmdr nichts umbenannt. Sieh sie dir noch einmal an und versuche es erneut.",
+  "@askCmdr.renameReview.needsAnotherLook": {
+    "sourceHash": "36c6050"
+  },
+  "askCmdr.renameReview.couldntStart": "Cmdr konnte diese Umbenennung nicht starten, und es hat sich nichts geändert. Versuche es gleich noch einmal.",
+  "@askCmdr.renameReview.couldntStart": {
+    "sourceHash": "3ca2b21"
+  },
+  "askCmdr.renameReview.nothingToApply": "Hier gibt es nichts mehr umzubenennen.",
+  "@askCmdr.renameReview.nothingToApply": {
+    "sourceHash": "9c63cc7"
+  },
+  "askCmdr.renameReview.nameNotSaved": "Cmdr konnte diesen Namen nicht speichern. Mit dem Namen ist alles in Ordnung, versuche es also noch mal.",
+  "@askCmdr.renameReview.nameNotSaved": {
+    "sourceHash": "daff211"
+  },
   "askCmdr.renameReview.status": "{allowed, plural, one {# Umbenennung erlaubt} other {# Umbenennungen erlaubt}}; {blocked, plural, one {# blockiert} other {# blockiert}}",
   "@askCmdr.renameReview.status": {
     "sourceHash": "9f70789"

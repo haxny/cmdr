@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "No se puede acceder al servidor de esta carpeta",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` está detrás de un enlace a otro servidor, y Cmdr no puede acceder a ese servidor ahora mismo. El resto de este recurso compartido funciona bien y no se ha eliminado nada.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Esto es lo que puedes probar:\n- Comprueba que el otro servidor esté en marcha y que tu red pueda acceder a él\n- Vuelve a abrir esta carpeta para reintentarlo",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "Reconectando con el dispositivo",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2156,6 +2168,10 @@
   "errors.volume.notConnected": "Cmdr aún no está conectado a este teléfono o servidor, así que ábrelo primero.",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "Esto está detrás de un enlace a otro servidor, y Cmdr no puede acceder a ese servidor ahora mismo.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "El dispositivo ha reiniciado su conexión. Espera unos segundos y vuelve a intentarlo.",
   "@errors.volume.deviceSessionReset": {

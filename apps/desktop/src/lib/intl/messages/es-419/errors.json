@@ -155,6 +155,10 @@
   "@errors.listing.notConnected.explanation": {
     "sourceHash": "3c3268f"
   },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` está detrás de un enlace a otro servidor, y Cmdr no puede acceder a ese servidor ahora mismo. El resto de este recurso compartido funciona bien y no se eliminó nada.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "97f8323"
+  },
   "errors.listing.deviceReconnecting.explanation": "La conexión con el dispositivo que contiene `{path}` se reinició, así que esta acción no se completó. El dispositivo sigue conectado y Cmdr lo está reabriendo ahora mismo. Suele ocurrir después de una transferencia cancelada o interrumpida.",
   "@errors.listing.deviceReconnecting.explanation": {
     "sourceHash": "84baa78"

@@ -636,6 +636,7 @@
     "exceptions": {
       "settings.mediaIndex.reclaim.alreadyCleared": "Index entries cleared are deleted from the index; supprimer, as in the sibling reclaim.couldNotDelete."
     },
+    "forms": "Clear jump → Effacer « Aller à » (the badge's own label; no French noun for a jump reads naturally)",
     "sources": "macOS; catalog"
   },
   "click": {
@@ -817,7 +818,7 @@
   "link": {
     "chosen": "lien",
     "confidence": "high",
-    "forms": "web link → lien web",
+    "forms": "web link → lien web; a DFS link: sits behind a link → se trouve derrière un lien vers un autre serveur; errors.volume.linkTargetUnreachable's This → Cet emplacement (a new folder or file doesn't exist yet)",
     "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
   },
   "mcp-server": {

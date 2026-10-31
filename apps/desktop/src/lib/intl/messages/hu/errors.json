@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "Nem érhető el ennek a mappának a szervere",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` egy másik szerverre mutató link mögött van, és a Cmdr most nem éri el azt a szervert. A megosztás többi része rendben van, és semmi sem törlődött.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Ezeket próbálhatod:\n- Ellenőrizd, hogy a másik szerver fut, és elérhető a hálózatodról\n- Lépj ide újra az ismételt próbához",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "Újracsatlakozás az eszközhöz",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2156,6 +2168,10 @@
   "errors.volume.notConnected": "A Cmdr még nem csatlakozott ehhez a telefonhoz vagy szerverhez, ezért előbb nyisd meg.",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "Ez a hely egy másik szerverre mutató link mögött van, és a Cmdr most nem éri el azt a szervert.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "Az eszköz újraindította a kapcsolatot. Várj néhány másodpercet, majd próbáld újra.",
   "@errors.volume.deviceSessionReset": {

@@ -2105,6 +2105,11 @@
     "forms": "column Naam; a pronoun never refers back to an uncontrolled {name}",
     "sources": "macOS Finder (Name → Naam)"
   },
+  "name-mask": {
+    "chosen": "naammasker",
+    "confidence": "high",
+    "sources": "catalog (multiRename.nameMask); TC 6602 (Hernoemmasker: bestandsnaam); DC (Masker, Bestandmasker)"
+  },
   "nas": {
     "chosen": "NAS",
     "confidence": "high",
@@ -3499,6 +3504,13 @@
     "confidence": "high",
     "forms": "the server protocol column Type (same as English)",
     "sources": "macOS System Settings (Type → Type)"
+  },
+  "type-to-jump": {
+    "accept": ["typ-om-te-springen"],
+    "chosen": "Ga naar",
+    "confidence": "high",
+    "forms": "the mode and badge word Ga naar (Ga naar: …), beside Filter; quoted in running text (Schakel naar ‘Ga naar’); clear the typed text → Getypte tekst wissen (a bare Ga naar wissen doesn't parse)",
+    "sources": "catalog (fileExplorer.typeToJump.prefix, settings.fileExplorer.typeToJump.mode.opt.jump)"
   },
   "typo": {
     "accept": ["typefouten"],

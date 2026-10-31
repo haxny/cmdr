@@ -519,6 +519,18 @@
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
+  "servers.sheet.nfsOtherGids": "其他群組 ID",
+  "@servers.sheet.nfsOtherGids": {
+    "sourceHash": "f9276b8"
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "請輸入群組 ID 數字，並用逗號分隔，例如 100, 1001。",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "sourceHash": "a67ce61"
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "NFS 最多可以傳送 16 個其他群組，而這裡列出了 {count} 個。",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "sourceHash": "dc277f3"
+  },
   "servers.sheet.nfsIdentityHelp": "伺服器會依這些號碼決定你能開啟什麼。NFS 不會問你密碼。",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"

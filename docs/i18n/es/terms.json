@@ -741,7 +741,7 @@
   "link": {
     "chosen": "enlace",
     "confidence": "high",
-    "forms": "web link → enlace web",
+    "forms": "web link → enlace web; a DFS link, sits behind a link → está detrás de un enlace (the insert stays subject of a genderless verb)",
     "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
   },
   "mcp-server": {
@@ -2652,6 +2652,12 @@
     "confidence": "high",
     "sources": "macOS Finder (Renombrar; RN1/RN2 Deshacer/Rehacer cambio de nombre)",
     "decision": "Palabras que se separaron"
+  },
+  "name-mask": {
+    "chosen": "máscara de nombre",
+    "accept": ["máscara"],
+    "confidence": "high",
+    "sources": "Total Commander WCMD.LNG 6602 Máscara: nombre de fichero; Double Commander &File mask → Máscara de &archivos; catalog multiRename.nameMask Máscara de nombre"
   },
   "rename-counter": {
     "chosen": "contador",

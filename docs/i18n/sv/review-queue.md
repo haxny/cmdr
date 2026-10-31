@@ -28,6 +28,10 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **text editor → `textredigerare`**: shares the catalog's `redigerare` stem; MS says `textredigeringsprogram`.
 - **Android `platform tools` kept English**: no AOSP or Google Swedish string either way.
 - **share options → `delningsalternativ`**: composed from `Dela` + `Alternativ`.
+- **`Rensa Hoppa-texten`** (`fileExplorer.typeToJump.clear`): the bare `Rensa hopp` reads as clearing "hope", so it
+  names the typed text in the mode `Hoppa`; screen-reader only.
+- **`filtermärket`** (`commands.paneQuickFilter.description`): composed from `filter` + the ruled `märke`; confirm it
+  reads as the small box of typed text.
 - **merge → `slå samman`** over Apple/GNOME's `sammanfoga`, chosen for a plainer voice.
 - **redact → `maskera` / `rensa bort`**, **streaming → `strömma` / `strömningsläge`**, **western (encoding group) →
   `västerländsk`**: convention, no UI source.

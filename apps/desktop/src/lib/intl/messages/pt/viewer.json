@@ -47,6 +47,10 @@
   "@viewer.error.coldStorage": {
     "sourceHash": "236cd1b"
   },
+  "viewer.error.linkTargetUnreachable": "O acesso a este arquivo passa por um link para outro servidor, e o Cmdr não consegue alcançar esse servidor agora. Verifique se o servidor está em execução e tente novamente.",
+  "@viewer.error.linkTargetUnreachable": {
+    "sourceHash": "8dcb736"
+  },
   "viewer.error.retry": "Tentar novamente",
   "@viewer.error.retry": {
     "sourceHash": "942087c"
