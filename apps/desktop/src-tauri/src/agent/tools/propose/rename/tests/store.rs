@@ -4,7 +4,7 @@
 use rusqlite::Connection;
 
 use super::super::plan::check_row_evidence;
-use super::super::revise::revise_staged_row;
+use super::super::revise::{ReviseRefusal, revise_staged_row};
 use super::super::store::{RenameDraft, RenameDraftRow};
 use super::super::{AcceptedPreflight, AcceptedRenamePreflights, RenameProposal};
 use super::{THREAD, draft_row};
@@ -391,12 +391,22 @@ fn revising_a_row_validates_the_name_on_the_server() {
 
     for name in ["", "   ", ".", "..", "folder/name.png", "folder\\name.png"] {
         assert!(
-            revise_staged_row(&conn, &accepted, id, row_id, name).is_err(),
-            "{name:?} must be refused"
+            matches!(
+                revise_staged_row(&conn, &accepted, id, row_id, name),
+                Err(ReviseRefusal::NameRefused { .. })
+            ),
+            "{name:?} must be refused as a NAME: the dialog words it on the row"
         );
     }
-    assert!(revise_staged_row(&conn, &accepted, id, "unknown-row", "fine.png").is_err());
-    assert!(revise_staged_row(&conn, &accepted, "9999", row_id, "fine.png").is_err());
+    // A row or review that's gone says start over, ❌ not "try a different name".
+    assert_eq!(
+        revise_staged_row(&conn, &accepted, id, "unknown-row", "fine.png").err(),
+        Some(ReviseRefusal::ReviewOver)
+    );
+    assert_eq!(
+        revise_staged_row(&conn, &accepted, "9999", row_id, "fine.png").err(),
+        Some(ReviseRefusal::ReviewOver)
+    );
 
     let revised = revise_staged_row(&conn, &accepted, id, row_id, "Receipt 2026-07-20.png").expect("a valid filename");
     assert_eq!(revised.destination_name, "Receipt 2026-07-20.png");

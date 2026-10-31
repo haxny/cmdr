@@ -3678,6 +3678,11 @@ export const commands = {
    */
   cancelBulkRenameProposal: (proposalId: string) => __TAURI_INVOKE<void>('cancel_bulk_rename_proposal', { proposalId }),
   /**
+   *  Stops a running check for this proposal, leaving the review open. Answers whether one was
+   *  running. The stopped `preflight_bulk_rename` or `apply_bulk_rename` answers `Cancelled`.
+   */
+  cancelBulkRenameCheck: (proposalId: string) => __TAURI_INVOKE<boolean>('cancel_bulk_rename_check', { proposalId }),
+  /**
    *  Every sweep with at least one group still waiting on the user, newest first.
    *
    *  Counts only: not one op row is read here, because a group of 60 000 is legitimate and a list
@@ -5589,6 +5594,7 @@ export const events = {
   aiStarting: makeEvent<AiStarting>('ai-starting'),
   aiVerifying: makeEvent<AiVerifying>('ai-verifying'),
   askCmdrTurn: makeEvent<AskCmdrTurn>('ask-cmdr-turn'),
+  bulkRenameCheckProgress: makeEvent<BulkRenameCheckProgress>('bulk-rename-check-progress'),
   clipboardPasteSettled: makeEvent<ClipboardPasteSettled>('clipboard-paste-settled'),
   closeAbout: makeEvent<CloseAbout>('close-about'),
   closeAllFileViewers: makeEvent<CloseAllFileViewers>('close-all-file-viewers'),
@@ -6811,12 +6817,19 @@ export type BulkRenameBlockReason =
   | 'targetExists'
   | 'volumeUnavailable'
 
+// How far one proposal's running check has got.
+export type BulkRenameCheckProgress = {
+  proposalId: string
+  // Rows finished so far. 0 is a real answer: the first stat is still out.
+  checked: number
+  total: number
+}
+
 /**
  *  Why a rename review couldn't be checked or applied.
  *
- *  ❌ Not prose: the review dialog words its own states (its per-row
- *  `askCmdr.renameReview.nameRejected` notice, and re-reading the plan when it
- *  has moved on); the variant is what the log records.
+ *  ❌ Not prose: the review dialog words each variant from the catalog
+ *  (`rename-review-status.ts`); a `detail` here is for the log.
  */
 export type BulkRenameError =
   /**
@@ -6851,9 +6864,12 @@ export type BulkRenameError =
        */
       reason: RenameStartError
     }
-  // The preflight didn't finish inside the command's wait.
-  | { type: 'timedOut' }
-  // Nothing above classifies it (a panicked task).
+  /**
+   *  The check was stopped before it answered: the user pressed Stop checking, the review
+   *  closed, or a newer check for this plan replaced it. Nothing ran.
+   */
+  | { type: 'cancelled' }
+  // Nothing above classifies it (a panicked task, Cmdr's own database not answering).
   | {
       type: 'unexpected'
       // What the runtime reported, for the log.

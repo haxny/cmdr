@@ -454,7 +454,7 @@ Its four pre-turn gates (no agent store, consent not accepted, no resolvable pro
 one-turn floor) are also the ONLY account of the Ask Cmdr funnel's top, because none of them reach `run_turn`. That's
 why `AskCmdrSendRefusal` has two constructors and no struct literal: `of` and `detailed` both report the anonymous
 `ask_cmdr_turn` refusal, and a literal would silently lose the gate. `agent/chat/DETAILS.md` § The turn event. `apply_bulk_rename` consumes an exact accepted preflight then delegates
-the batch to `Operations::start_renames`; it never accepts frontend paths or model approval.
+the batch to `Operations::start_renames`; it never accepts frontend paths or model approval. `preflight_bulk_rename` and apply's recheck are the exception to the timeout tiers, on purpose: they report progress and stop on `cancel_bulk_rename_check`, because a slow-but-working job must not fail (`agent/tools/propose/DETAILS.md` § A check with no time limit).
 
 **One commands file per domain, no business logic in commands.** Tauri command functions are the IPC boundary
 (deserialization, state extraction, error mapping). Mixing business logic here makes it untestable (Tauri commands need

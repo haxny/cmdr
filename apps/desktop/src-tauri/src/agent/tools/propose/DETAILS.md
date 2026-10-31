@@ -70,6 +70,16 @@ that sends it is refused with `EvidenceProblem::SourceReservedForUser`, because 
 name is the misattribution this whole module exists to stop. The plan schema's enum lists the five model-usable sources,
 so a compliant model never trips that refusal.
 
+## A check with no time limit
+
+`preflight` has no deadline, because a 500-row job on a busy NAS can take minutes while working fine (David's call, #152). `rename/check.rs` holds the mechanism and its reasoning: one registered check per proposal (a new one stops the old), a scan detached from its waiter, and progress from the waiter's own clock. Decisions worth knowing here:
+
+- **A stopped check answers `PreflightStopped`, ❌ never a partial row list**: everything apply trusts comes from an outcome that saw every allowed row, and an acceptance recorded after a stop could overwrite the newer check's.
+- **`LOCAL_SCANS` bounds the abandoned threads.** A stopped local scan holds its pool thread until its stat returns, so a dead mount could otherwise collect them. A remote scan awaits instead and holds no thread.
+- **Cmdr's own database not answering is not an expired review.** It surfaces as `StoreUnavailable`, so the review offers Check again rather than telling the user to throw the plan away. The same goes for `ReviseRefusal` and for apply's `Unexpected`.
+
+Frontend half: `apps/desktop/src/lib/ask-cmdr/DETAILS.md` § A check with no time limit.
+
 ## Revising one row
 
 The review can replace one staged row's destination name with the user's own (`revise.rs`, reached over

@@ -47,6 +47,7 @@ use tauri_specta::{Builder, collect_events};
 
 use crate::agent::chat::stream::AskCmdrTurn;
 use crate::agent::suggested_ops::SuggestionsChanged;
+use crate::agent::tools::propose::rename::BulkRenameCheckProgress;
 use crate::agent::wake::{AgentWakeStaged, AgentWakeStatus};
 use crate::clipboard::ClipboardPasteSettled;
 use crate::commands::search::SearchIndexReadyEvent;
@@ -487,6 +488,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::agent::apply_bulk_rename,
                     crate::commands::agent::revise_bulk_rename_row,
                     crate::commands::agent::cancel_bulk_rename_proposal,
+                    crate::commands::agent::cancel_bulk_rename_check,
                     crate::commands::agent::suggested_ops_list,
                     crate::commands::agent::suggested_ops_page,
                     crate::commands::agent::suggested_ops_live_facts,
@@ -1124,6 +1126,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             // Operation manager registry snapshot (crates/cmdr-operations/src/manager.rs).
             wire::OperationsChanged,
             SuggestionsChanged,
+            // How far a rename review's check has got (agent/tools/propose/rename/check.rs).
+            BulkRenameCheckProgress,
             // Every Ask Cmdr turn's progress, keyed by conversation: rail sends and wakes
             // alike (agent/chat/stream.rs).
             AskCmdrTurn,

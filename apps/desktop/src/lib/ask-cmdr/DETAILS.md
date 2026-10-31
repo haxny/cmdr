@@ -626,12 +626,12 @@ reading. Two more were considered and rejected:
   `rejectGroup`), so 500 files never mean 500 clicks.
 
 **The grouping is presentational; the proposal stays the unit.** `BulkRenameReview` is a list of
-`BulkRenameReviewProposal`s, each with its own rows, `preflighting`, `expired`, `revision`, `changed`, and
-`requestVersion`, because preflight, revise, apply, and cancel are all keyed by proposal id on the backend
-(`propose/rename/store.rs`). So every guardrail stays per row: the evidence check, pane-scoped source validation, the
-fingerprinted preflight, and the fingerprint recheck at write time. Apply loops over the batches in STAGING order, one
-`apply_bulk_rename` each, and stops at the first refusal, leaving the rest revalidated and still answerable. A batch the
-user turned down whole is consumed with the rest when Apply finishes: they answered it.
+`BulkRenameReviewProposal`s, each with its own rows, `preflighting`, `expired`, `revision`, `changed`, `checkFailed`,
+`checkProgress`, and `requestVersion`, because preflight, revise, apply, and cancel are all keyed by proposal id on the
+backend (`propose/rename/store.rs`). So every guardrail stays per row: the evidence check, pane-scoped source
+validation, the fingerprinted preflight, and the fingerprint recheck at write time. Apply loops over the batches in
+STAGING order, one `apply_bulk_rename` each, and stops at the first refusal, leaving the rest revalidated and still
+answerable. A batch the user turned down whole is consumed with the rest when Apply finishes: they answered it.
 
 A rename group binds one parent folder (`start_bulk_rename` refuses a row that would change it), so a job across folders
 is several batches. The dialog puts a folder heading above each run of rows for exactly that case, and shows none at all
@@ -670,6 +670,34 @@ previously blocked rows. This keeps target-exists and source-missing warnings li
 external process removes the clash or restores a missing source; matching names are only an IPC filter, never filesystem
 authority. `TargetExists` and `SourceMissing` rows are deselected and show specific red warnings, while the write
 engine's exclusive final rename remains the data-safety boundary.
+
+## A check with no time limit
+
+Checking and applying used to get a fixed five seconds, so a 500-row job on a NAS could time out every time while
+working fine. David's call (#152): no hard cap. A slow check shows a count and Stop checking, and a stuck stat can't
+hold the review hostage. Mechanism, including why the waiter owns the progress clock and how a stop detaches the scan:
+`apps/desktop/src-tauri/src/agent/tools/propose/rename/check.rs`.
+
+- **Progress**: `bulk-rename-check-progress` lands in `proposal.checkProgress`, and `renameCheckProgress` sums the
+  batches that reported. A finished batch stays in the sum at its full count until the last one ends, so the job's total
+  holds still. A check that ends inside the backend's quiet period emits nothing, which is why a local toggle doesn't
+  flicker.
+- **Stop checking is not Cancel.** Cancel closes the review and consumes its proposals (which also stops their checks).
+  Stop keeps the review open, marks the batch `checkFailed`, and shows Check again.
+- **`checkFailed` holds everything until the user answers it.** Rename stays disabled, and toggles, edits, and watcher
+  events don't recheck that batch (`recheckUnlessStopped`): restarting by itself is how a slow volume used to burn a
+  whole check per toggle. Check again is the only restart. A breakdown logs once through a `LogOnceGate`; a stop doesn't
+  log.
+- **Apply can run a check too.** The review checks every row, so a user who denied one arrives at `apply_bulk_rename`
+  with a subset, which reruns the check. So Stop checking works during Apply, and `applyingReview` keeps a watcher
+  recheck from replacing the check Apply is waiting on (a new check for a proposal stops the old one).
+  `applyStopRequested` and the closed-review test cover the gap between batches, when the backend has nothing to stop.
+
+**Every refusal gets its own answer** (`noteApplyRefusal`, `noteReviseRefusal`, exhaustive on `BulkRenameError`, carried
+by `BulkRenameFailure`): `listChanged` and `reviewExpired` mark the batch, `cancelled` marks it unchecked,
+`needsAnotherLook` / `nothingToApply` / `couldntStart` are a notice above the list (`review.notice`, worded in
+`rename-review-status.ts`; a volume's refusal adds the transfer dialogs' own sentence). On an edit, only `rowRefused`
+says "try a different name"; a store hiccup says `nameNotSaved`, since the name was fine.
 
 ## Undo after a batch lands
 

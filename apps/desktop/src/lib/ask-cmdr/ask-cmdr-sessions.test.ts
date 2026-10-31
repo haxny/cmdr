@@ -35,6 +35,7 @@ vi.mock('./ask-cmdr-trigger.svelte', () => ({
 
 import {
   SESSIONS_PAGE,
+  chooseThread,
   clearSearch,
   loadMoreSessions,
   loadSessions,
@@ -218,5 +219,44 @@ describe('sessions rename + archive', () => {
     await setArchived(1, false)
     expect(sessionsState.conversations.map((c) => c.id)).toEqual([1, 2])
     expect(sessionsState.conversations.find((c) => c.id === 1)?.archived).toBe(false)
+  })
+})
+
+/** A hiccup in Cmdr's own database used to escape as an unhandled rejection, which logs at error
+ * and auto-sends a report, and a thread rename's failure went unlogged altogether. */
+describe('a hiccup in the panel’s own database', () => {
+  beforeEach(() => {
+    warn.mockClear()
+  })
+
+  it('keeps the panel open and logs at warn when a thread won’t load', async () => {
+    sessionsState.open = true
+    switchMock.mockRejectedValueOnce(new Error('locked'))
+
+    await chooseThread(7)
+
+    expect(sessionsState.open).toBe(true)
+    expect(warn).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves the row as it was and logs when archiving doesn’t land', async () => {
+    sessionsState.conversations = [row(7)]
+    archiveMock.mockRejectedValueOnce(new Error('locked'))
+
+    await setArchived(7, true)
+
+    expect(sessionsState.conversations.map((c) => c.id)).toEqual([7])
+    expect(sessionsState.conversations[0].archived).toBe(false)
+    expect(warn).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the old title and logs when a rename doesn’t land', async () => {
+    sessionsState.conversations = [row(7)]
+    renameMock.mockRejectedValueOnce(new Error('locked'))
+
+    await renameConversation(7, 'New')
+
+    expect(sessionsState.conversations[0].title).toBe('Chat 7')
+    expect(warn).toHaveBeenCalledTimes(1)
   })
 })

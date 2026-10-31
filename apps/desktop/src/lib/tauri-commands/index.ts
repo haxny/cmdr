@@ -486,8 +486,11 @@ export {
   cancelAskCmdr,
   keepGoingAskCmdr,
   applyBulkRename,
+  BulkRenameFailure,
   preflightBulkRename,
+  cancelBulkRenameCheck,
   cancelBulkRenameProposal,
+  onBulkRenameCheckProgress,
   reviseBulkRenameRow,
   recordAskCmdrSlotChange,
   getAskCmdrConversation,
@@ -513,6 +516,9 @@ export {
 export { onSecurityNoticeRaised } from './security-notices'
 export { onStateRecoveryQueued, takeStateRecoveries } from './state-recovery'
 export type {
+  BulkRenameCheckProgress,
+  BulkRenameError,
+  RenameStartError,
   WakeReadinessView,
   AskCmdrStreamEvent,
   AskCmdrTurn,

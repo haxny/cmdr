@@ -239,6 +239,8 @@ function batch(proposalId: string, rows: Array<{ rowId: string; allowed: boolean
     rows: rows.map((row) => ({ ...row, blockedReason: null })),
     preflighting: false,
     expired: false,
+    checkFailed: false,
+    checkProgress: null,
     requestVersion: 0,
   }
 }

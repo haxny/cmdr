@@ -8,25 +8,29 @@
 //! refusal, so the user is never shown a name whose evidence didn't check out. See
 //! `evidence.rs` for the guardrail itself.
 //!
-//! Four concerns, one per file:
+//! Five concerns, one per file:
 //! - [`plan`]: the tool boundary — schema, dispatch, and everything a plan must survive
 //!   before a single row is staged (scope, validation, the evidence check).
 //! - [`store`]: what a staged proposal IS and where it lives — one durable group on the
 //!   proposal spine, its display snapshot, and the process-local accepted preflight.
 //! - [`preflight`](mod@preflight): user-action-time revalidation of the subset the user allows, and the
 //!   fingerprints apply later checks the sources against.
+//! - [`check`]: what keeps that revalidation honest on a slow volume: no time limit, live
+//!   progress, and a way to stop it.
 //! - [`revise`]: the user's own name for one row, replacing the model's without re-running the
 //!   plan boundary's whole-plan gates.
 //!
 //! Beside them, [`cut_listing`] counts a staged plan whose folder the model last saw as a cut
 //! listing (an analytics signal, nothing refused).
 
+mod check;
 mod cut_listing;
 mod plan;
 mod preflight;
 mod revise;
 mod store;
 
+pub use check::{BulkRenameCheckProgress, RenameChecks};
 pub use cut_listing::{PaneListingCuts, note_pane_listing};
 pub use plan::{
     RenameDispatchOutcome, dispatch, execute_propose_rename_plan, note_image_facts_delivered,
@@ -34,9 +38,9 @@ pub use plan::{
 };
 pub use preflight::{
     BulkRenameBlockReason, BulkRenamePreflight, BulkRenamePreflightRow, BulkRenamePreflightStatus, BulkRenameRowStatus,
-    BulkRenameWarning, preflight,
+    BulkRenameWarning, PreflightStopped, preflight,
 };
-pub use revise::revise_row;
+pub use revise::{ReviseRefusal, revise_row};
 pub use store::{
     AcceptedPreflight, AcceptedRenamePreflights, RenameProposal, RenameProposalRow, RenameProposalRowSnapshot,
     RenameProposalSnapshot, RenameSourceFingerprint, display_name as rename_display_name, group_ops, load, numeric_id,

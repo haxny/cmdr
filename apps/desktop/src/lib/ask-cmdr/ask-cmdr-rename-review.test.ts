@@ -15,12 +15,18 @@ const reviseRenameMock = vi.fn<(...args: unknown[]) => Promise<unknown>>()
 const applyRenameMock = vi.fn<(...args: unknown[]) => Promise<unknown>>()
 const cancelProposalMock = vi.fn<(proposalId: string) => Promise<void>>()
 const undoOperationsMock = vi.fn<(operationIds: string[]) => Promise<unknown>>()
+const cancelCheckMock = vi.fn<(proposalId: string) => Promise<boolean>>()
+const conversationMock = vi.fn<(...args: unknown[]) => Promise<unknown>>()
 
-vi.mock('#lib/tauri-commands/index.js', () => ({
+vi.mock('#lib/tauri-commands/index.js', async () => ({
+  BulkRenameFailure: (
+    await vi.importActual<typeof import('#lib/tauri-commands/ask-cmdr.js')>('#lib/tauri-commands/ask-cmdr.js')
+  ).BulkRenameFailure,
+  cancelBulkRenameCheck: (proposalId: string) => cancelCheckMock(proposalId),
   sendAskCmdrMessage: (c: number | null, t: string, a: unknown[], d: string[]) => sendMock(c, t, a, d),
   cancelAskCmdr: vi.fn(() => Promise.resolve({ tripped: 1, live: 1 })),
   listAskCmdrConversations: vi.fn(() => Promise.resolve([])),
-  getAskCmdrConversation: vi.fn(() => Promise.resolve(null)),
+  getAskCmdrConversation: (...args: unknown[]) => conversationMock(...args),
   recordAskCmdrSlotChange: vi.fn(() => Promise.resolve([])),
   preflightBulkRename: (...args: unknown[]) => preflightRenameMock(...args),
   cancelBulkRenameProposal: (proposalId: string) => cancelProposalMock(proposalId),
@@ -29,8 +35,9 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   undoOperations: (operationIds: string[]) => undoOperationsMock(operationIds),
 }))
 vi.mock('#lib/app-status-store.js', () => ({ saveAppStatus: vi.fn() }))
+const { warn } = vi.hoisted(() => ({ warn: vi.fn() }))
 vi.mock('#lib/logging/logger.js', () => ({
-  getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
+  getAppLogger: () => ({ warn, info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
 vi.mock('#lib/file-explorer/pane/explorer-state.svelte.js', () => ({
   explorerState: { setRailFocused: vi.fn() },
@@ -47,12 +54,18 @@ import {
   applyRenameReview,
   askCmdrState,
   cancelRenameReview,
+  checkRenameReviewAgain,
   newChat,
+  renameCheckProgressed,
   renameReviewListingChanged,
   reviseRenameRow,
   sendMessage,
   setRenameRowAllowed,
+  stopRenameChecks,
+  switchToThread,
 } from './ask-cmdr-trigger.svelte'
+import { BulkRenameFailure } from '#lib/tauri-commands/index.js'
+import { renameCheckProgress, uncheckedRowCount } from './rename-review-status'
 import { handleTurnEvent, resetTurnBookkeeping } from './ask-cmdr-stream.svelte'
 
 /** The thread a fired event belongs to when the test doesn't name one. */
@@ -77,6 +90,11 @@ beforeEach(() => {
   cancelProposalMock.mockReset()
   cancelProposalMock.mockResolvedValue()
   undoOperationsMock.mockReset()
+  cancelCheckMock.mockReset()
+  cancelCheckMock.mockResolvedValue(true)
+  conversationMock.mockReset()
+  conversationMock.mockResolvedValue(null)
+  warn.mockClear()
   newChat()
   resetTurnBookkeeping()
   askCmdrState.messages = []
@@ -252,7 +270,7 @@ describe('the revision the review showed', () => {
   })
 
   it('marks a batch changed when apply refuses it for a moved revision, and runs nothing after it', async () => {
-    applyRenameMock.mockRejectedValueOnce(Object.assign(new Error('listChanged'), { type: 'listChanged' }))
+    applyRenameMock.mockRejectedValueOnce(new BulkRenameFailure({ type: 'listChanged' }))
     sendMessage('rename them')
     stageBatch('proposal-1', [proposalRow('row-1', 'a.png', 'invoice-a.png')])
     stageBatch('proposal-2', [proposalRow('row-2', 'b.png', 'invoice-b.png')])
@@ -263,6 +281,333 @@ describe('the revision the review showed', () => {
 
     expect(applyRenameMock).toHaveBeenCalledTimes(1)
     expect(askCmdrState.renameReview?.proposals[0]).toMatchObject({ proposalId: 'proposal-1', changed: true })
+  })
+})
+
+/** Open a review over one batch of two rows, with its first check settled. */
+async function openSettledReview(): Promise<void> {
+  sendMessage('rename them')
+  stageBatch('proposal-1', [proposalRow('row-1', 'a.png', 'one.png'), proposalRow('row-2', 'b.png', 'two.png')])
+  finishTurn()
+  await reviewSettles(1)
+}
+
+/**
+ * A refusal used to reach the review as the same untyped error, and the review said nothing, so
+ * the user was left looking at a dialog that ignored Rename. Each variant now has its own answer.
+ */
+describe('why a rename did not happen', () => {
+  it.each([
+    [{ type: 'needsAnotherLook' }, { kind: 'needsAnotherLook' }],
+    [{ type: 'nothingToApply' }, { kind: 'nothingToApply' }],
+    [{ type: 'couldntStart', reason: { type: 'nothingToRename' } }, { kind: 'nothingToApply' }],
+    [
+      { type: 'couldntStart', reason: { type: 'notInOneFolder' } },
+      { kind: 'couldntStart', reason: { type: 'notInOneFolder' } },
+    ],
+    [
+      { type: 'unexpected', detail: 'a panicked task' },
+      { kind: 'couldntStart', reason: null },
+    ],
+  ] as const)('%j says so above the list', async (failure, notice) => {
+    await openSettledReview()
+    applyRenameMock.mockRejectedValueOnce(new BulkRenameFailure(failure))
+
+    await applyRenameReview()
+
+    expect(askCmdrState.renameReview?.notice).toEqual(notice)
+  })
+
+  it('keeps the review open and rechecks what it left behind', async () => {
+    await openSettledReview()
+    applyRenameMock.mockRejectedValueOnce(new BulkRenameFailure({ type: 'needsAnotherLook' }))
+
+    await applyRenameReview()
+
+    expect(reviewRowIds()).toEqual(['row-1', 'row-2'])
+    expect(preflightRenameMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('marks an expired batch on the batch, where the expired notice already lives', async () => {
+    await openSettledReview()
+    applyRenameMock.mockRejectedValueOnce(new BulkRenameFailure({ type: 'reviewExpired' }))
+    preflightRenameMock.mockResolvedValue({ status: 'expired', rows: [] })
+
+    await applyRenameReview()
+
+    expect(askCmdrState.renameReview?.proposals[0]).toMatchObject({ expired: true })
+    expect(askCmdrState.renameReview?.notice).toBeNull()
+  })
+
+  it('clears the old notice when the user tries again', async () => {
+    await openSettledReview()
+    applyRenameMock.mockRejectedValueOnce(new BulkRenameFailure({ type: 'needsAnotherLook' }))
+    await applyRenameReview()
+    await vi.waitFor(() => {
+      expect(askCmdrState.renameReview?.proposals[0].preflighting).toBe(false)
+    })
+    applyRenameMock.mockRejectedValueOnce(new BulkRenameFailure({ type: 'listChanged' }))
+
+    await applyRenameReview()
+
+    expect(askCmdrState.renameReview?.notice).toBeNull()
+  })
+
+  it('tells a refused name from a gone review from a store that did not answer', async () => {
+    await openSettledReview()
+
+    reviseRenameMock.mockRejectedValueOnce(new BulkRenameFailure({ type: 'rowRefused', detail: 'not a filename' }))
+    await reviseRenameRow('proposal-1', 'row-1', 'a/b.png')
+    expect(firstReviewRow()?.nameRejected).toBe(true)
+    expect(askCmdrState.renameReview?.notice).toBeNull()
+
+    reviseRenameMock.mockRejectedValueOnce(new BulkRenameFailure({ type: 'unexpected', detail: 'locked' }))
+    await reviseRenameRow('proposal-1', 'row-2', 'fine.png')
+    expect(askCmdrState.renameReview?.proposals[0].rows[1].nameRejected).toBe(false)
+    expect(askCmdrState.renameReview?.notice).toEqual({ kind: 'nameNotSaved' })
+
+    reviseRenameMock.mockRejectedValueOnce(new BulkRenameFailure({ type: 'reviewExpired' }))
+    await reviseRenameRow('proposal-1', 'row-2', 'fine.png')
+    expect(askCmdrState.renameReview?.proposals[0].expired).toBe(true)
+  })
+})
+
+/**
+ * A check has no time limit, so one that doesn't finish is a state the user can see and act on.
+ * Every toggle used to restart it silently, which on a slow volume meant it never finished.
+ */
+describe('a check that did not finish', () => {
+  async function openUncheckedReview(): Promise<void> {
+    preflightRenameMock.mockRejectedValueOnce(new BulkRenameFailure({ type: 'cancelled' }))
+    sendMessage('rename them')
+    stageBatch('proposal-1', [proposalRow('row-1', 'a.png', 'one.png'), proposalRow('row-2', 'b.png', 'two.png')])
+    finishTurn()
+    await reviewSettles(1)
+  }
+
+  it('marks the batch and leaves its rows on show', async () => {
+    await openUncheckedReview()
+
+    expect(askCmdrState.renameReview?.proposals[0]).toMatchObject({ checkFailed: true, preflighting: false })
+    expect(uncheckedRowCount(askCmdrState.renameReview?.proposals ?? [])).toBe(2)
+    expect(reviewRowIds()).toEqual(['row-1', 'row-2'])
+  })
+
+  it('stops rechecking on every toggle, edit, and watcher event', async () => {
+    await openUncheckedReview()
+    reviseRenameMock.mockResolvedValue({
+      destinationName: 'edited.png',
+      evidence: { source: 'userEdited', detail: '' },
+      coverage: null,
+    })
+
+    setRenameRowAllowed('proposal-1', 'row-1', false)
+    await reviseRenameRow('proposal-1', 'row-2', 'edited.png')
+    await renameReviewListingChanged([{ entry: { name: 'a.png' } }])
+
+    expect(preflightRenameMock).toHaveBeenCalledTimes(1)
+    expect(firstReviewRow()?.allowed).toBe(false)
+  })
+
+  it('holds Rename until Check again has answered', async () => {
+    await openUncheckedReview()
+
+    await applyRenameReview()
+    expect(applyRenameMock).not.toHaveBeenCalled()
+
+    checkRenameReviewAgain()
+    await reviewSettles(2)
+    expect(askCmdrState.renameReview?.proposals[0].checkFailed).toBe(false)
+
+    await applyRenameReview()
+    expect(applyRenameMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('logs a repeating breakdown once, and a stop not at all', async () => {
+    await openUncheckedReview()
+    expect(warn).not.toHaveBeenCalled()
+
+    preflightRenameMock.mockRejectedValue(new BulkRenameFailure({ type: 'unexpected', detail: 'locked' }))
+    checkRenameReviewAgain()
+    await reviewSettles(2)
+    checkRenameReviewAgain()
+    await reviewSettles(3)
+
+    expect(warn).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('stopping a check', () => {
+  /** A check that stays out until the backend answers `cancelled`, like a real slow one. */
+  function checkThatWaitsForStop(): void {
+    preflightRenameMock.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          cancelCheckMock.mockImplementationOnce(() => {
+            reject(new BulkRenameFailure({ type: 'cancelled' }))
+            return Promise.resolve(true)
+          })
+        }),
+    )
+  }
+
+  it('shows progress while it runs, and takes it away when the last batch ends', async () => {
+    checkThatWaitsForStop()
+    sendMessage('rename it')
+    stageBatch('proposal-1', [proposalRow('row-1', 'a.png', 'one.png')])
+    finishTurn()
+    await vi.waitFor(() => {
+      expect(preflightRenameMock).toHaveBeenCalledTimes(1)
+    })
+
+    expect(renameCheckProgress(askCmdrState.renameReview?.proposals ?? [])).toBeNull()
+    renameCheckProgressed({ proposalId: 'proposal-1', checked: 0, total: 1 })
+    expect(renameCheckProgress(askCmdrState.renameReview?.proposals ?? [])).toEqual({ checked: 0, total: 1 })
+
+    stopRenameChecks()
+    await vi.waitFor(() => {
+      expect(askCmdrState.renameReview?.proposals[0].preflighting).toBe(false)
+    })
+
+    expect(cancelCheckMock).toHaveBeenCalledWith('proposal-1')
+    expect(renameCheckProgress(askCmdrState.renameReview?.proposals ?? [])).toBeNull()
+    expect(askCmdrState.renameReview?.proposals[0].checkFailed).toBe(true)
+  })
+
+  it('holds the job total still while its batches finish at different times', async () => {
+    let finishSecond: (value: unknown) => void = () => {}
+    checkThatWaitsForStop()
+    preflightRenameMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSecond = resolve
+        }),
+    )
+    sendMessage('rename them')
+    stageBatch('proposal-1', [proposalRow('row-1', 'a.png', 'one.png')])
+    stageBatch('proposal-2', [proposalRow('row-2', 'b.png', 'two.png')])
+    finishTurn()
+    await vi.waitFor(() => {
+      expect(preflightRenameMock).toHaveBeenCalledTimes(2)
+    })
+    renameCheckProgressed({ proposalId: 'proposal-1', checked: 3, total: 10 })
+    renameCheckProgressed({ proposalId: 'proposal-2', checked: 8, total: 10 })
+    expect(renameCheckProgress(askCmdrState.renameReview?.proposals ?? [])).toEqual({ checked: 11, total: 20 })
+
+    finishSecond({ status: 'ready', rows: [] })
+    await vi.waitFor(() => {
+      expect(askCmdrState.renameReview?.proposals[1].preflighting).toBe(false)
+    })
+    expect(renameCheckProgress(askCmdrState.renameReview?.proposals ?? [])).toEqual({ checked: 13, total: 20 })
+
+    // A late report for the batch that already ended changes nothing.
+    renameCheckProgressed({ proposalId: 'proposal-2', checked: 8, total: 10 })
+    expect(renameCheckProgress(askCmdrState.renameReview?.proposals ?? [])).toEqual({ checked: 13, total: 20 })
+    stopRenameChecks()
+  })
+
+  it('stops an Apply on its rechecking batch, without starting the next or checking again', async () => {
+    await (async () => {
+      sendMessage('rename them')
+      stageBatch('proposal-1', [proposalRow('row-1', 'a.png', 'one.png')])
+      stageBatch('proposal-2', [proposalRow('row-2', 'b.png', 'two.png')])
+      finishTurn()
+      await reviewSettles(2)
+    })()
+    applyRenameMock.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          cancelCheckMock.mockImplementationOnce(() => {
+            reject(new BulkRenameFailure({ type: 'cancelled' }))
+            return Promise.resolve(true)
+          })
+        }),
+    )
+
+    const applying = applyRenameReview()
+    stopRenameChecks()
+    await applying
+
+    expect(applyRenameMock).toHaveBeenCalledTimes(1)
+    expect(preflightRenameMock).toHaveBeenCalledTimes(2)
+    expect(askCmdrState.renameReview?.proposals[0]).toMatchObject({ checkFailed: true, preflighting: false })
+    expect(askCmdrState.renameReview?.proposals[1]).toMatchObject({ checkFailed: false, preflighting: false })
+  })
+
+  it('does not let a watcher event replace the check Apply is waiting on', async () => {
+    await openSettledReview()
+    let finishApply: (value: unknown) => void = () => {}
+    applyRenameMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishApply = resolve
+        }),
+    )
+
+    const applying = applyRenameReview()
+    await renameReviewListingChanged([{ entry: { name: 'a.png' } }])
+
+    expect(preflightRenameMock).toHaveBeenCalledTimes(1)
+    finishApply({ operationId: 'op-1', swapsLeftOut: 0 })
+    await applying
+  })
+
+  it('does not start the next batch once the review closed under Apply', async () => {
+    sendMessage('rename them')
+    stageBatch('proposal-1', [proposalRow('row-1', 'a.png', 'one.png')])
+    stageBatch('proposal-2', [proposalRow('row-2', 'b.png', 'two.png')])
+    finishTurn()
+    await reviewSettles(2)
+    let finishApply: (value: unknown) => void = () => {}
+    applyRenameMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishApply = resolve
+        }),
+    )
+
+    const applying = applyRenameReview()
+    cancelRenameReview()
+    finishApply({ operationId: 'op-1', swapsLeftOut: 0 })
+    await applying
+
+    expect(applyRenameMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('switching threads under a review', () => {
+  it('keeps the review when the new thread will not load', async () => {
+    await openSettledReview()
+    conversationMock.mockRejectedValueOnce(new Error('main.db is locked'))
+
+    await expect(switchToThread(2)).rejects.toThrow('main.db is locked')
+
+    expect(reviewRowIds()).toEqual(['row-1', 'row-2'])
+    expect(cancelProposalMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps the review when the thread is gone', async () => {
+    await openSettledReview()
+
+    await switchToThread(2)
+
+    expect(reviewRowIds()).toEqual(['row-1', 'row-2'])
+  })
+
+  it('tears the old review down once the new thread is on screen', async () => {
+    await openSettledReview()
+    conversationMock.mockResolvedValueOnce({
+      totalMessages: 0,
+      messages: [],
+      turnInFlightRun: null,
+      spendPausedMicros: null,
+      lastContextUsage: null,
+    })
+
+    await switchToThread(2)
+
+    expect(askCmdrState.renameReview).toBeNull()
+    expect(cancelProposalMock).toHaveBeenCalledWith('proposal-1')
   })
 })
 
@@ -476,7 +821,9 @@ describe('revising a proposed name', () => {
   /** A name the server won't take leaves the row on the name it had, and says so on the row. */
   it('keeps the row’s name when the server refuses the typed one', async () => {
     await openOneRowReview()
-    reviseRenameMock.mockRejectedValue(new Error('Each destinationName must be one filename, not a path.'))
+    reviseRenameMock.mockRejectedValue(
+      new BulkRenameFailure({ type: 'rowRefused', detail: 'Each destinationName must be one filename, not a path.' }),
+    )
 
     await reviseRenameRow('proposal-1', 'row-1', 'folder/name.png')
 
