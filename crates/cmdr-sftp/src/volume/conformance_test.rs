@@ -236,7 +236,7 @@ async fn a_link_to_a_folder_moves_as_the_link() {
         .expect(FIXTURE);
     volume.create_directory(Path::new(&moved)).await.expect(FIXTURE);
     volume
-        .create_symlink(Path::new(&link), Path::new(&real))
+        .create_symlink_to_app_path(Path::new(&link), Path::new(&real))
         .await
         .expect(FIXTURE);
 
@@ -249,6 +249,14 @@ async fn a_link_to_a_folder_moves_as_the_link() {
     )
     .await;
 
+    clean_scratch_deep(&volume, &dir).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
+async fn a_link_lands_verbatim() {
+    let (volume, dir) = stock_server_with_scratch("link-landing").await;
+    conformance::assert_a_link_lands_verbatim(&volume, Path::new(&dir)).await;
     clean_scratch_deep(&volume, &dir).await;
 }
 

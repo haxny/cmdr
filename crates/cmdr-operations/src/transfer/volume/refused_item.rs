@@ -64,3 +64,17 @@ pub(super) fn refused_here(subject: &RefusalSubject<'_>, error: &PathedVolumeErr
     }
     refusal_reason(&error.clone().into_write_error())
 }
+
+/// Whether `error` is a source item with no bytes to copy and no way to land as
+/// itself (`VolumeError::NoContent`): one counted skip, ❌ never a failure of
+/// the item or its folder.
+pub(super) fn has_no_content(error: &PathedVolumeError) -> bool {
+    matches!(
+        error,
+        PathedVolumeError {
+            error: VolumeError::NoContent(_),
+            role: PathRole::Source,
+            ..
+        }
+    )
+}

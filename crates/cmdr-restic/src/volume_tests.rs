@@ -416,6 +416,30 @@ async fn a_folder_or_a_link_has_no_bytes_to_stream() {
     ));
 }
 
+/// A restore's link target: what the backup recorded, unresolved. Nothing else
+/// in the view is a link, the view's own folders included.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_link_reports_the_target_the_backup_recorded() {
+    let browse = Browse::new().await;
+    let dir = browse.source_in("latest").await;
+    assert_eq!(
+        browse
+            .volume
+            .read_link_target(&dir.join("link"))
+            .await
+            .unwrap()
+            .as_deref(),
+        Some(Path::new("a.txt"))
+    );
+    for not_a_link in [view(), view().join("latest"), dir.join("nested"), dir.join("a.txt")] {
+        assert_eq!(browse.volume.read_link_target(&not_a_link).await.unwrap(), None);
+    }
+    assert!(matches!(
+        browse.volume.read_link_target(&dir.join("nope")).await,
+        Err(VolumeError::NotFound(_))
+    ));
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn ranged_reads_fetch_windows_of_the_pack_never_the_whole_pack() {
     let browse = Browse::new().await;

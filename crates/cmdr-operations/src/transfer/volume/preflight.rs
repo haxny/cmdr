@@ -32,7 +32,7 @@ use std::time::Instant;
 
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::scan_cache::ScanPreviews;
-use super::super::super::state::{ScanResult, WriteOperationState};
+use super::super::super::state::WriteOperationState;
 use super::super::super::transfer_tree::{TreeModel, TreeOrder, TreeRecorder, from_per_path, sort_sources};
 use super::super::super::types::{
     CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteOperationError, WriteOperationPhase,
@@ -40,6 +40,7 @@ use super::super::super::types::{
 };
 use super::super::volume_outage::{OutageAnnounce, OutageEnd, wait_while_out};
 use super::folder_metadata::SourceFolderDates;
+use super::link_carry::LinkCarry;
 use super::scan_wait::ScanWait;
 use super::transfer_error::{PathRole, WriteFailure, map_failure_after_wait, map_volume_error};
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -177,23 +178,6 @@ impl VolumePreflight {
     }
 }
 
-/// Whether a cached preview counted one of `source_paths` as the LINK it is.
-///
-/// The local preview walks with the local engines' stance, where a link is a
-/// leaf worth its own few bytes. A cross-volume transfer streams what a link
-/// points at instead (`transfer/DETAILS.md` § "Symlinks are opaque to a move"),
-/// so for a selected link that preview describes a different transfer: its hint
-/// says "file" for a link to a folder, which streamed the folder as a file and
-/// failed, and its totals miss everything behind the link. The source volume's
-/// own scan follows a selected link, so it answers for this transfer instead.
-fn counted_a_selected_link_as_a_link(cached: &ScanResult, source_paths: &[PathBuf]) -> bool {
-    let selected: HashSet<&Path> = source_paths.iter().map(PathBuf::as_path).collect();
-    cached
-        .files
-        .iter()
-        .any(|file| file.is_symlink && selected.contains(file.path.as_path()))
-}
-
 /// Scans the source paths up front, reusing a cached preview when one is
 /// available.
 ///
@@ -210,6 +194,10 @@ fn counted_a_selected_link_as_a_link(cached: &ScanResult, source_paths: &[PathBu
 /// (`Volume::scan_for_copy_batch_with_boundary`); a stopped scan comes back as
 /// `VolumeError::Cancelled` and leaves through the same one-`write-cancelled`
 /// exit the pre-scan check uses.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "One scan's whole context: the volume, the sources, the config, who to report to, and which of the sources aren't walked."
+)]
 pub(super) async fn scan_volume_sources(
     volume: &Arc<dyn Volume>,
     source_paths: &[PathBuf],
@@ -218,6 +206,7 @@ pub(super) async fn scan_volume_sources(
     operation_type: WriteOperationType,
     state: &Arc<WriteOperationState>,
     events: &dyn OperationEventSink,
+    links: &LinkCarry,
 ) -> Result<VolumePreflight, WriteFailure> {
     // Emit the Scanning-phase progress event up front. The FE keys the dialog
     // stage indicator off `phase`, so this is what flips it from "starting"
@@ -241,18 +230,23 @@ pub(super) async fn scan_volume_sources(
     }
 
     // Cached preview from the TransferDialog: same scan results, no second
-    // walk over the device. Unless it counted a selected link as the link: see
-    // `counted_a_selected_link_as_a_link`.
+    // walk over the device. Unless it describes a different transfer: the local
+    // preview walks with the local engines' stance, where a selected link is a
+    // leaf worth its own few bytes, so where this transfer follows a link its
+    // hint says "file" for a link to a folder, which streamed the folder as a
+    // file and failed, and its totals miss everything behind the link. A source
+    // volume's own scan is the mirror: it follows a selected link, which a
+    // carried one isn't (`LinkCarry::disagrees_with_preview`).
     let previews = state.scope().stores().previews();
     if let Some(mut cached) = config
         .preview_id
         .as_deref()
         .and_then(|preview_id| previews.take_cached_scan_result(preview_id, source_paths))
         .filter(|cached| {
-            let describes_another_transfer = counted_a_selected_link_as_a_link(cached, source_paths);
+            let describes_another_transfer = links.disagrees_with_preview(cached, source_paths);
             if describes_another_transfer {
                 log::debug!(
-                    "scan_volume_sources: op={} rescans: its preview counted a selected link as the link, and this transfer copies what it points at",
+                    "scan_volume_sources: op={} rescans: its preview counted a selected link differently from how this transfer takes it",
                     operation_id,
                 );
             }
@@ -290,6 +284,7 @@ pub(super) async fn scan_volume_sources(
                 },
             );
         }
+        note_carried_links(&mut source_hints, links);
         return Ok(VolumePreflight {
             total_files: cached.file_count,
             total_bytes: cached.total_bytes,
@@ -370,8 +365,15 @@ pub(super) async fn scan_volume_sources(
         .stopping_at(stop)
         .recording_to(Arc::clone(&recorder) as Arc<dyn ScanRecorder>)
         .waiting_out(&outages);
+    // A carried link is one leaf with no bytes: nothing to walk, and walking what
+    // it points at would count (and reserve room for) a tree this copy never writes.
+    let to_walk: Vec<PathBuf> = source_paths
+        .iter()
+        .filter(|path| links.selected_target(path).is_none())
+        .cloned()
+        .collect();
     let batch = volume
-        .scan_for_copy_batch_with_boundary(source_paths, &boundary)
+        .scan_for_copy_batch_with_boundary(&to_walk, &boundary)
         .await
         .map_err(|e| {
             // ❗ A stopped scan takes the operation's own cancel exit, so the
@@ -390,6 +392,11 @@ pub(super) async fn scan_volume_sources(
             WriteFailure::from_volume(&path, PathRole::Source, e)
         })?;
 
+    for link in links.selected() {
+        recorder.file(link, 0);
+    }
+    let total_files = batch.aggregate.file_count + links.selected().count();
+
     // Final Scanning event with the aggregate totals. Bypasses the throttle
     // so the FE's last-known scan-phase state lands on the real total before
     // the phase flips to Copying — without this, a fast scan whose per-
@@ -401,7 +408,7 @@ pub(super) async fn scan_volume_sources(
             operation_type,
             WriteOperationPhase::Scanning,
             None,
-            batch.aggregate.file_count,
+            total_files,
             0,
             batch.aggregate.total_bytes,
             0,
@@ -428,20 +435,38 @@ pub(super) async fn scan_volume_sources(
         );
     }
 
+    note_carried_links(&mut source_hints, links);
+
     log::debug!(
         "scan_volume_sources: scan complete for op={}, files={}, dirs={}, bytes={}",
         operation_id,
-        batch.aggregate.file_count,
+        total_files,
         batch.aggregate.dir_count,
         batch.aggregate.total_bytes,
     );
 
     Ok(VolumePreflight {
-        total_files: batch.aggregate.file_count,
+        total_files,
         total_bytes: batch.aggregate.total_bytes,
         source_hints,
         tree,
     })
+}
+
+/// A carried link's hint: a file to every loop and conflict check, whatever the
+/// scan or a preview made of it, since this copy never looks behind it.
+fn note_carried_links(source_hints: &mut HashMap<PathBuf, SourceHint>, links: &LinkCarry) {
+    for link in links.selected() {
+        source_hints.insert(
+            link.clone(),
+            SourceHint {
+                is_directory: false,
+                size: 0,
+                modified_at: None,
+                created_at: None,
+            },
+        );
+    }
 }
 
 /// Top-level-only source hints for the same-volume move fast path.

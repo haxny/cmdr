@@ -98,9 +98,9 @@ pub(crate) fn recheck_local(file: &WrittenFile) -> Recheck {
         // is provable, so fail safe.
         Err(_) => return Recheck::Skip(SkipReason::UnverifiablePrecondition),
     };
-    match file.identity {
+    match &file.identity {
         WrittenIdentity::Unverifiable => Recheck::Skip(SkipReason::UnverifiablePrecondition),
-        WrittenIdentity::VolumeFile { .. } => {
+        WrittenIdentity::VolumeFile { .. } | WrittenIdentity::VolumeLink { .. } => {
             // A volume entry in a local ledger is a bookkeeping bug, not a file
             // to delete on a guess.
             log::warn!(
@@ -112,13 +112,13 @@ pub(crate) fn recheck_local(file: &WrittenFile) -> Recheck {
         WrittenIdentity::LocalDir { node } => match WrittenIdentity::node_of_stat(&live) {
             // A directory's own size shifts as children come and go, so the node
             // id is the whole check.
-            Some(live_node) if live_node == node => Recheck::Act,
+            Some(live_node) if live_node == *node => Recheck::Act,
             Some(_) => Recheck::Skip(SkipReason::Drift),
             None => Recheck::Skip(SkipReason::UnverifiablePrecondition),
         },
         WrittenIdentity::LocalFile { size, node } => match WrittenIdentity::node_of_stat(&live) {
-            Some(live_node) if live_node != node => Recheck::Skip(SkipReason::Drift),
-            Some(_) => Recheck::of(verify_snapshot(Some(size as i64), None, Some(live.len()), None)),
+            Some(live_node) if live_node != *node => Recheck::Skip(SkipReason::Drift),
+            Some(_) => Recheck::of(verify_snapshot(Some(*size as i64), None, Some(live.len()), None)),
             None => Recheck::Skip(SkipReason::UnverifiablePrecondition),
         },
     }
@@ -130,13 +130,14 @@ pub(crate) fn recheck_local(file: &WrittenFile) -> Recheck {
 /// answer is a [`PresentRecheck`]: a path the backend says is gone never reaches
 /// here, so nothing pays a second round trip to re-ask.
 pub(crate) fn recheck_volume(file: &WrittenFile, live_size: Option<u64>) -> PresentRecheck {
-    match file.identity {
+    match &file.identity {
         WrittenIdentity::VolumeFile { size } => {
-            PresentRecheck::of(verify_snapshot(Some(size as i64), None, live_size, None))
+            PresentRecheck::of(verify_snapshot(Some(*size as i64), None, live_size, None))
         }
         // No volume backend reports a node id, so a local identity can't be
-        // rechecked here. Reaching this is a bookkeeping bug; fail safe.
-        WrittenIdentity::LocalFile { .. } | WrittenIdentity::LocalDir { .. } => {
+        // rechecked here, and a link answers to `recheck_volume_link`. Reaching
+        // this is a bookkeeping bug; fail safe.
+        WrittenIdentity::LocalFile { .. } | WrittenIdentity::LocalDir { .. } | WrittenIdentity::VolumeLink { .. } => {
             log::warn!(
                 "reversal: {} was recorded as a local entry but is being rechecked through a volume, leaving it",
                 LogPrivate::path(&file.path)
@@ -144,6 +145,17 @@ pub(crate) fn recheck_volume(file: &WrittenFile, live_size: Option<u64>) -> Pres
             PresentRecheck::Skip(SkipReason::UnverifiablePrecondition)
         }
         WrittenIdentity::Unverifiable => PresentRecheck::Skip(SkipReason::UnverifiablePrecondition),
+    }
+}
+
+/// Is the symlink at a volume path still the one this operation landed? It is
+/// when it holds the target it landed with; `live_target` is what the backend
+/// reads there now, `None` for something that isn't a link.
+pub(crate) fn recheck_volume_link(recorded: &Path, live_target: Option<&Path>) -> PresentRecheck {
+    if live_target == Some(recorded) {
+        PresentRecheck::Act
+    } else {
+        PresentRecheck::Skip(SkipReason::Drift)
     }
 }
 

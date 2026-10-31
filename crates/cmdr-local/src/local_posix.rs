@@ -7,6 +7,7 @@
 //! files, so those methods stay here as one-line delegations to inherent bodies
 //! over there.
 
+mod links;
 mod scan;
 mod streams;
 
@@ -504,6 +505,25 @@ impl Volume for LocalPosixVolume {
 
     fn local_path(&self) -> Option<PathBuf> {
         Some(self.root.clone())
+    }
+
+    fn read_link_target<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<PathBuf>, VolumeError>> + Send + 'a>> {
+        Box::pin(self.read_link_target_impl(path))
+    }
+
+    fn can_hold_links(&self) -> bool {
+        true
+    }
+
+    fn create_symlink<'a>(
+        &'a self,
+        path: &'a Path,
+        target: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(self.create_symlink_impl(path, target))
     }
 
     fn create_file<'a>(

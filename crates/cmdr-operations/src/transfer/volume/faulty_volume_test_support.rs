@@ -505,6 +505,25 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         supports_unknown_length_writes, write_is_single_shot, publishes_writes_whole,
     );
 
+    fn read_link_target<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<PathBuf>, VolumeError>> + Send + 'a>> {
+        self.inner.read_link_target(path)
+    }
+
+    fn can_hold_links(&self) -> bool {
+        self.inner.can_hold_links()
+    }
+
+    fn create_symlink<'a>(
+        &'a self,
+        path: &'a Path,
+        target: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        self.inner.create_symlink(path, target)
+    }
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }

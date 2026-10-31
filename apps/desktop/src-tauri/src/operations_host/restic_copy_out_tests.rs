@@ -308,6 +308,103 @@ async fn a_special_file_in_a_snapshot_is_skipped_and_its_siblings_land() {
     );
 }
 
+/// The restore: a link lands as the link, holding exactly what the backup
+/// recorded, a target pointing out of the destination included. Nothing is
+/// followed, so nothing lands where it points.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_restore_lands_links_as_links_verbatim_nested_and_selected() {
+    let _secrets = isolate_secrets();
+    let engine = super::test_engine();
+    let drive = backed_up_drive(
+        "restic-restore-links",
+        &[DOC],
+        &[
+            NoBytes::Symlink("docs/near", "a.txt"),
+            NoBytes::Symlink("docs/out", "../../../outside"),
+            NoBytes::Symlink("alone", "/somewhere/absolute"),
+        ],
+    )
+    .await;
+    drive.unlock().await;
+    let (_dest_dir, dest_root, _dest_id, dest) = dest_drive("restic-restore-links-dest");
+    let sources = vec![drive.backed_up.join("docs"), drive.backed_up.join("alone")];
+    let (source, _route) = engine
+        .resolve_source_volume(&drive.volume_id, sources.first())
+        .await
+        .expect("the source volume");
+    let events = Arc::new(CollectorEventSink::new());
+
+    let result = copy_volumes_with_progress(
+        Arc::clone(&events) as _,
+        "restic-restore-links-op",
+        &Arc::new(new_operation_state(&engine, Duration::from_millis(50))),
+        source,
+        &sources,
+        dest,
+        &dest_root,
+        &quick_progress(),
+    )
+    .await;
+
+    assert!(result.is_ok(), "{result:?}");
+    let target_of = |name: &str| std::fs::read_link(dest_root.join(name)).expect("a link landed");
+    assert_eq!(target_of("docs/near"), Path::new("a.txt"));
+    assert_eq!(target_of("docs/out"), Path::new("../../../outside"));
+    assert_eq!(target_of("alone"), Path::new("/somewhere/absolute"));
+    assert_eq!(std::fs::read(dest_root.join("docs/a.txt")).expect("landed"), DOC.bytes);
+    assert_eq!(events.complete.lock().expect("events")[0].files_skipped, 0);
+}
+
+/// Onto a remote that can't hold a link, a restore has nothing to land: each is
+/// one counted skip, selected or nested, ❌ never an I/O error, and the rest lands.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_restore_onto_a_destination_with_no_links_counts_each_as_a_skip() {
+    let _secrets = isolate_secrets();
+    let engine = super::test_engine();
+    let drive = backed_up_drive(
+        "restic-restore-no-links",
+        &[DOC],
+        &[
+            NoBytes::Symlink("docs/near", "a.txt"),
+            NoBytes::Symlink("alone", "somewhere"),
+        ],
+    )
+    .await;
+    drive.unlock().await;
+    let dest = Arc::new(cmdr_fs::volume::InMemoryVolume::new("No links").with_space_info(10_000_000, 10_000_000));
+    dest.create_directory(Path::new("/inbox")).await.expect("inbox");
+
+    for (tag, source_path, skips, lands) in [
+        ("selected", drive.backed_up.join("alone"), 1, None),
+        ("nested", drive.backed_up.join("docs"), 1, Some("/inbox/docs/a.txt")),
+    ] {
+        let sources = vec![source_path];
+        let (source, _route) = engine
+            .resolve_source_volume(&drive.volume_id, sources.first())
+            .await
+            .expect("the source volume");
+        let events = Arc::new(CollectorEventSink::new());
+        let result = copy_volumes_with_progress(
+            Arc::clone(&events) as _,
+            &format!("restic-restore-no-links-{tag}"),
+            &Arc::new(new_operation_state(&engine, Duration::from_millis(50))),
+            source,
+            &sources,
+            Arc::clone(&dest) as Arc<dyn Volume>,
+            Path::new("/inbox"),
+            &quick_progress(),
+        )
+        .await;
+        assert!(result.is_ok(), "{tag}: {result:?}");
+        assert_eq!(events.complete.lock().expect("events")[0].files_skipped, skips, "{tag}");
+        if let Some(landed) = lands {
+            assert!(dest.exists(Path::new(landed)).await, "{tag}");
+        }
+    }
+    assert!(!dest.exists(Path::new("/inbox/alone")).await);
+    assert!(!dest.exists(Path::new("/inbox/docs/near")).await);
+}
+
 /// A Mac's backup is full of symlinks, and the view never follows one. A folder
 /// holding one still copies out: everything beside the link lands.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

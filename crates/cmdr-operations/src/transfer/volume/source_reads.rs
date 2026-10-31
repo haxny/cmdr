@@ -34,6 +34,12 @@ use cmdr_fs::volume::{ScanStop, StreamLength, VolumeError, VolumeReadStream};
 pub(super) struct SourceReads(Arc<AtomicBool>);
 
 impl SourceReads {
+    /// For a write that reads no stream (a link's target is already in hand):
+    /// nothing it can fail on is the source's.
+    pub(super) fn unwatched() -> Self {
+        Self(Arc::new(AtomicBool::new(false)))
+    }
+
     /// Labels a failed `write_from_stream` with the side that broke: the source,
     /// at `source_path`, when one of its reads failed, else the destination, at
     /// `dest_path`.

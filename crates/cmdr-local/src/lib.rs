@@ -76,6 +76,8 @@ pub use local_posix::{LocalPosixVolume, rename_local_exclusive, rename_volume_er
 #[cfg(test)]
 mod local_posix_conformance_test;
 #[cfg(test)]
+mod local_posix_link_test;
+#[cfg(test)]
 mod local_posix_test;
 #[cfg(test)]
 mod reading_parity_test;

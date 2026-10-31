@@ -412,6 +412,24 @@ impl Volume for ResticVolume {
         Box::pin(self.metadata(path))
     }
 
+    /// The target the backup recorded, raw bytes included. A folder of the view
+    /// itself (the root, a snapshot row) is no link.
+    fn read_link_target<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<PathBuf>, VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            let VirtualPath::Snapshot(which, inner) = self.classify(path)? else {
+                return Ok(None);
+            };
+            if inner.is_empty() {
+                return Ok(None);
+            }
+            let (node, _, _) = self.node(&which, inner, path).await?;
+            Ok(node.is_symlink().then(|| node.node_type.to_link().to_path_buf()))
+        })
+    }
+
     // ---- Read-only: a backup is changed with `restic`, not with a file manager
 
     /// ❌ Never flip this to track "the user can write to the repo". They can,

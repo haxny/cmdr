@@ -161,6 +161,25 @@ impl Volume for SftpVolume {
         Box::pin(self.noting(self.entry_kind_impl(path)))
     }
 
+    fn read_link_target<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<PathBuf>, VolumeError>> + Send + 'a>> {
+        Box::pin(self.noting(self.read_link_target_impl(path)))
+    }
+
+    fn can_hold_links(&self) -> bool {
+        true
+    }
+
+    fn create_symlink<'a>(
+        &'a self,
+        path: &'a Path,
+        target: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(self.noting(self.create_symlink_impl(path, target)))
+    }
+
     // ── The byte path ────────────────────────────────────────────────
 
     fn supports_streaming(&self) -> bool {

@@ -39,6 +39,7 @@ use super::super::super::types::{
 };
 use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::{LeafProgressLedger, build_pre_skip_set};
+use super::link_carry::LinkCarry;
 use super::preflight::{scan_volume_sources, sources_in_tree_order};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::log_private::LogPrivate;
@@ -110,6 +111,8 @@ pub(super) struct CopyCells {
     /// totals to the op-wide `files_skipped` / `bytes_skipped`.
     pub(super) deep_skipped_files: Arc<AtomicUsize>,
     pub(super) deep_skipped_bytes: Arc<AtomicU64>,
+    /// Which symlinks this copy lands as symlinks (`link_carry.rs`).
+    pub(super) links: Arc<LinkCarry>,
 }
 
 /// How long a wind-down waits for its in-flight tasks, chosen by whoever asked
@@ -731,6 +734,10 @@ pub async fn copy_volumes_with_progress(
         .then(|| dest_listing.map(DestNameIndex::build))
         .flatten();
 
+    // Which links land as links here, read before the scan so it counts each
+    // selected one as the leaf it is (`link_carry.rs`).
+    let links = Arc::new(LinkCarry::for_copy(state, &source_volume, source_paths, &dest_volume, dest_path).await);
+
     // Phase 1: Preflight scan (reuses the dialog's cached preview when one is
     // available). Populates `total_files`, `total_bytes`, and per-source
     // `is_directory` / `size` hints so the copy loop doesn't have to re-probe
@@ -743,6 +750,7 @@ pub async fn copy_volumes_with_progress(
         WriteOperationType::Copy,
         state,
         &*events,
+        &links,
     )
     .await?;
     state
@@ -950,7 +958,10 @@ pub async fn copy_volumes_with_progress(
         );
     }
 
-    let cells = CopyCells::default();
+    let cells = CopyCells {
+        links,
+        ..CopyCells::default()
+    };
     let mut copy_error: Option<WriteFailure>;
 
     // Live in-flight table + stall watchdog, for BOTH paths. The concurrent

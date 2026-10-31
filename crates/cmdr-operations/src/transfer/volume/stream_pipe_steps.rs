@@ -4,6 +4,7 @@
 //! outcome back to the runner; a step that fails returns a [`Fault`] for
 //! [`FileRun::on_fault`], ❌ never a wait of its own.
 
+use std::path::Path;
 use std::sync::Arc;
 
 use super::{Fault, FileRun, LandingToResume, PipedFile, Stop, auto_yield_tuning};
@@ -293,6 +294,40 @@ impl FileRun<'_> {
         }
     }
 
+    /// A symlink's own "write": stages a link holding `target` and hands it to
+    /// the same landing a file's bytes take, so it can't clobber what a file
+    /// couldn't. Raced against tier 2 like any write. No stall watchdog: one
+    /// small request has no bytes to stop moving, and the transport's own
+    /// deadline ends it.
+    pub(super) async fn write_link(&mut self, target: &Path) -> Result<Written, Stop> {
+        let (state, dest_volume, dest_path) = (self.state, self.dest_volume, self.dest_path);
+        set_task_phase(TaskPhase::Finalizing);
+        let staging = resolve_staging(self.staging, dest_volume.publishes_writes_whole());
+        let staged = StagedWrite::begin(state, &**dest_volume, self.announced_dest, staging);
+        let started_on = StartedOn::now(&[self.source_volume, dest_volume]);
+        let made = tokio::select! {
+            biased;
+            () = state.backend_abort.cancelled() => {
+                return Err(hard_abort_error(dest_path)).at_destination(dest_path).map_err(Stop::Over);
+            }
+            made = dest_volume.create_symlink(staged.target(), target) => made,
+        };
+        match made {
+            Ok(()) => Ok(Written {
+                staged,
+                written: StreamWritten::nothing_refused(0),
+                lost: MetadataClasses::NONE,
+                after_landing: CarriedMetadata::default(),
+            }),
+            Err(error) => Err(Stop::Faulted(Box::new(Fault::Write {
+                error,
+                started_on,
+                staged,
+                source_reads: SourceReads::unwatched(),
+            }))),
+        }
+    }
+
     /// Past the last byte: give the file its final name. What the source
     /// carries beyond its bytes is already on it: the destination asked the
     /// stream and put it on the staged write (`Volume::write_from_stream`), all
@@ -371,11 +406,12 @@ impl FileRun<'_> {
         };
         set_task_phase(TaskPhase::Finalizing);
         let started_on = StartedOn::now(&[self.source_volume, self.dest_volume]);
-        let source = LandingSource {
+        // A link has no bytes at its source to compare the name against.
+        let source = self.link_target.is_none().then_some(LandingSource {
             volume: self.source_volume,
             path: self.source_path,
-        };
-        match cut_off.resume(self.dest_volume, Some(source)).await {
+        });
+        match cut_off.resume(self.dest_volume, source).await {
             Resumed::Landed => Ok(Some(
                 self.landed(PipedFile::unreported(bytes), lost, &after_landing).await,
             )),

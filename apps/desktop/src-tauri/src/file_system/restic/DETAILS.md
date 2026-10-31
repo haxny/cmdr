@@ -130,9 +130,9 @@ written onto a local drive registered in the app's registry (`test_repo.rs`, who
 an `index/` or `data/` read):
 
 - **Copy-out** (`apps/desktop/src-tauri/src/operations_host/restic_copy_out_tests.rs`): a file and a folder land byte
-  for byte with their dates and permission bits; a move out is refused before a byte is written. A symlink or a fifo
-  inside a copied folder is one skipped item (`VolumeError::NoContent`); restoring a link AS a link needs a cross-backend
-  symlink seam that doesn't exist yet. A Cancel during a whole-snapshot pre-scan lands inside the listing that waits on
+  for byte with their dates and permission bits; a move out is refused before a byte is written. A symlink lands as
+  the link, verbatim, where the destination holds one (nested or selected), and is one skipped item otherwise, as a fifo
+  always is (`VolumeError::NoContent`). A Cancel during a whole-snapshot pre-scan lands inside the listing that waits on
   the index load (the view opts into `ScanSource::abandons_reads_on_stop`).
   A repo whose password the hub doesn't hold (remember off, then a restart) answers the copy with
   `WriteOperationError::ArchiveNeedsPassword`, the prompt the unlock dialog's repo variant answers. Hub eviction keeps

@@ -889,3 +889,37 @@ async fn an_interrupted_folder_copy_records_the_landed_times_its_writes_reported
     );
     assert_file_rows_carry_their_landed_mtime(fixture.log.db(), &fixture.op_id, &*fixture.dest, survivors.len()).await;
 }
+
+/// An undo reverses the links a copy landed, selected and nested, on the row's
+/// landed time alone: a link has no size to record. A selected link's row names
+/// the link itself on both sides (#624).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn undoing_a_copy_removes_the_links_it_landed() {
+    let fixture = VolumeLoop::onto("op-vol-links", InMemoryVolume::new("Dst").with_links());
+    fixture.mkdir("/album").await;
+    fixture.put("/album/a.jpg", b"aaa").await;
+    fixture
+        .source
+        .plant_symlink(std::path::Path::new("/album/nested"), std::path::Path::new("a.jpg"));
+    fixture
+        .source
+        .plant_symlink(std::path::Path::new("/alone"), std::path::Path::new("/anywhere"));
+    fixture.copy(&["/album", "/alone"]).await;
+    assert_eq!(
+        fixture
+            .dest
+            .read_link_target(std::path::Path::new("/alone"))
+            .await
+            .expect("the link landed")
+            .as_deref(),
+        Some(std::path::Path::new("/anywhere"))
+    );
+    let dests = fixture.journaled_dests(EntryType::File);
+    assert!(dests.contains(&"/alone".to_string()), "{dests:?}");
+    assert!(dests.contains(&"/album/nested".to_string()), "{dests:?}");
+
+    let report = fixture.rollback().await;
+
+    assert_eq!(report.skipped, 0, "{report:?}");
+    assert_eq!(fixture.dest_files_under("/").await, Vec::<String>::new());
+}
