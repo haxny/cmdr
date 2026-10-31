@@ -3352,6 +3352,8 @@ export type MessageKey =
   | 'multiRename.tags.discard.message'
   | 'multiRename.tags.discard.title'
   | 'multiRename.tags.editFailed'
+  | 'multiRename.tags.editor.largeKeys'
+  | 'multiRename.tags.editor.largeKeysLine'
   | 'multiRename.tags.error'
   | 'multiRename.tags.field.album'
   | 'multiRename.tags.field.albumArtist'
