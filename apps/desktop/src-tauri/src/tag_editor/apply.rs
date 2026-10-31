@@ -367,7 +367,7 @@ fn unix_millis() -> u64 {
         .map(|elapsed| u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX))
         .unwrap_or_default();
     let previous = LAST
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |last| Some(now.max(last + 1)))
+        .try_update(Ordering::Relaxed, Ordering::Relaxed, |last| Some(now.max(last + 1)))
         .unwrap_or_else(|last| last);
     now.max(previous + 1)
 }

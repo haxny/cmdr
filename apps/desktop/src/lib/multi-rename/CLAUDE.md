@@ -18,9 +18,8 @@ The ⌃M sheet over `src-tauri/src/multi_rename/` (the engine and its rules: tha
   marker and an inline editor (`mask-token-kinds.ts`), over pure `mask-tokens.ts`, the `*-token.ts` grammars, and
   `token-editor-rules.ts`.
 - `PlaceholderChips.svelte` the placeholder buttons and `media ▾`, whose `MediaFieldPicker.svelte` inserts fields
-  (`media-fields.ts`: their words, the picker's groups, spaced inserts). `PlaceholderTip.svelte` /
-  `placeholder-help.ts`, `SearchOptionChips.svelte` / `search-option-help.ts`: tooltips and chips; `rename-examples.ts`
-  renders the examples.
+  (`media-fields.ts`: their words, the picker's groups, spaced inserts). `PlaceholderTip.svelte`/`placeholder-help.ts`,
+  `SearchOptionChips.svelte`/`search-option-help.ts`: tooltips and chips; `rename-examples.ts` renders the examples.
 - `last-run.svelte.ts` the last run, which Undo rename (⌘⌥Z) rolls back. Outlives the sheet.
 - `tag-editor/`: Tags window.
 - `option-keys.ts` the ⌘⌥ option keys (`TOGGLE_COMMANDS`) and the whole-name toggles in pipeline order. Pure.

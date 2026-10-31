@@ -2880,7 +2880,7 @@
     "mediaIndex.semanticSearch.enabled": true,
     "mediaIndex.showFileStatusIcons": true,
     "mediaIndex.showInSearch": false,
-    "multiRename.tagEditor": false,
+    "multiRename.tagEditor": true,
     "multiRename.tagEditor.absSideFiles": false,
     "network.customTimeout": 15,
     "network.directSmbConnection": true,
