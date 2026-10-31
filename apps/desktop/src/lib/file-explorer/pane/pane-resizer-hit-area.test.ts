@@ -1,30 +1,110 @@
 /**
- * The pane divider's invisible grab strip (`PaneResizer.svelte`, `.pane-resizer::before`). Its geometry lives in CSS
- * and the test DOM does no layout, so this pins the declared offsets: wide enough to hit (#441, WCAG 2.5.8), and
- * never over the LEFT pane, whose vertical scrollbar runs along the divider and must stay fully grabbable.
+ * The pane divider's invisible hit areas (`PaneResizer.svelte`) and the path segments' floor (`FilePane.svelte`). Their
+ * geometry lives in CSS and the test DOM does no layout, so this pins the declared offsets: the strip along the file
+ * list must never cover the LEFT pane's scrollbar or the RIGHT pane's file icons, and the foot pad must hold a 24-by-24
+ * square (WCAG 2.5.8, #817) inside the status footers' blank inset.
  */
-import { describe, expect, it } from 'vitest'
+import { flushSync, mount, unmount } from 'svelte'
+import { describe, expect, it, vi } from 'vitest'
+import PaneResizer from './PaneResizer.svelte'
 import source from './PaneResizer.svelte?raw'
+import filePaneSource from './FilePane.svelte?raw'
+import { SEGMENT_MIN_HIT_WIDTH_PX } from '../navigation/breadcrumb-fit'
 
-/** The `left` / `right` offsets in px of the `.pane-resizer::before` rule. */
-function grabStripOffsets(): { left: number; right: number } {
-  const rule = /\.pane-resizer::before\s*\{([^}]*)\}/.exec(source)?.[1]
-  if (rule === undefined) throw new Error('`.pane-resizer::before` rule not found')
+/** `--spacing-md`: the blank inset of `.selection-info`, and the left pad's overhang. */
+const FOOTER_INSET_PX = 12
+/** Where a file row's icon starts, from the pane's edge (`.listbox-region` gutter + `.file-entry` padding). */
+const ROW_ICON_INSET_PX = 12
+
+function ruleOf(selector: string): string {
+  const rule = new RegExp(`\\.pane-resizer::${selector}\\s*\\{([^}]*)\\}`).exec(source)?.[1]
+  if (rule === undefined) throw new Error(`\`.pane-resizer::${selector}\` rule not found`)
+  return rule
+}
+
+/** The `left` / `right` offsets in px of a pseudo-element's rule. */
+function offsets(selector: string): { left: number; right: number } {
+  const rule = ruleOf(selector).replace(/calc\(-1 \* var\(--spacing-md\)\)/, `-${String(FOOTER_INSET_PX)}px`)
   const offset = (side: 'left' | 'right'): number => {
     const value = new RegExp(`(?:^|;|\\s)${side}:\\s*(-?[\\d.]+)(px)?\\s*;`).exec(rule)?.[1]
-    if (value === undefined) throw new Error(`\`${side}\` missing from the grab strip`)
+    if (value === undefined) throw new Error(`\`${side}\` missing from \`::${selector}\``)
     return Number(value)
   }
   return { left: offset('left'), right: offset('right') }
 }
 
-describe('pane divider grab strip', () => {
-  it('never reaches over the left pane, so its scrollbar stays fully grabbable', () => {
-    expect(grabStripOffsets().left).toBeGreaterThanOrEqual(0)
+describe('pane divider hit areas', () => {
+  it('the strip never reaches over the left pane, so its scrollbar stays fully grabbable', () => {
+    expect(offsets('before').left).toBeGreaterThanOrEqual(0)
   })
 
-  it('is at least 8px wide, counting the 1px divider', () => {
-    const { left, right } = grabStripOffsets()
-    expect(1 - left - right).toBeGreaterThanOrEqual(8)
+  it('the strip stops short of the right pane’s file icons, so it takes no click from a row', () => {
+    expect(-offsets('before').right).toBeLessThan(ROW_ICON_INSET_PX)
+  })
+
+  it('the foot pad is at least 24 wide, counting the 1px divider, and anchored to the bottom', () => {
+    const { left, right } = offsets('after')
+    expect(1 - left - right).toBeGreaterThanOrEqual(24)
+    expect(ruleOf('after')).toMatch(/bottom:\s*0;/)
+    expect(ruleOf('after')).toMatch(/height:\s*var\(--spacing-xl\);/)
+  })
+
+  it('the foot pad stays inside both status footers’ blank inset', () => {
+    const { left, right } = offsets('after')
+    expect(-left).toBeLessThanOrEqual(FOOTER_INSET_PX)
+    expect(-right).toBeLessThanOrEqual(FOOTER_INSET_PX)
+  })
+})
+
+describe('path segment hit area', () => {
+  it('declares the floor the fit reserves room for', () => {
+    const rule = /\.path :global\(\.path-segment\)\s*\{([^}]*)\}/.exec(filePaneSource)?.[1] ?? ''
+    expect(rule).toContain(`min-width: ${String(SEGMENT_MIN_HIT_WIDTH_PX)}px;`)
+    expect(SEGMENT_MIN_HIT_WIDTH_PX).toBeGreaterThanOrEqual(24)
+  })
+})
+
+describe('dragging the divider', () => {
+  function setup(): { resizer: HTMLElement; onResize: ReturnType<typeof vi.fn>; cleanup: () => void } {
+    const explorer = document.createElement('div')
+    explorer.className = 'dual-pane-explorer'
+    explorer.getBoundingClientRect = () => ({ left: 0, width: 1000 }) as DOMRect
+    document.body.appendChild(explorer)
+    const onResize = vi.fn()
+    const instance = mount(PaneResizer, {
+      target: explorer,
+      props: { onResize, onResizeEnd: () => {}, onReset: () => {} },
+    })
+    flushSync()
+    const resizer = explorer.querySelector<HTMLElement>('.pane-resizer')
+    if (!resizer) throw new Error('resizer not found')
+    resizer.getBoundingClientRect = () => ({ left: 500 }) as DOMRect
+    return {
+      resizer,
+      onResize,
+      cleanup: () => {
+        document.dispatchEvent(new MouseEvent('mouseup'))
+        void unmount(instance)
+        explorer.remove()
+      },
+    }
+  }
+
+  it('keeps the grab offset, so pressing the wide pad off the line doesn’t jump the divider', () => {
+    const { resizer, onResize, cleanup } = setup()
+    resizer.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 510 }))
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 510 }))
+    expect(onResize).toHaveBeenLastCalledWith(50)
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 610 }))
+    expect(onResize).toHaveBeenLastCalledWith(60)
+    cleanup()
+  })
+
+  it('ignores a secondary press, whose context menu would swallow the mouseup and strand the drag', () => {
+    const { resizer, onResize, cleanup } = setup()
+    resizer.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2, clientX: 500 }))
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 600 }))
+    expect(onResize).not.toHaveBeenCalled()
+    cleanup()
   })
 })

@@ -2507,7 +2507,9 @@
        `LinkButton` opts into a pointer).
        The click target is bigger than the text (WCAG 2.5.8): padding grows it to the header's
        full height and 3px into the `/` on each side, and the equal negative margin keeps the
-       layout byte-identical. A one-letter segment is still narrow, but no longer 17px tall. */
+       layout byte-identical. The floor only reaches names up to about three letters, whose
+       text it centers; `SEGMENT_MIN_HIT_WIDTH_PX` in `breadcrumb-fit.ts` has the number's why,
+       and the fit reserves its room. */
     .path :global(.path-segment) {
         font: inherit;
         color: inherit;
@@ -2515,6 +2517,7 @@
         border: none;
         padding: var(--spacing-sm) 3px var(--spacing-xs);
         margin: calc(-1 * var(--spacing-sm)) -3px calc(-1 * var(--spacing-xs));
+        min-width: 26px;
         cursor: default;
     }
 

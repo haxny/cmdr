@@ -316,7 +316,7 @@
     <!-- Before the content though pinned to the corner: focus order follows reading order, and it
          reads on the first line, above any action row (`toast-focus.ts` walks in DOM order). -->
     <button
-        class="toast-close"
+        class="toast-close hit-target"
         onclick={() => {
             onUserDismiss(id)
         }}

@@ -350,7 +350,7 @@
                                 </ShortcutPill>
                             {/if}
                             <button
-                                class="add-shortcut"
+                                class="add-shortcut hit-target"
                                 aria-label={tString('shortcuts.section.addShortcutTooltip')}
                                 use:tooltip={tString('shortcuts.section.addShortcutTooltip')}
                                 onclick={() => {
@@ -361,7 +361,7 @@
                             </button>
                             {#if isModified}
                                 <button
-                                    class="reset-shortcut"
+                                    class="reset-shortcut hit-target"
                                     aria-label={tString('shortcuts.section.resetToDefaultTooltip')}
                                     use:tooltip={tString('shortcuts.section.resetToDefaultTooltip')}
                                     onclick={(e) => {

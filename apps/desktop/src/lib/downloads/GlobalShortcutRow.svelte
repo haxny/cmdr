@@ -190,7 +190,7 @@
         </ShortcutPill>
         {#if isModified}
             <button
-                class="reset-shortcut"
+                class="reset-shortcut hit-target"
                 aria-label={tString('downloads.shortcutRow.resetTooltip')}
                 use:tooltip={tString('downloads.shortcutRow.resetTooltip')}
                 onclick={handleReset}

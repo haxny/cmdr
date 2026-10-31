@@ -164,7 +164,9 @@ come for free):
   pure `navigation/breadcrumb-navigation.ts` (`enrichBreadcrumbSegments`), unit-tested. The current folder (last
   segment), the empty root marker, and search-results panes (whose "path" is a query label) are non-clickable. The path
   fits the bar by middle-truncating its widest segments (`navigation/DETAILS.md`, the `breadcrumb-fit.ts` bullet).
-  Segments draw their focus ring INSIDE (`outline-offset: -2px`): `.path` clips at their hit area's edges.
+  Segments draw their focus ring INSIDE (`outline-offset: -2px`): `.path` clips at their hit area's edges. A clickable
+  segment is at least 26px wide (`SEGMENT_MIN_HIT_WIDTH_PX`, WCAG 2.5.8), so `~` and one-letter folders take a little
+  more room than their text; names past about three letters don't move.
 - **Double-click the empty pane background → parent folder** (Directory Opus-style), gated by
   `behavior.doubleClickPaneNavigatesToParent` (default on). The `ondblclick` lives on the `.file-pane` root (which
   already carries `role="region"`, so no new a11y exposure); `isFileListBackgroundClick` filters to genuine list
@@ -2031,6 +2033,18 @@ and `sameKindIndices(target, entries)` asks a listing snapshot which rows match.
 double-click) move the split from the keyboard and the palette. The divider isn't a Tab stop: `Tab` switches panes.
 `pane-split.ts` holds the rules (`stepSplit`, pure, time injected) and the drag's 25–75% clamp, so `PaneResizer.svelte`
 and the keys can't disagree.
+
+**Decision**: the divider's pointer target (`PaneResizer.svelte`) has two shapes: an 8px strip along its whole height,
+reaching right, and a 24-by-24 pad at its foot, centered on the line. **Why**: WCAG 2.5.8 counts a target that holds a
+24-by-24 square (Understanding 2.5.8, fetched 2026-10-31), and the foot is the only place one fits without taking
+anything: `.selection-info` keeps 12px blank on both sides of the line. A 24px strip along the list would sit over the
+left pane's scrollbar (10px) or the right pane's file icons (they start 12px in), which also swallows their wheel,
+tooltips, and hover. A pane with no footer (Servers, an error) has its bottom 24px under the pad, reaching no further
+than its own 12px gutter.
+
+What else looks at those areas: `drag/drop-target-hit-testing.ts` hit-tests past them, or a drop on the right pane's
+gutter would land on the resizer and do nothing; the drag keeps its grab offset, so a press on the pad doesn't jump the
+line. The wheel still stops at the 8px strip (known, small).
 
 - **Acceleration**: the first step is 1%, then ×1.5 per press up to 8%, while the key is held (auto-repeat) or tapped
   within 150 ms of the previous press. A slower re-press, or the other direction, starts at 1% again.

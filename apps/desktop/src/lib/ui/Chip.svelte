@@ -193,7 +193,7 @@
           activate doesn't also fire.
         -->
         <span
-            class="chip-clear"
+            class="chip-clear hit-target"
             aria-hidden="true"
             onmousedown={handleClearClick}
         >×</span>

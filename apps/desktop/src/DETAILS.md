@@ -98,7 +98,7 @@ Seven sheets, all global (no Svelte scoping). Who owns what:
 - `app-field.css`: the `.text-field*` chrome behind `lib/ui/TextInput.svelte` and `lib/ui/TextArea.svelte`. Nothing else
   may use those classes.
 - `app-utilities.css`: class-per-value utilities applied via class bindings (`.size-*` size tiers, `.age-*` date ages,
-  `.spinner*`).
+  `.spinner*`), plus `.hit-target`, a small control's unpainted 24-by-24 hit box (WCAG 2.5.8).
 - `app-tooltip.css`: `.cmdr-tooltip`, the singleton element the tooltip action creates.
 - `app-file-list.css`: the `.file-entry` row chrome that `FullList.svelte` and `BriefList.svelte` share (stripe,
   selection fill, selected-row hairline, the marked-file bar and text stroke, cursor fill and outline, the unfocused

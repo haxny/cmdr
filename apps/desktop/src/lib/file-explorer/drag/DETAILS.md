@@ -74,7 +74,8 @@ Uses Tauri 2's `onDragDropEvent` (window-level) with DOM hit-testing to resolve 
 
 Key files:
 
-- `drop-target-hit-testing.ts`: Pure logic: `document.elementFromPoint()` + `data-drop-target-path` walk
+- `drop-target-hit-testing.ts`: Pure logic: `document.elementsFromPoint()` (past the pane divider's unpainted grab
+  areas) + `data-drop-target-path` walk
 - `drop-target-validation.ts`: Pure logic: blocks drops onto the source itself or into a descendant
 - `drag-auto-scroll.ts`: Pure edge-band math for native drag auto-scroll. Full mode passes `axis: 'vertical'`; Brief
   mode passes `axis: 'horizontal'`.

@@ -455,10 +455,9 @@ const wcagAA: CriterionRow[] = [
     id: '2.5.8',
     name: 'Target size (minimum)',
     level: 'AA',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      'Column headers, the function key bar, the new-tab button, and the tab close button are at least 24 by 24 pixels. The small arrow beside the date column header opens a menu that a right-click anywhere on the header also opens. Path segments above the file list take the full height of their bar, but a folder with a one-letter name is still a narrow target, and the divider between the panes is 8 pixels wide.',
-    issues: [817],
+      "Column headers, the function key bar, the new-tab button, the tab close button, and the small buttons that clear a field or dismiss a notification are at least 24 by 24 pixels. Path segments above the file list take the full height of their bar and are at least 24 pixels wide, even for a folder with a one-letter name. The divider between the panes has a 24 by 24 pixel grab area at its bottom end, beside the status bar; along the file list it stays 8 pixels wide so it doesn't cover files or the scroll bar. The small arrow beside the date column header opens a menu that a right-click anywhere on the header also opens, and the drag handle on a queue row moves it the way that row's right-click menu does.",
   },
   {
     id: '3.1.2',
@@ -546,10 +545,9 @@ const section508Ch3: CriterionRow[] = [
   {
     id: '302.7',
     name: 'With limited manipulation',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      'Everything core works from the keyboard with remappable shortcuts, reordering and moving tabs included, and no shortcut needs more than modifiers plus one key, so Sticky Keys works. A few click targets are still smaller than 24 pixels: a path segment with a one-letter folder name, and the divider between the panes.',
-    issues: [817],
+      'Everything core works from the keyboard with remappable shortcuts, reordering and moving tabs included, and no shortcut needs more than modifiers plus one key, so Sticky Keys works. Click targets are at least 24 by 24 pixels; see WCAG 2.5.8.',
   },
   {
     id: '302.8',
@@ -791,9 +789,8 @@ const enClause4: CriterionRow[] = [
   {
     id: '4.2.7',
     name: 'Usage with limited manipulation or strength',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark: 'See Section 508 302.7.',
-    issues: [817],
   },
   {
     id: '4.2.8',
@@ -1099,8 +1096,4 @@ export const gapIssues: { number: number; title: string }[] = [
       'By default, the focused-pane cues, some focus rings, and the optional App date and size colors are under 3:1 contrast',
   },
   { number: 452, title: 'Hidden files differ from other files only by a dimmer color' },
-  {
-    number: 817,
-    title: 'A few click targets are still under 24 pixels: one-letter path segments and the pane divider',
-  },
 ]

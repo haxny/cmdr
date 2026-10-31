@@ -27,6 +27,7 @@
     import {
         computePathPillsLayout,
         PILL_CHROME_PX,
+        PILL_MIN_WIDTH_PX,
         PILL_SEPARATOR_GAP_PX,
         scheduleStableWidthMeasure,
         splitPath,
@@ -89,6 +90,7 @@
             measureWidth,
             separatorWidth: measureWidth ? measureWidth('/') + PILL_SEPARATOR_GAP_PX : 0,
             pillChrome: PILL_CHROME_PX,
+            pillMinWidth: PILL_MIN_WIDTH_PX,
         }),
     )
 
@@ -227,6 +229,10 @@
         min-width: 0;
         width: 100%;
         overflow: hidden;
+        /* Padding in, equal negative margin out, so nothing moves: `overflow: hidden` clips at
+           the padding box, and the pills' hit areas need that room. */
+        padding-block: var(--spacing-xxs);
+        margin-block: calc(-1 * var(--spacing-xxs));
     }
 
     .sep {
@@ -245,6 +251,10 @@
         /* Trimmed horizontal padding so the larger font doesn't blow the column;
            vertical padding stays at 0 since the row padding handles vertical rhythm. */
         padding: 0 var(--spacing-xxs);
+        /* WCAG 2.5.8, and `PILL_MIN_WIDTH_PX` in the layout: a one-letter folder is still 24 wide. */
+        min-width: var(--spacing-xl);
+        position: relative;
+        text-align: center;
         border-radius: var(--radius-sm);
         font-size: var(--font-size-md);
         font-family: inherit;
@@ -255,6 +265,14 @@
         transition:
             background var(--transition-base),
             color var(--transition-base);
+    }
+
+    /* The unpainted part of the hit area: up into the row's padding, so a pill is as tall as its
+       row while its hover fill stays the text's height. */
+    .pill::before {
+        content: '';
+        position: absolute;
+        inset: calc(-1 * var(--spacing-xxs)) 0;
     }
 
     .pill:hover {

@@ -94,7 +94,7 @@
 >
     {#snippet trailing()}
         <button
-            class="reveal-toggle"
+            class="reveal-toggle hit-target"
             type="button"
             onclick={toggleReveal}
             {disabled}

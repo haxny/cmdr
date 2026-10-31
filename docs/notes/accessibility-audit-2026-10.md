@@ -38,11 +38,11 @@ downloaded INT `.docx` (itic.org, `VPAT2.5RevINT`).
 Counts per table (rows marked "see WCAG section" aren't counted):
 
 - **WCAG 2.2 Level A (32)**: 24 Supports, 2 Partially supports, 0 Does not support, 6 Not applicable.
-- **WCAG 2.2 Level AA (24)**: 13 Supports, 6 Partially supports, 0 Does not support, 5 Not applicable.
-- **Section 508 chapter 3 (9)**: 5 Supports, 4 Partially supports.
+- **WCAG 2.2 Level AA (24)**: 14 Supports, 5 Partially supports, 0 Does not support, 5 Not applicable.
+- **Section 508 chapter 3 (9)**: 6 Supports, 3 Partially supports.
 - **Section 508 chapter 5 (26)**: 13 Supports, 3 Partially supports, 10 Not applicable.
 - **Section 508 chapter 6 (5)**: 4 Supports, 1 Not applicable.
-- **EN 301 549 clause 4 (11)**: 7 Supports, 4 Partially supports.
+- **EN 301 549 clause 4 (11)**: 8 Supports, 3 Partially supports.
 - **EN 301 549 clause 5 (11)**: 2 Supports, 9 Not applicable.
 - **EN 301 549 clause 11 (19)**: 12 Supports, 3 Partially supports, 4 Not applicable.
 - **EN 301 549 clause 12 (5)**: 5 Supports.
@@ -79,9 +79,8 @@ Top gaps, each with its issue:
    color alone (#452), and the default focus ring is under 3:1 with yellow, orange, green, or Cmdr gold in light mode
    (kept on purpose: VoiceOver draws its own ring; the ink ring is the Increase contrast tier). The default-contrast
    items are #454.
-5. **Pointer and keyboard leftovers** (#441, mostly closed in code 2026-10-15): tab reorder was drag-only, sub-24px
-   targets, tooltips not hoverable, viewer bare-key shortcuts not remappable, zoom topped out at 150%. Left: a
-   one-letter breadcrumb segment and the pane divider are still narrower than 24 px.
+5. **Pointer and keyboard leftovers** (#441, closed in code 2026-10-15; #817, 2026-10-31): tab reorder was drag-only,
+   sub-24px targets, tooltips not hoverable, viewer bare-key shortcuts not remappable, zoom topped out at 150%.
 6. **Quick fixes** (#442, closed in code 2026-10-15): Reduce motion misses, hard-coded English labels and window titles,
    a missing `lang`, a missing `autocomplete`, badges without text, no queue window a11y test.
 7. **No accessibility documentation** (#443, drafted 2026-10-15 at `/trust/accessibility-guide`, awaiting David's
@@ -318,15 +317,24 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   (Move up, Move down). Moving a dialog by its title bar has no alternative, and needs none: its position does nothing.
   Evidence: `PaneResizer.svelte`, `commands/sources/main-window.ts`, `pane/tab-operations.ts`,
   `file-operations/queue/DETAILS.md` § Dragging to reorder.
-- **2.5.8 Target size (minimum)**: Partially supports. Sort headers, function-key bar, the new-tab button, and since
-  #441 (2026-10-15) the tab close button (an unpainted 24×24 `::before`) meet 24×24 px. Breadcrumb segments now span the
-  header's full height (about 29 px at 100%) and 3 px into each `/`, but a one-letter segment is about 13 px wide next
-  to its neighbors; the pane divider's grab strip is 8 px. New in 0.57.0, both under 24 px wide but meeting the
-  "equivalent" exception: the Full date header's Sort by chevron (`views/DateSortChevron.svelte`, 20 px wide, the
-  header's 26 px tall), whose menu a right-click anywhere on the header row also opens; and the queue row's drag grip
-  (14 px, `aria-hidden`), whose moves the full-row right-click menu also makes. Evidence: `TabBar.svelte`,
-  `FilePane.svelte` `.path-segment`, `PaneResizer.svelte`, `FullListHeader.svelte` (header height),
-  `file-operations/queue/QueueRow.svelte` `.grip`. #817.
+- **2.5.8 Target size (minimum)**: Supports (#817, 2026-10-31). Sort headers, function-key bar, the new-tab button, and
+  the tab close button (an unpainted 24×24 `::before`) meet 24×24 px. Breadcrumb segments span the header's full height
+  (about 29 px at 100%) with a 26 px floor (`breadcrumb-fit.ts` says why 26), so `~` and one-letter folders hold a 24 px
+  square clear of their neighbors. The pane divider holds one too, at its foot: W3C's Understanding page counts a target
+  when "a solid 24 by 24 CSS pixel square" fits in it (fetched 2026-10-31), so the divider is 24×24 there, in the
+  footers' blank inset, and stays an 8 px strip along the list, where 24 px would cover file icons or the left pane's
+  scrollbar (`pane/DETAILS.md` § Pane divider from the keyboard). A static sweep of the app's `.svelte` styles
+  (2026-10-31, selectors naming a control with an explicit width under 24 px) found more, now closed: the × and `+` and
+  reset on Settings shortcuts, the password reveal, the Settings search clear, a toast's ×, a filter chip's ×
+  (`.hit-target` in `app-utilities.css`, unpainted), the Ask Cmdr rail's resize edge (a 24×24 pad over the header's
+  padding and glyph), and a resizable dialog's corners (24×24, reaching outward). Search path pills have a 24 px floor
+  and take their row's height, 23.6 px at 100%, which the "inline" exception covers: the row's line height sets it. Two
+  under 24 px wide meet the "equivalent" exception: the Full date header's Sort by chevron
+  (`views/DateSortChevron.svelte`, 20 px wide, the header's 26 px tall), whose menu a right-click anywhere on the header
+  row also opens; and the queue row's drag grip (14 px, `aria-hidden`), whose moves the full-row right-click menu also
+  makes. Evidence: `TabBar.svelte`, `FilePane.svelte` `.path-segment`, `PaneResizer.svelte`, `FullListHeader.svelte`
+  (header height), `file-operations/queue/QueueRow.svelte` `.grip`. Not measured in a running app; the sweep can't see a
+  size that comes from padding or a token, so a re-evaluation should measure real targets.
 - **3.1.2 Language of parts**: Supports. The language picker lists each language in its own name, with a per-option
   `lang` on the row and on the trigger while selected (#442, 2026-10-15). Evidence: `intl/locale-display-names.ts`,
   `settings/definitions/appearance.ts` `languageOptions()`, `ui/Select.svelte`.
@@ -377,10 +385,10 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **302.4 Without hearing**: Supports. Cmdr uses no audio cues.
 - **302.5 With limited hearing**: Supports. Same as 302.4.
 - **302.6 Without speech**: Supports. No speech input needed.
-- **302.7 With limited manipulation**: Partially supports. Full keyboard operation with rebindable shortcuts and no
+- **302.7 With limited manipulation**: Supports. Full keyboard operation with rebindable shortcuts and no
   simultaneous-key requirement beyond modifiers (Sticky Keys works). Toast actions are reachable with "Move focus to the
-  notifications" (#439, 2026-10-15), and tabs reorder and move from the keyboard (#441, 2026-10-15). A one-letter
-  breadcrumb segment and the pane divider are still under 24 px. #817.
+  notifications" (#439, 2026-10-15), and tabs reorder and move from the keyboard (#441, 2026-10-15). Click targets: see
+  2.5.8.
 - **302.8 With limited reach and strength**: Supports. Software only; no physical reach.
 - **302.9 With limited language, cognitive, and learning abilities**: Supports. Plain, conversational copy
   (`docs/style-guide.md`), confirmations, undo and rollback, consistent menus, and a setting that keeps toasts until
@@ -477,7 +485,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **4.2.4 Usage without hearing**: Supports. No audio.
 - **4.2.5 Usage with limited hearing**: Supports. No audio.
 - **4.2.6 Usage with no or limited vocal capability**: Supports. No speech input.
-- **4.2.7 Usage with limited manipulation or strength**: Partially supports. See 508 302.7. #817.
+- **4.2.7 Usage with limited manipulation or strength**: Supports. See 508 302.7.
 - **4.2.8 Usage with limited reach**: Supports. Software only.
 - **4.2.9 Minimize photosensitive seizure triggers**: Supports. See WCAG 2.3.1.
 - **4.2.10 Usage with limited cognition, language or learning**: Supports. See 508 302.9.
@@ -674,11 +682,12 @@ Not changed, no re-hear needed: V7, V8, V10, and V12.
 
 ### After 0.57.0 (2026-10-31, on `main`)
 
-`report.version` still says 0.57.0, but #824's level changes describe the next release, so the page is ahead of the
-shipped build until then:
+`report.version` still says 0.57.0, but #824's and #817's level changes describe the next release, so the page is ahead
+of the shipped build until then:
 
 - **2.1.1, 4.1.2, 502.3.1, 11.5.2.5**: Partially supports → Supports. 302.1 and 4.2.1 lose #824 and stay "Partially
   supports" for #451.
+- **2.5.8, 302.7, 4.2.7**: Partially supports → Supports (#817).
 
 ## How to re-evaluate
 

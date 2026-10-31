@@ -559,8 +559,10 @@ Chip-side behaviors live in `filter-chips/CLAUDE.md`; search-specific ones in `l
 
 The fitting algorithm lives in `path-pills-layout.ts::computePathPillsLayout` (pure, deterministic, unit-tested with
 mocked widths). The chrome budget per pill is 4 px (matching the real CSS padding) so the strip doesn't collapse when
-there's free space. The container width comes from a `ResizeObserver` on the strip element, and `createPretextMeasure`
-provides pixel-accurate text widths.
+there's free space, and a pill is never counted narrower than `PILL_MIN_WIDTH_PX` (24, the `.pill` floor for WCAG 2.5.8,
+which one-letter folders hit). An unpainted `::before` makes each pill as tall as its row (about 24 px at 100%) while
+its hover fill stays the text's height. The container width comes from a `ResizeObserver` on the strip element, and
+`createPretextMeasure` provides pixel-accurate text widths.
 
 ## Keyboard shortcuts (in-dialog, hard-coded)
 
