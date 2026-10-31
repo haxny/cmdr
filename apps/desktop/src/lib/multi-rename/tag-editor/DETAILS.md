@@ -180,16 +180,19 @@ tags… (`file.editTags`, ⌘⇧E) over the focused pane's selection, or the Mul
   (`tags.edit`) and ⇧F2 (`tags.editNumber`) open `TagValueEditor` over the cell, placed from the cell's box in the
   scroller (`pane-cursor.ts`'s `editorBox`), re-placed when the scroller resizes, and scrolled into view on open so a
   multiline box at the pane's foot isn't cut off. Enter commits, Esc cancels (claimed, so it never closes the window), a
-  click away commits, ⌥Enter adds a line in Comment and Description. A text the row can't send (`sharedEditBlock`: the
-  «multiple values» marker or the «…and N more» tail still in it) keeps the box open with a hint saying what to delete,
-  on Enter, ⌘S and a click away alike (the box takes focus back, so the typing is never dropped without a word; Esc
-  gives it up). The hint follows the typing, goes once the text can be sent, and is scrolled into view when it appears.
-  Case, Replace and Clear take the Album cursor row's field while that pane is active, the Tracks pane's active cell (#
-  after ←, else Title) while that one is, none once focus leaves both. Delete and ⌘X on a Tracks row act on every
-  selected row when the cursor row is one of them, as ⌘V does (`cursorTracks`), else on the cursor row. ⌘A / ⌘⇧A: Select
-  all and Deselect all are registered accelerators that fire before the page sees the key, so `menu_handlers.rs` sends
-  `tags-select-all` / `tags-deselect-all` to the focused `tags-*` window (`focused_tags_window`); `TagsWindow` selects
-  the text of a text box with focus (never a checkbox), else every track, and clears the track selection.
+  click away commits, ⌥Enter adds a line in Comment and Description. A value too long for its cell (cut with …, or
+  holding a line break) opens instead as a large wrapping panel (`large`, `needsLargeEditor`): 8 rows, the keys named
+  under it, same keys (Enter saves, ⌥Enter a line in Comment and Description only, Esc cancels); a short value, and a
+  typed-character start, keep the cell-sized box. A text the row can't send (`sharedEditBlock`: the «multiple values»
+  marker or the «…and N more» tail still in it) keeps the box open with a hint saying what to delete, on Enter, ⌘S and a
+  click away alike (the box takes focus back, so the typing is never dropped without a word; Esc gives it up). The hint
+  follows the typing, goes once the text can be sent, and is scrolled into view when it appears. Case, Replace and Clear
+  take the Album cursor row's field while that pane is active, the Tracks pane's active cell (# after ←, else Title)
+  while that one is, none once focus leaves both. Delete and ⌘X on a Tracks row act on every selected row when the
+  cursor row is one of them, as ⌘V does (`cursorTracks`), else on the cursor row. ⌘A / ⌘⇧A: Select all and Deselect all
+  are registered accelerators that fire before the page sees the key, so `menu_handlers.rs` sends `tags-select-all` /
+  `tags-deselect-all` to the focused `tags-*` window (`focused_tags_window`); `TagsWindow` selects the text of a text
+  box with focus (never a checkbox), else every track, and clears the track selection.
 - **⌘X / ⌘C / ⌘V on a field**: Edit > Cut, Copy and Paste go to the focused `tags-*` window as `tags-clipboard`
   (`TagsContent.clipboard`, `tags-clipboard.ts`). A focused text box, or focus in the cover section, gets the same
   action back as the native `cut:` / `copy:` / `paste:` (`tagsNativeEdit`), so the box's own clipboard and its typing

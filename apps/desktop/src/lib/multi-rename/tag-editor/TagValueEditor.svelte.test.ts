@@ -199,4 +199,65 @@ describe('TagValueEditor looks like the cell', () => {
     expect(media).toBeGreaterThan(-1)
     expect(style.indexOf('animation:')).toBeGreaterThan(media)
   })
+
+  describe('the large panel (a value too long for its cell)', () => {
+    async function mountLarge(multiline: boolean, value = 'Long text '.repeat(40)) {
+      const onCommit = vi.fn()
+      const onClose = vi.fn()
+      const mounted = await mountInto(TagValueEditor, {
+        value,
+        ariaLabel: 'Comment',
+        multiline,
+        large: true,
+        place: { top: 10, left: 5, width: 200, height: 20 },
+        onCommit,
+        onClose,
+      })
+      cleanup = mounted.cleanup
+      const area = mounted.root.querySelector<HTMLTextAreaElement>('textarea')
+      if (!area) throw new Error('no textarea')
+      return { mounted, area, onCommit, onClose }
+    }
+
+    it('shows the whole text in a wrapping textarea that is taller than the cell, and names its keys', async () => {
+      const { mounted, area } = await mountLarge(true)
+      expect(area.classList.contains('large')).toBe(true)
+      expect(area.getAttribute('rows')).toBe('8')
+      expect(area.style.minHeight).toBe('')
+      expect(area.value).toBe('Long text '.repeat(40))
+      const keys = mounted.root.querySelector('.tag-value-keys')
+      expect(keys?.textContent).toContain('⌥Enter')
+      expect(area.getAttribute('aria-describedby')).toContain(keys?.id ?? 'missing')
+      const rule =
+        /\.tag-value-editor\.large \{[^}]*\}/.exec(editorSource.slice(editorSource.indexOf('<style>')))?.[0] ?? ''
+      expect(rule).toContain('white-space: pre-wrap')
+    })
+
+    it('Enter saves, ⌥Enter adds a line in a Comment, Esc cancels', async () => {
+      const { area, onCommit, onClose } = await mountLarge(true, 'abc')
+      area.setSelectionRange(3, 3)
+      await press(area, 'Enter', { altKey: true })
+      expect(area.value).toBe('abc\n')
+      expect(onCommit).not.toHaveBeenCalled()
+      await press(area, 'Enter')
+      expect(onCommit).toHaveBeenCalledWith('abc\n')
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+
+    it('a long one-line field never takes a line break: ⌥Enter does nothing, the keys line omits it', async () => {
+      const { mounted, area } = await mountLarge(false, 'abc')
+      area.setSelectionRange(3, 3)
+      await press(area, 'Enter', { altKey: true })
+      expect(area.value).toBe('abc')
+      expect(mounted.root.querySelector('.tag-value-keys')?.textContent).not.toContain('⌥')
+    })
+
+    it('Esc closes without sending', async () => {
+      const { area, onCommit, onClose } = await mountLarge(true, 'abc')
+      await typeInto(area, 'changed')
+      await press(area, 'Escape')
+      expect(onCommit).not.toHaveBeenCalled()
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+  })
 })

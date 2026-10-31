@@ -34,4 +34,29 @@ describe('TagValueEditor a11y', () => {
     cleanup = mounted.cleanup
     await expectNoA11yViolations(mounted.root)
   })
+
+  it('the large panel for a long Comment, with its keys named, has no violations', async () => {
+    const mounted = await mountInto(TagValueEditor, {
+      value: 'A long comment. '.repeat(30),
+      ariaLabel: 'Comment for all files',
+      multiline: true,
+      large: true,
+      onCommit: () => {},
+      onClose: () => {},
+    })
+    cleanup = mounted.cleanup
+    await expectNoA11yViolations(mounted.root)
+  })
+
+  it('the large panel for a long one-line value has no violations', async () => {
+    const mounted = await mountInto(TagValueEditor, {
+      value: 'A very long title '.repeat(20),
+      ariaLabel: 'Title',
+      large: true,
+      onCommit: () => {},
+      onClose: () => {},
+    })
+    cleanup = mounted.cleanup
+    await expectNoA11yViolations(mounted.root)
+  })
 })

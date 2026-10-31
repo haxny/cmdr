@@ -15,6 +15,7 @@
      */
     import { onMount, tick, untrack } from 'svelte'
     import { getAppLogger } from '#lib/logging/logger.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
     import type { EditorPlace } from './pane-cursor'
@@ -29,7 +30,14 @@
          */
         seed?: string
         ariaLabel: string
+        /** ⌥Enter adds a line (Comment, Description). */
         multiline?: boolean
+        /**
+         * The value is long (it doesn't fit its cell, or already has line breaks): a larger wrapping panel with the
+         * keys named under it, instead of a box the size of the cell. Enter still saves; ⌥Enter adds a line only
+         * when `multiline`.
+         */
+        large?: boolean
         invalid?: boolean
         describedBy?: string
         /** Where the box sits over its row, in the scroller's coordinates. */
@@ -51,6 +59,7 @@
         seed,
         ariaLabel,
         multiline = false,
+        large = false,
         invalid = false,
         describedBy,
         place,
@@ -62,6 +71,8 @@
     const log = getAppLogger('tagEditor')
     const uid = $props.id()
     const hintId = `${uid}-hint`
+    const keysId = `${uid}-keys`
+    const tall = $derived(multiline || large)
 
     let draft = $state(untrack(() => seed ?? value))
     let box = $state<HTMLInputElement | HTMLTextAreaElement>()
@@ -71,7 +82,9 @@
     /** The box opened empty for a dead key and nothing was typed: closing it sends nothing (it never clears the row). */
     let untouched = untrack(() => seed === '')
 
-    const describedByAll = $derived([describedBy, hint === null ? undefined : hintId].filter(Boolean).join(' ') || undefined)
+    const describedByAll = $derived(
+        [describedBy, large ? keysId : undefined, hint === null ? undefined : hintId].filter(Boolean).join(' ') || undefined,
+    )
 
     /** Brings the whole frame (box and hint) into the scroller's view. jsdom has no `scrollIntoView`. */
     function reveal(): void {
@@ -198,22 +211,24 @@
 <div
     bind:this={frame}
     class="tag-value-frame"
+    class:large
     style:top={place ? `${String(place.top)}px` : undefined}
     style:left={place ? `${String(place.left)}px` : undefined}
     style:width={place ? `${String(place.width)}px` : undefined}
 >
-    {#if multiline}
+    {#if tall}
         <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- laid over a pane row like the inline rename field: it takes the row's font and box, which the framed `TextArea` (its padding, radius, ring) can't. -->
         <textarea
             bind:this={box}
             bind:value={draft}
             {id}
             class="tag-value-editor multiline"
-            style:min-height={place ? `${String(place.height)}px` : undefined}
+            class:large
+            style:min-height={place && !large ? `${String(place.height)}px` : undefined}
             aria-label={ariaLabel}
             aria-invalid={invalid ? 'true' : undefined}
             aria-describedby={describedByAll}
-            rows={4}
+            rows={large ? 8 : 4}
             {onkeydown}
             {oninput}
             {onblur}
@@ -234,6 +249,11 @@
             {oninput}
             {onblur}
         />
+    {/if}
+    {#if large}
+        <p class="tag-value-keys" id={keysId}>
+            {tString(multiline ? 'multiRename.tags.editor.largeKeysLine' : 'multiRename.tags.editor.largeKeys')}
+        </p>
     {/if}
     {#if hint !== null}
         <p class="tag-value-hint" id={hintId} role="status">{hint}</p>
@@ -295,6 +315,32 @@
 
     .tag-value-editor[aria-invalid='true'] {
         box-shadow: inset 0 0 0 1px var(--color-error), inset 0 0 6px 1px var(--color-error);
+    }
+
+    /* The long-value panel: it wraps the whole text, stands off the rows under it, and names its keys. */
+    .tag-value-frame.large {
+        z-index: 2;
+        padding-bottom: 0;
+        background: var(--color-bg-primary);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-tooltip), 0 0 0 1px var(--color-border-strong);
+    }
+
+    .tag-value-editor.large {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        line-height: var(--font-line-height-normal);
+        overflow-y: auto;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    .tag-value-keys {
+        margin: 0;
+        padding: var(--spacing-xxs) var(--spacing-sm);
+        color: var(--color-text-secondary);
+        font-size: var(--font-size-sm);
+        line-height: var(--font-line-height-normal);
+        white-space: normal;
     }
 
     .tag-value-hint {

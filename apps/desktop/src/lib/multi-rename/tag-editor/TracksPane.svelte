@@ -23,7 +23,7 @@
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Checkbox from '#lib/ui/Checkbox.svelte'
     import { useScrollBoxSize, type ScrollBoxSize } from '#lib/utils/scroll-box-size-action.js'
-    import { editorBox, onResize, paneCursorMove, revealRow, visibleRowCount, type EditorPlace } from './pane-cursor'
+    import { editorBox, needsLargeEditor, onResize, paneCursorMove, revealRow, visibleRowCount, type EditorPlace } from './pane-cursor'
     import './tag-pane.css'
     import { formatTrackLength, parseFieldText, trackCellValue } from './shared-field-input'
     import TagValueEditor from './TagValueEditor.svelte'
@@ -142,7 +142,7 @@
     /** The cells ← / → step through: # (not in a single-file book), Disc, Title. */
     const cells = $derived<EditedField[]>(showNumber ? ['track', 'disc', 'title'] : ['disc', 'title'])
     const activeCell = $derived<EditedField>(cells.includes(cell) ? cell : 'title')
-    let editing = $state<{ path: string; field: EditedField; place: EditorPlace; seed?: string } | null>(null)
+    let editing = $state<{ path: string; field: EditedField; place: EditorPlace; seed?: string; large: boolean } | null>(null)
     const edited = $derived(editing === null ? undefined : tracks.find((track) => track.path === editing?.path))
 
     /** Gives the pane focus (Tab from the other pane). */
@@ -212,7 +212,12 @@
         const track = tracks.at(index)
         const place = placeAt(index, field)
         if (!canEdit(track) || place === null) return
-        editing = { path: track.path, field, place, seed }
+        const cell = list?.querySelector<HTMLElement>(
+            `[data-index="${String(index)}"] [data-col="${CELL_COLUMN[field]}"]`,
+        )
+        const large =
+            seed === undefined && cell !== undefined && cell !== null && needsLargeEditor(cell, trackCellValue(track, field))
+        editing = { path: track.path, field, place, seed, large }
     }
 
     // A resize reflows the flexing Title column: the open editor follows its cell.
@@ -467,6 +472,7 @@
                 seed={editing.seed}
                 ariaLabel={tString(EDITOR_LABELS[field], { fileName: track.fileName })}
                 place={editing.place}
+                large={editing.large}
                 onCommit={(text: string) => commit(track.path, field, text)}
                 onClose={closeEditor}
             />

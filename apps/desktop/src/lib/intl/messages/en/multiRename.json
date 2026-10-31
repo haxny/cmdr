@@ -1685,6 +1685,14 @@
   "@multiRename.tags.editFailed": {
     "description": "Shown in the tag editor window when an edit to a tag couldn't be applied. Nothing was changed."
   },
+  "multiRename.tags.editor.largeKeys": "Enter saves, Esc cancels.",
+  "@multiRename.tags.editor.largeKeys": {
+    "description": "Line under the large text panel that opens in the tag editor window when you edit a value too long for its cell (for example a long Title). Lists the keys: Enter saves the text to the tags, Esc closes the panel without saving. Keep the key names as they are on the keyboard (Enter, Esc)."
+  },
+  "multiRename.tags.editor.largeKeysLine": "Enter saves, ⌥Enter adds a line, Esc cancels.",
+  "@multiRename.tags.editor.largeKeysLine": {
+    "description": "Line under the large text panel that opens in the tag editor window when you edit a long Comment or Description. Lists the keys: Enter saves the text to the tags, Option+Enter (⌥Enter) starts a new line in the text, Esc closes the panel without saving. Keep the key names and the ⌥ symbol as they are on the keyboard."
+  },
   "multiRename.tags.discard.title": "Discard tag changes?",
   "@multiRename.tags.discard.title": {
     "description": "Title of the question asked when closing Multi-Rename (or pressing Rename) while tag edits in the tag editor window have not been written to the files yet."

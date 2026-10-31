@@ -21,7 +21,7 @@
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Button from '#lib/ui/Button.svelte'
     import { FIELD_LABELS } from './field-labels'
-    import { editorBox, onResize, paneCursorMove, revealRow, visibleRowCount, type EditorPlace } from './pane-cursor'
+    import { editorBox, needsLargeEditor, onResize, paneCursorMove, revealRow, visibleRowCount, type EditorPlace } from './pane-cursor'
     import './tag-pane.css'
     import { formatFieldValue, isMultiLineField, multipleText, parseSharedEdit, sharedEditHint } from './shared-field-input'
     import { useScrollBoxSize, type ScrollBoxSize } from '#lib/utils/scroll-box-size-action.js'
@@ -129,7 +129,7 @@
     const measureScroller = (box: ScrollBoxSize) => {
         scrollbarWidth = Math.max(0, box.offsetWidth - box.clientWidth)
     }
-    let editing = $state<{ field: TagField; place: EditorPlace; seed?: string } | null>(null)
+    let editing = $state<{ field: TagField; place: EditorPlace; seed?: string; large: boolean } | null>(null)
     const edited = $derived(editing === null ? undefined : shown.find((row) => row.field === editing?.field))
 
     /** Gives the pane focus (Tab from the other pane). */
@@ -164,7 +164,10 @@
         const row = shown.at(index)
         const place = placeAt(index)
         if (!editable || row === undefined || place === null) return
-        editing = { field: row.field, place, seed }
+        const cell = list?.querySelector<HTMLElement>(`[data-index="${String(index)}"] .col-value`)
+        // A typed character starts a fresh text, so only an opened value that is long gets the large panel.
+        const large = seed === undefined && cell !== undefined && cell !== null && needsLargeEditor(cell, row.text)
+        editing = { field: row.field, place, seed, large }
     }
 
     // A resize reflows the flexing Value column: the open editor follows its cell.
@@ -294,6 +297,7 @@
                 seed={editing.seed}
                 ariaLabel={editLabel(row.label)}
                 multiline={isMultiLineField(row.field)}
+                large={editing.large}
                 invalid={row.invalid}
                 describedBy={row.invalid ? DATE_HINT_ID : undefined}
                 place={editing.place}

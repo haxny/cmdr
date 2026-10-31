@@ -106,3 +106,11 @@ export function revealRow(list: HTMLElement | undefined, index: number): void {
   // jsdom has no `scrollIntoView`; the tests run there.
   if (row && typeof row.scrollIntoView === 'function') row.scrollIntoView({ block: 'nearest' })
 }
+
+/**
+ * Whether a cell's value is too long for the one-line editor: it is cut with … (its text is wider than the cell), or
+ * it already holds a line break. Such a value opens in the large wrapping panel (`TagValueEditor`'s `large`).
+ */
+export function needsLargeEditor(cell: HTMLElement, text: string): boolean {
+  return text.includes('\n') || cell.scrollWidth > cell.clientWidth
+}

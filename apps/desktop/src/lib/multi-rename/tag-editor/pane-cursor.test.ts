@@ -1,6 +1,6 @@
 /** A pane's cursor keys: bare keys move, ⇧ also extends, and a move that hits an end says so (overflow). */
 import { describe, expect, it } from 'vitest'
-import { editorBox, paneCursorMove } from './pane-cursor'
+import { editorBox, needsLargeEditor, paneCursorMove } from './pane-cursor'
 
 const key = (k: string, init: KeyboardEventInit = {}) => new KeyboardEvent('keydown', { key: k, ...init })
 
@@ -91,5 +91,23 @@ describe('editorBox', () => {
 
   it('keeps a squeezed column wide enough to type in', () => {
     expect(boxes(0, 0, rect(30, 70, 8, 22)).width).toBe(40)
+  })
+})
+
+describe('needsLargeEditor', () => {
+  const cell = (scrollWidth: number, clientWidth: number): HTMLElement => {
+    const el = document.createElement('span')
+    Object.defineProperty(el, 'scrollWidth', { value: scrollWidth })
+    Object.defineProperty(el, 'clientWidth', { value: clientWidth })
+    return el
+  }
+
+  it('is true for a value cut with … and for one holding a line break', () => {
+    expect(needsLargeEditor(cell(400, 120), 'long')).toBe(true)
+    expect(needsLargeEditor(cell(100, 100), 'a\nb')).toBe(true)
+  })
+
+  it('is false for a short value, so it stays on one line', () => {
+    expect(needsLargeEditor(cell(100, 100), 'short')).toBe(false)
   })
 })
