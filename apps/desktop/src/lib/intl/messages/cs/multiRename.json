@@ -3,7 +3,7 @@
   "@multiRename.title": {
     "sourceHash": "5ceb1a2"
   },
-  "multiRename.noFileSelected": "No file selected",
+  "multiRename.noFileSelected": "Není vybraný žádný soubor",
   "@multiRename.noFileSelected": {
     "sourceHash": "26bfbd5"
   },
@@ -195,31 +195,31 @@
   "@multiRename.preset.normalizeUnicode": {
     "sourceHash": "6e1c97e"
   },
-  "multiRename.preset.foobarAuthorYearAlbumTrack": "Author - (year) Album - track",
+  "multiRename.preset.foobarAuthorYearAlbumTrack": "Autor - (rok) Album - stopa",
   "@multiRename.preset.foobarAuthorYearAlbumTrack": {
     "sourceHash": "fe31675"
   },
-  "multiRename.preset.foobarArtistAlbum": "Artist - Album",
+  "multiRename.preset.foobarArtistAlbum": "Interpret - Album",
   "@multiRename.preset.foobarArtistAlbum": {
     "sourceHash": "144aa90"
   },
-  "multiRename.preset.foobarAuthorYearAlbumTrackTitle": "Author - (year) Album - track title",
+  "multiRename.preset.foobarAuthorYearAlbumTrackTitle": "Autor - (rok) Album - stopa název",
   "@multiRename.preset.foobarAuthorYearAlbumTrackTitle": {
     "sourceHash": "6234a2e"
   },
-  "multiRename.preset.foobarReadByDiscTrackTitle": "… (read by) - disc track title",
+  "multiRename.preset.foobarReadByDiscTrackTitle": "… (čte) - disk stopa název",
   "@multiRename.preset.foobarReadByDiscTrackTitle": {
     "sourceHash": "82d5356"
   },
-  "multiRename.preset.foobarReadByDiscTrack": "… (read by) - disc track",
+  "multiRename.preset.foobarReadByDiscTrack": "… (čte) - disk stopa",
   "@multiRename.preset.foobarReadByDiscTrack": {
     "sourceHash": "8678abb"
   },
-  "multiRename.preset.foobarReadByPublisherDiscTrack": "… (read by, publisher) - disc track",
+  "multiRename.preset.foobarReadByPublisherDiscTrack": "… (čte, vydavatel) - disk stopa",
   "@multiRename.preset.foobarReadByPublisherDiscTrack": {
     "sourceHash": "3fab262"
   },
-  "multiRename.preset.foobarSftRadioShow": "SFT radio show",
+  "multiRename.preset.foobarSftRadioShow": "Rozhlasový pořad SFT",
   "@multiRename.preset.foobarSftRadioShow": {
     "sourceHash": "5015599"
   },
@@ -279,63 +279,65 @@
   "@multiRename.error.badRegex": {
     "sourceHash": "176cb2f"
   },
-  "multiRename.error.foobar.unknownField": "Cmdr doesn’t know the field %{name}% (character {position})",
+  "multiRename.error.foobar.unknownField": "Cmdr nezná pole %{name}% (znak {position})",
   "@multiRename.error.foobar.unknownField": {
     "sourceHash": "52fecf4"
   },
-  "multiRename.error.foobar.unknownFunction": "Cmdr doesn’t know the function ${name} (character {position})",
+  "multiRename.error.foobar.unknownFunction": "Cmdr nezná funkci ${name} (znak {position})",
   "@multiRename.error.foobar.unknownFunction": {
     "sourceHash": "4228e88"
   },
-  "multiRename.error.foobar.badArguments": "${function} got the wrong number of values (character {position})",
+  "multiRename.error.foobar.badArguments": "${function} má špatný počet hodnot (znak {position})",
   "@multiRename.error.foobar.badArguments": {
     "sourceHash": "82bbce1"
   },
-  "multiRename.error.foobar.unclosed": "{what, select, field {A field is missing its closing “%”} bracket {A “[” is missing its closing “]”} quote {A quote is missing its closing apostrophe} function {A function is missing its closing “)”} other {A “(” is missing its closing “)”}} (character {position})",
+  "multiRename.error.foobar.unclosed": "{what, select, field {Pole nemá uzavírací „%“} bracket {„[“ nemá uzavírací „]“} quote {Text v uvozovkách nemá uzavírací apostrof} function {Funkce nemá uzavírací „)“} other {„(“ nemá uzavírací „)“}} (znak {position})",
   "@multiRename.error.foobar.unclosed": {
     "sourceHash": "ab1bd9b"
   },
-  "multiRename.error.foobar.tooDeep": "The pattern nests too many sections and functions inside each other (character {position})",
+  "multiRename.error.foobar.tooDeep": "Vzor do sebe vnořuje příliš mnoho sekcí a funkcí (znak {position})",
   "@multiRename.error.foobar.tooDeep": {
     "sourceHash": "98ae052"
   },
-  "multiRename.syntax.label": "Name mask syntax",
+  "multiRename.syntax.label": "Syntaxe masky názvu",
   "@multiRename.syntax.label": {
     "sourceHash": "34e242b"
   },
   "multiRename.syntax.cmdr": "Cmdr",
   "@multiRename.syntax.cmdr": {
-    "sourceHash": "40c6a1b"
+    "sourceHash": "40c6a1b",
+    "sameAsSourceJustification": "The app name Cmdr; kept verbatim (BRAND_WORDS)."
   },
   "multiRename.syntax.foobar": "foobar2000",
   "@multiRename.syntax.foobar": {
-    "sourceHash": "6cc8688"
+    "sourceHash": "6cc8688",
+    "sameAsSourceJustification": "Product name foobar2000, lowercase as its makers write it; Czech foobar2000 users see the same name."
   },
-  "multiRename.syntax.cmdrTooltip": "Placeholders like [N], [C], and [=tag.title]",
+  "multiRename.syntax.cmdrTooltip": "Zástupné symboly jako [N], [C] a [=tag.title]",
   "@multiRename.syntax.cmdrTooltip": {
     "sourceHash": "fa7ac86"
   },
-  "multiRename.syntax.foobarTooltip": "A foobar2000 pattern as written in foobar: %artist%, [ … ], $num(…)",
+  "multiRename.syntax.foobarTooltip": "Vzor foobar2000 zapsaný jako ve foobaru: %artist%, [ … ], $num(…)",
   "@multiRename.syntax.foobarTooltip": {
     "sourceHash": "a129ed4"
   },
-  "multiRename.syntax.switched": "The name mask looks like a foobar2000 pattern, so Cmdr reads it as one.",
+  "multiRename.syntax.switched": "Maska názvu vypadá jako vzor foobar2000, proto ji Cmdr tak i čte.",
   "@multiRename.syntax.switched": {
     "sourceHash": "5da6429"
   },
-  "multiRename.syntax.useCmdr": "Use Cmdr syntax",
+  "multiRename.syntax.useCmdr": "Použít syntaxi Cmdr",
   "@multiRename.syntax.useCmdr": {
     "sourceHash": "7d15664"
   },
-  "multiRename.waitingForMask": "Fix the mask to see the new names",
+  "multiRename.waitingForMask": "Oprav masku, ať vidíš nové názvy",
   "@multiRename.waitingForMask": {
     "sourceHash": "d07061c"
   },
-  "multiRename.status.waitingForMask": "Waiting for a valid mask",
+  "multiRename.status.waitingForMask": "Čeká se na platnou masku",
   "@multiRename.status.waitingForMask": {
     "sourceHash": "ef7072b"
   },
-  "multiRename.foobarFields": "Insert foobar2000 field",
+  "multiRename.foobarFields": "Vložit pole foobar2000",
   "@multiRename.foobarFields": {
     "sourceHash": "a105d6b"
   },
@@ -530,7 +532,7 @@
   "multiRename.mediaField.exifIso": "ISO",
   "@multiRename.mediaField.exifIso": {
     "sourceHash": "6dc87bf",
-    "sameAsSourceJustification": "ISO is the standard name of the sensitivity setting; Czech camera menus and macOS Photos write ISO too (@key: keep ISO as is)."
+    "sameAsSourceJustification": "ISO is the international film-speed unit name; Czech photo apps and camera menus write ISO."
   },
   "multiRename.mediaField.exifFocal": "Ohnisková vzdálenost (mm)",
   "@multiRename.mediaField.exifFocal": {
@@ -563,9 +565,9 @@
   "multiRename.mediaField.tagAlbum": "Album",
   "@multiRename.mediaField.tagAlbum": {
     "sourceHash": "f05e840",
-    "sameAsSourceJustification": "Album is the Czech word too (macOS Hudba and music players label the field Album)."
+    "sameAsSourceJustification": "Album is the standard Czech word for a music album (shipped neighbours Interpret alba; Czech tag editors label the field Album)."
   },
-  "multiRename.mediaField.tagTrack": "Číslo skladby",
+  "multiRename.mediaField.tagTrack": "Číslo stopy",
   "@multiRename.mediaField.tagTrack": {
     "sourceHash": "de8de0b"
   },
@@ -585,39 +587,39 @@
   "@multiRename.mediaField.tagComment": {
     "sourceHash": "44f5e3f"
   },
-  "multiRename.mediaField.tagPerformer": "Performer",
+  "multiRename.mediaField.tagPerformer": "Účinkující",
   "@multiRename.mediaField.tagPerformer": {
     "sourceHash": "f4b163a"
   },
-  "multiRename.mediaField.tagComposer": "Composer",
+  "multiRename.mediaField.tagComposer": "Skladatel",
   "@multiRename.mediaField.tagComposer": {
     "sourceHash": "9cb2832"
   },
-  "multiRename.mediaField.tagPublisher": "Publisher",
+  "multiRename.mediaField.tagPublisher": "Vydavatel",
   "@multiRename.mediaField.tagPublisher": {
     "sourceHash": "2137854"
   },
-  "multiRename.mediaField.tagDate": "Date",
+  "multiRename.mediaField.tagDate": "Datum",
   "@multiRename.mediaField.tagDate": {
     "sourceHash": "99c40ab"
   },
-  "multiRename.mediaField.tagTotalTracks": "Total tracks",
+  "multiRename.mediaField.tagTotalTracks": "Počet stop",
   "@multiRename.mediaField.tagTotalTracks": {
     "sourceHash": "5677198"
   },
-  "multiRename.mediaField.tagTotalDiscs": "Total discs",
+  "multiRename.mediaField.tagTotalDiscs": "Počet disků",
   "@multiRename.mediaField.tagTotalDiscs": {
     "sourceHash": "2f1663d"
   },
-  "multiRename.mediaField.tagDescription": "Description",
+  "multiRename.mediaField.tagDescription": "Popis",
   "@multiRename.mediaField.tagDescription": {
     "sourceHash": "526e008"
   },
-  "multiRename.mediaField.tagTranslator": "Translator",
+  "multiRename.mediaField.tagTranslator": "Překladatel",
   "@multiRename.mediaField.tagTranslator": {
     "sourceHash": "e6fe8ee"
   },
-  "multiRename.mediaField.tagWww": "Web address",
+  "multiRename.mediaField.tagWww": "Webová adresa",
   "@multiRename.mediaField.tagWww": {
     "sourceHash": "45099c5"
   },
@@ -701,11 +703,11 @@
   "@multiRename.mediaEditor.digitsHint": {
     "sourceHash": "d71b7d7"
   },
-  "multiRename.mediaEditor.digitsHintTrack": "Pads with leading zeros, so 2 turns 3 into 03. Leave empty to pad to the longest number in these files, like 07 for 42 tracks.",
+  "multiRename.mediaEditor.digitsHintTrack": "Doplní úvodní nuly, takže při 2 se z 3 stane 03. Pokud pole necháš prázdné, doplní se na délku nejdelšího čísla v těchto souborech, třeba 07 při 42 stopách.",
   "@multiRename.mediaEditor.digitsHintTrack": {
     "sourceHash": "9931936"
   },
-  "multiRename.mediaEditor.digitsInvalid": "Type how many digits, like 2, or zeros, like 00.",
+  "multiRename.mediaEditor.digitsInvalid": "Zadej počet číslic, třeba 2, nebo nuly, třeba 00.",
   "@multiRename.mediaEditor.digitsInvalid": {
     "sourceHash": "6f1da7c"
   },
@@ -841,7 +843,7 @@
   "@multiRename.placeholderHelp.mediaCamera": {
     "sourceHash": "9da2073"
   },
-  "multiRename.placeholderHelp.mediaSong": "Číslo skladby, interpret a název",
+  "multiRename.placeholderHelp.mediaSong": "Číslo stopy, interpret a název skladby",
   "@multiRename.placeholderHelp.mediaSong": {
     "sourceHash": "f1a8bf1"
   },
@@ -1053,1363 +1055,1377 @@
   "@multiRename.placeholderHelp.rangeEditHint": {
     "sourceHash": "f1ef6fc"
   },
-  "multiRename.tags.reading": "Reading tags…",
+  "multiRename.tags.reading": "Čtou se tagy…",
   "@multiRename.tags.reading": {
     "sourceHash": "c4a8191"
   },
-  "multiRename.tags.trackCount": "{count, plural, one {{countText} track} other {{countText} tracks}}",
+  "multiRename.tags.trackCount": "{count, plural, one {{countText} stopa} few {{countText} stopy} many {{countText} stopy} other {{countText} stop}}",
   "@multiRename.tags.trackCount": {
     "sourceHash": "20a56bf"
   },
-  "multiRename.tags.error": "Couldn’t read the tags.",
+  "multiRename.tags.error": "Tagy se nepodařilo přečíst.",
   "@multiRename.tags.error": {
     "sourceHash": "fc228a3"
   },
-  "multiRename.tags.field.title": "Title",
+  "multiRename.tags.field.title": "Název",
   "@multiRename.tags.field.title": {
     "sourceHash": "7e8cd20"
   },
-  "multiRename.tags.field.artist": "Artist",
+  "multiRename.tags.field.artist": "Interpret",
   "@multiRename.tags.field.artist": {
     "sourceHash": "1d3981b"
   },
-  "multiRename.tags.field.albumArtist": "Album artist",
+  "multiRename.tags.field.albumArtist": "Interpret alba",
   "@multiRename.tags.field.albumArtist": {
     "sourceHash": "334ae82"
   },
   "multiRename.tags.field.album": "Album",
   "@multiRename.tags.field.album": {
-    "sourceHash": "f05e840"
+    "sourceHash": "f05e840",
+    "sameAsSourceJustification": "Album is the standard Czech word for a music album (sibling Interpret alba; Czech tag editors label the field Album)."
   },
-  "multiRename.tags.field.performer": "Performer",
+  "multiRename.tags.field.performer": "Účinkující",
   "@multiRename.tags.field.performer": {
     "sourceHash": "f4b163a"
   },
-  "multiRename.tags.field.composer": "Composer",
+  "multiRename.tags.field.composer": "Skladatel",
   "@multiRename.tags.field.composer": {
     "sourceHash": "9cb2832"
   },
-  "multiRename.tags.field.date": "Date",
+  "multiRename.tags.field.date": "Datum",
   "@multiRename.tags.field.date": {
     "sourceHash": "99c40ab"
   },
-  "multiRename.tags.field.genre": "Genre",
+  "multiRename.tags.field.genre": "Žánr",
   "@multiRename.tags.field.genre": {
     "sourceHash": "6da795a"
   },
-  "multiRename.tags.field.publisher": "Publisher",
+  "multiRename.tags.field.publisher": "Vydavatel",
   "@multiRename.tags.field.publisher": {
     "sourceHash": "2137854"
   },
-  "multiRename.tags.field.translator": "Translator",
+  "multiRename.tags.field.translator": "Překladatel",
   "@multiRename.tags.field.translator": {
     "sourceHash": "e6fe8ee"
   },
-  "multiRename.tags.field.track": "Track",
+  "multiRename.tags.field.track": "Číslo stopy",
   "@multiRename.tags.field.track": {
     "sourceHash": "051f01f"
   },
-  "multiRename.tags.field.trackTotal": "Total tracks",
+  "multiRename.tags.field.trackTotal": "Počet stop",
   "@multiRename.tags.field.trackTotal": {
     "sourceHash": "5677198"
   },
-  "multiRename.tags.field.disc": "Disc",
+  "multiRename.tags.field.disc": "Disk",
   "@multiRename.tags.field.disc": {
     "sourceHash": "0c3ae2c"
   },
-  "multiRename.tags.field.discTotal": "Total discs",
+  "multiRename.tags.field.discTotal": "Počet disků",
   "@multiRename.tags.field.discTotal": {
     "sourceHash": "2f1663d"
   },
-  "multiRename.tags.field.comment": "Comment",
+  "multiRename.tags.field.comment": "Komentář",
   "@multiRename.tags.field.comment": {
     "sourceHash": "44f5e3f"
   },
-  "multiRename.tags.field.description": "Description",
+  "multiRename.tags.field.description": "Popis",
   "@multiRename.tags.field.description": {
     "sourceHash": "526e008"
   },
-  "multiRename.tags.field.www": "Web address",
+  "multiRename.tags.field.www": "Webová adresa",
   "@multiRename.tags.field.www": {
     "sourceHash": "45099c5"
   },
-  "multiRename.tags.multipleValues": "‹multiple values›",
+  "multiRename.tags.multipleValues": "‹více hodnot›",
   "@multiRename.tags.multipleValues": {
     "sourceHash": "39e9850"
   },
-  "multiRename.tags.multipleValues.keepHint": "Delete {marker} to set what’s left on every file. Esc keeps each file’s own value.",
+  "multiRename.tags.multipleValues.keepHint": "Smaž {marker}, ať se zbylý text nastaví všem souborům. Esc ponechá každému souboru jeho vlastní hodnotu.",
   "@multiRename.tags.multipleValues.keepHint": {
     "sourceHash": "a1204ff"
   },
-  "multiRename.tags.multipleValues.tailHint": "Delete “{tail}” too: with it, the text isn’t every value. Esc keeps each file’s own value.",
+  "multiRename.tags.multipleValues.tailHint": "Smaž i „{tail}“: s tím text neobsahuje všechny hodnoty. Esc ponechá každému souboru jeho vlastní hodnotu.",
   "@multiRename.tags.multipleValues.tailHint": {
     "sourceHash": "b38728d"
   },
-  "multiRename.tags.date.invalid": "This date doesn't exist. Type the right one, for example 2010, before writing.",
+  "multiRename.tags.date.invalid": "Toto datum neexistuje. Před zápisem zadej správné, třeba 2010.",
   "@multiRename.tags.date.invalid": {
     "sourceHash": "671a3f5"
   },
-  "multiRename.tags.choicesMore": "…and {countText} more",
+  "multiRename.tags.choicesMore": "…a další: {countText}",
   "@multiRename.tags.choicesMore": {
     "sourceHash": "a674c4d"
   },
-  "multiRename.tags.tracks.label": "Tracks",
+  "multiRename.tags.tracks.label": "Stopy",
   "@multiRename.tags.tracks.label": {
     "sourceHash": "8898015"
   },
-  "multiRename.tags.album.label": "Album tags",
+  "multiRename.tags.album.label": "Tagy alba",
   "@multiRename.tags.album.label": {
     "sourceHash": "41747f9"
   },
-  "multiRename.tags.album.colName": "Name",
+  "multiRename.tags.album.colName": "Název",
   "@multiRename.tags.album.colName": {
     "sourceHash": "dcd1d52"
   },
-  "multiRename.tags.album.colValue": "Value",
+  "multiRename.tags.album.colValue": "Hodnota",
   "@multiRename.tags.album.colValue": {
     "sourceHash": "8e37953"
   },
-  "multiRename.tags.album.scopeFiltered": "{total, plural, one {{countText} of {totalText} track (filtered)} other {{countText} of {totalText} tracks (filtered)}}",
+  "multiRename.tags.album.scopeFiltered": "{total, plural, one {{countText} z {totalText} stopy (filtrováno)} few {{countText} z {totalText} stop (filtrováno)} many {{countText} z {totalText} stopy (filtrováno)} other {{countText} z {totalText} stop (filtrováno)}}",
   "@multiRename.tags.album.scopeFiltered": {
     "sourceHash": "ca59a84"
   },
-  "multiRename.tags.filter.label": "Filter the tracks",
+  "multiRename.tags.filter.label": "Filtrovat stopy",
   "@multiRename.tags.filter.label": {
     "sourceHash": "29f1004"
   },
-  "multiRename.tags.filter.placeholder": "Filter, or title: text",
+  "multiRename.tags.filter.placeholder": "Filtr, nebo title: text",
   "@multiRename.tags.filter.placeholder": {
     "sourceHash": "e815f87"
   },
-  "multiRename.tags.filter.count": "{total, plural, one {{shownText} of {totalText} track} other {{shownText} of {totalText} tracks}}",
+  "multiRename.tags.filter.count": "{total, plural, one {{shownText} z {totalText} stopy} few {{shownText} z {totalText} stop} many {{shownText} z {totalText} stopy} other {{shownText} z {totalText} stop}}",
   "@multiRename.tags.filter.count": {
     "sourceHash": "a471e31"
   },
-  "multiRename.tags.filter.hiddenSelected": "{count, plural, one {{countText} selected track hidden} other {{countText} selected tracks hidden}}",
+  "multiRename.tags.filter.hiddenSelected": "{count, plural, one {{countText} vybraná stopa je skrytá} few {{countText} vybrané stopy jsou skryté} many {{countText} vybrané stopy je skryto} other {{countText} vybraných stop je skryto}}",
   "@multiRename.tags.filter.hiddenSelected": {
     "sourceHash": "4cbcb7b"
   },
   "multiRename.tags.filter.countWithHidden": "{count}, {hidden}",
   "@multiRename.tags.filter.countWithHidden": {
-    "sourceHash": "e638440"
+    "sourceHash": "e638440",
+    "sameAsSourceJustification": "Two placeholders joined by a comma, which Czech uses the same way; nothing translatable."
   },
-  "multiRename.tags.cover.useForAllHidden": "{count, plural, one {Use for the {countText} file, hidden one too} other {Use for all {countText} files, hidden ones too}}",
+  "multiRename.tags.cover.useForAllHidden": "{count, plural, one {Použít pro {countText} soubor, i skrytý} few {Použít pro všechny {countText} soubory, i skryté} many {Použít pro všech {countText} souboru, i skryté} other {Použít pro všech {countText} souborů, i skryté}}",
   "@multiRename.tags.cover.useForAllHidden": {
     "sourceHash": "7857387"
   },
-  "multiRename.tags.cover.allFilesFiltered": "{count, plural, one {A cover goes to every file, including the {countText} the filter hides.} other {A cover goes to every file, including the {countText} the filter hides.}}",
+  "multiRename.tags.cover.allFilesFiltered": "{count, plural, one {Obal dostane každý soubor, i ten skrytý filtrem ({countText}).} few {Obal dostane každý soubor, i ty skryté filtrem ({countText}).} many {Obal dostane každý soubor, i ty skryté filtrem ({countText}).} other {Obal dostane každý soubor, i ty skryté filtrem ({countText}).}}",
   "@multiRename.tags.cover.allFilesFiltered": {
     "sourceHash": "28879e4"
   },
-  "multiRename.tags.filter.noneShown": "No track matches the filter, so nothing was changed. Change the filter, or press Esc in it to show every track.",
+  "multiRename.tags.filter.noneShown": "Filtru neodpovídá žádná stopa, takže se nic nezměnilo. Změň filtr, nebo v něm stiskni Esc, ať se zobrazí všechny stopy.",
   "@multiRename.tags.filter.noneShown": {
     "sourceHash": "ba2b0a9"
   },
-  "multiRename.tags.clearField.shown": "{count, plural, one {Empties {field} on the track the filter shows.} other {Empties {field} on the {countText} tracks the filter shows.}}",
+  "multiRename.tags.clearField.shown": "{count, plural, one {Vyprázdní pole {field} u stopy, kterou filtr zobrazuje.} few {Vyprázdní pole {field} u {countText} stop, které filtr zobrazuje.} many {Vyprázdní pole {field} u {countText} stopy, které filtr zobrazuje.} other {Vyprázdní pole {field} u {countText} stop, které filtr zobrazuje.}}",
   "@multiRename.tags.clearField.shown": {
     "sourceHash": "b2c9ced"
   },
-  "multiRename.tags.album.scope": "{total, plural, one {{countText} of {totalText} track} other {{countText} of {totalText} tracks}}",
+  "multiRename.tags.album.scope": "{total, plural, one {{countText} z {totalText} stopy} few {{countText} z {totalText} stop} many {{countText} z {totalText} stopy} other {{countText} z {totalText} stop}}",
   "@multiRename.tags.album.scope": {
     "sourceHash": "1cd1edf"
   },
-  "multiRename.tags.album.editLabel": "{field} for all files",
+  "multiRename.tags.album.editLabel": "{field} pro všechny soubory",
   "@multiRename.tags.album.editLabel": {
     "sourceHash": "980b039"
   },
-  "multiRename.tags.album.editLabelScoped": "{total, plural, one {{field} for {countText} of {totalText} track} other {{field} for {countText} of {totalText} tracks}}",
+  "multiRename.tags.album.editLabelScoped": "{total, plural, one {{field} pro {countText} z {totalText} stopy} few {{field} pro {countText} z {totalText} stop} many {{field} pro {countText} z {totalText} stopy} other {{field} pro {countText} z {totalText} stop}}",
   "@multiRename.tags.album.editLabelScoped": {
     "sourceHash": "0fd00e5"
   },
-  "multiRename.tags.track.playing": "Playing",
+  "multiRename.tags.track.playing": "Přehrává se",
   "@multiRename.tags.track.playing": {
     "sourceHash": "deaf6f9"
   },
   "multiRename.tags.col.number": "#",
   "@multiRename.tags.col.number": {
-    "sourceHash": "334359b"
+    "sourceHash": "334359b",
+    "sameAsSourceJustification": "The # sign heads a track-number column in Czech too (Apple Music cs and foobar2000 use #); nothing translatable."
   },
-  "multiRename.tags.col.disc": "Disc",
+  "multiRename.tags.col.disc": "Disk",
   "@multiRename.tags.col.disc": {
     "sourceHash": "0c3ae2c"
   },
-  "multiRename.tags.col.title": "Title",
+  "multiRename.tags.col.title": "Název",
   "@multiRename.tags.col.title": {
     "sourceHash": "7e8cd20"
   },
-  "multiRename.tags.col.length": "Length",
+  "multiRename.tags.col.length": "Délka",
   "@multiRename.tags.col.length": {
     "sourceHash": "adc9560"
   },
-  "multiRename.tags.col.fileName": "File name",
+  "multiRename.tags.col.fileName": "Název souboru",
   "@multiRename.tags.col.fileName": {
     "sourceHash": "3efed3d"
   },
-  "multiRename.tags.track.titleLabel": "Title of {fileName}",
+  "multiRename.tags.track.titleLabel": "Název stopy {fileName}",
   "@multiRename.tags.track.titleLabel": {
     "sourceHash": "d1d8d11"
   },
-  "multiRename.tags.track.cellNumber": "Track number column",
+  "multiRename.tags.track.cellNumber": "Sloupec čísla stopy",
   "@multiRename.tags.track.cellNumber": {
     "sourceHash": "091f2c2"
   },
-  "multiRename.tags.track.cellDisc": "Disc column",
+  "multiRename.tags.track.cellDisc": "Sloupec disku",
   "@multiRename.tags.track.cellDisc": {
     "sourceHash": "a8e8c8b"
   },
-  "multiRename.tags.track.discLabel": "Disc of {fileName}",
+  "multiRename.tags.track.discLabel": "Disk stopy {fileName}",
   "@multiRename.tags.track.discLabel": {
     "sourceHash": "4e98c4f"
   },
-  "multiRename.tags.track.cellTitle": "Title column",
+  "multiRename.tags.track.cellTitle": "Sloupec názvu",
   "@multiRename.tags.track.cellTitle": {
     "sourceHash": "1868f82"
   },
-  "multiRename.tags.track.numberLabel": "Track number of {fileName}",
+  "multiRename.tags.track.numberLabel": "Číslo stopy {fileName}",
   "@multiRename.tags.track.numberLabel": {
     "sourceHash": "312b18b"
   },
-  "multiRename.tags.track.unreadable": "Can’t read the tags of this file",
+  "multiRename.tags.track.unreadable": "Tagy tohoto souboru nelze přečíst",
   "@multiRename.tags.track.unreadable": {
     "sourceHash": "f6093cc"
   },
-  "multiRename.tags.readOnly": "Tags can only be edited for files on a local disk.",
+  "multiRename.tags.readOnly": "Tagy lze upravovat jen u souborů na místním disku.",
   "@multiRename.tags.readOnly": {
     "sourceHash": "c08c76d"
   },
-  "multiRename.tags.cover.label": "Cover",
+  "multiRename.tags.cover.label": "Obal",
   "@multiRename.tags.cover.label": {
     "sourceHash": "fa8d845"
   },
-  "multiRename.tags.cover.none": "No cover",
+  "multiRename.tags.cover.none": "Bez obalu",
   "@multiRename.tags.cover.none": {
     "sourceHash": "b2ec318"
   },
   "multiRename.tags.cover.details": "{mime}, {sizeText}",
   "@multiRename.tags.cover.details": {
-    "sourceHash": "1d0fb10"
+    "sourceHash": "1d0fb10",
+    "sameAsSourceJustification": "Placeholders joined by a comma; nothing translatable."
   },
   "multiRename.tags.cover.detailsPixels": "{mime}, {width}×{height} px, {sizeText}",
   "@multiRename.tags.cover.detailsPixels": {
-    "sourceHash": "1e4795e"
+    "sourceHash": "1e4795e",
+    "sameAsSourceJustification": "Placeholders plus the px unit and × sign, both used as is in Czech; nothing translatable."
   },
-  "multiRename.tags.cover.fromFolder": "From folder…",
+  "multiRename.tags.cover.fromFolder": "Ze složky…",
   "@multiRename.tags.cover.fromFolder": {
     "sourceHash": "9c18b8d"
   },
-  "multiRename.tags.cover.remove": "Remove",
+  "multiRename.tags.cover.remove": "Odstranit",
   "@multiRename.tags.cover.remove": {
     "sourceHash": "c3812fc"
   },
-  "multiRename.tags.cover.pickerLabel": "Pictures in the folder",
+  "multiRename.tags.cover.pickerLabel": "Obrázky ve složce",
   "@multiRename.tags.cover.pickerLabel": {
     "sourceHash": "c65dd9f"
   },
   "multiRename.tags.cover.candidate": "{fileName} ({sizeText})",
   "@multiRename.tags.cover.candidate": {
-    "sourceHash": "6e3e460"
+    "sourceHash": "6e3e460",
+    "sameAsSourceJustification": "Placeholders with brackets; nothing translatable."
   },
-  "multiRename.tags.cover.noImages": "No pictures (jpg, png, webp) in this folder.",
+  "multiRename.tags.cover.noImages": "V této složce nejsou žádné obrázky (jpg, png, webp).",
   "@multiRename.tags.cover.noImages": {
     "sourceHash": "a1857ea"
   },
-  "multiRename.tags.cover.listFailed": "Couldn’t list the pictures in this folder.",
+  "multiRename.tags.cover.listFailed": "Seznam obrázků v této složce se nepodařilo načíst.",
   "@multiRename.tags.cover.listFailed": {
     "sourceHash": "1b3c24c"
   },
-  "multiRename.tags.cover.tooLarge": "That picture is too large (over 10 MB).",
+  "multiRename.tags.cover.tooLarge": "Ten obrázek je příliš velký (přes 10 MB).",
   "@multiRename.tags.cover.tooLarge": {
     "sourceHash": "9bc62eb"
   },
-  "multiRename.tags.cover.unreadable": "Couldn’t read that picture, or it isn’t a supported image.",
+  "multiRename.tags.cover.unreadable": "Ten obrázek se nepodařilo přečíst, nebo to není podporovaný formát obrázku.",
   "@multiRename.tags.cover.unreadable": {
     "sourceHash": "4598a37"
   },
-  "multiRename.tags.cover.notAnImage": "That file isn’t a JPEG, PNG, or WebP picture, whatever its name says.",
+  "multiRename.tags.cover.notAnImage": "Ten soubor není obrázek JPEG, PNG ani WebP, ať má název jakýkoli.",
   "@multiRename.tags.cover.notAnImage": {
     "sourceHash": "bef4ab5"
   },
-  "multiRename.tags.cover.choicesLabel": "Covers in the files",
+  "multiRename.tags.cover.choicesLabel": "Obaly v souborech",
   "@multiRename.tags.cover.choicesLabel": {
     "sourceHash": "4efc84c"
   },
-  "multiRename.tags.cover.files": "{count, plural, one {{countText} file} other {{countText} files}}",
+  "multiRename.tags.cover.files": "{count, plural, one {{countText} soubor} few {{countText} soubory} many {{countText} souboru} other {{countText} souborů}}",
   "@multiRename.tags.cover.files": {
     "sourceHash": "3c08428"
   },
   "multiRename.tags.cover.caption": "{filesText} · {sizeText}",
   "@multiRename.tags.cover.caption": {
-    "sourceHash": "fdfd95d"
+    "sourceHash": "fdfd95d",
+    "sameAsSourceJustification": "Placeholders joined by a middle dot; nothing translatable."
   },
-  "multiRename.tags.cover.openLabel": "{caption}: open the cover ({details})",
+  "multiRename.tags.cover.openLabel": "{caption}: otevřít obal ({details})",
   "@multiRename.tags.cover.openLabel": {
     "sourceHash": "196a95b"
   },
-  "multiRename.tags.cover.choicesFailed": "Couldn’t read the covers of these files.",
+  "multiRename.tags.cover.choicesFailed": "Obaly těchto souborů se nepodařilo přečíst.",
   "@multiRename.tags.cover.choicesFailed": {
     "sourceHash": "298b99c"
   },
-  "multiRename.tags.cover.pasteHint": "Paste a picture (⌘V) or drop one here to make it the cover of every file.",
+  "multiRename.tags.cover.pasteHint": "Vlož obrázek (⌘V) nebo ho sem přetáhni a stane se obalem všech souborů.",
   "@multiRename.tags.cover.pasteHint": {
     "sourceHash": "62469e3"
   },
-  "multiRename.tags.cover.pasteNoImage": "There’s no picture on the clipboard. Copy a JPEG, PNG, or WebP picture, then paste again.",
+  "multiRename.tags.cover.pasteNoImage": "Ve schránce není žádný obrázek. Zkopíruj obrázek JPEG, PNG nebo WebP a vlož ho znovu.",
   "@multiRename.tags.cover.pasteNoImage": {
     "sourceHash": "9cabc76"
   },
-  "multiRename.tags.cover.dropOne": "Drop one picture at a time.",
+  "multiRename.tags.cover.dropOne": "Přetáhni jen jeden obrázek najednou.",
   "@multiRename.tags.cover.dropOne": {
     "sourceHash": "c4173a9"
   },
-  "multiRename.tags.cover.dropHere": "Drop to make this picture the cover of every file",
+  "multiRename.tags.cover.dropHere": "Pusť přetažený obrázek a stane se obalem všech souborů",
   "@multiRename.tags.cover.dropHere": {
     "sourceHash": "0e7e2ce"
   },
-  "multiRename.tags.cover.notAFile": "Only a picture file can become the cover, not a folder or a link.",
+  "multiRename.tags.cover.notAFile": "Obalem může být jen soubor s obrázkem, ne složka ani odkaz.",
   "@multiRename.tags.cover.notAFile": {
     "sourceHash": "5c848ab"
   },
-  "multiRename.tags.cover.gone": "That cover isn’t in the files any more. Pick another one.",
+  "multiRename.tags.cover.gone": "Ten obal už v souborech není. Vyber jiný.",
   "@multiRename.tags.cover.gone": {
     "sourceHash": "074721e"
   },
-  "multiRename.tags.cover.viewerTitle": "Cover",
+  "multiRename.tags.cover.viewerTitle": "Obal",
   "@multiRename.tags.cover.viewerTitle": {
     "sourceHash": "fa8d845"
   },
-  "multiRename.tags.cover.viewerAlt": "Cover picture: {details}",
+  "multiRename.tags.cover.viewerAlt": "Obrázek obalu: {details}",
   "@multiRename.tags.cover.viewerAlt": {
     "sourceHash": "80794e7"
   },
-  "multiRename.tags.cover.onFiles": "On {countText} of {totalText} files",
+  "multiRename.tags.cover.onFiles": "Souborů s tímto obalem: {countText} z {totalText}",
   "@multiRename.tags.cover.onFiles": {
     "sourceHash": "aa5c3a4"
   },
-  "multiRename.tags.cover.cantShow": "Can’t show this picture.",
+  "multiRename.tags.cover.cantShow": "Tento obrázek nelze zobrazit.",
   "@multiRename.tags.cover.cantShow": {
     "sourceHash": "ee506dd"
   },
-  "multiRename.tags.cover.lookAlike": "{count, plural, one {{countText} covers look almost the same} other {{countText} covers look almost the same}}",
+  "multiRename.tags.cover.lookAlike": "{count, plural, one {{countText} obal vypadá skoro stejně} few {{countText} obaly vypadají skoro stejně} many {{countText} obalu vypadá skoro stejně} other {{countText} obalů vypadá skoro stejně}}",
   "@multiRename.tags.cover.lookAlike": {
     "sourceHash": "1785415"
   },
-  "multiRename.tags.cover.lookAlikeSomeNone": "{count, plural, one {{countText} covers look almost the same} other {{countText} covers look almost the same}}; {none, plural, one {{noneText} file has none} other {{noneText} files have none}}",
+  "multiRename.tags.cover.lookAlikeSomeNone": "{count, plural, one {{countText} obal vypadá skoro stejně} few {{countText} obaly vypadají skoro stejně} many {{countText} obalu vypadá skoro stejně} other {{countText} obalů vypadá skoro stejně}}; {none, plural, one {{noneText} soubor nemá žádný} few {{noneText} soubory nemají žádný} many {{noneText} souboru nemá žádný} other {{noneText} souborů nemá žádný}}",
   "@multiRename.tags.cover.lookAlikeSomeNone": {
     "sourceHash": "8593996"
   },
-  "multiRename.tags.cover.useLargest": "{count, plural, one {Use it for the {countText} file} other {Use it for all {countText} files}}",
+  "multiRename.tags.cover.useLargest": "{count, plural, one {Použít pro {countText} soubor} few {Použít pro všechny {countText} soubory} many {Použít pro všech {countText} souboru} other {Použít pro všech {countText} souborů}}",
   "@multiRename.tags.cover.useLargest": {
     "sourceHash": "41e4f40"
   },
-  "multiRename.tags.cover.more": "{count, plural, one {{countText} more} other {{countText} more}}",
+  "multiRename.tags.cover.more": "{count, plural, one {Zobrazit další ({countText})} few {Zobrazit další ({countText})} many {Zobrazit další ({countText})} other {Zobrazit další ({countText})}}",
   "@multiRename.tags.cover.more": {
     "sourceHash": "6276706"
   },
-  "multiRename.tags.cover.fewer": "Show fewer",
+  "multiRename.tags.cover.fewer": "Zobrazit méně",
   "@multiRename.tags.cover.fewer": {
     "sourceHash": "255beb6"
   },
-  "multiRename.tags.cover.useForAll": "Use for all files",
+  "multiRename.tags.cover.useForAll": "Použít pro všechny soubory",
   "@multiRename.tags.cover.useForAll": {
     "sourceHash": "723f22c"
   },
-  "multiRename.tags.cover.pasteNotAnImage": "That isn’t a picture Cmdr can use as a cover. Copy a JPEG, PNG, WebP, or TIFF picture, then paste again.",
+  "multiRename.tags.cover.pasteNotAnImage": "Tohle není obrázek, který Cmdr může použít jako obal. Zkopíruj obrázek JPEG, PNG, WebP nebo TIFF a vlož ho znovu.",
   "@multiRename.tags.cover.pasteNotAnImage": {
     "sourceHash": "291f4a5"
   },
-  "multiRename.tags.cover.timedOut": "The drive that picture is on stopped answering, so the cover is unchanged. Copy the picture to this Mac first, then drop it again.",
+  "multiRename.tags.cover.timedOut": "Disk s tím obrázkem přestal odpovídat, takže obal zůstal beze změny. Nejdřív obrázek zkopíruj do tohoto Macu a pak ho přetáhni znovu.",
   "@multiRename.tags.cover.timedOut": {
     "sourceHash": "ec1b3bb"
   },
-  "multiRename.tags.cover.busy": "Earlier pictures from a drive that stopped answering are still being read. Wait a moment, or copy the picture to this Mac first, then drop it again.",
+  "multiRename.tags.cover.busy": "Starší obrázky z disku, který přestal odpovídat, se pořád čtou. Chvíli počkej, nebo obrázek nejdřív zkopíruj do tohoto Macu a pak ho přetáhni znovu.",
   "@multiRename.tags.cover.busy": {
     "sourceHash": "f10fab5"
   },
-  "multiRename.tags.cover.pasteTimedOut": "Converting that picture took too long, so the cover is unchanged. Paste a smaller picture, or a JPEG or PNG.",
+  "multiRename.tags.cover.pasteTimedOut": "Převod toho obrázku trval příliš dlouho, takže obal zůstal beze změny. Vlož menší obrázek, nebo JPEG či PNG.",
   "@multiRename.tags.cover.pasteTimedOut": {
     "sourceHash": "9e24fa9"
   },
-  "multiRename.tags.cover.noPreview": "No preview",
+  "multiRename.tags.cover.noPreview": "Bez náhledu",
   "@multiRename.tags.cover.noPreview": {
     "sourceHash": "4b8bacd"
   },
-  "multiRename.tags.cover.pasteButton": "Paste picture",
+  "multiRename.tags.cover.pasteButton": "Vložit obrázek",
   "@multiRename.tags.cover.pasteButton": {
     "sourceHash": "fa34bdb"
   },
-  "multiRename.tags.cover.pasteUnavailable": "Couldn’t read the clipboard. Select the cover section and press ⌘V instead.",
+  "multiRename.tags.cover.pasteUnavailable": "Schránku se nepodařilo přečíst. Vyber oblast obalu a stiskni ⌘V.",
   "@multiRename.tags.cover.pasteUnavailable": {
     "sourceHash": "e7a30af"
   },
-  "multiRename.tags.cover.loading": "Loading the picture…",
+  "multiRename.tags.cover.loading": "Načítá se obrázek…",
   "@multiRename.tags.cover.loading": {
     "sourceHash": "a47d42d"
   },
-  "multiRename.tags.editFailed": "Couldn’t apply that change.",
+  "multiRename.tags.editFailed": "Tuto změnu se nepodařilo použít.",
   "@multiRename.tags.editFailed": {
     "sourceHash": "9747a7c"
   },
-  "multiRename.tags.discard.title": "Discard tag changes?",
+  "multiRename.tags.discard.title": "Zahodit změny tagů?",
   "@multiRename.tags.discard.title": {
     "sourceHash": "fb94558"
   },
-  "multiRename.tags.discard.message": "You changed tags that haven’t been written to the files yet. Closing now loses those changes. Cancel keeps editing.",
+  "multiRename.tags.discard.message": "Některé změny tagů ještě nejsou zapsané do souborů. Když teď zavřeš, o tyto změny přijdeš. Tlačítkem Zrušit se vrátíš k úpravám.",
   "@multiRename.tags.discard.message": {
     "sourceHash": "0362274"
   },
-  "multiRename.tags.discard.confirm": "Discard",
+  "multiRename.tags.discard.confirm": "Zahodit",
   "@multiRename.tags.discard.confirm": {
     "sourceHash": "eb1a70e"
   },
-  "multiRename.tags.clearRow": "Clear",
+  "multiRename.tags.clearRow": "Vymazat",
   "@multiRename.tags.clearRow": {
     "sourceHash": "83b12c2"
   },
-  "multiRename.tags.clearRowLabel": "Clear {field} for all files",
+  "multiRename.tags.clearRowLabel": "Vymazat pole {field} u všech souborů",
   "@multiRename.tags.clearRowLabel": {
     "sourceHash": "ac716fc"
   },
-  "multiRename.tags.clearRowLabelScoped": "{total, plural, one {Clear {field} for {countText} of {totalText} track} other {Clear {field} for {countText} of {totalText} tracks}}",
+  "multiRename.tags.clearRowLabelScoped": "{total, plural, one {Vymazat pole {field} u {countText} z {totalText} stopy} few {Vymazat pole {field} u {countText} z {totalText} stop} many {Vymazat pole {field} u {countText} z {totalText} stopy} other {Vymazat pole {field} u {countText} z {totalText} stop}}",
   "@multiRename.tags.clearRowLabelScoped": {
     "sourceHash": "8d307ef"
   },
-  "multiRename.tags.tools.caseFields": "Changes: {fields}",
+  "multiRename.tags.tools.caseFields": "Změní: {fields}",
   "@multiRename.tags.tools.caseFields": {
     "sourceHash": "008465f"
   },
-  "multiRename.tags.tools.caseSentence": "Sentence case",
+  "multiRename.tags.tools.caseSentence": "Jako ve větě",
   "@multiRename.tags.tools.caseSentence": {
     "sourceHash": "2f29e30"
   },
-  "multiRename.tags.tools.caseTitle": "Title Case",
+  "multiRename.tags.tools.caseTitle": "Velká Počáteční Písmena",
   "@multiRename.tags.tools.caseTitle": {
     "sourceHash": "c897dd8"
   },
-  "multiRename.tags.tools.caseLower": "lower case",
+  "multiRename.tags.tools.caseLower": "malá písmena",
   "@multiRename.tags.tools.caseLower": {
     "sourceHash": "99f7180"
   },
-  "multiRename.tags.tools.caseUpper": "UPPER CASE",
+  "multiRename.tags.tools.caseUpper": "VELKÁ PÍSMENA",
   "@multiRename.tags.tools.caseUpper": {
     "sourceHash": "cc4c2e4"
   },
   "multiRename.tags.tools.text.group": "Text",
   "@multiRename.tags.tools.text.group": {
-    "sourceHash": "71988c4"
+    "sourceHash": "71988c4",
+    "sameAsSourceJustification": "Text is the same word in Czech (macOS cs Text, TC Text)."
   },
-  "multiRename.tags.tools.text.fieldsLabel": "Fields",
+  "multiRename.tags.tools.text.fieldsLabel": "Pole",
   "@multiRename.tags.tools.text.fieldsLabel": {
     "sourceHash": "616f48c"
   },
-  "multiRename.tags.tools.text.allFields": "All fields except Comment and Description",
+  "multiRename.tags.tools.text.allFields": "Všechna pole kromě „Komentář“ a „Popis“",
   "@multiRename.tags.tools.text.allFields": {
     "sourceHash": "fec24a7"
   },
-  "multiRename.tags.tools.text.failed": "Couldn’t change the tags. Nothing was changed.",
+  "multiRename.tags.tools.text.failed": "Tagy se nepodařilo změnit. Nic se nezměnilo.",
   "@multiRename.tags.tools.text.failed": {
     "sourceHash": "ee97e79"
   },
-  "multiRename.tags.tools.text.run": "Run",
+  "multiRename.tags.tools.text.run": "Spustit",
   "@multiRename.tags.tools.text.run": {
     "sourceHash": "00d60e3"
   },
-  "multiRename.tags.tools.stripTrackPrefix": "Strip track prefix",
+  "multiRename.tags.tools.stripTrackPrefix": "Odstranit číslo stopy z názvu",
   "@multiRename.tags.tools.stripTrackPrefix": {
     "sourceHash": "6f8b4db"
   },
-  "multiRename.tags.tools.renumber": "Renumber",
+  "multiRename.tags.tools.renumber": "Přečíslovat",
   "@multiRename.tags.tools.renumber": {
     "sourceHash": "26216cd"
   },
-  "multiRename.tags.tools.albumArtistFromArtist": "Album artist = Artist",
+  "multiRename.tags.tools.albumArtistFromArtist": "Interpret alba = Interpret",
   "@multiRename.tags.tools.albumArtistFromArtist": {
     "sourceHash": "c6f45e3"
   },
-  "multiRename.tags.tools.discFromFolder": "Disc from folder",
+  "multiRename.tags.tools.discFromFolder": "Disk podle složky",
   "@multiRename.tags.tools.discFromFolder": {
     "sourceHash": "341c998"
   },
-  "multiRename.tags.tools.discNumberOnly": "Keep only the disc number",
+  "multiRename.tags.tools.discNumberOnly": "Ponechat jen číslo disku",
   "@multiRename.tags.tools.discNumberOnly": {
     "sourceHash": "8679776"
   },
-  "multiRename.tags.tools.discUnchanged": "No disc changed.",
+  "multiRename.tags.tools.discUnchanged": "Žádný disk se nezměnil.",
   "@multiRename.tags.tools.discUnchanged": {
     "sourceHash": "641443f"
   },
-  "multiRename.tags.tools.narratorFromText": "Narrator from text",
+  "multiRename.tags.tools.narratorFromText": "Vypravěč z textu",
   "@multiRename.tags.tools.narratorFromText": {
     "sourceHash": "f55986d"
   },
-  "multiRename.tags.tools.clearRedundantTitles": "Clear title = album",
+  "multiRename.tags.tools.clearRedundantTitles": "Vymazat název = album",
   "@multiRename.tags.tools.clearRedundantTitles": {
     "sourceHash": "135f3e7"
   },
-  "multiRename.tags.tools.extrasLabel": "Extra tags to remove",
+  "multiRename.tags.tools.extrasLabel": "Tagy navíc k odstranění",
   "@multiRename.tags.tools.extrasLabel": {
     "sourceHash": "346d424"
   },
-  "multiRename.tags.tools.removeChecked": "{count, plural, one {Remove {countText} extra tag} other {Remove {countText} extra tags}}",
+  "multiRename.tags.tools.removeChecked": "{count, plural, one {Odstranit {countText} tag navíc} few {Odstranit {countText} tagy navíc} many {Odstranit {countText} tagu navíc} other {Odstranit {countText} tagů navíc}}",
   "@multiRename.tags.tools.removeChecked": {
     "sourceHash": "adc79db"
   },
-  "multiRename.tags.kind.label": "Content",
+  "multiRename.tags.kind.label": "Obsah",
   "@multiRename.tags.kind.label": {
     "sourceHash": "47bd290"
   },
-  "multiRename.tags.kind.audiobook": "Audiobook",
+  "multiRename.tags.kind.audiobook": "Audiokniha",
   "@multiRename.tags.kind.audiobook": {
     "sourceHash": "8716cb3"
   },
-  "multiRename.tags.kind.music": "Music",
+  "multiRename.tags.kind.music": "Hudba",
   "@multiRename.tags.kind.music": {
     "sourceHash": "6eb00b4"
   },
-  "multiRename.tags.write.review": "Write tags…",
+  "multiRename.tags.write.review": "Zapsat tagy…",
   "@multiRename.tags.write.review": {
     "sourceHash": "c4ffa01"
   },
-  "multiRename.tags.write.confirm": "Write tags",
+  "multiRename.tags.write.confirm": "Zapsat tagy",
   "@multiRename.tags.write.confirm": {
     "sourceHash": "975c614"
   },
-  "multiRename.tags.write.back": "Back",
+  "multiRename.tags.write.back": "Zpět",
   "@multiRename.tags.write.back": {
     "sourceHash": "76900f1"
   },
-  "multiRename.tags.write.checking": "Checking what will change…",
+  "multiRename.tags.write.checking": "Kontroluje se, co se změní…",
   "@multiRename.tags.write.checking": {
     "sourceHash": "c8b6fc4"
   },
-  "multiRename.tags.write.writing": "Writing tags…",
+  "multiRename.tags.write.writing": "Zapisují se tagy…",
   "@multiRename.tags.write.writing": {
     "sourceHash": "cb12323"
   },
-  "multiRename.tags.write.changeLabel": "Files that will change",
+  "multiRename.tags.write.changeLabel": "Soubory, které se změní",
   "@multiRename.tags.write.changeLabel": {
     "sourceHash": "49b54dc"
   },
   "multiRename.tags.write.fileChanges": "{fileName}: {fields}",
   "@multiRename.tags.write.fileChanges": {
-    "sourceHash": "aaca806"
+    "sourceHash": "aaca806",
+    "sameAsSourceJustification": "Placeholders joined by a colon; nothing translatable."
   },
-  "multiRename.tags.write.cover": "cover",
+  "multiRename.tags.write.cover": "obal",
   "@multiRename.tags.write.cover": {
     "sourceHash": "3fa405a"
   },
-  "multiRename.tags.write.extras": "extra tags",
+  "multiRename.tags.write.extras": "tagy navíc",
   "@multiRename.tags.write.extras": {
     "sourceHash": "c1d0d74"
   },
-  "multiRename.tags.write.removesConductor": "conductor (removed)",
+  "multiRename.tags.write.removesConductor": "dirigent (odstraněno)",
   "@multiRename.tags.write.removesConductor": {
     "sourceHash": "af05198"
   },
-  "multiRename.tags.write.nothing": "Nothing to write: the tags are as they are on disk.",
+  "multiRename.tags.write.nothing": "Není co zapsat: tagy jsou stejné jako na disku.",
   "@multiRename.tags.write.nothing": {
     "sourceHash": "0457bbd"
   },
-  "multiRename.tags.write.done": "{count, plural, one {Tags written to {countText} file} other {Tags written to {countText} files}}",
+  "multiRename.tags.write.done": "{count, plural, one {Tagy zapsány do {countText} souboru} few {Tagy zapsány do {countText} souborů} many {Tagy zapsány do {countText} souboru} other {Tagy zapsány do {countText} souborů}}",
   "@multiRename.tags.write.done": {
     "sourceHash": "c536765"
   },
-  "multiRename.tags.write.noUndo": "This write can’t be undone: the old tags couldn’t be kept.",
+  "multiRename.tags.write.noUndo": "Tento zápis nelze odvolat: původní tagy se nepodařilo uchovat.",
   "@multiRename.tags.write.noUndo": {
     "sourceHash": "7b96c5b"
   },
-  "multiRename.tags.write.failedHeading": "Not written:",
+  "multiRename.tags.write.failedHeading": "Nezapsáno:",
   "@multiRename.tags.write.failedHeading": {
     "sourceHash": "20468cb"
   },
   "multiRename.tags.write.failedRow": "{fileName}: {reason}",
   "@multiRename.tags.write.failedRow": {
-    "sourceHash": "7939f8f"
+    "sourceHash": "7939f8f",
+    "sameAsSourceJustification": "Placeholders joined by a colon; nothing translatable."
   },
-  "multiRename.tags.write.error.notSupported": "this file type isn’t supported",
+  "multiRename.tags.write.error.notSupported": "tento typ souboru není podporovaný",
   "@multiRename.tags.write.error.notSupported": {
     "sourceHash": "cce56b8"
   },
-  "multiRename.tags.write.error.io": "the file couldn’t be opened or saved",
+  "multiRename.tags.write.error.io": "soubor se nepodařilo otevřít ani uložit",
   "@multiRename.tags.write.error.io": {
     "sourceHash": "338680a"
   },
-  "multiRename.tags.write.error.parse": "its tags couldn’t be read",
+  "multiRename.tags.write.error.parse": "jeho tagy se nepodařilo přečíst",
   "@multiRename.tags.write.error.parse": {
     "sourceHash": "a9d0236"
   },
-  "multiRename.tags.write.error.write": "the tags couldn’t be saved",
+  "multiRename.tags.write.error.write": "tagy se nepodařilo uložit",
   "@multiRename.tags.write.error.write": {
     "sourceHash": "99f4775"
   },
-  "multiRename.tags.write.error.badDate": "its date “{date}” isn’t a real date; correct it in the Date row",
+  "multiRename.tags.write.error.badDate": "jeho datum „{date}“ není skutečné datum; oprav ho v řádku Datum",
   "@multiRename.tags.write.error.badDate": {
     "sourceHash": "55698d1"
   },
-  "multiRename.tags.write.error.wouldDrop": "it would lose tag data",
+  "multiRename.tags.write.error.wouldDrop": "přišel by o data tagů",
   "@multiRename.tags.write.error.wouldDrop": {
     "sourceHash": "8429c5f"
   },
-  "multiRename.tags.write.error.unwritableExtra": "an extra tag can’t be written to it",
+  "multiRename.tags.write.error.unwritableExtra": "tag navíc do něj nelze zapsat",
   "@multiRename.tags.write.error.unwritableExtra": {
     "sourceHash": "468d4a5"
   },
-  "multiRename.tags.write.changedOnDiskHeading": "Changed on disk since it was read, not written:",
+  "multiRename.tags.write.changedOnDiskHeading": "Od načtení změněno na disku, nezapsáno:",
   "@multiRename.tags.write.changedOnDiskHeading": {
     "sourceHash": "1093cd1"
   },
-  "multiRename.tags.write.skippedHeading": "Skipped, not written:",
+  "multiRename.tags.write.skippedHeading": "Přeskočeno, nezapsáno:",
   "@multiRename.tags.write.skippedHeading": {
     "sourceHash": "d163fc8"
   },
-  "multiRename.tags.write.reload": "Read the files again",
+  "multiRename.tags.write.reload": "Znovu načíst soubory",
   "@multiRename.tags.write.reload": {
     "sourceHash": "c8652e6"
   },
-  "multiRename.tags.reload.title": "Read the files again?",
+  "multiRename.tags.reload.title": "Znovu načíst soubory?",
   "@multiRename.tags.reload.title": {
     "sourceHash": "257fdce"
   },
-  "multiRename.tags.reload.message": "This reads every file’s tags from disk again. Changes you haven’t written are lost.",
+  "multiRename.tags.reload.message": "Tagy všech souborů se znovu načtou z disku. Nezapsané změny se ztratí.",
   "@multiRename.tags.reload.message": {
     "sourceHash": "4a53628"
   },
-  "multiRename.tags.reload.confirm": "Read again",
+  "multiRename.tags.reload.confirm": "Znovu načíst",
   "@multiRename.tags.reload.confirm": {
     "sourceHash": "d8cb92f"
   },
-  "multiRename.tags.diacritics.warning": "Diacritics in: {fields}",
+  "multiRename.tags.diacritics.warning": "Diakritika v polích: {fields}",
   "@multiRename.tags.diacritics.warning": {
     "sourceHash": "7eb7f45"
   },
-  "multiRename.tags.diacritics.fix": "Remove diacritics",
+  "multiRename.tags.diacritics.fix": "Odstranit diakritiku",
   "@multiRename.tags.diacritics.fix": {
     "sourceHash": "4103ca1"
   },
-  "multiRename.tags.undo.button": "Undo tag changes",
+  "multiRename.tags.undo.button": "Odvolat změny tagů",
   "@multiRename.tags.undo.button": {
     "sourceHash": "aa8e020"
   },
-  "multiRename.tags.undo.tooltip": "Puts the files back as they were before the last tag write. A file changed since then is left as it is.",
+  "multiRename.tags.undo.tooltip": "Vrátí soubory do stavu před posledním zápisem tagů. Soubor, který se od té doby změnil, zůstane, jak je.",
   "@multiRename.tags.undo.tooltip": {
     "sourceHash": "9df4987"
   },
-  "multiRename.tags.undo.title": "Undo tag changes?",
+  "multiRename.tags.undo.title": "Odvolat změny tagů?",
   "@multiRename.tags.undo.title": {
     "sourceHash": "1d85df2"
   },
-  "multiRename.tags.undo.message": "{count, plural, one {This puts the tags of the {countText} file the last write changed back as they were before it. If that file changed since the write, it’s left as it is.} other {This puts the tags of the {countText} files the last write changed back as they were before it. A file that changed since the write is left as it is.}}",
+  "multiRename.tags.undo.message": "{count, plural, one {Tagy {countText} souboru, který poslední zápis změnil, se vrátí do stavu před ním. Pokud se ten soubor od zápisu změnil, zůstane, jak je.} few {Tagy {countText} souborů, které poslední zápis změnil, se vrátí do stavu před ním. Soubor, který se od zápisu změnil, zůstane, jak je.} many {Tagy {countText} souboru, které poslední zápis změnil, se vrátí do stavu před ním. Soubor, který se od zápisu změnil, zůstane, jak je.} other {Tagy {countText} souborů, které poslední zápis změnil, se vrátí do stavu před ním. Soubor, který se od zápisu změnil, zůstane, jak je.}}",
   "@multiRename.tags.undo.message": {
     "sourceHash": "d5b4c86"
   },
-  "multiRename.tags.undo.confirm": "Undo",
+  "multiRename.tags.undo.confirm": "Odvolat akci",
   "@multiRename.tags.undo.confirm": {
     "sourceHash": "a8283ad"
   },
-  "multiRename.tags.undo.done": "{count, plural, one {Tags restored in {countText} file} other {Tags restored in {countText} files}}",
+  "multiRename.tags.undo.done": "{count, plural, one {Tagy obnoveny: {countText} soubor} few {Tagy obnoveny: {countText} soubory} many {Tagy obnoveny: {countText} souboru} other {Tagy obnoveny: {countText} souborů}}",
   "@multiRename.tags.undo.done": {
     "sourceHash": "2eb1c9d"
   },
-  "multiRename.tags.undo.notRestored": "{count, plural, one {{countText} file couldn’t be restored.} other {{countText} files couldn’t be restored.}}",
+  "multiRename.tags.undo.notRestored": "{count, plural, one {{countText} soubor se nepodařilo obnovit.} few {{countText} soubory se nepodařilo obnovit.} many {{countText} souboru se nepodařilo obnovit.} other {{countText} souborů se nepodařilo obnovit.}}",
   "@multiRename.tags.undo.notRestored": {
     "sourceHash": "97939fa"
   },
-  "multiRename.tags.undo.changedSince": "{count, plural, one {{countText} file changed after the write, for example by a rename, so it was left as it is.} other {{countText} files changed after the write, for example by a rename, so they were left as they are.}}",
+  "multiRename.tags.undo.changedSince": "{count, plural, one {{countText} soubor se po zápisu změnil, třeba přejmenováním, takže zůstal, jak je.} few {{countText} soubory se po zápisu změnily, třeba přejmenováním, takže zůstaly, jak jsou.} many {{countText} souboru se po zápisu změnilo, třeba přejmenováním, takže zůstalo, jak je.} other {{countText} souborů se po zápisu změnilo, třeba přejmenováním, takže zůstalo, jak je.}}",
   "@multiRename.tags.undo.changedSince": {
     "sourceHash": "78c31f1"
   },
-  "multiRename.tags.wouldDrop.title": "Some files would lose tag data",
+  "multiRename.tags.wouldDrop.title": "Některé soubory by přišly o data tagů",
   "@multiRename.tags.wouldDrop.title": {
     "sourceHash": "5afab0b"
   },
-  "multiRename.tags.wouldDrop.message": "{count, plural, one {Writing {countText} file would drop the tag data listed below, which the editor doesn’t show. It wasn’t written.} other {Writing {countText} files would drop the tag data listed below, which the editor doesn’t show. They weren’t written.}}",
+  "multiRename.tags.wouldDrop.message": "{count, plural, one {Zápisem {countText} souboru by se ztratila níže uvedená data tagů, která editor nezobrazuje. Soubor nebyl zapsán.} few {Zápisem {countText} souborů by se ztratila níže uvedená data tagů, která editor nezobrazuje. Soubory nebyly zapsány.} many {Zápisem {countText} souboru by se ztratila níže uvedená data tagů, která editor nezobrazuje. Soubory nebyly zapsány.} other {Zápisem {countText} souborů by se ztratila níže uvedená data tagů, která editor nezobrazuje. Soubory nebyly zapsány.}}",
   "@multiRename.tags.wouldDrop.message": {
     "sourceHash": "684fc18"
   },
-  "multiRename.tags.wouldDrop.listLabel": "Files that would lose tag data",
+  "multiRename.tags.wouldDrop.listLabel": "Soubory, které by přišly o data tagů",
   "@multiRename.tags.wouldDrop.listLabel": {
     "sourceHash": "43f0321"
   },
   "multiRename.tags.wouldDrop.row": "{fileName}: {items}",
   "@multiRename.tags.wouldDrop.row": {
-    "sourceHash": "50de2de"
+    "sourceHash": "50de2de",
+    "sameAsSourceJustification": "Placeholders joined by a colon; the items are technical tag IDs; nothing translatable."
   },
-  "multiRename.tags.wouldDrop.writeAnyway": "Write anyway",
+  "multiRename.tags.wouldDrop.writeAnyway": "Přesto zapsat",
   "@multiRename.tags.wouldDrop.writeAnyway": {
     "sourceHash": "00b17b2"
   },
-  "multiRename.tags.wouldDrop.skip": "Skip these files",
+  "multiRename.tags.wouldDrop.skip": "Přeskočit tyto soubory",
   "@multiRename.tags.wouldDrop.skip": {
     "sourceHash": "ddb7a77"
   },
-  "multiRename.tags.write.summaryAs": "{count, plural, one {Writing as {kind}: {countText} file will change:} other {Writing as {kind}: {countText} files will change:}}",
+  "multiRename.tags.write.summaryAs": "{count, plural, one {Zápis jako {kind}: změní se {countText} soubor:} few {Zápis jako {kind}: změní se {countText} soubory:} many {Zápis jako {kind}: změní se {countText} souboru:} other {Zápis jako {kind}: změní se {countText} souborů:}}",
   "@multiRename.tags.write.summaryAs": {
     "sourceHash": "cba70de"
   },
-  "multiRename.tags.write.refused": "No file was written.",
+  "multiRename.tags.write.refused": "Nebyl zapsán žádný soubor.",
   "@multiRename.tags.write.refused": {
     "sourceHash": "6762f25"
   },
-  "multiRename.tags.write.waiting": "Finishing the last change…",
+  "multiRename.tags.write.waiting": "Dokončuje se poslední změna…",
   "@multiRename.tags.write.waiting": {
     "sourceHash": "e49e983"
   },
-  "multiRename.tags.write.stillBusy": "Cmdr is still reading the files. Try again in a moment.",
+  "multiRename.tags.write.stillBusy": "Cmdr ještě čte soubory. Zkus to za chvíli znovu.",
   "@multiRename.tags.write.stillBusy": {
     "sourceHash": "f9beee0"
   },
-  "multiRename.tags.write.listFailed": "Cmdr couldn’t check what will change. Try again in a moment.",
+  "multiRename.tags.write.listFailed": "Cmdr nedokázal zjistit, co se změní. Zkus to za chvíli znovu.",
   "@multiRename.tags.write.listFailed": {
     "sourceHash": "74dd272"
   },
-  "multiRename.tags.write.sessionGone": "The tags aren’t open any more. Close Multi-Rename and open it again.",
+  "multiRename.tags.write.sessionGone": "Tagy už nejsou otevřené. Zavři Hromadné přejmenování a otevři ho znovu.",
   "@multiRename.tags.write.sessionGone": {
     "sourceHash": "00fb6eb"
   },
-  "multiRename.tags.write.stopped": "The write stopped before it finished, so some files may not have their new tags.",
+  "multiRename.tags.write.stopped": "Zápis se zastavil před dokončením, takže některé soubory možná nemají nové tagy.",
   "@multiRename.tags.write.stopped": {
     "sourceHash": "05bfca4"
   },
-  "multiRename.tags.write.noUndoSome": "Some of these files can’t be undone: their old tags couldn’t be kept. Undo tag changes restores the others.",
+  "multiRename.tags.write.noUndoSome": "U některých z těchto souborů nelze zápis odvolat: jejich původní tagy se nepodařilo uchovat. Tlačítko „Odvolat změny tagů“ obnoví ostatní.",
   "@multiRename.tags.write.noUndoSome": {
     "sourceHash": "3ae488c"
   },
-  "multiRename.tags.undoStoreUnavailable": "Couldn’t use the store that keeps the old tags for Undo.",
+  "multiRename.tags.undoStoreUnavailable": "Nepodařilo se použít úložiště, kam se ukládají původní tagy pro odvolání.",
   "@multiRename.tags.undoStoreUnavailable": {
     "sourceHash": "1455c16"
   },
-  "multiRename.tags.undo.unwrittenLost": "Tag changes you haven’t written to those files yet are lost too.",
+  "multiRename.tags.undo.unwrittenLost": "Ztratí se i změny tagů, které v těch souborech ještě nejsou zapsané.",
   "@multiRename.tags.undo.unwrittenLost": {
     "sourceHash": "2ad42a1"
   },
-  "multiRename.tags.select.all": "Select all tracks",
+  "multiRename.tags.select.all": "Vybrat všechny stopy",
   "@multiRename.tags.select.all": {
     "sourceHash": "9320e48"
   },
-  "multiRename.tags.choices.button": "Values…",
+  "multiRename.tags.choices.button": "Hodnoty…",
   "@multiRename.tags.choices.button": {
     "sourceHash": "e8e4b2c"
   },
-  "multiRename.tags.choices.label": "{field} values",
+  "multiRename.tags.choices.label": "Hodnoty pole {field}",
   "@multiRename.tags.choices.label": {
     "sourceHash": "fefdb59"
   },
   "multiRename.tags.choices.item": "{value} ({countText})",
   "@multiRename.tags.choices.item": {
-    "sourceHash": "d2d9b66"
+    "sourceHash": "d2d9b66",
+    "sameAsSourceJustification": "Placeholders with brackets; nothing translatable."
   },
-  "multiRename.tags.choices.empty": "‹empty›",
+  "multiRename.tags.choices.empty": "‹prázdné›",
   "@multiRename.tags.choices.empty": {
     "sourceHash": "d58e123"
   },
-  "multiRename.tags.selectionGone": "The checked tracks are no longer here, so nothing was changed. Check tracks again, or run the tool with none checked for all tracks.",
+  "multiRename.tags.selectionGone": "Vybrané stopy už tu nejsou, takže se nic nezměnilo. Vyber stopy znovu, nebo spusť nástroj bez výběru pro všechny stopy.",
   "@multiRename.tags.selectionGone": {
-    "sourceHash": "17373af"
+    "sourceHash": "f2f28a4"
   },
-  "multiRename.tags.tools.replace.button": "Find and replace",
+  "multiRename.tags.tools.replace.button": "Najít a nahradit",
   "@multiRename.tags.tools.replace.button": {
     "sourceHash": "9898ad0"
   },
-  "multiRename.tags.tools.format.button": "Format a field",
+  "multiRename.tags.tools.format.button": "Formátovat pole",
   "@multiRename.tags.tools.format.button": {
     "sourceHash": "ece9485"
   },
-  "multiRename.tags.tools.replace.fieldsLabel": "Fields to search",
+  "multiRename.tags.tools.replace.fieldsLabel": "Pole k prohledání",
   "@multiRename.tags.tools.replace.fieldsLabel": {
     "sourceHash": "aff1d09"
   },
-  "multiRename.tags.tools.replace.allFields": "All fields",
+  "multiRename.tags.tools.replace.allFields": "Všechna pole",
   "@multiRename.tags.tools.replace.allFields": {
     "sourceHash": "b2525b1"
   },
-  "multiRename.tags.tools.replace.search": "Find",
+  "multiRename.tags.tools.replace.search": "Najít",
   "@multiRename.tags.tools.replace.search": {
     "sourceHash": "822b2ae"
   },
-  "multiRename.tags.tools.replace.replaceWith": "Replace with",
+  "multiRename.tags.tools.replace.replaceWith": "Nahradit za",
   "@multiRename.tags.tools.replace.replaceWith": {
     "sourceHash": "8382d31"
   },
-  "multiRename.tags.tools.replace.run": "Replace",
+  "multiRename.tags.tools.replace.run": "Nahradit",
   "@multiRename.tags.tools.replace.run": {
     "sourceHash": "95e1543"
   },
-  "multiRename.tags.tools.replace.lists.heading": "Saved lists",
+  "multiRename.tags.tools.replace.lists.heading": "Uložené seznamy",
   "@multiRename.tags.tools.replace.lists.heading": {
     "sourceHash": "88b6a9e"
   },
-  "multiRename.tags.tools.replace.lists.empty": "No saved lists yet.",
+  "multiRename.tags.tools.replace.lists.empty": "Zatím žádné uložené seznamy.",
   "@multiRename.tags.tools.replace.lists.empty": {
     "sourceHash": "fc29749"
   },
-  "multiRename.tags.tools.replace.lists.loadFailed": "Couldn’t load the saved lists.",
+  "multiRename.tags.tools.replace.lists.loadFailed": "Uložené seznamy se nepodařilo načíst.",
   "@multiRename.tags.tools.replace.lists.loadFailed": {
     "sourceHash": "bf2c5e1"
   },
-  "multiRename.tags.tools.replace.lists.stepsLabel": "Steps in the list being built",
+  "multiRename.tags.tools.replace.lists.stepsLabel": "Kroky v sestavovaném seznamu",
   "@multiRename.tags.tools.replace.lists.stepsLabel": {
     "sourceHash": "44debc9"
   },
-  "multiRename.tags.tools.replace.lists.addStep": "Add as step",
+  "multiRename.tags.tools.replace.lists.addStep": "Přidat jako krok",
   "@multiRename.tags.tools.replace.lists.addStep": {
     "sourceHash": "ee91785"
   },
-  "multiRename.tags.tools.replace.lists.removeStep": "Remove step",
+  "multiRename.tags.tools.replace.lists.removeStep": "Odstranit krok",
   "@multiRename.tags.tools.replace.lists.removeStep": {
     "sourceHash": "d4c76f4"
   },
   "multiRename.tags.tools.replace.lists.stepSummary": "{search} → {replace}",
   "@multiRename.tags.tools.replace.lists.stepSummary": {
-    "sourceHash": "5246665"
+    "sourceHash": "5246665",
+    "sameAsSourceJustification": "Placeholders joined by an arrow; nothing translatable."
   },
-  "multiRename.tags.tools.replace.lists.name": "List name",
+  "multiRename.tags.tools.replace.lists.name": "Název seznamu",
   "@multiRename.tags.tools.replace.lists.name": {
     "sourceHash": "6c1247b"
   },
-  "multiRename.tags.tools.replace.lists.save": "Save list",
+  "multiRename.tags.tools.replace.lists.save": "Uložit seznam",
   "@multiRename.tags.tools.replace.lists.save": {
     "sourceHash": "6dfcb92"
   },
-  "multiRename.tags.tools.replace.lists.run": "Run",
+  "multiRename.tags.tools.replace.lists.run": "Spustit",
   "@multiRename.tags.tools.replace.lists.run": {
     "sourceHash": "00d60e3"
   },
-  "multiRename.tags.tools.replace.lists.runNamed": "Run {name}",
+  "multiRename.tags.tools.replace.lists.runNamed": "Spustit: {name}",
   "@multiRename.tags.tools.replace.lists.runNamed": {
     "sourceHash": "7e8d49b"
   },
-  "multiRename.tags.tools.replace.lists.edit": "Edit",
+  "multiRename.tags.tools.replace.lists.edit": "Upravit",
   "@multiRename.tags.tools.replace.lists.edit": {
     "sourceHash": "464c4ff"
   },
-  "multiRename.tags.tools.replace.lists.editNamed": "Edit {name}",
+  "multiRename.tags.tools.replace.lists.editNamed": "Upravit: {name}",
   "@multiRename.tags.tools.replace.lists.editNamed": {
     "sourceHash": "2313fe2"
   },
-  "multiRename.tags.tools.replace.lists.delete": "Delete",
+  "multiRename.tags.tools.replace.lists.delete": "Smazat",
   "@multiRename.tags.tools.replace.lists.delete": {
     "sourceHash": "e2d0a54"
   },
-  "multiRename.tags.tools.replace.lists.deleteNamed": "Delete {name}",
+  "multiRename.tags.tools.replace.lists.deleteNamed": "Smazat: {name}",
   "@multiRename.tags.tools.replace.lists.deleteNamed": {
     "sourceHash": "3cf8146"
   },
-  "multiRename.tags.tools.replace.lists.deleteFailed": "Couldn’t delete the list.",
+  "multiRename.tags.tools.replace.lists.deleteFailed": "Seznam se nepodařilo smazat.",
   "@multiRename.tags.tools.replace.lists.deleteFailed": {
     "sourceHash": "0dda7bb"
   },
-  "multiRename.tags.tools.replace.lists.full": "There are too many saved lists. Delete one first.",
+  "multiRename.tags.tools.replace.lists.full": "Uložených seznamů je příliš mnoho. Nejdřív jeden smaž.",
   "@multiRename.tags.tools.replace.lists.full": {
     "sourceHash": "9972af1"
   },
-  "multiRename.tags.tools.replace.lists.needsSteps": "A list needs a name and at least one step.",
+  "multiRename.tags.tools.replace.lists.needsSteps": "Seznam potřebuje název a aspoň jeden krok.",
   "@multiRename.tags.tools.replace.lists.needsSteps": {
     "sourceHash": "9437bab"
   },
-  "multiRename.tags.tools.replace.lists.saveFailed": "Couldn’t save the list.",
+  "multiRename.tags.tools.replace.lists.saveFailed": "Seznam se nepodařilo uložit.",
   "@multiRename.tags.tools.replace.lists.saveFailed": {
     "sourceHash": "d7bb236"
   },
-  "multiRename.tags.tools.format.field": "Field",
+  "multiRename.tags.tools.format.field": "Pole",
   "@multiRename.tags.tools.format.field": {
     "sourceHash": "f45fc1d"
   },
-  "multiRename.tags.tools.format.mask": "Mask",
+  "multiRename.tags.tools.format.mask": "Maska",
   "@multiRename.tags.tools.format.mask": {
     "sourceHash": "e368929"
   },
-  "multiRename.tags.tools.format.hint": "Format keeps only the first value of a field that holds several, such as Artist or Genre.",
+  "multiRename.tags.tools.format.hint": "Formátování ponechá u pole s více hodnotami, jako je Interpret nebo Žánr, jen první hodnotu.",
   "@multiRename.tags.tools.format.hint": {
     "sourceHash": "a319ffd"
   },
-  "multiRename.tags.tools.format.run": "Format",
+  "multiRename.tags.tools.format.run": "Formátovat",
   "@multiRename.tags.tools.format.run": {
     "sourceHash": "2f34366"
   },
-  "multiRename.tags.tools.name.mode": "How to read the file names",
+  "multiRename.tags.tools.name.mode": "Jak číst názvy souborů",
   "@multiRename.tags.tools.name.mode": {
     "sourceHash": "b821cb1"
   },
-  "multiRename.tags.tools.name.modePattern": "Pattern",
+  "multiRename.tags.tools.name.modePattern": "Vzor",
   "@multiRename.tags.tools.name.modePattern": {
     "sourceHash": "4288ade"
   },
-  "multiRename.tags.tools.name.modeRegex": "Regular expression",
+  "multiRename.tags.tools.name.modeRegex": "Regulární výraz",
   "@multiRename.tags.tools.name.modeRegex": {
     "sourceHash": "9f896c3"
   },
-  "multiRename.tags.tools.name.patternPattern": "Pattern, like %track% - %title%",
+  "multiRename.tags.tools.name.patternPattern": "Vzor, třeba %track% - %title%",
   "@multiRename.tags.tools.name.patternPattern": {
     "sourceHash": "d0cd612"
   },
-  "multiRename.tags.tools.name.patternRegex": "Regular expression, like {example}",
+  "multiRename.tags.tools.name.patternRegex": "Regulární výraz, třeba {example}",
   "@multiRename.tags.tools.name.patternRegex": {
     "sourceHash": "6b2e8dd"
   },
-  "multiRename.tags.tools.name.recent": "Recent patterns",
+  "multiRename.tags.tools.name.recent": "Poslední vzory",
   "@multiRename.tags.tools.name.recent": {
     "sourceHash": "ba57dc2"
   },
-  "multiRename.tags.tools.name.preview": "Preview",
+  "multiRename.tags.tools.name.preview": "Náhled",
   "@multiRename.tags.tools.name.preview": {
     "sourceHash": "324b134"
   },
-  "multiRename.tags.tools.name.take": "Take",
+  "multiRename.tags.tools.name.take": "Převzít",
   "@multiRename.tags.tools.name.take": {
     "sourceHash": "8b862ba"
   },
-  "multiRename.tags.tools.name.stale": "Preview again to take this pattern.",
+  "multiRename.tags.tools.name.stale": "Pro převzetí tohoto vzoru zobraz znovu náhled.",
   "@multiRename.tags.tools.name.stale": {
     "sourceHash": "897c556"
   },
-  "multiRename.tags.tools.name.previewLabel": "What the pattern reads from each file name",
+  "multiRename.tags.tools.name.previewLabel": "Co vzor přečte z každého názvu souboru",
   "@multiRename.tags.tools.name.previewLabel": {
     "sourceHash": "81130f8"
   },
-  "multiRename.tags.tools.name.columnFile": "File name",
+  "multiRename.tags.tools.name.columnFile": "Název souboru",
   "@multiRename.tags.tools.name.columnFile": {
     "sourceHash": "3efed3d"
   },
-  "multiRename.tags.tools.name.columnFields": "Read from it",
+  "multiRename.tags.tools.name.columnFields": "Přečteno",
   "@multiRename.tags.tools.name.columnFields": {
     "sourceHash": "0ba0b39"
   },
-  "multiRename.tags.tools.name.noMatch": "Doesn’t match",
+  "multiRename.tags.tools.name.noMatch": "Neodpovídá",
   "@multiRename.tags.tools.name.noMatch": {
     "sourceHash": "0533e1b"
   },
-  "multiRename.tags.tools.name.badRegex": "The pattern isn’t a valid regular expression.",
+  "multiRename.tags.tools.name.badRegex": "Vzor není platný regulární výraz.",
   "@multiRename.tags.tools.name.badRegex": {
     "sourceHash": "3eab3bf"
   },
-  "multiRename.tags.tools.name.unknownField": "“{name}” isn’t a tag field.",
+  "multiRename.tags.tools.name.unknownField": "„{name}“ není pole tagu.",
   "@multiRename.tags.tools.name.unknownField": {
     "sourceHash": "aaeb7b5"
   },
-  "multiRename.tags.tools.name.noFields": "The pattern reads no tag field. Use a field like %title% or a named group like {example}.",
+  "multiRename.tags.tools.name.noFields": "Vzor nečte žádné pole tagu. Použij pole jako %title% nebo pojmenovanou skupinu jako {example}.",
   "@multiRename.tags.tools.name.noFields": {
     "sourceHash": "4be905c"
   },
-  "multiRename.tags.numbering.title": "Auto-numbering wizard",
+  "multiRename.tags.numbering.title": "Průvodce automatickým číslováním",
   "@multiRename.tags.numbering.title": {
     "sourceHash": "fee1ba8"
   },
-  "multiRename.tags.numbering.track": "Track number",
+  "multiRename.tags.numbering.track": "Číslo stopy",
   "@multiRename.tags.numbering.track": {
     "sourceHash": "de8de0b"
   },
-  "multiRename.tags.numbering.disc": "Disc number",
+  "multiRename.tags.numbering.disc": "Číslo disku",
   "@multiRename.tags.numbering.disc": {
     "sourceHash": "0fd0aef"
   },
-  "multiRename.tags.numbering.begin": "Begin at",
+  "multiRename.tags.numbering.begin": "Začít od",
   "@multiRename.tags.numbering.begin": {
     "sourceHash": "b61275a"
   },
-  "multiRename.tags.numbering.total": "Save total",
+  "multiRename.tags.numbering.total": "Uložit celkový počet",
   "@multiRename.tags.numbering.total": {
     "sourceHash": "a0757b7"
   },
-  "multiRename.tags.numbering.pad": "Leading zeros",
+  "multiRename.tags.numbering.pad": "Úvodní nuly",
   "@multiRename.tags.numbering.pad": {
     "sourceHash": "cf43ab8"
   },
-  "multiRename.tags.numbering.nextOnFolder": "Next disc on change of directory",
+  "multiRename.tags.numbering.nextOnFolder": "Další disk při změně složky",
   "@multiRename.tags.numbering.nextOnFolder": {
     "sourceHash": "8134fba"
   },
-  "multiRename.tags.numbering.nextOnField": "Next disc on change of",
+  "multiRename.tags.numbering.nextOnField": "Další disk při změně pole",
   "@multiRename.tags.numbering.nextOnField": {
     "sourceHash": "94ce8a8"
   },
-  "multiRename.tags.numbering.resetTrack": "Reset track counter on next disc",
+  "multiRename.tags.numbering.resetTrack": "Na dalším disku resetovat počítadlo stop",
   "@multiRename.tags.numbering.resetTrack": {
     "sourceHash": "92d5ca2"
   },
-  "multiRename.tags.numbering.resetDisc": "Reset disc counter on change of",
+  "multiRename.tags.numbering.resetDisc": "Resetovat počítadlo disků při změně pole",
   "@multiRename.tags.numbering.resetDisc": {
     "sourceHash": "29ae44a"
   },
-  "multiRename.tags.numbering.singleFile": "A single-file book gets no track number; only the disc is numbered.",
+  "multiRename.tags.numbering.singleFile": "Kniha v jednom souboru nedostane číslo stopy, čísluje se jen disk.",
   "@multiRename.tags.numbering.singleFile": {
     "sourceHash": "cec7894"
   },
-  "multiRename.tags.numbering.invalidBegin": "Begin at must be a whole number, 0 or more.",
+  "multiRename.tags.numbering.invalidBegin": "„Začít od“ musí být celé číslo 0 nebo větší.",
   "@multiRename.tags.numbering.invalidBegin": {
     "sourceHash": "3b288e2"
   },
   "multiRename.tags.numbering.ok": "OK",
   "@multiRename.tags.numbering.ok": {
-    "sourceHash": "565339b"
+    "sourceHash": "565339b",
+    "sameAsSourceJustification": "OK is the Czech macOS button label (AppKit cs OK)."
   },
-  "multiRename.tags.numbering.cancel": "Cancel",
+  "multiRename.tags.numbering.cancel": "Zrušit",
   "@multiRename.tags.numbering.cancel": {
     "sourceHash": "19766ed"
   },
-  "multiRename.tags.sort.label": "Sort tracks",
+  "multiRename.tags.sort.label": "Seřadit stopy",
   "@multiRename.tags.sort.label": {
     "sourceHash": "ffef16b"
   },
-  "multiRename.tags.sort.state": "{column}, {order, select, ascending {sorted ascending} descending {sorted descending} other {not sorted}}",
+  "multiRename.tags.sort.state": "{column}, {order, select, ascending {seřazeno vzestupně} descending {seřazeno sestupně} other {neseřazeno}}",
   "@multiRename.tags.sort.state": {
     "sourceHash": "b4787e7"
   },
-  "multiRename.tags.sort.by": "Sort by {column}",
+  "multiRename.tags.sort.by": "Seřadit podle sloupce {column}",
   "@multiRename.tags.sort.by": {
     "sourceHash": "55fb1bf"
   },
-  "multiRename.tags.col.play": "Play",
+  "multiRename.tags.col.play": "Přehrát",
   "@multiRename.tags.col.play": {
     "sourceHash": "436e610"
   },
-  "multiRename.tags.play.failed": "Couldn’t play that track.",
+  "multiRename.tags.play.failed": "Tuto stopu se nepodařilo přehrát.",
   "@multiRename.tags.play.failed": {
     "sourceHash": "0b91294"
   },
-  "multiRename.tags.play.openInPlayer": "Open in foobar2000",
+  "multiRename.tags.play.openInPlayer": "Otevřít v přehrávači",
   "@multiRename.tags.play.openInPlayer": {
-    "sourceHash": "bca23db"
+    "sourceHash": "bbd20b9"
   },
-  "multiRename.tags.play.openInApp": "Open in {app}",
+  "multiRename.tags.play.openInApp": "Otevřít v aplikaci {app}",
   "@multiRename.tags.play.openInApp": {
     "sourceHash": "f30fd61"
   },
-  "multiRename.tags.play.chooseApp": "Choose the app to open the tracks in",
+  "multiRename.tags.play.chooseApp": "Vybrat aplikaci pro otevření stop",
   "@multiRename.tags.play.chooseApp": {
     "sourceHash": "8cf87ab"
   },
-  "multiRename.tags.play.menu": "Open the tracks with",
+  "multiRename.tags.play.menu": "Otevřít stopy v aplikaci",
   "@multiRename.tags.play.menu": {
     "sourceHash": "12aff2d"
   },
-  "multiRename.tags.play.defaultApp": "{app} (default)",
+  "multiRename.tags.play.defaultApp": "{app} (výchozí)",
   "@multiRename.tags.play.defaultApp": {
     "sourceHash": "32a7cca"
   },
-  "multiRename.tags.play.defaultAppUnknown": "Each in its default app",
+  "multiRename.tags.play.defaultAppUnknown": "Každou ve výchozí aplikaci",
   "@multiRename.tags.play.defaultAppUnknown": {
     "sourceHash": "b564deb"
   },
-  "multiRename.tags.play.noOtherApp": "No other app opens all these tracks",
+  "multiRename.tags.play.noOtherApp": "Žádná jiná aplikace neotevře všechny tyto stopy",
   "@multiRename.tags.play.noOtherApp": {
     "sourceHash": "b31072c"
   },
-  "multiRename.tags.play.chooseOther": "Choose…",
+  "multiRename.tags.play.chooseOther": "Vybrat…",
   "@multiRename.tags.play.chooseOther": {
     "sourceHash": "7ca4161"
   },
-  "multiRename.tags.play.playerMissing": "The app you chose isn’t installed any more, so the tracks opened in the default app.",
+  "multiRename.tags.play.playerMissing": "Vybraná aplikace už není nainstalovaná, takže se stopy otevřely ve výchozí aplikaci.",
   "@multiRename.tags.play.playerMissing": {
     "sourceHash": "96a9b8e"
   },
-  "multiRename.tags.play.playerUnavailable": "Couldn’t open the tracks in a player.",
+  "multiRename.tags.play.playerUnavailable": "Stopy se nepodařilo otevřít v přehrávači.",
   "@multiRename.tags.play.playerUnavailable": {
     "sourceHash": "753fba0"
   },
-  "multiRename.tags.play.nothingReadable": "None of those tracks can be read, so none was opened.",
+  "multiRename.tags.play.nothingReadable": "Žádnou z těch stop nelze přečíst, takže se žádná neotevřela.",
   "@multiRename.tags.play.nothingReadable": {
     "sourceHash": "914f007"
   },
-  "multiRename.tags.play.openFailed": "Couldn’t open those tracks.",
+  "multiRename.tags.play.openFailed": "Ty stopy se nepodařilo otevřít.",
   "@multiRename.tags.play.openFailed": {
     "sourceHash": "d8d01f0"
   },
-  "multiRename.tags.openWindow": "Tags…",
+  "multiRename.tags.openWindow": "Tagy…",
   "@multiRename.tags.openWindow": {
     "sourceHash": "449cf54"
   },
-  "multiRename.tags.window.title": "Tags: {folder}",
+  "multiRename.tags.window.title": "Tagy: {folder}",
   "@multiRename.tags.window.title": {
     "sourceHash": "229d9b1"
   },
-  "multiRename.tags.window.nothingSelected": "Select the audio files to tag first.",
+  "multiRename.tags.window.nothingSelected": "Nejdřív vyber zvukové soubory, kterým chceš upravit tagy.",
   "@multiRename.tags.window.nothingSelected": {
     "sourceHash": "1fbb8f5"
   },
-  "multiRename.tags.window.openFailed": "Cmdr couldn’t open these tags. Close the window and try again.",
+  "multiRename.tags.window.openFailed": "Cmdr nedokázal tyto tagy otevřít. Zavři okno a zkus to znovu.",
   "@multiRename.tags.window.openFailed": {
     "sourceHash": "ad77a4c"
   },
-  "multiRename.tags.window.bodyReloaded": "The Tags window ran into a problem, so Cmdr reloaded it. Your tag edits are still here.",
+  "multiRename.tags.window.bodyReloaded": "Okno Tagy narazilo na problém, a tak ho Cmdr znovu načetl. Tvoje úpravy tagů tu pořád jsou.",
   "@multiRename.tags.window.bodyReloaded": {
     "sourceHash": "dcf8eae"
   },
-  "multiRename.tags.window.bodyStopped": "The Tags window keeps running into a problem, so Cmdr stopped reloading it.",
+  "multiRename.tags.window.bodyStopped": "Okno Tagy opakovaně naráží na problém, a tak ho Cmdr přestal znovu načítat.",
   "@multiRename.tags.window.bodyStopped": {
     "sourceHash": "4e61147"
   },
-  "multiRename.tags.window.broken": "This Tags window can’t show its tags. Close it; if tag changes aren’t written to the files yet, Cmdr asks first.",
+  "multiRename.tags.window.broken": "Toto okno Tagy nemůže zobrazit své tagy. Zavři ho; pokud změny tagů ještě nejsou zapsané do souborů, Cmdr se nejdřív zeptá.",
   "@multiRename.tags.window.broken": {
     "sourceHash": "afe391a"
   },
-  "multiRename.tags.window.close": "Close",
+  "multiRename.tags.window.close": "Zavřít",
   "@multiRename.tags.window.close": {
     "sourceHash": "7d9eb7a"
   },
-  "multiRename.tags.window.noTracks": "None of the selected files is an audio file Cmdr can tag.",
+  "multiRename.tags.window.noTracks": "Žádný z vybraných souborů není zvukový soubor, kterému Cmdr umí upravit tagy.",
   "@multiRename.tags.window.noTracks": {
     "sourceHash": "5765e14"
   },
-  "multiRename.tags.window.tooManyTracks": "Those folders hold more than {limit, number} audio files. Select a smaller part of the book.",
+  "multiRename.tags.window.tooManyTracks": "V těch složkách je víc než {limit, number} zvukových souborů. Vyber menší část knihy.",
   "@multiRename.tags.window.tooManyTracks": {
     "sourceHash": "daee60a"
   },
-  "multiRename.tags.window.foldersNeedLocalDisk": "Edit tags opens a folder only on a disk of this computer. Open the folder and select its audio files instead.",
+  "multiRename.tags.window.foldersNeedLocalDisk": "Úprava tagů otevře složku jen na disku tohoto počítače. Otevři složku a vyber přímo její zvukové soubory.",
   "@multiRename.tags.window.foldersNeedLocalDisk": {
     "sourceHash": "ce31fcf"
   },
-  "multiRename.tags.window.openTimedOut": "Reading the folder took too long, so nothing was opened. Try again, or select the audio files themselves.",
+  "multiRename.tags.window.openTimedOut": "Čtení složky trvalo příliš dlouho, takže se nic neotevřelo. Zkus to znovu, nebo vyber přímo zvukové soubory.",
   "@multiRename.tags.window.openTimedOut": {
     "sourceHash": "b41c453"
   },
-  "multiRename.tags.window.someUnreadable": "{count, plural, one {# place in the folders couldn’t be read, so some tracks may be missing.} other {# places in the folders couldn’t be read, so some tracks may be missing.}}",
+  "multiRename.tags.window.someUnreadable": "{count, plural, one {# místo ve složkách se nepodařilo přečíst, takže některé stopy možná chybí.} few {# místa ve složkách se nepodařilo přečíst, takže některé stopy možná chybí.} many {# místa ve složkách se nepodařilo přečíst, takže některé stopy možná chybí.} other {# míst ve složkách se nepodařilo přečíst, takže některé stopy možná chybí.}}",
   "@multiRename.tags.window.someUnreadable": {
     "sourceHash": "99dae0a"
   },
-  "multiRename.tags.keys.label": "Tag tools",
+  "multiRename.tags.keys.label": "Nástroje tagů",
   "@multiRename.tags.keys.label": {
     "sourceHash": "75ff93d"
   },
-  "multiRename.tags.keys.edit": "Edit",
+  "multiRename.tags.keys.edit": "Upravit",
   "@multiRename.tags.keys.edit": {
     "sourceHash": "464c4ff"
   },
-  "multiRename.tags.keys.play": "Play",
+  "multiRename.tags.keys.play": "Přehrát",
   "@multiRename.tags.keys.play": {
     "sourceHash": "436e610"
   },
-  "multiRename.tags.keys.replace": "Replace",
+  "multiRename.tags.keys.replace": "Nahradit",
   "@multiRename.tags.keys.replace": {
     "sourceHash": "95e1543"
   },
-  "multiRename.tags.keys.format": "Format",
+  "multiRename.tags.keys.format": "Formátovat",
   "@multiRename.tags.keys.format": {
     "sourceHash": "2f34366"
   },
-  "multiRename.tags.keys.fromName": "From name",
+  "multiRename.tags.keys.fromName": "Z názvu",
   "@multiRename.tags.keys.fromName": {
     "sourceHash": "b28f93e"
   },
-  "multiRename.tags.keys.number": "Number",
+  "multiRename.tags.keys.number": "Číslovat",
   "@multiRename.tags.keys.number": {
     "sourceHash": "bd82cf1"
   },
-  "multiRename.tags.keys.clearField": "Clear",
+  "multiRename.tags.keys.clearField": "Vymazat",
   "@multiRename.tags.keys.clearField": {
     "sourceHash": "83b12c2"
   },
-  "multiRename.tags.keys.editNumber": "Edit #",
+  "multiRename.tags.keys.editNumber": "Upravit #",
   "@multiRename.tags.keys.editNumber": {
     "sourceHash": "3e37820"
   },
-  "multiRename.tags.keys.openInPlayer": "Open in player",
+  "multiRename.tags.keys.openInPlayer": "Otevřít v přehrávači",
   "@multiRename.tags.keys.openInPlayer": {
     "sourceHash": "bbd20b9"
   },
-  "multiRename.tags.keys.openInApp": "Open in {app}",
+  "multiRename.tags.keys.openInApp": "Otevřít v aplikaci {app}",
   "@multiRename.tags.keys.openInApp": {
     "sourceHash": "f30fd61"
   },
-  "multiRename.tags.keys.case": "Case",
+  "multiRename.tags.keys.case": "Velikost písmen",
   "@multiRename.tags.keys.case": {
     "sourceHash": "15f86e2"
   },
-  "multiRename.tags.keys.cleanUp": "Clean up",
+  "multiRename.tags.keys.cleanUp": "Vyčistit",
   "@multiRename.tags.keys.cleanUp": {
     "sourceHash": "f938c32"
   },
-  "multiRename.tags.keys.removeExtras": "Remove extras",
+  "multiRename.tags.keys.removeExtras": "Odstranit navíc",
   "@multiRename.tags.keys.removeExtras": {
     "sourceHash": "b737aae"
   },
-  "multiRename.tags.keys.write": "Write",
+  "multiRename.tags.keys.write": "Zapsat",
   "@multiRename.tags.keys.write": {
     "sourceHash": "3f00927"
   },
-  "multiRename.tags.keys.review": "Review",
+  "multiRename.tags.keys.review": "Posoudit",
   "@multiRename.tags.keys.review": {
     "sourceHash": "aff0766"
   },
-  "multiRename.tags.dialog.fromName": "Tags from file names",
+  "multiRename.tags.dialog.fromName": "Tagy z názvů souborů",
   "@multiRename.tags.dialog.fromName": {
     "sourceHash": "bb61563"
   },
-  "multiRename.tags.dialog.case": "Change case",
+  "multiRename.tags.dialog.case": "Změnit velikost písmen",
   "@multiRename.tags.dialog.case": {
     "sourceHash": "f97fe58"
   },
-  "multiRename.tags.dialog.cleanUp": "Clean up",
+  "multiRename.tags.dialog.cleanUp": "Vyčistit",
   "@multiRename.tags.dialog.cleanUp": {
     "sourceHash": "f938c32"
   },
-  "multiRename.tags.dialog.extras": "Remove extra tags",
+  "multiRename.tags.dialog.extras": "Odstranit tagy navíc",
   "@multiRename.tags.dialog.extras": {
     "sourceHash": "122f0a2"
   },
-  "multiRename.tags.dialog.clearField": "Clear a field",
+  "multiRename.tags.dialog.clearField": "Vymazat pole",
   "@multiRename.tags.dialog.clearField": {
     "sourceHash": "5b0b05c"
   },
-  "multiRename.tags.dialog.write": "Write tags",
+  "multiRename.tags.dialog.write": "Zapsat tagy",
   "@multiRename.tags.dialog.write": {
     "sourceHash": "975c614"
   },
-  "multiRename.tags.dialog.close": "Close",
+  "multiRename.tags.dialog.close": "Zavřít",
   "@multiRename.tags.dialog.close": {
     "sourceHash": "7d9eb7a"
   },
-  "multiRename.tags.clearField.field": "Field",
+  "multiRename.tags.clearField.field": "Pole",
   "@multiRename.tags.clearField.field": {
     "sourceHash": "f45fc1d"
   },
-  "multiRename.tags.clearField.all": "Empties {field} on every file.",
+  "multiRename.tags.clearField.all": "Vyprázdní pole {field} u všech souborů.",
   "@multiRename.tags.clearField.all": {
     "sourceHash": "4b4481f"
   },
-  "multiRename.tags.clearField.some": "{count, plural, one {Empties {field} on the selected track.} other {Empties {field} on the {countText} selected tracks.}}",
+  "multiRename.tags.clearField.some": "{count, plural, one {Vyprázdní pole {field} u vybrané stopy.} few {Vyprázdní pole {field} u {countText} vybraných stop.} many {Vyprázdní pole {field} u {countText} vybrané stopy.} other {Vyprázdní pole {field} u {countText} vybraných stop.}}",
   "@multiRename.tags.clearField.some": {
     "sourceHash": "f33d90f"
   },
-  "multiRename.tags.clearField.run": "Clear",
+  "multiRename.tags.clearField.run": "Vymazat",
   "@multiRename.tags.clearField.run": {
     "sourceHash": "83b12c2"
   },
-  "multiRename.tags.clipboard.readFailed": "Couldn’t read the clipboard. Try ⌘V again.",
+  "multiRename.tags.clipboard.readFailed": "Schránku se nepodařilo přečíst. Zkus znovu ⌘V.",
   "@multiRename.tags.clipboard.readFailed": {
     "sourceHash": "db20129"
   },
-  "multiRename.tags.clipboard.noText": "The clipboard holds no text to paste.",
+  "multiRename.tags.clipboard.noText": "Ve schránce není žádný text k vložení.",
   "@multiRename.tags.clipboard.noText": {
     "sourceHash": "c8936c0"
   },
-  "multiRename.tags.clipboard.tooLong": "The clipboard holds too much text for this field, so nothing was pasted.",
+  "multiRename.tags.clipboard.tooLong": "Ve schránce je na toto pole příliš mnoho textu, takže se nic nevložilo.",
   "@multiRename.tags.clipboard.tooLong": {
     "sourceHash": "ef75331"
   },
-  "multiRename.tags.clipboard.writeFailed": "Couldn’t copy to the clipboard. Try again.",
+  "multiRename.tags.clipboard.writeFailed": "Do schránky se nepodařilo kopírovat. Zkus to znovu.",
   "@multiRename.tags.clipboard.writeFailed": {
     "sourceHash": "e1ca017"
   },
-  "multiRename.tags.undo.editUndone": "Undone",
+  "multiRename.tags.undo.editUndone": "Odvoláno",
   "@multiRename.tags.undo.editUndone": {
     "sourceHash": "dcccf56"
   },
-  "multiRename.tags.undo.editRedone": "Redone",
+  "multiRename.tags.undo.editRedone": "Znovu provedeno",
   "@multiRename.tags.undo.editRedone": {
     "sourceHash": "6579cb1"
   },
-  "multiRename.tags.undo.nothing": "There’s no tag write to undo.",
+  "multiRename.tags.undo.nothing": "Žádný zápis tagů nelze odvolat.",
   "@multiRename.tags.undo.nothing": {
     "sourceHash": "6324c69"
   },
-  "multiRename.tags.write.someLeft": "Some files weren’t written. Write lists their changes again.",
+  "multiRename.tags.write.someLeft": "Některé soubory nebyly zapsány. Tlačítko Posoudit znovu zobrazí seznam jejich změn.",
   "@multiRename.tags.write.someLeft": {
-    "sourceHash": "b999e17"
+    "sourceHash": "afa85fa"
   },
-  "multiRename.tags.write.doneSummary": "{count, plural, one {{countText} file written} other {{countText} files written}}",
+  "multiRename.tags.write.doneSummary": "{count, plural, one {{countText} soubor zapsán} few {{countText} soubory zapsány} many {{countText} souboru zapsáno} other {{countText} souborů zapsáno}}",
   "@multiRename.tags.write.doneSummary": {
     "sourceHash": "cb31071"
   },
-  "multiRename.tags.write.doneWithProblems": "{count, plural, one {{countText} file written} other {{countText} files written}}, {notWritten, plural, one {{notWrittenText} not written} other {{notWrittenText} not written}}. Review changes ({shortcut}) shows which.",
+  "multiRename.tags.write.doneWithProblems": "{count, plural, one {{countText} soubor zapsán} few {{countText} soubory zapsány} many {{countText} souboru zapsáno} other {{countText} souborů zapsáno}}, {notWritten, plural, one {{notWrittenText} nezapsán} few {{notWrittenText} nezapsány} many {{notWrittenText} nezapsáno} other {{notWrittenText} nezapsáno}}. Které to jsou, ukáže Posoudit změny ({shortcut}).",
   "@multiRename.tags.write.doneWithProblems": {
     "sourceHash": "9cceaed"
   },
-  "multiRename.tags.write.reviewRemovals": "{count, plural, one {Writing as {kind} removes a tag from {countText} file, so the list shows it first.} other {Writing as {kind} removes a tag from {countText} files, so the list shows them first.}}",
+  "multiRename.tags.write.reviewRemovals": "{count, plural, one {Zápis jako {kind} odstraní tag z {countText} souboru, proto ho seznam zobrazuje nejdřív.} few {Zápis jako {kind} odstraní tag z {countText} souborů, proto je seznam zobrazuje nejdřív.} many {Zápis jako {kind} odstraní tag z {countText} souboru, proto je seznam zobrazuje nejdřív.} other {Zápis jako {kind} odstraní tag z {countText} souborů, proto je seznam zobrazuje nejdřív.}}",
   "@multiRename.tags.write.reviewRemovals": {
     "sourceHash": "5bd733f"
   },
-  "multiRename.tags.write.listedAgain": "Something changed since the list was made, so here it is again. Check it, then write.",
+  "multiRename.tags.write.listedAgain": "Od vytvoření seznamu se něco změnilo, takže je tu znovu. Zkontroluj ho a pak potvrď zápis.",
   "@multiRename.tags.write.listedAgain": {
     "sourceHash": "6e80be7"
   },
-  "multiRename.tags.write.removesUnknown": "maybe a tag it couldn’t check (removed)",
+  "multiRename.tags.write.removesUnknown": "možná tag, který nešlo ověřit (odstraněno)",
   "@multiRename.tags.write.removesUnknown": {
     "sourceHash": "619d906"
   },
-  "multiRename.tags.write.nothingToWrite": "Nothing to write.",
+  "multiRename.tags.write.nothingToWrite": "Není co zapsat.",
   "@multiRename.tags.write.nothingToWrite": {
     "sourceHash": "498d365"
   },
-  "multiRename.tags.write.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
+  "multiRename.tags.write.closeWaits": "Zapisují se tagy… Počkej, až bude hotovo, a pak okno zavři.",
   "@multiRename.tags.write.closeWaits": {
     "sourceHash": "82e021e"
   },
-  "multiRename.tags.window.closeWaits": "Writing tags… Wait until it’s done, then close the window.",
+  "multiRename.tags.window.closeWaits": "Zapisují se tagy… Počkej, až bude hotovo, a pak okno zavři.",
   "@multiRename.tags.window.closeWaits": {
     "sourceHash": "82e021e"
   },
-  "multiRename.tags.readTimedOut": "The drive stopped answering while the tags were read. Close the window and try again.",
+  "multiRename.tags.readTimedOut": "Disk přestal při čtení tagů odpovídat. Zavři okno a zkus to znovu.",
   "@multiRename.tags.readTimedOut": {
     "sourceHash": "257c44c"
   },
-  "multiRename.tags.quit.title": "{count, plural, one {Quit with tag changes not written?} other {Quit with tag changes not written in {countText} windows?}}",
+  "multiRename.tags.quit.title": "{count, plural, one {Ukončit s nezapsanými změnami tagů?} few {Ukončit s nezapsanými změnami tagů ve {countText} oknech?} many {Ukončit s nezapsanými změnami tagů v {countText} okna?} other {Ukončit s nezapsanými změnami tagů v {countText} oknech?}}",
   "@multiRename.tags.quit.title": {
     "sourceHash": "548be20"
   },
-  "multiRename.tags.quit.writingTitle": "Quit while tags are being written?",
+  "multiRename.tags.quit.writingTitle": "Ukončit během zápisu tagů?",
   "@multiRename.tags.quit.writingTitle": {
     "sourceHash": "3e1038f"
   },
-  "multiRename.tags.quit.unwritten": "{count, plural, one {A Tags window has changes that haven’t been written. Quitting discards them.} other {{countText} Tags windows have changes that haven’t been written. Quitting discards them.}}",
+  "multiRename.tags.quit.unwritten": "{count, plural, one {Okno Tagy má nezapsané změny. Ukončením o ně přijdeš.} few {{countText} okna Tagy mají nezapsané změny. Ukončením o ně přijdeš.} many {{countText} okna Tagy má nezapsané změny. Ukončením o ně přijdeš.} other {{countText} oken Tagy má nezapsané změny. Ukončením o ně přijdeš.}}",
   "@multiRename.tags.quit.unwritten": {
     "sourceHash": "78c6748"
   },
-  "multiRename.tags.quit.writing": "Tags are being written. Cmdr finishes writing them before it quits, so no book is left half written.",
+  "multiRename.tags.quit.writing": "Zapisují se tagy. Cmdr zápis před ukončením dokončí, aby žádná kniha nezůstala zapsaná napůl.",
   "@multiRename.tags.quit.writing": {
     "sourceHash": "fb2d5ce"
   },
-  "multiRename.tags.quit.waits": "Cmdr waits for your answer, so no tag changes are lost while you’re away.",
+  "multiRename.tags.quit.waits": "Cmdr čeká na tvou odpověď, aby se během tvé nepřítomnosti neztratily žádné změny tagů.",
   "@multiRename.tags.quit.waits": {
     "sourceHash": "ed6de29"
   },
-  "multiRename.tags.write.sideHeading": "Beside the book:",
+  "multiRename.tags.write.sideHeading": "Vedle knihy:",
   "@multiRename.tags.write.sideHeading": {
     "sourceHash": "a64deb5"
   },
-  "multiRename.tags.write.sideCreate": "Create {fileName}: {text}",
+  "multiRename.tags.write.sideCreate": "Vytvořit {fileName}: {text}",
   "@multiRename.tags.write.sideCreate": {
     "sourceHash": "db5d831"
   },
-  "multiRename.tags.write.sideReplace": "Replace {fileName}: “{old}” becomes “{text}”",
+  "multiRename.tags.write.sideReplace": "Nahradit {fileName}: z „{old}“ bude „{text}“",
   "@multiRename.tags.write.sideReplace": {
     "sourceHash": "6263efd"
   },
-  "multiRename.tags.write.sideWithheld": "{fileName} isn’t written: {reason}",
+  "multiRename.tags.write.sideWithheld": "{fileName} se nezapíše: {reason}",
   "@multiRename.tags.write.sideWithheld": {
     "sourceHash": "875491f"
   },
-  "multiRename.tags.write.sideWhy.readerDisagree": "the tracks name different narrators",
+  "multiRename.tags.write.sideWhy.readerDisagree": "stopy uvádějí různé vypravěče",
   "@multiRename.tags.write.sideWhy.readerDisagree": {
     "sourceHash": "952a61c"
   },
-  "multiRename.tags.write.sideWhy.descDisagree": "the tracks have different descriptions",
+  "multiRename.tags.write.sideWhy.descDisagree": "stopy mají různé popisy",
   "@multiRename.tags.write.sideWhy.descDisagree": {
     "sourceHash": "33b4bfe"
   },
-  "multiRename.tags.write.sideWhy.tooLong": "its text is longer than 64 KB",
+  "multiRename.tags.write.sideWhy.tooLong": "jeho text je delší než 64 kB",
   "@multiRename.tags.write.sideWhy.tooLong": {
     "sourceHash": "16dc435"
   },
-  "multiRename.tags.write.sideWhy.notAFile": "something other than a plain file has that name",
+  "multiRename.tags.write.sideWhy.notAFile": "tento název má něco jiného než obyčejný soubor",
   "@multiRename.tags.write.sideWhy.notAFile": {
     "sourceHash": "f2e8a54"
   },
-  "multiRename.tags.write.sideWhy.unreadable": "the file there can’t be read, so it couldn’t be put back",
+  "multiRename.tags.write.sideWhy.unreadable": "stávající soubor nelze přečíst, takže by ho nešlo vrátit zpět",
   "@multiRename.tags.write.sideWhy.unreadable": {
     "sourceHash": "943d1d1"
   },
-  "multiRename.tags.write.sideWhy.notOneBook": "the tracks come from more than one book folder",
+  "multiRename.tags.write.sideWhy.notOneBook": "stopy pocházejí z více složek knih",
   "@multiRename.tags.write.sideWhy.notOneBook": {
     "sourceHash": "5c33ed4"
   },
-  "multiRename.tags.write.sideWritten": "Also written beside the book: {files}",
+  "multiRename.tags.write.sideWritten": "Vedle knihy se zapsalo i: {files}",
   "@multiRename.tags.write.sideWritten": {
     "sourceHash": "11b2f55"
   },
-  "multiRename.tags.write.sideNotWrittenHeading": "Not written beside the book:",
+  "multiRename.tags.write.sideNotWrittenHeading": "Vedle knihy nezapsáno:",
   "@multiRename.tags.write.sideNotWrittenHeading": {
     "sourceHash": "5e60c0f"
   },
-  "multiRename.tags.write.reviewSideFiles": "{count, plural, one {A file beside the book says something else, so the list shows its replacement first.} other {Files beside the book say something else, so the list shows their replacement first.}}",
+  "multiRename.tags.write.reviewSideFiles": "{count, plural, one {Soubor vedle knihy obsahuje něco jiného, proto seznam nejdřív zobrazuje jeho nahrazení.} few {Soubory vedle knihy obsahují něco jiného, proto seznam nejdřív zobrazuje jejich nahrazení.} many {Soubory vedle knihy obsahují něco jiného, proto seznam nejdřív zobrazuje jejich nahrazení.} other {Soubory vedle knihy obsahují něco jiného, proto seznam nejdřív zobrazuje jejich nahrazení.}}",
   "@multiRename.tags.write.reviewSideFiles": {
     "sourceHash": "def8bc2"
   }

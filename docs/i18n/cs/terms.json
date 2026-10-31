@@ -1069,7 +1069,10 @@
       }
     ],
     "confidence": "high",
-    "sources": "macOS Finder (Název:, Zadejte nový název položky), SystemSettings (Název); Double Commander (Název); MC; MS (název)"
+    "sources": "macOS Finder (Název:, Zadejte nový název položky), SystemSettings (Název); Double Commander (Název); MC; MS (název)",
+    "exceptions": {
+      "multiRename.tags.write.sideWhy.readerDisagree": "\"name\" is the verb (the tracks name different narrators → uvádějí), not a file name."
+    }
   },
   "nas": {
     "chosen": "NAS",
@@ -1577,7 +1580,10 @@
     "accept": ["zobraz", "ukáž", "ukáz"],
     "forms": "command → Zobrazit; Show all → Zobrazit vše; shown → zobrazeno",
     "confidence": "high",
-    "sources": "macOS SystemSettings/Dock (Zobrazit), AppKit (Zobrazit boční panel, Zobrazit vše); DC; MS (zobrazit)"
+    "sources": "macOS SystemSettings/Dock (Zobrazit), AppKit (Zobrazit boční panel, Zobrazit vše); DC; MS (zobrazit)",
+    "exceptions": {
+      "multiRename.preset.foobarSftRadioShow": "A radio show (broadcast programme, pořad), not the show/display verb."
+    }
   },
   "show-in-finder": {
     "chosen": "Zobrazit ve Finderu",
@@ -1679,7 +1685,10 @@
     "accept": ["zastav"],
     "forms": "button → Zastavit; stopped → zastaveno",
     "confidence": "high",
-    "sources": "macOS Finder (Stop → Zastavit, Zastavit komprimování); Nautilus; MS; TC (Zastavit načítání)"
+    "sources": "macOS Finder (Stop → Zastavit, Zastavit komprimování); Nautilus; MS; TC (Zastavit načítání)",
+    "exceptions": {
+      "multiRename.tags.window.bodyStopped": "\"stopped reloading it\" is ceasing to do something (přestal znovu načítat), not the Stop command."
+    }
   },
   "storage": {
     "chosen": "úložiště",
@@ -1753,7 +1762,87 @@
     "forms": "f.: Tags → Značky; tag color → barva značky",
     "confidence": "high",
     "sources": "macOS Finder (Značky…, Upravit značky, Odstranit značku); Dolphin (Značky); MS (značka)",
-    "note": "A git tag in the .git portal is also značka (MS tag → značka, Pro Git cs Značky); a tagged commit → označený commit."
+    "note": "A git tag in the .git portal is also značka (MS tag → značka, Pro Git cs Značky); a tagged commit → označený commit.",
+    "exceptions": {
+      "commands.fileEditTags.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "commands.tagsCase.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "commands.tagsCleanUp.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "commands.tagsClearField.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "commands.tagsClose.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "commands.tagsFormat.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "commands.tagsFromName.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "commands.tagsRedo.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "commands.tagsRemoveExtras.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "commands.tagsReplace.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "commands.tagsUndo.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "commands.tagsWrite.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "menu.file.editTags": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.album.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.dialog.extras": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.dialog.fromName": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.dialog.write": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.discard.message": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.discard.title": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.error": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.keys.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.openWindow": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.quit.title": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.quit.unwritten": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.quit.waits": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.quit.writing": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.quit.writingTitle": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.readOnly": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.readTimedOut": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.tools.extrasLabel": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.tools.name.noFields": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.tools.name.unknownField": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.tools.removeChecked": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.tools.text.failed": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.track.unreadable": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.undo.button": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.undo.done": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.undo.message": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.undo.nothing": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.undo.title": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.undo.tooltip": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.undo.unwrittenLost": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.undoStoreUnavailable": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.window.bodyReloaded": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.window.bodyStopped": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.window.broken": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.window.closeWaits": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.window.foldersNeedLocalDisk": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.window.nothingSelected": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.window.noTracks": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.window.openFailed": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.window.title": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.wouldDrop.listLabel": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.wouldDrop.message": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.wouldDrop.title": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.closeWaits": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.confirm": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.done": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.error.parse": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.error.unwritableExtra": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.error.wouldDrop": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.error.write": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.extras": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.nothing": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.noUndo": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.noUndoSome": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.removesUnknown": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.review": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.reviewRemovals": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.sessionGone": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.stopped": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "multiRename.tags.write.writing": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "settings.multiRename.tagEditor.absSideFiles.description": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "settings.multiRename.tagEditor.description": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "settings.multiRename.tagEditor.label": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "settings.multiRename.tagEditor.player.description": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "shortcuts.scope.tagsWindow": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka).",
+      "stateRecovery.tagReplacePresets.title": "Audio metadata tag (media-tag ruling: tag/tagy), not a Finder tag (značka)."
+    }
   },
   "terminal": {
     "chosen": "Terminál",
@@ -1789,7 +1878,10 @@
     "forms": "verb first keeps the time in the nominative: zbývá {eta}, Zbývá 3 min; overall → celkem zbývá",
     "confidence": "high",
     "sources": "macOS Finder Get Info (Zbývá:), SystemSettings (%d zbývá)",
-    "note": "verb agrees with the hour count inside the plural branch: zbývá 1 hodina, zbývají 2 hodiny, zbývá 5 hodin (indexing.eta.hoursLeft, indexing.eta.hoursMinutesLeft); rough wrapper → odhadem zbývá 2 min (indexing.scan.etaRough)"
+    "note": "verb agrees with the hour count inside the plural branch: zbývá 1 hodina, zbývají 2 hodiny, zbývá 5 hodin (indexing.eta.hoursLeft, indexing.eta.hoursMinutesLeft); rough wrapper → odhadem zbývá 2 min (indexing.scan.etaRough)",
+    "exceptions": {
+      "multiRename.tags.undo.message": "English \"is left as it is\" means stays unchanged (zůstane, jak je), not time remaining."
+    }
   },
   "toolbar": {
     "chosen": "panel nástrojů",
@@ -4073,7 +4165,10 @@
     "forms": "button → Znovu načíst; Reload? → Znovu načíst?; without reloading → bez opětovného načtení; imperative → načti ho znovu",
     "confidence": "high",
     "sources": "Total Commander Lister 5918 „Načíst znovu“, 5085 „F2 - Načíst znovu“; Double Commander „Reload“ → „Znovu načíst“, „Reload current file“ → „Znovu načíst aktuální soubor“; same verb as the existing refresh ruling (catalog: commands.paneRefresh.label „Znovu načíst panel“)",
-    "note": "Shares the Czech verb with refresh; the concepts stay distinct in English only."
+    "note": "Shares the Czech verb with refresh; the concepts stay distinct in English only.",
+    "exceptions": {
+      "multiRename.tags.window.bodyReloaded": "Past tense of the ruling verb: Cmdr ho znovu načetl (načetl carries no načt/načí stem)."
+    }
   },
   "save-panel": {
     "chosen": "panel pro ukládání",
@@ -4394,5 +4489,13 @@
     "confidence": "tentative",
     "sources": "macOS SystemSettings: „Když své jméno zaregistrujete…“, „zaregistrovaný v programu Apple Beta Software“; MS terminology: register → registrovat (335540, 1367522); Total Commander: Jak se zaregistrovat.",
     "note": "Perfective zaregistrovat as macOS writes it; a reviewer might prefer Aktivní/Neaktivní for the status chips."
+  },
+  "media-tag": {
+    "chosen": "tag",
+    "accept": ["tag"],
+    "forms": "m.: pl. tagy, gen. pl. tagů; reading tags → čtou se tagy; the Tags window → okno Tagy; extra tags → tagy navíc; tag editor → editor tagů",
+    "confidence": "high",
+    "sources": "Mp3tag cs and the Czech foobar2000/Mp3tag community (tag, tagy, ID3 tag); shipped multiRename.readingTags; fork owner consistency ruling 2026-10-31 (tracks = stopa, audio tags = tag, extra tags = tagy navíc)",
+    "note": "Finder color tags stay značka (tag concept). A track of an album or audiobook is stopa (Číslo stopy, Počet stop)."
   }
 }
