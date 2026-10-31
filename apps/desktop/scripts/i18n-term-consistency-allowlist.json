@@ -752,6 +752,14 @@
       {
         "source": "{countText} {count, plural, one {item} other {items}}",
         "reason": "`queue.row.itemCount` follows the row's verbal noun (Mazání 3 položek), so genitive; `fileExplorer.contextMenu.itemCount` stands alone, nominative."
+      },
+      {
+        "source": "Format",
+        "reason": "Noun vs verb. `Formát` is the label of a format box (`multiRename.mediaEditor.format`); `Formátovat` is the action that runs a pattern over tag fields in the fork's Tags window (`multiRename.tags.keys.format`, `multiRename.tags.tools.format.run`). Czech has no form that serves both."
+      },
+      {
+        "source": "Tags",
+        "reason": "Two different tags. `Značky` are macOS Finder colour tags (`menu.tag.rowLabel`, as in Finder). `Tagy` are audio metadata tags in the fork's tag editor (`multiRename.tags.openWindow`), the `media-tag` ruling in `docs/i18n/cs/terms.json`. Merging them would point Finder users at the audio editor or the other way round."
       }
     ],
     "uk": [
