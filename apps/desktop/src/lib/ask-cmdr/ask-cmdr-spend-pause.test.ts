@@ -136,6 +136,7 @@ describe('the spend pause', () => {
       messages: [],
       lastContextUsage: null,
       turnInFlightSinceSeq: 0,
+      turnInFlightRun: 1,
       spendPausedMicros: 2_400_000,
     })
     await switchToThread(9)

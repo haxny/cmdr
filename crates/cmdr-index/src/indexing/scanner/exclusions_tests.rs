@@ -275,12 +275,12 @@ fn a_stamp_from_a_different_policy_re_arms_the_walk() {
     assert!(index_predates_exclusion_policy(&conn, ExclusionTier::BootDisk));
 }
 
-/// The boot disk now stops at every filesystem mounted inside its tree, a rule a
-/// mount-rooted walk doesn't run. So a boot index stamped before it (whose stamp is
+/// The boot disk stops at filesystems mounted inside its tree (every one on macOS,
+/// the ones that aren't a local disk on Linux), a rule a mount-rooted walk doesn't
+/// run. So a boot index stamped before it (whose stamp is
 /// what the mount-rooted fingerprint still reads) predates the policy and gets
 /// rebuilt, while every external drive's index keeps its stamp and its rows.
 #[test]
-#[cfg(target_os = "macos")]
 fn the_boot_tree_mount_rule_re_arms_only_the_boot_index() {
     assert_ne!(
         exclusion_policy_fingerprint(ExclusionTier::BootDisk),

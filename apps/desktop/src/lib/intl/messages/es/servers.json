@@ -519,6 +519,18 @@
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
+  "servers.sheet.nfsOtherGids": "Otros ID de grupo",
+  "@servers.sheet.nfsOtherGids": {
+    "sourceHash": "f9276b8"
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "Usa números de ID de grupo separados por comas, como 100, 1001.",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "sourceHash": "a67ce61"
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "NFS admite hasta 16 grupos más, y esta lista tiene {count}.",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "sourceHash": "dc277f3"
+  },
   "servers.sheet.nfsIdentityHelp": "El servidor decide qué puedes abrir según estos números. NFS no pide contraseña.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"

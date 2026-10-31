@@ -8,6 +8,7 @@ import {
 } from '#lib/settings/settings-registry.js'
 import { SOFT_DIALOG_REGISTRY } from '#lib/ui/dialog-registry.js'
 import RenameConflictDialog from './RenameConflictDialog.svelte'
+import ExtensionChangeDialog from './ExtensionChangeDialog.svelte'
 import type { RenameConflictResolution } from './rename-operations'
 
 vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
@@ -281,5 +282,121 @@ describe('RenameConflictDialog footer', () => {
     for (const button of target.querySelectorAll<HTMLButtonElement>('.modal-footer button')) button.click()
 
     expect(resolutions).toEqual(['cancel', 'continue', 'overwrite-delete', 'overwrite-trash'])
+  })
+})
+
+/**
+ * Two files a few bytes apart both read "1.18 MiB", and the choice feeds an
+ * overwrite: the prompt must show they differ, or say they don't (#782).
+ */
+describe('RenameConflictDialog sizes that look the same', () => {
+  const mounted: HTMLElement[] = []
+
+  afterEach(() => {
+    for (const target of mounted.splice(0)) target.remove()
+  })
+
+  async function mountSizes(renamedSize: number, existingSize: number, existingIsDirectory = false) {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mounted.push(target)
+    mount(RenameConflictDialog, {
+      target,
+      props: {
+        renamedFile: { name: 'report.md', size: renamedSize, modifiedAt: undefined, isDirectory: false },
+        existingFile: {
+          name: 'report.md',
+          size: existingSize,
+          modifiedAt: undefined,
+          isDirectory: existingIsDirectory,
+        },
+        supportsTrash: true,
+        onResolve: () => {},
+      },
+    })
+    await tick()
+    return target
+  }
+
+  const sizesIn = (target: HTMLElement) =>
+    [...target.querySelectorAll('.size-value')].map((el) => el.textContent.trim())
+
+  it('shows exact bytes on both sides when the friendly sizes match but the bytes differ', async () => {
+    const target = await mountSizes(1_234_570, 1_234_567)
+    expect(sizesIn(target)).toEqual(['1,234,570 bytes', '1,234,567 bytes'])
+    expect(target.querySelector('.same-size')).toBeNull()
+  })
+
+  it('says "same size" when the bytes match', async () => {
+    const target = await mountSizes(1_234_567, 1_234_567)
+    expect(sizesIn(target)).toEqual(['1.23 MB', '1.23 MB'])
+    expect(target.querySelector('.same-size')?.textContent.trim()).toBe('(same size)')
+  })
+
+  it('keeps friendly sizes that already differ', async () => {
+    const target = await mountSizes(2048, 1024)
+    expect(sizesIn(target)).toEqual(['2.05 kB', '1.02 kB'])
+  })
+
+  it('makes no size comparison against a folder', async () => {
+    const target = await mountSizes(0, 0, true)
+    expect(target.querySelector('.same-size')).toBeNull()
+  })
+})
+
+/**
+ * The extension-change dialog words each of the three changes on its own:
+ * swapping one extension for another, removing it, and adding one where there
+ * was none. A dialog that only knew the swap read "Use ." and "to “.”".
+ */
+describe('ExtensionChangeDialog wording', () => {
+  const mounted: HTMLElement[] = []
+
+  afterEach(() => {
+    for (const target of mounted.splice(0)) target.remove()
+  })
+
+  async function mountDialog(oldExtension: string, newExtension: string, isDirectory = false) {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mounted.push(target)
+    mount(ExtensionChangeDialog, {
+      target,
+      props: { oldExtension, newExtension, isDirectory, onKeepOld: () => {}, onUseNew: () => {} },
+    })
+    await tick()
+    const description = target.querySelector('#extension-change-description')?.textContent.trim() ?? ''
+    const buttons = [...target.querySelectorAll('.modal-footer button')].map((b) => b.textContent.trim())
+    return { description, buttons }
+  }
+
+  it('words a swap with both extensions', async () => {
+    const { description, buttons } = await mountDialog('txt', 'md')
+
+    expect(description).toContain('from “.txt” to “.md”')
+    expect(buttons).toEqual(['Keep .txt', 'Use .md'])
+  })
+
+  it('words a removal without an empty extension', async () => {
+    const { description, buttons } = await mountDialog('txt', '')
+
+    expect(description).toContain('remove the “.txt” extension')
+    expect(description).not.toContain('“.”')
+    expect(buttons).toEqual(['Keep .txt', 'Remove .txt'])
+  })
+
+  it('says what removing a package folder’s extension does to it', async () => {
+    const { description } = await mountDialog('app', '', true)
+
+    expect(description).toContain('remove the “.app” extension')
+    expect(description).toContain('folder')
+  })
+
+  it('words an addition without an empty extension', async () => {
+    const { description, buttons } = await mountDialog('', 'md')
+
+    expect(description).toContain('add the “.md” extension')
+    expect(description).not.toContain('“.”')
+    expect(buttons).toEqual(['Keep no extension', 'Use .md'])
   })
 })

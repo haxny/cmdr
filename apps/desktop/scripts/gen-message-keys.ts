@@ -1,14 +1,12 @@
 #!/usr/bin/env node
 /**
  * Generates `src/lib/intl/keys.gen.ts`: the `MessageKey` union of every catalog
- * key under `src/lib/intl/messages/en/`, and reports key drift:
- *  - keys referenced in code but ABSENT from the catalog → a build failure
- *    (exit 1), because `t('missing.key')` would silently fall back to the raw
- *    key string at runtime,
- *  - catalog keys NEVER referenced in code → a dead-key WARNING (exit 0), since
- *    a dead key is harmless but worth pruning. The scan only sees statically
- *    written keys, so a dynamically-built key reads as dead (don't blindly
- *    delete on this warning alone — see the `messages/` docs).
+ * key under `src/lib/intl/messages/en/`, and fails (exit 1) on keys referenced
+ * in code but ABSENT from the catalog, because `t('missing.key')` would
+ * silently fall back to the raw key string at runtime.
+ *
+ * The inverse (catalog keys nobody references) is the `message-keys-unused` Go
+ * check's job, not this script's: it matches every key in one pass per file.
  *
  * Pure logic lives in `gen-message-keys-lib.ts` (unit-tested); this CLI does the
  * filesystem I/O and the source scan. Run via `pnpm intl:keys` from the desktop
@@ -19,32 +17,16 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-  collectCatalogKeys,
-  extractUsedKeys,
-  findCatalogKeyMentions,
-  diffKeys,
-  emitKeysModule,
-} from './gen-message-keys-lib.ts'
+import { collectCatalogKeys, extractUsedKeys, findMissingKeys, emitKeysModule } from './gen-message-keys-lib.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const desktopDir = join(here, '..')
 const messagesDir = join(desktopDir, 'src', 'lib', 'intl', 'messages', 'en')
 const srcDir = join(desktopDir, 'src')
-/**
- * The Rust crate, scanned for MENTIONS only. The native menu bar, the window
- * title, and the already-running alert resolve their copy through Rust's
- * `menu_t`, so their keys never appear in a `.ts` file and would otherwise read
- * as dead. Rust can't ADD a missing key (the `MessageKey` union is a frontend
- * type), so this scan feeds `literalKeys`, never `usedKeys`.
- */
-const rustSrcDir = join(desktopDir, 'src-tauri', 'src')
 const outFile = join(desktopDir, 'src', 'lib', 'intl', 'keys.gen.ts')
 
 /** Source extensions to scan for key references. */
 const SCANNED_EXTS = new Set(['.ts', '.svelte'])
-/** Source extensions scanned for key MENTIONS only (see `rustSrcDir`). */
-const MENTION_ONLY_EXTS = new Set(['.rs'])
 /** Directories to skip when walking for key usages. */
 const SKIP_DIRS = new Set(['node_modules', 'target', '.svelte-kit'])
 /**
@@ -73,33 +55,21 @@ function readCatalogFiles(): Record<string, Record<string, unknown>> {
 }
 
 /**
- * Recursively collects, across the frontend source tree: keys referenced via
- * `t()`/`tString()`/`getMessage()`/`<Trans>`/`*Key:` props (into `acc`, drives
- * missing detection) and catalog keys whose literal appears anywhere (into
- * `mentioned`, suppresses false dead warnings for indirection). The generated
- * `keys.gen.ts` is skipped (it lists the catalog keys, not usages).
- * @param dir
- * @param acc keys from direct references
- * @param mentioned catalog keys whose literal appears in source
- * @param catalogKeys the catalog key list to scan for mentions
+ * Recursively collects the keys the frontend references via
+ * `t()`/`tString()`/`getMessage()`/`<Trans>`/`*Key:` props into `acc`. The
+ * generated `keys.gen.ts` is skipped (it lists the catalog keys, not usages).
+ * Rust's `menu_t` call sites aren't read: the `MessageKey` union is a frontend
+ * type, so missing-key detection is frontend-only.
  */
-function scanUsedKeys(dir: string, acc: Set<string>, mentioned: Set<string>, catalogKeys: string[]): void {
+function scanUsedKeys(dir: string, acc: Set<string>): void {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
-      if (!SKIP_DIRS.has(entry.name)) scanUsedKeys(join(dir, entry.name), acc, mentioned, catalogKeys)
+      if (!SKIP_DIRS.has(entry.name)) scanUsedKeys(join(dir, entry.name), acc)
       continue
     }
-    const ext = extname(entry.name)
-    if (MENTION_ONLY_EXTS.has(ext)) {
-      const source = readFileSync(join(dir, entry.name), 'utf8')
-      for (const key of findCatalogKeyMentions(source, catalogKeys)) mentioned.add(key)
-      continue
-    }
-    if (!SCANNED_EXTS.has(ext)) continue
+    if (!SCANNED_EXTS.has(extname(entry.name))) continue
     if (entry.name === 'keys.gen.ts' || isScanExcluded(entry.name)) continue
-    const source = readFileSync(join(dir, entry.name), 'utf8')
-    for (const key of extractUsedKeys(source)) acc.add(key)
-    for (const key of findCatalogKeyMentions(source, catalogKeys)) mentioned.add(key)
+    for (const key of extractUsedKeys(readFileSync(join(dir, entry.name), 'utf8'))) acc.add(key)
   }
 }
 
@@ -107,21 +77,10 @@ const catalogKeys = collectCatalogKeys(readCatalogFiles())
 writeFileSync(outFile, emitKeysModule(catalogKeys))
 
 const usedKeys = new Set<string>()
-/** Catalog keys whose literal text appears in source, for dead-key suppression. */
-const literalKeys = new Set<string>()
-scanUsedKeys(srcDir, usedKeys, literalKeys, catalogKeys)
-scanUsedKeys(rustSrcDir, usedKeys, literalKeys, catalogKeys)
-const { missing, dead } = diffKeys({ catalogKeys, usedKeys, literalKeys })
+scanUsedKeys(srcDir, usedKeys)
+const missing = findMissingKeys(catalogKeys, usedKeys)
 
 console.log(`Wrote ${String(catalogKeys.length)} message keys to keys.gen.ts`)
-
-if (dead.length > 0) {
-  console.warn(
-    `\nWarning: ${String(dead.length)} catalog key(s) not referenced in code (dead keys).\n` +
-      `These may be dynamically referenced; verify before deleting:\n` +
-      dead.map((k) => `  - ${k}`).join('\n'),
-  )
-}
 
 if (missing.length > 0) {
   console.error(

@@ -13,13 +13,17 @@ pub use cmdr_fs::volume::UsbSpeed;
 /// foreign to this crate, and `cmdr-fs` must not depend on a transport to write
 /// the impl on its side. So the mapping is a plain function, and this is the
 /// only place the two enums meet.
-pub fn usb_speed_from_device(speed: mtp_rs::UsbSpeed) -> UsbSpeed {
+///
+/// `None` for a speed newer than this mapping knows (`mtp_rs::UsbSpeed` is
+/// `#[non_exhaustive]`), which reads the same as a device that reports no speed.
+pub fn usb_speed_from_device(speed: mtp_rs::UsbSpeed) -> Option<UsbSpeed> {
     match speed {
-        mtp_rs::UsbSpeed::Low => UsbSpeed::Low,
-        mtp_rs::UsbSpeed::Full => UsbSpeed::Full,
-        mtp_rs::UsbSpeed::High => UsbSpeed::High,
-        mtp_rs::UsbSpeed::Super => UsbSpeed::Super,
-        mtp_rs::UsbSpeed::SuperPlus => UsbSpeed::SuperPlus,
+        mtp_rs::UsbSpeed::Low => Some(UsbSpeed::Low),
+        mtp_rs::UsbSpeed::Full => Some(UsbSpeed::Full),
+        mtp_rs::UsbSpeed::High => Some(UsbSpeed::High),
+        mtp_rs::UsbSpeed::Super => Some(UsbSpeed::Super),
+        mtp_rs::UsbSpeed::SuperPlus => Some(UsbSpeed::SuperPlus),
+        _ => None,
     }
 }
 

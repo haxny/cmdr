@@ -109,6 +109,13 @@ answer either (verified on macOS 27.0, by switching the served script mid-test, 
 hits nor the answers tell a cache hit from a miss: `pac_test.rs::an_answer_is_cached_per_host` reads `MacPac`'s
 test-only `evaluations` count.
 
+Two of those connections are TLS: for an `http://` PAC URL, CFNetwork sends a TLS ClientHello on two connections first,
+and only the third asks `GET /proxy.pac` in plain HTTP (verified on macOS 27.0, a loopback server logging each
+connection's first bytes, 2026-10-29). A process's FIRST evaluation is the slow one: 0.2–2 s on a busy Mac, then about 1
+ms for the next host (same probe). So a PAC on a loaded Mac can miss `TIMEOUT` once per launch and go direct for
+`FAILURE_TTL`; a nextest process pays that cold start every time, which is why answer-expecting cells take the test-only
+`ANSWER_BUDGET` (#754).
+
 ❗ The two `Execute…` functions are declared in `pac.rs` with raw pointers rather than taken from `objc2-cf-network`
 0.3.2: its `CFProxyAutoConfigurationResultCallback` types the proxy list as `NonNull`, and CFNetwork passes null when
 the PAC fails, which would be undefined behavior in a `NonNull` parameter.

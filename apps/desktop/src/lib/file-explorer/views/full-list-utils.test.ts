@@ -66,57 +66,72 @@ describe('getVisibleItemsCount', () => {
 
 describe('getDisplayExtension / getDisplayName', () => {
   it('splits a plain filename', () => {
-    expect(getDisplayExtension('photo.jpg', false)).toBe('jpg')
-    expect(getDisplayName('photo.jpg', false)).toBe('photo')
+    expect(getDisplayExtension('photo.jpg', 'file')).toBe('jpg')
+    expect(getDisplayName('photo.jpg', 'file')).toBe('photo')
   })
 
   it('keeps dotfiles intact (no secondary dot)', () => {
-    expect(getDisplayExtension('.bashrc', false)).toBe('')
-    expect(getDisplayName('.bashrc', false)).toBe('.bashrc')
+    expect(getDisplayExtension('.bashrc', 'file')).toBe('')
+    expect(getDisplayName('.bashrc', 'file')).toBe('.bashrc')
   })
 
   it('treats only the last segment of a multi-dot name as the extension', () => {
-    expect(getDisplayExtension('file.tar.gz', false)).toBe('gz')
-    expect(getDisplayName('file.tar.gz', false)).toBe('file.tar')
+    expect(getDisplayExtension('my.file.name.txt', 'file')).toBe('txt')
+    expect(getDisplayName('my.file.name.txt', 'file')).toBe('my.file.name')
+  })
+
+  it('shows a compressed tar as one extension', () => {
+    expect(getDisplayExtension('file.tar.gz', 'file')).toBe('tar.gz')
+    expect(getDisplayName('file.tar.gz', 'file')).toBe('file')
+  })
+
+  it('keeps words after a dot in the name', () => {
+    expect(getDisplayExtension('Smlouva v. 2 final', 'file')).toBe('')
+    expect(getDisplayName('Smlouva v. 2 final', 'file')).toBe('Smlouva v. 2 final')
   })
 
   it('returns empty ext for directories and keeps the full name', () => {
-    expect(getDisplayExtension('My Folder.d', true)).toBe('')
-    expect(getDisplayName('My Folder.d', true)).toBe('My Folder.d')
+    expect(getDisplayExtension('My Folder.d', 'folder')).toBe('')
+    expect(getDisplayName('My Folder.d', 'folder')).toBe('My Folder.d')
+  })
+
+  it('splits a macOS package folder at its extension', () => {
+    expect(getDisplayExtension('Cmdr.app', 'package')).toBe('app')
+    expect(getDisplayName('Cmdr.app', 'package')).toBe('Cmdr')
   })
 
   it('keeps trailing-dot names intact', () => {
-    expect(getDisplayExtension('foo.', false)).toBe('')
-    expect(getDisplayName('foo.', false)).toBe('foo.')
+    expect(getDisplayExtension('foo.', 'file')).toBe('')
+    expect(getDisplayName('foo.', 'file')).toBe('foo.')
   })
 
   it('handles names with no dot at all', () => {
-    expect(getDisplayExtension('README', false)).toBe('')
-    expect(getDisplayName('README', false)).toBe('README')
+    expect(getDisplayExtension('README', 'file')).toBe('')
+    expect(getDisplayName('README', 'file')).toBe('README')
   })
 
   it('splits a dotfile with a secondary dot', () => {
-    expect(getDisplayExtension('.env.local', false)).toBe('local')
-    expect(getDisplayName('.env.local', false)).toBe('.env')
+    expect(getDisplayExtension('.env.local', 'file')).toBe('local')
+    expect(getDisplayName('.env.local', 'file')).toBe('.env')
   })
 })
 
 describe('getNameColumnText', () => {
   it('strips the extension when the split mode is on (default)', () => {
-    expect(getNameColumnText('launch.json', false, false)).toBe('launch')
-    expect(getNameColumnText('file.tar.gz', false, false)).toBe('file.tar')
+    expect(getNameColumnText('launch.json', 'file', false)).toBe('launch')
+    expect(getNameColumnText('file.tar.gz', 'file', false)).toBe('file')
   })
 
   it('keeps the full filename when showExtensionInName is on', () => {
-    expect(getNameColumnText('launch.json', false, true)).toBe('launch.json')
-    expect(getNameColumnText('file.tar.gz', false, true)).toBe('file.tar.gz')
+    expect(getNameColumnText('launch.json', 'file', true)).toBe('launch.json')
+    expect(getNameColumnText('file.tar.gz', 'file', true)).toBe('file.tar.gz')
   })
 
   it('returns the full name in both modes when there is no extension to split', () => {
-    expect(getNameColumnText('README', false, false)).toBe('README')
-    expect(getNameColumnText('README', false, true)).toBe('README')
-    expect(getNameColumnText('My Folder', true, false)).toBe('My Folder')
-    expect(getNameColumnText('My Folder', true, true)).toBe('My Folder')
+    expect(getNameColumnText('README', 'file', false)).toBe('README')
+    expect(getNameColumnText('README', 'file', true)).toBe('README')
+    expect(getNameColumnText('My Folder', 'folder', false)).toBe('My Folder')
+    expect(getNameColumnText('My Folder', 'folder', true)).toBe('My Folder')
   })
 })
 

@@ -1715,6 +1715,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Say when a deleted item was already gone",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "When you delete something another app already moved or deleted, Cmdr treats it as done and shows a short note saying so. Turn this off (or click “Never show this again” in the note) to skip the note.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "missing, vanished, moved, deleted, gone, toast, notification",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Počet zavřených záložek, které si každý panel pamatuje",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
@@ -3534,5 +3546,33 @@
   "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
   "@settings.multiRename.tagEditor.absSideFiles.keywords": {
     "sourceHash": "806b0cd"
+  },
+  "settings.servers.card.smbLinkConsents": "SMB link sign-ins",
+  "@settings.servers.card.smbLinkConsents": {
+    "sourceHash": "831477d"
+  },
+  "settings.network.smbLinkConsents.keywords": "SMB, DFS, link, sign in, other server, allow, trust, forget",
+  "@settings.network.smbLinkConsents.keywords": {
+    "sourceHash": "d88f7c7"
+  },
+  "settings.servers.smbLinkConsents.description": "A link in an SMB share can lead to a folder on another server. Cmdr asks before it signs in there, and remembers your answer here.",
+  "@settings.servers.smbLinkConsents.description": {
+    "sourceHash": "03ed8ee"
+  },
+  "settings.servers.smbLinkConsents.empty": "Nothing allowed yet. When a link in a share leads to another server, Cmdr asks first.",
+  "@settings.servers.smbLinkConsents.empty": {
+    "sourceHash": "16326ce"
+  },
+  "settings.servers.smbLinkConsents.pair": "Links on {server} can sign in to {target}",
+  "@settings.servers.smbLinkConsents.pair": {
+    "sourceHash": "093a03d"
+  },
+  "settings.servers.smbLinkConsents.confirmTitle": "Forget this sign-in?",
+  "@settings.servers.smbLinkConsents.confirmTitle": {
+    "sourceHash": "edc2567"
+  },
+  "settings.servers.smbLinkConsents.confirm": "The next time a link on {server} leads to {target}, Cmdr will ask again.",
+  "@settings.servers.smbLinkConsents.confirm": {
+    "sourceHash": "0218465"
   }
 }

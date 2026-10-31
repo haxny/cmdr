@@ -3,7 +3,7 @@
  * They pin which keys each mode consumes and which fall through.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { routeTypingKey, type TypingKeyTarget } from './type-to-jump-keys'
+import { routeTypingKey, typingFilters, type TypingKeyTarget } from './type-to-jump-keys'
 
 /** The target with its spies as plain `vi.fn()` properties (not `TypingKeyTarget` methods), so asserting on one isn't an unbound method. */
 function pane(mode: 'jump' | 'filter', active = false, renaming = false) {
@@ -22,6 +22,18 @@ function pane(mode: 'jump' | 'filter', active = false, renaming = false) {
 }
 
 const key = (k: string, mods: KeyboardEventInit = {}) => new KeyboardEvent('keydown', { key: k, ...mods })
+
+describe('typingFilters', () => {
+  it('follows the setting in a folder', () => {
+    expect(typingFilters('filter', false)).toBe(true)
+    expect(typingFilters('jump', false)).toBe(false)
+  })
+
+  it('falls back to jump in the network views, which have nothing to filter', () => {
+    expect(typingFilters('filter', true)).toBe(false)
+    expect(typingFilters('jump', true)).toBe(false)
+  })
+})
 
 describe('routeTypingKey in filter mode', () => {
   it('starts the filter on a letter or digit', () => {

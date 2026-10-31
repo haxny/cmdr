@@ -654,6 +654,14 @@
   "@menu.volume.ejectBusy": {
     "sourceHash": "e2145a6"
   },
+  "menu.volume.ejectAll": "Ejetar tudo",
+  "@menu.volume.ejectAll": {
+    "sourceHash": "7adbe9a"
+  },
+  "menu.volume.ejectAllBusy": "Ejetar tudo (ocupado)",
+  "@menu.volume.ejectAllBusy": {
+    "sourceHash": "8b91f8f"
+  },
   "menu.volume.renameFavorite": "Renomear",
   "@menu.volume.renameFavorite": {
     "sourceHash": "3064d79"

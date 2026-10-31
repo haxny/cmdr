@@ -2,6 +2,7 @@
 //! behind a `Volume`): an oracle-aware recursive listing, then `Volume::delete`
 //! per file or `delete_files` per batch. The local-FS twin is `walker.rs`.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
@@ -27,7 +28,7 @@ use cmdr_fs::volume::{EntryKind, Volume};
 /// tracks outcomes per source (an approved AI suggestion's ops) read every one
 /// as never reached.
 struct SourceCountdown {
-    remaining: std::collections::HashMap<PathBuf, usize>,
+    remaining: HashMap<PathBuf, usize>,
     /// Sources a folder of which the delete left standing (best effort: a
     /// folder still holding something refuses, and stays).
     kept: std::collections::HashSet<PathBuf>,
@@ -35,7 +36,7 @@ struct SourceCountdown {
 
 impl SourceCountdown {
     fn new(sources: &[PathBuf], entries: &[VolumeDeleteEntry]) -> Self {
-        let mut remaining = std::collections::HashMap::new();
+        let mut remaining = HashMap::new();
         for source in sources {
             remaining.insert(source.clone(), 0);
         }
@@ -151,13 +152,10 @@ fn emit_cancelled_if_aborted(
     }
 }
 
-/// Deletes files on a non-local volume (like MTP) with progress reporting.
-///
-/// Uses `volume.list_directory()` for scanning, and `volume.delete()` per file or
-/// `volume.delete_files()` per batch where the backend batches
-/// (`Volume::delete_batch_size`), then `volume.delete_directory()` per folder.
-/// Emits the same events as `delete_files_with_progress` so the frontend progress
-/// dialog works unchanged.
+/// [`delete_volume_files_with_progress_probed`] with no pre-check answers: the
+/// entry tests drive the walk through. Production always comes through
+/// `volume_start.rs`, which runs the already-gone pre-check first.
+#[cfg(any(test, feature = "testing"))]
 #[allow(
     clippy::too_many_arguments,
     reason = "Matches the parameter pattern of other write operation functions"
@@ -170,6 +168,44 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
     state: &Arc<WriteOperationState>,
     sources: &[PathBuf],
     config: &WriteOperationConfig,
+) -> Result<(), WriteOperationError> {
+    delete_volume_files_with_progress_probed(
+        volume,
+        volume_id,
+        events,
+        operation_id,
+        state,
+        sources,
+        config,
+        &HashMap::new(),
+    )
+    .await
+}
+
+/// Deletes files on a non-local volume (like MTP) with progress reporting.
+///
+/// Uses `volume.list_directory()` for scanning, and `volume.delete()` per file or
+/// `volume.delete_files()` per batch where the backend batches
+/// (`Volume::delete_batch_size`), then `volume.delete_directory()` per folder.
+/// Emits the same events as `delete_files_with_progress` so the frontend progress
+/// dialog works unchanged.
+///
+/// `probed` is what the already-gone pre-check's probe learned of each
+/// top-level source (`already_gone::split_on`), so the walk asks the volume
+/// nothing twice.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the walk's inputs plus the pre-check's answers"
+)]
+pub(super) async fn delete_volume_files_with_progress_probed(
+    volume: Arc<dyn Volume>,
+    volume_id: &str,
+    events: &dyn OperationEventSink,
+    operation_id: &str,
+    state: &Arc<WriteOperationState>,
+    sources: &[PathBuf],
+    config: &WriteOperationConfig,
+    probed: &HashMap<PathBuf, Listed>,
 ) -> Result<(), WriteOperationError> {
     use std::sync::atomic::Ordering;
 
@@ -207,7 +243,7 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
 
         // Index cached per-path results by source path so we can look up
         // `top_level_is_directory` and `total_bytes` for each input source.
-        let by_path: std::collections::HashMap<PathBuf, &cmdr_fs::volume::CopyScanResult> =
+        let by_path: HashMap<PathBuf, &cmdr_fs::volume::CopyScanResult> =
             scan.per_path.iter().map(|(p, r)| (p.clone(), r)).collect();
 
         for source in sources {
@@ -253,14 +289,17 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
                     //
                     // ❌ Don't hand it `Some(Directory)` on the preview's word: a
                     // preview's top-level stat may follow a link (a copy's does,
-                    // by design), so "directory" can be a link to one. The parent
-                    // listing answers link-aware with no I/O; failing that, the
-                    // walker asks `entry_kind`.
+                    // by design), so "directory" can be a link to one. The
+                    // pre-check's probe and the parent listing answer link-aware;
+                    // failing both, the walker asks `entry_kind`.
                     let result = scan_volume_recursive(
                         &volume,
                         volume_id,
                         source,
-                        listed_in_parent_listing(state, volume.as_ref(), volume_id, source),
+                        probed
+                            .get(source)
+                            .copied()
+                            .or_else(|| listed_in_parent_listing(state, volume.as_ref(), volume_id, source)),
                         &mut entries,
                         &mut total_bytes,
                         &mut seen_inodes,
@@ -344,7 +383,11 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
             // instead of probing the volume, which on MTP lists the parent and
             // on S3 costs a HEAD the cost estimate never counted. Falls through
             // to the trait probe when the oracle can't answer.
-            let parent_hint = listed_in_parent_listing(state, volume.as_ref(), volume_id, source);
+            // The pre-check's probe answered first, fresher than any listing.
+            let parent_hint = probed
+                .get(source)
+                .copied()
+                .or_else(|| listed_in_parent_listing(state, volume.as_ref(), volume_id, source));
 
             // Hand the hint (or the lack of one) straight to the walker: it
             // resolves an absent hint with a PROPAGATING probe and handles both
@@ -605,6 +648,7 @@ pub(crate) async fn delete_volume_files_with_progress_inner(
         metadata_left_behind: None,
         durability_unconfirmed: None,
         locked_kept: None,
+        already_gone: None,
     });
 
     Ok(())

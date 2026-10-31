@@ -6,9 +6,9 @@
 //! could execute it). The extension is a tiebreaker only, and the SVG case is the
 //! sole place where the extension is load-bearing (see [`classify_viewer_content`]).
 //!
-//! Only **local** files are eligible for media rendering in v1. MTP has no POSIX path
-//! to serve, and SMB paths can block; both stay on the text pipeline. The caller
-//! decides locality and passes it in as `is_local`.
+//! Where a file lives plays no part: the caller reads the head through whatever serves
+//! the file (a local handle, a volume reader), so a picture on a share classifies like
+//! one on the local disk.
 
 use serde::Serialize;
 
@@ -66,8 +66,8 @@ pub fn is_renderable_markdown(head: &[u8], ext: Option<&str>, size: u64) -> bool
 /// skips a BOM, an XML prolog, comments, and a DOCTYPE before the `<svg` root).
 pub const CLASSIFY_HEAD_LEN: usize = 1024;
 
-/// Classifies a file as [`ViewerContentKind`] from its head bytes, extension, and
-/// locality. Pure: no I/O.
+/// Classifies a file as [`ViewerContentKind`] from its head bytes and extension.
+/// Pure: no I/O.
 ///
 /// - **Magic bytes decide** the kind (and, downstream, the served `Content-Type`):
 ///   JPEG/PNG/GIF/WebP/BMP/TIFF/HEIC -> `Image`, `%PDF-` -> `Pdf`.
@@ -75,12 +75,7 @@ pub const CLASSIFY_HEAD_LEN: usize = 1024;
 ///   `svg` AND the first meaningful token (after a BOM, XML prolog, comments, and a
 ///   DOCTYPE) is an `<svg` root. This avoids false-positiving an HTML file that merely
 ///   embeds an inline `<svg>`.
-/// - **Non-local -> always `Text`.** v1 scopes media rendering to local files.
-pub fn classify_viewer_content(head: &[u8], ext: Option<&str>, is_local: bool) -> ViewerContentKind {
-    if !is_local {
-        return ViewerContentKind::Text;
-    }
-
+pub fn classify_viewer_content(head: &[u8], ext: Option<&str>) -> ViewerContentKind {
     if let Some(kind) = classify_by_magic(head) {
         return kind;
     }

@@ -50,6 +50,9 @@ const bindingCommands = vi.hoisted(() => ({
       },
     ]),
   ),
+  listSmbLinkConsents: vi.fn(() =>
+    Promise.resolve([{ server: 'nas.local', target: 'fs01.example.com', approvedAt: '2026-10-31T10:00:00Z' }]),
+  ),
   listTrustedSftpHostKeys: vi.fn(() =>
     Promise.resolve([
       {
@@ -493,17 +496,11 @@ describe('GitSection a11y', () => {
  * the settings-store boundary.
  */
 describe('KeyboardShortcutsSection a11y', () => {
-  useSettings(() => undefined)
+  useSettings((key: string) =>
+    key === 'behavior.fileSystemWatching.globalGoToLatestShortcut.binding' ? '⌃⌥⌘J' : undefined,
+  )
 
-  // TODO: The shortcut pill renders `<span role="button" tabindex="-1">×</span>`
-  // *inside* an outer `<button>` (KeyboardShortcutsSection.svelte around
-  // lines 490-500). Axe flags every pill as `nested-interactive` because nested
-  // focusable controls are ambiguous for screen readers. Fix: split into two
-  // sibling controls (the pill button + a dedicated remove button positioned
-  // next to it), or drop the inner span's `role="button"` entirely (it's
-  // already `tabindex="-1"`, so mouse-only click is fine via plain span).
-  // Leaving this skipped so the suite stays green until fixed.
-  it.skip('default render has no a11y violations (BLOCKED: nested-interactive on shortcut pill)', async () => {
+  it('default render has no a11y violations', async () => {
     const target = container()
     mount(KeyboardShortcutsSection, { target, props: { searchQuery: '' } })
     await tick()
@@ -781,7 +778,7 @@ describe('SearchSection a11y', () => {
  * `KeyboardShortcutsSection` rows and `#lib/downloads/GlobalShortcutRow.svelte`.
  * Its states differ in the element they render: a `<button>` that starts recording
  * by default, a plain `<span>` when `readOnly`, and the same button plus a
- * hover-only remove control when `remove` is set.
+ * remove button beside it when `remove` is set.
  */
 describe('ShortcutPill a11y', () => {
   function mountPill(props: Omit<ComponentProps<typeof ShortcutPill>, 'children'> = {}): HTMLElement {
@@ -819,14 +816,7 @@ describe('ShortcutPill a11y', () => {
     await expectNoA11yViolations(target)
   })
 
-  // TODO: `nested-interactive` — the remove control is a `<span role="button">`
-  // inside the pill's own `<button>` (`ShortcutPill.svelte`), and nested focusable
-  // controls are ambiguous for screen readers. Fix: render it as a sibling button
-  // beside the pill, or drop the inner span's `role="button"` (it is already
-  // `tabindex="-1"`, so the mouse-only click keeps working). This is the same
-  // finding as the skipped `KeyboardShortcutsSection` test above, which mounts the
-  // pills through a real row; unskip both together.
-  it.skip('with the remove control has no a11y violations (BLOCKED: nested-interactive)', async () => {
+  it('with the remove control has no a11y violations', async () => {
     const target = mountPill({ onclick: () => {}, remove: { tooltip: 'Remove this shortcut', onRemove: () => {} } })
     await tick()
     await expectNoA11yViolations(target)

@@ -43,8 +43,8 @@ pub use fs_type::{is_network_fs_type, is_smb_fs_type, supports_trash_for_mount};
 pub(crate) use ids::{volume_id_for, volume_id_for_mount};
 pub use mounts::get_attached_volumes;
 pub(crate) use mounts::{
-    has_mount_identity, is_private_to_another_user, mount_identity_at, mount_roots, mount_type_and_source_for,
-    network_mount_under, registrable_mount_roots, smb_mount_info_at, smb_mounts,
+    has_mount_identity, is_private_to_another_user, mount_identity_at, mount_points_with_rows, mount_rows,
+    mount_type_and_source_for, network_mount_under, registrable_mount_roots, smb_mount_info_at, smb_mounts,
 };
 pub(crate) use nsurl::{
     get_icon_for_path, get_volume_name, get_volume_uuid, get_volume_uuid_for_path, is_volume_ejectable,
@@ -100,6 +100,10 @@ pub struct LocationInfo {
     /// prompt) and both free-space bars for them. Detected via DiskArbitration; see
     /// `disk_image::is_disk_image_mount`. Always `false` off macOS and for non-volume locations.
     pub is_disk_image: bool,
+    /// Whether another switcher row sits on this volume's physical disk, so Eject leaves the disk
+    /// attached and the row's menu also offers "Eject all". Set only by the listing
+    /// (`volume_listing::complete`), since no one row can answer it.
+    pub shares_disk_with_others: bool,
     /// Whether a cloud provider's own filesystem serves this mount (pCloud's `pcloudfs`,
     /// CloudMounter, …), so every entry read costs a round trip to that provider's daemon.
     /// Groups the row under CLOUD and, like `is_disk_image`, suppresses the index affordances:
@@ -297,6 +301,7 @@ pub fn resolve_path_volume_fast(path: &str) -> Option<VolumeInfo> {
             supports_trash,
             mount_is_read_only,
             is_disk_image,
+            shares_disk_with_others: false,
             is_cloud_mount,
             connection_state: None,
             pinned: None,
@@ -399,6 +404,7 @@ fn favorite_location(
         fs_type,
         mount_is_read_only: false,
         is_disk_image: false,
+        shares_disk_with_others: false,
         is_cloud_mount: false,
         connection_state: None,
         pinned: None,
@@ -442,6 +448,7 @@ fn get_main_volume() -> Option<LocationInfo> {
             supports_trash,
             mount_is_read_only: false,
             is_disk_image: false,
+            shares_disk_with_others: false,
             is_cloud_mount: false,
             connection_state: None,
             pinned: None,
@@ -455,6 +462,35 @@ fn get_main_volume() -> Option<LocationInfo> {
             mount_account: None,
         })
     })
+}
+
+/// A row with nothing set, for a test that fills in what it reads.
+#[cfg(test)]
+pub(crate) fn location_for_test() -> LocationInfo {
+    LocationInfo {
+        id: String::new(),
+        name: String::new(),
+        path: String::new(),
+        category: LocationCategory::AttachedVolume,
+        icon: None,
+        is_ejectable: false,
+        fs_type: None,
+        supports_trash: false,
+        mount_is_read_only: false,
+        is_disk_image: false,
+        shares_disk_with_others: false,
+        is_cloud_mount: false,
+        connection_state: None,
+        pinned: None,
+        landing_path: None,
+        device_readiness: None,
+        usb_speed: None,
+        capabilities: None,
+        favorite_shortcut: None,
+        favorite_target: None,
+        root_label: None,
+        mount_account: None,
+    }
 }
 
 /// The volume-shaped name for the same struct: discovery calls every entry a

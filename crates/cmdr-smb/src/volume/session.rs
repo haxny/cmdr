@@ -1,21 +1,20 @@
 //! Connection/session management: session cloning (the [`SessionLease`]),
-//! connection checks, the smb2 error-handling helper (`handle_smb_result`), plus
-//! session (re)build helpers.
+//! connection checks, the smb2 error-handling helper (`handle_smb_result`), and
+//! the credential refresh. Building a session is `session_build.rs`.
 
 use super::mapping::map_smb_error;
-use super::state::{ConnectionState, SessionGeneration};
+use super::state::{ConnectionState, RanOn, SessionGeneration};
+use super::transfer_session::{Member, TransferHold};
 use super::{SmbConnectionParams, SmbVolume};
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::credentials::StoredCredentials;
 use log::{debug, warn};
+use smb2::SmbClient;
 use smb2::client::tree::Tree;
-use smb2::types::SessionId;
-use smb2::{ClientConfig, SmbClient};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
-use std::time::Duration;
 
 pub(super) static CLIENT_LOCK_TICKET: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
@@ -54,6 +53,27 @@ pub(super) struct SessionLease {
     pub(super) tree: Arc<Tree>,
     pub(super) conn: smb2::client::Connection,
     pub(super) generation: SessionGeneration,
+}
+
+/// A lease for a byte-moving call ([`SmbVolume::transfer_lease`]): the tree, a
+/// connection clone, and which session they belong to.
+///
+/// ❗ An error from a call on these goes through the funnel with
+/// [`ran_on`](Self::ran_on), exactly as a [`SessionLease`]'s generation does.
+/// Keep the lease alive for as long as the connection clone is in use: on the
+/// transfer session it carries the hold that stops the idle close.
+pub(super) struct TransferLease {
+    pub(super) tree: Arc<Tree>,
+    pub(super) conn: smb2::client::Connection,
+    pub(super) ran_on: RanOn,
+    pub(super) on: LeaseOn,
+}
+
+/// Which session a [`TransferLease`] came from, and what it needs to reach that
+/// session's client (`dfs_links.rs`).
+pub(super) enum LeaseOn {
+    Main,
+    Transfer { member: Arc<Member>, _hold: TransferHold },
 }
 
 impl SmbVolume {
@@ -118,15 +138,67 @@ impl SmbVolume {
             );
             lease
         };
-        // Refresh what the credit window can carry, while a `Connection` is in
-        // hand: `Volume::max_concurrent_ops` is sync and can't reach one, and
-        // this is the single place every read and write passes through. See
-        // `REPRESENTATIVE_COPY_REQUEST_BYTES`.
+        // Measure the window before any transfer has: a small-window server's
+        // first batch is clamped too. Once a transfer session is up, ITS window
+        // is what copies spend, and only `transfer_lease` measures it.
+        if !self.inner.transfer.is_up() {
+            self.note_credit_capacity(&lease.conn);
+        }
+        Ok(lease)
+    }
+
+    /// Refresh what the credit window can carry, while a `Connection` is in
+    /// hand: `Volume::max_concurrent_ops` is sync and can't reach one. See
+    /// `REPRESENTATIVE_COPY_REQUEST_BYTES`.
+    fn note_credit_capacity(&self, conn: &smb2::client::Connection) {
         self.inner.credit_copy_capacity.store(
-            lease.conn.credit_capacity_for(super::REPRESENTATIVE_COPY_REQUEST_BYTES),
+            conn.credit_capacity_for(super::REPRESENTATIVE_COPY_REQUEST_BYTES),
             Ordering::Relaxed,
         );
-        Ok(lease)
+    }
+
+    /// The connection a transfer rides right now, for the watchdog's liveness
+    /// and receive-rate readings: the transfer session's while one is up, else
+    /// the main session's, which is where [`transfer_lease`](Self::transfer_lease)
+    /// falls back to.
+    pub(super) fn transfer_connection(&self) -> &super::liveness::LiveConnection {
+        if self.inner.transfer.is_up() {
+            &self.inner.transfer.live
+        } else {
+            &self.inner.live_connection
+        }
+    }
+
+    /// A lease for a BYTE-MOVING call: on the share's transfer session
+    /// (`transfer_session.rs`), opening it first if nothing is open, or on the
+    /// main session while the transfer session is down.
+    ///
+    /// The share must read `Direct` either way: the main session is the one
+    /// answer to "is the share up", which a transfer's outage wait asks.
+    pub(super) async fn transfer_lease(&self) -> Result<TransferLease, VolumeError> {
+        self.check_connection()?;
+        if !self.inner.unmounted.load(Ordering::Relaxed)
+            && let Some(leased) = self.inner.transfer.lease().await
+        {
+            self.note_credit_capacity(&leased.conn);
+            return Ok(TransferLease {
+                tree: Arc::clone(&leased.member.tree),
+                conn: leased.conn,
+                ran_on: RanOn::Transfer(leased.generation),
+                on: LeaseOn::Transfer {
+                    member: leased.member,
+                    _hold: leased.hold,
+                },
+            });
+        }
+        let SessionLease { tree, conn, generation } = self.clone_session().await?;
+        self.note_credit_capacity(&conn);
+        Ok(TransferLease {
+            tree,
+            conn,
+            ran_on: RanOn::Main(generation),
+            on: LeaseOn::Main,
+        })
     }
 
     /// Maps an smb2 result, handling connection state transitions on error.
@@ -142,7 +214,7 @@ impl SmbVolume {
         &self,
         op_name: &str,
         smb_path: &str,
-        ran_on: SessionGeneration,
+        ran_on: impl Into<RanOn>,
         result: Result<T, smb2::Error>,
     ) -> Result<T, VolumeError> {
         let e = match result {
@@ -150,17 +222,23 @@ impl SmbVolume {
             Err(e) => e,
         };
         let kind = e.kind();
-        if self.inner.note_smb_error(ran_on, &e) {
+        let ran_on = ran_on.into();
+        if self.inner.note_error(ran_on, &e) {
+            let lost = match ran_on {
+                RanOn::Main(_) => "the session is lost",
+                RanOn::Transfer(_) => "the transfer session is lost, the share stays up",
+            };
             // A refused signature lands here too: it leaves the signed session in a
             // state nothing can vouch for, so whatever runs next (the pane's
             // reconnect, the notice's Reconnect) builds a fresh, freshly signed one.
             warn!(
-                "SmbVolume::{}(share={:?}): source=backend, backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}; the session is lost",
+                "SmbVolume::{}(share={:?}): source=backend, backend=smb2, error_kind={:?}, nt_status={:?}, detail={:?}; {}",
                 op_name, // allowed-log-private: the volume method's name, not a user value
                 LogPrivate::volume(&self.inner.share_name),
                 kind,
                 e.status(),
-                cmdr_fs::log_detail::LogDetail(&e.to_string()).marking(&[LogPrivate::path(smb_path)])
+                cmdr_fs::log_detail::LogDetail(&e.to_string()).marking(&[LogPrivate::path(smb_path)]),
+                lost
             );
         } else if matches!(
             kind,
@@ -194,58 +272,6 @@ impl SmbVolume {
 
         Err(map_smb_error(e, &self.to_display_path(smb_path)))
     }
-}
-
-/// The session id a replacement client names as its `PreviousSessionId`
-/// (#581), or `None` while `client`'s connection is still up.
-///
-/// The server ends a named session even mid-request, and a request on it
-/// afterwards fails as `SignatureInvalid`, which reads as a security refusal.
-/// So a session is named only once smb2 has torn its connection down: with
-/// `auto_reconnect: false` nothing can revive it, so nobody is still using it.
-/// One whose connection is up (a watcher death the main session didn't share)
-/// closes itself when its last clone drops.
-pub(super) fn retired_session_id(client: &SmbClient) -> Option<SessionId> {
-    client.connection().is_disconnected().then(|| client.session_id())
-}
-
-/// Builds a fresh smb2 session using the given params. Returns the connected
-/// client + tree on success.
-///
-/// `replaces` names the session this one stands in for
-/// ([`retired_session_id`]), so the server ends it, closing its handles, before
-/// the new one is up. ❌ Never a sibling's: each pool member or watcher names
-/// only its own predecessor.
-pub(super) async fn build_session(
-    params: &SmbConnectionParams,
-    replaces: Option<SessionId>,
-) -> Result<(SmbClient, Tree), smb2::Error> {
-    use crate::build_smb_addr;
-
-    let config = ClientConfig {
-        addr: build_smb_addr(&params.server, params.port),
-        timeout: Duration::from_secs(10),
-        username: params.username.clone(),
-        password: params.password.clone(),
-        domain: String::new(),
-        auto_reconnect: false,
-        compression: true,
-        // A share name that isn't a share on the server may be a DFS namespace
-        // root, which is how an AD domain normally publishes a share
-        // (`\\<domain>\<namespace>`). smb2 only asks for a referral once a
-        // TreeConnect has been refused by a server that advertised DFS, so an
-        // ordinary NAS pays nothing for this being on.
-        dfs_enabled: true,
-        dfs_target_overrides: Default::default(),
-        // Safe because Cmdr asks for no durable handles: on Windows 8.1+ this
-        // also closes the old session's durable opens, which a client meaning to
-        // reclaim one must keep.
-        previous_session_id: replaces,
-        ..Default::default()
-    };
-    let mut client = crate::connection::connect_volume_client(config).await?;
-    let tree = client.connect_share(&params.share_name).await?;
-    Ok((client, tree))
 }
 
 /// Re-fetches credentials from the secret store for the given server/share.

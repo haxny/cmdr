@@ -239,6 +239,26 @@ fn volume_error_variants_map_correctly() {
             |r| matches!(r, ListingErrorReason::NotConnected { .. }),
         ),
         (
+            // ❌ Deliberately NOT `DeviceDisconnected`: the share is fine, only
+            // this link's other server isn't, and it may come back.
+            VolumeError::LinkTargetUnreachable("x".into()),
+            ErrorCategory::Transient,
+            true,
+            |r| matches!(r, ListingErrorReason::LinkTargetUnreachable { .. }),
+        ),
+        (
+            // A retry can't help until a person allows it, which the pane's own
+            // button does.
+            VolumeError::LinkNeedsConsent(Box::new(crate::volume::LinkSignIn {
+                path: "x".into(),
+                server: "nas".into(),
+                target: "fs01".into(),
+            })),
+            ErrorCategory::NeedsAction,
+            false,
+            |r| matches!(r, ListingErrorReason::LinkNeedsConsent { .. }),
+        ),
+        (
             // ❌ Deliberately NOT the `DeviceDisconnected` classification: the
             // device is still attached and a reopen is already running, so the
             // user needs to wait and retry, not go re-plug anything.
@@ -529,6 +549,59 @@ fn an_s3_refusal_is_the_object_store_accounts() {
     assert_eq!(listing.category, ErrorCategory::NeedsAction);
     assert_eq!(listing.action_kind, None);
     assert!(!listing.retry_hint);
+}
+
+/// ❗ A folder a phone refuses is Android's call, so it never earns the macOS
+/// permission page. Read off the app path's own scheme, ❌ never a message. `/data`
+/// on a non-rooted Pixel over ADB is how this reaches a person (#836).
+#[test]
+fn a_phone_refusal_is_the_phones() {
+    for path in ["adb://R58M123/data", "mtp://pixel/65537/Android"] {
+        let err = VolumeError::PermissionDenied {
+            path: path.to_string(),
+            raw_os_error: None,
+        };
+        let listing = listing_error_from_volume_error(&err, Path::new(path));
+        assert!(
+            matches!(listing.reason, ListingErrorReason::PhoneRefused),
+            "{path}: {:?}",
+            listing.reason
+        );
+        assert_eq!(listing.category, ErrorCategory::NeedsAction);
+        assert_eq!(
+            listing.action_kind, None,
+            "{path}: System Settings holds no grant for this"
+        );
+        assert!(!listing.retry_hint, "{path}: Android answers the same way every time");
+    }
+}
+
+/// A connected server's refusal is its own, not a mounted share's: there's nothing
+/// to eject. NFS's `NFS3ERR_ACCES` carries `EACCES` and still lands here.
+#[test]
+fn a_connected_servers_refusal_is_the_servers() {
+    for (path, raw_os_error) in [
+        ("sftp://ada@nas.local:22/etc/ssl", None),
+        ("webdav://ada@nas.local:443/private", None),
+        ("nfs://nas.local:2049/%2Fexport/private", Some(libc::EACCES)),
+    ] {
+        let err = VolumeError::PermissionDenied {
+            path: path.to_string(),
+            raw_os_error,
+        };
+        let listing = listing_error_from_volume_error(&err, Path::new(path));
+        assert!(
+            matches!(listing.reason, ListingErrorReason::ServerRefused),
+            "{path}: {:?}",
+            listing.reason
+        );
+        assert_eq!(listing.category, ErrorCategory::NeedsAction);
+        assert_eq!(
+            listing.action_kind, None,
+            "{path}: System Settings holds no grant for this"
+        );
+        assert!(!listing.retry_hint, "{path}: retrying reruns the same refused request");
+    }
 }
 
 /// A share's own permissions are the file server's business, so the remote reason

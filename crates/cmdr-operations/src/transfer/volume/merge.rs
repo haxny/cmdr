@@ -44,16 +44,38 @@ use super::landing::{DestFolder, NewName, where_it_lands};
 use super::merge_ctx::{CreatedPaths, FileWindow, MergeCtx, MergeProbe};
 use super::naming::take_back_reservation;
 use super::preflight::SourceFileFacts;
+use super::refused_item::{RefusalSubject, has_no_content, refused_here, skip_if_refused};
 use super::rename_merge::merges_as_a_directory;
 use super::strategy::Replaces;
 use super::strategy::{LandingName, WriteStaging, staging_for};
-use super::stream_pipe::stream_pipe_file;
+use super::stream_pipe::{land_link, stream_pipe_file};
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::log_error::LogError;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{ChildName, DirectoryCreation, Volume, VolumeError};
 
 /// What one leaf file's copy reports back to the walker.
-type LeafResult = Result<u64, PathedVolumeError>;
+type LeafResult = Result<LeafEnd, PathedVolumeError>;
+
+/// How a leaf that didn't fail the walk ended.
+enum LeafEnd {
+    /// The file landed, with this many bytes.
+    Landed(u64),
+    /// The destination refused the file's name. Nothing of it is there (its
+    /// temp went with the failed landing), and the WALKER asks the person
+    /// about it (`LeafPool::settle_refused`): a leaf may never wait on one.
+    Refused(RefusedLeaf),
+}
+
+/// A leaf whose name the destination refused, waiting for its walker to ask.
+struct RefusedLeaf {
+    source: PathBuf,
+    dest: PathBuf,
+    size: Option<u64>,
+    node: Option<NodeId>,
+    error: PathedVolumeError,
+}
 
 /// What a leaf is called in the operation's in-flight table. Built even when no
 /// probe is registered (the tests), which costs two `PathBuf` clones per file
@@ -95,6 +117,9 @@ struct LeafPool<'a> {
     /// file that actually broke, and a second error piled on top of it says
     /// nothing the user can act on (same rule `cleanup.rs::remove_tree` follows).
     first_error: Option<PathedVolumeError>,
+    /// Leaves whose names the destination refused, in the order they came
+    /// back, for the walker to ask about.
+    refused: std::collections::VecDeque<RefusedLeaf>,
     /// Every folder below the root this walk created, noted as the walk leaves
     /// it, so the subtree can date them once its leaves have drained.
     folders: FolderMetadata,
@@ -109,13 +134,15 @@ impl<'a> LeafPool<'a> {
             in_flight: FuturesUnordered::new(),
             bytes: 0,
             first_error: None,
+            refused: std::collections::VecDeque::new(),
             folders: FolderMetadata::default(),
         }
     }
 
     fn fold(&mut self, result: LeafResult) {
         match result {
-            Ok(bytes) => self.bytes += bytes,
+            Ok(LeafEnd::Landed(bytes)) => self.bytes += bytes,
+            Ok(LeafEnd::Refused(refused)) => self.refused.push_back(refused),
             Err(e) => {
                 if self.first_error.is_none() {
                     self.first_error = Some(e);
@@ -259,6 +286,40 @@ impl<'a> LeafPool<'a> {
             self.fold(landed);
         }
     }
+
+    /// Asks the person about every leaf whose name the destination refused,
+    /// on the WALKER, with this walker's other leaves still moving (`drive`).
+    ///
+    /// A Skip records the leaf exactly like a conflict Skip (`record_skip`,
+    /// which a move's source sweep spares, and out of the carried-source
+    /// ledger too) and credits the bars. Anything else is the walk's failure.
+    /// With no merge context there's nobody to ask through, so the refusal
+    /// stands, as it did before the question existed.
+    async fn settle_refused(
+        &mut self,
+        merge: Option<&MergeCtx<'_>>,
+        created: &CreatedPaths,
+        progress: &Arc<SourceProgress>,
+    ) -> Result<(), PathedVolumeError> {
+        while let Some(refused) = self.refused.pop_front() {
+            let Some(ctx) = merge else {
+                return Err(refused.error);
+            };
+            let subject = RefusalSubject {
+                source: &refused.source,
+                dest: &refused.dest,
+                source_size: refused.size,
+                source_is_directory: false,
+            };
+            self.drive(skip_if_refused(ctx, &subject, refused.error.clone()))
+                .await?;
+            let bytes = refused.size.unwrap_or(0);
+            created.forget_carried_source(&refused.source);
+            created.record_skip(refused.source, bytes);
+            progress.skip_leaf(bytes, refused.node);
+        }
+        Ok(())
+    }
 }
 
 /// Streams ONE file to the destination and records it, which is everything the
@@ -289,6 +350,7 @@ async fn copy_leaf<'a>(
     // also the file's tree row, active from here.
     let leaf = progress.begin_leaf(node);
     let on_chunk = |file_bytes_done: u64, _file_bytes_total: u64| leaf.on_chunk(file_bytes_done);
+    let source_size = source_facts.size;
     // ❗ This is the deepest frame that knows WHICH file failed, and the error
     // leaves it carrying that file's path on the side that refused. Report it
     // one level up and the user gets the name of the folder they selected
@@ -311,18 +373,12 @@ async fn copy_leaf<'a>(
     if streamed.is_err() && reserved_placeholder {
         take_back_reservation(dest_volume, &write_dest, &state.claimed_names).await;
     }
-    // A child with no bytes (a link the source can't recreate, a fifo) is one
-    // skipped item, ❌ never the end of its folder; a move's sweep spares it.
-    if let Err(PathedVolumeError {
-        error: VolumeError::NoContent(_),
-        role: PathRole::Source,
-        ..
-    }) = &streamed
-    {
-        created.record_skip(child_source, 0);
-        return Ok(0);
-    }
-    let piped = streamed?;
+    let piped = match streamed {
+        Ok(piped) => piped,
+        Err(error) => {
+            return leaf_stopped_short(error, child_source, write_dest, source_size, created, progress, node);
+        }
+    };
     let bytes = piped.bytes;
     // The file landed at `write_dest`, the original's own name for an
     // overwrite (a swap's landing ran inside the write). A landed overwrite's
@@ -334,7 +390,150 @@ async fn copy_leaf<'a>(
     }
     created.record_file(write_dest, bytes, piped.landed);
     leaf.complete(bytes);
-    Ok(bytes)
+    Ok(LeafEnd::Landed(bytes))
+}
+
+/// What a leaf's write stopping short of a landing comes to.
+///
+/// A child with no bytes and no way to land as itself (a link the source can't
+/// recreate, a fifo) is one skipped item, ❌ never the end of its folder; a move's
+/// sweep spares it. A NAME the destination refused is one item the person decides
+/// about, handed back for the walker to ask, since a leaf must never wait on a
+/// person (`LeafPool`). Anything else is the walk's failure.
+fn leaf_stopped_short(
+    error: PathedVolumeError,
+    source: PathBuf,
+    dest: PathBuf,
+    size: Option<u64>,
+    created: &CreatedPaths,
+    progress: &Arc<SourceProgress>,
+    node: Option<NodeId>,
+) -> LeafResult {
+    if has_no_content(&error) {
+        let bytes = size.unwrap_or(0);
+        created.record_skip(source, bytes);
+        progress.skip_leaf(bytes, node);
+        return Ok(LeafEnd::Landed(0));
+    }
+    let subject = RefusalSubject {
+        source: &source,
+        dest: &dest,
+        source_size: size,
+        source_is_directory: false,
+    };
+    if refused_here(&subject, &error).is_some() {
+        return Ok(LeafEnd::Refused(RefusedLeaf {
+            error,
+            source,
+            dest,
+            size,
+            node,
+        }));
+    }
+    Err(error)
+}
+
+/// Lands ONE symlink the copy carries and records it: [`copy_leaf`] for a child
+/// with a target in place of bytes. Credits the bars what the scan counted for
+/// the entry, since that's what they total.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "One leaf's whole context, the same set `copy_leaf` carries, with the target in place of the listing's facts."
+)]
+async fn copy_link_leaf<'a>(
+    source_volume: &'a Arc<dyn Volume>,
+    child_source: PathBuf,
+    target: PathBuf,
+    listed_size: Option<u64>,
+    dest_volume: &'a Arc<dyn Volume>,
+    write_dest: PathBuf,
+    replaces: Replaces,
+    reserved_placeholder: bool,
+    staging: WriteStaging,
+    state: &'a Arc<WriteOperationState>,
+    created: &'a CreatedPaths,
+    progress: &'a Arc<SourceProgress>,
+    node: Option<NodeId>,
+) -> LeafResult {
+    let leaf = progress.begin_leaf(node);
+    let landed = land_link(
+        source_volume,
+        &child_source,
+        &target,
+        dest_volume,
+        &write_dest,
+        state,
+        staging,
+    )
+    .await;
+    if landed.is_err() && reserved_placeholder {
+        take_back_reservation(dest_volume, &write_dest, &state.claimed_names).await;
+    }
+    if let Err(error) = landed {
+        return leaf_stopped_short(error, child_source, write_dest, listed_size, created, progress, node);
+    }
+    if replaces.overwrites() {
+        created.record_overwrite();
+    }
+    created.record_link(write_dest, target);
+    let bytes = listed_size.unwrap_or(0);
+    leaf.complete(bytes);
+    Ok(LeafEnd::Landed(bytes))
+}
+
+/// A child folder of the walk, as its refused-name question names it.
+struct RefusedFolder<'p> {
+    source: &'p Path,
+    dest: &'p Path,
+    node: Option<NodeId>,
+}
+
+/// A child folder's level ended in `error`. When that is the destination
+/// refusing the FOLDER's own name (its `create_directory`, before anything
+/// under it was made), the walker asks, as for a refused file; a Skip leaves
+/// the whole subtree out and the walk carries on with its siblings.
+///
+/// The skip counts every file under it (one `scan_for_copy` of the source
+/// subtree, paid only on a skip) and records the folder as a skipped source,
+/// which a move's sweep spares whole: nothing of it was carried. Anything else,
+/// a refusal deeper down included (its own level asked about it), stands.
+async fn skip_if_folder_refused(
+    pool: &mut LeafPool<'_>,
+    merge: Option<&MergeCtx<'_>>,
+    created: &CreatedPaths,
+    progress: &Arc<SourceProgress>,
+    source_volume: &Arc<dyn Volume>,
+    folder: &RefusedFolder<'_>,
+    error: PathedVolumeError,
+) -> Result<(), PathedVolumeError> {
+    let Some(ctx) = merge else {
+        return Err(error);
+    };
+    let subject = RefusalSubject {
+        source: folder.source,
+        dest: folder.dest,
+        source_size: None,
+        source_is_directory: true,
+    };
+    if refused_here(&subject, &error).is_none() {
+        return Err(error);
+    }
+    pool.drive(skip_if_refused(ctx, &subject, error)).await?;
+    let (files, bytes) = match pool.drive(source_volume.scan_for_copy(folder.source)).await {
+        Ok(scan) => (scan.file_count, scan.total_bytes),
+        // The skip stands either way; only its count is short.
+        Err(e) => {
+            log::warn!(
+                "merge: couldn't count the skipped folder {}: {}",
+                LogPrivate::path(folder.source),
+                LogError(&e)
+            );
+            (0, 0)
+        }
+    };
+    created.record_skipped_subtree(folder.source.to_path_buf(), files, bytes);
+    progress.skip_leaves(files, bytes, folder.node);
+    Ok(())
 }
 
 /// Copies (merges) a directory tree from source to destination, streaming each
@@ -442,6 +641,8 @@ pub(super) async fn copy_directory_streaming(
     if let Some(e) = pool.first_error.take() {
         return Err(e);
     }
+    // The last leaves' refused names, now that nothing is in flight.
+    pool.settle_refused(merge, created, progress).await?;
 
     // Every leaf landed, so no write can bump a folder's date after this. A
     // failed or cancelled subtree returned above and dates nothing.
@@ -703,7 +904,23 @@ async fn merge_level<'a>(
             continue;
         }
 
-        if entry.is_directory {
+        // A link this copy lands as a link is a leaf, whatever it points at; any
+        // other link takes the listing's word (`link_carry.rs`).
+        let link_target = match merge.and_then(|ctx| ctx.links) {
+            Some(links) if entry.is_symlink && plan.is_none() => {
+                pool.drive(through_outages(state, &[source_volume, dest_volume], || async {
+                    links
+                        .target_of_listed(state, source_volume, dest_volume, &child_source)
+                        .await
+                        .at_source(&child_source)
+                }))
+                .await?
+            }
+            _ => None,
+        };
+        let descends = entry.is_directory && link_target.is_none();
+
+        if descends {
             // Dir-vs-dir (and dir-into-nothing) always recurses to merge — no
             // resolver call for the folder itself. A dir landing on a same-named
             // LEAF is a type mismatch, which the resolver (below) handles.
@@ -715,7 +932,7 @@ async fn merge_level<'a>(
             // entry in hand answers it, so a real folder costs no probe.
             let dir_clashes_with_leaf = dest_hit.is_some_and(|d| !merges_as_a_directory(d));
             if !dir_clashes_with_leaf {
-                let level = Box::pin(merge_level(
+                let level = match Box::pin(merge_level(
                     source_volume,
                     &child_source,
                     dest_volume,
@@ -728,7 +945,19 @@ async fn merge_level<'a>(
                     pool,
                     child_row,
                 ))
-                .await?;
+                .await
+                {
+                    Ok(level) => level,
+                    Err(e) => {
+                        let folder = RefusedFolder {
+                            source: &child_source,
+                            dest: &child_dest,
+                            node: child_row,
+                        };
+                        skip_if_folder_refused(pool, merge, created, progress, source_volume, &folder, e).await?;
+                        continue;
+                    }
+                };
                 if level == DirectoryCreation::Created {
                     pool.folders
                         .note_filled(child_dest, child_source, SourceFolderDates::of_entry(entry));
@@ -763,6 +992,7 @@ async fn merge_level<'a>(
                     source_volume,
                     &child_source,
                     entry,
+                    descends,
                     dest_volume,
                     &child_dest,
                     hit,
@@ -799,7 +1029,7 @@ async fn merge_level<'a>(
             }
         }
 
-        if entry.is_directory {
+        if descends {
             // Only a resolver decision sends a folder on from here. With no
             // merge context nobody freed the name, and recursing would merge
             // into the leaf that holds it (THROUGH it, for a link): refuse.
@@ -809,6 +1039,8 @@ async fn merge_level<'a>(
             // Type-mismatch Overwrite/Rename that resolved to Proceed: the
             // resolver already set aside/relocated the dest leaf, so recurse
             // into `write_dest` as a fresh (or renamed) directory root.
+            // No refused-name question here: a same-named leaf already stands at
+            // this name, so the destination stores it.
             let level = Box::pin(merge_level(
                 source_volume,
                 &child_source,
@@ -830,9 +1062,40 @@ async fn merge_level<'a>(
             continue;
         }
 
+        if let Some(target) = link_target {
+            let staging = staging_for(&replaces, landing);
+            let row = LeafRow {
+                source: child_source.clone(),
+                dest: write_dest.clone(),
+            };
+            pool.submit(
+                row,
+                copy_link_leaf(
+                    source_volume,
+                    child_source,
+                    target,
+                    entry.size,
+                    dest_volume,
+                    write_dest,
+                    replaces,
+                    reserved_placeholder,
+                    staging,
+                    state,
+                    created,
+                    progress,
+                    child_row,
+                ),
+            )
+            .await?;
+            pool.settle_refused(merge, created, progress).await?;
+            continue;
+        }
+
         // Past every Skip, so this child is one the move carries. Recording it
         // here rather than when its bytes land is safe: a leaf that fails fails
-        // the whole source, and a failed source is never swept.
+        // the whole source, and a failed source is never swept. The one leaf
+        // that fails WITHOUT failing its source, a refused name the person
+        // skipped, comes off again (`LeafPool::settle_refused`).
         created.record_carried_source(&child_source, entry);
 
         // PLAN MODE (one-pass sequential extract): the destination + conflict are
@@ -881,6 +1144,9 @@ async fn merge_level<'a>(
             ),
         )
         .await?;
+        // Ask about any name refused so far before walking on, so the prompt
+        // comes while the person still sees the file it's about.
+        pool.settle_refused(merge, created, progress).await?;
     }
 
     // The level is in place, which is all an empty folder's row waits for. A
@@ -929,11 +1195,17 @@ enum MergeChildDecision {
 /// handing it the op-wide apply-to-all latch so a "…all" choice from any level
 /// (top or deep) applies here. The `conflict_dispatch_lock` inside the resolver
 /// — not this cell — is what serializes the human across concurrent merges.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "Both sides of one clash, plus what this walk makes of the child (a link it carries is no folder)."
+)]
 async fn resolve_merge_child(
     ctx: &MergeCtx<'_>,
     source_volume: &Arc<dyn Volume>,
     child_source: &Path,
     entry: &FileEntry,
+    // Whether the child is a folder to THIS walk: a link it carries isn't.
+    source_is_directory: bool,
     dest_volume: &Arc<dyn Volume>,
     child_dest: &Path,
     dest_hit: &FileEntry,
@@ -948,8 +1220,8 @@ async fn resolve_merge_child(
     // ❗ The dest size matters beyond display: it's what `OverwriteSmaller`
     // compares against. Passing `None` here used to leave the resolver
     // fabricating a `0`, which made every destination look smaller.
-    let source_is_directory_hint = Some(entry.is_directory);
-    let source_size_hint = if entry.is_directory { None } else { entry.size };
+    let source_is_directory_hint = Some(source_is_directory);
+    let source_size_hint = if source_is_directory { None } else { entry.size };
     let dest_size_hint = if dest_hit.is_directory { None } else { dest_hit.size };
     let _ = ctx.source_hints; // hints are keyed by top-level source path; deep children never match
 

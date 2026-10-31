@@ -1,8 +1,7 @@
-//! `statvfs`-based filesystem primitives: trash support, virtual-filesystem
-//! classification, mount-point resolution, and free-space queries. All read
-//! `/proc/mounts` or call `statvfs`, never the mounted filesystem itself.
+//! Mount-table filesystem primitives: trash support, virtual-filesystem
+//! classification, and mount-point resolution. All read `/proc/mounts`, never the
+//! mounted filesystem itself. Free space is `cmdr_local::space::get_volume_space`.
 
-use crate::file_system::volume::SpaceInfo;
 use cmdr_local::linux_mounts;
 use std::path::Path;
 
@@ -68,32 +67,6 @@ pub(crate) fn get_mount_point(path: &str) -> Option<(String, String, String)> {
     Some((mount_point, fs_type, source))
 }
 
-/// Get space information for a volume using `statvfs`.
-///
-/// A mounted filesystem always has a capacity, so this is always
-/// [`SpaceInfo::Bounded`].
-pub fn get_volume_space(path: &str) -> Option<SpaceInfo> {
-    use std::ffi::CString;
-
-    let c_path = CString::new(path).ok()?;
-
-    // SAFETY: `c_path` is a valid NUL-terminated C string from `path`; `stat` is a zeroed,
-    // correctly-typed `libc::statvfs` out-buffer the kernel fills, and its fields are only read on
-    // the `== 0` (success) branch where the kernel initialized them.
-    unsafe {
-        let mut stat: libc::statvfs = std::mem::zeroed();
-        if libc::statvfs(c_path.as_ptr(), &mut stat) == 0 {
-            let block_size = stat.f_frsize;
-            Some(SpaceInfo::bounded(
-                stat.f_blocks * block_size,
-                stat.f_bavail * block_size,
-            ))
-        } else {
-            None
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,26 +121,5 @@ mod tests {
     #[test]
     fn test_supports_trash_on_a_block_device_whatever_its_type() {
         assert!(supports_trash_for_mount(Some("/dev/sdb1"), Some("somefs")));
-    }
-
-    #[test]
-    fn test_get_volume_space_root() {
-        let space = get_volume_space("/");
-        // statvfs works on both macOS and Linux
-        if let Some(SpaceInfo::Bounded {
-            total_bytes,
-            available_bytes,
-            ..
-        }) = space
-        {
-            assert!(total_bytes > 0);
-            assert!(available_bytes <= total_bytes);
-        }
-    }
-
-    #[test]
-    fn test_get_volume_space_nonexistent() {
-        let space = get_volume_space("/nonexistent/path/does/not/exist");
-        assert!(space.is_none());
     }
 }

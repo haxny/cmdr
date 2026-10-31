@@ -18,7 +18,7 @@ use super::super::transfer_driver::{LeafProgressLedger, SourceProgress};
 use super::merge::copy_directory_streaming;
 use super::merge_ctx::{CreatedPaths, MergeCtx};
 use super::preflight::SourceFileFacts;
-use super::stream_pipe::stream_pipe_file;
+use super::stream_pipe::{land_link, stream_pipe_file};
 use super::transfer_error::{AtPath, PathedVolumeError};
 use cmdr_fs::volume::{Volume, VolumeError};
 
@@ -94,6 +94,30 @@ pub(super) async fn copy_single_path(
     // Check cancellation up front.
     if state.work_stopped() {
         return Err(VolumeError::Cancelled("Operation cancelled by user".into())).at_source(source_path);
+    }
+
+    // A selected link this copy carries is a leaf, whatever the scan or a hint
+    // says it points at. It joins the source's ledger like a walked leaf (a
+    // file source records nothing here otherwise), because a link's identity is
+    // its target, ❌ never a byte count.
+    if let Some(target) = merge
+        .and_then(|ctx| ctx.links)
+        .and_then(|links| links.selected_target(source_path))
+    {
+        let leaf = progress.begin_leaf(progress.node());
+        land_link(
+            source_volume,
+            source_path,
+            target,
+            dest_volume,
+            dest_path,
+            state,
+            staging,
+        )
+        .await?;
+        created.record_link(dest_path.to_path_buf(), target.to_path_buf());
+        leaf.complete(0);
+        return Ok(0);
     }
 
     let source_is_directory = resolve_source_is_directory(source_volume, source_path, source_is_directory)

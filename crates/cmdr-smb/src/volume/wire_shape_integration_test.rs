@@ -100,7 +100,7 @@ async fn smb_integration_the_compound_read_stops_at_one_download_chunk() {
     vol.create_directory(Path::new(&dir)).await.unwrap();
 
     let chunk = smb2::DOWNLOAD_CHUNK_SIZE as usize;
-    let SessionLease { conn, .. } = vol.clone_session().await.unwrap();
+    let TransferLease { conn, .. } = vol.transfer_lease().await.unwrap();
     assert_eq!(
         conn.quick_read_limit(),
         chunk as u64,
@@ -163,7 +163,7 @@ async fn smb_integration_a_measured_fast_link_compounds_a_multi_chunk_file() {
     drain(vol.open_read_stream(Path::new(&warm_up_path)).await.unwrap()).await;
 
     let size = 2 * 1024 * 1024;
-    let SessionLease { conn, .. } = vol.clone_session().await.unwrap();
+    let TransferLease { conn, .. } = vol.transfer_lease().await.unwrap();
     assert!(
         conn.quick_read_limit() >= size as u64,
         "loopback moves far more than 2 MiB in 250 ms, so the limit should have risen from one chunk, got {}",
@@ -419,7 +419,7 @@ async fn smb_integration_a_staged_write_over_the_quick_write_limit_streams() {
     vol.create_directory(Path::new(&dir)).await.unwrap();
     let data: Vec<u8> = (0..=252u8).cycle().take(1024 * 1024).collect();
     let size = data.len() as u64;
-    let SessionLease { conn, .. } = vol.clone_session().await.unwrap();
+    let TransferLease { conn, .. } = vol.transfer_lease().await.unwrap();
     assert!(
         size > conn.quick_write_limit() && size <= conn.compound_write_limit(),
         "1 MiB must fit one frame by credits and size, and still be over a cold connection's limit"
@@ -465,31 +465,38 @@ async fn smb_integration_a_warm_uplink_lifts_the_promise_and_the_promised_write_
     ensure_clean(&vol, &dir).await;
     vol.create_directory(Path::new(&dir)).await.unwrap();
 
+    let data: Vec<u8> = (0..=240u8).cycle().take(4 * 1024 * 1024).collect();
+    let size = data.len() as u64;
+
     // Warm the uplink with a staged 8 MiB stream (loopback moves it at hundreds
-    // of MB/s, so 250 ms of it clears `compound_write_limit`).
-    let warm: Vec<u8> = vec![0x3C; 8 * 1024 * 1024];
+    // of MB/s, so 250 ms of it clears `compound_write_limit`). The promise reads
+    // the rate the LAST upload measured, so one a loaded machine starved promises
+    // nothing, and the next upload is a fresh measurement. Bounded: an uplink that
+    // never clears 4 MiB in 250 ms is the failure this cell exists to see.
     let temp = format!(
         "{}/warm.bin{}{}",
         dir,
         cmdr_fs::staging::STAGING_TEMP_MARKER,
         "warm-test"
     );
-    vol.write_from_stream(
-        Path::new(&temp),
-        WriteMode::CreateOrReplace,
-        StreamLength::Known(warm.len() as u64),
-        Box::new(InlineReadStream::new(warm, None)),
-        &|_| std::ops::ControlFlow::Continue(()),
-    )
-    .await
-    .unwrap();
-
-    let data: Vec<u8> = (0..=240u8).cycle().take(4 * 1024 * 1024).collect();
-    let size = data.len() as u64;
-    assert!(
-        vol.write_is_single_shot(StreamLength::Known(size)).await,
-        "a warm loopback uplink moves 4 MiB in well under 250 ms"
-    );
+    let mut promised = false;
+    for _ in 0..5 {
+        let warm: Vec<u8> = vec![0x3C; 8 * 1024 * 1024];
+        vol.write_from_stream(
+            Path::new(&temp),
+            WriteMode::CreateOrReplace,
+            StreamLength::Known(warm.len() as u64),
+            Box::new(InlineReadStream::new(warm, None)),
+            &|_| std::ops::ControlFlow::Continue(()),
+        )
+        .await
+        .unwrap();
+        promised = vol.write_is_single_shot(StreamLength::Known(size)).await;
+        if promised {
+            break;
+        }
+    }
+    assert!(promised, "a warm loopback uplink moves 4 MiB in well under 250 ms");
 
     let path = format!("{}/promised.bin", dir);
     let (requests_before, compounds_before) = request_counts(&vol).await;
@@ -563,7 +570,7 @@ async fn credit_capped_volume(proxy: &credit_cap_proxy::CreditCapProxy) -> SmbVo
     // A few round trips, so the server has had a chance to decline growing the
     // window and smb2 knows its ceiling.
     let _ = vol.list_directory(Path::new(""), None).await;
-    let SessionLease { conn, .. } = vol.clone_session().await.unwrap();
+    let TransferLease { conn, .. } = vol.transfer_lease().await.unwrap();
     let ceiling = conn.credit_ceiling().expect("smb2 has seen the window stop growing");
     assert!(ceiling <= 64, "the proxy caps the window at 64, smb2 saw {ceiling}");
     vol
@@ -597,7 +604,7 @@ async fn smb_integration_a_hinted_read_the_credit_window_cant_fund_streams_inste
 
     // Warm the link, so the rate alone would say "one READ".
     drain(vol.open_read_stream(Path::new(&path)).await.unwrap()).await;
-    let SessionLease { conn, .. } = vol.clone_session().await.unwrap();
+    let TransferLease { conn, .. } = vol.transfer_lease().await.unwrap();
     assert!(
         conn.quick_read_limit() < data.len() as u64,
         "the credit ceiling must hold the limit under 5 MiB, got {}",

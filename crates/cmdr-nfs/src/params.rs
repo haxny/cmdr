@@ -1,5 +1,7 @@
 //! How to reach one NFS export, and how to reach it again.
 
+use crate::proto::rpc::MAX_GIDS;
+
 /// The port an NFS server listens on when nothing says otherwise, and the port
 /// a volume id and an app path carry when the address named none.
 pub(crate) const NFS_PORT: u16 = 2049;
@@ -39,17 +41,51 @@ impl NfsServer {
     }
 }
 
-/// Who a place acts as on the server: the uid and gid every call's `AUTH_SYS`
-/// credential carries.
+/// Who a place acts as on the server: the uid and the groups every call's
+/// `AUTH_SYS` credential carries.
 ///
-/// ❗ A SETTING of the place, ❌ not its identity: changing it keeps the volume
-/// id, the tabs, and the favorites, and redials.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// ❗ A SETTING of the place, ❌ not its identity: changing any of it keeps the
+/// volume id, the tabs, and the favorites, and redials.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NfsIdentity {
     /// The user id.
     pub uid: u32,
     /// The primary group id.
     pub gid: u32,
+    /// The person's other groups, so a file readable only through one of them
+    /// opens. Empty for someone in the primary group alone. What reaches the
+    /// wire: [`NfsIdentity::credential_gids`].
+    pub other_gids: Vec<u32>,
+}
+
+impl NfsIdentity {
+    /// An identity in its primary group alone.
+    pub const fn new(uid: u32, gid: u32) -> Self {
+        Self {
+            uid,
+            gid,
+            other_gids: Vec::new(),
+        }
+    }
+
+    /// The `gids` list a credential sends: the primary group first, then the
+    /// others, each once, at most [`MAX_GIDS`] (RFC 5531).
+    ///
+    /// ❗ With [`MAX_GIDS`] others, the primary group gives up its slot: it still
+    /// travels in the credential's own `gid` field, where the server checks it
+    /// anyway, and every group a person listed goes out.
+    pub(crate) fn credential_gids(&self) -> Vec<u32> {
+        let mut others: Vec<u32> = Vec::with_capacity(MAX_GIDS);
+        for gid in &self.other_gids {
+            if others.len() < MAX_GIDS && *gid != self.gid && !others.contains(gid) {
+                others.push(*gid);
+            }
+        }
+        if others.len() < MAX_GIDS {
+            others.insert(0, self.gid);
+        }
+        others
+    }
 }
 
 /// Everything needed to open (and later re-open) one NFS export.

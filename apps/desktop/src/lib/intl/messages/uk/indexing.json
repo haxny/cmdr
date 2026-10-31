@@ -1,0 +1,285 @@
+{
+  "indexing.status.ariaLabel": "Стан індексування диска",
+  "@indexing.status.ariaLabel": {
+    "sourceHash": "49edebb"
+  },
+  "indexing.drive.heading": "{name}",
+  "@indexing.drive.heading": {
+    "sourceHash": "5e291d7",
+    "sameAsSourceJustification": "Placeholder-only heading: the drive’s own name, nothing to translate."
+  },
+  "indexing.scan.label": "Індексування диска…",
+  "@indexing.scan.label": {
+    "sourceHash": "5b0433c"
+  },
+  "indexing.scan.counters": "{entriesText} {entries, plural, one {запис} few {записи} many {записів} other {запису}}, {dirsText} {dirs, plural, one {папка} few {папки} many {папок} other {папки}}",
+  "@indexing.scan.counters": {
+    "sourceHash": "ecf47f2"
+  },
+  "indexing.scan.countersElapsed": "{counters} · {elapsed}",
+  "@indexing.scan.countersElapsed": {
+    "sourceHash": "aeb0b57",
+    "sameAsSourceJustification": "Placeholders joined by a middle dot; Ukrainian uses the same separator, nothing to translate."
+  },
+  "indexing.scan.etaRough": "приблизно {eta}",
+  "@indexing.scan.etaRough": {
+    "sourceHash": "6f92820"
+  },
+  "indexing.phase.priorityFolders": "Індексування папок, якими ви користуєтеся найчастіше",
+  "@indexing.phase.priorityFolders": {
+    "sourceHash": "09dd19d"
+  },
+  "indexing.phase.home": "Індексування решти домашньої папки",
+  "@indexing.phase.home": {
+    "sourceHash": "8c31671"
+  },
+  "indexing.phase.wholeDrive": "Індексування решти диска",
+  "@indexing.phase.wholeDrive": {
+    "sourceHash": "1e1d606"
+  },
+  "indexing.run.firstIndex": "Перше індексування",
+  "@indexing.run.firstIndex": {
+    "sourceHash": "4de62ce"
+  },
+  "indexing.run.firstScan": "Перше повне сканування",
+  "@indexing.run.firstScan": {
+    "sourceHash": "bb804db"
+  },
+  "indexing.run.rescan": "Повне повторне сканування",
+  "@indexing.run.rescan": {
+    "sourceHash": "f8cd103"
+  },
+  "indexing.run.changeCheck": "Перевірка змін",
+  "@indexing.run.changeCheck": {
+    "sourceHash": "9b43638"
+  },
+  "indexing.run.update": "Швидке оновлення",
+  "@indexing.run.update": {
+    "sourceHash": "97ac3e3"
+  },
+  "indexing.step.findFiles": "Знайти файли",
+  "@indexing.step.findFiles": {
+    "sourceHash": "15d12bc"
+  },
+  "indexing.step.saveFileList": "Зберегти список файлів",
+  "@indexing.step.saveFileList": {
+    "sourceHash": "92af072"
+  },
+  "indexing.step.updateFileList": "Оновити список файлів",
+  "@indexing.step.updateFileList": {
+    "sourceHash": "ef0a3d2"
+  },
+  "indexing.step.computeFolderSizes": "Обчислити розміри папок",
+  "@indexing.step.computeFolderSizes": {
+    "sourceHash": "65c86f6"
+  },
+  "indexing.step.catchUp": "Врахувати недавні зміни",
+  "@indexing.step.catchUp": {
+    "sourceHash": "ef74b56"
+  },
+  "indexing.step.updateIndex": "Оновити індекс",
+  "@indexing.step.updateIndex": {
+    "sourceHash": "494e5b8"
+  },
+  "indexing.summary.found": "Знайдено: {countText}",
+  "@indexing.summary.found": {
+    "sourceHash": "fe3038e"
+  },
+  "indexing.step.findFilesPhased": "Це перший прохід, тож знадобиться час. Ваші папки стають доступними для пошуку в міру того, як Cmdr до них доходить.",
+  "@indexing.step.findFilesPhased": {
+    "sourceHash": "dbeb379"
+  },
+  "indexing.step.findFilesFirstScan": "Перше сканування, тож це може зайняти деякий час",
+  "@indexing.step.findFilesFirstScan": {
+    "sourceHash": "5e9ea25"
+  },
+  "indexing.step.findFilesChangeCheck": "Перевірка кожної папки за індексом. Розміри ваших папок залишаються видимими, поки вона триває.",
+  "@indexing.step.findFilesChangeCheck": {
+    "sourceHash": "8c23f1f"
+  },
+  "indexing.step.statusDone": "Готово",
+  "@indexing.step.statusDone": {
+    "sourceHash": "11a6767"
+  },
+  "indexing.step.statusActive": "Виконується",
+  "@indexing.step.statusActive": {
+    "sourceHash": "c1f88e9"
+  },
+  "indexing.step.statusPending": "Не розпочато",
+  "@indexing.step.statusPending": {
+    "sourceHash": "ba35f0c"
+  },
+  "indexing.aggregation.loading": "Завантаження папок…",
+  "@indexing.aggregation.loading": {
+    "sourceHash": "d0aa0da"
+  },
+  "indexing.aggregation.sorting": "Сортування папок…",
+  "@indexing.aggregation.sorting": {
+    "sourceHash": "5c5a247"
+  },
+  "indexing.aggregation.computing": "Обчислення розмірів папок…",
+  "@indexing.aggregation.computing": {
+    "sourceHash": "d693bcf"
+  },
+  "indexing.aggregation.writing": "Збереження розмірів папок…",
+  "@indexing.aggregation.writing": {
+    "sourceHash": "4cec9d8"
+  },
+  "indexing.replay.detail": "Оброблено {eventsText} {events, plural, one {подію} few {події} many {подій} other {події}}",
+  "@indexing.replay.detail": {
+    "sourceHash": "1c2a534"
+  },
+  "indexing.progress.percentEta": "{percent} %, {eta}",
+  "@indexing.progress.percentEta": {
+    "sourceHash": "26b29da"
+  },
+  "indexing.overall.eta": "Загалом: {eta}",
+  "@indexing.overall.eta": {
+    "sourceHash": "a9a2ffc"
+  },
+  "indexing.overall.estimating": "Загалом: оцінювання…",
+  "@indexing.overall.estimating": {
+    "sourceHash": "9dac967"
+  },
+  "indexing.eta.almostDone": "Майже готово",
+  "@indexing.eta.almostDone": {
+    "sourceHash": "506f162"
+  },
+  "indexing.eta.almostDoneMidSentence": "майже готово",
+  "@indexing.eta.almostDoneMidSentence": {
+    "sourceHash": "1d2fb48"
+  },
+  "indexing.eta.secondsLeft": "ще {secondsText} с",
+  "@indexing.eta.secondsLeft": {
+    "sourceHash": "3a67288"
+  },
+  "indexing.eta.minutesLeft": "ще {minutesText} хв",
+  "@indexing.eta.minutesLeft": {
+    "sourceHash": "bcb3615"
+  },
+  "indexing.eta.hoursMinutesLeft": "ще {hours, plural, one {{hoursText} година} few {{hoursText} години} many {{hoursText} годин} other {{hoursText} години}} {minutes, plural, one {{minutesText} хвилина} few {{minutesText} хвилини} many {{minutesText} хвилин} other {{minutesText} хвилини}}",
+  "@indexing.eta.hoursMinutesLeft": {
+    "sourceHash": "8b2b4c0"
+  },
+  "indexing.eta.hoursLeft": "ще {hours, plural, one {{hoursText} година} few {{hoursText} години} many {{hoursText} годин} other {{hoursText} години}}",
+  "@indexing.eta.hoursLeft": {
+    "sourceHash": "1d50900"
+  },
+  "indexing.rescan.journalGap": "Системний журнал змін файлів не сягає так далеко в минуле. Cmdr сканує диск заново, щоб перебудувати індекс.",
+  "@indexing.rescan.journalGap": {
+    "sourceHash": "a697c86"
+  },
+  "indexing.rescan.replayOverflow": "Від останнього запуску змінилося дуже багато файлів. Cmdr сканує диск заново, замість того щоб відтворювати зміни одну за одною.",
+  "@indexing.rescan.replayOverflow": {
+    "sourceHash": "70c7481"
+  },
+  "indexing.rescan.watcherStartFailed": "Не вдалося запустити відстеження змін файлів. Cmdr сканує диск заново, щоб індекс знову став актуальним.",
+  "@indexing.rescan.watcherStartFailed": {
+    "sourceHash": "07fb462"
+  },
+  "indexing.rescan.reconcilerBufferOverflow": "Через бурхливу активність у файловій системі переповнився буфер подій. Cmdr сканує диск заново, щоб дані залишалися точними.",
+  "@indexing.rescan.reconcilerBufferOverflow": {
+    "sourceHash": "d6000e4"
+  },
+  "indexing.rescan.incompletePreviousScan": "Попереднє сканування не завершилося (можливо, програму закрили). Cmdr починає сканування з нуля.",
+  "@indexing.rescan.incompletePreviousScan": {
+    "sourceHash": "804084a"
+  },
+  "indexing.rescan.watcherChannelOverflow": "Сплеск активності у файловій системі переповнив канал відстеження змін. Cmdr сканує диск заново, щоб дані залишалися точними.",
+  "@indexing.rescan.watcherChannelOverflow": {
+    "sourceHash": "b7ce086"
+  },
+  "indexing.rescan.fallback": "Cmdr сканує диск заново, щоб індекс залишався точним.",
+  "@indexing.rescan.fallback": {
+    "sourceHash": "cd99826"
+  },
+  "indexing.needsFreshScan.afterDisconnect": "Диск «{name}» відʼєднався, поки Cmdr оновлював його індекс. Наступне сканування цього диска почнеться з нуля, і розміри папок знову будуть правильні.",
+  "@indexing.needsFreshScan.afterDisconnect": {
+    "sourceHash": "a90dbdf"
+  },
+  "indexing.memoryStop.paused": "Cmdr призупинив індексування дисків, бо використовував забагато памʼяті. Розміри папок можуть бути застарілі, доки ви не перезапустите Cmdr.",
+  "@indexing.memoryStop.paused": {
+    "sourceHash": "32d225a"
+  },
+  "indexing.firstConnect.title": "Індексувати диск «{name}»?",
+  "@indexing.firstConnect.title": {
+    "sourceHash": "0734a24"
+  },
+  "indexing.firstConnect.body": "Cmdr може індексувати цей диск у фоновому режимі, щоб тут працювали розміри папок і пошук. Індексування працює, лише поки диск підʼєднано.",
+  "@indexing.firstConnect.body": {
+    "sourceHash": "56ec1e5"
+  },
+  "indexing.firstConnect.enable": "Увімкнути індексування",
+  "@indexing.firstConnect.enable": {
+    "sourceHash": "3dc7ddf"
+  },
+  "indexing.firstConnect.silenceDrive": "Більше не питати про цей диск",
+  "@indexing.firstConnect.silenceDrive": {
+    "sourceHash": "8d7a674"
+  },
+  "indexing.firstConnect.silenceAll": "Більше не питати про жоден диск",
+  "@indexing.firstConnect.silenceAll": {
+    "sourceHash": "0e10003"
+  },
+  "indexing.staleDialog.title": "Індекс цього диска може бути застарілим",
+  "@indexing.staleDialog.title": {
+    "sourceHash": "7de163b"
+  },
+  "indexing.staleDialog.body": "Поки диск «{name}» був відʼєднаний, файли на цьому диску могли змінитися. Розміри папок і результати пошуку можуть бути трохи неточними, доки ви не запустите повторне сканування. Жовта позначка стану біля диска завжди показує, коли таке трапляється, а повторне сканування оновлює дані.",
+  "@indexing.staleDialog.body": {
+    "sourceHash": "c04519a"
+  },
+  "indexing.staleDialog.titlePhone": "Індекс цього телефону може бути застарілим",
+  "@indexing.staleDialog.titlePhone": {
+    "sourceHash": "1f41e08"
+  },
+  "indexing.staleDialog.bodyPhone": "Телефон «{name}» не повідомляє Cmdr, коли файли на телефоні змінюються, тож Cmdr оновлює індекс, враховуючи зміни, які вносить сам. Зміни, зроблені на телефоні, як-от нові фото, зʼявляться в розмірах папок і в пошуку після повторного сканування. Жовта позначка стану біля телефону залишиться як нагадування.",
+  "@indexing.staleDialog.bodyPhone": {
+    "sourceHash": "2751fdf"
+  },
+  "indexing.staleDialog.neverShowAgain": "Більше не показувати",
+  "@indexing.staleDialog.neverShowAgain": {
+    "sourceHash": "f2d1044"
+  },
+  "indexing.staleDialog.close": "Закрити",
+  "@indexing.staleDialog.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "indexing.enrich.label": "Індексування зображень",
+  "@indexing.enrich.label": {
+    "sourceHash": "442068b"
+  },
+  "indexing.enrich.progress": "{done, plural, one {Зображень: {doneText} з {totalText}} few {Зображень: {doneText} з {totalText}} many {Зображень: {doneText} з {totalText}} other {Зображень: {doneText} з {totalText}}}",
+  "@indexing.enrich.progress": {
+    "sourceHash": "b307416"
+  },
+  "indexing.enrich.rate": "{rateText}/хв",
+  "@indexing.enrich.rate": {
+    "sourceHash": "255f3b4"
+  },
+  "indexing.enrich.rateEta": "{rate} · {eta}",
+  "@indexing.enrich.rateEta": {
+    "sourceHash": "ac6a373",
+    "sameAsSourceJustification": "Two placeholders joined by a middle dot; Ukrainian uses the same separator (as `indexing.scan.countersElapsed`), nothing to translate."
+  },
+  "indexing.enrich.pausedIdle": "Очікування, поки ви зайняті",
+  "@indexing.enrich.pausedIdle": {
+    "sourceHash": "ee9b2e9"
+  },
+  "indexing.enrich.pausedDisconnected": "Призупинено, поновиться після повторного підʼєднання",
+  "@indexing.enrich.pausedDisconnected": {
+    "sourceHash": "1483989"
+  },
+  "indexing.enrich.queued": "Індексування зображень почнеться після сканування диска",
+  "@indexing.enrich.queued": {
+    "sourceHash": "09e94f5"
+  },
+  "indexing.enrich.imagesBarLabel": "Проіндексовано зображень",
+  "@indexing.enrich.imagesBarLabel": {
+    "sourceHash": "f4b2ca5"
+  },
+  "indexing.enrich.bytesBarLabel": "Оброблено даних зображень",
+  "@indexing.enrich.bytesBarLabel": {
+    "sourceHash": "58952a9"
+  }
+}

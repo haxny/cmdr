@@ -78,7 +78,11 @@ export interface QuickFilterController {
   /** The pattern the user has typed; empty when no filter is on. */
   readonly pattern: string
   isActive: () => boolean
+  /** Whether the pane has a listing to filter right now. */
+  canFilter: () => boolean
   append: (char: string) => void
+  /** Puts a whole pattern on, the way ⌃S brings it back from Jump. No-op without a listing to filter. */
+  replace: (next: string) => void
   backspace: () => void
   /** Clears the pattern and shows every row again. */
   clear: () => void
@@ -220,6 +224,12 @@ export function createQuickFilterController(deps: QuickFilterControllerDeps): Qu
       return pattern
     },
     isActive: () => pattern !== '',
+    canFilter,
+    replace: (next: string) => {
+      if (!canFilter()) return
+      edit++
+      setPattern(next)
+    },
     append: (char: string) => {
       if (!canFilter()) return
       setPattern(pattern + char)

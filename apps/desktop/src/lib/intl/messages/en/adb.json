@@ -43,6 +43,14 @@
   "@adb.readiness.waitingForAuthorization": {
     "description": "Hover tooltip on a phone's row in the volume switcher (the dropdown listing disks and devices) while the phone is showing its \"Allow USB debugging?\" prompt. The row still opens; this says what has to happen first, naming WHERE the user acts (their phone) and WHAT they press. \"Allow\" is the button on ANDROID's own prompt: render it exactly as Android's own translation of that button reads in your language, so the user can match the word on their screen."
   },
+  "adb.readiness.tapAllow": "Tap Allow on your phone",
+  "@adb.readiness.tapAllow": {
+    "description": "One short line under a phone's row in the volume switcher (the dropdown listing disks and devices) while the phone is showing its \"Allow USB debugging?\" prompt. VERB phrase, imperative, addressed to the user: it's the one thing to do next. \"Allow\" is the button on ANDROID's own prompt: render it exactly as Android's own translation of that button reads in your language, so the user can match the word on their screen."
+  },
+  "adb.unnamedPhone": "Android phone",
+  "@adb.unnamedPhone": {
+    "description": "The name shown for a phone anywhere a device name appears (the volume switcher, tabs, dialogs) while Cmdr doesn't know its model yet, usually because the phone hasn't accepted the USB debugging prompt. A generic noun phrase standing in for a model name like \"Pixel 7\". \"Android\" is the product name."
+  },
   "adb.readiness.offline": "Your phone isn’t responding. Wake its screen, or reseat the cable.",
   "@adb.readiness.offline": {
     "description": "Hover tooltip on a phone's row in the volume switcher while the row is greyed out and cannot be opened, because the phone is listed but silent. Says the two things that usually fix it. Address the user directly."

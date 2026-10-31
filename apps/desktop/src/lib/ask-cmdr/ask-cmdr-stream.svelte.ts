@@ -82,7 +82,7 @@ interface PendingStop {
    * reload adopted). */
   send: symbol | null
   /** The stopped turn's run, which its terminal carries; `null` while the rail hadn't learned it
-   * (a turn adopted on reload that has said nothing since). */
+   * (a send whose answer hasn't come back yet, which then fills it in). */
   run: number | null
 }
 
@@ -91,7 +91,7 @@ interface PendingStop {
 let pendingStops: PendingStop[] = []
 
 /** The run of the turn the rail is streaming, `null` until it is known: from the send's answer,
- * or from the first event of a turn the rail picked up. */
+ * a thread load that found the turn running, or the first event of a turn the rail picked up. */
 let liveRun: number | null = null
 
 /**
@@ -167,16 +167,23 @@ export function leaveChat(): void {
  *
  * When the backend says a turn runs there, the rail is in that turn now: the load replays no
  * `assistantStarted`, and the turn may stay quiet for a while (a long tool call), so waiting for
- * its next event to adopt it would leave a running turn looking idle.
+ * its next event to adopt it would leave a running turn looking idle. The load names that turn's
+ * run (`runningRun`, `null` when none runs), so a Stop before its next event still waits on its
+ * own terminal, and a late one after a `live: 0` can't end the turn sent next (#802).
  */
-export function resumeThread(conversationId: number, turnRunning: boolean, spendPausedMicros: number | null): void {
+export function resumeThread(
+  conversationId: number,
+  runningRun: number | null,
+  spendPausedMicros: number | null,
+): void {
   pendingStops = pendingStops.filter((stop) => stop.conversationId !== conversationId)
-  liveRun = null
+  liveRun = runningRun
   askCmdrState.spendPausedMicros = null
-  if (turnRunning) adoptLiveTurn()
+  if (runningRun === null) return
+  adoptLiveTurn()
   // A turn paused on spend emits nothing until the user answers, so the load is the only way the
   // question gets back on screen after a reload.
-  if (turnRunning && spendPausedMicros !== null) applySpendPaused(spendPausedMicros)
+  if (spendPausedMicros !== null) applySpendPaused(spendPausedMicros)
 }
 
 /**

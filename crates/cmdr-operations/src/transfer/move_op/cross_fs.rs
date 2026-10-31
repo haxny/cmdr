@@ -750,6 +750,7 @@ pub(super) fn move_with_staging(
         metadata_left_behind: None,
         durability_unconfirmed: None,
         locked_kept: locked.kept(),
+        already_gone: None,
     });
 
     Ok(())

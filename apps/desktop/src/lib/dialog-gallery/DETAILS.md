@@ -176,8 +176,9 @@ forget to clean up nor clean up something it never touched. Two gotchas the code
 doesn't open.
 
 **`bulk-rename-review`'s Apply fails, by design.** `applyRenameReview` keys on a `proposalId` the backend staged, and a
-fixture proposal has no counterpart there, so the attempt logs a warning and the review stays up. Cancel and Escape are
-unaffected (`cancel_bulk_rename_proposal` is infallible: it consumes the id if it exists). The row says so.
+fixture proposal has no counterpart there, so the attempt logs a warning, a notice says nothing was renamed, and the
+review stays up. Cancel and Escape are unaffected (`cancel_bulk_rename_proposal` is infallible: it consumes the id if it
+exists). The row says so.
 
 **Its thumbnails are always the placeholder**, also by design: fixture rows carry a `/gallery-fixture/…` path, so no
 token mints and every row shows the neutral no-preview glyph. That's the degraded state on purpose — the gallery reviews

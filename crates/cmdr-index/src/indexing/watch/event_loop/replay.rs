@@ -17,10 +17,11 @@ use super::super::activity_monitor::BatchObservers;
 use super::super::branches::{self, Admission, WatchScope};
 use super::super::watcher;
 use super::live::{drain_promoted, mark_pending_and_drain, process_live_batch, queue_admitted};
+use super::replay_cost::{REPLAY_DEDUP_WINDOW_PATHS, ReplayBudget, ReplayWindow};
 use super::verification::run_background_verification;
 use super::{
     BacklogTracker, IngestionPressure, JOURNAL_GAP_THRESHOLD, LIVE_FLUSH_INTERVAL_MS, ReplayConfig,
-    THROTTLE_SWEEP_INTERVAL_MS, classify_ingestion_pressure, merge_fs_events, open_read_conn_with_retry,
+    THROTTLE_SWEEP_INTERVAL_MS, classify_ingestion_pressure, history_was_purged, open_read_conn_with_retry,
     report_backlog,
 };
 use crate::ActivityPhase;
@@ -40,17 +41,9 @@ use cmdr_fs::pluralize::pluralize;
 /// stops and a single "full refresh" is emitted instead.
 const MAX_ORIGIN_DIRS: usize = 50_000;
 
-/// If the number of events processed during replay exceeds this threshold,
-/// abort replay and fall back to a full scan. Safety net for scenarios where
-/// FDA was toggled and the app suddenly sees millions of previously hidden paths.
-const REPLAY_EVENT_COUNT_LIMIT: u64 = 10_000_000;
-
-/// Replay events are deduplicated by normalized path in batches of this
-/// size before processing. Dramatically reduces CPU when the FSEvents
-/// journal contains many duplicate events for the same path (for example,
-/// SQLite journal files, browser cache). Matches the `UpdateLastEventId`
-/// batching cadence.
-const REPLAY_DEDUP_BATCH_SIZE: u64 = 1_000;
+/// How often (in raw events) phase 1 samples the ingestion queue for the RAM
+/// guard. Independent of the dedup window, which drains by distinct paths.
+const REPLAY_PRESSURE_CHECK_EVERY: u64 = 1_000;
 
 // ── Replay event loop (cold start sinceWhen) ─────────────────────────
 
@@ -59,10 +52,11 @@ const REPLAY_DEDUP_BATCH_SIZE: u64 = 1_000;
 /// Two-phase approach to avoid a race condition where `DirsUpdated`
 /// notifications fire before the writer commits replay data to SQLite:
 ///
-/// **Phase 1 (replay):** Process events via `process_fs_event` directly,
-/// collecting affected parent paths in a `HashSet`. No per-event UI
-/// notification. `UpdateLastEventId` sent every 1000 events to reduce
-/// writer load.
+/// **Phase 1 (replay):** Merge events by path into a [`ReplayWindow`] and drain
+/// it through `process_fs_event_into` each time it fills, collecting affected
+/// parent paths in a `HashSet`. No per-event UI notification.
+/// `UpdateLastEventId` goes out after each drain. A [`ReplayBudget`] caps the
+/// paths processed; past it, a full reconcile is cheaper and the loop falls back.
 ///
 /// **Phase 2 (after HistoryDone):** Send final `UpdateLastEventId`, flush
 /// the writer (wait for all prior messages to commit), then emit a single
@@ -89,9 +83,13 @@ pub(in crate::indexing) async fn run_replay_event_loop(
         heal_after_replay,
         work,
         ground,
+        mut budget,
     } = config;
 
-    log::info!("Replay: started (since_event_id={since_event_id}, estimated_total={estimated_total:?})");
+    log::info!(
+        "Replay: started (since_event_id={since_event_id}, estimated_total={estimated_total:?}, path budget={})",
+        budget.limit()
+    );
     log::info!(target: "stall_probe::reconciler", "replay_event_loop_started since_event_id={since_event_id}");
 
     // Open a read-only connection for path resolution (integer-keyed lookups).
@@ -136,16 +134,16 @@ pub(in crate::indexing) async fn run_replay_event_loop(
 
     // ── Phase 1: Replay (before HistoryDone) ─────────────────────────
 
-    // Deduplicate events by normalized path before processing, same as
-    // the live event loop. Flushed every REPLAY_DEDUP_BATCH_SIZE events.
-    let mut replay_pending = HashMap::<String, watcher::FsChangeEvent>::new();
+    // Deduplicate events by normalized path before processing, same as the live
+    // event loop, in a window bounded by distinct paths (`replay_cost.rs`).
+    let mut window = ReplayWindow::new(REPLAY_DEDUP_WINDOW_PATHS);
     let mut deduped_total = 0u64;
 
     while let Some(event) = event_rx.recv().await {
         // Check for journal gap on the first event
         if !first_event_checked {
             first_event_checked = true;
-            if event.event_id > since_event_id + JOURNAL_GAP_THRESHOLD {
+            if history_was_purged(since_event_id, event.event_id) {
                 emit_rescan_notification(
                     events.as_ref(),
                     &volume_id,
@@ -174,9 +172,15 @@ pub(in crate::indexing) async fn run_replay_event_loop(
         if event.flags.history_done {
             log::info!("Replay: HistoryDone received after {}", pluralize(event_count, "event"));
 
-            // Flush remaining deduplicated events before leaving Phase 1
+            // Flush remaining deduplicated events before leaving Phase 1, if the
+            // budget still covers them.
+            if budget.would_exceed(window.len() as u64) {
+                fall_back_over_budget(events.as_ref(), &volume_id, &budget, event_count, &mut fallback_tx);
+                return Ok(());
+            }
+            budget.spend(window.len() as u64);
             deduped_total += flush_replay_batch(
-                &mut replay_pending,
+                window.pending_mut(),
                 &space,
                 &conn,
                 &writer,
@@ -224,47 +228,28 @@ pub(in crate::indexing) async fn run_replay_event_loop(
 
         // Accumulate into dedup buffer instead of processing immediately.
         // Same pattern as the live event loop: canonicalize path, merge flags.
-        let canonical = space.absolute(&event.path);
-        let deduped_event = watcher::FsChangeEvent {
-            path: canonical.clone(),
+        let window_full = window.add(watcher::FsChangeEvent {
+            path: space.absolute(&event.path),
             event_id: event.event_id,
-            flags: event.flags.clone(),
-        };
-        replay_pending
-            .entry(canonical)
-            .and_modify(|existing| {
-                *existing = merge_fs_events(existing, &deduped_event);
-            })
-            .or_insert(deduped_event);
+            flags: event.flags,
+        });
 
         last_event_id = event.event_id;
         event_count += 1;
 
-        // Safety net: if replay event count exceeds the limit, abort and
-        // fall back to a full scan. Handles the FDA-toggle scenario where
-        // the app suddenly sees millions of previously hidden paths.
-        if event_count >= REPLAY_EVENT_COUNT_LIMIT {
-            emit_rescan_notification(
-                events.as_ref(),
-                &volume_id,
-                RescanReason::ReplayOverflow,
-                format!(
-                    "Replay processed {}, exceeding the safety limit of \
-                     {REPLAY_EVENT_COUNT_LIMIT}. This can happen when Full Disk Access was \
-                     toggled.",
-                    pluralize(event_count, "event")
-                ),
-            );
-            if let Some(tx) = fallback_tx.take() {
-                let _ = tx.send(RescanReason::ReplayOverflow);
+        // Drain the window once it holds its distinct paths, then record how far
+        // the journal got. Cost is checked BEFORE the drain: a replay that would
+        // process more paths than the index holds costs more than the reconcile
+        // it replaces (this is also what catches the FDA-toggle flood of
+        // previously hidden paths).
+        if window_full {
+            if budget.would_exceed(window.len() as u64) {
+                fall_back_over_budget(events.as_ref(), &volume_id, &budget, event_count, &mut fallback_tx);
+                return Ok(());
             }
-            return Ok(());
-        }
-
-        // Flush dedup buffer and batch UpdateLastEventId
-        if event_count.is_multiple_of(REPLAY_DEDUP_BATCH_SIZE) {
+            budget.spend(window.len() as u64);
             deduped_total += flush_replay_batch(
-                &mut replay_pending,
+                window.pending_mut(),
                 &space,
                 &conn,
                 &writer,
@@ -278,7 +263,9 @@ pub(in crate::indexing) async fn run_replay_event_loop(
             {
                 log::warn!("Replay: UpdateLastEventId send failed: {e}");
             }
+        }
 
+        if event_count.is_multiple_of(REPLAY_PRESSURE_CHECK_EVERY) {
             // Ingestion-pressure guard (Fix 2). The channel is unbounded, so a slow
             // replay drain grows the queue instead of backpressuring FSEvents into
             // dropping events (which used to force a full scan). Past the RAM-guard
@@ -463,8 +450,8 @@ pub(in crate::indexing) async fn run_replay_event_loop(
     // with a stuck hourglass — takes the VISIBLE scanner path instead; a deep/narrow
     // anchor stays on the live drain, which dedups, ancestor-collapses, and
     // per-subtree-throttles them at background QoS, so a churn-heavy gap catches up
-    // subtree by subtree. The genuine full-scan fallbacks (journal purge, >10M
-    // events, watcher overflow) remain.
+    // subtree by subtree. The genuine full-scan fallbacks (journal purge, the
+    // path budget, the RAM guard, watcher overflow) remain.
     for path in pending_rescans {
         reconciler.route_must_scan_sub_dirs(std::path::PathBuf::from(path), &writer);
     }
@@ -635,6 +622,33 @@ fn send_replay_deletes(deletes_to_send: Vec<WriteMessage>, work: &VolumeWork, wr
         let _ = writer.send(message);
     }
     deletes::batch_sent(work.volume_id());
+}
+
+/// Give up on a replay whose next window would go past its path budget: a full
+/// reconcile brings the index current for less. Nothing is lost by stopping
+/// here, because the walk that follows reads the disk whole.
+fn fall_back_over_budget(
+    events: &dyn EventSink,
+    volume_id: &str,
+    budget: &ReplayBudget,
+    event_count: u64,
+    fallback_tx: &mut Option<tokio::sync::oneshot::Sender<RescanReason>>,
+) {
+    emit_rescan_notification(
+        events,
+        volume_id,
+        RescanReason::ReplayOverflow,
+        format!(
+            "Replay would process more than {} after {} paths and {}; the index holds about that many, \
+             so a full reconcile is cheaper.",
+            pluralize(budget.limit(), "path"),
+            budget.spent(),
+            pluralize(event_count, "event"),
+        ),
+    );
+    if let Some(tx) = fallback_tx.take() {
+        let _ = tx.send(RescanReason::ReplayOverflow);
+    }
 }
 
 /// Defer a rescan anchor into the replay-phase pending set. Shared by

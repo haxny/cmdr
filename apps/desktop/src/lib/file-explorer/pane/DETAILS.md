@@ -164,7 +164,9 @@ come for free):
   pure `navigation/breadcrumb-navigation.ts` (`enrichBreadcrumbSegments`), unit-tested. The current folder (last
   segment), the empty root marker, and search-results panes (whose "path" is a query label) are non-clickable. The path
   fits the bar by middle-truncating its widest segments (`navigation/DETAILS.md`, the `breadcrumb-fit.ts` bullet).
-  Segments draw their focus ring INSIDE (`outline-offset: -2px`): `.path` clips at their hit area's edges.
+  Segments draw their focus ring INSIDE (`outline-offset: -2px`): `.path` clips at their hit area's edges. A clickable
+  segment is at least 26px wide (`SEGMENT_MIN_HIT_WIDTH_PX`, WCAG 2.5.8), so `~` and one-letter folders take a little
+  more room than their text; names past about three letters don't move.
 - **Double-click the empty pane background → parent folder** (Directory Opus-style), gated by
   `behavior.doubleClickPaneNavigatesToParent` (default on). The `ondblclick` lives on the `.file-pane` root (which
   already carries `role="region"`, so no new a11y exposure); `isFileListBackgroundClick` filters to genuine list
@@ -188,8 +190,10 @@ Every listing failure renders through the one `ErrorPane`, so its action row is 
 for all ~60 error reasons at once. Only two reason-groups carry a CTA of their own (`Try again` for `retryHint`,
 `Open System Settings` for `actionKind === 'open_privacy_settings'` on macOS); the rest have none, which is why the row
 always renders at least one way out. All five buttons share ONE `.cta` row, above the Technical details disclosure. The
-last is "Send error report…" (`ReportOffer`), on every reason: it reports `FriendlyError.listingReason`, the typed
-reason `renderListingError` keeps from the wire, so the note never has to be parsed out of the title.
+last is "Send error report…" (`ReportOffer`): it reports `FriendlyError.listingReason`, the typed reason
+`renderListingError` keeps from the wire, so the note never has to be parsed out of the title. A refusal from the far
+side (a phone, a server, a share, a storage account) offers no report (`offersErrorReport` in `listing-error.ts`):
+nothing in Cmdr broke, and the report would say only what the screen does.
 
 - **`Try again` keys on `retryHint` ALONE.** That flag is the backend's "retrying might help" signal and is set across
   categories on purpose: `friendly_error/errno.rs`'s `serious` helper carries it (`diskReadProblem`,
@@ -329,14 +333,16 @@ region its first message would drop. A jump speaks through the cursor row it lan
 **Type-to-jump factory.** One `createTypeToJumpState` instance per pane, inside `FilePane`. Reset triggers (ESC, arrows,
 Page/Home/End, Enter, Tab, Backspace, rename entry, context menu, drag start, pane switch, tab switch, dir change,
 re-sort, listing replace) all call the factory's `clearJumpState()`. The generation counter discards stale async match
-responses. Backend match runs in `crates/cmdr-listing/src/fuzzy_jump.rs`.
+responses. Backend match runs in `crates/cmdr-listing/src/fuzzy_jump.rs`; the network views match in memory
+(`../network/DETAILS.md` § Typing jumps).
 
 **Quick filter (Filter typing mode, the default).** `fileExplorer.typeToJump.mode` picks what typing does: `filter`
-(Total Commander's quick filter) or `jump`. `routeTypingKey` (`type-to-jump-keys.ts`) is the one intercept for both, and
-in Filter mode `routeFilterKey` sends letters and digits (any printable once a pattern is on) to
-`quick-filter-controller.svelte.ts`; Backspace edits and Esc clears while a pattern is on; arrows and Enter fall
-through, so you navigate the filtered list. The filtering is the backend's (`crates/cmdr-listing/ DETAILS.md` § Quick
-filter), and everything the pane reads (count, rows, selection, diffs) is the filtered row space.
+(Total Commander's quick filter) or `jump`, and the network views always jump (`typingFilters`). `routeTypingKey`
+(`type-to-jump-keys.ts`) is the one intercept for both, and in Filter mode `routeFilterKey` sends letters and digits
+(any printable once a pattern is on) to `quick-filter-controller.svelte.ts`; Backspace edits and Esc clears while a
+pattern is on; arrows and Enter fall through, so you navigate the filtered list. The filtering is the backend's
+(`crates/cmdr-listing/ DETAILS.md` § Quick filter), and everything the pane reads (count, rows, selection, diffs) is the
+filtered row space.
 
 - **One call in flight, latest pattern wins**: keystrokes that land mid-call only move `pattern`, and the loop sends
   whatever stands when the call returns. Successful bursts stay batched; refused growth is replayed one character at a
@@ -352,6 +358,15 @@ filter), and everything the pane reads (count, rows, selection, diffs) is the fi
   refresh never restores an old count. `listing-filter-sync.svelte.test.ts` pins both delivery orders.
 - **The pattern belongs to its listing and its mode**: a new listing starts unfiltered (`reset()`, no IPC), and leaving
   Filter mode clears it, since in Jump mode nothing could.
+- **⌃S (`pane.quickFilter`) opens a session** (`quick-filter-session.svelte.ts`, the rules are in its header): the badge
+  with a caret after the pattern, then each press switches that pattern between Filter and Jump, in a cycle. It sits
+  above the setting for this pane until Esc, the ×, or the folder changing, and it has to survive the jump reset
+  triggers, so on Jump the buffer is HELD (`hold` in `type-to-jump-state.svelte.ts`): no timers, and `clear` is a no-op
+  until `release`. Both kinds take `routeFilterKey`, so Backspace edits and arrows navigate either way; Backspace on an
+  empty badge closes it. The network views open on Jump and stay there; a load or search results ignores the key.
+- **Decision: the caret is drawn, ❌ not a text field.** A real input would take DOM focus off the list (the focus model
+  above) and the arrows with it, and moving around while the pattern stays editable is the point of ⌃S. So edits happen
+  at the end only. It doesn't blink, which would keep the compositor awake while a badge is up.
 - **Seen from outside**: the "Filter: …" badge (`TypeToJumpIndicator kind="filter"`) carries a × that clears by mouse
   without taking focus; MCP's pane state carries `quickFilter` while one is on; the first filter ever shown raises a
   once-ever toast (`quick-filter-intro.ts`, stamped on the way up) saying what happened, that Esc brings every file
@@ -818,16 +833,16 @@ when the held manager mutates in place. Returning a snapshot would silently seve
 **`FunctionKeyBar` reads the store, not props.** The F-key bar is mounted in `+page.svelte` (a sibling of
 `DualPaneExplorer`, not a child), yet it derives its capability flags from `explorerState` directly: one
 `activeTab = $derived(getActiveTab(getTabMgr(getFocusedPane())))` and
-`caps = $derived(capabilitiesForPane(activeTab.volumeId, activeTab.path))`, then `canMkdir` / `canMkfile` / `canRename`
-= `caps.canWrite` and `canSourceOps` = `caps.canBeSource` (capabilities, not a `volumeId === 'search-results'` string
-compare). ❌ The PANE's row, never `capabilitiesFor`'s volume row: both routed kinds are kind-from-path over a parent
-drive that is itself writable, so asking the volume id alone put New folder and Rename up as enabled inside a `.git`
-snapshot and inside a read-only tar, and the press then hit `readOnlyRefusal`'s alert. A zip keeps both, being the one
-archive format the managed edit flow writes. A store getter inside a `$derived` is reactive across the component
-boundary, so there's no `onFocusedVolumeChange` callback or `+page.svelte` mirror `$state` in the chain. Per-pane read
-only (P1): touch the focused pane's manager, never both. `canSourceOps` is derived here rather than passed in as a prop,
-so a focused `network` pane disables the source buttons too (`canBeSource: false`) instead of offering ops that no-op
-deep down.
+`caps = $derived(capabilitiesForPane(activeTab.volumeId, activeTab.path))`, then `canMkdir` / `canMkfile` /
+`canRename` = `caps.canWrite` and `canSourceOps` = `caps.canBeSource` (capabilities, not a
+`volumeId === 'search-results'` string compare). ❌ The PANE's row, never `capabilitiesFor`'s volume row: both routed
+kinds are kind-from-path over a parent drive that is itself writable, so asking the volume id alone put New folder and
+Rename up as enabled inside a `.git` snapshot and inside a read-only tar, and the press then hit `readOnlyRefusal`'s
+alert. A zip keeps both, being the one archive format the managed edit flow writes. A store getter inside a `$derived`
+is reactive across the component boundary, so there's no `onFocusedVolumeChange` callback or `+page.svelte` mirror
+`$state` in the chain. Per-pane read only (P1): touch the focused pane's manager, never both. `canSourceOps` is derived
+here rather than passed in as a prop, so a focused `network` pane disables the source buttons too (`canBeSource: false`)
+instead of offering ops that no-op deep down.
 
 **`FunctionKeyBar` dispatches `file.*` onto the bus.** Each button click calls a single
 `onCommand?: (id: CommandId) => void` prop, wired in `+page.svelte` to `handleCommandExecute`. The button-to-command
@@ -1976,10 +1991,9 @@ and `sameKindIndices(target, entries)` asks a listing snapshot which rows match.
   every extension-less file. The `..` row has no kind, so the command no-ops there and the label falls back to its
   neutral form.
 - **The extension rule is `getDisplayExtension`** (`../views/full-list-utils.ts`), what the **Ext column the user is
-  looking at** renders and what Rust sorts by. ❌ Never `getExtension` (`#lib/utils/filename-validation`): it returns
-  the last dot segment WITH its dot and calls `file.` an extension of `"."`, where the column says "no extension". They
-  agree on everything else that matters here (`archive.tar.gz` → `gz`, `.gitignore` → none). What the command groups has
-  to be what the column shows.
+  looking at** renders and what Rust sorts by: the product's one rule (`crates/cmdr-fs/DETAILS.md` § "What counts as an
+  extension"), so `archive.tar.gz` groups as `tar.gz`, apart from `backup.gz`. What the command groups has to be what
+  the column shows.
 - **It ADDS, never replaces** (decision, matching Total Commander): the matches union into whatever is already selected.
 - **❗ `FilePane.selectSameKind` applies through `selection.applyIndices`, ❌ NOT the component's own `applyIndices`.**
   That one moves the cursor to the first newly-selected row and scrolls there on `'add'`, which is right for the Select
@@ -2019,6 +2033,18 @@ and `sameKindIndices(target, entries)` asks a listing snapshot which rows match.
 double-click) move the split from the keyboard and the palette. The divider isn't a Tab stop: `Tab` switches panes.
 `pane-split.ts` holds the rules (`stepSplit`, pure, time injected) and the drag's 25–75% clamp, so `PaneResizer.svelte`
 and the keys can't disagree.
+
+**Decision**: the divider's pointer target (`PaneResizer.svelte`) has two shapes: an 8px strip along its whole height,
+reaching right, and a 24-by-24 pad at its foot, centered on the line. **Why**: WCAG 2.5.8 counts a target that holds a
+24-by-24 square (Understanding 2.5.8, fetched 2026-10-31), and the foot is the only place one fits without taking
+anything: `.selection-info` keeps 12px blank on both sides of the line. A 24px strip along the list would sit over the
+left pane's scrollbar (10px) or the right pane's file icons (they start 12px in), which also swallows their wheel,
+tooltips, and hover. A pane with no footer (Servers, an error) has its bottom 24px under the pad, reaching no further
+than its own 12px gutter.
+
+What else looks at those areas: `drag/drop-target-hit-testing.ts` hit-tests past them, or a drop on the right pane's
+gutter would land on the resizer and do nothing; the drag keeps its grab offset, so a press on the pad doesn't jump the
+line; a wheel over the strip scrolls whatever's under it (`handleWheel`).
 
 - **Acceleration**: the first step is 1%, then ×1.5 per press up to 8%, while the key is held (auto-repeat) or tapped
   within 150 ms of the previous press. A slower re-press, or the other direction, starts at 1% again.

@@ -33,10 +33,16 @@ describe('asking a server before a place exists', () => {
   })
 
   it('guesses the identity for that export, keeping host, port, and export in order', async () => {
-    vi.mocked(commands.guessNfsIdentity).mockResolvedValueOnce({ uid: 1026, gid: 100, source: 'most_common_owner' })
+    vi.mocked(commands.guessNfsIdentity).mockResolvedValueOnce({
+      uid: 1026,
+      gid: 100,
+      otherGids: [],
+      source: 'most_common_owner',
+    })
     expect(await guessNfsIdentity('nas.local', 2049, '/volume1/data')).toEqual({
       uid: 1026,
       gid: 100,
+      otherGids: [],
       source: 'most_common_owner',
     })
     expect(commands.guessNfsIdentity).toHaveBeenCalledWith('nas.local', 2049, '/volume1/data')
@@ -51,6 +57,7 @@ describe('the saved places', () => {
     export: '/volume1/data',
     uid: 1026,
     gid: 100,
+    otherGids: [],
     displayName: '',
     startFolder: null,
     autoReconnect: true,

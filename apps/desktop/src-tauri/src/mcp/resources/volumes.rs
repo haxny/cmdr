@@ -181,6 +181,7 @@ pub(crate) fn device_readiness_token(readiness: cmdr_fs::volume::DeviceReadiness
     match readiness {
         R::Ready => "ready",
         R::WaitingForAuthorization => "waiting_for_authorization",
+        R::Connecting => "connecting",
         R::Unavailable { reason: Why::Offline } => "unavailable_offline",
         R::Unavailable {
             reason: Why::NoPermissions,

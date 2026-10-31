@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "這支手機不公開這個資料夾",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android 把這個資料夾留給系統和系統的 App，所以 Cmdr 打不開。你的手機和連線都沒有問題。",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "你的照片、下載項目和其他檔案都在手機的共用儲存空間裡，試試那裡的資料夾吧。",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "伺服器不讓開啟這個資料夾",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "這個資料夾在伺服器上，而你連線時用的帳號沒有開啟它的權限。這由伺服器決定，所以這台電腦上的任何設定都改變不了。",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "可以這樣試試：\n- 在伺服器上查看這個資料夾的權限\n- 有些資料夾屬於伺服器自己的系統帳號，對其他所有人都是關著的\n- 用有存取權限的帳號連線",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "已經存在",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -562,6 +586,18 @@
   "errors.listing.notConnected.suggestion": "可以這樣試試：\n- 從卷宗切換器開啟這支手機或伺服器來連線\n- 如果是手機，把它解鎖並接受它跳出的任何提示\n- 連線好之後，再次進入這裡",
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
+  },
+  "errors.listing.linkTargetUnreachable.title": "連不上這個資料夾所在的伺服器",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` 要透過連結連到另一個伺服器，而 Cmdr 現在連不上那個伺服器。這個共享資料夾的其他地方都沒問題，也沒有任何東西被刪除。",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "可以這樣試試：\n- 確認另一個伺服器正在執行，而且你的網路連得上它\n- 再次進入這裡重試",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
   },
   "errors.listing.deviceReconnecting.title": "正在重新連線到裝置",
   "@errors.listing.deviceReconnecting.title": {
@@ -1729,6 +1765,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Android 把這個位置留給系統和系統的 App。你的照片、下載項目和其他檔案都在手機的共用儲存空間裡，試試那裡的資料夾吧。",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "伺服器拒絕了你連線時用的帳號。請在伺服器上查看這個資料夾的權限，或用有存取權限的帳號連線。",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "提供者拒絕了，這可能有兩種情況。檢查存取金鑰的權限，或到提供者的主控台看看有沒有用量上限或帳單通知。",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2125,6 +2169,10 @@
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
   },
+  "errors.volume.linkTargetUnreachable": "這裡要透過連結連到另一個伺服器，而 Cmdr 現在連不上那個伺服器。",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
+  },
   "errors.volume.deviceSessionReset": "裝置重新建立了連線。等個幾秒再試一次。",
   "@errors.volume.deviceSessionReset": {
     "sourceHash": "e5ad77d"
@@ -2261,29 +2309,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "還有東西開著那裡的檔案。請關掉開著的檔案和 App，然後再試一次。",
+  "errors.eject.unmountRefused": "那裡還有東西在使用中。請關掉開著的檔案和 App，然後再試一次。",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} 還開著那裡的檔案。請把它們關掉，然後再試一次。",
+  "errors.eject.unmountRefusedByApp": "{app} 還在使用那裡的某些內容。請把它關掉，然後再試一次。",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} 還開著那裡的檔案。請把它們關掉，然後再試一次。",
+  "errors.eject.unmountRefusedByApps": "{apps} 還在使用那裡的某些內容。請把它們關掉，然後再試一次。",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "其他 App",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "有個名為 {process} 的程序還開著那裡的檔案。（Cmdr 不知道 App 名稱，只知道程序名稱。）",
+  "errors.eject.unmountRefusedByProcess": "有個名為 {process} 的程序還在使用那裡的某些內容。（Cmdr 不知道 App 名稱，只知道程序名稱。）",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "有 {countText} 個程序還開著那裡的檔案，分別是 {processes}。（Cmdr 不知道 App 名稱，只知道程序名稱。）",
+  "errors.eject.unmountRefusedByProcesses": "有 {countText} 個程序還在使用那裡的某些內容，分別是 {processes}。（Cmdr 不知道 App 名稱，只知道程序名稱。）",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "其他程序",
   "@errors.eject.otherProcesses": {
@@ -2293,13 +2341,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "macOS 還開著那裡的檔案。請稍等一下，然後再試一次。",
+  "errors.eject.unmountRefusedBySystem": "macOS 還在使用那裡的某些內容。請稍等一下，然後再試一次。",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "Cmdr 自己還開著那裡的檔案。請等一下再試一次，如果一直這樣，請傳送一份報告。",
+  "errors.eject.unmountRefusedByCmdr": "Cmdr 自己還在使用那裡的某些內容。請等一下再試一次，如果一直這樣，請傳送一份報告。",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "這個磁碟機還沒回應，過一會兒它可能會自己退出。",
   "@errors.eject.timedOut": {
@@ -2488,5 +2536,33 @@
   "errors.write.namedLeavesRefused.suggestion.routeCannotName": "先用原本的名稱移動或複製它們，再到那裡重新命名。",
   "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
     "sourceHash": "b1e881c"
+  },
+  "errors.listing.linkNeedsConsent.title": "這個資料夾在另一個伺服器上",
+  "@errors.listing.linkNeedsConsent.title": {
+    "sourceHash": "c37d453"
+  },
+  "errors.listing.linkNeedsConsent.explanation": "`{path}` 是 **{server}** 上的連結，指向 **{target}**。Cmdr 沒有登入那裡，所以 {target} 沒有收到你的任何資料。",
+  "@errors.listing.linkNeedsConsent.explanation": {
+    "sourceHash": "91b0171"
+  },
+  "errors.listing.linkNeedsConsent.suggestion": "要開啟這個資料夾，Cmdr 需要用你在 {server} 使用的帳號登入 {target}。如果你信任 {target}，可以檢視並決定。這個共享資料夾的其他地方照常運作。",
+  "@errors.listing.linkNeedsConsent.suggestion": {
+    "sourceHash": "991cb6c"
+  },
+  "errors.volume.linkNeedsConsent": "這個項目在指向另一個伺服器的連結後面，Cmdr 還沒獲准登入那個伺服器。請在窗格中開啟資料夾來決定。",
+  "@errors.volume.linkNeedsConsent": {
+    "sourceHash": "79ff9fe"
+  },
+  "errors.write.linkNeedsConsent.title": "這個檔案在另一個伺服器上",
+  "@errors.write.linkNeedsConsent.title": {
+    "sourceHash": "ff31c7f"
+  },
+  "errors.write.linkNeedsConsent.message": "{server} 上的連結指向 {target}，而 Cmdr 還沒獲准登入那裡，所以沒有任何內容傳到那個伺服器。",
+  "@errors.write.linkNeedsConsent.message": {
+    "sourceHash": "7893ce9"
+  },
+  "errors.write.linkNeedsConsent.suggestion": "請在窗格中開啟資料夾，如果你信任那個伺服器就允許登入，然後再試一次。",
+  "@errors.write.linkNeedsConsent.suggestion": {
+    "sourceHash": "cc25854"
   }
 }

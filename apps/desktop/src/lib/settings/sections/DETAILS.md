@@ -124,10 +124,11 @@ sections compose).
   the fallback for a provider with no name of its own). Decision/Why: users already know the term from their provider's
   docs and console. The term is data on each preset (`CloudProviderPreset.effortTerm`, sources listed on `EffortTerm`),
   resolved by `effortLabelKey`; the registry label (search, MCP) is the fallback. It offers what
-  `getAiModelLimits().effort` lists: Recommended (naming its level when anything knows it), Off where the model can stop
-  thinking, then its levels. Hidden for a model known not to reason; Recommended alone, with a note, when nothing knows
-  the levels. A stored pick the model can't take shows as the nearest it can (`effectiveEffortChoice`, mirroring
-  `agent::chat::effort::resolve_effort`, which is the actual guard).
+  `getAiModelLimits().effort` lists: Recommended (naming its level when anything knows it), then its levels. No Off:
+  thinking stays on for users, and a stored `off` from an older build reads as Recommended (`readEffortChoice`, as the
+  backend's `EffortChoice::parse` does). Hidden for a model known not to reason; Recommended alone, with a note, when
+  nothing knows the levels. A stored pick the model can't take shows as the nearest it can (`effectiveEffortChoice`,
+  mirroring `agent::chat::effort::resolve_effort`, which is the actual guard).
 - **`AiLocalSection.svelte`**: Local llama-server lifecycle, model install with multi-step tracking, context window
   "Apply" (server restart), RAM gauge, delete confirmation. Only the context-window registry-row cluster (`SettingRow`
   - the RAM gauge) is wrapped in an unlabeled `SectionCard`, and that wrapper sits INSIDE the
@@ -195,11 +196,12 @@ sections compose).
   (same pattern as FSW above).
 - **`ServersSection.svelte`**: `File systems > Servers (SFTP, WebDAV)`: a "Trusted host keys" `SectionCard` listing
   `listTrustedSftpHostKeys()`, a row per key (host with port, algorithm, fingerprint, the date it was trusted) with a
-  confirmed Forget, and a "Trusted certificates" card the same shape over `listTrustedWebdavCertificates()` (a pin per
-  host and port, the SHA-256). ❗ The page has NO setting: saved servers live in the hub, so its sidebar row and each
-  card's `shouldShow` gate come from the rows in `ServersSection.rows.ts` (`../DETAILS.md` § Searchable rows). The list
-  is `null` until the read answers, so the empty sentence can't flash in front of someone who has keys; a read that
-  throws lands on the same sentence rather than an eternal blank.
+  confirmed Forget, and a "Trusted certificates" card the same shape over `listTrustedWebdavCertificates()`, and an "SMB
+  link sign-ins" card over `listSmbLinkConsents()` (`crates/cmdr-smb/DETAILS.md` § "Signing in through a link") (a
+  certificate pin per host and port, the SHA-256). ❗ The page has NO setting: saved servers live in the hub, so its
+  sidebar row and each card's `shouldShow` gate come from the rows in `ServersSection.rows.ts` (`../DETAILS.md` §
+  Searchable rows). The list is `null` until the read answers, so the empty sentence can't flash in front of someone who
+  has keys; a read that throws lands on the same sentence rather than an eternal blank.
 - **`MtpSection.svelte`**: `File systems > MTP (Android/Kindle/cameras)`: one unlabeled `SectionCard`, gated via
   `anyVisible(shouldShow, ...)`
 - **`AdbSection.svelte`**: `File systems > Android (ADB)`: one unlabeled `SectionCard` holding the
@@ -296,8 +298,9 @@ sections compose).
   `unreachable` = nothing lost, retry), so a surface can say what to do next; one that only has a single failure line
   still branches on `kind` alone
 - **`ShortcutPill.svelte`**: the shortcut chip of a `KeyboardShortcutsSection` row and of
-  `lib/downloads/GlobalShortcutRow.svelte` (editable button with `editing` / `pendingConflict` / `empty` states and the
-  hover-only × via `remove`, or a `readOnly` span), so the two rows look the same
+  `lib/downloads/GlobalShortcutRow.svelte` (editable button with `editing` / `pendingConflict` / `empty` states and a
+  sibling × button via `remove`, drawn over the pill and kept focusable while hidden so Tab reaches it, or a `readOnly`
+  span), so the two rows look the same. Removing the focused × hands focus to the row's `+`, because rows re-key
 - **`keyboard-shortcuts-grouping.ts`**: Pure scope→group logic for `KeyboardShortcutsSection` (one titled group per
   `CommandScope`, fixed order). Tested by the set-equality regression guard
 - **`keyboard-shortcuts-banner.ts`**: Pure conflict-banner classification for `KeyboardShortcutsSection`

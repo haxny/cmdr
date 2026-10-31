@@ -1130,6 +1130,42 @@
   "@askCmdr.renameReview.expired": {
     "sourceHash": "4e6482a"
   },
+  "askCmdr.renameReview.checking": "Đã kiểm tra {checkedText} trên {totalText} {total, plural, other {tệp}}",
+  "@askCmdr.renameReview.checking": {
+    "sourceHash": "92a4d6f"
+  },
+  "askCmdr.renameReview.checkingLabel": "Đang kiểm tra các tệp",
+  "@askCmdr.renameReview.checkingLabel": {
+    "sourceHash": "03f0bc5"
+  },
+  "askCmdr.renameReview.stopChecking": "Dừng kiểm tra",
+  "@askCmdr.renameReview.stopChecking": {
+    "sourceHash": "4373037"
+  },
+  "askCmdr.renameReview.checkUnfinished": "Cmdr chưa kiểm tra xong {count, plural, other {# tệp}}, nên chưa thể đổi tên.",
+  "@askCmdr.renameReview.checkUnfinished": {
+    "sourceHash": "c3c05ce"
+  },
+  "askCmdr.renameReview.checkAgain": "Kiểm tra lại",
+  "@askCmdr.renameReview.checkAgain": {
+    "sourceHash": "fb7099a"
+  },
+  "askCmdr.renameReview.needsAnotherLook": "Có gì đó đã thay đổi kể từ lúc Cmdr kiểm tra các tên này, nên Cmdr chưa đổi tên tệp nào. Hãy xem lại rồi thử lại.",
+  "@askCmdr.renameReview.needsAnotherLook": {
+    "sourceHash": "36c6050"
+  },
+  "askCmdr.renameReview.couldntStart": "Cmdr không bắt đầu được lần đổi tên này, nên chưa có gì thay đổi. Hãy thử lại sau giây lát.",
+  "@askCmdr.renameReview.couldntStart": {
+    "sourceHash": "3ca2b21"
+  },
+  "askCmdr.renameReview.nothingToApply": "Ở đây không còn gì để đổi tên.",
+  "@askCmdr.renameReview.nothingToApply": {
+    "sourceHash": "9c63cc7"
+  },
+  "askCmdr.renameReview.nameNotSaved": "Cmdr không lưu được tên đó. Tên không có vấn đề gì, nên hãy thử lại.",
+  "@askCmdr.renameReview.nameNotSaved": {
+    "sourceHash": "daff211"
+  },
   "askCmdr.renameReview.status": "{allowed, plural, other {# lần đổi tên được cho phép}}; {blocked, plural, other {# lần bị chặn}}",
   "@askCmdr.renameReview.status": {
     "sourceHash": "9f70789"

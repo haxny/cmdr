@@ -90,17 +90,16 @@ pub(crate) fn read_fs_children(dir_path: &Path, space: &IndexPathSpace) -> Optio
     #[cfg(target_os = "macos")]
     {
         match scanner::bulk_read_dir_unwatched(dir_path) {
-            // The whole-listing fallback, and the reason `unusable` is counted at
-            // all: `diff_dir_against_db` DELETES every index row the live listing
-            // lacks, so a child the parser couldn't name would be reaped from the
-            // index. A short listing is never diffed — re-read the directory the
-            // slow, complete way instead.
-            Ok(read) if read.unusable > 0 => log::warn!(
-                "reconcile: bulk read of {} couldn't parse {}, re-reading it with read_dir",
-                LogPrivate::dir_path(&dir_path),
-                cmdr_fs::pluralize::pluralize_with(read.unusable as u64, "entry", "entries"),
-            ),
-            Ok(read) => return Some(bulk_children(dir_path, space, read)),
+            // The whole-listing fallback, and the reason a read in doubt (an
+            // unusable record, an interrupted stream) is reported at all:
+            // `diff_dir_against_db` DELETES every index row the live listing
+            // lacks, so a child the read missed would be reaped from the index. A
+            // short listing is never diffed — re-read the directory the slow,
+            // complete way instead.
+            Ok(read) => match read.doubt() {
+                Some(doubt) => scanner::log_bulk_reread("reconcile", dir_path, doubt),
+                None => return Some(bulk_children(dir_path, space, read)),
+            },
             Err(e) => {
                 // TRACE: this is the EXPECTED race with whatever is writing the
                 // tree (a compiler deleting its target dir mid-walk), not a

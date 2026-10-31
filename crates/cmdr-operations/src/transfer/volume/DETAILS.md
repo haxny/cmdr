@@ -54,6 +54,11 @@ Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`.
   `preflight.rs`, ❌ never in the dispatcher. One engine may hand off to the other: `move_same` calls
   `move_cross::move_volumes_with_progress` when a rename copies (§ "A same-volume move whose renames copy"), and
   `move_cross` names nothing back, so the edge stays one-way.
+- **`link_carry.rs` decides which symlinks a copy lands as symlinks** (§ "A copy carries a link as the link"), read by
+  `preflight.rs`, `strategy.rs`, and `merge.rs`; `stream_pipe.rs::land_link` lands one.
+- **`refused_item.rs` turns a failure into the refused-name question** for the item its caller owns (a merge walker's
+  leaf, or a top-level source), through `../../refused_name.rs`. `../../../DETAILS.md` § "A name the destination
+  refuses".
 - **`conflict.rs` DECIDES; two thin siblings act and answer.** The resolver keeps the policy (`resolve_volume_conflict`,
   `apply_volume_conflict_resolution`, the conditional reduction). `top_level_conflict.rs` is the serial copy's and
   cross-volume move's top-level resolver closure, built from ONE capture set (`TopLevelConflicts`) so the two drivers
@@ -2017,12 +2022,61 @@ drops a directory entry whether or not the directory still holds children.
 
 ## A child with no bytes is one skipped item
 
-**Decision**: a merge leaf whose source answers `VolumeError::NoContent` (a symlink the source can't recreate, a device,
-fifo, or socket; a restic snapshot's read stream today) records a skip (`CreatedPaths::record_skip`, counted in
-`files_skipped`) and the walk carries on. A move's sweep spares it like any skipped child. Selected on its own, the same
-error fails the transfer as an `IoError`.
+**Decision**: an item whose source answers `VolumeError::NoContent` (a symlink on a destination that can't hold it, a
+device, fifo, or socket; a restic snapshot's read stream) is one counted skip: `CreatedPaths::record_skip` and
+`SourceProgress::skip_leaf` for a merge leaf, `TransferOutcome::Skipped` / `CopyTaskEnd::Skipped` for a selected source
+(`refused_item.rs::has_no_content`, asked by all three drivers). A move's sweep spares it like any skipped item. It
+reaches the person as `files_skipped` on the completion; no new wording.
 
-**Why**: a backup of a Mac is full of symlinks, and the cross-volume engine has no seam to recreate one on another
-volume, so failing the folder on the first link made every real folder impossible to restore. Restoring a link AS a link
-is the better answer and wants a cross-backend symlink seam; until then a skip is honest and counted. Pinned by
-`no_content_skip_tests.rs` (serial and concurrent copies, a move).
+**Why**: a backup of a Mac is full of symlinks, so failing a folder on the first link made every real folder impossible
+to restore onto a share with no links, and a link selected alone failed as an I/O error nobody could act on. Pinned by
+`no_content_skip_tests.rs` (serial and concurrent copies, a move) and `link_carry_tests.rs` (selected, both drivers, and
+the file bar finishing).
+
+## A copy carries a link as the link
+
+**Decision**: a cross-volume COPY lands a symlink as a symlink when the source can read its target
+(`Volume::read_link_target`) and the destination can hold it (`Volume::can_hold_links`, then one proof). Selected or
+nested, whatever it points at. `link_carry.rs` decides; `stream_pipe.rs::land_link` lands.
+
+- **The target is recreated VERBATIM, never followed, resolved, or checked.** A target pointing out of the destination
+  (`../../../etc/passwd`, `/absolute`) lands as those bytes, because that's what the backup or source holds and
+  rewriting it would make a restore lie. The engine never reads or writes through a link it landed. What this means for
+  the person: a restored link can point somewhere outside the folder they restored into, exactly as the original did,
+  and opening it reaches whatever is there on THAT machine. A later item can't write through one: a name already at the
+  destination is a clash (a repeated name in a hostile listing included, § "A source listing one name twice"), and the
+  walk treats a link as a leaf (`../DETAILS.md` § "Symlinks are opaque to a move").
+- **What happens where, per pair**:
+  - Source reads + destination holds: the link lands. Today's sources: local, restic, SFTP. Destinations: local, SFTP.
+  - Destination can't hold, source has bytes (local or SFTP onto SMB, MTP, WebDAV, S3): the older route, what it points
+    at (`../DETAILS.md`, deliberate: a NAS copy of a linked cloud folder should hold the files).
+  - Destination can't hold, source has no bytes (restic onto SMB): a counted skip (§ above).
+  - A source with no seam yet (NFS, ADB, archives, git, SMB): the older route. NFS could join: it has `READLINK`, and
+    only `SYMLINK` is missing from its protocol layer.
+- **A move never carries** (`MergeCtx::links` is `None`, #570: `../DETAILS.md` § "Symlinks are opaque to a move"), and
+  neither does a copy inside one volume (`Arc::ptr_eq`), which stays what it was.
+- **A landing like a file's, because it can replace what a file can.** `land_link` is `FileRun` with its open and write
+  swapped for `create_symlink`: same `.cmdr-tmp-*` stage, same `LandingName` rules (a link never clears a name nobody
+  resolved), same swap for an answered Overwrite, same retries and outage waits. A cut-off landing can't prove itself by
+  size, since a link has none worth comparing, so it runs again, and a run that finds its own target at the name counts
+  as landed.
+- **The conflict decision comes before any write, so the proof does too.** A link meets a clash as a leaf, a folder as a
+  merge, so "can this destination hold it?" has to be settled before the resolver runs. `can_hold_links` is the
+  backend's word, and the filesystem under it has the last one (exFAT on a local volume), so the first link that turns
+  up makes one on a tracked temp and removes it. One write and one delete per operation, none if no link appears. A
+  refusal after a good proof (a target the protocol can't carry) is `NoContent`: a counted skip.
+- **A carried link has no bytes**: a selected one is left out of the scan (walking what it points at would count, and
+  reserve room for, a tree this copy never writes) and counted as one file; a nested one credits what the scan counted.
+  `LocalPosixVolume`'s scan now counts a nested link as one entry, as the shared `scan_walk` and the preview always did.
+- **Its ledger identity is its target** (`WrittenIdentity::VolumeLink`), because a size proves nothing about a link
+  (`LocalPosixVolume` lists none). A rollback removes it only while it still holds that target; `reverse_written_file`
+  reads it back. A selected link joins the per-leaf ledger for the same reason, which is the `by_leaves` both drivers
+  branch on. The journal row carries no size, so an undo from history rests on the landed modified time. A backend whose
+  `get_metadata` follows a link (SFTP) answers with the target's date or nothing, so that undo leaves the link behind
+  and reports it (fail safe); an in-flight rollback still removes it.
+- **Not carried**: the link's own date and mode. Nothing here can set them through the `Volume` trait without following
+  the link, and an `apply_metadata` that followed would stamp the target.
+
+Pinned by `link_carry_tests.rs`, `conformance::assert_a_link_lands_verbatim` (local, in-memory, and the SFTP Docker
+cell), `operations_host/restic_copy_out_tests.rs` (a real repo, both destination shapes), and
+`operations_host/backend_suites/sftp_transfer_semantics_test.rs::sftp_integration_a_copy_onto_the_server_lands_links_as_links`.

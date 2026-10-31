@@ -6,6 +6,7 @@ const sampleTarget: RenameTarget = {
   originalName: 'file.txt',
   parentPath: '/Users/test',
   isDirectory: false,
+  nameKind: 'file',
 }
 
 describe('createRenameState', () => {
@@ -115,6 +116,7 @@ describe('session ids', () => {
     originalName: 'other.txt',
     parentPath: '/Users/test',
     isDirectory: false,
+    nameKind: 'file',
   }
 
   it('hands every activation a fresh id', () => {

@@ -107,5 +107,10 @@
   "common.sizeUnit.petabyte": "PB",
   "@common.sizeUnit.petabyte": {
     "description": "Unit symbol for a petabyte, the DECIMAL (base 1000, SI) unit: 1 PB = 1,000 TB, the largest unit Cmdr shows. Shown after a number in every size, free-space readout, and transfer speed when the user picked the SI size format (Settings > Appearance > File and folder sizes), like '1.00 PB', and in fixed copy that names a decimal amount; the app adds the number and the space. Write your language's SI symbol (for example French 'Po'), never the binary one: it must stay distinct from common.sizeUnit.pebibyte, which means base 1024. Symbol only, never the full word. Keep it in step with the other decimal common.sizeUnit symbols and with the symbols named in settings.appearance.fileSizeFormat.*."
+  },
+
+  "common.sizeComparison.same": "(same size)",
+  "@common.sizeComparison.same": {
+    "description": "Annotation after the incoming item's size in the 'file already exists' prompts (copy, move, and rename onto a taken name) when the two files are exactly the same size, down to the byte. It sits inline after a size like '1.18 MiB', in the spot where '(larger)' goes when one file is bigger, so keep it short and keep the parentheses."
   }
 }

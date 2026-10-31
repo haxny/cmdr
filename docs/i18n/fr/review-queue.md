@@ -108,6 +108,9 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   `Exploration en cours : …` for "Looked around"; `a montré 5 sur 6` (the tool as subject); `Réponse arrêtée · …` names
   the answer so the participle can agree; `Demande de l’outil « x »` adds `l’outil` English leaves implicit;
   `et de 3 autres` (and `de 1 suggestion`) before a numeral; `Ne rien changer` for "Leave them as I had them".
+- **Refused-name dialog title** (`fileOperations.transferProgress.titleRefusedNameNotAllowed`):
+  `Nom non autorisé à destination` follows the destination ruling's `à destination`; does it read as "on arrival" rather
+  than "at the destination"? Fallback: `Nom refusé par la destination` (loses the `autoriser` term).
 
 ## Overflow (check against the `en-XA` pseudolocale)
 

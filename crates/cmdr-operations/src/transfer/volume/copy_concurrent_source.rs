@@ -187,6 +187,7 @@ impl ConcurrentCopy<'_> {
             dest_name_claimed,
             window: self.file_window.clone(),
             displaced: Arc::clone(&self.cells.displaced),
+            links: Arc::clone(&self.cells.links),
             created: Arc::new(super::merge_ctx::CreatedPaths::default()),
             // Every leaf of a directory source's subtree numbers itself under
             // this source's own row.
@@ -370,8 +371,9 @@ impl ConcurrentCopy<'_> {
     /// emits a `write-progress` event. Without this, a "Skip all" choice silently
     /// runs through dozens of conflicts with the progress bar pinned at 0% — the
     /// user expects the bar to reflect skipped files since the operation is in
-    /// fact processing them.
-    fn account_skipped_file(&self, source_path: &Path) {
+    /// fact processing them. Also the account of a task whose own name the
+    /// destination refused and the person skipped (`copy_concurrent.rs`).
+    pub(super) fn account_skipped_file(&self, source_path: &Path) {
         self.skipped_whole(source_path);
         let hint_size = self
             .source_hints

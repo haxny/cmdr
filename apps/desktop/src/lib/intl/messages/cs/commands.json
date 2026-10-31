@@ -488,6 +488,14 @@
   "@commands.fileRename.label": {
     "sourceHash": "3064d79"
   },
+  "commands.paneQuickFilter.label": "Quick filter",
+  "@commands.paneQuickFilter.label": {
+    "sourceHash": "e731882"
+  },
+  "commands.paneQuickFilter.description": "Opens the filter badge on the current pattern. Press again to switch between Filter and Jump",
+  "@commands.paneQuickFilter.description": {
+    "sourceHash": "2778526"
+  },
   "commands.fileMultiRename.label": "Hromadné přejmenování",
   "@commands.fileMultiRename.label": {
     "sourceHash": "5ceb1a2"

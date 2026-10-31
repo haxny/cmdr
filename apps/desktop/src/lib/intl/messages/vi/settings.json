@@ -1714,6 +1714,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Báo khi mục cần xóa đã không còn từ trước",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Khi bạn xóa thứ gì đó mà một ứng dụng khác đã di chuyển hoặc xóa trước, Cmdr coi như đã xong và hiển thị một thông báo ngắn cho bạn biết. Hãy tắt tùy chọn này (hoặc bấm “Không hiển thị lại nữa” trong thông báo) để bỏ qua thông báo đó.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "biến mất, không còn, mất tích, đã chuyển, thông báo, nhắc, cảnh báo",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Số tab đã đóng cần nhớ cho mỗi khung",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
@@ -2850,9 +2862,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Chạy một mô hình ngôn ngữ nhỏ hoàn toàn trên thiết bị của bạn. Riêng tư tối đa: không gì rời khỏi máy tính của bạn. Hoạt động ngoại tuyến. Dùng ~2 GB dung lượng đĩa và ~400 MB bộ nhớ (thay đổi theo cỡ ngữ cảnh). Cần Apple silicon (M1+).",
+  "settings.ai.tooltipLocal": "Chạy một mô hình ngôn ngữ nhỏ hoàn toàn trên thiết bị của bạn. Riêng tư tối đa: không gì rời khỏi máy tính của bạn. Hoạt động ngoại tuyến. Dùng ~2 GB dung lượng đĩa và ~400 MB bộ nhớ (thay đổi theo cỡ ngữ cảnh). Cần Apple silicon (M1+) và macOS 14 trở lên.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "AI cục bộ cần Apple silicon (M1 trở lên). Hãy dùng AI đám mây thay vào đó.",
   "@settings.ai.tooltipLocalDisabled": {
@@ -3535,5 +3547,33 @@
   "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
   "@settings.multiRename.tagEditor.absSideFiles.keywords": {
     "sourceHash": "806b0cd"
+  },
+  "settings.servers.card.smbLinkConsents": "Đăng nhập qua liên kết SMB",
+  "@settings.servers.card.smbLinkConsents": {
+    "sourceHash": "831477d"
+  },
+  "settings.network.smbLinkConsents.keywords": "SMB, DFS, liên kết, đăng nhập, máy chủ khác, cho phép, tin cậy, quên",
+  "@settings.network.smbLinkConsents.keywords": {
+    "sourceHash": "d88f7c7"
+  },
+  "settings.servers.smbLinkConsents.description": "Một liên kết trong mục chia sẻ SMB có thể dẫn tới thư mục trên máy chủ khác. Cmdr hỏi trước khi đăng nhập vào đó, và ghi nhớ câu trả lời của bạn ở đây.",
+  "@settings.servers.smbLinkConsents.description": {
+    "sourceHash": "03ed8ee"
+  },
+  "settings.servers.smbLinkConsents.empty": "Chưa cho phép gì. Khi một liên kết trong mục chia sẻ dẫn tới máy chủ khác, Cmdr sẽ hỏi trước.",
+  "@settings.servers.smbLinkConsents.empty": {
+    "sourceHash": "16326ce"
+  },
+  "settings.servers.smbLinkConsents.pair": "Liên kết trên {server} được đăng nhập vào {target}",
+  "@settings.servers.smbLinkConsents.pair": {
+    "sourceHash": "093a03d"
+  },
+  "settings.servers.smbLinkConsents.confirmTitle": "Quên lần đăng nhập này?",
+  "@settings.servers.smbLinkConsents.confirmTitle": {
+    "sourceHash": "edc2567"
+  },
+  "settings.servers.smbLinkConsents.confirm": "Lần tới khi một liên kết trên {server} dẫn tới {target}, Cmdr sẽ hỏi lại.",
+  "@settings.servers.smbLinkConsents.confirm": {
+    "sourceHash": "0218465"
   }
 }

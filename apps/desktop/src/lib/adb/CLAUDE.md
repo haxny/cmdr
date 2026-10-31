@@ -27,7 +27,10 @@ backend is `src-tauri/src/adb/`; the wire is `crates/cmdr-adb/`.
 - **❌ No inert affordance.** `deviceGone` and `deviceTooOld` carry NO recovery, so the pane renders the sentence with
   no button. A "Try again" that can only fail again is what this rule exists to prevent.
 - **❌ Nothing a person reads may carry a serial, "adb", "transport", "daemon", or "socket".** The backend's diagnostic
-  goes to the log; `#lib/error-messages/friendly-error-style.test.ts` enforces the vocabulary over every variant.
+  goes to the log; `#lib/error-messages/friendly-error-style.test.ts` enforces the vocabulary over every variant. A row
+  still named by its serial reads "Android phone": the store applies `withUnnamedPhonesNamed`, so no reader sees one.
+- **❗ A `connecting` row is MTP's, and it's NOT openable**: no storage yet. Whatever picks a volume asks
+  `isStillConnecting`. ❌ Never word it as though a prompt is showing: the open can stall with none on screen.
 - **❗ Spell an `adb://` path only through `adb-path-utils.ts`**, which mirrors `cmdr_fs::volume::adb_volume_id`. The
   volume id (`adb-<slug>-<digest>`) does NOT carry the serial: read it from the volume's PATH.
 

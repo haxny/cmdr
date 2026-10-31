@@ -61,6 +61,7 @@ pub use index::{BufferedLeaves, ExpectedTotals, Leaf, OperationIndex};
 use name_order::EnglishNameOrder;
 pub use name_order::NameOrder;
 pub use operation_sink::OperationEventSink;
+pub(crate) use operation_sink::SinkDecorator;
 use own_writes::NoOwnWrites;
 pub use own_writes::{Announced, OwnWrites};
 use pacing::NoPacing;

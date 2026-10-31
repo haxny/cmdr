@@ -874,3 +874,20 @@ impl Volume for ClaimsCreationDates {
         }
     }
 }
+
+#[tokio::test]
+async fn a_link_lands_verbatim_on_a_store_that_holds_links() {
+    let volume = InMemoryVolume::new("Links").with_links();
+    volume.create_directory(Path::new("/dir")).await.unwrap();
+    conformance::assert_a_link_lands_verbatim(&volume, Path::new("/dir")).await;
+}
+
+#[tokio::test]
+async fn a_store_with_no_links_refuses_to_make_one() {
+    let volume = InMemoryVolume::new("No links");
+    assert!(!volume.can_hold_links());
+    assert!(matches!(
+        volume.create_symlink(Path::new("/link"), Path::new("t")).await,
+        Err(VolumeError::NotSupported)
+    ));
+}

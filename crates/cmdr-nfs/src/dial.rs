@@ -90,15 +90,15 @@ pub(crate) struct MountedExport {
 }
 
 /// The `AUTH_SYS` credential for `identity`: this Mac's name, the uid, and the
-/// gid as both the primary and the only supplementary group. A file readable
-/// only through another group answers `PermissionDenied`.
-pub(crate) fn credential_for(identity: NfsIdentity) -> Credential {
+/// gid, and the place's groups (`NfsIdentity::credential_gids`). A file readable
+/// only through a group not listed answers `PermissionDenied`.
+pub(crate) fn credential_for(identity: &NfsIdentity) -> Credential {
     Credential::sys(&AuthSys {
         stamp: random_u32(),
         machine_name: machine_name(),
         uid: identity.uid,
         gid: identity.gid,
-        gids: vec![identity.gid],
+        gids: identity.credential_gids(),
     })
 }
 
@@ -120,7 +120,7 @@ fn this_process() -> NfsIdentity {
     // SAFETY: `getuid` and `getgid` take nothing, can't fail, and touch no
     // memory of ours.
     let (uid, gid) = unsafe { (libc::getuid(), libc::getgid()) };
-    NfsIdentity { uid, gid }
+    NfsIdentity::new(uid, gid)
 }
 
 /// Runs `work` inside the dial's budget, ending at once on `cancel`.
@@ -148,7 +148,7 @@ pub(crate) async fn list_exports(
         let conn = connect(
             addresses.mount,
             MOUNT_V3,
-            credential_for(this_process()),
+            credential_for(&this_process()),
             SourcePort::Reserved,
             options,
         )
@@ -172,7 +172,7 @@ pub(crate) async fn list_exports(
 pub(crate) async fn mount(
     server: &NfsServer,
     typed: &str,
-    identity: NfsIdentity,
+    identity: &NfsIdentity,
     options: &DialOptions,
     cancel: &CancellationToken,
 ) -> Result<MountedExport, NfsConnectError> {

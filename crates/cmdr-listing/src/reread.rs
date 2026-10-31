@@ -249,7 +249,7 @@ impl Inner {
         for mut entry in modifies {
             // A re-stat reads no xattr, so a bare modify would blank the file's
             // Finder tag dots.
-            self.carry_forward_tags(listing_id, &mut entry);
+            self.carry_forward_deferred(listing_id, &mut entry);
             let _ = self.update_entry_sorted(listing_id, entry);
         }
     }

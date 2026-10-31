@@ -1,27 +1,32 @@
-//! Cmdr's own eject, per PHYSICAL disk: one flight for the whole disk, every volume
-//! on it gated and stopped before anything unmounts, and everything it stopped handed
-//! back when the disk stays.
+//! Cmdr's own eject of a PHYSICAL disk's volumes: one flight per disk at a time, every
+//! volume it takes down gated and stopped before anything unmounts, and everything it
+//! stopped handed back when a volume stays.
 //!
 //! **Why per disk.** `diskutil eject` of one volume takes the whole disk down, so a
 //! sibling partition or APFS volume Cmdr indexes would meet the unmount with a live
 //! FSEvents watcher on it, which is the FSKit wedge the pre-stop exists to avoid. And
 //! a disk that refuses because a sibling is held used to read as a clean eject
-//! (`real_image.rs` pinned it), leaving the drive powered on.
+//! (`real_image.rs` pinned it), leaving the drive powered on. One volume of a disk that
+//! keeps others takes `diskutil unmount` instead (`disk_reach`), with only that volume
+//! stopped.
 //!
-//! The order is the one in `volume/DETAILS.md` § "Eject": resolve the disk, capture
-//! its registered volumes, adopt them into the ejecting set, the busy gate, one
-//! release under one deadline, the teardown, then the resume. ❌ Nothing unmounts
-//! after a step before it stalled or refused.
+//! The order is the one in `volume/DETAILS.md` § "Eject": resolve the disk, decide how
+//! far the eject reaches, capture what it takes down, adopt that into the ejecting set,
+//! the busy gate, one release under one deadline, the pre-check when several volumes are
+//! going, the teardown, then the resume. ❌ Nothing unmounts after a step before it
+//! stalled or refused.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use super::disk_reach::{self, DiskReach};
 use super::disk_target::{self, DiskMounts, DiskTarget};
 use super::in_flight::{self, DiskFlight, DiskOwnership};
 use super::unmount_tool::{AbandonedRun, UnmountVerb};
 use super::{
-    EjectError, EjectOutcome, EjectStep, IndexStopped, Teardown, deadlines, run_teardown, stop_indexes_blocking,
+    EjectError, EjectOutcome, EjectScope, EjectStep, IndexStopped, Teardown, deadlines, pre_check, run_teardown,
+    stop_indexes_blocking,
 };
 use crate::file_system::volume::drive_release::{
     self, DriveRelease, LateRelease, Release, ResumeCandidate, ResumeOwner, VolumeRelease,
@@ -37,37 +42,78 @@ pub(super) struct Sibling {
     pub(super) path: PathBuf,
 }
 
-/// Ejects the physical disk under `volume_id`, which is mounted at `mount_path`.
-pub(super) async fn eject_disk(
+/// Ejects `volume_id`, mounted at `mount_path`, or the whole physical disk under it, whichever
+/// `scope` and what's mounted there call for (`disk_reach`).
+pub(super) async fn eject_on_disk(
     volume_id: &str,
     mount_path: &str,
     target: DiskTarget,
+    scope: EjectScope,
 ) -> Result<EjectOutcome, EjectError> {
-    // ❗ Fail closed: without the disk's volumes nobody knows which siblings the
-    // teardown would take down, so stopping only the volume that was clicked and
-    // unmounting anyway is exactly the live-watcher unmount the pre-stop exists to
-    // avoid. ❌ An unreadable answer is never an empty disk.
-    let DiskMounts::Read(mounted) = disk_target::mounted_volumes_on_disk(&target.units) else {
-        log::warn!(
-            target: "eject",
-            "DiskArbitration wouldn't say what's mounted on {volume_id}'s disk, so nothing is unmounted"
-        );
-        return Err(EjectError::NotResponding {
-            step: EjectStep::DiskResolve,
+    loop {
+        // ❗ Fail closed: without the disk's volumes nobody knows which siblings the
+        // teardown would take down, so stopping only the volume that was clicked and
+        // unmounting anyway is exactly the live-watcher unmount the pre-stop exists to
+        // avoid. ❌ An unreadable answer is never an empty disk.
+        let DiskMounts::Read(mounted) = disk_target::mounted_volumes_on_disk(&target.units) else {
+            log::warn!(
+                target: "eject",
+                "DiskArbitration wouldn't say what's mounted on {volume_id}'s disk, so nothing is unmounted"
+            );
+            return Err(EjectError::NotResponding {
+                step: EjectStep::DiskResolve,
+            });
+        };
+        let with_rows = crate::volumes::mount_points_with_rows();
+        // A table that wouldn't answer counts every mount, which leaves the disk up: the cautious
+        // side, since the person can still eject what's left.
+        let reach = disk_reach::reach_of(scope, Path::new(mount_path), &mounted, |path| {
+            with_rows.as_ref().is_none_or(|rows| rows.iter().any(|row| row == path))
         });
-    };
-    let siblings = capture(volume_id, Path::new(mount_path), &mounted, |path| {
-        let (id, volume) = crate::file_system::volume::manager::get_volume_manager().find_by_root(path)?;
-        (volume.root() == path).then_some(id)
-    });
-    let ids: Vec<String> = siblings.iter().map(|sibling| sibling.volume_id.clone()).collect();
+        let siblings = match reach {
+            DiskReach::WholeDisk => capture(volume_id, Path::new(mount_path), &mounted, |path| {
+                let (id, volume) = crate::file_system::volume::manager::get_volume_manager().find_by_root(path)?;
+                (volume.root() == path).then_some(id)
+            }),
+            // Only the volume asked about lets go: its siblings stay mounted and keep working.
+            DiskReach::ThisVolume => vec![Sibling {
+                volume_id: volume_id.to_string(),
+                path: PathBuf::from(mount_path),
+            }],
+        };
+        let ids: Vec<String> = siblings.iter().map(|sibling| sibling.volume_id.clone()).collect();
 
-    // ❗ Before the busy gate and everything after it: from here a sibling's own eject
-    // joins this flight in `join_or_start` rather than running a teardown of its own.
-    let ownership = match in_flight::join_or_own_disk(target.key, volume_id, &ids) {
-        DiskFlight::Joined(running) => return running.await,
-        DiskFlight::Owner(ownership) => ownership,
-    };
+        // ❗ Before the busy gate and everything after it: from here a sibling's own eject
+        // joins this flight in `join_or_start` rather than running a teardown of its own.
+        let claim = match reach {
+            DiskReach::WholeDisk => in_flight::join_or_own_disk(target.key, volume_id, &ids),
+            DiskReach::ThisVolume => in_flight::own_disk_for_one_volume(target.key, volume_id),
+        };
+        let ownership = match claim {
+            DiskFlight::Joined(running) => return running.await,
+            DiskFlight::DecideAgainAfter(running) => {
+                drop(running.await);
+                if !super::is_still_mounted(mount_path) {
+                    return Ok(EjectOutcome::AlreadyGone);
+                }
+                continue;
+            }
+            DiskFlight::Owner(ownership) => ownership,
+        };
+        return run_owned_flight(volume_id, mount_path, &target, reach, &siblings, ownership).await;
+    }
+}
+
+/// The flight, once it holds the disk: the busy gate, then the stop, the teardown, and the resume.
+async fn run_owned_flight(
+    volume_id: &str,
+    mount_path: &str,
+    target: &DiskTarget,
+    reach: DiskReach,
+    siblings: &[Sibling],
+    ownership: DiskOwnership,
+) -> Result<EjectOutcome, EjectError> {
+    let ids: Vec<String> = siblings.iter().map(|sibling| sibling.volume_id.clone()).collect();
     if !ownership.adopted().is_empty() {
         log::info!(
             target: "eject",
@@ -93,22 +139,27 @@ pub(super) async fn eject_disk(
         drive_release::gate(),
         volume_id,
         mount_path,
-        &target,
-        &siblings,
+        target,
+        reach,
+        siblings,
         ownership,
     )
     .await?;
-    // Success here means the whole disk went, siblings included, which is what
-    // separates this outcome from a one-volume `Unmounted`.
-    Ok(EjectOutcome::DiskEjected)
+    Ok(match reach {
+        // Success here means the whole disk went, siblings included, which is what
+        // separates this outcome from a one-volume `Unmounted`.
+        DiskReach::WholeDisk => EjectOutcome::DiskEjected,
+        DiskReach::ThisVolume => EjectOutcome::VolumeEjectedDiskStays,
+    })
 }
 
-/// Stop every sibling, tear the disk down, and hand back what stayed.
+/// Stop every sibling the eject takes down, tear them down, and hand back what stayed.
 async fn eject_stopped_disk(
     gate: &'static DriveRelease,
     volume_id: &str,
     mount_path: &str,
     target: &DiskTarget,
+    reach: DiskReach,
     siblings: &[Sibling],
     ownership: DiskOwnership,
 ) -> Result<(), EjectError> {
@@ -160,14 +211,35 @@ async fn eject_stopped_disk(
         }
     };
 
-    let teardown = DiskTeardown::new(captured_paths(&mounted_now(target), siblings), {
-        let units = target.units.clone();
-        move || anything_mounted_on(&units)
-    });
+    let (teardown, verb) = match reach {
+        DiskReach::WholeDisk => {
+            let units = target.units.clone();
+            let teardown = DiskTeardown::new(captured_paths(&mounted_now(target), siblings), move || {
+                anything_mounted_on(&units)
+            });
+            (teardown, UnmountVerb::Eject)
+        }
+        // ❗ Done means this one mount left: the disk is meant to stay, so ❌ no fresh look at it.
+        DiskReach::ThisVolume => (
+            DiskTeardown::new(vec![PathBuf::from(mount_path)], || false),
+            UnmountVerb::Unmount,
+        ),
+    };
+
+    // ❗ Only where a refusal could leave a half-ejected disk. Nothing has unmounted yet, so what
+    // this stopped is owed back at the epochs that stop set.
+    if teardown.captured().len() > 1
+        && let Some(holders) = pre_check::held_before_eject(teardown.captured(), deadlines::HOLDER_BUDGET).await
+    {
+        log::info!(target: "eject", "Nothing on the disk under {volume_id} was unmounted, since it's {holders}");
+        hand_back(gate, &owner, owed_ids(&release), |id| epoch_of(&release, id));
+        return Err(EjectError::HeldBeforeEject { holders });
+    }
+
     let result = run_teardown(
         volume_id,
         Teardown::Tool {
-            verb: UnmountVerb::Eject,
+            verb,
             mount_path,
             disk: Some(&teardown),
         },
@@ -545,215 +617,4 @@ pub(super) mod test_support {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::test_support::FakeIndex;
-    use super::*;
-    use crate::file_system::volume::drive_release::IndexDoor;
-    use std::time::Instant;
-
-    /// Well past `RESUME_SETTLE`, so a resume batch's quiet period is over.
-    const SETTLED: std::time::Duration = std::time::Duration::from_secs(30);
-
-    fn mounted(path: &str, whole_unit: u32) -> MountedVolume {
-        MountedVolume {
-            bsd_name: format!("disk{whole_unit}s1"),
-            whole_unit,
-            volume_uuid: None,
-            path: PathBuf::from(path),
-        }
-    }
-
-    #[test]
-    fn a_disks_siblings_are_the_registered_volumes_at_its_mounts_with_the_asked_one_first() {
-        let registry: HashMap<PathBuf, String> = [
-            (PathBuf::from("/Volumes/A"), "vol-a".to_string()),
-            (PathBuf::from("/Volumes/B"), "vol-b".to_string()),
-        ]
-        .into();
-        let disk = [
-            mounted("/Volumes/B", 7),
-            mounted("/Volumes/A", 7),
-            // A volume of the same disk that Cmdr doesn't have registered.
-            mounted("/Volumes/Unknown", 7),
-        ];
-
-        let siblings = capture("vol-a", Path::new("/Volumes/A"), &disk, |path| {
-            registry.get(path).cloned()
-        });
-
-        assert_eq!(
-            siblings,
-            [
-                Sibling {
-                    volume_id: "vol-a".to_string(),
-                    path: PathBuf::from("/Volumes/A"),
-                },
-                Sibling {
-                    volume_id: "vol-b".to_string(),
-                    path: PathBuf::from("/Volumes/B"),
-                },
-            ],
-            "the asked volume leads, its registered sibling follows, and an unregistered mount names nobody"
-        );
-    }
-
-    #[test]
-    fn a_volume_reachable_through_a_spare_mount_isnt_captured_twice() {
-        // `find_by_root` matches ANY known root, so the active-root check is what keeps
-        // one volume from being stopped and resumed as two.
-        let disk = [mounted("/Volumes/A", 7), mounted("/Volumes/A-1", 7)];
-        let siblings = capture("vol-a", Path::new("/Volumes/A"), &disk, |_| Some("vol-a".to_string()));
-        assert_eq!(siblings.len(), 1, "got {siblings:?}");
-    }
-
-    // ── What the teardown aims at, and what counts as done ───────────
-
-    fn captured() -> Vec<PathBuf> {
-        [PathBuf::from("/Volumes/A"), PathBuf::from("/Volumes/B")].to_vec()
-    }
-
-    #[test]
-    fn a_disk_whose_captured_mounts_are_all_gone_is_done_only_if_nothing_else_is_mounted_on_it() {
-        // `diskutil eject` of a two-partition disk unmounts what it can and exits
-        // nonzero on the held one. Asking only about the volume the person clicked
-        // would call that done and leave the disk powered on.
-        assert!(
-            disk_is_still_mounted(&captured(), |path| path == Path::new("/Volumes/B"), || false),
-            "a sibling that stayed mounted means the disk is still up"
-        );
-        assert!(
-            disk_is_still_mounted(&captured(), |_| false, || true),
-            "and so does a volume the capture never named"
-        );
-        assert!(
-            !disk_is_still_mounted(&captured(), |_| false, || false),
-            "every captured mount gone and nothing else on the disk is the only 'done'"
-        );
-    }
-
-    #[test]
-    fn a_disk_nobody_could_read_counts_as_still_mounted_and_an_empty_one_doesnt() {
-        // ❗ Three answers, not two. DiskArbitration going silent is NOT an empty disk:
-        // collapsing them would answer `Ok` for an eject that left the drive powered on
-        // with a volume Cmdr never registered still mounted on it.
-        assert!(
-            reads_as_mounted(DiskMounts::Unreadable),
-            "nobody could say, so the disk is still up"
-        );
-        assert!(reads_as_mounted(DiskMounts::Read(vec![mounted("/Volumes/A", 7)])));
-        assert!(
-            !reads_as_mounted(DiskMounts::Read(Vec::new())),
-            "a disk genuinely read as empty is the only one that's gone"
-        );
-    }
-
-    #[test]
-    fn a_retry_aims_at_a_mount_thats_still_there_not_at_the_one_that_already_went() {
-        // Aimed at `/Volumes/A` after a partial unmount, `diskutil` answers "no such
-        // disk" and the retry proves nothing.
-        assert_eq!(
-            aim_at(&captured(), "/Volumes/A", |path| path == Path::new("/Volumes/B")),
-            "/Volumes/B"
-        );
-        assert_eq!(
-            aim_at(&captured(), "/Volumes/A", |_| true),
-            "/Volumes/A",
-            "with everything still mounted it aims at the disk's own volume, which is captured first"
-        );
-        assert_eq!(
-            aim_at(&captured(), "/Volumes/A", |_| false),
-            "/Volumes/A",
-            "with nothing left it falls back, and `settle` reads the tool's refusal as already gone"
-        );
-    }
-
-    #[test]
-    fn a_write_op_on_any_volume_of_the_disk_refuses_the_eject() {
-        // The teardown takes the whole disk down, so a transfer on a sibling would be
-        // truncated just as surely as one on the volume clicked.
-        let ids = ["vol-a".to_string(), "vol-b".to_string()];
-        assert_eq!(busy_sibling(&ids, &["vol-b".to_string()]), Some("vol-b"));
-        assert_eq!(busy_sibling(&ids, &["vol-elsewhere".to_string()]), None);
-    }
-
-    #[test]
-    fn the_mounts_a_teardown_has_to_see_gone_cover_the_captured_roots_and_a_fresh_read() {
-        let siblings = [Sibling {
-            volume_id: "vol-a".to_string(),
-            path: PathBuf::from("/Volumes/A"),
-        }];
-        let paths = captured_paths(&[mounted("/Volumes/A", 7), mounted("/Volumes/Unknown", 7)], &siblings);
-        assert_eq!(
-            paths,
-            [PathBuf::from("/Volumes/A"), PathBuf::from("/Volumes/Unknown")],
-            "a volume Cmdr never registered still keeps the disk up"
-        );
-    }
-
-    // ── What a flight owes back ───────────────────────────────────────
-
-    #[test]
-    fn only_a_volume_that_was_indexing_is_owed_its_index_back() {
-        let index = Arc::new(FakeIndex::default());
-        index.indexes("vol-a");
-        let gate = DriveRelease::with_fake_clock(Arc::clone(&index) as Arc<dyn IndexDoor>);
-
-        let release = gate.release(
-            &["vol-a".to_string(), "vol-idle".to_string()],
-            Instant::now(),
-            index.stop(),
-            |_| {},
-        );
-
-        assert_eq!(
-            owed_ids(&release),
-            ["vol-a"],
-            "a volume with no index had nothing taken from it"
-        );
-    }
-
-    #[test]
-    fn a_refusal_after_the_flights_own_asks_moved_the_epochs_still_hands_the_index_back() {
-        // `diskutil eject` triggers an unmount approval per volume, and each ask's own
-        // release moves the epoch. Reading it at the pre-stop would fail every check.
-        let index = Arc::new(FakeIndex::default());
-        index.indexes("vol-a");
-        let gate = DriveRelease::with_fake_clock(Arc::clone(&index) as Arc<dyn IndexDoor>);
-        let owner = Arc::new(FlightResume {
-            flight_id: u64::MAX,
-            paths: [("vol-a".to_string(), PathBuf::from("/"))].into(),
-        });
-
-        let release = gate.release(&["vol-a".to_string()], Instant::now(), index.stop(), |_| {});
-        let stale = epoch_of(&release, "vol-a");
-        // The approver's ask during the teardown, which the eject then refused.
-        gate.release(&["vol-a".to_string()], Instant::now(), index.stop(), |_| {});
-        assert_ne!(gate.epoch("vol-a"), stale, "the ask moved the epoch");
-
-        let batch = gate.resume(
-            vec![ResumeCandidate {
-                volume_id: "vol-a".to_string(),
-                epoch: gate.epoch("vol-a"),
-            }],
-            Arc::clone(&owner) as Arc<dyn ResumeOwner>,
-        );
-        gate.advance(SETTLED);
-        batch.wait();
-
-        assert_eq!(index.started(), ["vol-a"], "the index came back");
-
-        // And the same hand-back against the epoch the pre-stop saw resumes nothing.
-        index.indexes("vol-a");
-        gate.release(&["vol-a".to_string()], Instant::now(), index.stop(), |_| {});
-        let batch = gate.resume(
-            vec![ResumeCandidate {
-                volume_id: "vol-a".to_string(),
-                epoch: stale,
-            }],
-            owner as Arc<dyn ResumeOwner>,
-        );
-        gate.advance(SETTLED);
-        batch.wait();
-        assert_eq!(index.started(), ["vol-a"], "the stale epoch resumed nothing");
-    }
-}
+mod tests;

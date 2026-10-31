@@ -46,6 +46,7 @@ type cliFlags struct {
 	includeSlow       bool
 	onlySlow          bool
 	fast              bool
+	preRelease        bool // run only the IsPreRelease checks (before a release tag, and every six days in CI)
 	failFast          bool
 	noLog             bool
 	quiet             bool   // the default: collapse passing checks into a one-line count; stream only warns, failures, skips, and changes. `-v` turns it off
@@ -222,6 +223,7 @@ func ensurePnpmIfNeeded(ctx *checks.CheckContext, checksToRun []checks.CheckDefi
 // the gocyclo threshold.
 func applyLaneFilters(checksToRun []checks.CheckDefinition, flags *cliFlags) []checks.CheckDefinition {
 	checksToRun = checks.FilterDisabledChecks(checksToRun, flags.checkNames)
+	checksToRun = checks.FilterPreReleaseChecks(checksToRun, flags.preRelease, flags.checkNames)
 	checksToRun = checks.FilterSlowChecks(checksToRun, flags.includeSlow)
 	checksToRun = checks.FilterCIOnlyChecks(checksToRun, flags.ciMode, flags.checkNames)
 	checksToRun = checks.FilterFastChecks(checksToRun, flags.fast, flags.checkNames)
@@ -303,6 +305,7 @@ func parseFlags(args []string) (*cliFlags, error) {
 		includeSlow       = fs.Bool("include-slow", false, "Include slow checks (excluded by default)")
 		onlySlow          = fs.Bool("only-slow", false, "Run only slow checks")
 		fast              = fs.Bool("fast", false, "Run only the curated fast pre-commit check set")
+		preRelease        = fs.Bool("pre-release", false, "Run only the pre-release gates (release.sh runs them before tagging)")
 		failFast          = fs.Bool("fail-fast", false, "Stop on first failure")
 		noLog             = fs.Bool("no-log", false, "Disable CSV stats logging")
 		allowMain         = fs.Bool("allow-main", false, "Allow running in the main clone instead of a worktree")
@@ -337,8 +340,8 @@ func parseFlags(args []string) (*cliFlags, error) {
 	if *help || *h {
 		return nil, flag.ErrHelp
 	}
-	if *fast && (*includeSlow || *onlySlow) {
-		return nil, errors.New("--fast is mutually exclusive with --include-slow / --only-slow")
+	if err := validateLaneFlags(*fast, *includeSlow || *onlySlow, *preRelease); err != nil {
+		return nil, err
 	}
 
 	flags := &cliFlags{
@@ -350,6 +353,7 @@ func parseFlags(args []string) (*cliFlags, error) {
 		ciMode:     *ciMode,
 		onlySlow:   *onlySlow,
 		fast:       *fast,
+		preRelease: *preRelease,
 		failFast:   *failFast,
 		noLog:      *noLog || *ciMode,
 		// Quiet is the default; `-v` / `--verbose` opts into the per-check lines.
@@ -377,6 +381,19 @@ func parseFlags(args []string) (*cliFlags, error) {
 	flags.includeSlow = *includeSlow || *onlySlow || len(flags.checkNames) > 0
 
 	return flags, nil
+}
+
+// validateLaneFlags rejects lane flags that contradict each other: `--fast` and
+// `--pre-release` each name a lane of their own, and neither combines with the
+// slow lanes or with the other.
+func validateLaneFlags(fast, slow, preRelease bool) error {
+	if fast && slow {
+		return errors.New("--fast is mutually exclusive with --include-slow / --only-slow")
+	}
+	if preRelease && (fast || slow) {
+		return errors.New("--pre-release is a lane of its own: it doesn't combine with --fast / --include-slow / --only-slow")
+	}
+	return nil
 }
 
 // applyPositionalSelectors classifies each positional token (splitting on
@@ -662,6 +679,7 @@ func showUsage() {
 	fmt.Println("    --include-slow           Include slow checks (excluded by default)")
 	fmt.Println("    --only-slow              Run only slow checks")
 	fmt.Println("    --fast                   Run only the curated fast pre-commit check set")
+	fmt.Println("    --pre-release            Run only the pre-release gates (release.sh runs them before tagging)")
 	fmt.Println("    --fresh                  Bypass the input-fingerprint cache: run everything selected, then refresh it")
 	fmt.Println("    --exact                  Run only the selected checks, without the doc lanes a scoped run adds")
 	fmt.Println("    --fail-fast              Stop on first failure")
@@ -720,6 +738,8 @@ func showUsage() {
 			name += " (run by name only)"
 		case check.IsSlow:
 			name += " (slow)"
+		case check.IsPreRelease:
+			name += " (pre-release)"
 		}
 		groupMap[key].ids = append(groupMap[key].ids, name)
 	}

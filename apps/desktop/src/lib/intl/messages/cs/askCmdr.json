@@ -1128,6 +1128,42 @@
   "@askCmdr.renameReview.expired": {
     "sourceHash": "4e6482a"
   },
+  "askCmdr.renameReview.checking": "Checked {checkedText} of {totalText} {total, plural, one {file} other {files}}",
+  "@askCmdr.renameReview.checking": {
+    "sourceHash": "92a4d6f"
+  },
+  "askCmdr.renameReview.checkingLabel": "Checking the files",
+  "@askCmdr.renameReview.checkingLabel": {
+    "sourceHash": "03f0bc5"
+  },
+  "askCmdr.renameReview.stopChecking": "Stop checking",
+  "@askCmdr.renameReview.stopChecking": {
+    "sourceHash": "4373037"
+  },
+  "askCmdr.renameReview.checkUnfinished": "Cmdr hasn’t finished checking {count, plural, one {# file} other {# files}}, so it can’t rename yet.",
+  "@askCmdr.renameReview.checkUnfinished": {
+    "sourceHash": "c3c05ce"
+  },
+  "askCmdr.renameReview.checkAgain": "Check again",
+  "@askCmdr.renameReview.checkAgain": {
+    "sourceHash": "fb7099a"
+  },
+  "askCmdr.renameReview.needsAnotherLook": "Something changed since Cmdr checked these names, so it didn’t rename anything. Take another look and try again.",
+  "@askCmdr.renameReview.needsAnotherLook": {
+    "sourceHash": "36c6050"
+  },
+  "askCmdr.renameReview.couldntStart": "Cmdr couldn’t start this rename, and nothing changed. Try again in a moment.",
+  "@askCmdr.renameReview.couldntStart": {
+    "sourceHash": "3ca2b21"
+  },
+  "askCmdr.renameReview.nothingToApply": "There’s nothing left to rename here.",
+  "@askCmdr.renameReview.nothingToApply": {
+    "sourceHash": "9c63cc7"
+  },
+  "askCmdr.renameReview.nameNotSaved": "Cmdr couldn’t save that name. Nothing’s wrong with the name, so try it again.",
+  "@askCmdr.renameReview.nameNotSaved": {
+    "sourceHash": "daff211"
+  },
   "askCmdr.renameReview.status": "{allowed, plural, one {# přejmenování povoleno} few {# přejmenování povolena} many {# přejmenování povoleno} other {# přejmenování povoleno}}; {blocked, plural, one {# zablokováno} few {# zablokována} many {# zablokováno} other {# zablokováno}}",
   "@askCmdr.renameReview.status": {
     "sourceHash": "9f70789"

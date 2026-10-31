@@ -75,6 +75,45 @@ restores ptpcamerad on macOS; enabling re-runs `check_for_device_changes()`. The
 (`OnceLock`, no shutdown channel) and `check_for_device_changes()` returns early when the flag is off. The persisted
 key is `fileOperations.mtpEnabled` in `settings.json`, read by `settings/loader.rs` at startup.
 
+**Auto-connect retries while the device stays plugged in.** A replugged Android phone can leave an open unanswered: it runs
+out its 30 s transfer bound and fails with `Timeout`, and the phone stays enumerated throughout, so no hotplug event
+comes to trigger another try. Before the retry, the only way back was toggling the phone's USB mode (Pixel 9 Pro XL,
+Android 17, macOS 27.0.1, dev build, 2026-10-30, issue #834: arrival 08:21:55, timeout 08:22:26, nothing further until a
+USB-mode toggle at 08:24:48, connected in 0.4 s). Why the phone was silent is open: that replug followed a cable pull
+mid-upload, while a later plain replug with Android's prompts unanswered connected at once, so a prompt alone isn't the
+cause. `auto_connect.rs` holds the fix, pure and injectable so it tests without a device or a clock:
+
+- `KnownDevices` replaces the old `HashSet`: each device carries the `Arrival` token of the diff that saw it come. A
+  retry loop holds its arrival and keeps going only while `is_still_present(id, arrival)` and MTP is on. An unplug ends
+  the arrival; a replug is a NEW arrival that starts its own loop, so the old loop retires instead of doubling up.
+- `is_worth_retrying` is an exhaustive match: `Timeout`, `DeviceBusy`, and `SessionReset` retry. **Why not
+  `ExclusiveAccess` / `PermissionDenied`:** `connect()` emits their dialog event on every attempt, and both dialogs
+  carry their own Retry button, so a loop would re-raise the dialog every few seconds. The rest mean the device is gone
+  or a wait won't change the answer.
+- `connect_while_present` runs attempts back to back with `retry_delay` between them (2 s, growing 1.5x, capped at
+  15 s, never zero), with no attempt budget: a phone left locked costs one USB open roughly every 45 s, and connects
+  within seconds of the next try once unlocked. Per-attempt logging drops to `debug` after the fifth attempt.
+- **The presence and enabled checks run between attempts, never during one.** An attempt in flight always finishes,
+  because dropping an mtp-rs future mid-transaction wedges the phone (`crates/cmdr-mtp/CLAUDE.md`). The cost: an attempt
+  that succeeds after the user switched MTP off lands on a device the disable path couldn't see, so the watcher checks
+  the flag again on success and disconnects it.
+- `connect()` is idempotent, so a manual connect from the frontend that wins the race just makes the loop's next attempt
+  report `Connected`. ptpcamerad suppression needs nothing new: it stays on while any device is known, and the loop only
+  runs while its device is.
+- **The waiting row.** Until now a phone in that loop had no row, and one open can run 30 s. Once an auto-connect has
+  run for `WAITING_ROW_DELAY` (3 s, so a healthy 0.2 s open never flashes a row), `waiting_entry` lists the device under
+  `DeviceReadiness::Connecting`, named by product or manufacturer, until the loop ends. Not openable, no detach, no space
+  figure, no index badge: there's no storage behind it. Id `{device}:waiting` and path `mtp://{device}/waiting` name no
+  storage, so `split_volume_id` refuses the id and `device_volume_for_path` can't resolve the phone's real paths to it.
+- **The row's state lives on the arrival in `KnownDevices`** (`ConnectPhase`), because an attempt in flight can't be
+  interrupted: an unplug, a replug, and MTP going off all end the row the moment they end the arrival, up to 30 s before
+  the loop notices. `Settled` is what stops the delay's timer, a task of its own so nothing can drop an mtp-rs future,
+  from showing a row for a connect that just ended. A refusal settles too, since its dialog says what's wrong.
+- **The row's words don't claim a prompt.** A plain replug with the prompts left unanswered connected in 0.2 s, and the
+  one 30 s timeout seen came right after a cable pull mid-upload (verified on a Pixel 9 Pro XL, dev build, #834's retest,
+  2026-10-30), so a stall may have no prompt behind it at all. Copy and its reasoning:
+  `apps/desktop/src/lib/adb/DETAILS.md`.
+
 **No double-count at startup:** `start_mtp_watcher` enumerates and seeds `KNOWN_DEVICES` synchronously, *before* it
 spawns the watcher task, so the stream's initial already-connected `Arrived` burst diffs to nothing. When MTP is
 disabled at startup the seed is deliberately left empty (we're not connecting those devices), so a later
@@ -123,7 +162,7 @@ USB plug-in
   → HotplugEvent::Arrived (watcher.rs; mtp-rs filters to MTP devices and owns the settle delay)
   → check is_mtp_enabled() (the manager's flag), skip if disabled
   → list_mtp_devices() (discovery.rs)
-  → auto_connect_device() (watcher.rs)
+  → auto_connect_device() (watcher.rs; retries Timeout/DeviceBusy/SessionReset while the arrival is current)
     → MtpConnectionManager::connect()
     → open_device() via MtpDeviceBuilder
     → probe_write_capability() per storage

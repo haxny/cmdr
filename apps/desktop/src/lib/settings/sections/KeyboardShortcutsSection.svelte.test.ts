@@ -438,11 +438,10 @@ describe('KeyboardShortcutsSection native macOS rows', () => {
 /**
  * `ShortcutPill.svelte`'s remove control, mounted on its own.
  *
- * The × sits INSIDE the pill's own button, so its press has to stop there: let it
- * bubble and removing a binding would immediately start recording a replacement
- * over the slot that just emptied. The section mounts pills through real rows
- * above; these mount the pill directly, which is the only way to watch both
- * handlers of one press at once.
+ * The × is the pill's sibling, so its press can't also start recording a replacement
+ * over the slot that just emptied. The section mounts pills through real rows above;
+ * these mount the pill directly, which is the only way to watch both handlers of one
+ * press at once.
  */
 describe('ShortcutPill remove control', () => {
   const onRemove = vi.fn()
@@ -484,20 +483,40 @@ describe('ShortcutPill remove control', () => {
     expect(onclick).not.toHaveBeenCalled()
   })
 
-  it('reaches the × from the keyboard with Enter and Space, and ignores other keys', () => {
+  it('makes the × a named, tabbable button beside the pill, so the keyboard can remove a binding', () => {
     const remove = mountPill(true)
 
-    remove?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
-    flushSync()
-    expect(onRemove).toHaveBeenCalledTimes(1)
+    expect(remove?.tagName).toBe('BUTTON')
+    expect(remove?.tabIndex).toBe(0)
+    expect(remove?.getAttribute('aria-label')).toBe('Remove this shortcut')
+    expect(remove?.closest('.shortcut-pill')).toBeNull()
+  })
+})
 
-    remove?.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }))
-    flushSync()
-    expect(onRemove).toHaveBeenCalledTimes(2)
+describe('removing a binding from the keyboard', () => {
+  it('lands focus on the row’s add button, since the re-keyed row destroys the focused ×', async () => {
+    render()
+    const remove = row(COPY).querySelector<HTMLButtonElement>('.remove-shortcut')
+    if (!remove) throw new Error('`file.copy` has no remove button')
 
-    remove?.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true }))
+    remove.focus()
+    remove.click()
+    await flushSave()
     flushSync()
-    expect(onRemove).toHaveBeenCalledTimes(2)
-    expect(onclick).not.toHaveBeenCalled()
+
+    expect(getEffectiveShortcuts(COPY)).toEqual([])
+    expect(document.activeElement).toBe(addButton(COPY))
+  })
+
+  it('leaves focus alone after a mouse press, which never focused the ×', async () => {
+    render()
+    const remove = row(COPY).querySelector<HTMLButtonElement>('.remove-shortcut')
+    if (!remove) throw new Error('`file.copy` has no remove button')
+
+    remove.click()
+    await flushSave()
+    flushSync()
+
+    expect(document.activeElement).not.toBe(addButton(COPY))
   })
 })

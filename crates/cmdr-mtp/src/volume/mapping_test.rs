@@ -21,6 +21,17 @@ fn same_named_siblings_map_to_a_duplicate_name() {
     );
 }
 
+/// A phone that went away mid-copy (a pulled cable) reads as the device leaving,
+/// ❌ never the generic `IoError` "Couldn't copy the file" with a report button
+/// (mtp-rs#53).
+#[test]
+fn a_dropped_session_maps_to_device_disconnected() {
+    let mapped = map_mtp_error(MtpConnectionError::Disconnected {
+        device_id: "mtp-1".to_string(),
+    });
+    assert!(matches!(mapped, VolumeError::DeviceDisconnected(_)), "got {mapped:?}");
+}
+
 /// A name past what a PTP string holds can only fail again under the same name, so
 /// it's the destination's name refusal (ADB's `ENAMETOOLONG` lands on the same
 /// variant), ❌ never the retryable `IoError`.
@@ -31,6 +42,49 @@ fn a_name_too_long_for_the_phone_maps_to_an_invalid_name() {
         units: 255,
     });
     assert!(matches!(mapped, VolumeError::InvalidName(_)), "got {mapped:?}");
+}
+
+/// A folder the phone won't let anyone read is the phone's refusal, carrying its path,
+/// which is what the pane's and a copy's advice turn on (`refuser_of_path`), ❌ never
+/// `ReadOnly`.
+#[test]
+fn a_refused_read_maps_to_a_permission_denial_on_its_path() {
+    let mapped = map_mtp_error(MtpConnectionError::ReadRefused {
+        device_id: "mtp-1".to_string(),
+        path: PATH.to_string(),
+    });
+    assert!(
+        matches!(&mapped, VolumeError::PermissionDenied { path, raw_os_error: None } if path == PATH),
+        "got {mapped:?}"
+    );
+}
+
+/// ❗ A write refused the same way keeps the read-only answer.
+#[test]
+fn a_refused_write_stays_read_only() {
+    let mapped = map_mtp_error(MtpConnectionError::StoreReadOnly {
+        device_id: "mtp-1".to_string(),
+    });
+    assert!(matches!(mapped, VolumeError::ReadOnly(_)), "got {mapped:?}");
+}
+
+/// ❗ These two are about this machine's USB access, so they can't reach the
+/// `PermissionDenied` arm, where an `mtp://` path reads "this phone keeps this folder
+/// private" (#841).
+#[test]
+fn a_usb_level_refusal_never_reads_as_the_phone_keeping_a_folder() {
+    for error in [
+        MtpConnectionError::ExclusiveAccess {
+            device_id: "mtp-1".to_string(),
+            blocking_process: None,
+        },
+        MtpConnectionError::PermissionDenied {
+            device_id: "mtp-1".to_string(),
+        },
+    ] {
+        let mapped = map_mtp_error(error);
+        assert!(matches!(mapped, VolumeError::NotConnected(_)), "got {mapped:?}");
+    }
 }
 
 /// A refusal that names a folder keeps the connection error typed in the volume error's

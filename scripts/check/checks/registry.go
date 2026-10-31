@@ -46,13 +46,15 @@ var AllChecks = []CheckDefinition{
 		DisplayName: "clippy with mimalloc on macOS",
 		App:         AppDesktop,
 		Tech:        "🦀 Rust",
-		// A periodic gate: it guards a build nobody ships today, in a build
-		// directory of its own, so a plain `pnpm check` shouldn't pay for it.
-		IsSlow:    true,
-		NotInCI:   "on CI's ubuntu lanes mimalloc is the default and the plain clippy step covers it; the macOS-only mimalloc readers are a build nobody ships, so CI's macOS job doesn't pay for them",
-		DependsOn: []string{"desktop-rust-clippy"},
-		Inputs:    inputs(rustCompileInputs, []string{"clippy.toml"}),
-		Run:       RunClippyMimalloc,
+		// A pre-release gate: it guards a build nobody ships today, in a build
+		// directory of its own, and hasn't failed since 2026-07, so neither a plain
+		// `pnpm check` nor every push should pay its ~120 s. `slow-checks.yml`
+		// runs the lane on macOS every six days, since the readers it lints are
+		// macOS-only.
+		IsPreRelease: true,
+		DependsOn:    []string{"desktop-rust-clippy"},
+		Inputs:       inputs(rustCompileInputs, []string{"clippy.toml"}),
+		Run:          RunClippyMimalloc,
 	},
 	{
 		ID:          "desktop-rust-rustdoc",
@@ -310,7 +312,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🦀 Rust",
 		DependsOn:   nil,
-		IsFast:      true,
 		// The root manifest's `[patch.crates-io]` and the lockfile decide the whole
 		// answer; no cargo call, no compile.
 		Inputs: inputs([]string{"Cargo.toml", "Cargo.lock"}),
@@ -437,6 +438,7 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🎨 Svelte",
 		DependsOn:   nil,
+		IsFast:      true,
 		Inputs:      svelteInputs,
 		Run:         RunDesktopMessageKeysFresh,
 	},
@@ -449,7 +451,6 @@ var AllChecks = []CheckDefinition{
 		// catalog dirs, but what goes stale is the table the resolver compiles in.
 		Tech:      "🦀 Rust",
 		DependsOn: nil,
-		IsFast:    true,
 		Inputs: inputs([]string{
 			"apps/desktop/src/lib/intl/messages/**",
 			"apps/desktop/scripts/gen-shipped-locales*.ts",
@@ -467,7 +468,6 @@ var AllChecks = []CheckDefinition{
 		// native menu bar compiles in.
 		Tech:      "🦀 Rust",
 		DependsOn: nil,
-		IsFast:    true,
 		Inputs: inputs([]string{
 			"apps/desktop/src/lib/intl/messages/**",
 			"apps/desktop/scripts/gen-native-strings*.ts",
@@ -493,8 +493,10 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🎨 Svelte",
 		DependsOn:   nil,
-		Inputs:      svelteInputs,
-		Run:         RunDesktopMessageKeysUnused,
+		IsFast:      true,
+		// The Rust half: `menu_t` call sites are the only reference the native menu keys have.
+		Inputs: inputs(svelteInputs, rustAppTreeInputs),
+		Run:    RunDesktopMessageKeysUnused,
 	},
 	{
 		ID:          "desktop-message-screenshots-fresh",
@@ -926,16 +928,6 @@ var AllChecks = []CheckDefinition{
 	},
 
 	// Desktop - Svelte checks
-	{
-		ID:          "desktop-svelte-eslint",
-		CpuWeight:   2,
-		DisplayName: "eslint",
-		App:         AppDesktop,
-		Tech:        "🎨 Svelte",
-		DependsOn:   []string{"oxfmt"},
-		Inputs:      svelteInputs,
-		Run:         RunDesktopESLint,
-	},
 	// Generates `node_modules/$app/tsconfig.json` (which `tsconfig.json` extends as `$app/tsconfig`).
 	// The type-aware checks below depend on it so a TypeScript program can be
 	// built; without it on a fresh tree, type-aware `eslint --fix` strips
@@ -954,8 +946,8 @@ var AllChecks = []CheckDefinition{
 	// Type-aware ESLint is split into a Svelte pass and a TypeScript (non-Svelte)
 	// pass: linting both in one `eslint .` invocation hits a projectService cliff
 	// (~25x slower). Split, each is ~10-15s with identical coverage, so both are
-	// normal (non-slow) and run in parallel with each other and the fast
-	// `desktop-svelte-eslint`. See docs/notes/check-cpu-contention.md.
+	// normal (non-slow) and run in parallel. Together they're the desktop's whole
+	// ESLint coverage, auto-fix included. See docs/notes/check-cpu-contention.md.
 	{
 		ID:          "desktop-svelte-eslint-typecheck-svelte",
 		CpuWeight:   2,
@@ -1018,7 +1010,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDesktop,
 		Tech:        "🎨 Svelte",
 		DependsOn:   []string{"desktop-svelte-stylelint"},
-		IsFast:      true,
 		Inputs:      inputs(svelteInputs, siblingToolInputs("check-btn-restyle")),
 		Run:         RunBtnRestyle,
 	},
@@ -1315,11 +1306,11 @@ var AllChecks = []CheckDefinition{
 		Tech:        "🎨 Svelte",
 		// Runs its own ~6s production-shaped `vite build` into a private dir rather
 		// than depending on another lane, so the number is what a release ships and
-		// not an E2E build carrying the dialog gallery.
-		IsFast:  false,
-		NotInCI: "warn-only metric; it can never fail, so a CI step would be noise",
-		Inputs:  inputs(svelteInputs, runnerDataInputs("desktop-bundle-size-baseline.json")),
-		Run:     RunDesktopBundleSize,
+		// not an E2E build carrying the dialog gallery. A pre-release gate: growth
+		// past the budget fails, so a release ships a bigger bundle on purpose.
+		IsPreRelease: true,
+		Inputs:       inputs(svelteInputs, runnerDataInputs("desktop-bundle-size-baseline.json")),
+		Run:          RunDesktopBundleSize,
 	},
 	{
 		ID:          "website-bundle-size",
@@ -1371,6 +1362,16 @@ var AllChecks = []CheckDefinition{
 		IsFast:      true, // a source-tree walk and a few regexes
 		Inputs:      websiteInputs,
 		Run:         RunWebsiteCSPConnectSrc,
+	},
+	{
+		ID:          "website-trust-sources",
+		Nickname:    "trust-sources",
+		DisplayName: "trust page source map",
+		App:         AppWebsite,
+		Tech:        "🚀 Astro",
+		IsFast:      false,           // `go run` compiles the review tool
+		Inputs:      wholeRepoInputs, // the map's patterns name files anywhere in the repo
+		Run:         RunWebsiteTrustSources,
 	},
 
 	// API server checks
@@ -1441,7 +1442,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDashboard,
 		Tech:        "🎨 Svelte",
 		DependsOn:   []string{"oxfmt"},
-		IsFast:      true,
 		Inputs:      dashboardInputs,
 		Run:         RunDashboardStylelint,
 	},
@@ -1460,7 +1460,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppDashboard,
 		Tech:        "🎨 Svelte",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      dashboardInputs,
 		Run:         RunDashboardImportCycles,
 	},
@@ -1503,7 +1502,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppScripts,
 		Tech:        "🐹 Go",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      goSourceInputs,
 		Run:         RunGoFmt,
 	},
@@ -1832,6 +1830,16 @@ var AllChecks = []CheckDefinition{
 		Run:         RunChangelogCommitLinks,
 	},
 	{
+		ID:          "changelog-security",
+		DisplayName: "CHANGELOG Security lines",
+		App:         AppOther,
+		Tech:        "🔒 Security",
+		DependsOn:   nil,
+		IsFast:      true,
+		Inputs:      inputs([]string{"CHANGELOG.md"}),
+		Run:         RunChangelogSecurity,
+	},
+	{
 		ID:          "workflows-hardening",
 		Nickname:    "workflows",
 		DisplayName: "workflows hardening",
@@ -1889,7 +1897,6 @@ var AllChecks = []CheckDefinition{
 		App:         AppOther,
 		Tech:        "📏 Metrics",
 		DependsOn:   nil,
-		IsFast:      true,
 		Inputs:      workflowsInputs,
 		Run:         RunWorkflowsRustup,
 	},
@@ -2088,6 +2095,26 @@ func FilterFastChecks(defs []CheckDefinition, fast bool, namedChecks []string) [
 	var result []CheckDefinition
 	for _, def := range defs {
 		if def.IsFast || named[def.ID] {
+			result = append(result, def)
+		}
+	}
+	return result
+}
+
+// FilterPreReleaseChecks keeps only the IsPreRelease checks when preRelease is
+// set, and drops them otherwise. Named checks bypass both directions, so
+// `pnpm check clippy-mimalloc` still runs it and `--pre-release svelte-check`
+// adds svelte-check to the lane.
+func FilterPreReleaseChecks(defs []CheckDefinition, preRelease bool, namedChecks []string) []CheckDefinition {
+	named := make(map[string]bool, len(namedChecks))
+	for _, name := range namedChecks {
+		if c := GetCheckByID(name); c != nil {
+			named[c.ID] = true
+		}
+	}
+	var result []CheckDefinition
+	for _, def := range defs {
+		if def.IsPreRelease == preRelease || named[def.ID] {
 			result = append(result, def)
 		}
 	}

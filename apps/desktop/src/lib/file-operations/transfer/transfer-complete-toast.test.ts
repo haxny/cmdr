@@ -3,6 +3,7 @@ import {
   composeDurabilityUnconfirmedToast,
   composeTransferCompleteToast,
   composeTrashRefusedToast,
+  planCompletionToasts,
 } from './transfer-complete-toast'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
 import type { LostMetadata } from '#lib/ipc/bindings.js'
@@ -615,5 +616,38 @@ describe('composeDurabilityUnconfirmedToast', () => {
   it('says nothing when the flush confirmed everything', () => {
     expect(composeDurabilityUnconfirmedToast(null)).toBeNull()
     expect(composeDurabilityUnconfirmedToast(undefined)).toBeNull()
+  })
+})
+
+describe('a delete or trash whose items were already gone', () => {
+  const allGone = { itemCount: 1, totalCount: 1, name: 'song.m4a' }
+
+  it('says nothing about a finished delete when every item was already gone', () => {
+    const plan = planCompletionToasts(
+      { operationType: 'delete', filesProcessed: 0, filesSkipped: 0, alreadyGone: allGone },
+      false,
+    )
+    expect(plan.message).toBeNull()
+  })
+
+  it('says nothing about a trash when every item was already gone', () => {
+    const plan = planCompletionToasts(
+      { operationType: 'trash', filesProcessed: 0, filesSkipped: 0, alreadyGone: allGone },
+      false,
+    )
+    expect(plan.message).toBeNull()
+  })
+
+  it('still confirms what it deleted when only some items were gone', () => {
+    const plan = planCompletionToasts(
+      {
+        operationType: 'delete',
+        filesProcessed: 1,
+        filesSkipped: 0,
+        alreadyGone: { itemCount: 1, totalCount: 2, name: 'gone.txt' },
+      },
+      false,
+    )
+    expect(plan.message).toBe('Delete complete: 1 file')
   })
 })

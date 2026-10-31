@@ -4,9 +4,10 @@
  *
  * The AI returns one shape and it lands in five places (the Pattern chip and its label,
  * size, date, type, scope, case sensitivity, the system-dir toggle), so this is where the
- * mapping lives rather than in the dialog wrapper. What comes BACK is only what QueryDialog
- * needs to render: the caveat, and the names of the chips that changed (for the highlight
- * flash).
+ * mapping lives rather than in the dialog wrapper. What comes BACK is the caveat and an
+ * `apply` that makes the writes and names the chips that changed (for the highlight flash).
+ * ❌ Nothing is written before `apply`: QueryDialog calls it only while the run is still the
+ * newest, which is what keeps a stale answer off the chips (#762).
  *
  * ❌ This does NOT write `lastAiPrompt` / `lastAiCaveat`: QueryDialog owns both
  * (`query-ui/CLAUDE.md`). And the typed IPC error is deliberately left to throw, so
@@ -98,10 +99,9 @@ export function applyAiTranslationToState(result: TranslateResult): string[] {
 }
 
 /**
- * Translates a natural-language prompt and applies the AI's filter writes: the Pattern
- * chip + label, size, date, scope, case sensitivity, and "hide boring folders". Returns
- * the caveat + highlighted-field list for QueryDialog to surface in the AI strip and
- * flash effect.
+ * Translates a natural-language prompt. Returns the caveat plus an `apply` holding the AI's
+ * filter writes (the Pattern chip + label, size, date, scope, case sensitivity, and "hide
+ * boring folders"), which returns the changed chips for the flash effect.
  */
 export async function translateAi(prompt: string): Promise<AiTranslateResult | null> {
   // Hand the AI the user's current type as context so it can keep or change it.
@@ -109,6 +109,7 @@ export async function translateAi(prompt: string): Promise<AiTranslateResult | n
   const result = await translateSearchQuery(prompt, currentType)
   return {
     caveat: result.caveat,
-    highlightedFields: applyAiTranslationToState(result),
+    // Deferred: QueryDialog runs it only while this run is still the newest.
+    apply: () => applyAiTranslationToState(result),
   }
 }

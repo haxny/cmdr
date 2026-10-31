@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { reportEntryFor, reportNoteFor, slowBreadcrumbFor, type ReportIncident } from './report-incident'
+import type { WriteOperationError } from '#lib/ipc/bindings.js'
+import {
+  operationFailureKinds,
+  reportEntryFor,
+  reportNoteFor,
+  slowBreadcrumbFor,
+  type ReportIncident,
+} from './report-incident'
 
 const NOW = 1_800_000_000_000
 
@@ -9,7 +16,14 @@ describe('reportEntryFor', () => {
       [{ kind: 'message', from: 'errorToast', text: 'x' }, 'errorToast'],
       [{ kind: 'message', from: 'updateFailure', text: 'x' }, 'updateFailure'],
       [
-        { kind: 'operationFailed', from: 'transferError', operation: 'copy', error: 'insufficient_space', title: 't' },
+        {
+          kind: 'operationFailed',
+          from: 'transferError',
+          operation: 'copy',
+          error: 'insufficient_space',
+          cause: null,
+          title: 't',
+        },
         'transferError',
       ],
       [{ kind: 'operationsFailed', count: 4 }, 'queueFailure'],
@@ -55,9 +69,38 @@ describe('reportNoteFor', () => {
       from: 'queueFailure',
       operation: 'move',
       error: 'insufficient_space',
+      cause: null,
       title: 'Not enough space',
     })
     expect(note).toBe('Not enough space\nReference: move/insufficient_space')
+  })
+
+  it('adds the underlying refusal’s kind to a move whose original stayed (cmdr-reports#84)', () => {
+    // The copy landed, deleting the original was refused: the refusal is what triage needs,
+    // and the title alone doesn't carry it.
+    const error: WriteOperationError = {
+      type: 'source_not_removed',
+      path: '/Users/someone/private',
+      landedAt: '/Volumes/share/private',
+      cause: { type: 'source_not_found', path: '/Users/someone/private/a.txt' },
+    }
+    const note = reportNoteFor({
+      kind: 'operationFailed',
+      from: 'transferError',
+      operation: 'move',
+      ...operationFailureKinds(error),
+      title: 'The copy arrived, but the original stayed',
+    })
+    expect(note).toBe('The copy arrived, but the original stayed\nReference: move/source_not_removed/source_not_found')
+    // No path reaches the note: only the typed kinds do.
+    expect(note).not.toContain('/Users')
+  })
+
+  it('carries no cause for an error that wraps none', () => {
+    expect(operationFailureKinds({ type: 'destination_full', path: '/Volumes/x' })).toEqual({
+      error: 'destination_full',
+      cause: null,
+    })
   })
 
   it('references the typed listing reason, and leaves it out when there is none', () => {

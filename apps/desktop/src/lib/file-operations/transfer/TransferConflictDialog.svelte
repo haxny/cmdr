@@ -7,7 +7,7 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
     import { containingFolder } from './transfer-dialog-utils'
-    import { formatByteSize, dynamicTierIndex } from '#lib/units/index.js'
+    import { formatByteSize, formatExactBytes, formatSizePair, dynamicTierIndex } from '#lib/units/index.js'
     import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
     import { sizeTierClasses } from '#lib/file-explorer/selection/selection-info-utils.js'
     import { formatDate } from '#lib/file-explorer/selection/selection-info-utils.js'
@@ -74,7 +74,16 @@
     const newIsLarger = $derived(sizeDiff !== null && sizeDiff < 0)
     const sourceIsDir = $derived(conflictEvent.sourceIsDirectory)
     const destIsDir = $derived(conflictEvent.destinationIsDirectory)
-    const isTypeMismatch = $derived(sourceIsDir !== destIsDir)
+    /** Set when this isn't a clash at all: the destination refused to store the
+     *  item under its name (`refused_name.rs`). Nothing is there to compare,
+     *  overwrite, or rename around, so only the skips and the ways out show. */
+    const refusedName = $derived(conflictEvent.refusedName ?? null)
+    const refusedBody = $derived(
+        refusedName === 'tooLong'
+            ? tString('fileOperations.transferProgress.refusedNameTooLongBody')
+            : tString('fileOperations.transferProgress.refusedNameNotAllowedBody'),
+    )
+    const isTypeMismatch = $derived(refusedName === null && sourceIsDir !== destIsDir)
     const isFileOverFolder = $derived(isTypeMismatch && destIsDir)
     const existingLabel = $derived(
         destIsDir
@@ -111,12 +120,21 @@
     const destSizeUnknown = $derived(destSize === null)
     const destSizeIsFloor = $derived(destSize?.kind === 'atLeast')
     const destSizeClass = $derived(sizeClass(destSize))
-    const destSizeText = $derived(sizeText(destSize))
     const srcSize = $derived(conflictEvent.sourceSize)
     const srcSizeUnknown = $derived(srcSize === null)
     const srcSizeIsFloor = $derived(srcSize?.kind === 'atLeast')
     const srcSizeClass = $derived(sizeClass(srcSize))
-    const srcSizeText = $derived(sizeText(srcSize))
+    /** Two exact sizes are worded as a pair, so two files a few bytes apart never
+     *  both read "1.18 MiB" (exact bytes then) and equal ones say so. A floor or an
+     *  unknown size keeps its own rendering and makes no exact-size claim. */
+    const exactPair = $derived(
+        destSize?.kind === 'exact' && srcSize?.kind === 'exact' ? formatSizePair(destSize.bytes, srcSize.bytes) : null,
+    )
+    const destSizeText = $derived(exactPair?.first.text ?? sizeText(destSize))
+    const srcSizeText = $derived(exactPair?.second.text ?? sizeText(srcSize))
+    const destExactTooltip = $derived(destSize?.kind === 'exact' ? formatExactBytes(destSize.bytes) : undefined)
+    const srcExactTooltip = $derived(srcSize?.kind === 'exact' ? formatExactBytes(srcSize.bytes) : undefined)
+    const sameSize = $derived(exactPair?.same ?? false)
     /** "Overwrite all smaller" compares against the existing side, so it needs
      *  that side's whole size: a floor can't say which is smaller. */
     const destSizeComparable = $derived(destSize?.kind === 'exact')
@@ -150,19 +168,21 @@
     const exitLocked = $derived(isCancelling || isResolvingConflict)
 
     /** Every button's letter, enabled exactly when the button is. `decision-keys.ts`. */
+    /** The answers past the skips, which a refused name doesn't offer. */
+    const clashAnswersLive = $derived(!isResolvingConflict && refusedName === null)
     const keyChoices = $derived<DecisionChoice[]>([
         { key: CONFLICT_KEYS.skip, enabled: !isResolvingConflict, run: skip },
         { key: CONFLICT_KEYS.skipAll, enabled: !isResolvingConflict, run: skipAll },
-        { key: CONFLICT_KEYS.rename, enabled: !isResolvingConflict, run: rename },
-        { key: CONFLICT_KEYS.renameAll, enabled: !isResolvingConflict, run: renameAll },
-        { key: CONFLICT_KEYS.overwrite, enabled: !isResolvingConflict, run: overwrite },
-        { key: CONFLICT_KEYS.overwriteAll, enabled: !isResolvingConflict, run: overwriteAll },
+        { key: CONFLICT_KEYS.rename, enabled: clashAnswersLive, run: rename },
+        { key: CONFLICT_KEYS.renameAll, enabled: clashAnswersLive, run: renameAll },
+        { key: CONFLICT_KEYS.overwrite, enabled: clashAnswersLive, run: overwrite },
+        { key: CONFLICT_KEYS.overwriteAll, enabled: clashAnswersLive, run: overwriteAll },
         {
             key: CONFLICT_KEYS.overwriteAllSmaller,
-            enabled: !isResolvingConflict && destSizeComparable,
+            enabled: clashAnswersLive && destSizeComparable,
             run: overwriteAllSmaller,
         },
-        { key: CONFLICT_KEYS.overwriteAllOlder, enabled: !isResolvingConflict, run: overwriteAllOlder },
+        { key: CONFLICT_KEYS.overwriteAllOlder, enabled: clashAnswersLive, run: overwriteAllOlder },
         { key: CONFLICT_KEYS.cancel, enabled: !exitLocked, run: cancel },
         { key: CONFLICT_KEYS.rollback, enabled: offersRollback && !exitLocked, run: rollBack },
     ])
@@ -242,11 +262,18 @@
                  identically, so this line is the only sign the two differ. -->
             <p class="conflict-look-alike">{tString('fileOperations.transferProgress.lookAlikeHint')}</p>
         {/if}
+        {#if refusedName !== null}
+            <!-- Why the destination won't take it. Secondary, not a warning:
+                 nothing is at risk, the prompt only says why it asks. -->
+            <p class="conflict-refused">{refusedBody}</p>
+        {/if}
     </div>
 
     <!-- File comparison: same shape across all variants. Type tags
          (`Existing (file):` / `New (folder):` etc.) flag the mismatch
-         without breaking the layout. -->
+         without breaking the layout. A refused name has nothing to compare
+         against. -->
+    {#if refusedName === null}
     <div class="conflict-comparison">
         <div class="conflict-file">
             <span class="conflict-file-label">{existingLabel}</span>
@@ -259,7 +286,7 @@
                     ><span class="size-lower-bound-prefix">{LOWER_BOUND_GLYPH}</span>{destSizeText}</span
                 >
             {:else}
-                <span class="conflict-file-size {destSizeClass}">{destSizeText}</span>
+                <span class="conflict-file-size {destSizeClass}" use:tooltip={destExactTooltip}>{destSizeText}</span>
             {/if}
             {#if existingIsLarger}<span class="conflict-annotation larger"
                     >{tString('fileOperations.transferProgress.annotationLarger')}</span
@@ -284,10 +311,12 @@
                     ><span class="size-lower-bound-prefix">{LOWER_BOUND_GLYPH}</span>{srcSizeText}</span
                 >
             {:else}
-                <span class="conflict-file-size {srcSizeClass}">{srcSizeText}</span>
+                <span class="conflict-file-size {srcSizeClass}" use:tooltip={srcExactTooltip}>{srcSizeText}</span>
             {/if}
             {#if newIsLarger}<span class="conflict-annotation larger"
                     >{tString('fileOperations.transferProgress.annotationLarger')}</span
+                >{:else if sameSize}<span class="conflict-annotation same"
+                    >{tString('common.sizeComparison.same')}</span
                 >{/if}
             <span class="conflict-file-date"
                 >{conflictEvent.sourceModified ? formatDate(conflictEvent.sourceModified) : ''}</span
@@ -297,6 +326,7 @@
                 >{/if}
         </div>
     </div>
+    {/if}
 
     <!-- Buttons. One grid, two columns, every button (the ways out too) as wide
          as the widest label and as tall as the rest (CSS below). The answers:
@@ -325,6 +355,7 @@
             >
                 {tString('fileOperations.transferProgress.conflictSkipAll')}
             </Button>
+            {#if refusedName === null}
             <Button
                 variant="secondary"
                 onclick={rename}
@@ -381,6 +412,7 @@
             >
                 {tString('fileOperations.transferProgress.conflictOverwriteAllOlder')}
             </Button>
+            {/if}
     </div>
 
     <!-- The ways out, under a divider, in the same grid: as big as the answers,
@@ -477,6 +509,16 @@
        about. Narrowed so two short sentences wrap into a readable block. */
     .conflict-look-alike {
         margin: var(--spacing-sm) auto 0;
+        max-width: 36em;
+        font-size: var(--font-size-sm);
+        color: var(--color-text-secondary);
+        text-align: center;
+    }
+
+    /* Why a refused name is asked about: quiet like the look-alike hint, with
+       room before the buttons since no comparison rows sit between. */
+    .conflict-refused {
+        margin: var(--spacing-sm) auto var(--spacing-lg);
         max-width: 36em;
         font-size: var(--font-size-sm);
         color: var(--color-text-secondary);
@@ -583,6 +625,10 @@
 
     .conflict-annotation.larger {
         color: var(--color-size-mb);
+    }
+
+    .conflict-annotation.same {
+        color: var(--color-text-secondary);
     }
 
     /* Every button as wide as the widest, and never a wrapped label: in a grid

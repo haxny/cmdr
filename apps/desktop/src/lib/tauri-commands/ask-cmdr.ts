@@ -25,6 +25,9 @@ import {
   type MessageBlock,
   type AttachmentRef,
   type AttachmentKindView,
+  type BulkRenameCheckProgress,
+  type BulkRenameError,
+  type RenameStartError,
   type LegacyAskCmdrOptIn,
   type ManagedAiRefusal,
   type ConversationCost,
@@ -43,9 +46,21 @@ import {
   type AskCmdrToolResultError,
   type ToolResultDetailView,
 } from '#lib/ipc/bindings.js'
+import { TypedFailure } from '#lib/ipc/typed-failure.js'
 import { throwIpcError } from './ipc-types'
 
+/** Why a rename review couldn't be checked, edited, or applied. The review words each variant. */
+export class BulkRenameFailure extends TypedFailure<BulkRenameError> {
+  constructor(failure: BulkRenameError) {
+    super(failure, `bulk rename refused: ${failure.type}`)
+    this.name = 'BulkRenameFailure'
+  }
+}
+
 export type {
+  BulkRenameCheckProgress,
+  BulkRenameError,
+  RenameStartError,
   LegacyAskCmdrOptIn,
   WakeReadinessView,
   AskCmdrStreamEvent,
@@ -169,7 +184,7 @@ export async function keepGoingAskCmdr(conversationId: number): Promise<boolean>
  * `listChanged` and records nothing. */
 export async function preflightBulkRename(proposalId: string, revision: number, allowedRowIds: string[]) {
   const res = await commands.preflightBulkRename(proposalId, revision, allowedRowIds)
-  if (res.status === 'error') throwIpcError(res.error)
+  if (res.status === 'error') throw new BulkRenameFailure(res.error)
   return res.data
 }
 
@@ -179,7 +194,7 @@ export async function preflightBulkRename(proposalId: string, revision: number, 
  * as the dialog should now show it. */
 export async function reviseBulkRenameRow(proposalId: string, rowId: string, destinationName: string) {
   const res = await commands.reviseBulkRenameRow(proposalId, rowId, destinationName)
-  if (res.status === 'error') throwIpcError(res.error)
+  if (res.status === 'error') throw new BulkRenameFailure(res.error)
   return res.data
 }
 
@@ -187,8 +202,21 @@ export async function reviseBulkRenameRow(proposalId: string, rowId: string, des
  * revision the review showed. An agent amend since refuses as the typed `listChanged` error. */
 export async function applyBulkRename(proposalId: string, revision: number, allowedRowIds: string[]) {
   const res = await commands.applyBulkRename(proposalId, revision, allowedRowIds)
-  if (res.status === 'error') throwIpcError(res.error)
+  if (res.status === 'error') throw new BulkRenameFailure(res.error)
   return res.data
+}
+
+/** Stop this proposal's running check, leaving the review open. Answers whether one was running;
+ * the stopped call rejects with a `cancelled` {@link BulkRenameFailure}. */
+export async function cancelBulkRenameCheck(proposalId: string): Promise<boolean> {
+  return commands.cancelBulkRenameCheck(proposalId)
+}
+
+/** How far a rename check has got. Silent for a check that ends quickly. */
+export function onBulkRenameCheckProgress(callback: (payload: BulkRenameCheckProgress) => void): Promise<UnlistenFn> {
+  return events.bulkRenameCheckProgress.listen((event) => {
+    callback(event.payload)
+  })
 }
 
 /** Discard a staged rename proposal after the user closes its review. */

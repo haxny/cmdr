@@ -1,3 +1,16 @@
 {
-  "advisories": []
+  "advisories": [
+    {
+      "id": "GHSA-4p9f-7p9m-5vfg",
+      "fixedIn": "0.58.0",
+      "severity": "medium",
+      "url": "https://getcmdr.com/changelog"
+    },
+    {
+      "id": "GHSA-fw5c-8223-6h42",
+      "fixedIn": "0.58.0",
+      "severity": "medium",
+      "url": "https://getcmdr.com/changelog"
+    }
+  ]
 }

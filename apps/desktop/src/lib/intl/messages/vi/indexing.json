@@ -166,10 +166,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "Chỉ mục ổ đĩa của bạn đã lỗi thời. Có vẻ như ứng dụng chưa chạy một thời gian. Đang chạy một lần quét mới để bắt kịp.",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "Nhật ký thay đổi tệp của hệ thống không lưu đủ xa về trước. Đang chạy một lần quét mới để dựng lại chỉ mục.",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

@@ -15,7 +15,7 @@ use serde::Serialize;
 use tauri::AppHandle;
 
 use super::session::{provider_and_model, resolve_prompt_budget};
-use crate::agent::llm::types::ProviderTag;
+use crate::agent::llm::types::{AgentUsage, ProviderTag};
 
 /// Whether a send could reach a model, as far as SETUP goes. The rail warns on every variant
 /// but `Ready`, and its Send button says why it's disabled.
@@ -114,7 +114,7 @@ pub fn slot_status(app: &AppHandle) -> SlotStatus {
     } else {
         provider_and_model(crate::settings::load_ask_cmdr_interactive_model(app).as_deref())
     };
-    let priced = crate::agent::pricing::price_call(provider, &model, 0, 0).priced;
+    let priced = crate::agent::pricing::price_call(provider, &model, AgentUsage::default()).priced;
     let baseline = resolve_prompt_budget(app, provider, &model)
         .ok()
         .map(|budget| BaselineUsage {

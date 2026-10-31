@@ -10,8 +10,9 @@ the best-effort directory pass left standing reports `source_removed: false`. Wi
 source at all, and an approved AI suggestion's ops stayed `pending` with their files gone. Regression anchor:
 `volume_source_done_tests.rs`.
 
-`delete_volume_files_with_progress_inner` consumes the scan preview via `take_cached_scan_result(preview_id, sources)`.
-On hit, top-level files come straight from `CopyScanResult` with no `is_directory` probe; top-level dirs recurse via the
+`delete_volume_files_with_progress_probed` (the walk; tests enter through the `_inner` wrapper, gated
+`any(test, feature = "testing")`) consumes the scan preview via `take_cached_scan_result(preview_id, sources)`. On hit,
+top-level files come straight from `CopyScanResult` with no `is_directory` probe; top-level dirs recurse via the
 oracle-aware walker. On no-preview paths (MCP, programmatic), the parent oracle answers the top-level type when the
 source's parent is watcher-fresh in the listing cache, and otherwise the walker resolves it. Both emit paths use
 `with_scan_meta(current_dir, dirs_done, None)` so the scanning UI shows the dir count and the directory the walker is
@@ -175,6 +176,37 @@ folder is gone with its last child, and a plain delete of its path then takes a 
 rename-merge's source cleanup, `remove_tree`) and every reversal removing a folder it created (a cancelled copy's prune,
 the journal rollback's `RemoveDir`, both through `unblocked_removal.rs` with `NodeKind::Directory`), pinned by
 `crates/cmdr-operations/src/transfer/volume/folder_delete_kind_tests.rs`.
+
+## An item that's already gone is done (`already_gone.rs`)
+
+A delete or trash whose top-level item is already gone (another app, a sync client, or a script moved or deleted it,
+often while a pane still showed it) completes instead of failing. **Why**: ERR-X84HN (2026-10-28): a file moved out by
+another app stayed in the pane, the person deleted it, and `validate_sources` stopped the delete with `SourceNotFound`,
+which the FE logged at ERROR twice and auto-sent as an error report. The file was gone, which is what the person asked
+for.
+
+- **Where**: the first step of each starter's body (local delete and trash in `../local_start.rs`, the volume delete in
+  `volume_start.rs::run_volume_delete`), BEFORE the source binding and the queue check. A queued delete whose items left
+  meanwhile therefore completes, and ❌ never asks "delete the rest?" about items whose absence is the goal.
+- **The probe**: one per top-level source. Local: the queue check's own (`queued_sources::local_source_is_gone`).
+  Volume: the walk's own top-level probe (`volume_scan::top_level_entry`, link-aware, so a dangling link is there, not
+  gone), and the walk takes its answer as the top-level hint (`delete_volume_files_with_progress_probed`). ❌ Never a
+  second probe per item: on S3 it cost a HEAD (a folder, a listing too) the cost estimate doesn't count
+  (`s3_integration_the_engine_sends_what_the_estimate_counts_*`). Only a POSITIVE `NotFound` counts; "we couldn't look"
+  stays in the batch, so the engine's typed error says what happened (a dead mount must never read as "already gone").
+- **What it reports**: each gone source gets a `Skipped` `write-source-item-done` with `source_removed: true` (so search
+  snapshots drop it, and an approved suggestion's op isn't recorded as deleted: a moved-away file still exists), and the
+  completion carries `already_gone: Some(AlreadyGone { item_count, total_count, name })`, `name` only for a single one.
+  All gone: a completion with nothing done (`complete_all_gone`). Some gone: `AlreadyGoneSink` wraps the sink and stamps
+  the note on the walk's own completion, so the walkers know nothing of it.
+- **Logged at info**: an expected outcome, and warn reaches error-report bundles.
+- **The race inside a walk**: the LOCAL walker treats a `NotFound` from `remove_file` (a file the scan listed, gone
+  before its unlink) as done, with no journal row. The volume walker's outage re-check already does the same after a
+  wait (`outage.rs`).
+- Frontend counterpart (the "already gone" toast and its setting):
+  `apps/desktop/src/lib/file-operations/delete/DETAILS.md`.
+
+Pinned by `already_gone_tests.rs`.
 
 ## Key decisions
 

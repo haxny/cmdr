@@ -3,6 +3,10 @@
   "@fileExplorer.archiveEnterMenu.open": {
     "sourceHash": "f429111"
   },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {¿Seguro que quieres agregar la extensión “.{newExt}”? Puede que macOS muestre esta carpeta como un solo elemento.} other {¿Seguro que quieres agregar la extensión “.{newExt}”? La próxima vez tu archivo podría abrirse en una app distinta.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "6c6f402"
+  },
   "fileExplorer.git.status.added": "Agregado",
   "@fileExplorer.git.status.added": {
     "sourceHash": "f52c88f"
@@ -454,5 +458,25 @@
   "fileExplorer.dateTooltip.dateAdded": "Fecha en que se agregó",
   "@fileExplorer.dateTooltip.dateAdded": {
     "sourceHash": "3709ae0"
+  },
+  "fileExplorer.pane.ejectedDriveStaysToast": "{volumeName} se expulsó, pero deja el disco conectado: otros volúmenes de ese disco siguen montados.",
+  "@fileExplorer.pane.ejectedDriveStaysToast": {
+    "sourceHash": "b2290a4"
+  },
+  "fileExplorer.pane.ejectAllFailedToast": "No se pudo expulsar todo lo que hay en este disco: {message}",
+  "@fileExplorer.pane.ejectAllFailedToast": {
+    "sourceHash": "505a94a"
+  },
+  "fileExplorer.pane.ejectAllHeldToast": "No se expulsó nada de este disco: {message}",
+  "@fileExplorer.pane.ejectAllHeldToast": {
+    "sourceHash": "3011356"
+  },
+  "fileExplorer.smbLinkConsent.note": "Cmdr recuerda tu respuesta para estos dos servidores. Puedes olvidarla en Configuración, en Servidores.",
+  "@fileExplorer.smbLinkConsent.note": {
+    "sourceHash": "7e85e0c"
+  },
+  "fileExplorer.network.osMountFallback.otherServerNotAllowed": "No se pudo conectar directamente a <shareName>{share}</shareName>, porque sus archivos están en otro servidor y Cmdr no inicia sesión allí por su cuenta. Sigues conectado a través de la conexión de red SMB nativa de macOS, que es mucho más lenta.",
+  "@fileExplorer.network.osMountFallback.otherServerNotAllowed": {
+    "sourceHash": "14cb9b9"
   }
 }

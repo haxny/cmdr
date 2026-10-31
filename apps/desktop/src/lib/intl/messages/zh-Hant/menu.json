@@ -652,6 +652,14 @@
   "@menu.volume.ejectBusy": {
     "sourceHash": "e2145a6"
   },
+  "menu.volume.ejectAll": "全部退出",
+  "@menu.volume.ejectAll": {
+    "sourceHash": "7adbe9a"
+  },
+  "menu.volume.ejectAllBusy": "全部退出（使用中）",
+  "@menu.volume.ejectAllBusy": {
+    "sourceHash": "8b91f8f"
+  },
   "menu.volume.renameFavorite": "重新命名",
   "@menu.volume.renameFavorite": {
     "sourceHash": "3064d79"

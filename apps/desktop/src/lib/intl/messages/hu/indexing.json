@@ -166,10 +166,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "A meghajtó indexe elavult. Úgy tűnik, az app egy ideje nem futott. Friss átvizsgálás indul, hogy behozza a lemaradást.",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "A rendszer fájlváltozás-naplója nem nyúlik vissza eléggé. Friss átvizsgálás indul az index újraépítéséhez.",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

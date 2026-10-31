@@ -7,6 +7,7 @@
 //! files, so those methods stay here as one-line delegations to inherent bodies
 //! over there.
 
+mod links;
 mod scan;
 mod streams;
 
@@ -207,6 +208,9 @@ pub struct LocalPosixVolume {
     /// a detached host silently turns off the scan oracle's fast path and leaves
     /// panes stale after every local copy.
     host: VolumeHost,
+    /// Handed to every `list_directory` tally: see [`Self::with_listing_hook`].
+    #[cfg(any(test, feature = "testing"))]
+    listing_hook: Option<crate::reading::ListingHook>,
     /// Raw errno to inject on the next `list_directory` call. Cleared after use.
     #[cfg(feature = "playwright-e2e")]
     injected_error: std::sync::Mutex<Option<i32>>,
@@ -238,9 +242,22 @@ impl LocalPosixVolume {
             mount,
             sidecar_probe: cmdr_fs::apple_double::volume_keeps_sidecars,
             host,
+            #[cfg(any(test, feature = "testing"))]
+            listing_hook: None,
             #[cfg(feature = "playwright-e2e")]
             injected_error: std::sync::Mutex::new(None),
         }
+    }
+
+    /// This volume with `hook` run on the lister's thread after each entry a
+    /// `list_directory` counts, so a test can hold a read partway until its
+    /// progress tick lands. The ticks are sampled on a timer, and a starved async
+    /// side can wake only after a fast read is done, so without a hold no tick is
+    /// guaranteed.
+    #[cfg(any(test, feature = "testing"))]
+    pub fn with_listing_hook(mut self, hook: crate::reading::ListingHook) -> Self {
+        self.listing_hook = Some(hook);
+        self
     }
 
     /// This volume with an injected sidecar probe, so a test on APFS can read
@@ -354,6 +371,9 @@ impl Volume for LocalPosixVolume {
             // this side samples it on a timer, leaving the callback on the async task that
             // owns it. Without this the pane sits on "Opening folder…" for a big folder's
             // whole read. `DETAILS.md` § "The local reader".
+            #[cfg(any(test, feature = "testing"))]
+            let tally = Arc::new(ListingTally::with_hook(self.listing_hook.clone()));
+            #[cfg(not(any(test, feature = "testing")))]
             let tally = Arc::new(ListingTally::default());
             let tally_for_listing = Arc::clone(&tally);
             let host = self.host.clone();
@@ -485,6 +505,25 @@ impl Volume for LocalPosixVolume {
 
     fn local_path(&self) -> Option<PathBuf> {
         Some(self.root.clone())
+    }
+
+    fn read_link_target<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<PathBuf>, VolumeError>> + Send + 'a>> {
+        Box::pin(self.read_link_target_impl(path))
+    }
+
+    fn can_hold_links(&self) -> bool {
+        true
+    }
+
+    fn create_symlink<'a>(
+        &'a self,
+        path: &'a Path,
+        target: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(self.create_symlink_impl(path, target))
     }
 
     fn create_file<'a>(

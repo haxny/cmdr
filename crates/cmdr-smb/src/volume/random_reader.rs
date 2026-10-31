@@ -12,6 +12,7 @@ use cmdr_fs::volume::{VolumeError, VolumeRandomReader};
 use log::debug;
 use smb2::client::stream::FileReader;
 
+use super::dfs_links::link_open_reader;
 use super::mapping::map_smb_error;
 use super::session::SessionLease;
 use super::state::SessionGeneration;
@@ -100,12 +101,15 @@ impl SmbVolume {
             LogPrivate::file_path(&smb_path)
         );
         let SessionLease { tree, conn, generation } = self.clone_session().await?;
-        let reader = self.handle_smb_result(
-            "open_random_reader",
-            &smb_path,
-            generation,
-            tree.open_file_reader(conn, &smb_path).await,
-        )?;
+        let opened = self
+            .or_through_link(
+                generation,
+                &smb_path,
+                tree.open_file_reader(conn, &smb_path),
+                link_open_reader,
+            )
+            .await;
+        let reader = self.handle_smb_result("open_random_reader", &smb_path, generation, opened)?;
         if reader.info().is_directory {
             // Close it rather than leak the handle; the caller only needs the refusal.
             let _ = reader.close().await;

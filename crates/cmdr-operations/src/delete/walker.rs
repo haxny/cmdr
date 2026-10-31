@@ -142,21 +142,31 @@ pub(crate) fn delete_files_with_progress_inner(
         // future "deleted from Downloads" event source wouldn't surprise us.
         // No-ops outside ~/Downloads.
         state.scope().host().announce(&file_info.path);
-        fs::remove_file(&file_info.path).with_path(&file_info.path)?;
-
-        // Journal the deleted leaf so "when did I delete dog.jpg" is searchable.
-        // Delete is never rollbackable (the op finalizes `permanent_delete`), so
-        // these rows exist purely for search — one per leaf, deliberately.
-        super::super::journal::record_local_leaf(
-            state.scope(),
-            cmdr_operation_log::types::EntryType::File,
-            &file_info.path,
-            None,
-            Some(progress_bytes as i64),
-            None,
-            false,
-            cmdr_operation_log::types::ItemOutcome::Done,
-        );
+        match fs::remove_file(&file_info.path) {
+            // Journal the deleted leaf so "when did I delete dog.jpg" is searchable.
+            // Delete is never rollbackable (the op finalizes `permanent_delete`), so
+            // these rows exist purely for search — one per leaf, deliberately.
+            Ok(()) => super::super::journal::record_local_leaf(
+                state.scope(),
+                cmdr_operation_log::types::EntryType::File,
+                &file_info.path,
+                None,
+                Some(progress_bytes as i64),
+                None,
+                false,
+                cmdr_operation_log::types::ItemOutcome::Done,
+            ),
+            // Gone between the scan and its unlink: its absence is what this delete
+            // is for, so carry on (`already_gone.rs`). No journal row: we removed nothing.
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                log::info!(
+                    target: "already_gone",
+                    "op={operation_id}: {} vanished before its unlink; counting it as done",
+                    cmdr_fs::log_private::LogPrivate::path(&file_info.path)
+                );
+            }
+            Err(error) => Err::<(), _>(error).with_path(&file_info.path)?,
+        }
 
         files_done += 1;
         bytes_done += progress_bytes;
@@ -245,6 +255,7 @@ pub(crate) fn delete_files_with_progress_inner(
         metadata_left_behind: None,
         durability_unconfirmed: None,
         locked_kept: None,
+        already_gone: None,
     });
 
     Ok(())

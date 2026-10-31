@@ -430,6 +430,8 @@ async fn finish_the_scan(params: ScanCompletion) {
                 space: space_live,
                 watcher_overflow: overflow_live,
                 scope,
+                // Started at the scan's own id, right behind the walk: no gap to judge.
+                history_check: None,
             },
         )
         .await;

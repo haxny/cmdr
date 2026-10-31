@@ -98,8 +98,13 @@ pub struct CostRecord {
     pub conversation_id: i64,
     pub provider: ProviderTag,
     pub model: String,
+    /// The whole input, the cached share included.
     pub prompt_tokens: u64,
     pub completion_tokens: u64,
+    /// Of `prompt_tokens`, read back from the provider's prompt cache.
+    pub cache_read_tokens: u64,
+    /// Of `prompt_tokens`, written to the provider's prompt cache.
+    pub cache_write_tokens: u64,
     /// Integer micro-USD; an honest estimate, 0 for a local/on-device model.
     pub cost_micros: i64,
     /// False when the model wasn't in the price table at metering time.
@@ -247,13 +252,17 @@ pub fn discard_conversation_keeping_cost(conn: &Connection, id: i64) -> Result<(
     let tx = conn.unchecked_transaction()?;
     tx.execute(
         "INSERT INTO cost_meter
-            (day, conversation_id, provider, model, prompt_tokens, completion_tokens, cost_micros, priced)
-         SELECT day, ?2, provider, model, prompt_tokens, completion_tokens, cost_micros, priced
+            (day, conversation_id, provider, model, prompt_tokens, completion_tokens,
+             cache_read_tokens, cache_write_tokens, cost_micros, priced)
+         SELECT day, ?2, provider, model, prompt_tokens, completion_tokens,
+                cache_read_tokens, cache_write_tokens, cost_micros, priced
            FROM cost_meter WHERE conversation_id = ?1
          ON CONFLICT (day, conversation_id, provider, model) DO UPDATE SET
-            prompt_tokens     = prompt_tokens + excluded.prompt_tokens,
-            completion_tokens = completion_tokens + excluded.completion_tokens,
-            cost_micros       = cost_micros + excluded.cost_micros,
+            prompt_tokens      = prompt_tokens + excluded.prompt_tokens,
+            completion_tokens  = completion_tokens + excluded.completion_tokens,
+            cache_read_tokens  = cache_read_tokens + excluded.cache_read_tokens,
+            cache_write_tokens = cache_write_tokens + excluded.cache_write_tokens,
+            cost_micros        = cost_micros + excluded.cost_micros,
             priced            = priced AND excluded.priced",
         rusqlite::params![id, reserved],
     )?;
@@ -584,13 +593,16 @@ pub fn search_conversations(
 pub fn record_cost(conn: &Connection, record: &CostRecord) -> Result<(), AgentStoreError> {
     conn.execute(
         "INSERT INTO cost_meter
-            (day, conversation_id, provider, model, prompt_tokens, completion_tokens, cost_micros, priced)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+            (day, conversation_id, provider, model, prompt_tokens, completion_tokens,
+             cache_read_tokens, cache_write_tokens, cost_micros, priced)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
          ON CONFLICT (day, conversation_id, provider, model) DO UPDATE SET
-            prompt_tokens     = prompt_tokens + excluded.prompt_tokens,
-            completion_tokens = completion_tokens + excluded.completion_tokens,
-            cost_micros       = cost_micros + excluded.cost_micros,
-            priced            = priced AND excluded.priced",
+            prompt_tokens      = prompt_tokens + excluded.prompt_tokens,
+            completion_tokens  = completion_tokens + excluded.completion_tokens,
+            cache_read_tokens  = cache_read_tokens + excluded.cache_read_tokens,
+            cache_write_tokens = cache_write_tokens + excluded.cache_write_tokens,
+            cost_micros        = cost_micros + excluded.cost_micros,
+            priced             = priced AND excluded.priced",
         rusqlite::params![
             record.day,
             record.conversation_id,
@@ -598,6 +610,8 @@ pub fn record_cost(conn: &Connection, record: &CostRecord) -> Result<(), AgentSt
             record.model,
             record.prompt_tokens as i64,
             record.completion_tokens as i64,
+            record.cache_read_tokens as i64,
+            record.cache_write_tokens as i64,
             record.cost_micros,
             record.priced as i64,
         ],

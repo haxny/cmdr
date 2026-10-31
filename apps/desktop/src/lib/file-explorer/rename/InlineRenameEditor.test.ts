@@ -220,4 +220,81 @@ describe('InlineRenameEditor keyboard and focus', () => {
     expect(input.selectionStart).toBe(0)
     expect(input.selectionEnd).toBe('report'.length)
   })
+
+  it('pre-selects the whole name when what follows the dot is not an extension', async () => {
+    const { input } = setup({ value: 'Smlouva v. 2 final', onInput: noop })
+    await tick()
+    await tick()
+
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, 'Smlouva v. 2 final'.length])
+  })
+
+  it('pre-selects a plain folder whole, dot and all', async () => {
+    const { input } = setup({ value: 'release.v1.2', nameKind: 'folder', onInput: noop })
+    await tick()
+    await tick()
+
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, 'release.v1.2'.length])
+  })
+})
+
+describe('InlineRenameEditor selection keys', () => {
+  function press(input: HTMLInputElement, init: KeyboardEventInit) {
+    const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })
+    input.dispatchEvent(event)
+    return event
+  }
+
+  it('F2 again cycles name, whole name, extension, and back', async () => {
+    const { input } = setup({ value: 'report.pdf', onInput: noop })
+    await tick()
+    await tick()
+
+    const seen: number[][] = [[input.selectionStart ?? -1, input.selectionEnd ?? -1]]
+    for (let i = 0; i < 3; i++) {
+      expect(press(input, { key: 'F2' }).defaultPrevented).toBe(true)
+      seen.push([input.selectionStart ?? -1, input.selectionEnd ?? -1])
+    }
+
+    expect(seen).toEqual([
+      [0, 6],
+      [0, 10],
+      [7, 10],
+      [0, 6],
+    ])
+  })
+
+  it('⇧F6 cycles too, since it is also bound to Rename', async () => {
+    const { input } = setup({ value: 'report.pdf', onInput: noop })
+    await tick()
+    await tick()
+
+    press(input, { key: 'F6', shiftKey: true })
+
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, 10])
+  })
+
+  it('⌥← from the end stops at the extension, and ⇧⌥← selects exactly it', async () => {
+    const { input } = setup({ value: 'IMG_2041.jpg', onInput: noop })
+    await tick()
+    await tick()
+
+    input.setSelectionRange(12, 12)
+    expect(press(input, { key: 'ArrowLeft', altKey: true }).defaultPrevented).toBe(true)
+    expect([input.selectionStart, input.selectionEnd]).toEqual([9, 9])
+
+    input.setSelectionRange(12, 12)
+    press(input, { key: 'ArrowLeft', altKey: true, shiftKey: true })
+    expect([input.selectionStart, input.selectionEnd]).toEqual([9, 12])
+  })
+
+  it('leaves a word move the dot stop has nothing to say about to the system', async () => {
+    const { input } = setup({ value: 'IMG_2041.jpg', onInput: noop })
+    await tick()
+    await tick()
+
+    input.setSelectionRange(9, 9)
+    expect(press(input, { key: 'ArrowLeft', altKey: true }).defaultPrevented).toBe(false)
+    expect(press(input, { key: 'ArrowLeft', altKey: true, metaKey: true }).defaultPrevented).toBe(false)
+  })
 })

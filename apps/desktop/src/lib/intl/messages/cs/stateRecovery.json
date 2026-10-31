@@ -130,5 +130,9 @@
   "stateRecovery.dismiss": "Zavřít",
   "@stateRecovery.dismiss": {
     "sourceHash": "48845bf"
+  },
+  "stateRecovery.smbLinkConsents.title": "Cmdr couldn’t read all the servers you let SMB links sign in to, so it may ask about some of them again",
+  "@stateRecovery.smbLinkConsents.title": {
+    "sourceHash": "2e0f9fd"
   }
 }

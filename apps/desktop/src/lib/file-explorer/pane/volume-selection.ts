@@ -18,6 +18,7 @@
 
 import { tString } from '#lib/intl/messages.svelte.js'
 import { getAppLogger } from '#lib/logging/logger.js'
+import { isStillConnecting } from '#lib/adb/device-readiness.js'
 import { openFavorite } from '../navigation/open-favorite'
 import type { FavoriteRefusal } from '../navigation/favorite-reach'
 import type { FavoriteOpenedEvent } from '../navigation/favorites-analytics'
@@ -87,6 +88,11 @@ export function createVolumeSelection(deps: VolumeSelectionDeps): VolumeSelectio
     }
 
     const volume = volumes[index]
+
+    if (isStillConnecting(volume)) {
+      log.warn('Volume is still connecting: {volumeId}', { volumeId: volume.id })
+      return { kind: 'not-found' }
+    }
 
     // A favorite is a row pointing at a path on some other volume, so it takes the
     // shared open (`navigation/open-favorite.ts`), which reads the volume off the row

@@ -33,6 +33,7 @@ export function tauriCommandsMock(overrides: Record<string, unknown> = {}) {
     // reads `results[0]`, so an object here silently leaves the `..` row blank.
     getDirStatsBatch: vi.fn(() => Promise.resolve([null])),
     enrichTags: vi.fn(() => Promise.resolve()),
+    enrichPackages: vi.fn(() => Promise.resolve()),
     ...overrides,
   }
 }

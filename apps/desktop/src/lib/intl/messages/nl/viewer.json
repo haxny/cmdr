@@ -47,6 +47,10 @@
   "@viewer.error.coldStorage": {
     "sourceHash": "236cd1b"
   },
+  "viewer.error.linkTargetUnreachable": "Dit bestand ligt achter een link naar een andere server, en Cmdr kan die server nu niet bereiken. Controleer of de server draait en probeer het dan opnieuw.",
+  "@viewer.error.linkTargetUnreachable": {
+    "sourceHash": "8dcb736"
+  },
   "viewer.error.retry": "Probeer opnieuw",
   "@viewer.error.retry": {
     "sourceHash": "942087c"
@@ -478,5 +482,9 @@
   "viewer.selection.toEndOfFileNoLine": "Geselecteerd tot het einde van het bestand",
   "@viewer.selection.toEndOfFileNoLine": {
     "sourceHash": "e7e0442"
+  },
+  "viewer.error.linkNeedsConsent": "Dit bestand ligt achter een link naar een andere server waar Cmdr nog niet mag inloggen. Open de map ervan in een paneel om te beslissen.",
+  "@viewer.error.linkNeedsConsent": {
+    "sourceHash": "b9b3e1f"
   }
 }

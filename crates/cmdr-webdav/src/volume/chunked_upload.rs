@@ -130,12 +130,74 @@ impl WebdavVolume {
     /// DELETEs upload `id`'s collection, chunks and all, saying nothing if
     /// that fails: the error that got us here is the one worth reporting, and
     /// the server expires an abandoned upload on its own after a day.
-    async fn abandon(&self, client: &WebdavClient, uploads: &ChunkedUploads, id: &str) {
-        let request = client
-            .request(Method::DELETE, uploads.session(id))
-            .timeout(MUTATION_BUDGET);
-        let _ = self.send(client, request, id, Attempted::Reaching).await;
+    ///
+    /// ❗ A cancel drops the chunk PUT in flight, and the server may still be
+    /// reading it, holding the collection's lock: Nextcloud then refuses this
+    /// DELETE (403) and the chunks stay for that day (2 in 25 cancels on
+    /// `nextcloud:35.0.0-apache` under load, 2026-10-29, read from its access log).
+    /// So one DELETE goes now, and a refused one goes again in the background
+    /// ([`retry_abandon`]), so the cancel answers at once. The id is a fresh
+    /// uuid, so a late DELETE can only ever take our own upload.
+    async fn abandon(&self, client: &Arc<WebdavClient>, uploads: &ChunkedUploads, id: &str) {
+        let session = uploads.session(id);
+        if self.delete_upload(client, &session, id).await == Abandoned::Gone {
+            return;
+        }
+        let (volume, client, id) = (self.twin(), Arc::clone(client), id.to_string());
+        self.inner.host.runtime().spawn(async move {
+            let delete_again = || {
+                let (volume, client, session, id) = (volume.twin(), Arc::clone(&client), session.clone(), id.clone());
+                async move { volume.delete_upload(&client, &session, &id).await }
+            };
+            if !retry_abandon(delete_again).await {
+                debug!("WebdavVolume: the server kept refusing to drop upload {id}; it expires it in a day");
+            }
+        });
     }
+
+    /// One DELETE of an uploads collection, and whether it's gone now.
+    async fn delete_upload(&self, client: &WebdavClient, session: &url::Url, id: &str) -> Abandoned {
+        let request = client.request(Method::DELETE, session.clone()).timeout(MUTATION_BUDGET);
+        match self.send(client, request, id, Attempted::Reaching).await {
+            Ok(_) | Err(VolumeError::NotFound(_)) => Abandoned::Gone,
+            Err(_) => Abandoned::Refused,
+        }
+    }
+}
+
+/// What one abandoning DELETE got back.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Abandoned {
+    /// The collection is gone: deleted now, or already.
+    Gone,
+    /// Still there: locked by a chunk the server is finishing, or not reached.
+    Refused,
+}
+
+/// The waits before each retry of a refused abandon: the server finishes
+/// reading a cut-off chunk within a moment, and past these the server's own
+/// expiry takes over.
+pub(super) const ABANDON_RETRIES: [Duration; 4] = [
+    Duration::from_millis(250),
+    Duration::from_millis(500),
+    Duration::from_secs(1),
+    Duration::from_secs(2),
+];
+
+/// Tries `delete` again after each of [`ABANDON_RETRIES`], until one answers
+/// [`Abandoned::Gone`]. Whether the collection went.
+pub(super) async fn retry_abandon<F, Fut>(mut delete: F) -> bool
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Abandoned>,
+{
+    for wait in ABANDON_RETRIES {
+        tokio::time::sleep(wait).await;
+        if delete().await == Abandoned::Gone {
+            return true;
+        }
+    }
+    false
 }
 
 /// The one source stream every chunk's window reads from, and what it has

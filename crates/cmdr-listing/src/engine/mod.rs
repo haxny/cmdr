@@ -35,6 +35,8 @@ mod reread;
 mod rows;
 mod settings;
 
+pub use intake::RowFacts;
+
 /// The listing engine: every open listing, and the seams it asks the host
 /// through. Cheap to clone; every clone is the same engine.
 #[derive(Clone)]
@@ -154,6 +156,7 @@ impl ListingsBuilder {
                 read_generations: AtomicU64::new(0),
                 hung_reads: Arc::new(HungReads::new()),
                 collators: RwLock::new(HashMap::new()),
+                volume_watches: std::sync::Mutex::new(HashMap::new()),
             }),
         }
     }

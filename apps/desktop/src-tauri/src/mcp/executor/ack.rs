@@ -143,9 +143,9 @@ impl AckSignal {
 
 /// Wait for an ack signal to arrive within `timeout`.
 ///
-/// On success returns `Ok(())`. On timeout returns a `ToolError::internal` whose message
-/// names the missing signal and the elapsed budget, so callers can surface a useful
-/// failure rather than a false-positive OK.
+/// On success returns `Ok(())`. On timeout returns a `ToolError::outcome_unknown` whose
+/// message names the missing signal and the elapsed budget: neither a false-positive OK
+/// nor a false failure, since the action was dispatched and may still run.
 pub async fn wait_for_ack<R: Runtime>(
     app: &AppHandle<R>,
     signal: AckSignal,
@@ -170,8 +170,8 @@ pub async fn wait_for_ack<R: Runtime>(
 
         if tokio::time::Instant::now() >= deadline {
             let elapsed_ms = start.elapsed().as_millis();
-            return Err(ToolError::internal(format!(
-                "Action not acknowledged by backend within {} ms (waiting for: {}). The frontend may be stalled (modal blocking input, error pane up, race during startup). Inspect cmdr://state to triage.",
+            return Err(ToolError::outcome_unknown(format!(
+                "Action not acknowledged by backend within {} ms (waiting for: {}), so the outcome is unknown: it may still go ahead. The frontend may be slow or stalled (modal blocking input, error pane up, race during startup). Inspect cmdr://state to triage.",
                 elapsed_ms,
                 signal.describe()
             )));

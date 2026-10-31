@@ -10,6 +10,7 @@
      * and the ⌥M opener; this component owns the popover surface, the dynamic preset list, and its
      * local custom-input flags.
      */
+    import { tick } from 'svelte'
     import FilterPopover from '#lib/ui/FilterPopover.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { DateFilter } from '../query-filter-state.svelte'
@@ -59,6 +60,8 @@
 
     let dateIsCustomLower = $state(false)
     let dateIsCustomUpper = $state(false)
+    let customLowerInput = $state<HTMLInputElement | undefined>()
+    let customUpperInput = $state<HTMLInputElement | undefined>()
 
     /**
      * Rebuild the Modified preset list each time the popover renders. Labels are
@@ -122,11 +125,21 @@
         setDateValueMax(resolved)
         scheduleSearch()
     }
-    function pickDateCustomLower(): void {
+    /** One press picks Custom AND puts the caret in the field the press just brought up. */
+    async function pickDateCustomLower(): Promise<void> {
         if (dateFilter === 'any') setDateFilter('after')
         dateIsCustomLower = true
         setDateValue('')
         scheduleSearch()
+        await tick()
+        customLowerInput?.focus()
+    }
+    async function pickDateCustomUpper(): Promise<void> {
+        dateIsCustomUpper = true
+        setDateValueMax('')
+        scheduleSearch()
+        await tick()
+        customUpperInput?.focus()
     }
 </script>
 
@@ -151,7 +164,7 @@
             <!-- Col 1: comparator -->
             <div class="list-col" role="radiogroup" aria-label={tString('queryUi.date.aria.comparator')}>
                 {#each DATE_COMPARATORS as opt (opt.value)}
-                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                     <button
                         type="button"
                         class="list-cell"
@@ -177,7 +190,7 @@
                  `dateIsCustomLower` in sync. -->
             <div class="list-col" role="radiogroup" aria-label={tString('queryUi.date.aria.value')}>
                 {#each datePresets as preset (preset.key)}
-                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                    <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                     <button
                         type="button"
                         class="list-cell"
@@ -192,43 +205,37 @@
                         {preset.label}
                     </button>
                 {/each}
-                <button
-                    type="button"
-                    class="list-cell list-cell-custom"
-                    class:is-selected={dateIsCustomLower}
-                    class:is-disabled-look={isDateRangeDisabled(dateFilter)}
-                    onclick={(e) => {
-                        if ((e.target as HTMLElement).tagName === 'INPUT') return
-                        pickDateCustomLower()
-                        void Promise.resolve().then(() => {
-                            ;(
-                                e.currentTarget as HTMLElement | null
-                            )?.querySelector<HTMLInputElement>('input')?.focus()
-                        })
-                    }}
-                >
-                    {#if dateIsCustomLower}
+                <!-- A button until picked, then a label holding the field: a button's children
+                     are presentational, and the label keeps a press on the cell's padding
+                     focusing the field. -->
+                {#if dateIsCustomLower}
+                    <label class="list-cell list-cell-custom is-selected" class:is-disabled-look={isDateRangeDisabled(dateFilter)}>
                         <input
+                            bind:this={customLowerInput}
                             type="date"
                             class="popover-input date-input custom-input-inline"
                             value={dateValue}
                             oninput={onInput(setDateValue)}
-                            onclick={(e) => {
-                                e.stopPropagation()
-                            }}
                             aria-label={tString('queryUi.date.aria.custom')}
                         />
-                    {:else}
+                    </label>
+                {:else}
+                    <button
+                        type="button"
+                        class="list-cell list-cell-custom"
+                        class:is-disabled-look={isDateRangeDisabled(dateFilter)}
+                        onclick={() => void pickDateCustomLower()}
+                    >
                         {tString('queryUi.date.customCell')}
-                    {/if}
-                </button>
+                    </button>
+                {/if}
             </div>
 
             {#if showsDateUpperBound(dateFilter)}
                 <!-- Col 3: upper-bound preset (same shape as col 2). -->
                 <div class="list-col" role="radiogroup" aria-label={tString('queryUi.date.aria.maxValue')}>
                     {#each datePresets as preset (preset.key)}
-                        <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one even hosts an inline input), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
+                        <!-- eslint-disable-next-line cmdr/prefer-ui-primitive -- Grid-style popover cell: each column is a dense list of preset cells (the Custom one turns into an inline field), which a RadioGroup option list can't express; the enclosing role="radiogroup" carries the a11y contract. -->
                         <button
                             type="button"
                             class="list-cell"
@@ -242,37 +249,26 @@
                             {preset.label}
                         </button>
                     {/each}
-                    <button
-                        type="button"
-                        class="list-cell list-cell-custom"
-                        class:is-selected={dateIsCustomUpper}
-                        onclick={(e) => {
-                            if ((e.target as HTMLElement).tagName === 'INPUT') return
-                            dateIsCustomUpper = true
-                            setDateValueMax('')
-                            scheduleSearch()
-                            void Promise.resolve().then(() => {
-                                ;(
-                                    e.currentTarget as HTMLElement | null
-                                )?.querySelector<HTMLInputElement>('input')?.focus()
-                            })
-                        }}
-                    >
-                        {#if dateIsCustomUpper}
+                    {#if dateIsCustomUpper}
+                        <label class="list-cell list-cell-custom is-selected">
                             <input
+                                bind:this={customUpperInput}
                                 type="date"
                                 class="popover-input date-input custom-input-inline"
                                 value={dateValueMax}
                                 oninput={onInput(setDateValueMax)}
-                                onclick={(e) => {
-                                    e.stopPropagation()
-                                }}
                                 aria-label={tString('queryUi.date.aria.customMax')}
                             />
-                        {:else}
+                        </label>
+                    {:else}
+                        <button
+                            type="button"
+                            class="list-cell list-cell-custom"
+                            onclick={() => void pickDateCustomUpper()}
+                        >
                             {tString('queryUi.date.customCell')}
-                        {/if}
-                    </button>
+                        </button>
+                    {/if}
                 </div>
             {/if}
         </div>

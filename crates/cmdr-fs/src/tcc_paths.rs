@@ -170,6 +170,13 @@ pub fn is_network_volume_path(path: &Path) -> bool {
     network_volume_root(path).is_some()
 }
 
+/// Whether an observed permission denial on `path` came from a mounted share's file
+/// server: the path is on one, and TCC isn't what's shut. The answer the pane's
+/// `remote_permission_denied` reason gives, for callers that word their own advice.
+pub fn mounted_share_refused(path: &Path) -> bool {
+    is_network_volume_path(path) && !tcc_denial_is_plausible(path)
+}
+
 /// The mounted network share `path` sits on, as `/Volumes/<share>`. See
 /// [`is_network_volume_path`] for the filesystem types this recognizes.
 fn network_volume_root(path: &Path) -> Option<PathBuf> {
@@ -489,6 +496,7 @@ mod tests {
         assert!(!is_network_volume_path(Path::new("/")));
         assert!(!is_network_volume_path(Path::new("/Users/test")));
         assert!(!is_network_volume_path(Path::new("/Volumes")));
+        assert!(!mounted_share_refused(Path::new("/Users/test")));
         // Real path may or may not exist on the test machine; we only verify
         // it doesn't panic and returns a bool.
         let _: bool = is_network_volume_path(Path::new("/Volumes/Macintosh HD"));

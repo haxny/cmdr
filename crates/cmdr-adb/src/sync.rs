@@ -7,17 +7,23 @@
 //!
 //! The v2 verbs (`STA2`, `LIS2`, `SND2`, `RCV2`) are preferred where the
 //! device advertises them: they carry an errno and 64-bit sizes, which the v1
-//! verbs lose (a missing path is mode 0, a 5 GB file wraps).
+//! verbs lose (a missing path is mode 0, a 5 GB file wraps). `RCV2` and `SND2`
+//! also carry the file as one LZ4 frame where the device advertises
+//! `sendrecv_v2_lz4` (`lz4.rs`); callers see plain bytes either way.
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::errors::AdbError;
 use crate::features::{DeviceFeatures, connect_as_transport};
+use crate::lz4::{Lz4Reader, Lz4Writer};
 use crate::server::AdbEndpoint;
 use crate::transport::AdbConnection;
 
 /// The largest `DATA` payload the protocol allows.
 pub const MAX_DATA_CHUNK: usize = 64 * 1024;
+
+/// `kSyncFlagLZ4` in `file_sync_protocol.h`: the setup word of `RCV2` and `SND2`.
+const SYNC_FLAG_LZ4: u32 = 2;
 
 /// The `S_IFMT` mask and the file-type bits the mode word carries.
 const S_IFMT: u32 = 0o170000;
@@ -106,6 +112,10 @@ pub struct SyncDirEntry {
 pub struct SyncSession {
     conn: AdbConnection,
     features: DeviceFeatures,
+    /// The frame of the pull in progress, when it's compressed.
+    recv_frame: Option<Lz4Reader>,
+    /// The frame of the push in progress, when it's compressed.
+    send_frame: Option<Lz4Writer>,
 }
 
 impl std::fmt::Debug for SyncSession {
@@ -127,7 +137,12 @@ impl SyncSession {
 
     /// Wraps a connection that already speaks `sync:`.
     pub(crate) fn from_connection(conn: AdbConnection, features: DeviceFeatures) -> Self {
-        Self { conn, features }
+        Self {
+            conn,
+            features,
+            recv_frame: None,
+            send_frame: None,
+        }
     }
 
     /// Writes `[id][u32 LE]`.
@@ -236,9 +251,12 @@ impl SyncSession {
     /// Lists `path`, handing each entry to `on_entry` as it arrives. `LIS2`
     /// where the device has it, else `LIST`. `.` and `..` are skipped.
     ///
-    /// ❗ A missing or unreadable directory lists as EMPTY on both verbs (the
-    /// device answers `DONE` straight away); callers that need to tell those
-    /// apart stat the path first.
+    /// ❗ A missing, an unreadable, and an empty directory all list as EMPTY on
+    /// both verbs (the device answers `DONE` straight away). A stat separates
+    /// "missing", but it succeeds on a folder the device won't open, so telling
+    /// "unreadable" from "empty" takes the shell's `test -r` / `test -x` (the
+    /// volume's `refuse_if_unreadable`). A real `adbd` sends no `.`/`..`; the
+    /// skip stays for one that does.
     pub async fn list(&mut self, path: &str, on_entry: &mut (dyn FnMut(SyncDirEntry) + Send)) -> Result<(), AdbError> {
         if self.features.ls_v2 {
             self.send_payload(b"LIS2", path.as_bytes()).await?;
@@ -284,39 +302,64 @@ impl SyncSession {
     /// Starts pulling `path`. Follow with [`SyncSession::recv_chunk`] until it
     /// answers `None`.
     pub async fn recv_start(&mut self, path: &str) -> Result<(), AdbError> {
+        let compress = self.features.lz4_transfers();
+        self.recv_frame = compress.then(Lz4Reader::new);
         if self.features.sendrecv_v2 {
             self.send_payload(b"RCV2", path.as_bytes()).await?;
-            // The setup word: flags 0 (no compression, no dry run).
-            self.send_word(b"RCV2", 0).await
+            // The setup word: the flags. No dry run.
+            self.send_word(b"RCV2", if compress { SYNC_FLAG_LZ4 } else { 0 }).await
         } else {
             self.send_payload(b"RECV", path.as_bytes()).await
         }
     }
 
-    /// The next chunk of the file being pulled: `Some(bytes)` on `DATA`, `None`
-    /// on `DONE`, [`AdbError::Refused`] on `FAIL`.
+    /// The next chunk of the file being pulled, at most [`MAX_DATA_CHUNK`] bytes
+    /// of the file itself: `Some(bytes)` on `DATA`, `None` on `DONE`,
+    /// [`AdbError::Refused`] on `FAIL`.
+    ///
+    /// A compressed pull decodes one chunk per call, so what a small packet
+    /// expands to waits behind the caller's own pace.
     pub async fn recv_chunk(&mut self) -> Result<Option<Vec<u8>>, AdbError> {
-        match &self.conn.read_id().await? {
-            b"DATA" => Ok(Some(self.read_len_prefixed().await?)),
-            b"DONE" => {
-                let _zero = self.conn.read_u32_le().await?;
-                Ok(None)
+        loop {
+            if let Some(frame) = &mut self.recv_frame
+                && let Some(chunk) = frame.next_chunk()?
+            {
+                return Ok(Some(chunk));
             }
-            b"FAIL" => Err(self.read_fail().await),
-            other => Err(unexpected("DATA", other)),
+            match &self.conn.read_id().await? {
+                b"DATA" => {
+                    let payload = self.read_len_prefixed().await?;
+                    match &mut self.recv_frame {
+                        Some(frame) => frame.feed(&payload),
+                        None => return Ok(Some(payload)),
+                    }
+                }
+                b"DONE" => {
+                    let _zero = self.conn.read_u32_le().await?;
+                    if let Some(frame) = self.recv_frame.take() {
+                        frame.finish()?;
+                    }
+                    return Ok(None);
+                }
+                b"FAIL" => return Err(self.read_fail().await),
+                other => return Err(unexpected("DATA", other)),
+            }
         }
     }
 
     /// Starts pushing to `path` with `mode`. Follow with
     /// [`SyncSession::send_chunk`] then [`SyncSession::send_finish`].
     pub async fn send_start(&mut self, path: &str, mode: u32) -> Result<(), AdbError> {
+        let compress = self.features.lz4_transfers();
+        self.send_frame = compress.then(Lz4Writer::new);
         if self.features.sendrecv_v2 {
             self.send_payload(b"SND2", path.as_bytes()).await?;
-            // The setup packet: id, mode, flags 0.
+            // The setup packet: id, mode, flags. No dry run.
+            let flags: u32 = if compress { SYNC_FLAG_LZ4 } else { 0 };
             let mut packet = Vec::with_capacity(12);
             packet.extend_from_slice(b"SND2");
             packet.extend_from_slice(&mode.to_le_bytes());
-            packet.extend_from_slice(&0u32.to_le_bytes());
+            packet.extend_from_slice(&flags.to_le_bytes());
             self.conn.write_all(&packet).await
         } else {
             let spec = format!("{path},{mode}");
@@ -325,16 +368,36 @@ impl SyncSession {
     }
 
     /// Pushes `bytes`, split into `DATA` packets of at most
-    /// [`MAX_DATA_CHUNK`].
+    /// [`MAX_DATA_CHUNK`]. A compressed push holds back what doesn't fill a
+    /// packet yet, so the device sees it by [`SyncSession::send_finish`] at the
+    /// latest.
     pub async fn send_chunk(&mut self, bytes: &[u8]) -> Result<(), AdbError> {
         for chunk in bytes.chunks(MAX_DATA_CHUNK) {
-            self.send_payload(b"DATA", chunk).await?;
+            match &mut self.send_frame {
+                Some(frame) => {
+                    let ready = frame.write(chunk)?;
+                    self.send_packets(&ready).await?;
+                }
+                None => self.send_payload(b"DATA", chunk).await?,
+            }
+        }
+        Ok(())
+    }
+
+    /// Writes `bytes` as `DATA` packets of at most [`MAX_DATA_CHUNK`].
+    async fn send_packets(&mut self, bytes: &[u8]) -> Result<(), AdbError> {
+        for packet in bytes.chunks(MAX_DATA_CHUNK) {
+            self.send_payload(b"DATA", packet).await?;
         }
         Ok(())
     }
 
     /// Ends the push with `DONE` + `mtime` and reads the device's verdict.
     pub async fn send_finish(&mut self, mtime: u32) -> Result<(), AdbError> {
+        if let Some(frame) = self.send_frame.take() {
+            let rest = frame.finish()?;
+            self.send_packets(&rest).await?;
+        }
         self.send_word(b"DONE", mtime).await?;
         match &self.conn.read_id().await? {
             b"OKAY" => {

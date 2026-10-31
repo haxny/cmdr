@@ -1714,6 +1714,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Сообщать, если удаляемого объекта уже нет",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Если вы удаляете то, что другое приложение уже переместило или удалило, Cmdr считает удаление выполненным и коротко сообщает об этом. Выключите (или нажмите «Больше не показывать» в сообщении), и Cmdr будет пропускать это сообщение.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "пропал, исчез, нет на месте, перемещен, удален, уведомление, всплывающее сообщение, подсказка",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Число закрытых вкладок в истории панели",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
@@ -2847,9 +2859,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Небольшая языковая модель работает полностью на вашем устройстве. Максимальная конфиденциальность: ничего не покидает компьютер. Работает без интернета. Занимает ~2 ГБ на диске и ~400 МБ памяти (зависит от размера контекста). Нужен Mac с чипом Apple (M1+).",
+  "settings.ai.tooltipLocal": "Небольшая языковая модель работает полностью на вашем устройстве. Максимальная конфиденциальность: ничего не покидает компьютер. Работает без интернета. Занимает ~2 ГБ на диске и ~400 МБ памяти (зависит от размера контекста). Нужен Mac с чипом Apple (M1+) и macOS 14 или новее.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "Для локального ИИ нужен Mac с чипом Apple (M1 или новее). Используйте облачный ИИ.",
   "@settings.ai.tooltipLocalDisabled": {
@@ -3532,5 +3544,33 @@
   "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
   "@settings.multiRename.tagEditor.absSideFiles.keywords": {
     "sourceHash": "806b0cd"
+  },
+  "settings.servers.card.smbLinkConsents": "Вход по ссылкам SMB",
+  "@settings.servers.card.smbLinkConsents": {
+    "sourceHash": "831477d"
+  },
+  "settings.network.smbLinkConsents.keywords": "SMB, DFS, ссылка, вход, другой сервер, разрешить, доверять, забыть",
+  "@settings.network.smbLinkConsents.keywords": {
+    "sourceHash": "d88f7c7"
+  },
+  "settings.servers.smbLinkConsents.description": "Ссылка в общей папке SMB может вести к папке на другом сервере. Cmdr спрашивает, прежде чем войти туда, и запоминает ответ здесь.",
+  "@settings.servers.smbLinkConsents.description": {
+    "sourceHash": "03ed8ee"
+  },
+  "settings.servers.smbLinkConsents.empty": "Пока ничего не разрешено. Когда ссылка в общей папке ведет на другой сервер, Cmdr сначала спрашивает.",
+  "@settings.servers.smbLinkConsents.empty": {
+    "sourceHash": "16326ce"
+  },
+  "settings.servers.smbLinkConsents.pair": "Ссылки на {server} могут входить на {target}",
+  "@settings.servers.smbLinkConsents.pair": {
+    "sourceHash": "093a03d"
+  },
+  "settings.servers.smbLinkConsents.confirmTitle": "Забыть этот вход?",
+  "@settings.servers.smbLinkConsents.confirmTitle": {
+    "sourceHash": "edc2567"
+  },
+  "settings.servers.smbLinkConsents.confirm": "Когда ссылка на {server} в следующий раз поведет на {target}, Cmdr спросит снова.",
+  "@settings.servers.smbLinkConsents.confirm": {
+    "sourceHash": "0218465"
   }
 }

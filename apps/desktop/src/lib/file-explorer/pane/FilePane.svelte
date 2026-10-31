@@ -24,6 +24,7 @@
     import { createQuickFilterController } from './quick-filter-controller.svelte'
     import { createListingUpdateQueue } from './listing-update-queue'
     import { maybeShowQuickFilterIntro } from './quick-filter-intro'
+    import { createQuickFilterSession } from './quick-filter-session.svelte'
     import type { ViewMode } from '#lib/app-status-store.js'
     import type { CommandId } from '#lib/commands/index.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
@@ -43,6 +44,7 @@
     import { createListingPresentation } from './listing-presentation.svelte'
     import { createSmbViewState } from './smb-view-state.svelte'
     import { createVolumeSpace } from './volume-space.svelte'
+    import SmbLinkConsentDialog from '../network/SmbLinkConsentDialog.svelte'
     import ErrorPane from './ErrorPane.svelte'
     import ListingStalledView from './ListingStalledView.svelte'
     import type { ListingPhase, StalledOn } from '#lib/ipc/bindings.js'
@@ -87,6 +89,7 @@
     import { volumeScheme } from '#lib/volume-scheme.js'
     import { getPaneTintBg, getPaneTintName } from './volume-tint.svelte'
     import { createCursorNavKeys } from './cursor-nav-keys'
+    import { typingFilters } from './type-to-jump-keys'
     import { createSearchPaneKeys } from './search-pane-keys'
     import { computeHasParent, effectiveVolumeRootFor } from './has-parent'
     import { overlayRowsToSkip } from './overlay-rows'
@@ -273,6 +276,8 @@
     let loading = $state(true)
     let error = $state<string | null>(null)
     let friendlyError = $state<FriendlyError | null>(null)
+    /** The sign-in the error screen's button is asking about, while its dialog is up. */
+    let linkConsentPair = $state<{ server: string; target: string } | null>(null)
 
     let cursorIndex = $state(0)
 
@@ -306,6 +311,10 @@
         getListingId: () => listingId,
         getLoading: () => loading,
         getHasBackendListing: () => caps.hasBackendListing,
+        getInMemoryJump: () =>
+            isNetworkView && getNetworkItemCount() > 0
+                ? (prefix) => networkMountViewRef?.jumpToPrefix(prefix) ?? null
+                : null,
         getIncludeHidden: () => includeHidden,
         getHasParent: () => hasParent,
         setCursorIndex: (index: number) => void setCursorIndex(index),
@@ -333,6 +342,13 @@
             void selectionInfo.fetchStats()
             debouncedSyncMcp.call()
         },
+    })
+
+    const quickFilterSession = createQuickFilterSession({
+        filter: quickFilter,
+        jump,
+        announce: (message) => { announcer?.announce(message) },
+        onPlainFilterStarted: maybeShowQuickFilterIntro,
     })
 
     const rename = createRenameState()
@@ -953,36 +969,42 @@
         jump.clearJumpState()
     }
 
-    // Quick filter delegates (`FilePaneAPI`), driven by `routeTypingKey`.
+    // Quick filter delegates (`FilePaneAPI`), driven by `routeTypingKey` and `pane.quickFilter`.
     export function isQuickFilterMode(): boolean {
-        return getTypeToJumpMode() === 'filter'
+        return quickFilterSession.kind !== null || typingFilters(getTypeToJumpMode(), isNetworkView)
     }
     export function isQuickFilterActive(): boolean {
-        return quickFilter.isActive()
+        return quickFilterSession.kind !== null || quickFilter.isActive()
     }
     export function appendQuickFilter(char: string): void {
-        const starting = !quickFilter.isActive()
-        quickFilter.append(char)
-        // The first time typing ever narrows a pane, say what happened and how to undo it.
-        if (starting && quickFilter.isActive()) maybeShowQuickFilterIntro()
+        quickFilterSession.append(char)
     }
     export function backspaceQuickFilter(): void {
-        quickFilter.backspace()
+        quickFilterSession.backspace()
     }
     export function clearQuickFilter(): void {
-        quickFilter.clear()
+        quickFilterSession.clear()
+    }
+    export function cycleQuickFilter(): void {
+        if (!rename.active) quickFilterSession.cycle()
     }
 
-    // A pattern belongs to its listing; a new one starts unfiltered on the backend.
+    // A pattern belongs to its listing; a new one starts unfiltered on the backend. A network
+    // view has no listing, so its session goes with the list it was opened on.
     $effect(() => {
-        dependOn(listingId)
-        untrack(() => { quickFilter.reset(); })
+        dependOn(listingId, networkHost.host)
+        untrack(() => {
+            quickFilter.reset()
+            quickFilterSession.end()
+        })
     })
 
-    // Leaving Filter mode takes its pattern along: in Jump mode nothing could clear it.
+    // Changing the setting ends a session, and leaving Filter mode takes its pattern along: in
+    // Jump mode nothing could clear it.
     $effect(() => {
         const mode = getTypeToJumpMode()
         untrack(() => {
+            quickFilterSession.end()
             if (mode !== 'filter') quickFilter.clear()
         })
     })
@@ -2143,13 +2165,16 @@
             buffer={jump.buffer}
             visible={jump.indicatorVisible}
             stale={jump.indicatorStale}
+            caret={quickFilterSession.kind === 'jump'}
+            onClear={quickFilterSession.kind === 'jump' ? quickFilterSession.clear : undefined}
         />
         <TypeToJumpIndicator
             buffer={quickFilter.pattern}
-            visible={quickFilter.isActive()}
+            visible={quickFilter.isActive() || quickFilterSession.kind === 'filter'}
             stale={false}
             kind="filter"
-            onClear={quickFilter.clear}
+            caret={quickFilterSession.kind === 'filter'}
+            onClear={quickFilterSession.clear}
         />
         {#if unreachable}
             <VolumeUnreachableBanner
@@ -2222,8 +2247,24 @@
                 {canGoBack}
                 onGoBack={() => onGoBack?.()}
                 onGoHome={() => onOpenHome?.()}
+                onReviewLinkConsent={() => {
+                    linkConsentPair = friendlyError?.linkConsent ?? null
+                }}
                 {isFocused}
             />
+            {#if linkConsentPair}
+                <SmbLinkConsentDialog
+                    server={linkConsentPair.server}
+                    target={linkConsentPair.target}
+                    onAllowed={() => {
+                        linkConsentPair = null
+                        void navigateToPath(currentPath)
+                    }}
+                    onCancel={() => {
+                        linkConsentPair = null
+                    }}
+                />
+            {/if}
         {:else if error && !showLoadingView}
             <div class="error-message">{error}</div>
         {:else if viewMode === 'brief'}
@@ -2395,6 +2436,7 @@
     <ExtensionChangeDialog
         oldExtension={renameFlow.extensionDialogState.oldExtension}
         newExtension={renameFlow.extensionDialogState.newExtension}
+        isDirectory={renameFlow.extensionDialogState.isDirectory}
         onKeepOld={handleExtensionKeepOld}
         onUseNew={handleExtensionUseNew}
     />
@@ -2484,7 +2526,9 @@
        `LinkButton` opts into a pointer).
        The click target is bigger than the text (WCAG 2.5.8): padding grows it to the header's
        full height and 3px into the `/` on each side, and the equal negative margin keeps the
-       layout byte-identical. A one-letter segment is still narrow, but no longer 17px tall. */
+       layout byte-identical. The floor only reaches names up to about three letters, whose
+       text it centers; `SEGMENT_MIN_HIT_WIDTH_PX` in `breadcrumb-fit.ts` has the number's why,
+       and the fit reserves its room. */
     .path :global(.path-segment) {
         font: inherit;
         color: inherit;
@@ -2492,6 +2536,7 @@
         border: none;
         padding: var(--spacing-sm) 3px var(--spacing-xs);
         margin: calc(-1 * var(--spacing-sm)) -3px calc(-1 * var(--spacing-xs));
+        min-width: 26px;
         cursor: default;
     }
 

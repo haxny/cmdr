@@ -47,6 +47,10 @@
   "@viewer.error.coldStorage": {
     "sourceHash": "236cd1b"
   },
+  "viewer.error.linkTargetUnreachable": "访问这个文件要通过一个指向另一台服务器的链接，而 Cmdr 现在连不上那台服务器。请确认那台服务器在运行，然后重试。",
+  "@viewer.error.linkTargetUnreachable": {
+    "sourceHash": "8dcb736"
+  },
   "viewer.error.retry": "重试",
   "@viewer.error.retry": {
     "sourceHash": "942087c"
@@ -475,5 +479,9 @@
   "viewer.selection.toEndOfFileNoLine": "已选择到文件末尾的内容",
   "@viewer.selection.toEndOfFileNoLine": {
     "sourceHash": "e7e0442"
+  },
+  "viewer.error.linkNeedsConsent": "这个文件位于指向另一台服务器的链接之后，Cmdr 还未获准登录那台服务器。请在窗格中打开它所在的文件夹来决定。",
+  "@viewer.error.linkNeedsConsent": {
+    "sourceHash": "b9b3e1f"
   }
 }

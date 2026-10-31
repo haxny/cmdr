@@ -262,6 +262,23 @@ describe('RenameConflictDialog a11y', () => {
     await tick()
     await expectNoA11yViolations(target)
   })
+
+  it('same size (the "same size" note) has no a11y violations', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(RenameConflictDialog, {
+      target,
+      props: {
+        renamedFile: { name: 'notes.txt', size: 2048, modifiedAt: undefined, isDirectory: false },
+        existingFile: { name: 'notes.txt', size: 2048, modifiedAt: undefined, isDirectory: false },
+        supportsTrash: true,
+        onResolve: () => {},
+      },
+    })
+    await tick()
+    expect(target.querySelector('.same-size')).not.toBeNull()
+    await expectNoA11yViolations(target)
+  })
 })
 
 /**

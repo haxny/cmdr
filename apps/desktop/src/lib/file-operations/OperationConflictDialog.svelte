@@ -14,7 +14,7 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { ConflictResolution } from '#lib/file-explorer/types.js'
     import TransferConflictDialog from './transfer/TransferConflictDialog.svelte'
-    import { conflictDialogWidthStyle } from './transfer/transfer-dialog-utils'
+    import { conflictDialogWidthStyle, conflictTitle } from './transfer/transfer-dialog-utils'
     import RollbackConfirmDialog from './RollbackConfirmDialog.svelte'
     import { getFolderName } from './transfer/transfer-dialog-utils'
     import { inFlightRollbackVariant } from './reversal-wording'
@@ -85,7 +85,7 @@
             conflictBody?.handleKeydown(event)
         }}
     >
-        {#snippet title()}{tString('fileOperations.transferProgress.titleConflict')}{/snippet}
+        {#snippet title()}{conflictTitle(prompt.event)}{/snippet}
 
         {#if context !== null}
             <p id="operation-conflict-context" class="context">{context}</p>

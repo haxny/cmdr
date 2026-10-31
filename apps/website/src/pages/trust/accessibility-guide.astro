@@ -4,8 +4,7 @@
 // (`help.accessibility`), and linked from `/trust/accessibility`, the criterion-by-criterion
 // conformance report. Every feature claim here must be true in the app's code; the gap list is the
 // report's `gapIssues` (`src/lib/accessibility-report.ts`), so a closed gap leaves both pages at once.
-// "New in 0.53.0" marks features that aren't in 0.52.0; drop the marks once 0.53.0 has shipped for a
-// while. `<DevTodo>` callouts are David's open tasks and render only in `pnpm dev`.
+// `<DevTodo>` callouts are David's open tasks and render only in `pnpm dev`.
 import LegalLayout from '../../layouts/LegalLayout.astro'
 import DevTodo from '../../components/DevTodo.astro'
 import { gapIssues } from '../../lib/accessibility-report'
@@ -30,8 +29,7 @@ const toc = [
     lastUpdated="2026-10-15"
 >
     <DevTodo>
-        Draft copy, written by an agent: review all of it. Also decide (1) whether to promise a reply time in "Get
-        help", and (2) whether to keep the "New in 0.53.0" marks if this page goes live before 0.53.0 ships.
+        Draft copy, written by an agent: review all of it. Also decide whether to promise a reply time in "Get help".
     </DevTodo>
 
     <p>
@@ -56,8 +54,9 @@ const toc = [
     <p>Everything core in Cmdr works without a mouse.</p>
     <ul>
         <li>
-            <strong>Every action has a shortcut</strong>, and you can change any of them in Settings &gt; Keyboard
-            shortcuts. Help &gt; Keyboard shortcuts lists them all in one window.
+            <strong>Every command works from the keyboard</strong>: most have a shortcut, the rest are in the command
+            palette, and you can add or change a shortcut for any of them in Settings &gt; Keyboard shortcuts. Help
+            &gt; Keyboard shortcuts lists them all in one window.
         </li>
         <li>
             <strong>Command palette</strong>: press ⌘⇧P (Command-Shift-P) and type to find any command by name.
@@ -65,24 +64,23 @@ const toc = [
         <li><strong>Switch panes</strong>: press Tab to move between the left and right file lists.</li>
         <li>
             <strong>Reach the pane controls</strong>: press ⌃F5 (Control-F5) to move focus to the focused pane's tabs,
-            location bar, and sort buttons. Arrow keys move between them, and Escape takes you back to the files. New in
-            0.53.0.
+            location bar, and sort buttons. Arrow keys move between them, and Escape takes you back to the files.
         </li>
         <li>
             <strong>Reach the notifications</strong>: press ⌃F6 (Control-F6) to move focus to the notifications and
-            their buttons, like Undo. Arrow keys and Tab move between them, and Escape takes you back. New in 0.53.0.
+            their buttons, like Undo. Arrow keys and Tab move between them, and Escape takes you back.
         </li>
         <li>
             <strong>Undo a move to trash</strong> any time from Edit &gt; Undo move to trash, after its notification is
-            gone. The menu item names what it puts back, like "Undo move to trash of 3 items". New in 0.53.0.
+            gone. The menu item names what it puts back, like "Undo move to trash of 3 items".
         </li>
         <li>
             <strong>Move tabs</strong>: ⌘⌃⇧← and ⌘⌃⇧→ (Command-Control-Shift-arrow) move the current tab along its bar,
-            and "Move tab to other pane" in the command palette sends it across. New in 0.53.0.
+            and "Move tab to other pane" in the command palette sends it across.
         </li>
         <li>
             <strong>Single-key shortcuts</strong> in the file viewer (like W for word wrap and 1 for text view) can be
-            changed or turned off in Settings &gt; Keyboard shortcuts, under File viewer. New in 0.53.0.
+            changed or turned off in Settings &gt; Keyboard shortcuts, under File viewer.
         </li>
         <li>
             <strong>Full Keyboard Access</strong>: in the main window, Tab switches panes, so macOS Full Keyboard Access
@@ -100,16 +98,16 @@ const toc = [
         <li>
             <strong>Works today</strong>: dialogs, Settings, and forms are built for screen readers, and dialogs keep
             and return focus correctly. The menu bar and context menus are native, so VoiceOver reads them like any
-            other app's. Notifications are read out without moving your focus (new in 0.53.0).
+            other app's. Notifications are read out without moving your focus.
         </li>
         <li>
-            <strong>The file list</strong> (new in 0.53.0): as the cursor moves, VoiceOver reads the file's name, its
+            <strong>The file list</strong>: as the cursor moves, VoiceOver reads the file's name, its
             kind (folder, symlink, package, or archive), and its position, like "3 of 8", and says "selected" for marked
             files. Switching panes or folders says which pane and folder you're in, and in Full view each file also
             says its size and date.
         </li>
         <li>
-            <strong>In-app menus</strong> (new in 0.53.0), like the volume switcher (⌥F1) and Favorites, read each row
+            <strong>In-app menus</strong>, like the volume switcher (⌥F1) and Favorites, read each row
             as you arrow through them, submenus included.
         </li>
         <li>
@@ -139,7 +137,7 @@ const toc = [
         <li>
             <strong>Contrast</strong>: text contrast is checked automatically in light and dark mode, with every macOS
             accent color. Turn on Increase contrast in System Settings &gt; Accessibility &gt; Display, and Cmdr
-            draws stronger borders, secondary text, focus rings, and pane tints (new in 0.53.0).
+            draws stronger borders, secondary text, focus rings, and pane tints.
         </li>
         <li>
             <strong>Marked files and the focused pane</strong>: marked files carry a bar down their left edge and
@@ -147,7 +145,7 @@ const toc = [
             and a gray one in the other pane, and the focused pane's active tab has the stronger accent line along its
             top. These cues are subtle by default; turn on Differentiate without color or Increase contrast in the same
             place, and the other pane's outline turns dashed, so you can tell the panes apart without color, and the
-            outlines get stronger. New in 0.53.0.
+            outlines get stronger.
         </li>
         <li>
             <strong>Show borders</strong>: turn it on in System Settings &gt; Accessibility &gt; Display, and Cmdr's
@@ -156,7 +154,7 @@ const toc = [
         </li>
         <li>
             <strong>Tooltips</strong> stay up while you move the pointer onto them, so you can read them with the
-            screen magnified. Any key closes them. New in 0.53.0.
+            screen magnified. Any key closes them.
         </li>
     </ul>
 
@@ -175,7 +173,7 @@ const toc = [
     <h2 id="notifications">Time to read notifications</h2>
     <p>
         Notifications go away after a few seconds by default. To keep them up until you close them, turn on Settings
-        &gt; Behavior &gt; Notifications &gt; "Keep notifications until I close them" (new in 0.53.0). A notification
+        &gt; Behavior &gt; Notifications &gt; "Keep notifications until I close them". A notification
         also stays while your pointer or keyboard focus is on it.
     </p>
 

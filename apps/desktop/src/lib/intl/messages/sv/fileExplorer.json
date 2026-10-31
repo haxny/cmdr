@@ -196,6 +196,18 @@
   "@fileExplorer.paneBoundary.reload": {
     "sourceHash": "a53cfeb"
   },
+  "fileExplorer.pane.ejectedDriveStaysToast": "Volymen {volumeName} är utmatad, men låt enheten vara ansluten: andra volymer på den är fortfarande monterade.",
+  "@fileExplorer.pane.ejectedDriveStaysToast": {
+    "sourceHash": "12eac5d"
+  },
+  "fileExplorer.pane.ejectAllFailedToast": "Det gick inte att mata ut allt på den här enheten: {message}",
+  "@fileExplorer.pane.ejectAllFailedToast": {
+    "sourceHash": "d824a11"
+  },
+  "fileExplorer.pane.ejectAllHeldToast": "Inget på den här enheten matades ut: {message}",
+  "@fileExplorer.pane.ejectAllHeldToast": {
+    "sourceHash": "9ef094c"
+  },
   "fileExplorer.pane.ejectFailedToast": "Det gick inte att mata ut {volumeName}: {message}",
   "@fileExplorer.pane.ejectFailedToast": {
     "sourceHash": "f4072a7"
@@ -1548,6 +1560,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Är du säker på att du vill ta bort filtillägget ”.{oldExt}”? macOS visar då objektet som en vanlig mapp i stället för som ett enda objekt.} other {Är du säker på att du vill ta bort filtillägget ”.{oldExt}”? Utan det vet din Mac kanske inte vilken app som ska öppna filen.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Är du säker på att du vill lägga till filtillägget ”.{newExt}”? macOS kan då visa mappen som ett enda objekt.} other {Är du säker på att du vill lägga till filtillägget ”.{newExt}”? Din fil kan öppnas i en annan app nästa gång du öppnar den.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "Behåll utan filtillägg",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": "Ta bort .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Tillåt alltid ändringar av tillägg",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"
@@ -1864,6 +1892,14 @@
   "@fileExplorer.navigation.forgetSecretNoneToast": {
     "sourceHash": "3d40a09"
   },
+  "fileExplorer.navigation.ejectOneVolumeTooltip": "Matar bara ut den här volymen. Enheten förblir ansluten tills de andra volymerna också har matats ut.",
+  "@fileExplorer.navigation.ejectOneVolumeTooltip": {
+    "sourceHash": "e1dd1cc"
+  },
+  "fileExplorer.navigation.ejectAllTooltip": "Matar ut alla volymer på den här enheten så att du kan koppla ur den.",
+  "@fileExplorer.navigation.ejectAllTooltip": {
+    "sourceHash": "9e86249"
+  },
   "fileExplorer.navigation.ejectVolumeAriaLabel": "Mata ut {name}",
   "@fileExplorer.navigation.ejectVolumeAriaLabel": {
     "sourceHash": "61db18b"
@@ -2067,6 +2103,18 @@
   "@fileExplorer.folderSizes.unreadable": {
     "sourceHash": "ad31a56"
   },
+  "fileExplorer.quickFilter.modeFilter": "Filtrera: bara matchande namn visas",
+  "@fileExplorer.quickFilter.modeFilter": {
+    "sourceHash": "3febd29"
+  },
+  "fileExplorer.typeToJump.modeJump": "Hoppa: alla namn visas och markören går till träffen",
+  "@fileExplorer.typeToJump.modeJump": {
+    "sourceHash": "292fdf5"
+  },
+  "fileExplorer.typeToJump.clear": "Rensa Hoppa-texten",
+  "@fileExplorer.typeToJump.clear": {
+    "sourceHash": "42ec82f"
+  },
   "fileExplorer.quickFilter.clear": "Rensa filter",
   "@fileExplorer.quickFilter.clear": {
     "sourceHash": "ba59e2d"
@@ -2102,5 +2150,41 @@
   "fileExplorer.tags.skipped": "{count, plural, one {Cmdr lämnade taggarna på ett objekt som de var, eftersom taggarna som redan fanns där inte gick att läsa. Kontrollera att du kan öppna objektet, annars kan du lägga till taggen i Finder.} other {Cmdr lämnade taggarna på {countText} objekt som de var, eftersom taggarna som redan fanns där inte gick att läsa. Kontrollera att du kan öppna objekten, annars kan du lägga till taggen i Finder.}}",
   "@fileExplorer.tags.skipped": {
     "sourceHash": "31363ee"
+  },
+  "fileExplorer.errorPane.reviewLinkSignIn": "Granska inloggning",
+  "@fileExplorer.errorPane.reviewLinkSignIn": {
+    "sourceHash": "25a3cfe"
+  },
+  "fileExplorer.pane.directConnectionOtherServerNotAllowedToast": "{server} säger att filerna i den här delade mappen finns på en annan server. Cmdr loggar inte in där av sig själv, så den ligger kvar på systemanslutningen.",
+  "@fileExplorer.pane.directConnectionOtherServerNotAllowedToast": {
+    "sourceHash": "c350d80"
+  },
+  "fileExplorer.network.osMountFallback.otherServerNotAllowed": "Kunde inte ansluta direkt till <shareName>{share}</shareName>, eftersom filerna finns på en annan server och Cmdr inte loggar in där av sig själv. Du är fortfarande ansluten via macOS egen SMB-nätverksanslutning, som är mycket långsammare.",
+  "@fileExplorer.network.osMountFallback.otherServerNotAllowed": {
+    "sourceHash": "9c9c5a5"
+  },
+  "fileExplorer.smbLinkConsent.title": "Logga in på en annan server?",
+  "@fileExplorer.smbLinkConsent.title": {
+    "sourceHash": "91458ea"
+  },
+  "fileExplorer.smbLinkConsent.message": "En länk på {server} leder till en mapp på {target}. För att öppna den loggar Cmdr in på {target} med kontot du använder för {server}.",
+  "@fileExplorer.smbLinkConsent.message": {
+    "sourceHash": "848be1b"
+  },
+  "fileExplorer.smbLinkConsent.warning": "Tillåt det här bara om du litar på {target}. En server du inte känner till kan använda en sådan länk för att komma över ditt lösenord.",
+  "@fileExplorer.smbLinkConsent.warning": {
+    "sourceHash": "295e81e"
+  },
+  "fileExplorer.smbLinkConsent.note": "Cmdr kommer ihåg ditt svar för de här två servrarna. Du kan glömma det i Inställningar, under Servrar.",
+  "@fileExplorer.smbLinkConsent.note": {
+    "sourceHash": "3f9615a"
+  },
+  "fileExplorer.smbLinkConsent.allow": "Tillåt och logga in",
+  "@fileExplorer.smbLinkConsent.allow": {
+    "sourceHash": "d8192ad"
+  },
+  "fileExplorer.smbLinkConsent.notNow": "Inte nu",
+  "@fileExplorer.smbLinkConsent.notNow": {
+    "sourceHash": "a0e63d7"
   }
 }

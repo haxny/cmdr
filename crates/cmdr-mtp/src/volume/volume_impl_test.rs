@@ -114,7 +114,7 @@ async fn an_index_walk_descends_every_folder_an_mtp_phone_lists() {
     let volume = volume_for(test_connection_manager(), &device, None).await;
 
     let entries = volume
-        .list_directory_for_scan(Path::new("/"), None)
+        .list_directory_for_scan(Path::new("/"), None, &cmdr_fs::volume::ScanListingClock::start())
         .await
         .expect("the virtual phone lists its root");
     let folders: Vec<_> = entries.iter().filter(|entry| entry.is_directory).collect();

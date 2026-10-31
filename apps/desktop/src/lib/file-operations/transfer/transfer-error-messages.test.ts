@@ -596,6 +596,32 @@ describe('getTechnicalDetails', () => {
     expect(suggestion).toContain('usage cap')
   })
 
+  // Every operation and side meets the same advice, and none of it is about this Mac:
+  // a delete on a phone used to say "Unlock it in Finder".
+  it.each([
+    ['phone', 'shared storage'],
+    ['server', 'account'],
+  ] as const)('gives %s refusals advice that never mentions this Mac', (refusal, expected) => {
+    for (const operation of ['copy', 'move', 'delete', 'trash'] as const) {
+      for (const side of ['source', 'destination', null] as const) {
+        const { suggestion } = getUserFriendlyMessage(
+          {
+            type: 'permission_denied',
+            path: 'adb://R58M123/data/a.txt',
+            message: 'Permission denied',
+            errno: null,
+            refusal,
+            refusedFolder: null,
+            side,
+          },
+          operation,
+        )
+        expect(suggestion).toContain(expected)
+        expect(suggestion).not.toMatch(/macOS|Finder|chmod|administrator/)
+      }
+    }
+  })
+
   // The errno is what a bug report needs and the prose deliberately never states:
   // 13 is a folder an administrator could write to, 1 is macOS refusing outright.
   it('includes the errno and the proved folder for a permission_denied error', () => {

@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "This phone keeps this folder private",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android reserves this folder for the system and its apps, so Cmdr can’t open it. Nothing’s wrong with your phone or the connection.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "Your photos, downloads, and other files are in the phone’s shared storage, so try a folder there.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "The server won’t open this folder",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "This folder is on a server, and the account you connected with doesn’t have permission to open it. The server makes that call, so no setting on this computer changes it.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Here’s what to try:\n- Check the folder’s permissions on the server\n- Some folders belong to the server’s own system account and stay closed to everyone else\n- Connect with an account that has access",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "Už existuje",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -562,6 +586,18 @@
   "errors.listing.notConnected.suggestion": "Co můžeš zkusit:\n- Otevři telefon nebo server v přepínači svazků, tím se k němu Cmdr připojí\n- Pokud jde o telefon, odemkni ho a potvrď všechny výzvy, které telefon zobrazí\n- Až bude připojení hotové, přejdi sem znovu",
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
+  },
+  "errors.listing.linkTargetUnreachable.title": "This folder’s server is out of reach",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` sits behind a link to another server, and Cmdr can’t reach that server right now. The rest of this share is fine, and nothing was deleted.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Here’s what to try:\n- Check that the other server is running and that your network can reach it\n- Navigate here again to retry",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
   },
   "errors.listing.deviceReconnecting.title": "Opětovné připojování k zařízení",
   "@errors.listing.deviceReconnecting.title": {
@@ -1729,6 +1765,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Android reserves this location for the system and its apps. Your photos, downloads, and other files are in the phone’s shared storage, so try a folder there.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "The server turned this down for the account you connected with. Check the folder’s permissions on the server, or connect with an account that has access.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "Poskytovatel požadavek odmítl, což může znamenat dvě věci. Zkontroluj oprávnění přístupového klíče, nebo se v konzoli poskytovatele podívej, jestli nejde o vyčerpaný limit využití nebo upozornění k platbě.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2125,6 +2169,10 @@
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
   },
+  "errors.volume.linkTargetUnreachable": "This sits behind a link to another server, and Cmdr can’t reach that server right now.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
+  },
   "errors.volume.deviceSessionReset": "Zařízení restartovalo připojení. Dej mu pár sekund a zkus to znovu.",
   "@errors.volume.deviceSessionReset": {
     "sourceHash": "e5ad77d"
@@ -2488,5 +2536,33 @@
   "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Move or copy them under their own names, then rename them there.",
   "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
     "sourceHash": "b1e881c"
+  },
+  "errors.listing.linkNeedsConsent.title": "This folder is on another server",
+  "@errors.listing.linkNeedsConsent.title": {
+    "sourceHash": "c37d453"
+  },
+  "errors.listing.linkNeedsConsent.explanation": "`{path}` is a link on **{server}** that leads to **{target}**. Cmdr hasn’t signed in there, so {target} received nothing from you.",
+  "@errors.listing.linkNeedsConsent.explanation": {
+    "sourceHash": "91b0171"
+  },
+  "errors.listing.linkNeedsConsent.suggestion": "To open this folder, Cmdr has to sign in to {target} with the account you use for {server}. Review that if you trust {target}. The rest of this share works as usual.",
+  "@errors.listing.linkNeedsConsent.suggestion": {
+    "sourceHash": "991cb6c"
+  },
+  "errors.volume.linkNeedsConsent": "This sits behind a link to another server, and Cmdr hasn’t been allowed to sign in there. Open the folder in a pane to decide.",
+  "@errors.volume.linkNeedsConsent": {
+    "sourceHash": "79ff9fe"
+  },
+  "errors.write.linkNeedsConsent.title": "This file is on another server",
+  "@errors.write.linkNeedsConsent.title": {
+    "sourceHash": "ff31c7f"
+  },
+  "errors.write.linkNeedsConsent.message": "A link on {server} leads to {target}, and Cmdr hasn’t been allowed to sign in there, so nothing went to that server.",
+  "@errors.write.linkNeedsConsent.message": {
+    "sourceHash": "7893ce9"
+  },
+  "errors.write.linkNeedsConsent.suggestion": "Open the folder in a pane and allow the sign-in if you trust that server, then try again.",
+  "@errors.write.linkNeedsConsent.suggestion": {
+    "sourceHash": "cc25854"
   }
 }

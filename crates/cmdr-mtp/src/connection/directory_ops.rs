@@ -17,6 +17,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
+use cmdr_fs::volume::ScanListingClock;
 use cmdr_fs::volume::host::indexing::WatchGap;
 
 /// Global counter for generating unique request IDs for debugging.
@@ -203,6 +204,11 @@ impl MtpConnectionManager {
     /// round trip. It populates the same path/listing caches as `list_directory`
     /// via `finalize_listing`.
     ///
+    /// `clock` is the walk's wedge timer: it stops while this listing parks at a
+    /// yield point or waits for the device lock (held by a foreground op or by
+    /// the walk's own sibling listings), and runs during every PTP transaction,
+    /// so only a round trip the phone doesn't answer can time the listing out.
+    ///
     /// Foreground listings deliberately do NOT use this path: the user wants the
     /// whole listing now, and a foreground listing isn't the thing being starved.
     pub async fn list_directory_for_scan(
@@ -211,6 +217,7 @@ impl MtpConnectionManager {
         storage_id: u32,
         path: &str,
         cancel: Option<&CancelToken>,
+        clock: &ScanListingClock,
     ) -> Result<Vec<FileEntry>, MtpConnectionError> {
         let parent_path = normalize_mtp_path(path);
 
@@ -233,21 +240,27 @@ impl MtpConnectionManager {
 
         // Unit 0: get the handle list (one GetObjectHandles), holding the lock
         // only for that single transaction.
-        self.background_yield_point(device_id).await;
+        clock.paused(self.background_yield_point(device_id)).await;
         if cancel.is_some_and(CancelToken::is_cancelled) {
             return Err(scan_cancelled(device_id));
         }
         let mut listing = {
-            let device = acquire_device_lock(&device_arc, device_id, "list_directory_for_scan[handles]").await?;
+            let device = clock
+                .paused(acquire_device_lock(
+                    &device_arc,
+                    device_id,
+                    "list_directory_for_scan[handles]",
+                ))
+                .await?;
             let storage = device
                 .storage(StorageId(u64::from(storage_id)))
                 .await
-                .map_err(|e| self.map_device_error(e, device_id))?;
+                .map_err(|e| self.map_device_read_error(e, device_id, path))?;
 
             storage
                 .list_objects_stream_with_cancel(parent_opt, cancel)
                 .await
-                .map_err(|e| self.map_device_error(e, device_id))?
+                .map_err(|e| self.map_device_read_error(e, device_id, path))?
             // `device` / `storage` drop here, releasing the lock before the
             // metadata batches below.
         };
@@ -259,12 +272,18 @@ impl MtpConnectionManager {
         // Units 1..n: fetch metadata in bounded batches, releasing the lock and
         // yielding to foreground between each.
         loop {
-            self.background_yield_point(device_id).await;
+            clock.paused(self.background_yield_point(device_id)).await;
             if cancel.is_some_and(CancelToken::is_cancelled) {
                 return Err(scan_cancelled(device_id));
             }
 
-            let device = acquire_device_lock(&device_arc, device_id, "list_directory_for_scan[meta]").await?;
+            let device = clock
+                .paused(acquire_device_lock(
+                    &device_arc,
+                    device_id,
+                    "list_directory_for_scan[meta]",
+                ))
+                .await?;
             let mut done = false;
             for _ in 0..SCAN_METADATA_BATCH {
                 match listing.next().await {
@@ -290,7 +309,7 @@ impl MtpConnectionManager {
                         // session failure mid-listing quietly produced a SHORT
                         // folder that looked complete. mtp-rs 0.30 separates the
                         // two cases, so this can propagate again.
-                        return Err(self.map_device_error(e, device_id));
+                        return Err(self.map_device_read_error(e, device_id, path));
                     }
                     None => {
                         done = true;
@@ -400,7 +419,7 @@ impl MtpConnectionManager {
         let storage = device
             .storage(StorageId(u64::from(storage_id)))
             .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
+            .map_err(|e| self.map_device_read_error(e, device_id, path))?;
         debug!(
             "MTP list_directory [req#{}]: got storage object in {:?}",
             request_id,
@@ -424,7 +443,7 @@ impl MtpConnectionManager {
         let mut object_infos = match storage.list_objects_with_cancel(parent_opt, cancel).await {
             Ok(infos) => infos,
             Err(e) => {
-                let mapped_err = self.map_device_error(e, device_id);
+                let mapped_err = self.map_device_read_error(e, device_id, path);
                 error!(
                     "MTP list_directory [req#{}]: list_objects failed after {:?}: {}",
                     request_id,
@@ -530,7 +549,7 @@ impl MtpConnectionManager {
         let storage = device
             .storage(StorageId(u64::from(storage_id)))
             .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
+            .map_err(|e| self.map_device_read_error(e, device_id, path))?;
 
         let parent_opt = if parent_handle == ObjectHandle::ROOT {
             None
@@ -543,7 +562,7 @@ impl MtpConnectionManager {
         let mut listing = storage
             .list_objects_stream_with_cancel(parent_opt, cancel)
             .await
-            .map_err(|e| self.map_device_error(e, device_id))?;
+            .map_err(|e| self.map_device_read_error(e, device_id, path))?;
 
         let total = listing.total();
         debug!(
@@ -581,7 +600,7 @@ impl MtpConnectionManager {
                     // error, so a transport or session failure mid-listing quietly
                     // produced a SHORT folder that looked complete. mtp-rs 0.30
                     // separates the two cases, so this can propagate again.
-                    return Err(self.map_device_error(e, device_id));
+                    return Err(self.map_device_read_error(e, device_id, path));
                 }
             };
 

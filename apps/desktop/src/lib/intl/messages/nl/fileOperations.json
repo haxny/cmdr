@@ -585,6 +585,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Naam te lang voor de bestemming",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Naam niet toegestaan op de bestemming",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "De bestemming kan zo’n lange naam niet opslaan. Sla dit onderdeel over om met de rest verder te gaan, wijzig daarna de naam en probeer het opnieuw.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "De bestemming kan deze naam niet opslaan. Misschien is hij te lang, gereserveerd of bevat hij een teken dat de bestemming niet toestaat. Sla dit onderdeel over om met de rest verder te gaan, wijzig daarna de naam en probeer het opnieuw.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "Als een bestand al bestaat: {policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -800,6 +816,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Niets meer te kopiëren: {total, plural, one {het onderdeel dat gekopieerd zou worden, is} other {alle {totalText} onderdelen die gekopieerd zouden worden, zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} move {Niets meer te verplaatsen: {total, plural, one {het onderdeel dat verplaatst zou worden, is} other {alle {totalText} onderdelen die verplaatst zouden worden, zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} delete {Niets meer te verwijderen: {total, plural, one {het onderdeel dat verwijderd zou worden, is} other {alle {totalText} onderdelen die verwijderd zouden worden, zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} trash {Niets meer naar de prullenmand te verplaatsen: {total, plural, one {het onderdeel dat naar de prullenmand verplaatst zou worden, is} other {alle {totalText} onderdelen die naar de prullenmand verplaatst zouden worden, zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.} other {Niets meer te doen: {total, plural, one {het onderdeel van deze bewerking is} other {alle {totalText} onderdelen van deze bewerking zijn}} verplaatst of verwijderd terwijl de bewerking wachtte.}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "‘{name}’ was al weg. Waarschijnlijk heeft een andere app het onderdeel verplaatst of verwijderd.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} onderdeel was al weg. Waarschijnlijk heeft een andere app het verplaatst of verwijderd.} other {{countText} onderdelen waren al weg. Waarschijnlijk heeft een andere app ze verplaatst of verwijderd.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Toon dit nooit meer",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "Beveiligde onderdelen verplaatsen?",
   "@fileOperations.lockedSources.title": {

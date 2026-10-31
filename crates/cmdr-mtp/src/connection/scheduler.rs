@@ -30,8 +30,8 @@
 //! the device lock, and the device lock is the only OS lock — it's always released
 //! at a unit boundary. So there's no lock-ordering cycle. Background always makes
 //! progress when idle (`background_yield_point` returns immediately at zero
-//! pending), and a parked scan is always woken because the last foreground guard
-//! drop decrements to zero and notifies. We re-read the counter after every wake
+//! pending), and every parked scan unit is woken because the last foreground guard
+//! drop decrements to zero and notifies them all. We re-read the counter after every wake
 //! (`while` loop), so a stale or spurious wake just re-parks rather than
 //! proceeding wrongly. Design history is in git (former
 //! `docs/specs/mtp-device-scheduler-plan.md`).
@@ -56,8 +56,8 @@ struct GateInner {
     /// Count of foreground ops currently entered (waiting for, or holding, the
     /// device). A background unit yields while this is non-zero.
     foreground_pending: AtomicUsize,
-    /// Woken when `foreground_pending` drops to zero, so a parked background unit
-    /// re-checks and proceeds.
+    /// Woken when `foreground_pending` drops to zero, so every parked background
+    /// unit re-checks and proceeds.
     drained: Notify,
 }
 
@@ -90,16 +90,21 @@ impl DevicePriorityGate {
     /// step). Returns immediately when no foreground op is pending, so an idle
     /// scan never stalls.
     ///
-    /// Lost-wakeup-free by construction. We use `Notify::notify_one`, which STORES
-    /// a permit when no waiter is currently parked, so a drain that races between
-    /// our counter read and our `.await` is not lost — the stored permit makes the
-    /// `.await` return immediately, and we re-read the counter in the loop. (A
-    /// leftover permit at most causes one extra wake on a later yield, which just
-    /// re-checks and re-parks — never a wrong proceed, since the loop gates on the
-    /// counter, not the wake.)
+    /// Lost-wakeup-free by construction, for any number of parked units. A walk keeps
+    /// many listings in flight and each parks here, so the drain wakes them ALL
+    /// (`Notify::notify_waiters`); ❌ never `notify_one`, which frees one and leaves the
+    /// rest asleep until the next foreground op. `notify_waiters` stores no permit, so a
+    /// unit registers (`enable`) BEFORE reading the counter: a drain after the read
+    /// reaches the registered future, and a drain before it shows up as zero. We re-read
+    /// the counter after every wake, so a stale one just re-parks.
     pub(super) async fn background_yield_point(&self) {
-        while self.inner.foreground_pending.load(Ordering::SeqCst) > 0 {
-            self.inner.drained.notified().await;
+        loop {
+            let mut drained = std::pin::pin!(self.inner.drained.notified());
+            drained.as_mut().enable();
+            if self.inner.foreground_pending.load(Ordering::SeqCst) == 0 {
+                return;
+            }
+            drained.await;
         }
     }
 }
@@ -113,10 +118,8 @@ pub(super) struct ForegroundGuard {
 impl Drop for ForegroundGuard {
     fn drop(&mut self) {
         // `fetch_sub` returns the PREVIOUS value; we hit zero when it was 1.
-        // `notify_one` stores a permit if no background unit is parked yet, so a
-        // drain that races a yield point's check-then-await isn't lost.
         if self.inner.foreground_pending.fetch_sub(1, Ordering::SeqCst) == 1 {
-            self.inner.drained.notify_one();
+            self.inner.drained.notify_waiters();
         }
     }
 }
@@ -205,6 +208,34 @@ mod tests {
             .await
             .expect("waiter wakes once the LAST foreground op drains")
             .expect("waiter task must not panic");
+    }
+
+    /// A walk keeps many listings in flight, and each parks here on its own. If the drain
+    /// woke just one, the rest slept until the next foreground op, which on an idle pane is
+    /// never (Pixel 9 Pro XL, 2026-10-30: the walk froze the moment browsing stopped).
+    #[tokio::test]
+    async fn every_parked_unit_wakes_when_foreground_drains() {
+        let gate = DevicePriorityGate::default();
+        let guard = gate.foreground_guard();
+
+        let waiters: Vec<_> = (0..8)
+            .map(|_| {
+                let gate = gate.clone();
+                tokio::spawn(async move { gate.background_yield_point().await })
+            })
+            .collect();
+
+        // allowed-test-sleep: lets every waiter park before the drain; a wake that lands first
+        // would pass without proving anything about parked waiters
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        drop(guard);
+
+        for waiter in waiters {
+            tokio::time::timeout(Duration::from_millis(500), waiter)
+                .await
+                .expect("every parked unit wakes once the foreground drains")
+                .expect("waiter task must not panic");
+        }
     }
 
     #[tokio::test]

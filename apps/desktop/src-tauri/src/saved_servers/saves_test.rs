@@ -81,12 +81,43 @@ async fn an_add_without_a_dial_writes_the_store_and_contacts_nothing() {
         export: "/export/media".to_string(),
         uid: 501,
         gid: 20,
+        other_gids: Vec::new(),
         start_folder: None,
         auto_reconnect: false,
     })
     .await;
     let nfs = nfs_known_places::find(&nfs).expect("saved");
     assert_eq!(nfs.last_connected_at, "", "a save claims no connection");
+}
+
+/// ❗ An approved Ask Cmdr edit names only what it changes, so it can't drop the person's
+/// other groups: they ride along from the stored entry (`save_place_edit`).
+#[tokio::test]
+async fn a_place_edit_keeps_the_other_groups_and_adding_them_keeps_the_id() {
+    use crate::saved_servers::saves::{PlaceEdit, save_place_edit};
+    let _secrets = crate::test_support::isolate_secrets();
+    let target = |other_gids: Vec<u32>| ServerTarget::Nfs {
+        display_name: String::new(),
+        host: "192.0.2.86".to_string(),
+        port: None,
+        export: "/export/media".to_string(),
+        uid: 501,
+        gid: 20,
+        other_gids,
+        start_folder: None,
+        auto_reconnect: false,
+    };
+    assert_eq!(place_id(target(Vec::new())), place_id(target(vec![2001, 2002])));
+
+    let id = saved_without_contact(target(vec![2001, 2002])).await;
+    let edit = PlaceEdit {
+        start_folder: Some("/Photos".to_string()),
+        ..PlaceEdit::default()
+    };
+    assert_eq!(save_place_edit(&id, edit).await, SavedServerOutcome::Saved);
+    let saved = nfs_known_places::find(&id).expect("saved");
+    assert_eq!(saved.start_folder.as_deref(), Some("/Photos"));
+    assert_eq!(saved.other_gids, vec![2001, 2002]);
 }
 
 /// An edit of a saved, unconnected place keeps when it was last connected: the

@@ -279,10 +279,6 @@
   "@ai.cloud.effort.recommendedWithLevel": {
     "sourceHash": "e9e8984"
   },
-  "ai.cloud.effort.off": "Выключено",
-  "@ai.cloud.effort.off": {
-    "sourceHash": "ca7981b"
-  },
   "ai.cloud.effort.low": "Низкая",
   "@ai.cloud.effort.low": {
     "sourceHash": "f793de2"

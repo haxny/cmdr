@@ -212,7 +212,7 @@ pub enum ServerTarget {
         auto_reconnect: bool,
     },
     /// One NFS export: display name, host, an optional port, the export, the
-    /// uid and gid it acts as, an optional start folder, and the auto-reconnect
+    /// uid and groups it acts as, an optional start folder, and the auto-reconnect
     /// switch.
     Nfs {
         /// What to call it in the UI.
@@ -230,6 +230,9 @@ pub enum ServerTarget {
         uid: u32,
         /// The group id every request acts as. A setting, like `uid`.
         gid: u32,
+        /// The person's other groups, sent with every request. A setting, like
+        /// `uid`.
+        other_gids: Vec<u32>,
         /// Where a pane lands when the place is opened: an export-relative path
         /// (`/Photos`). `None` is the export's root.
         start_folder: Option<String>,

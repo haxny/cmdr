@@ -231,12 +231,14 @@ The full top-level inventory is here:
   so the three stay out of a cycle: `source_binding` → `queued_sources` → `state` → `sources_gone_slot`, and the empty
   batch's terminal shape is `WriteCompleteEvent::all_skipped` in `types`. `locked_sources.rs` is a move's question about
   Locked items and the plan its answer makes, parking on `locked_sources_slot.rs` the same way (§ "Moving Locked
-  items"). Fixtures: `testing/` (an engine a test owns, and what test cells outside the engine reach beyond its public
-  list) and `test_support.rs` (the placeholder conflict, the park-window wait, and the queued-operation fixture). Every
-  backend's cells through this pipeline live app-side, in `operations_host/backend_suites/`, because they need the app
-  around the engine (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is
-  the Criterion bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state
-  on an engine the bench owns (`crates/cmdr-operations/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` §
+  items"). `refused_name.rs` is a transfer's question about a name the destination refuses, asked through the conflict
+  slot (§ "A name the destination refuses"); its "Skip all" latch is `refused_names_latch.rs`, a leaf the state owns.
+  Fixtures: `testing/` (an engine a test owns, and what test cells outside the engine reach beyond its public list) and
+  `test_support.rs` (the placeholder conflict, the park-window wait, and the queued-operation fixture). Every backend's
+  cells through this pipeline live app-side, in `operations_host/backend_suites/`, because they need the app around the
+  engine (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is the
+  Criterion bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state on
+  an engine the bench owns (`crates/cmdr-operations/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` §
   `criterion`).
 
 What the mechanisms DO is in the sections below: the registry, lanes, and `run_instant` in § "Operation manager"; the
@@ -1118,11 +1120,15 @@ and it's what `docs/specs/elevated-file-operations.md` decision 12 branches on w
 The errno survives the volume layer too: `VolumeError::PermissionDenied { path, raw_os_error }` carries it from
 `VolumeError::from_io_at`, and `map_volume_error` hands it to the constructor, so a volume-routed refusal (a
 cross-volume move's source delete hitting a Finder-locked file, cmdr-reports#17) gets the same advice as a local one and
-the details block shows the OS's sentence rather than the path twice. A backend that words its own refusals (SMB, MTP,
-and ADB, whose errno is the DEVICE's and would earn macOS advice for an Android file) carries `None` and stays
-`Unclassified`. An errno-less refusal on an S3 app path (`server_of_path`) is `ObjectStoreAccount` instead
-(`WriteOperationError::object_store_refused`): the key's permissions or a provider that paused the account (a usage cap,
-a billing hold) answer alike, so its advice names both.
+the details block shows the OS's sentence rather than the path twice. A backend that words its own refusals (SMB, and
+also ADB, whose errno is the DEVICE's) carries `None`. A path whose scheme names its backend (`refuser_of_path`) takes
+its refusal from there, errno or not (`WriteOperationError::refused_by`, so NFS's `EACCES` isn't read as this Mac's
+folder permissions): `Phone` and `Server`, whose advice can't mention this Mac, and `ObjectStoreAccount`, where the
+key's permissions or a provider that paused the account (a usage cap, a billing hold) answer alike, so its advice names
+both. A mounted SMB, AFP, or NFS share has no scheme, so `WriteOperationError::permission_denied` asks
+`tcc_paths::mounted_share_refused` (`statfs`, with TCC ruled out, the same answer the pane's `RemotePermissionDenied`
+gives): it's `Server` too, whatever the errno, and names no folder, or a refused delete sends someone to Finder's Locked
+box for a file on a NAS. The rest with no errno stays `Unclassified`.
 
 **Why the folder is PROVED, never inferred.** A `rename(2)` needs write access to both parent folders, a `unlink(2)` to
 the one it removes from, and a `create_dir_all` to the deepest ancestor that exists; no errno says which refused. So
@@ -1638,6 +1644,10 @@ it has written (`cancel_write_operation(id, rollback = true)`), and when it can'
 snapshot because the operation queue window is its own webview: it never sees the source/destination volume ids the
 dialog decides from, and two surfaces disagreeing about whether an operation is reversible is the kind of drift that
 ends with a button that lies.
+
+A symlink a volume copy landed is `WrittenIdentity::VolumeLink`: its target IS its content, since a link has no size
+worth comparing, so `reversal::recheck_volume_link` removes it only while it still holds the target it landed with, and
+the journal's read-back dates it. The landing: `src/transfer/volume/DETAILS.md` § "A copy carries a link as the link".
 
 Every construction site states its own verdict (a struct literal, so a new spawn path can't forget to decide):
 
@@ -2200,8 +2210,9 @@ job still had plans for those files.
 - **Observable and answerable by an agent**: `cmdr://state` renders the parked question as `pendingSourcesGone`, and the
   `queue` tool's `continue_without_gone` answers it (`cancel` is the other answer).
 - `OperationEventSink::emit_sources_gone` has a default no-op so the many single-purpose test sinks needn't spell it
-  out; ❗ a sink that WRAPS another (the suggestion bridge's `ProposalReportingSink`) must forward it, or nobody is
-  asked and the operation waits until cancelled.
+  out; a sink that WRAPS another implements `SinkDecorator`, which forwards it by default (`src/host/DETAILS.md`), or,
+  app-side (the suggestion bridge's `ProposalReportingSink`), forwards it by hand: a dropped one leaves nobody asked and
+  the operation waiting until cancelled.
 
 Pinned by `queued_sources_tests.rs`. The frontend half: `apps/desktop/src/lib/file-operations/DETAILS.md` § "Sources
 that left while an operation queued".
@@ -2248,12 +2259,47 @@ then stopped in Phase 4 with every original kept: the files in both places and a
   removal on a cross-drive move after its lock is lifted: a mode, which no Locked answer covers.
 - **Observable and answerable by an agent**: `cmdr://state` renders the parked question as `pendingLockedSources`, and
   the `queue` tool's `move_locked` / `skip_locked` answer it.
-- `OperationEventSink::emit_locked_sources` defaults to a no-op; ❗ a sink that WRAPS another must forward it, or nobody
-  is asked and the move waits until cancelled.
+- `OperationEventSink::emit_locked_sources` defaults to a no-op; a wrapping sink forwards it (`SinkDecorator` does by
+  default), as a dropped one leaves nobody asked and the move waiting until cancelled.
 
 Pinned by `locked_sources_tests.rs`, the move cells in `src/transfer/metadata_matrix_tests.rs`, and
 `src/transfer/volume/move_locked_tests.rs`. The frontend half: `apps/desktop/src/lib/file-operations/DETAILS.md` §
 "Locked items in a move".
+
+## A name the destination refuses
+
+`refused_name.rs` (cmdr-reports#83). A destination that can't store an item's NAME (too long for an eCryptfs-backed
+Synology share, a reserved `CON`, a character its filesystem can't hold) fails that one item, and every other item in
+the batch still has a good name. So the transfer parks on the person, per item: Skip, Skip all, or Stop.
+
+- **It IS a `write-conflict`, ❌ not a parallel prompt.** The same `ConflictSlot`, ids, `write-conflict-resolved`,
+  dispatch mutex, human-wait clock, `cmdr://state` `pendingConflict`, and `resolve_conflict` answer, with
+  `WriteConflictEvent::refused_name` set. Every surface that answers a clash answers this one with no new plumbing.
+- **Skip** leaves the item out, counted in `files_skipped`. **Skip with apply-to-all** latches `RefusedNames`
+  (`refused_names_latch.rs`), its OWN latch (❌ never the clash one: "Skip all" here says nothing about clashes). **Any
+  other resolution** is Stop: the operation ends with the refusal as its error, as before. The dialog's Cancel /
+  Rollback are the ordinary cancel.
+- **Only a typed refusal asks**: `WriteOperationError::NameTooLong` or `InvalidName` (`refusal_reason`), ❌ never a
+  message. A landing refused as `InvalidName` for a name longer than `MAX_SCRATCH_NAME_BYTES` reads as `NameTooLong`,
+  since the temp in the same folder (at most that long) was accepted (`transfer_error.rs::from_landing`).
+- **Who asks is whoever may wait on a person** (`transfer/volume/refused_item.rs`): the merge WALKER for its leaves (a
+  leaf hands back `LeafEnd::Refused`, since a leaf may never wait on one), and the top-level dispatch for a source whose
+  OWN name was refused (the concurrent driver's spawned task, the serial closures, the local `copy_single_item`). Each
+  asks only about a refusal AT the item it owns, so a deep refusal answered Stop isn't asked again on its way up, and a
+  folder that already landed something is no longer one refused item.
+- **Data safety**: nothing of a refused item is at the destination (the failed landing took its temp back), and it is in
+  no rollback ledger. A move keeps its source: a deep skip is `record_skip`ed (which the source sweep spares) and taken
+  off the carried-source ledger; a top-level skip returns before the sweep; the local cross-FS move deletes only what
+  its transaction recorded.
+- **A refused FOLDER** (its `create_directory`, deep in a volume walk) asks from its parent level
+  (`merge.rs::skip_if_folder_refused`); a Skip leaves its whole subtree out, counts every file under it (one
+  `scan_for_copy` of the source subtree, paid only then), and records the folder as one skipped source, which the sweep
+  spares whole. It reads as `notAllowed`: a refused folder create carries no evidence its length is why, so that copy
+  names length among the reasons.
+- **Not covered**: on the LOCAL engine, a refused folder deep in a tree still ends the copy (a refused file asks).
+
+Pinned by `refused_name_tests.rs` (the question) and `transfer/volume/refused_name_tests.rs` (every volume driver,
+including the move keeping each skipped source), plus `transfer/copy/copy_tests.rs` for the local engine.
 
 ## Per-source outcomes
 

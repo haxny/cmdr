@@ -579,7 +579,7 @@
   "servers.sheet.address": "Address",
   "@servers.sheet.address": {
     "description": "Label of the field where the user types where the server lives. One word, NOUN.",
-    "screenshot": "server-sign-in-add.png"
+    "screenshot": "suggested-ops-servers.png"
   },
   "servers.sheet.addressPlaceholder": "nas.local",
   "@servers.sheet.addressPlaceholder": {
@@ -672,6 +672,21 @@
   "servers.sheet.nfsGid": "Group ID",
   "@servers.sheet.nfsGid": {
     "description": "Label of a number field in the NFS add form: the numeric group ID (a Unix gid, like 100) Cmdr uses for every request to the server. Keep it short; it sits beside the user ID field."
+  },
+  "servers.sheet.nfsOtherGids": "Other group IDs",
+  "@servers.sheet.nfsOtherGids": {
+    "description": "Label of a text field in the NFS add and edit forms, right under the user ID and group ID fields: the numeric IDs of the other Unix groups the user belongs to on the server, like 100, 1001. Cmdr sends them with every request, so files the user may read only through one of those groups open. It can stay empty."
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "Use group ID numbers separated by commas, like 100, 1001.",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "description": "Under the Other group IDs field in the NFS add and edit forms, when what the user typed isn’t a list of numbers (for example they typed a group’s name). Connect stays disabled until it reads. Keep the example numbers as they are."
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "NFS carries up to 16 other groups, and this lists {count}.",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "description": "Under the Other group IDs field in the NFS add and edit forms, when the user listed more groups than the protocol can send with a request (the limit is always 16, so count is always 17 or more). Connect stays disabled until they remove some. “NFS” is a protocol name; keep it as-is.",
+    "placeholders": {
+      "count": "how many different group IDs the user listed, 17 or more"
+    }
   },
   "servers.sheet.nfsIdentityHelp": "The server decides what you can open by these numbers. NFS doesn’t ask for a password.",
   "@servers.sheet.nfsIdentityHelp": {
@@ -766,7 +781,7 @@
   "servers.sheet.name": "Name",
   "@servers.sheet.name": {
     "description": "Label of the field for what to call this server in the app. One word, NOUN.",
-    "screenshot": "server-sign-in-add.png"
+    "screenshot": "suggested-ops-servers.png"
   },
   "servers.sheet.protocolS3": "S3",
   "@servers.sheet.protocolS3": {
@@ -914,7 +929,7 @@
   "servers.sheet.rootFolder": "Root folder",
   "@servers.sheet.rootFolder": {
     "description": "Label of the field for the folder ON THE SERVER this saved server is limited to: Cmdr never shows anything above it. Two words, NOUN phrase. The refusal messages and the start folder help reuse this term, so keep it consistent.",
-    "screenshot": "server-sign-in-add-prefilled.png"
+    "screenshot": "suggested-ops-servers.png"
   },
   "servers.sheet.rootFolderHelp": "Cmdr never goes above this folder on the server.",
   "@servers.sheet.rootFolderHelp": {

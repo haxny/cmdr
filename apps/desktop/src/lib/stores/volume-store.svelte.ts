@@ -17,6 +17,7 @@ import { LogOnceGate } from '#lib/logging/log-once.js'
 import { pluralize } from '#lib/utils/pluralize.js'
 import { getSetting, setSetting } from '#lib/settings/index.js'
 import { addToast } from '#lib/ui/toast/index.js'
+import { withUnnamedPhonesNamed } from '#lib/adb/adb-volume-label.js'
 import { shouldShowPinHint } from '#lib/file-explorer/navigation/should-show-pin-hint.js'
 import ServersPinHintToastContent from '#lib/file-explorer/navigation/ServersPinHintToastContent.svelte'
 
@@ -34,9 +35,12 @@ let initialized = $state(false)
 let unlistenVolumesChanged: UnlistenFn | undefined
 let unlistenVolumeConnectionChanged: UnlistenFn | undefined
 
+// A `$derived`, so a language switch re-words a nameless phone without waiting for a republish.
+const namedVolumes = $derived(withUnnamedPhonesNamed(volumes))
+
 /** Returns the current volume list. Reactive. */
 export function getVolumes(): VolumeInfo[] {
-  return volumes
+  return namedVolumes
 }
 
 /** Returns whether the last volume listing timed out (some volumes may be missing). Reactive. */

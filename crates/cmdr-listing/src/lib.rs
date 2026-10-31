@@ -72,7 +72,7 @@ pub use caching::ListingSummary;
 pub use cmdr_collation::NameCollator;
 pub use compare::{CompareDirectoriesError, CompareDirectoriesMode, CompareDirectoriesResult};
 pub use diff::{DiffChange, DiffChangeType, DirectoryDiffBatch};
-pub use engine::{Listings, ListingsBuilder};
+pub use engine::{Listings, ListingsBuilder, RowFacts};
 pub use foreign_path::{entries_as_stored, stored_spellings};
 pub use fuzzy_jump::FuzzyJumpError;
 pub use index_sizes::IndexSizes;
@@ -154,6 +154,10 @@ pub(crate) struct Inner {
     hung_reads: Arc<HungReads>,
     /// One collator per locale tag (`Inner::collator`).
     collators: RwLock<HashMap<String, Arc<NameCollator>>>,
+    /// What each open listing's volume keeps alive while it's shown
+    /// (`Volume::watch_listing`), by listing id; dropped on close
+    /// (`host/observers.rs`).
+    volume_watches: std::sync::Mutex<HashMap<String, cmdr_fs::volume::ListingWatch>>,
 }
 
 impl Inner {
@@ -300,6 +304,8 @@ mod name_filter_test;
 mod operations_test;
 #[cfg(test)]
 mod overlay_read_paths_test;
+#[cfg(test)]
+mod packages_test;
 #[cfg(test)]
 mod pane_diff_test;
 #[cfg(test)]

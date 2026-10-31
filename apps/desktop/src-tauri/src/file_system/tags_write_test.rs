@@ -238,7 +238,7 @@ fn strict_reader_tells_absent_apart_from_empty() {
 
 /// D11 regression: tagging must NOT clobber a folder's custom-icon FinderInfo.
 /// Zeroing `com.apple.FinderInfo` would wipe `kHasCustomIcon` (0x0400 at offset 8)
-/// and break both the custom icon and Cmdr's own `has_custom_folder_icon`.
+/// and break both the custom icon and Cmdr's own `custom_folder_icon`.
 #[test]
 fn tagging_preserves_finder_info_custom_icon_flag() {
     let dir = temp_dir("d11");

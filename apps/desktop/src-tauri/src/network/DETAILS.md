@@ -830,6 +830,10 @@ using the app: `announce_os_mount_fallback` emits `SmbFellBackToOsMount { volume
 raises a notice with a "Try connecting directly" button (`src/lib/file-explorer/network/DETAILS.md` § "The OS-mount
 fallback notice").
 
+**A namespace on another server nobody allowed is `UpgradeFailure::OtherServerNotAllowed`**, which also drops the button,
+with its own sentence: repeating can't help, and nothing on this path can ask (`crates/cmdr-smb/DETAILS.md` § "Signing in
+through a link").
+
 **The reason rides along so the notice can drop that button.** `UpgradeFailure::ShareNotOnServer` (the server answering
 `STATUS_BAD_NETWORK_NAME` at TreeConnect) is the one failure here that repeating cannot fix: the same identity asking
 the same server for the same share gets the same answer. Every other variant is a condition that can pass on its own,
@@ -1137,7 +1141,7 @@ switch, found by that id. The name is the SERVER's (one `KnownNfsServer` record 
 `adopt_typed_name`, the S3 account rule), and an export reads as its own path. `saved_servers/nfs_places.rs` groups
 the exports back under one hub row per server, whose id is its root export's place id.
 
-- **Decision (revisit in review): the uid and gid live in the entry, in plain JSON, ❌ not the Keychain.** `AUTH_SYS`
+- **Decision (revisit in review): the uid and groups live in the entry, in plain JSON, ❌ not the Keychain.** `AUTH_SYS`
   sends them with every call and proves nothing, so they're a preference like SMB's username, and a Keychain prompt in
   front of a non-secret is friction. They're a SETTING of the place, ❌ not its identity, so fixing a typo later keeps
   the id, the tabs, and the favorites.
@@ -1145,7 +1149,7 @@ the exports back under one hub row per server, whose id is its root export's pla
   the incumbent, remember), but `cmdr_nfs::connect_nfs_volume` splits a typed `/share/Public/photos` into the real
   export and a start folder first, so the wiring registers under the returned volume's id and remembers its params.
 - **An edit to a connected place**: the name, the start folder, and the switch ride the live connection
-  (`live_server_edit.rs`, below). A changed uid or gid is a NEW connection, since every call's credential carries them:
+  (`live_server_edit.rs`, below). A changed uid or group is a NEW connection, since every call's credential carries them:
   it dials its own, confirms the start folder through it, and replaces the live volume through
   `install_retiring_incumbent`, so transfers on the old connection finish there. A refusal at any step moves nothing.
 - **No address move.** The host, port, and export ARE the place, so `saved_servers/saves.rs` answers an edit naming

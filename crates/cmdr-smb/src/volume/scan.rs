@@ -4,6 +4,7 @@
 //! methods in `volume_impl` delegate to.
 
 use super::SmbVolume;
+use super::dfs_links::link_stat;
 use super::links::stat_through_link;
 use super::mapping::{filetime_to_unix_secs, map_smb_error};
 use super::session::SessionLease;
@@ -79,7 +80,14 @@ impl SmbVolume {
                             mut conn,
                             generation,
                         } = self.clone_session().await?;
-                        let r = stat_through_link(&tree, &mut conn, smb_path).await;
+                        let r = self
+                            .or_through_link(
+                                generation,
+                                smb_path,
+                                stat_through_link(&tree, &mut conn, smb_path),
+                                link_stat,
+                            )
+                            .await;
                         self.handle_smb_result("scan_for_copy(stat)", smb_path, generation, r)
                     })
                     .await?;
@@ -434,6 +442,15 @@ impl SmbVolume {
 
         let mut outcomes = Vec::with_capacity(smb_paths.len());
         while let Some((idx, smb_path, result)) = stat_futs.next().await {
+            // One behind a DFS link asks again through it, one at a time: a
+            // link is the rare case, and the others keep draining meanwhile.
+            let result = match result {
+                Err(e) => self
+                    .or_through_link(generation, &smb_path, std::future::ready(Err(e)), link_stat)
+                    .await
+                    .map(StatOutcome::Entry),
+                answered => answered,
+            };
             match result {
                 Ok(outcome) => outcomes.push((idx, outcome)),
                 Err(e) => {

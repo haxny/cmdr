@@ -191,6 +191,13 @@ The server a zero-op `add_server` / `edit_server` group proposes, one row per gr
 the group's own transaction. Rationale, the claim it feeds, and why the spine writes it when rename's producer writes its
 own sidecar: `proposals/DETAILS.md` § A server group.
 
+## v14: `cost_meter.cache_read_tokens` / `cache_write_tokens`
+
+How much of each prompt the provider's cache served and stored, both SHARES of `prompt_tokens` (which stays the whole
+input, so every existing reader keeps its meaning). `record_cost` and `discard_conversation_keeping_cost` accumulate them
+like the other counts. `cost_micros` already prices the two at their own rates (`agent::pricing`); the columns say why a
+cached thread costs what it does. Rows metered before v14 read 0. Nothing on the wire reads them yet.
+
 ## No auto-retention in v1
 
 Transcripts are small (spec §3), so there's no pruning yet. When real sizes exist, the operation log's

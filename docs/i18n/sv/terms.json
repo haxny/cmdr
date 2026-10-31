@@ -1088,7 +1088,7 @@
     "sources": "macOS Finder (Redigera)"
   },
   "eject": {
-    "accept": ["matar ut", "matas ut", "matades ut", "utmatning", "mata sedan ut"],
+    "accept": ["matar ut", "matas ut", "matades ut", "utmatning", "mata sedan ut", "matats ut", "utmatad"],
     "chosen": "mata ut",
     "confidence": "high",
     "decision": "Eject and disconnect errors",
@@ -2034,6 +2034,18 @@
     "forms": "column Namn; Det här filnamnet kan inte användas",
     "sources": "macOS"
   },
+  "name-mask": {
+    "avoid": [
+      {
+        "form": "omdöpningsmask",
+        "why": "Total Commander's word, but the catalog says byt namn, never döp om, for its own commands"
+      }
+    ],
+    "chosen": "namnmask",
+    "confidence": "high",
+    "forms": "definite namnmasken; the field label Namnmask",
+    "sources": "shipped catalog (multiRename.nameMask Namnmask, commands.fileMultiRename.description); Total Commander sv (6602 Omdöpningsmask: filnamn), the feature's origin; no macOS, Thunar, Dolphin, or Nautilus term for it, since Finder and Thunar build new names without a mask"
+  },
   "nas": {
     "chosen": "NAS",
     "confidence": "high",
@@ -2141,6 +2153,9 @@
     "chosen": "notering",
     "confidence": "high",
     "decision": "Amending a sent error report",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: the “note” is Cmdr’s own short toast, not text the user writes; meddelande, since the notification ruling avoids notis and avisering is macOS’s system-notification word"
+    },
     "forms": "a note on a report → notering; Ask Cmdr's notes about you → anteckningar",
     "sources": "catalog (Lägg till en notering)"
   },
@@ -2323,7 +2338,7 @@
     "sources": "macOS Finder, MS"
   },
   "pattern": {
-    "accept": ["namnmönster", "sökmönster", "filnamnsmönster"],
+    "accept": ["namnmönster", "sökmönster", "filnamnsmönster", "mönstret"],
     "chosen": "mönster",
     "confidence": "high",
     "exceptions": {
@@ -2644,6 +2659,7 @@
       "omdöpt",
       "byta namn",
       "byter bara namn",
+      "bytte inte namn",
       "byta tillbaka",
       "byter tillbaka",
       "massbyte av namn",
@@ -2714,6 +2730,7 @@
     "sources": "MS terminology"
   },
   "reserved": {
+    "accept": ["reserverat", "reserverade"],
     "chosen": "reserverad",
     "confidence": "high",
     "sources": "standard Swedish"
@@ -3063,6 +3080,9 @@
     "accept": ["hoppar över", "hoppade över", "hoppas över", "överhoppad", "hoppas", "hoppades över"],
     "chosen": "hoppa över",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: “skip the note” means not seeing a toast again, not leaving an item out of an operation (för att slippa meddelandet)"
+    },
     "forms": "outcome chip Överhoppad (tentative)",
     "sources": "Nautilus (_Hoppa över)"
   },
@@ -3769,5 +3789,17 @@
     "chosen": "Tankenivå",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
+  },
+  "shared-storage": {
+    "accept": ["delade lagringsutrymme"],
+    "chosen": "delat lagringsutrymme",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-sv storage_internal (read 2026-10-30): Delat internt lagringsutrymme"
+  },
+  "this-computer": {
+    "accept": ["dator"],
+    "chosen": "den här datorn",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
   }
 }

@@ -207,3 +207,76 @@ describe('createTypeToJumpState', () => {
     expect(onIndicatorHide).not.toHaveBeenCalled()
   })
 })
+
+describe('createTypeToJumpState held', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  function heldState() {
+    const onMatch = vi.fn()
+    const state = createTypeToJumpState({ getResetMs: () => 1000, onMatch })
+    state.hold('re')
+    return { state, onMatch }
+  }
+
+  it('shows the pattern and outlasts both timers', () => {
+    const { state, onMatch } = heldState()
+    expect(state.buffer).toBe('re')
+    expect(state.indicatorVisible).toBe(true)
+    expect(onMatch).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(INDICATOR_HIDE_MS + 1)
+    expect(state.buffer).toBe('re')
+    expect(state.indicatorVisible).toBe(true)
+    expect(state.indicatorStale).toBe(false)
+  })
+
+  it('stops the timers a plain jump had running', () => {
+    const state = createTypeToJumpState({ getResetMs: () => 1000, onMatch: vi.fn() })
+    state.appendChar('a')
+    state.hold('a')
+    vi.advanceTimersByTime(INDICATOR_HIDE_MS + 1)
+    expect(state.buffer).toBe('a')
+    expect(state.indicatorVisible).toBe(true)
+  })
+
+  it('stays through a typed character, which still matches', () => {
+    const { state, onMatch } = heldState()
+    state.appendChar('p')
+    expect(onMatch).toHaveBeenCalledWith('rep', expect.any(Number))
+    vi.advanceTimersByTime(INDICATOR_HIDE_MS + 1)
+    expect(state.buffer).toBe('rep')
+  })
+
+  it('ignores the reset triggers: clear() takes a plain jump, not a held pattern', () => {
+    const { state } = heldState()
+    state.clear()
+    expect(state.buffer).toBe('re')
+    expect(state.indicatorVisible).toBe(true)
+  })
+
+  it('backspace matches the shorter pattern, and an empty one matches nothing', () => {
+    const { state, onMatch } = heldState()
+    state.backspaceHeld()
+    expect(state.buffer).toBe('r')
+    expect(onMatch).toHaveBeenCalledWith('r', expect.any(Number))
+    onMatch.mockClear()
+    state.backspaceHeld()
+    expect(state.buffer).toBe('')
+    expect(state.indicatorVisible).toBe(true)
+    expect(onMatch).not.toHaveBeenCalled()
+  })
+
+  it('release ends it, and the next jump is a plain one again', () => {
+    const { state } = heldState()
+    state.release()
+    expect(state.buffer).toBe('')
+    expect(state.indicatorVisible).toBe(false)
+    state.appendChar('x')
+    vi.advanceTimersByTime(INDICATOR_HIDE_MS + 1)
+    expect(state.indicatorVisible).toBe(false)
+  })
+})

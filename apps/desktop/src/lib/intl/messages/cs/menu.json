@@ -648,6 +648,14 @@
   "@menu.volume.ejectBusy": {
     "sourceHash": "e2145a6"
   },
+  "menu.volume.ejectAll": "Eject all",
+  "@menu.volume.ejectAll": {
+    "sourceHash": "7adbe9a"
+  },
+  "menu.volume.ejectAllBusy": "Eject all (busy)",
+  "@menu.volume.ejectAllBusy": {
+    "sourceHash": "8b91f8f"
+  },
   "menu.volume.renameFavorite": "Přejmenovat",
   "@menu.volume.renameFavorite": {
     "sourceHash": "3064d79"

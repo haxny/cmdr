@@ -39,9 +39,10 @@ the shared `extract_metadata` primitive at `../metadata.rs` (documented in the [
 - **The bulk read is shared with the serial reconcile walk.** `bulk_read::bulk_read_dir_unwatched` is re-exported at
   `scanner` level (along with `RawDirEntry` / `RawFileType`) for `reconcile::reconciler::read_fs_children`, which reads
   on its own `GuardedReader` thread and has no watchdog to publish `ReadProgress` to. The walker engine itself stays
-  private to the scanner. It returns a `BulkDirRead` (entries + an `unusable` count) rather than a bare `Vec`, because
-  the reconcile can't tolerate a silently-short listing: `diff_dir_against_db` deletes index rows the live listing
-  lacks, so it re-reads a directory with `read_dir` when `unusable > 0`. See `../reconcile/DETAILS.md`.
+  private to the scanner. It returns a `BulkDirRead` (entries, an `unusable` count, and an `interrupted` flag) rather
+  than a bare `Vec`, because the reconcile can't tolerate a silently-short listing: `diff_dir_against_db` deletes index
+  rows the live listing lacks, so it re-reads a directory with `read_dir` whenever `BulkDirRead::doubt` is `Some`. See
+  `../reconcile/DETAILS.md`.
 - **Degrade, never drop.** The bulk reader decodes through `cmdr_fs::attr_buf`; a missing attribute costs an entry its
   inline stat, never the entry, and a record that can't become one makes the directory re-read with `read_dir`.
   `walker/DETAILS.md` § "The bulk reader".
@@ -149,10 +150,14 @@ image or an NFS share mounted in the home folder, an rclone / sshfs / macFUSE mo
 `~/Library/Developer/CoreDevice/DeviceFS`. `/Volumes/` always got this by prefix; `boot_tree_mounts` extends it to every
 other mount point.
 
-- **macOS only** (`CUTS_AT_BOOT_TREE_MOUNTS`). On Linux the rule would also cut a separate `/home` partition (Fedora
-  Workstation mounts `/home` as its own btrfs subvolume), and nothing else indexes it, since only `/mnt` and `/media`
-  mounts get their own indexes. So Linux keeps walking into mounts inside its tree, and its `BootDisk` fingerprint
-  doesn't carry the rule (no rebuild there).
+- **Decision/Why: macOS cuts every mount, Linux only the ones that aren't a local disk** (`BOOT_TREE_CUT`,
+  [#731](https://github.com/vdavid/cmdr/issues/731)). On Linux, cutting every mount would also cut a separate `/home`
+  partition (Fedora Workstation mounts `/home` as its own btrfs subvolume), and nothing else indexes it, since only
+  `/mnt` and `/media` mounts get their own indexes. Cutting none crawled an NFS or CIFS share under the home folder at
+  local-walker speed: slow, chatty on the network, and its sizes went stale. So Linux asks `MountPoint::is_local_disk`
+  (the shared `mount_is_local_disk` allowlist: a `/dev/` source or a known local type), and a network share, FUSE, or
+  sshfs mount is cut. Each rule has its own `BootDisk` fingerprint tag, so a platform changing rules rebuilds its boot
+  index once.
 
 - **Where it lives: inside `should_exclude`'s `BootDisk` tier**, after the prefix checks. That's the one gate every
   boot-disk path already asks (the walker per child, the reconciler's listing and live events, the verifier, FSEvents

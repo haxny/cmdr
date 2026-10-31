@@ -323,8 +323,20 @@ async fn a_big_file_goes_up_in_chunks_and_a_cancelled_one_leaves_nothing() {
         .await;
     assert!(matches!(cancelled, Err(VolumeError::Cancelled(_))), "{cancelled:?}");
     assert!(!volume.exists(&cancelled_path).await, "the target never saw a byte");
+    // ❗ Waited for, ❌ not asserted at once: the server may still be reading the
+    // cut-off chunk and refuse the first DELETE, which the background retry then
+    // repeats (`chunked_upload.rs`'s `abandon`; 2 in 25 red here before it).
     let abandoned = the_upload_just_started();
-    assert!(!upload_still_there(&abandoned).await, "the chunks went with the cancel");
+    let mut gone = false;
+    for _ in 0..100 {
+        if !upload_still_there(&abandoned).await {
+            gone = true;
+            break;
+        }
+        // allowed-test-sleep: the check is an HTTP request, which `wait_until_async`'s sync predicate can't make
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    assert!(gone, "the chunks went with the cancel");
 
     clean(&volume, &dir).await;
 }

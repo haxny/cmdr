@@ -14,6 +14,8 @@
  * over-warn on legitimate text files.
  */
 
+import { fileExtension } from '#lib/utils/file-extension.js'
+
 const IMAGE_EXTS = new Set([
   'jpg',
   'jpeg',
@@ -78,6 +80,10 @@ const OTHER_BINARY_EXTS = new Set([
   // archive
   'zip',
   'tar',
+  'tar.gz',
+  'tar.bz2',
+  'tar.xz',
+  'tar.zst',
   'gz',
   'tgz',
   'bz2',
@@ -137,16 +143,10 @@ export interface ViewerWarning {
   ext: string
 }
 
-function getExtension(fileName: string): string {
-  // No `lastIndexOf('.')`-blind: "foo" (no dot), ".bashrc" (leading dot only),
-  // "name." (trailing dot) all return `''`.
-  const dot = fileName.lastIndexOf('.')
-  if (dot < 1 || dot === fileName.length - 1) return ''
-  return fileName.slice(dot + 1).toLowerCase()
-}
-
 export function categorizeForViewerWarning(fileName: string): ViewerWarning {
-  const ext = getExtension(fileName)
+  // The viewer only opens files. The product's one rule, so `README`, `.bashrc`,
+  // and `name.` have none, and `src.tar.gz` has `tar.gz`.
+  const ext = fileExtension(fileName, 'file').toLowerCase()
   if (!ext) return { shouldWarn: false, category: null, ext: '' }
   if (IMAGE_EXTS.has(ext)) return { shouldWarn: true, category: 'image', ext: '' }
   if (DOCUMENT_EXTS.has(ext)) return { shouldWarn: true, category: 'document', ext: '' }

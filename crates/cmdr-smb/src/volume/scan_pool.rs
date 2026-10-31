@@ -48,19 +48,20 @@ use std::time::Duration;
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 
+use super::dfs_links::is_behind_dfs_link;
 use super::mapping::map_smb_error;
 use super::query::{ListingStop, read_listing};
 use super::read_stream::{ASSUMED_MAX_READ, InlineReadStream};
-use super::session::{build_session, retired_session_id};
+use super::session_build::{build_session, retired_session_id};
 use super::state::{ConnectionState, ends_the_session};
 use super::{SmbConnectionParams, SmbVolume};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{Volume, VolumeError, VolumeReadStream};
-use smb2::SmbClient;
 use smb2::client::tree::Tree;
 use smb2::types::SessionId;
+use smb2::{DirectoryReader, SmbClient};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -96,7 +97,7 @@ struct PoolMember {
     session: tokio::sync::Mutex<Option<MemberSession>>,
     /// The id of THIS member's session that died, set when it's cleared out of
     /// `session` and taken by the reconnect that replaces it, which names it to
-    /// the server (`session::retired_session_id`). ❌ Never a sibling's.
+    /// the server (`session_build::retired_session_id`). ❌ Never a sibling's.
     retired: std::sync::Mutex<Option<SessionId>>,
 }
 
@@ -265,6 +266,22 @@ impl ScanPool {
             }
         }
         None
+    }
+
+    /// Opens `smb_path`'s listing through the DFS link it sits behind, on member
+    /// `idx`'s own client (held for the open only; the reader owns the
+    /// target's connection). `None` when that member's session is gone: the
+    /// caller keeps the refusal.
+    async fn open_through_link(&self, idx: usize, smb_path: &str) -> Option<Result<DirectoryReader, smb2::Error>> {
+        let mut guard = self.members[idx].session.lock().await;
+        let sess = guard.as_mut()?;
+        // Straight to the target (smb2's resolver, cached per member client),
+        // or as given and smb2 follows.
+        let (mut tree, path) = match super::dfs_links::target_of(&mut sess.client, &sess.tree, smb_path).await {
+            Ok(target) => target,
+            Err(e) => return Some(Err(e)),
+        };
+        Some(sess.client.open_directory_reader(&mut tree, &path).await)
     }
 
     /// A listing on member `idx` failed with a connection-lost/expired error: drop
@@ -492,7 +509,25 @@ impl SmbVolume {
                     break;
                 };
                 let runtime = self.inner.host().runtime();
-                match read_listing(&tree, conn, &smb_path, &display_path, None, cancel, &runtime).await {
+                let opened = match tree.open_directory_reader(conn, &smb_path).await {
+                    // Behind a DFS link: through this member's own client, so
+                    // the walk stays off the main session (`dfs_links.rs`).
+                    Err(e) if is_behind_dfs_link(&e) => match pool.open_through_link(idx, &smb_path).await {
+                        Some(opened) => {
+                            if opened.is_ok() {
+                                self.inner.link_paths.note(&smb_path);
+                            }
+                            opened
+                        }
+                        None => Err(e),
+                    },
+                    opened => opened,
+                };
+                let listed = match opened {
+                    Ok(reader) => read_listing(reader, &display_path, None, cancel, &runtime).await,
+                    Err(e) => Err(ListingStop::Smb(e)),
+                };
+                match listed {
                     Ok(entries) => return Ok(entries),
                     Err(ListingStop::Cancelled) => {
                         return Err(VolumeError::Cancelled("Listing cancelled".into()));
@@ -601,6 +636,9 @@ impl SmbVolume {
                         // reached the wire, and the main session streams it in
                         // chunks the window can carry.
                         Err(smb2::Error::CreditStarvation { .. }) => break, // ⇒ streaming
+                        // Behind a DFS link: the streamed read follows it, on
+                        // the transfer session (`dfs_links.rs`).
+                        Err(e) if is_behind_dfs_link(&e) => break, // ⇒ streaming
                         // A real per-file error (permission, not-found, …): the same
                         // on any connection; surface it typed, don't touch the main
                         // session's state (this wasn't its connection).

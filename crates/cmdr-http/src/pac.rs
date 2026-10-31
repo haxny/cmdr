@@ -24,6 +24,12 @@ use crate::entries::{Entry, Pac, PacSource};
 /// How long the asking thread waits for a PAC answer before going direct, the way macOS does
 /// when a PAC can't be run. Covers fetching the file, which CFNetwork does itself.
 pub(crate) const TIMEOUT: Duration = Duration::from_secs(3);
+/// The budget for a test cell that wants the PAC's ANSWER, ❌ not one about [`TIMEOUT`]: each
+/// test process pays CFNetwork's cold first evaluation (0.2–2 s on a busy Mac, then about
+/// 1 ms warm), so under load `TIMEOUT` tripped and the walk went direct (#754). Past it, the
+/// nextest cap reports a starved cell as a timeout, which is what it is.
+#[cfg(test)]
+pub(crate) const ANSWER_BUDGET: Duration = Duration::from_secs(60);
 /// How long an answer stays good. A PAC file rarely changes, and this bounds how long a changed
 /// one takes to apply.
 const ANSWER_TTL: Duration = Duration::from_secs(5 * 60);

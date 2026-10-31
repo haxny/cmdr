@@ -329,7 +329,7 @@ All under `apps/desktop/src-tauri/src/`.
   holds on it
 - `fda_gate.rs`: Full Disk Access startup gate: blocks TCC reads + `NSWorkspace` icon calls until FDA is decided. See
   `apps/desktop/src-tauri/CLAUDE.md` § Tauri commands and capabilities
-- `instance_lock.rs`: Single-instance guard: one process per data dir, claimed at startup. See
+- `instance_lock.rs`: Single-instance guard: one process per data, cache, and log dir, claimed at startup. See
   `tooling/instance-isolation.md` § Instance lock
 - `quit/`: The quit gate. Every exit path asks it first (the two Tauri handlers and the MCP `quit` tool); with
   non-instant operations in flight it holds the exit, raises the countdown dialog, and runs the teardown on its own
@@ -589,7 +589,8 @@ the vendored fork are ordinary members.
 - `crates/operation-log-dump/`: developer CLI that renders `operation-log.db` through the log's own read functions.
   Depends on `cmdr-operation-log` alone
 - `crates/fsevent-stream/`: vendored fork of the FSEvents stream crate (published as `cmdr-fsevent-stream`), giving the
-  drive watcher event IDs and `sinceWhen` replay. macOS-only
+  drive watcher event IDs and `sinceWhen` replay, and the panes' per-listing watch every event (lost-history flags
+  anchored above the folder included). macOS-only
 - `fuzz/` (repo root, outside the workspace): libFuzzer targets for the parsers that read bytes someone else chose (ADB,
   WebDAV, S3, archives, PDF, image headers), reached through each crate's `fuzzing` feature. Run by `pnpm check fuzz`
   and the slow CI lane. See `fuzz/CLAUDE.md`

@@ -67,6 +67,8 @@ pub(super) fn failure_token(error: &ViewerError) -> &'static str {
         ViewerError::DestinationIsReadOnly => "destination_read_only",
         ViewerError::Archive { .. } => "archive",
         ViewerError::ColdStorage => "cold_storage",
+        ViewerError::LinkTargetUnreachable => "link_target_unreachable",
+        ViewerError::LinkNeedsConsent => "link_needs_consent",
         // Only an "Open with" pull checks for room, so a viewer open never carries it.
         ViewerError::NotEnoughSpace { .. } => "not_enough_space",
     }

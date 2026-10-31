@@ -1,172 +1,196 @@
 # Ukrainian (uk) translation style guide
 
 Working notes for translating Cmdr into Ukrainian. Read `../README.md` for how this fits the translation process, and
-the app-wide `docs/style-guide.md` for the English voice these notes carry into Ukrainian.
+the app-wide `docs/style-guide.md` for the English voice these notes carry into Ukrainian. Term rulings live in
+`terms.json` (keyed by the shared `../concepts.json`), their rationale in `decisions.md`, typography in
+`mechanics.json`, and open questions in `review-queue.md`.
 
-Evidence is triangulated against the reference pile (`_ignored/i18n/uk/`: macOS strongest, then Microsoft terminology
-and style guide, then GNOME Nautilus and Xfce Thunar) on 2026-06-20. Sources are read to decide a term, never copied
-verbatim (Apple and Microsoft are copyrighted, GNOME and Xfce are GPL): Cmdr writes its own value.
+Ukrainian is well resourced in the reference pile (`_ignored/i18n/uk/` in the main clone): macOS (Finder, AppKit, System
+Settings), Microsoft terminology and style guide, Total Commander, Double Commander, GNOME Nautilus, KDE Dolphin, and
+Xfce Thunar. The live macOS bundles on any Mac (`uk.lproj`, `.loctable`) fill what the pile's macOS extract lacks (the
+Privacy & Security rows, for example). macOS wins for anything a Mac user sees in their own system; Total Commander and
+Double Commander win for two-pane vocabulary Finder doesn't have. Sources are read to decide a term, never copied
+verbatim: Cmdr writes its own value.
 
-## Decisions to confirm with David
+## Digest
 
-These are the calls a translator can't make alone. The rest of this guide assumes them. Both resolved confidently from
-the reference pile, listed here only so they aren't relitigated:
+The must-know rules; the rest of this file elaborates them.
 
-- **Formal `Ви` address, resolved (high).** Microsoft's Ukrainian style guide directs avoiding the informal «ти» in
-  favor of the formal «Ви» for software (paraphrased; the substance is supported, but the exact quoted wording wasn't
-  verifiable from the PDF). macOS Finder addresses the user formally too. Settled, not pending.
-- **Cyrillic only, target the single `uk` base (high).** Ukrainian has one script (Cyrillic) and one mainstream written
-  standard. No regional split to manage. The one live risk is Russian-convention leakage, called out below.
+- **Ukrainian, not Russian**: the most visible failure is Russian leaking in. Write modern standard Ukrainian (2019
+  orthography) the way Ukrainian macOS and current Ukrainian apps speak. ❌ Never calque a Russian construction or term
+  (`являтися`, `слідуючий`, `на протязі`, `приймати участь`, `співпадати`, `вірний` for "correct", `згідно з чим`
+  piles); use `бути`, `наступний`, `протягом`, `брати участь`, `збігатися`, `правильний`. Ukrainian letters `і`, `ї`,
+  `є`, `ґ` wherever the word needs them. If a phrase only sounds right because Russian says it that way, rewrite it.
+- **Address**: polite `ви`, always lowercase (`ви`, `вас`, `ваш`), as Ukrainian macOS writes it (140 lowercase, zero
+  capitalized mid-sentence). Never `ти`. Keep direct address light: Ukrainian UI often phrases impersonally
+  (`Можна зачекати`, `Потрібен дозвіл`). Onboarding, About, and a few notes may speak as David in the first person.
+- **Voice**: everyday, warm, calm; ❌ never officialese (канцелярит). Prefer a verb clause to a noun chain, `щоб` to
+  `для + verbal noun` (`Натисніть Esc, щоб очистити`, not `для очищення`), `потрібно` / `треба` to `необхідно`, and
+  `цей` to `даний`. Keep the English's warmth, apologies, and jokes when the `@key` description asks for them.
+- **No «помилка» in error copy**: "Couldn't X" → `Не вдалося X` (a one-time result, macOS: `Не вдалося створити папку`);
+  "Can't X" (a standing state) → `Не вдається X` or `Неможливо X`; "Cmdr couldn't X" → `Cmdr не вдалося X`; "Something
+  went wrong" → `Щось пішло не так`; "ran into a problem" → `виникла проблема`. Compounds are fine (`звіт про помилку`,
+  `друкарська помилка`). "Try again" as a button → `Спробувати ще раз`; in prose → `Спробуйте ще раз`.
+- **Register by UI slot**:
+  - buttons, menu items, commands: perfective infinitive, macOS-style (`Скопіювати`, `Перейменувати`, `Скасувати`,
+    `Вийняти`); ❌ never an imperative (`Скопіюйте`) on a button;
+  - toggle and checkbox labels: an imperfective infinitive or a noun phrase describing a standing behavior
+    (`Показувати приховані файли`); a switch named after a command keeps that command's name;
+  - progress lines: a verbal noun with `…` (`Копіювання…`, `Підʼєднання: {name}…`);
+  - finished results: the impersonal `-но/-то` form (`Скопійовано`, `Переміщено`, `Видалено`): no gender, no person;
+  - status chips: a short adjective or participle agreeing with its noun (`Підʼєднано`, `Призупинено`), or a noun;
+  - dialog titles: an infinitive question (`Видалити «{name}»?`) or a noun phrase;
+  - instructions inside a sentence: the polite imperative (`Відкрийте {systemSettings}`) or an impersonal
+    (`Потрібно дозволити доступ`).
+- **Native names follow Ukrainian macOS**: `Смітник` (capitalized, `у Смітник`, `зі Смітника`), `Досьє` (Get Info),
+  `Швидкий перегляд` (Quick Look), `Системні параметри`, `Параметри…` (the app Settings menu item),
+  `Приватність і безпека`, `Повний доступ до диска`, `Файли та папки`, `Локальна мережа`, `Автоматизація`, `Програми`
+  (the folder), `Викачане` (Downloads), `Документи`, `Робочий стіл`, `Домівка` (Go > Home), `Перехід до папки…` (Go to
+  Folder), `Підʼєднатися до сервера…`, `Вийняти` (Eject), `Замкнено` (Locked), `Довідка` (Help), `Теги`, `Бічна панель`,
+  `Недавні`, `Улюблені`, `Мережа`, `Показати у Finder`, `Відкрити програмою` (Open With), `Показати вміст пакета`,
+  `Емодзі та символи`, `Повноекранний режим`, `Доступність` (Accessibility), `Експертні` (Finder's Advanced tab),
+  `Спільний доступ і привілеї`, `Сховати решту`, `Повернути назад` (Put Back), `Стартовий диск`, `Панель стану`. Apple
+  app names localized in Ukrainian: `Термінал`, `Мініредактор` (TextEdit), `Ключар` (Keychain Access),
+  `Монітор активності`, `Дискова утиліта` / `Швидка допомога` (First Aid). Kept Latin: Finder, Dock, Spotlight, Mission
+  Control, AirDrop, iCloud Drive, Time Machine. Verify any other macOS label in the pile or the live bundle before
+  quoting it.
+- **Product vocabulary** (rulings in `terms.json`): item → `елемент` (macOS, ❌ not `обʼєкт`); delete → `Видалити`,
+  remove from a list → `Вилучити` (macOS keeps the two apart); Undo → `Відмінити`, Cancel → `Скасувати` (macOS keeps
+  these apart too); Settings → `Параметри`; folder → `папка` (❌ not `тека`, the GNOME word); pane → `панель`; tab →
+  `вкладка`; volume → `том`; drive / disk → `диск`; connect / disconnect → `підʼєднати(ся)` / `відʼєднати(ся)`; download
+  / upload → `викачати` / `закачати` (macOS); name (a file's) → `назва`, a person's or account name → `імʼя`; Resume →
+  `Поновити`; Pause → `Призупинити`; Merge → `Обʼєднати`; app → `програма` (❌ not `застосунок` / `додаток`, macOS and
+  Microsoft agree); default → `типовий` (❌ not `за замовчуванням`, a Russian calque); select / choose → `вибрати`,
+  selected → `вибрано`; mount → `змонтувати`; permissions → `привілеї`. Ask Cmdr stays verbatim and takes no case
+  ending: put case on a head noun (`у вікні Ask Cmdr`). click → `натиснути` / `клацнути`; double-click →
+  `двічі клацнути`.
+- **Placeholders**: a `{name}`, `{path}`, `{server}`, `{app}` can't decline and has no known gender. Keep it nominative:
+  a type noun in front (`папка {name}`, `сервер «{server}»`), a quoted name like Finder (`Перейменувати «{name}»`), a
+  label colon (`Пропущено: {name}`), or the sentence subject in the present tense. ❌ Never a bare insert where
+  Ukrainian needs a case ending (`у {folder}`), ❌ never a past-tense verb or adjective that guesses its gender.
+- **Fragments**: a value that lands inside another sentence (an ETA, a fallback name, a duration, a unit word) must read
+  correctly in its host. Find the host key and read the assembled sentence. Mid-line fragments start lowercase.
+- **Plurals**: CLDR `one` / `few` / `many` / `other`, all four required. `one` covers 21, 31, 101 (`21 файл`); use `=1`
+  only for wording that means exactly one (`цей файл`). `few` takes nominative plural (`2 файли`), `many` genitive
+  plural (`5 файлів`), `other` (fractions) genitive singular (`1,5 файлу`). Put every word that agrees with the count
+  INSIDE the branches, the verb and participle too (`скопійовано 21 файл` works for every branch; `вибрано` is the safe
+  participle). Without a plural param, use a counted label colon (`Файлів: {countText}`) or Finder's parenthesis.
+- **Gender**: never gender the user (no `ви видалив(ла)`, no `готовий` addressed to them); use the present tense, the
+  infinitive, the impersonal `-но/-то`, or plural `ви` forms (`ви скасували`). Cmdr is masculine when a past tense is
+  unavoidable (`Cmdr зберіг`), but `Cmdr не вдалося` (impersonal) is better. macOS is feminine (`macOS заблокувала`).
+- **Typography** (`mechanics.json`): quotes `«…»`, nested `„…“`; the apostrophe is the letter `ʼ` (U+02BC), as Ukrainian
+  macOS writes it (`підʼєднати`, `обʼєкт`, `імʼя`), ❌ never ASCII `'` or `’` (and the ICU doubling rule then never
+  bites); ellipsis is the single `…` hugging its word; a no-break space before `%` (`42 %`) and before a dash `—`
+  (`Cmdr — файловий менеджер`); en dash for ranges (`2–3`); decimal comma and space-grouped thousands come from the
+  formatter. Size units are Cyrillic, as Finder writes them (`100 МБ`, `512 байтів`).
+- **No hedged grammar**: ❌ no `файл(и)`, `видалив(ла)`, `елемент/и`, no guessed ending glued to an insert (`{name}а`).
+  Use ICU `plural` / `select`, or restructure.
 
 ## Voice and tone
 
-Friendly, concise, active, calm. Microsoft's Ukrainian voice guidance ("clear, friendly, and concise," everyday
-conversational words, avoid "old-fashioned, too formal or archaic words") matches Cmdr's English voice, so it carries
-over cleanly. Keep sentences short and natural-spoken, not bureaucratic or officialese.
+Friendly, concise, active, calm. Microsoft's Ukrainian voice guidance (clear, friendly, concise, everyday words, no
+old-fashioned or overly formal vocabulary) matches Cmdr's English voice, so it carries over cleanly. Keep sentences
+short and natural-spoken.
 
-Error messages stay calm and actionable, and never label themselves with "помилка" (error) or "не вдалося" as a status
-the way English avoids "error"/"failed". State the problem and the next step. macOS Finder's pattern is the model here:
-"Не вдалося створити папку." ("Couldn't create the folder.") reads as a calm statement, not an alarm; pair it with a
-recovery action.
+The danger in Ukrainian runs two ways at once: careful translation drifts into канцелярит (nominal chains, `здійснити`,
+`даний`, `з метою`, `у разі необхідності`), and it drifts toward Russian syntax, since many translation habits were
+formed on Russian software. Pick the everyday form a Ukrainian speaker would say to a colleague in 2026:
+
+- `Здійснюється копіювання файлів` → `Копіювання файлів…`
+- `Для продовження роботи необхідно надати дозвіл` → `Щоб продовжити, дайте дозвіл`
+- `У даній папці` → `У цій папці`
+- `Співпадає з` → `Збігається з`; `слідуючий` → `наступний`; `на протязі` → `протягом`; `являється` → `є`.
+
+Error messages stay calm and actionable. State the problem and the next step, with a recovery action where there is one.
 
 ## Formality
 
-- **`Ви` (formal), lowercase mid-sentence.** Never `ти`. Capitalized `Ви` only where a sentence genuinely addresses one
-  specific person directly and respectfully (rare in UI); default to lowercase per Microsoft.
-- **Buttons and menu actions: perfective infinitive, not imperative.** This is the macOS norm and the single most
-  important register choice. macOS Finder/AppKit: "Скопіювати" (Copy), "Відкрити" (Open), "Закрити" (Close), "Видалити"
-  (Delete), "Скасувати" (Cancel), "Стерти" (Erase). Use the infinitive form for action labels, NOT the imperative
-  "Скопіюй"/"Скопіюйте".
-- **In-progress status: verbal noun.** "Копіювання файлів…" (Copying files…), "Дублювання" (Duplicating), the way Thunar
-  and macOS phrase operations in flight.
-- **Explanatory/instructional sentences to the user: imperative plural or impersonal.** When telling the user to do
-  something inside a sentence, Microsoft prefers the polite imperative ("Спершу видаліть файл" = Delete the file first)
-  or an impersonal construction ("Потрібно додати текст" = Text needs to be added), specifically to dodge the
-  second-person past-tense gender trap (see Decision points).
+- **`ви` (formal), lowercase mid-sentence.** Never `ти`. Ukrainian macOS writes lowercase throughout, and so does
+  Microsoft.
+- **Buttons and menu actions: perfective infinitive.** This is the macOS norm and the single most important register
+  choice: `Скопіювати`, `Відкрити`, `Закрити`, `Видалити`, `Скасувати`, `Стерти`.
+- **In-progress status: verbal noun** (`Копіювання файлів…`, `Дублювання`), the way macOS and Thunar phrase operations
+  in flight.
+- **Instructions inside a sentence: polite imperative or impersonal** (`Спершу видаліть файл`, `Потрібно додати текст`),
+  which also dodges the past-tense gender trap.
 
 ## Decision points
 
 ### Avoid gendered past-tense and adjective agreement (high)
 
 Ukrainian past-tense verbs and adjectives agree with the subject's gender and number. A sentence that puts the user in
-the past tense forces a gender the app can't know ("Ви видалив" masculine vs "Ви видалила" feminine), which is wrong for
-half of users and reads as a defect.
+the past tense forces a gender the app can't know (`ви видалив` vs `ви видалила` in the singular), which is wrong for
+half of users. Prefer the present tense, the impersonal `-но/-то` form (`Файл переміщено`), the infinitive, or the
+plural `ви` past (`ви скасували`, grammatically plural so gender-free). Describing a FILE is fine: its noun fixes the
+gender (`файл` masculine, `папка` feminine, `елемент` masculine).
 
-- **Recommendation:** structure copy so no message about the user uses a gendered past-tense verb or adjective referring
-  to them. Microsoft's own neutralization strategy: prefer present tense, impersonal forms, or imperatives. Concrete:
-  "Файл переміщено" (the file was moved, impersonal `-но/-то` passive, no gender) over "Ви перемістили файл"; "Готово"
-  over a gendered "completed"; present "{0} відкриває файл" over past "{0} відкрив файл". The impersonal `-но/-то` form
-  ("видалено", "скопійовано", "переміщено") is the workhorse: it states the result with zero gender.
-- Same care for adjectives describing the user. Describing a FILE is fine because the file's grammatical gender is fixed
-  by the noun (файл is masculine, папка feminine, etc.) and known.
-- Confidence: high. This is the dominant real-world Ukrainian UI gender concern and Microsoft documents the exact
-  workaround.
+### Russian-convention leakage (high)
 
-### Don't let Russian conventions leak in (high)
+Guard the letters (`і` / `ї` / `є` / `ґ`, the apostrophe letter), the vocabulary (pull every term from the Ukrainian
+pile, never guess from Russian), and the syntax (`щоб` clauses, `-но/-то` impersonals, and verbs over noun chains).
+Russian is shipped in Cmdr; ❌ don't read the Russian catalog as a template. A native Ukrainian reviewer will proofread;
+anything you're unsure reads as Ukrainian goes in `review-queue.md`.
 
-Ukrainian and Russian share a Cyrillic base but are distinct languages; mixing them is the most visible localization
-failure, and politically charged. Guard specifically:
+### Regional variant and script (high)
 
-- **Ukrainian-only letters must appear where the word needs them:** і (not Russian и as the default "i"), ї, є, and ґ.
-  Ukrainian also has и and е but with different values than Russian. Don't transliterate from a Russian term.
-- **The apostrophe is a LETTER, not punctuation.** It separates a hard consonant from an iotated vowel: комп'ютер,
-  об'єкт, прем'єр. macOS renders it with the modifier-letter apostrophe ʼ (U+02BC), e.g. "Компʼютер". A plain ASCII `'`
-  is the common practical choice and acceptable; be consistent. This collides with the ICU apostrophe-doubling rule, so
-  see Plurals/Notes: every literal apostrophe in an ICU value must be doubled (`''`), or ICU silently eats text.
-- Use Ukrainian terms, not Russian-derived ones (e.g. "тека"/"папка" for folder, not a Russian calque). Pull every term
-  from the Ukrainian reference pile, never guess from Russian.
-- Confidence: high. Recommendation: native review is the real backstop here; flag anything you're unsure reads as
-  Ukrainian rather than Russian-influenced.
+Ukrainian has one script (Cyrillic) and one mainstream written standard, so Cmdr ships the single `uk` base with no
+overlay.
 
-### Number, date, and quotation formatting (high)
+## Terminology
 
-- **Numbers come from the formatter layer, never hardcode separators.** Ukrainian uses a space (non-breaking) thousands
-  separator and a comma decimal: `1 234 567,89`, `1,5` (verified with `Intl.NumberFormat('uk')`, 2026-06-20). Let
-  `formatNumber()`/`formatByteSize()` produce these from the locale.
-- **Dates:** `dd.MM.yyyy` (e.g. `20.06.2026`), verified with `Intl.DateTimeFormat('uk')` 2026-06-20. From the formatter
-  layer, not strings.
-- **Quotation marks: «…» (guillemets)** as the primary pair, the way macOS Finder writes them ("папки «Робочий стіл»").
-  For a nested quote, the German-style „…" can be used inside. Avoid English "…".
-- **Sentence case is native.** Ukrainian doesn't capitalize common nouns, weekdays, or months, so the app's
-  sentence-case rule applies cleanly. Don't title-case.
-- Confidence: high.
+The agreed translation for recurring terms lives in `terms.json`, one ruling per concept from `../concepts.json`.
+Cross-term notes:
 
-## Terminology and glossary
-
-Format per term: `chosen · sources · confidence`. macOS wins when sources differ, since Cmdr is a macOS app. Verified
-against `_ignored/i18n/uk/` on 2026-06-20.
-
-- **file: `файл`** · macOS, MS, GNOME, Thunar all agree. Definite forms by case; plural "файли". `high`.
-- **folder: `папка`** · macOS Finder ("Не вдалося створити папку", "вкладеної папки"). Thunar/GNOME also use "тека";
-  prefer macOS's "папка" for consistency with the platform, reserve "тека" only if mirroring a GNOME-style surface.
-  `high`.
-- **copy: `Скопіювати` (action) / `Копіювання` (in progress)** · macOS AppKit, Thunar. `high`.
-- **move: `Перемістити`** · macOS Finder ("перемістити до {destination}", "Переміщує елементи у Смітник"). `high`.
-- **delete: `Видалити`** · macOS Finder/AppKit. The move-to-trash safe action is separate (below). `high`.
-- **erase (permanent, format/wipe): `Стерти`** · macOS Finder ("Erase" = "Стерти", "Стартовий диск"). Use for the
-  destructive wipe sense, not routine delete. `high`.
-- **rename: `Перейменувати`** · Thunar, MS terminology. `high`.
-- **open: `Відкрити`** · macOS. `high`.
-- **cancel: `Скасувати`** · macOS Finder. Imperative-infinitive on buttons. `high`.
-- **trash (the location): `Смітник`** · macOS Finder ("у Смітник", "Елементи в Смітнику"). Capitalized as a place name,
-  the way Finder shows it. `high`.
-- **move to trash: `Перемістити у Смітник`** (or Finder's "Викинути … у Смітник") · macOS Finder. Prefer "Перемістити у
-  Смітник" for the neutral action label. `high`.
-- **eject: `Вийняти`** · macOS AppKit ("NSNavEjectButton" = "вийняти"). `high`.
-- **duplicate: `Дублювати` / `Дублювання`** · macOS Finder ("Дублює елементи", "для дублювання"). `high`.
-- **settings: `Параметри`** · MS terminology and Microsoft's standard; note macOS may show "Налаштування" in places.
-  `tentative` (macOS-vs-MS split possible): confirm which the user-facing macOS surface shows.
-- **search: `Пошук` (noun) / `Шукати` (action)** · MS terminology, common Ukrainian IT usage. `high`.
-- **overwrite: `Перезаписати`** · macOS Finder ("Залишати чи перезаписувати … розширення"). `high`.
-- **volume / disk: `том` / `диск`** · macOS Finder ("Зовнішні диски", "Стартовий диск"); "том" for a mounted volume per
-  MS terminology. `high`.
-- **pane / tab: `панель` / `вкладка`** · MS terminology ("вкладка" for tab). The two file lists are "панелі".
-  `tentative` for pane (no direct macOS Finder source); low risk.
-
-Add terms as they come up in this same `chosen · sources · confidence` shape.
+- **Short labels** start with a capital and use sentence case (`Показати приховані файли`); Ukrainian never title-cases.
+- **Compounds**: Ukrainian builds noun phrases with genitive or an adjective (`журнал операцій`, `черга передач`), not a
+  glued compound. Keep those phrases short; more than two genitives in a row reads like officialese.
+- **Foreign technical terms** Ukrainian IT uses natively stay as words (`сервер`, `хост`, `токен`, `кеш`); a protocol or
+  format name stays Latin (`SMB`, `SFTP`, `ZIP`).
 
 ## Brand and do-not-translate
 
-Keep verbatim: Cmdr, macOS, GitHub, SMB, MTP, Tauri, Rust, Svelte, Quick Look, plus the `{system_settings}`-style
-tokens. The curated list (BRAND_WORDS + SYSTEM_TOKENS) is enforced by `desktop-i18n-dont-translate`; see
-`apps/desktop/scripts/i18n-catalog-lib.ts`. macOS UI names Cmdr opens into (System Settings panes, "Смітник") should
-match what a Ukrainian macOS actually shows.
+Keep verbatim: Cmdr, macOS, GitHub, SMB, MTP, Tauri, Rust, Svelte, plus the `{system_settings}`-style tokens (the full
+list: BRAND_WORDS + SYSTEM_TOKENS in `apps/desktop/scripts/i18n-catalog-lib.ts`). Quick Look is NOT kept: Ukrainian
+macOS calls it `Швидкий перегляд`. A brand takes no case ending (`у Cmdr`, `для Cmdr`, `Cmdr зберіг`): Ukrainian leaves
+an indeclinable foreign name bare, like `у Finder`.
 
 ## Plurals
 
-CLDR categories for Ukrainian: **`one`, `few`, `many`, `other`** (4 forms; verified with
+CLDR categories for Ukrainian: `one`, `few`, `many`, `other` (verified with
 `new Intl.PluralRules('uk').resolvedOptions().pluralCategories`, 2026-06-20). The `desktop-i18n-plural` check requires
-every plural message to cover all four. Real catalogs (Nautilus) use `nplurals=4`, so this is well-trodden.
+all four.
 
-The categories map to noun-ending agreement after the count (this is WHY there are four, and the branch text must use
-the matching case form):
+- `one`: numbers ending in 1 but not 11 (1, 21, 101). Nominative singular: `1 файл`, `21 папка`.
+- `few`: ending in 2–4 but not 12–14 (2, 3, 22). Nominative plural: `2 файли`, `3 папки`.
+- `many`: ending in 0, 5–9, or 11–14 (5, 11, 25, 100). Genitive plural: `5 файлів`, `11 папок`.
+- `other`: fractions (1,5). Genitive singular: `1,5 файлу`, `2,5 гігабайта`.
 
-- **`one`**: numbers ending in 1 but not 11 (1, 21, 101). Noun in nominative singular: "1 файл", "21 файл".
-- **`few`**: ending in 2-4 but not 12-14 (2, 3, 4, 22, 23). Noun in genitive singular: "2 файли", "3 папки".
-- **`many`**: ending in 0, 5-9, or 11-14 (5, 11, 12, 25, 100). Noun in genitive plural: "5 файлів", "11 папок".
-- **`other`**: fractional or decimal values: "1,5 файлу".
+Adjectives and participles agree too (`1 вибраний файл`, `2 вибрані файли`, `5 вибраних файлів`), so put them inside the
+branches. The neuter impersonal (`вибрано 5 файлів`, `скопійовано 21 файл`) is the easiest frame: the same verb form
+works in every branch.
 
-Write all four branches with the correctly-cased noun in each; don't reuse one noun form across branches. The number
-itself comes from the formatter, but the noun and any agreeing adjective live in the branch text. Combine with the
-gender-avoidance rule above: if a counted-items message also references an action on the user, keep that part impersonal
-(`-но/-то`) so no branch carries a gendered past-tense verb.
+## Typography
+
+As Ukrainian macOS writes it (the pile's Finder, AppKit, and System Settings strings, counted 2026-10-29):
+
+- Quotes `«…»` (763 in the pile, 16 curly `“`); nested `„…“`.
+- The apostrophe is `ʼ` (U+02BC MODIFIER LETTER APOSTROPHE): 212 in the pile, zero ASCII `'`, zero `’` inside a word.
+  It's a letter, so ICU never treats it as an escape.
+- Ellipsis `…` (262 vs 10 three-dot), hugging its word.
+- `%` takes a no-break space (`100 %`, `^0 % завершено`); the dash `—` takes a no-break space before it and a plain
+  space after.
+- Ranges take an en dash with no spaces (`2–3`).
 
 ## Notes and decisions
 
-- **ICU apostrophe doubling is extra-sharp here.** Because the apostrophe is a real Ukrainian letter (комп'ютер,
-  об'єкт), it appears in ordinary words inside ICU values, where a lone `'` is an ICU escape that silently swallows
-  following text. Double EVERY literal apostrophe (`'` → `''`) in ICU-formatted values. (Keys under `errors.*` are raw,
-  not ICU: there use a single normal apostrophe. See `i18n.md` § Error pipeline and the agent-handoff block in
-  `docs/guides/i18n-translation.md`.)
-- **Length.** Ukrainian runs somewhat longer than English (often 10-20% more), and case endings lengthen nouns.
-  Overflow-check the layout against the pseudolocale (`en-XA`).
-- **Numbers/dates from the formatter layer**, never hardcoded in a string (see Decision points).
-- Record any case-by-case rulings here so they aren't relitigated.
+- **Length.** Ukrainian runs 10–20% longer than English, and case endings lengthen nouns. Overflow-check the layout
+  against the pseudolocale (`en-XA`).
+- **Numbers and dates come from the formatter layer** (`1 234 567,89`, `20.06.2026`), never hardcoded in a string.
+- **Search keywords** (`settings.*.keywords`): Ukrainian users often type with a Ukrainian keyboard whose apostrophe key
+  yields ASCII `'`, so prefer keywords without an apostrophe where a synonym exists.
+- Case-by-case rulings go in `decisions.md` under a heading citing their keys.
 
-## Termbase
+## Termbase files
 
-This language has no termbase yet. On its first translation pass, copy `terms.json`, `decisions.md`, and
-`review-queue.md` from `docs/i18n/_template/` into this folder, and add a `## Digest` to this guide (the template
-`style.md` shows it). Each term ruling goes in `terms.json`, keyed by a concept from `docs/i18n/concepts.json` and
-sourced from the reference pile (`_ignored/i18n/uk/`; recipes in `docs/i18n/reference-pile/how-to-mine.md`); never guess
-a term. Any terminology notes above are seeds to verify and move there. Schema: `docs/i18n/termbase.md`.
+`terms.json` holds one ruling per concept (`chosen`, `sources`, `confidence`, plus `accept` / `forms` / `avoid`), seeded
+from the reference pile on the first translation pass (2026-10-29). Schema: `../termbase.md`.

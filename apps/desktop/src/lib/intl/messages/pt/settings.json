@@ -1718,6 +1718,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Avisar quando um item apagado já tinha sumido",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Quando você apaga algo que outro app já moveu ou apagou, o Cmdr considera isso concluído e mostra uma nota curta avisando. Desative esta opção (ou clique em “Nunca mais mostrar” na nota) para pular a nota.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "sumido, desaparecido, ausente, removido, excluído, aviso, notificação, mensagem",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Número de abas fechadas a lembrar por painel",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
@@ -2852,9 +2864,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Roda um pequeno modelo de linguagem inteiramente no seu dispositivo. Privacidade máxima: nada sai do seu computador. Funciona offline. Usa ~2 GB de espaço em disco e ~400 MB de memória (varia com o tamanho do contexto). Requer Apple silicon (M1+).",
+  "settings.ai.tooltipLocal": "Roda um pequeno modelo de linguagem inteiramente no seu dispositivo. Privacidade máxima: nada sai do seu computador. Funciona offline. Usa ~2 GB de espaço em disco e ~400 MB de memória (varia com o tamanho do contexto). Requer Apple silicon (M1+) e macOS 14 ou posterior.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "A IA local requer Apple silicon (M1 ou posterior). Use a IA na nuvem.",
   "@settings.ai.tooltipLocalDisabled": {
@@ -3539,5 +3551,33 @@
   "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
   "@settings.multiRename.tagEditor.absSideFiles.keywords": {
     "sourceHash": "806b0cd"
+  },
+  "settings.servers.card.smbLinkConsents": "Inícios de sessão de links SMB",
+  "@settings.servers.card.smbLinkConsents": {
+    "sourceHash": "831477d"
+  },
+  "settings.network.smbLinkConsents.keywords": "SMB, DFS, link, iniciar sessão, outro servidor, permitir, confiar, esquecer",
+  "@settings.network.smbLinkConsents.keywords": {
+    "sourceHash": "d88f7c7"
+  },
+  "settings.servers.smbLinkConsents.description": "Um link em um compartilhamento SMB pode levar a uma pasta em outro servidor. O Cmdr pergunta antes de iniciar sessão lá, e guarda sua resposta aqui.",
+  "@settings.servers.smbLinkConsents.description": {
+    "sourceHash": "03ed8ee"
+  },
+  "settings.servers.smbLinkConsents.empty": "Nada permitido ainda. Quando um link em um compartilhamento levar a outro servidor, o Cmdr pergunta primeiro.",
+  "@settings.servers.smbLinkConsents.empty": {
+    "sourceHash": "16326ce"
+  },
+  "settings.servers.smbLinkConsents.pair": "Links em {server} podem iniciar sessão em {target}",
+  "@settings.servers.smbLinkConsents.pair": {
+    "sourceHash": "093a03d"
+  },
+  "settings.servers.smbLinkConsents.confirmTitle": "Esquecer este início de sessão?",
+  "@settings.servers.smbLinkConsents.confirmTitle": {
+    "sourceHash": "edc2567"
+  },
+  "settings.servers.smbLinkConsents.confirm": "Na próxima vez que um link em {server} levar a {target}, o Cmdr vai perguntar de novo.",
+  "@settings.servers.smbLinkConsents.confirm": {
+    "sourceHash": "0218465"
   }
 }

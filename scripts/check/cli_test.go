@@ -207,6 +207,54 @@ func TestParseFlags_FastMutuallyExclusiveWithSlowLanes(t *testing.T) {
 	}
 }
 
+func TestParseFlags_PreReleaseIsItsOwnLane(t *testing.T) {
+	flags, err := parseFlags([]string{"--pre-release", "--ci"})
+	if err != nil || !flags.preRelease {
+		t.Fatalf("parseFlags(--pre-release --ci) = %+v, %v; want preRelease set", flags, err)
+	}
+	for _, args := range [][]string{
+		{"--pre-release", "--fast"},
+		{"--pre-release", "--include-slow"},
+		{"--pre-release", "--only-slow"},
+	} {
+		if _, err := parseFlags(args); err == nil {
+			t.Errorf("parseFlags(%v) should error: --pre-release is a lane of its own", args)
+		}
+	}
+}
+
+// Through the real registry and filter pipeline: `--pre-release` runs exactly the pre-release
+// checks, and no other lane runs any of them.
+func TestApplyLaneFilters_PreReleaseLaneIsDisjoint(t *testing.T) {
+	isPreRelease := map[string]bool{}
+	for _, c := range checks.AllChecks {
+		if c.IsPreRelease {
+			isPreRelease[c.ID] = true
+		}
+	}
+	if len(isPreRelease) == 0 {
+		t.Fatal("no check is IsPreRelease")
+	}
+	got := applyLaneFilters(checks.AllChecks, &cliFlags{preRelease: true, ciMode: true})
+	if len(got) != len(isPreRelease) {
+		t.Errorf("--pre-release ran %d checks, want the %d pre-release ones", len(got), len(isPreRelease))
+	}
+	for _, c := range got {
+		if !isPreRelease[c.ID] {
+			t.Errorf("--pre-release ran %q, which isn't in the lane", c.ID)
+		}
+	}
+	for name, flags := range map[string]*cliFlags{
+		"default": {}, "ci": {ciMode: true}, "include-slow": {includeSlow: true}, "fast": {fast: true},
+	} {
+		for _, c := range applyLaneFilters(checks.AllChecks, flags) {
+			if isPreRelease[c.ID] {
+				t.Errorf("lane %s ran pre-release check %q", name, c.ID)
+			}
+		}
+	}
+}
+
 func TestParseFlags_HelpReturnsErrHelp(t *testing.T) {
 	for _, args := range [][]string{{"--help"}, {"-h"}} {
 		_, err := parseFlags(args)

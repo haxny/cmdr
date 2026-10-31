@@ -296,6 +296,84 @@ async fn a_listing_of_a_missing_directory_carries_the_path() {
     );
 }
 
+/// A phone with `/data` as a non-rooted one has it (`drwxrwx--x system`): the
+/// sync service stats it fine, but the shell user can't read it, so `LIST`
+/// answers `DONE` straight away. Plus a readable empty folder beside it.
+async fn phone_with_unreadable_data() -> (FakeAdbServer, Arc<super::AdbVolume>) {
+    let mut tree = FakeTree::new();
+    tree.add_dir("/data");
+    tree.add_file("/data/secret.db", b"private");
+    tree.deny_read("/data");
+    tree.add_dir("/sdcard/empty");
+    let server = FakeAdbServer::start(tree).await;
+    let (volume, _) = connect_fake(&server, FIXTURE_SERIAL).await;
+    (server, volume)
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_listing_of_a_directory_the_phone_wont_open_is_refused_not_empty() {
+    // ❗ Regression anchor (#836): adbd answers `[]` for a denied, an empty, and
+    // a missing folder alike, and `stat` succeeds on a folder it can't read, so
+    // `/data` on a real Pixel listed as an empty folder with no word of why.
+    let (_server, volume) = phone_with_unreadable_data().await;
+    let outcome = volume.list_directory(&fixture_path("/data"), None).await;
+    assert!(
+        matches!(outcome, Err(cmdr_fs::volume::VolumeError::PermissionDenied { ref path, raw_os_error: None }) if path == "/data"),
+        "{outcome:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_copy_scan_refuses_a_directory_the_phone_wont_open() {
+    // A copy that reads a refused folder as empty would quietly make an empty one.
+    use cmdr_fs::volume::scan_walk::ScanSource;
+
+    let (_server, volume) = phone_with_unreadable_data().await;
+    let scanned = volume.scan_list(&fixture_path("/data")).await;
+    assert!(
+        matches!(scanned, Err(cmdr_fs::volume::VolumeError::PermissionDenied { .. })),
+        "{scanned:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_index_walk_pays_no_shell_round_trip_for_an_empty_folder() {
+    // A phone has hundreds of empty folders, and one probe each took a real Pixel's walk
+    // from 4 s to 22 s. A refused folder costs the index nothing worse than a size of 0.
+    let (server, volume) = phone_with_unreadable_data().await;
+    let shells = || server.requests().iter().filter(|r| r.starts_with("shell")).count();
+    let before = shells();
+    let walked = volume
+        .list_directory_for_scan(
+            &fixture_path("/sdcard/empty"),
+            None,
+            &cmdr_fs::volume::ScanListingClock::start(),
+        )
+        .await
+        .expect("an empty folder lists");
+    assert!(walked.is_empty());
+    assert_eq!(shells(), before, "the walk runs no shell");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_empty_folder_the_phone_can_read_lists_as_empty() {
+    let (server, volume) = phone_with_unreadable_data().await;
+    let entries = volume
+        .list_directory(&fixture_path("/sdcard/empty"), None)
+        .await
+        .expect("an empty readable folder lists");
+    assert!(entries.is_empty());
+    // A listing with entries costs no readability probe: only an empty one asks.
+    let shells = || server.requests().iter().filter(|r| r.starts_with("shell")).count();
+    let before = shells();
+    let root = volume
+        .list_directory(&fixture_path("/"), None)
+        .await
+        .expect("root lists");
+    assert!(!root.is_empty());
+    assert_eq!(shells(), before, "a non-empty listing runs no shell");
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_phones_space_is_its_shared_storage_not_the_system_image_at_the_root() {
     // ❗ A phone's `/` is a read-only system image that reports 0 free. Asking

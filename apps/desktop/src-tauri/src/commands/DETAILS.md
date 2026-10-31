@@ -215,7 +215,7 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   command can't reach. Carries no paths or names, only counts. Runs off the IPC thread (one syscall per map entry) with
   a 5 s backstop. Its caller is the `memory_diagnostics` MCP tool (`../mcp/executor/memory.rs`), which is what makes the
   reading reachable from outside the app; recipes live in `docs/tooling/memory-debugging.md`.
-- **`eject.rs`**: `eject_volume(volume_id)` + `get_busy_volume_ids()` + `get_ejecting_volume_ids()`, thin delegates.
+- **`eject.rs`**: `eject_volume(volume_id)` + `eject_all_on_disk(volume_id)` + `get_busy_volume_ids()` + `get_ejecting_volume_ids()`, thin delegates.
   The teardown logic (joining an eject already running, kind dispatch, the pure unit-tested `decide_eject_action`, the
   busy-volume guard, and the `diskutil`/`umount`/MTP shell-out) lives in `file_system::volume::eject`. `EjectError` IS the wire type, so the command returns it unchanged
   and the frontend words each variant from `errors.eject.*`. `get_busy_volume_ids()` bootstraps the picker's busy set (see
@@ -454,7 +454,7 @@ Its four pre-turn gates (no agent store, consent not accepted, no resolvable pro
 one-turn floor) are also the ONLY account of the Ask Cmdr funnel's top, because none of them reach `run_turn`. That's
 why `AskCmdrSendRefusal` has two constructors and no struct literal: `of` and `detailed` both report the anonymous
 `ask_cmdr_turn` refusal, and a literal would silently lose the gate. `agent/chat/DETAILS.md` § The turn event. `apply_bulk_rename` consumes an exact accepted preflight then delegates
-the batch to `Operations::start_renames`; it never accepts frontend paths or model approval.
+the batch to `Operations::start_renames`; it never accepts frontend paths or model approval. `preflight_bulk_rename` and apply's recheck are the exception to the timeout tiers, on purpose: they report progress and stop on `cancel_bulk_rename_check`, because a slow-but-working job must not fail (`agent/tools/propose/DETAILS.md` § A check with no time limit).
 
 **One commands file per domain, no business logic in commands.** Tauri command functions are the IPC boundary
 (deserialization, state extraction, error mapping). Mixing business logic here makes it untestable (Tauri commands need

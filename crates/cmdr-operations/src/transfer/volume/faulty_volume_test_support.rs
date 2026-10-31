@@ -352,6 +352,12 @@ pub struct FaultyVolume<V: Volume> {
     inner: Arc<V>,
     faults: HashMap<FaultyOp, ArmedFault>,
     calls: StdMutex<HashMap<FaultyOp, usize>>,
+    /// `Some(n)`: every `rename` onto, and `create_directory` of, a name longer
+    /// than `n` UTF-8 bytes is refused with `InvalidName`, the way an
+    /// eCryptfs-backed share answers one (cmdr-reports#83).
+    name_cap: Option<usize>,
+    /// How many names the cap refused.
+    names_refused: std::sync::atomic::AtomicUsize,
 }
 
 impl<V: Volume + 'static> FaultyVolume<V> {
@@ -362,7 +368,34 @@ impl<V: Volume + 'static> FaultyVolume<V> {
             inner,
             faults: HashMap::new(),
             calls: StdMutex::new(HashMap::new()),
+            name_cap: None,
+            names_refused: std::sync::atomic::AtomicUsize::new(0),
         }
+    }
+
+    /// Refuses every name longer than `max_bytes` UTF-8 bytes at a `rename`'s
+    /// destination and at a `create_directory`, with `InvalidName`: a share
+    /// with a short name limit, where the staged temp (at most 143 bytes) fits
+    /// and the final name doesn't.
+    pub fn refusing_names_longer_than(mut self, max_bytes: usize) -> Self {
+        self.name_cap = Some(max_bytes);
+        self
+    }
+
+    /// How many names [`refusing_names_longer_than`](Self::refusing_names_longer_than)
+    /// refused, so a cell can prove its refusals fired.
+    pub fn names_refused(&self) -> usize {
+        self.names_refused.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// The refusal for `path` when its name is over the cap.
+    fn over_name_cap(&self, path: &Path) -> Option<VolumeError> {
+        let cap = self.name_cap?;
+        let leaf = path.file_name()?.as_encoded_bytes().len();
+        (leaf > cap).then(|| {
+            self.names_refused.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            VolumeError::InvalidName("STATUS_OBJECT_NAME_INVALID".into())
+        })
     }
 
     /// Arms `op` to fail on its `nth` call (1-based) with `error`. One fault per
@@ -472,6 +505,25 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         supports_unknown_length_writes, write_is_single_shot, publishes_writes_whole,
     );
 
+    fn read_link_target<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<PathBuf>, VolumeError>> + Send + 'a>> {
+        self.inner.read_link_target(path)
+    }
+
+    fn can_hold_links(&self) -> bool {
+        self.inner.can_hold_links()
+    }
+
+    fn create_symlink<'a>(
+        &'a self,
+        path: &'a Path,
+        target: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        self.inner.create_symlink(path, target)
+    }
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
@@ -503,10 +555,11 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         &'a self,
         path: &'a Path,
         cancel: Option<&'a CancellationToken>,
+        clock: &'a cmdr_fs::volume::ScanListingClock,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         match self.fault_for(FaultyOp::ListDirectory, path) {
             Some(e) => Box::pin(async move { Err(e) }),
-            None => self.inner.list_directory_for_scan(path, cancel),
+            None => self.inner.list_directory_for_scan(path, cancel, clock),
         }
     }
 
@@ -534,7 +587,10 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         &'a self,
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
-        match self.fault_for(FaultyOp::CreateDirectory, path) {
+        match self
+            .fault_for(FaultyOp::CreateDirectory, path)
+            .or_else(|| self.over_name_cap(path))
+        {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.create_directory(path),
         }
@@ -588,6 +644,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         match self
             .fault_for(FaultyOp::RenameFrom, from)
             .or_else(|| self.fault_for(FaultyOp::Rename, to))
+            .or_else(|| self.over_name_cap(to))
         {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.rename(from, to, force),

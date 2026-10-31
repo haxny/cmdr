@@ -45,9 +45,10 @@ pub(super) struct IndexOnDisk {
     pub has_covered_branches: bool,
     /// This volume has a journal and a stored event id worth replaying from.
     pub journal_replayable: bool,
-    /// The journal has moved so far past the stored id that replaying it costs
-    /// more than walking the volume.
-    pub journal_gap_too_wide: bool,
+    /// The journal's current id is BEHIND the stored one ([`journal_runs_behind`]),
+    /// so the journal can't serve that position: a replay from it would deliver
+    /// nothing and miss every change since.
+    pub journal_runs_behind: bool,
     /// The product's phased-first-index switch. Off restores the bulk-build path.
     pub phased_first_index: bool,
     /// This index is marked as one a drive that went away may have taken rows
@@ -72,8 +73,10 @@ pub(super) struct IndexOnDisk {
 ///   for the same reason: it can look finished while holding rows the current
 ///   policy cuts, and only a truncating walk re-stamps the policy, so replaying
 ///   or reconciling would leave its coverage distrusted for good;
-/// - a replayable journal with too wide a gap ⇒ walk it whole (today's behavior,
-///   and reachable only on a volume that already completed a scan);
+/// - a replayable journal that runs behind the stored id ⇒ walk it whole
+///   (reachable only on a volume that already completed a scan). ❌ A wide gap
+///   alone is NOT this row: the id counter is machine-wide, and the replay
+///   bounds its own cost (`watch/DETAILS.md` § "Replay cost, not event count");
 /// - a replayable journal ⇒ replay;
 /// - a completed index with no journal to replay ⇒ walk it whole, which
 ///   reconciles in place (the path a `LocalExternal` drive takes at every mount,
@@ -95,7 +98,7 @@ pub(super) fn launch_route(index: &IndexOnDisk) -> LaunchRoute {
         };
     }
     if index.journal_replayable {
-        return if index.journal_gap_too_wide {
+        return if index.journal_runs_behind {
             LaunchRoute::ScanTheVolume
         } else {
             LaunchRoute::ReplayTheJournal
@@ -110,6 +113,22 @@ pub(super) fn launch_route(index: &IndexOnDisk) -> LaunchRoute {
     LaunchRoute::CoverInPhases
 }
 
+/// Whether the journal can't serve the stored position: its current id is behind
+/// the one this index last saw. Event ids only grow on a healthy journal, so this
+/// means the journal was reset (or the id belongs to another one), and nothing
+/// replayed from the stored id can be trusted.
+///
+/// `current_id == 0` is "couldn't read it", which proves nothing, so it replays
+/// and lets the replay's own first-event check judge.
+///
+/// ❌ Deliberately no "too far ahead" arm. FSEvents ids count every write on the
+/// machine, so an hour of compiling moves them by 10 M+ while the index stays
+/// nearly current (#751). Purged history is caught by the replay's first-event
+/// check, and cost by its path budget.
+pub(super) fn journal_runs_behind(stored_id: u64, current_id: u64) -> bool {
+    current_id > 0 && current_id < stored_id
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,7 +140,7 @@ mod tests {
         has_rows: false,
         has_covered_branches: false,
         journal_replayable: false,
-        journal_gap_too_wide: false,
+        journal_runs_behind: false,
         phased_first_index: true,
         needs_rebuild: false,
         predates_exclusion_policy: false,
@@ -198,29 +217,29 @@ mod tests {
         assert_eq!(launch_route(&COMPLETED_UNJOURNALED), LaunchRoute::ScanTheVolume);
     }
 
-    /// A gap too wide to replay keeps today's meaning — and it is reachable only
-    /// on a volume that completed a scan, since replaying at all requires one. So
-    /// no volume being covered in phases can ever take it.
+    /// A journal that can't serve the stored id walks a completed volume, and that
+    /// row is reachable only on a volume that completed a scan, since replaying at
+    /// all requires one. So no volume being covered in phases can ever take it.
     #[test]
-    fn a_wide_journal_gap_during_phasing_does_not_truncate() {
-        let wide_gap_on_a_completed_volume = IndexOnDisk {
-            journal_gap_too_wide: true,
+    fn a_journal_behind_the_index_during_phasing_does_not_truncate() {
+        let behind_on_a_completed_volume = IndexOnDisk {
+            journal_runs_behind: true,
             ..COMPLETED_JOURNALED
         };
         assert_eq!(
-            launch_route(&wide_gap_on_a_completed_volume),
+            launch_route(&behind_on_a_completed_volume),
             LaunchRoute::ScanTheVolume,
-            "a completed volume with an unreplayable gap walks itself, exactly as it does today"
+            "a completed volume whose journal can't serve its position walks itself"
         );
 
-        let wide_gap_while_phasing = IndexOnDisk {
-            journal_gap_too_wide: true,
+        let behind_while_phasing = IndexOnDisk {
+            journal_runs_behind: true,
             ..PHASED_PARTIAL
         };
         assert_eq!(
-            launch_route(&wide_gap_while_phasing),
+            launch_route(&behind_while_phasing),
             LaunchRoute::CoverInPhases,
-            "❌ a partially covered volume must never be truncated by a journal gap: it has no journal \
+            "❌ a partially covered volume must never be truncated by the journal: it has no journal \
              position to be behind, and the branch resume's epoch bump is what admits the staleness"
         );
     }
@@ -339,5 +358,33 @@ mod tests {
             }),
             LaunchRoute::CoverInPhases
         );
+    }
+
+    /// #751: 14 M FSEvents ids went by in 90 minutes of `cargo` builds against an
+    /// index reconciled just before. That gap is the machine's write count, not
+    /// staleness, so the launch replays and lets the replay judge its own cost.
+    #[test]
+    fn a_wide_id_gap_alone_still_replays() {
+        assert!(!journal_runs_behind(4_000_000_000, 4_014_029_000));
+        assert!(!journal_runs_behind(1, u64::MAX), "however wide");
+        assert_eq!(
+            launch_route(&IndexOnDisk {
+                journal_runs_behind: journal_runs_behind(4_000_000_000, 4_014_029_000),
+                ..COMPLETED_JOURNALED
+            }),
+            LaunchRoute::ReplayTheJournal
+        );
+    }
+
+    /// A journal behind the stored id can't serve it: a replay from a future id
+    /// delivers nothing, so it would miss every change since. That one walks.
+    #[test]
+    fn a_journal_behind_the_stored_id_is_not_replayed() {
+        assert!(journal_runs_behind(5_000, 4_999));
+        assert!(
+            !journal_runs_behind(5_000, 5_000),
+            "nothing happened since: replay is a no-op"
+        );
+        assert!(!journal_runs_behind(5_000, 0), "an unread current id proves nothing");
     }
 }

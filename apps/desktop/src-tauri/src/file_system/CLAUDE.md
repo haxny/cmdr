@@ -22,16 +22,13 @@ Sync status, volume management, and file watching. The engines are crates: listi
   can block forever. Use pooled, hard-capped 8 MB OS threads (`framework_pool.rs`). § "Threading".
 - **Watcher rules** (each has a `DETAILS.md` section; read them before touching `watcher.rs`):
   - ❌ Never `tokio::spawn` from a watcher OS thread (no reactor: it panics). Use `tauri::async_runtime::spawn`.
-  - The watcher is the engine's first `ListingObserver` and keeps only the OS half: changes go to
-    `Listings::observe_children`, full re-reads to `Listings::refresh`.
-  - Arm listing watches with `start_watching_detached`, ❌ never `start_watching` (p90 653 ms inline). A late arm
-    misses earlier changes, so `arm_missed_a_change` (mtime) gates a re-read, ❌ never an unconditional one.
-  - Rebase event paths (`rebase_event_path`), or firmlinks (`/tmp`, `/var`, `/etc`) plus a symlinked watch root drop
-    every event.
-  - A created, removed, or renamed watch ROOT forces a full re-read; ❌ don't add `Modify(Metadata(_))`, since every
-    child change bumps the dir's mtime.
-  - Test builds arm no OS stream; a test needing real delivery calls `watch_for_real` first. § "Tests arm no OS
-    stream".
+  - Arm with `start_watching_detached`, ❌ never `start_watching` (p90 653 ms inline); `arm_missed_a_change` (mtime)
+    gates the catch-up re-read, ❌ never an unconditional one.
+  - Rebase event paths (`rebase_event_path`), or firmlinks and a symlinked root drop every event.
+  - A `Structural` change on the ROOT re-reads; ❌ not a root `Content` change (every child change bumps its mtime).
+  - macOS uses `cmdr-fsevent-stream`, ❌ never `notify`: it dropped lost-history flags anchored ABOVE the folder.
+    § "Lost history".
+  - Test builds arm no OS stream unless `watch_for_real`. § "Tests arm no OS stream".
   - A re-sorted row is one `DiffChangeType::Move`, ❌ never a remove plus an add (cursor and selection ride along by
     identity). § "Reordered rows".
 - **A watch on an OS-mounted network share is `WatchCoverage::ThisMachineOnly`, never `EveryWriter`** (FSEvents on

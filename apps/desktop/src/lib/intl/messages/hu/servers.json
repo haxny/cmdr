@@ -519,6 +519,18 @@
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
+  "servers.sheet.nfsOtherGids": "További csoportazonosítók",
+  "@servers.sheet.nfsOtherGids": {
+    "sourceHash": "f9276b8"
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "Csoportazonosító-számokat írj be vesszővel elválasztva, például 100, 1001.",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "sourceHash": "a67ce61"
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "Az NFS legfeljebb 16 további csoportot kezel, itt pedig {count} van felsorolva.",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "sourceHash": "dc277f3"
+  },
   "servers.sheet.nfsIdentityHelp": "A szerver e számok alapján dönti el, mit nyithatsz meg. Az NFS nem kér jelszót.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"

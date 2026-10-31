@@ -181,6 +181,7 @@ async fn a_cancel_during_the_operations_own_scan_stops_the_walk() {
         WriteOperationType::Copy,
         &state,
         &events,
+        &crate::transfer::volume::link_carry::LinkCarry::default(),
     )
     .await;
 
@@ -235,6 +236,7 @@ async fn a_pause_during_the_operations_own_scan_holds_it_until_resume() {
         WriteOperationType::Copy,
         &state,
         &events,
+        &crate::transfer::volume::link_carry::LinkCarry::default(),
     )
     .await
     .expect("a resumed scan finishes");

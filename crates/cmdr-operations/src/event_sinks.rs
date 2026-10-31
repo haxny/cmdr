@@ -11,6 +11,7 @@
 use cmdr_fs::ignore_poison::IgnorePoison;
 
 use super::host::ExpectedTotals;
+pub(crate) use super::host::SinkDecorator;
 pub use super::host::{OperationEventSink, ScanPreviewEventSink};
 #[cfg(any(test, feature = "testing"))]
 use super::types::{

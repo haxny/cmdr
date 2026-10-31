@@ -7,7 +7,7 @@ fn a_place_with_no_port_is_minted_on_the_nfs_port() {
     let params = NfsConnectionParams::new(
         NfsServer::new("NAS.local", None),
         "/Public/",
-        NfsIdentity { uid: 1000, gid: 100 },
+        NfsIdentity::new(1000, 100),
     );
     assert_eq!(params.export(), "/Public");
     assert_eq!(
@@ -19,15 +19,57 @@ fn a_place_with_no_port_is_minted_on_the_nfs_port() {
 
 #[test]
 fn the_identity_never_reaches_the_volume_id() {
-    let as_ada = NfsConnectionParams::new(
-        NfsServer::new("nas", Some(2049)),
-        "/x",
-        NfsIdentity { uid: 1000, gid: 100 },
-    );
-    let as_bob = NfsConnectionParams::new(
-        NfsServer::new("nas", Some(2049)),
-        "/x",
-        NfsIdentity { uid: 1001, gid: 100 },
-    );
+    let as_ada = NfsConnectionParams::new(NfsServer::new("nas", Some(2049)), "/x", NfsIdentity::new(1000, 100));
+    let as_bob = NfsConnectionParams::new(NfsServer::new("nas", Some(2049)), "/x", NfsIdentity::new(1001, 100));
     assert_eq!(as_ada.volume_id(), as_bob.volume_id());
+}
+
+fn with_others(gid: u32, other_gids: Vec<u32>) -> NfsIdentity {
+    NfsIdentity {
+        uid: 1000,
+        gid,
+        other_gids,
+    }
+}
+
+#[test]
+fn someone_in_their_primary_group_alone_sends_just_that_group() {
+    // Regression anchor: what every place saved before `other_gids` keeps sending.
+    assert_eq!(NfsIdentity::new(1000, 100).credential_gids(), vec![100]);
+}
+
+#[test]
+fn the_other_groups_follow_the_primary_each_once() {
+    let identity = with_others(100, vec![2001, 100, 2002, 2001]);
+    assert_eq!(identity.credential_gids(), vec![100, 2001, 2002]);
+}
+
+#[test]
+fn sixteen_others_all_go_out_and_the_primary_rides_the_gid_field_alone() {
+    let others: Vec<u32> = (2000..2016).collect();
+    assert_eq!(with_others(100, others.clone()).credential_gids(), others);
+}
+
+#[test]
+fn fifteen_others_still_leave_room_for_the_primary() {
+    let others: Vec<u32> = (2000..2015).collect();
+    let gids = with_others(100, others.clone()).credential_gids();
+    assert_eq!(gids.len(), 16);
+    assert_eq!(gids[0], 100);
+    assert_eq!(&gids[1..], others.as_slice());
+}
+
+#[test]
+fn a_list_past_the_rfc_cap_keeps_its_first_sixteen() {
+    // The form refuses this; a hand-edited store file can still say it.
+    let gids = with_others(100, (2000..2040).collect()).credential_gids();
+    assert_eq!(gids, (2000..2016).collect::<Vec<u32>>());
+}
+
+#[test]
+fn the_other_groups_stay_out_of_the_volume_id_and_the_app_root() {
+    let plain = NfsConnectionParams::new(NfsServer::new("nas", None), "/Public", NfsIdentity::new(1000, 100));
+    let grouped = NfsConnectionParams::new(NfsServer::new("nas", None), "/Public", with_others(100, vec![2001]));
+    assert_eq!(plain.volume_id(), grouped.volume_id());
+    assert_eq!(plain.app_root(), grouped.app_root());
 }

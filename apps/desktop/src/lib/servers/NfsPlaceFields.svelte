@@ -1,6 +1,6 @@
 <script lang="ts">
     /**
-     * The NFS block of the add form: the export, and the uid and gid every request
+     * The NFS block of the add form: the export, and the uid and groups every request
      * acts as. `ServerFormFields` renders it under the name while NFS is selected.
      *
      * ❗ **It asks the server as the person types** (`nfs-discovery.svelte.ts`): the
@@ -22,6 +22,7 @@
     import { hostWithPort } from './server-form'
     import {
         nfsIdentityWarns,
+        readNfsOtherGids,
         withGuessedIdentity,
         withTypedIdentity,
         type NfsFormFields,
@@ -150,6 +151,14 @@
         return { text: tString('servers.sheet.nfsExportHelp'), tone: 'help' }
     })
 
+    /** The line under "Other group IDs" when they don't read: why Connect is waiting. */
+    const otherGidsProblem = $derived.by((): string | undefined => {
+        const reading = readNfsOtherGids(fields.otherGids)
+        if (reading.kind === 'not_ids') return tString('servers.sheet.nfsOtherGidsNotIds')
+        if (reading.kind === 'too_many') return tString('servers.sheet.nfsOtherGidsTooMany', { count: reading.count })
+        return undefined
+    })
+
     const identityLine = $derived(
         fields.identitySource === null
             ? tString('servers.sheet.nfsIdentityHelp')
@@ -228,6 +237,26 @@
         />
     </div>
 </div>
+<div class="field other-gids">
+    <label for="server-nfs-other-gids" class="field-label">{tString('servers.sheet.nfsOtherGids')}</label>
+    <TextInput
+        id="server-nfs-other-gids"
+        value={fields.otherGids}
+        oninput={(e: Event) => {
+            onChange(withTypedIdentity(fields, { otherGids: (e.currentTarget as HTMLInputElement).value }))
+        }}
+        {disabled}
+        invalid={otherGidsProblem !== undefined}
+        placeholder={tString('servers.sheet.examplePlaceholder', { example: '100, 1001' })}
+        aria-describedby={otherGidsProblem === undefined ? 'server-nfs-identity-help' : 'server-nfs-other-gids-problem'}
+        autocomplete="off"
+        spellcheck={false}
+    />
+    {#if otherGidsProblem !== undefined}
+        <!-- `status`: it changes as the person types, and asks for a look. -->
+        <p id="server-nfs-other-gids-problem" class="field-refusal" role="status">{otherGidsProblem}</p>
+    {/if}
+</div>
 <p id="server-nfs-identity-help" class="field-help identity-help">{identityLine}</p>
 {#if nfsIdentityWarns(fields)}
     <!-- A warning, ❌ never a block: on a `no_root_squash` export, 0 is exactly what's meant. -->
@@ -274,6 +303,11 @@
     }
 
     .identity-row .field {
+        margin-bottom: 0;
+    }
+
+    .other-gids {
+        margin-top: var(--spacing-md);
         margin-bottom: 0;
     }
 

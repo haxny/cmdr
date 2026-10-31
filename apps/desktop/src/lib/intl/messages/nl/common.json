@@ -82,5 +82,9 @@
   "@common.sizeUnit.petabyte": {
     "sourceHash": "f9085bf",
     "sameAsSourceJustification": "Dutch macOS Finder writes the same unit symbols (nl Finder SP24–SP26: GB, MB, KB); SI symbols are international, so Dutch keeps them as English does."
+  },
+  "common.sizeComparison.same": "(zelfde grootte)",
+  "@common.sizeComparison.same": {
+    "sourceHash": "2d0f788"
   }
 }

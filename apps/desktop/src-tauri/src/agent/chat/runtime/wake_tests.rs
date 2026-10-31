@@ -10,7 +10,7 @@ use tokio::sync::mpsc::unbounded_channel;
 use tokio_util::sync::CancellationToken;
 
 use super::test_support::{OkDispatcher, params, runtime_with_stamped_conversation};
-use crate::agent::chat::cancel::turn_in_flight_since_seq;
+use crate::agent::chat::cancel::{InFlightTurn, turn_in_flight};
 use crate::agent::chat::runtime::{AgentChatEvent, CallContext, ToolDispatchOutcome, ToolDispatcher, TurnResult};
 use crate::agent::llm::fake::{FakeAgentLlm, ScriptedTurn};
 use crate::agent::llm::types::{AgentToolCall, AgentToolResult, ToolId};
@@ -38,6 +38,7 @@ async fn a_wake_runs_its_turn_in_the_thread_it_was_handed() {
             &params(id, Some("4 new in ~/Downloads")),
             &sink,
             &CancellationToken::new(),
+            0,
         )
         .await
         .expect("the store took the turn");
@@ -62,7 +63,7 @@ async fn a_wake_queues_behind_whatever_already_holds_its_thread() {
 
     let turn = params(id, Some("4 new in ~/Downloads"));
     let cancel = CancellationToken::new();
-    let waking = runtime.wake(&llm, &OkDispatcher, &[], &turn, &sink, &cancel);
+    let waking = runtime.wake(&llm, &OkDispatcher, &[], &turn, &sink, &cancel, 0);
     // Releasing only once `Queued` has landed proves the wake actually waited for the lock
     // rather than racing past it.
     let releasing = async {
@@ -79,13 +80,15 @@ async fn a_wake_queues_behind_whatever_already_holds_its_thread() {
 }
 
 /// While a turn holds its thread, the registry says since which row it has been writing, so a
-/// reload can tell the running turn's calls from a crashed one's; once it ends, it says nothing.
+/// reload can tell the running turn's calls from a crashed one's, and which run it is, so a Stop
+/// the reloaded rail sends before the turn's next event still knows its terminal (#802); once it
+/// ends, it says nothing.
 #[tokio::test]
 async fn a_running_turn_marks_its_thread_in_flight_since_its_last_row() {
     /// Reads the mark while the turn is mid-dispatch.
     struct MarkProbe {
         conversation_id: i64,
-        seen: Mutex<Option<Option<i64>>>,
+        seen: Mutex<Option<Option<InFlightTurn>>>,
     }
     impl ToolDispatcher for MarkProbe {
         fn dispatch<'a>(
@@ -94,7 +97,7 @@ async fn a_running_turn_marks_its_thread_in_flight_since_its_last_row() {
             _turn: CallContext<'a>,
         ) -> BoxFuture<'a, ToolDispatchOutcome> {
             async move {
-                *self.seen.lock().expect("lock") = Some(turn_in_flight_since_seq(self.conversation_id));
+                *self.seen.lock().expect("lock") = Some(turn_in_flight(self.conversation_id));
                 ToolDispatchOutcome {
                     result: AgentToolResult {
                         call_id: call.call_id.clone(),
@@ -132,14 +135,15 @@ async fn a_running_turn_marks_its_thread_in_flight_since_its_last_row() {
             &params(id, Some("hi")),
             &sink,
             &CancellationToken::new(),
+            42,
         )
         .await
         .expect("the store took the turn");
 
     assert_eq!(
         *probe.seen.lock().expect("lock"),
-        Some(Some(0)),
-        "mid-turn, the mark is the thread's last row when the turn started"
+        Some(Some(InFlightTurn { since_seq: 0, run: 42 })),
+        "mid-turn, the mark is the thread's last row when the turn started, and the turn's run"
     );
-    assert_eq!(turn_in_flight_since_seq(id), None, "the mark clears when the turn ends");
+    assert_eq!(turn_in_flight(id), None, "the mark clears when the turn ends");
 }

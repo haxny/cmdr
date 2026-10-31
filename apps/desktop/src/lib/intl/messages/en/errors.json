@@ -780,6 +780,42 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
+  "errors.listing.phoneRefused.title": "This phone keeps this folder private",
+  "errors.listing.phoneRefused.explanation": "Android reserves this folder for the system and its apps, so Cmdr can’t open it. Nothing’s wrong with your phone or the connection.",
+  "errors.listing.phoneRefused.suggestion": "Your photos, downloads, and other files are in the phone’s shared storage, so try a folder there.",
+  "@errors.listing.phoneRefused.title": {
+    "description": "Title of the listing error panel when a phone connected over USB refuses to open a folder, usually a system folder like /data. This is normal Android behavior, not a problem. Plain text.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.phoneRefused.explanation": {
+    "description": "Body of the listing error panel for a folder an Android phone refuses. Markdown. \"Android\" is a proper name; do NOT translate. The reassurance is the point: nothing is broken, and no setting on the computer would change this.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.phoneRefused.suggestion": {
+    "description": "Recovery suggestion for a folder an Android phone refuses. Markdown. \"Shared storage\" is the part of the phone that holds a person's own files (photos, downloads, music); use the wording Android uses in your locale.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.listing.serverRefused.title": "The server won’t open this folder",
+  "errors.listing.serverRefused.explanation": "This folder is on a server, and the account you connected with doesn’t have permission to open it. The server makes that call, so no setting on this computer changes it.",
+  "errors.listing.serverRefused.suggestion": "Here’s what to try:\n- Check the folder’s permissions on the server\n- Some folders belong to the server’s own system account and stay closed to everyone else\n- Connect with an account that has access",
+  "@errors.listing.serverRefused.title": {
+    "description": "Title of the listing error panel when a server Cmdr connected to directly (SFTP, WebDAV, or NFS) refuses a folder. Plain text.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.serverRefused.explanation": {
+    "description": "Body of the listing error panel for a folder a connected server (SFTP, WebDAV, or NFS) refuses. Markdown. The contrast with a setting on the computer is the point of the sentence: the user can't fix this on their own machine.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.serverRefused.suggestion": {
+    "description": "Recovery suggestion for a folder a connected server (SFTP, WebDAV, or NFS) refuses. Markdown bullet list. Nothing is mounted here, so don't word it as ejecting or remounting a share.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
   "errors.listing.alreadyExists.title": "Already exists",
   "errors.listing.alreadyExists.explanation": "A file or folder already exists at `{path}`, so Cmdr can’t create a new one there.",
   "errors.listing.alreadyExists.suggestion": "Rename the existing item or choose a different name for the new one.",
@@ -837,6 +873,24 @@
   "errors.listing.notConnected.title": "Not connected yet",
   "errors.listing.notConnected.explanation": "Cmdr hasn’t connected to the phone or server holding `{path}` yet, so there’s nothing to show here. Nothing was disconnected, and nothing was deleted.",
   "errors.listing.notConnected.suggestion": "Here’s what to try:\n- Open the phone or server from the volume switcher to connect to it\n- If it’s a phone, unlock it and accept any prompt it shows\n- Navigate here again once it’s connected",
+  "errors.listing.linkTargetUnreachable.title": "This folder’s server is out of reach",
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` sits behind a link to another server, and Cmdr can’t reach that server right now. The rest of this share is fine, and nothing was deleted.",
+  "errors.listing.linkTargetUnreachable.suggestion": "Here’s what to try:\n- Check that the other server is running and that your network can reach it\n- Navigate here again to retry",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "description": "Title of the listing error panel when a folder on a network share is really a link (a DFS link) to a folder on a different server, and that other server doesn't answer. The share the person opened still works. Plain text.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "description": "Body of the listing error panel for a folder that links to a different server which doesn't answer. Markdown. The literal `{path}` is a do-not-translate placeholder replaced at runtime with the folder's path, which Cmdr doesn't control: any length. \"Share\" is a network share, the shared folder on a server. The last sentence reassures that only this folder is affected.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "description": "Recovery suggestion for a folder that links to a different server which doesn't answer. Markdown bullet list. \"The other server\" is the one the link points to, not the one holding the share the person opened.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
   "@errors.listing.notConnected.title": {
     "description": "Title of the listing error panel when a phone or server shows in Cmdr's volume list but Cmdr hasn't connected to it yet, so there's nothing to list. Deliberately distinct from \"Device disconnected\": nothing dropped. Plain text.",
     "screenshot": "error-message-example.png",
@@ -2513,9 +2567,21 @@
   "errors.write.permissionDenied.suggestion.deleteOther": "Check that you have write access to the parent folder. The file may be protected. Check its permissions (e.g. via chmod or your file manager) and try again.",
   "errors.write.permissionDenied.suggestion.default": "Check that you have write access to the destination folder. You may need to unlock the device or change folder permissions.",
   "errors.write.permissionDenied.message.named": "Your macOS user can’t change {folder}.",
+  "errors.write.permissionDenied.suggestion.phone": "Android reserves this location for the system and its apps. Your photos, downloads, and other files are in the phone’s shared storage, so try a folder there.",
+  "errors.write.permissionDenied.suggestion.server": "The server turned this down for the account you connected with. Check the folder’s permissions on the server, or connect with an account that has access.",
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "The provider refused, and that can mean two things. Check the access key’s permissions, or your provider’s console for a usage cap or a billing notice.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "description": "Recovery suggestion in the copy/move/delete dialog when cloud object storage (Amazon S3, Cloudflare R2, Backblaze B2, Wasabi, and similar) refuses. The provider gives the same answer for missing permissions and for a paused account (a usage cap or a billing problem), so the sentence names both. Plain text. \"Access key\" is the credential the user entered when connecting; \"console\" is the provider's web dashboard.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "description": "Recovery suggestion in the copy/move/delete dialog when an Android phone connected over USB refuses, usually because the location is a system folder. Plain text. \"Android\" is a proper name; do NOT translate. \"Shared storage\" is the part of the phone that holds a person's own files (photos, downloads, music); use the wording Android uses in your locale.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.write.permissionDenied.suggestion.server": {
+    "description": "Recovery suggestion in the copy/move/delete dialog when a server Cmdr connected to directly (SFTP, WebDAV, or NFS) refuses. Plain text. \"The account you connected with\" is the sign-in the user chose when connecting to the server.",
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
@@ -3231,6 +3297,12 @@
     "screenshot": "mkdir-confirmation-too-long.png",
     "screenshotNote": "This one is NOT the error panel. Your string is the single red line under the name field in the Rename / New folder / New file box, exactly where the validation message sits in this screenshot (which shows a DIFFERENT message). One sentence, plain text, no markdown, and it has to fit a narrow dialog."
   },
+  "errors.volume.linkTargetUnreachable": "This sits behind a link to another server, and Cmdr can’t reach that server right now.",
+  "@errors.volume.linkTargetUnreachable": {
+    "description": "Shown when a rename, new folder, or new file targets something behind a DFS link: a folder in a Windows-style network share that really lives on a different server, which is out of reach right now. The share itself is fine. Inline one-line message under the name field in Cmdr's Rename / New folder / New file flow, or in a brief toast. Plain text, one sentence, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
+    "screenshot": "mkdir-confirmation-too-long.png",
+    "screenshotNote": "This one is NOT the error panel. Your string is the single red line under the name field in the Rename / New folder / New file box, exactly where the validation message sits in this screenshot (which shows a DIFFERENT message). One sentence, plain text, no markdown, and it has to fit a narrow dialog."
+  },
   "errors.volume.deviceSessionReset": "The device restarted its connection. Give it a few seconds and try again.",
   "@errors.volume.deviceSessionReset": {
     "description": "Shown when a connected phone (MTP) reset its session but is still plugged in. IMPORTANT: the device did NOT disconnect, so don't word this as unplugging; a retry in a few seconds works. Inline one-line message under the name field in Cmdr's Rename / New folder / New file flow, or in a brief toast. Plain text, one sentence, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
@@ -3444,13 +3516,13 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
-  "errors.eject.unmountRefused": "Something still has files open there. Close any open files and apps, then try again.",
+  "errors.eject.unmountRefused": "Something is still in use there. Close any open files and apps, then try again.",
   "@errors.eject.unmountRefused": {
-    "description": "Shown when the operating system turns the eject down, almost always because another app still holds a file open. The technical reason is written to the log, not shown here. Surface: a brief error toast in the top-right of Cmdr's main window, shown after someone asks to eject a drive or disconnect a network share. Your string is dropped into \"Couldn't eject {volumeName}: …\" or \"Couldn't disconnect: …\", so it reads as the sentence AFTER a colon; start it lowercase if your language does that after a colon. The same sentence follows both, and the lead-in already says which action it was and what it was done to, so name neither: no \"drive\", no \"share\", no \"eject\" or \"disconnect\". Point at the place with a plain \"there\" and ask to \"try again\". Plain text, one or two short sentences, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
+    "description": "Shown when the operating system turns the eject down, almost always because another app still holds a file open or a terminal is sitting in a folder there. The technical reason is written to the log, not shown here. Surface: a brief error toast in the top-right of Cmdr's main window, shown after someone asks to eject a drive or disconnect a network share. Your string is dropped into \"Couldn't eject {volumeName}: …\" or \"Couldn't disconnect: …\", so it reads as the sentence AFTER a colon; start it lowercase if your language does that after a colon. The same sentence follows both, and the lead-in already says which action it was and what it was done to, so name neither: no \"drive\", no \"share\", no \"eject\" or \"disconnect\". Point at the place with a plain \"there\" and ask to \"try again\". Plain text, one or two short sentences, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
-  "errors.eject.unmountRefusedByApp": "{app} still has files open there. Close them, then try again.",
+  "errors.eject.unmountRefusedByApp": "{app} is still using something there. Close it, then try again.",
   "@errors.eject.unmountRefusedByApp": {
     "description": "Shown when the operating system turns the eject down and Cmdr could name exactly ONE app or command-line tool still holding the drive. Naming it is the whole point: the person now knows what to close. Surface: a brief error toast in the top-right of Cmdr's main window, shown after someone asks to eject a drive or disconnect a network share. Your string is dropped into \"Couldn't eject {volumeName}: …\" or \"Couldn't disconnect: …\", so it reads as the sentence AFTER a colon; start it lowercase if your language does that after a colon. The same sentence follows both, and the lead-in already says which action it was and what it was done to, so name neither: no \"drive\", no \"share\", no \"eject\" or \"disconnect\". Point at the place with a plain \"there\" and ask to \"try again\". Plain text, one or two short sentences, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "placeholders": {
@@ -3461,7 +3533,7 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
-  "errors.eject.unmountRefusedByApps": "{apps} still have files open there. Close them, then try again.",
+  "errors.eject.unmountRefusedByApps": "{apps} are still using something there. Close them, then try again.",
   "@errors.eject.unmountRefusedByApps": {
     "description": "The same message as the one-app version, for TWO OR MORE apps or tools holding the drive. Surface: a brief error toast in the top-right of Cmdr's main window, shown after someone asks to eject a drive or disconnect a network share. Your string is dropped into \"Couldn't eject {volumeName}: …\" or \"Couldn't disconnect: …\", so it reads as the sentence AFTER a colon; start it lowercase if your language does that after a colon. The same sentence follows both, and the lead-in already says which action it was and what it was done to, so name neither: no \"drive\", no \"share\", no \"eject\" or \"disconnect\". Point at the place with a plain \"there\" and ask to \"try again\". Plain text, one or two short sentences, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "placeholders": {
@@ -3478,7 +3550,7 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
-  "errors.eject.unmountRefusedByProcess": "A process called {process} still has files open there. (Cmdr doesn’t have an app name, only the process name.)",
+  "errors.eject.unmountRefusedByProcess": "A process called {process} is still using something there. (Cmdr doesn’t have an app name, only the process name.)",
   "@errors.eject.unmountRefusedByProcess": {
     "description": "Shown when the operating system turns the eject down and Cmdr found exactly ONE running program holding the drive, but couldn't tell which app it belongs to, so all it has is the program's technical process name. The sentence must call it a process, never an app or a tool, and the parenthetical tells the reader why the name may look cryptic. Cmdr speaks of itself by name there, never as \"we\". Surface: a brief error toast in the top-right of Cmdr's main window, shown after someone asks to eject a drive or disconnect a network share. Your string is dropped into \"Couldn't eject {volumeName}: …\" or \"Couldn't disconnect: …\", so it reads as the sentence AFTER a colon; start it lowercase if your language does that after a colon. The same sentence follows both, and the lead-in already says which action it was and what it was done to, so name neither: no \"drive\", no \"share\", no \"eject\" or \"disconnect\". Point at the place with a plain \"there\" and ask to \"try again\". Plain text, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "placeholders": {
@@ -3489,7 +3561,7 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
-  "errors.eject.unmountRefusedByProcesses": "{countText} processes called {processes} still have files open there. (Cmdr doesn’t have app names, only the process names.)",
+  "errors.eject.unmountRefusedByProcesses": "{countText} processes called {processes} are still using something there. (Cmdr doesn’t have app names, only the process names.)",
   "@errors.eject.unmountRefusedByProcesses": {
     "description": "The same message as the one-process version, for TWO OR MORE running programs that Cmdr couldn't match to an app, so all it has is their technical process names. The sentence must call them processes, never apps or tools. Cmdr speaks of itself by name in the parenthetical, never as \"we\". Restructure the sentence freely to whatever reads and works best in your language, for example naming the processes after the count. Surface: a brief error toast in the top-right of Cmdr's main window, shown after someone asks to eject a drive or disconnect a network share. Your string is dropped into \"Couldn't eject {volumeName}: …\" or \"Couldn't disconnect: …\", so it reads as the sentence AFTER a colon; start it lowercase if your language does that after a colon. The same sentence follows both, and the lead-in already says which action it was and what it was done to, so name neither: no \"drive\", no \"share\", no \"eject\" or \"disconnect\". Point at the place with a plain \"there\" and ask to \"try again\". Plain text, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "placeholders": {
@@ -3515,13 +3587,13 @@
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
-  "errors.eject.unmountRefusedBySystem": "macOS still has files open there. Wait a minute, then try again.",
+  "errors.eject.unmountRefusedBySystem": "macOS is still using something there. Wait a minute, then try again.",
   "@errors.eject.unmountRefusedBySystem": {
     "description": "Shown when the only thing holding the drive is macOS itself (Spotlight indexing it, Time Machine, and so on). There's nothing for the person to close, so the advice is to wait rather than to hunt for an app. \"macOS\" is Apple's product name: keep it exactly as written, and don't translate it. Surface: a brief error toast in the top-right of Cmdr's main window, shown after someone asks to eject a drive or disconnect a network share. Your string is dropped into \"Couldn't eject {volumeName}: …\" or \"Couldn't disconnect: …\", so it reads as the sentence AFTER a colon; start it lowercase if your language does that after a colon. The same sentence follows both, and the lead-in already says which action it was and what it was done to, so name neither: no \"drive\", no \"share\", no \"eject\" or \"disconnect\". Point at the place with a plain \"there\" and ask to \"try again\". Plain text, one or two short sentences, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   },
-  "errors.eject.unmountRefusedByCmdr": "Cmdr itself still has files open there. Wait a moment and try again, or send a report if it keeps happening.",
+  "errors.eject.unmountRefusedByCmdr": "Cmdr itself is still using something there. Wait a moment and try again, or send a report if it keeps happening.",
   "@errors.eject.unmountRefusedByCmdr": {
     "description": "Shown when Cmdr is the one holding the drive it was asked to eject. That's a bug in Cmdr rather than anything the person did, so the message owns it and points at Cmdr's own feedback feature (\"send a report\"). \"Cmdr\" is this app's name: keep it as-is, never translate it. Surface: a brief error toast in the top-right of Cmdr's main window, shown after someone asks to eject a drive or disconnect a network share. Your string is dropped into \"Couldn't eject {volumeName}: …\" or \"Couldn't disconnect: …\", so it reads as the sentence AFTER a colon; start it lowercase if your language does that after a colon. The same sentence follows both, and the lead-in already says which action it was and what it was done to, so name neither: no \"drive\", no \"share\", no \"eject\" or \"disconnect\". Point at the place with a plain \"there\" and ask to \"try again\". Plain text, one or two short sentences, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
     "screenshot": "error-message-example.png",
@@ -3818,8 +3890,7 @@
   "errors.write.namedLeavesRefused.title": "These new names can’t be used",
   "@errors.write.namedLeavesRefused.title": {
     "description": "Title. Shown when Ask Cmdr's suggestion to move or copy files, each under a new name the AI chose, can't use those names. Cmdr refuses before anything is moved or copied. Plain text. This is a raw errors.* string (no ICU).",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-named_leaves_refused.png"
   },
   "errors.write.namedLeavesRefused.message.notASource": "One of the new names is for {path}, which isn’t part of this suggestion, so nothing started.",
   "@errors.write.namedLeavesRefused.message.notASource": {
@@ -3833,8 +3904,7 @@
   "errors.write.namedLeavesRefused.message.sameName": "Two items would end up as {path}. Many disks treat those as one name, so one would replace the other.",
   "@errors.write.namedLeavesRefused.message.sameName": {
     "description": "Explanation, when two items would get the same name, ignoring upper/lower case and accents written two ways; {path} is where both would land. Shown when Ask Cmdr's suggestion to move or copy files, each under a new name the AI chose, can't use those names. Cmdr refuses before anything is moved or copied. Plain text. This is a raw errors.* string (no ICU), so {path} is a literal replacement target, not ICU syntax: keep it spelled exactly and move it freely to suit your grammar.",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is.",
+    "screenshot": "transfer-error-named_leaves_refused.png",
     "placeholders": {
       "path": "a full file or folder path"
     }
@@ -3875,8 +3945,7 @@
   "errors.write.namedLeavesRefused.suggestion.sameName": "Ask Cmdr for a different name for each item.",
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "description": "Recovery suggestion for the reason this one's explanation gives (sameName). Shown when Ask Cmdr's suggestion to move or copy files, each under a new name the AI chose, can't use those names. Cmdr refuses before anything is moved or copied. Plain text. This is a raw errors.* string (no ICU).",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-named_leaves_refused.png"
   },
   "errors.write.namedLeavesRefused.suggestion.ontoASource": "Ask Cmdr for names that don’t match the items being moved or copied.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
@@ -3893,6 +3962,61 @@
   "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Move or copy them under their own names, then rename them there.",
   "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
     "description": "Recovery suggestion for the reason this one's explanation gives (routeCannotName). Shown when Ask Cmdr's suggestion to move or copy files, each under a new name the AI chose, can't use those names. Cmdr refuses before anything is moved or copied. Plain text. This is a raw errors.* string (no ICU).",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.listing.linkNeedsConsent.title": "This folder is on another server",
+  "@errors.listing.linkNeedsConsent.title": {
+    "description": "Title of the listing error panel when a folder in an SMB network share is really a link (a DFS link) to a folder on a different server, and the person hasn’t allowed Cmdr to sign in there yet. Plain text.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.listing.linkNeedsConsent.explanation": "`{path}` is a link on **{server}** that leads to **{target}**. Cmdr hasn’t signed in there, so {target} received nothing from you.",
+  "@errors.listing.linkNeedsConsent.explanation": {
+    "description": "Explanation in that panel. Raw catalog string with markdown (keep the backticks and asterisks) and literal tokens {path}, {server}, {target}.",
+    "placeholders": {
+      "path": "the folder’s path",
+      "server": "the server the share is on, like nas.local",
+      "target": "the other server the link leads to, like fs01.example.com"
+    },
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.listing.linkNeedsConsent.suggestion": "To open this folder, Cmdr has to sign in to {target} with the account you use for {server}. Review that if you trust {target}. The rest of this share works as usual.",
+  "@errors.listing.linkNeedsConsent.suggestion": {
+    "description": "Suggestion in that panel, above a button labeled \"Review sign-in\". Raw catalog string with literal tokens {server} and {target}.",
+    "placeholders": {
+      "server": "the server the share is on",
+      "target": "the other server the link leads to"
+    },
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.volume.linkNeedsConsent": "This sits behind a link to another server, and Cmdr hasn’t been allowed to sign in there. Open the folder in a pane to decide.",
+  "@errors.volume.linkNeedsConsent": {
+    "description": "Shown when creating, renaming, or deleting something failed because it sits behind a link (a DFS link in an SMB share) to another server the person hasn’t allowed Cmdr to sign in to. \"pane\" is one of the two file lists.",
+    "screenshot": "mkdir-confirmation-too-long.png",
+    "screenshotNote": "This one is NOT the error panel. Your string is the single red line under the name field in the Rename / New folder / New file box, exactly where the validation message sits in this screenshot (which shows a DIFFERENT message). One sentence, plain text, no markdown, and it has to fit a narrow dialog."
+  },
+  "errors.write.linkNeedsConsent.title": "This file is on another server",
+  "@errors.write.linkNeedsConsent.title": {
+    "description": "Title of the dialog when a copy or move stopped at a file behind a link (a DFS link in an SMB share) to another server the person hasn’t allowed Cmdr to sign in to.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.write.linkNeedsConsent.message": "A link on {server} leads to {target}, and Cmdr hasn’t been allowed to sign in there, so nothing went to that server.",
+  "@errors.write.linkNeedsConsent.message": {
+    "description": "Message in that dialog.",
+    "placeholders": {
+      "server": "the server the share is on",
+      "target": "the other server the link leads to"
+    },
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "errors.write.linkNeedsConsent.suggestion": "Open the folder in a pane and allow the sign-in if you trust that server, then try again.",
+  "@errors.write.linkNeedsConsent.suggestion": {
+    "description": "Suggestion in that dialog. \"pane\" is one of the two file lists.",
     "screenshot": "error-message-example.png",
     "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
   }

@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "Este teléfono mantiene esta carpeta privada",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android reserva esta carpeta para el sistema y sus apps, así que Cmdr no puede abrirla. No le pasa nada a tu teléfono ni a la conexión.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "Tus fotos, descargas y otros archivos están en el almacenamiento compartido del teléfono, así que prueba con una carpeta de ahí.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "El servidor no abre esta carpeta",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "Esta carpeta está en un servidor, y la cuenta con la que te has conectado no tiene permiso para abrirla. Lo decide el servidor, así que ningún ajuste de este ordenador lo cambia.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Esto es lo que puedes probar:\n- Revisa los permisos de la carpeta en el servidor\n- Algunas carpetas pertenecen a la cuenta de sistema del propio servidor y siguen cerradas para todos los demás\n- Conéctate con una cuenta que tenga acceso",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "Ya existe",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -562,6 +586,18 @@
   "errors.listing.notConnected.suggestion": "Esto es lo que puedes probar:\n- Abre el teléfono o el servidor desde el selector de volúmenes para conectarte\n- Si es un teléfono, desbloquéalo y acepta cualquier aviso que muestre\n- Vuelve a abrir esta carpeta cuando esté conectado",
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
+  },
+  "errors.listing.linkTargetUnreachable.title": "No se puede acceder al servidor de esta carpeta",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` está detrás de un enlace a otro servidor, y Cmdr no puede acceder a ese servidor ahora mismo. El resto de este recurso compartido funciona bien y no se ha eliminado nada.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Esto es lo que puedes probar:\n- Comprueba que el otro servidor esté en marcha y que tu red pueda acceder a él\n- Vuelve a abrir esta carpeta para reintentarlo",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
   },
   "errors.listing.deviceReconnecting.title": "Reconectando con el dispositivo",
   "@errors.listing.deviceReconnecting.title": {
@@ -1729,6 +1765,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Android reserva esta ubicación para el sistema y sus apps. Tus fotos, descargas y otros archivos están en el almacenamiento compartido del teléfono, así que prueba con una carpeta de ahí.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "El servidor lo ha rechazado para la cuenta con la que te has conectado. Revisa los permisos de la carpeta en el servidor o conéctate con una cuenta que tenga acceso.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "El proveedor lo ha rechazado, y eso puede significar dos cosas. Comprueba los permisos de la clave de acceso, o busca en la consola de tu proveedor un límite de uso o un aviso de facturación.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2125,6 +2169,10 @@
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
   },
+  "errors.volume.linkTargetUnreachable": "Esto está detrás de un enlace a otro servidor, y Cmdr no puede acceder a ese servidor ahora mismo.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
+  },
   "errors.volume.deviceSessionReset": "El dispositivo ha reiniciado su conexión. Espera unos segundos y vuelve a intentarlo.",
   "@errors.volume.deviceSessionReset": {
     "sourceHash": "e5ad77d"
@@ -2261,29 +2309,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "Algo todavía tiene archivos abiertos ahí. Cierra los archivos y las apps que tengas abiertos y vuelve a intentarlo.",
+  "errors.eject.unmountRefused": "Algo todavía se está usando ahí. Cierra los archivos y las apps que tengas abiertos y vuelve a intentarlo.",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} todavía tiene archivos abiertos ahí. Ciérralos y vuelve a intentarlo.",
+  "errors.eject.unmountRefusedByApp": "{app} todavía está usando algo ahí. Cierra la app y vuelve a intentarlo.",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} todavía tienen archivos abiertos ahí. Ciérralos y vuelve a intentarlo.",
+  "errors.eject.unmountRefusedByApps": "{apps} todavía están usando algo ahí. Cierra esas apps y vuelve a intentarlo.",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "otras apps",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "Un proceso llamado {process} todavía tiene archivos abiertos ahí. (Cmdr no tiene el nombre de la app, solo el del proceso.)",
+  "errors.eject.unmountRefusedByProcess": "Un proceso llamado {process} todavía está usando algo ahí. (Cmdr no tiene el nombre de la app, solo el del proceso.)",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "{countText} procesos llamados {processes} todavía tienen archivos abiertos ahí. (Cmdr no tiene los nombres de las apps, solo los de los procesos.)",
+  "errors.eject.unmountRefusedByProcesses": "{countText} procesos llamados {processes} todavía están usando algo ahí. (Cmdr no tiene los nombres de las apps, solo los de los procesos.)",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "otros",
   "@errors.eject.otherProcesses": {
@@ -2293,13 +2341,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "macOS todavía tiene archivos abiertos ahí. Espera un minuto y vuelve a intentarlo.",
+  "errors.eject.unmountRefusedBySystem": "macOS todavía está usando algo ahí. Espera un minuto y vuelve a intentarlo.",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "El propio Cmdr todavía tiene archivos abiertos ahí. Espera un momento y vuelve a intentarlo. Si sigue pasando, envía un informe.",
+  "errors.eject.unmountRefusedByCmdr": "El propio Cmdr todavía está usando algo ahí. Espera un momento y vuelve a intentarlo. Si sigue pasando, envía un informe.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "El disco aún no ha respondido, así que es posible que sí se expulse por su cuenta.",
   "@errors.eject.timedOut": {
@@ -2488,5 +2536,33 @@
   "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Muévelos o cópialos con sus propios nombres y luego renómbralos ahí.",
   "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
     "sourceHash": "b1e881c"
+  },
+  "errors.listing.linkNeedsConsent.title": "Esta carpeta está en otro servidor",
+  "@errors.listing.linkNeedsConsent.title": {
+    "sourceHash": "c37d453"
+  },
+  "errors.listing.linkNeedsConsent.explanation": "`{path}` es un enlace en **{server}** que lleva a **{target}**. Cmdr no ha iniciado sesión allí, así que {target} no ha recibido nada de ti.",
+  "@errors.listing.linkNeedsConsent.explanation": {
+    "sourceHash": "91b0171"
+  },
+  "errors.listing.linkNeedsConsent.suggestion": "Para abrir esta carpeta, Cmdr tiene que iniciar sesión en {target} con la cuenta que usas para {server}. Revísalo si confías en {target}. El resto de este recurso compartido funciona como siempre.",
+  "@errors.listing.linkNeedsConsent.suggestion": {
+    "sourceHash": "991cb6c"
+  },
+  "errors.volume.linkNeedsConsent": "Esto está detrás de un enlace a otro servidor en el que Cmdr aún no tiene permiso para iniciar sesión. Abre la carpeta en un panel para decidir.",
+  "@errors.volume.linkNeedsConsent": {
+    "sourceHash": "79ff9fe"
+  },
+  "errors.write.linkNeedsConsent.title": "Este archivo está en otro servidor",
+  "@errors.write.linkNeedsConsent.title": {
+    "sourceHash": "ff31c7f"
+  },
+  "errors.write.linkNeedsConsent.message": "Un enlace en {server} lleva a {target}, y Cmdr aún no tiene permiso para iniciar sesión allí, así que no se ha enviado nada a ese servidor.",
+  "@errors.write.linkNeedsConsent.message": {
+    "sourceHash": "7893ce9"
+  },
+  "errors.write.linkNeedsConsent.suggestion": "Abre la carpeta en un panel y permite el inicio de sesión si confías en ese servidor. Luego vuelve a intentarlo.",
+  "@errors.write.linkNeedsConsent.suggestion": {
+    "sourceHash": "cc25854"
   }
 }

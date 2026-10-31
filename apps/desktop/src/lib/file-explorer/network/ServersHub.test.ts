@@ -158,6 +158,7 @@ interface ServersHubApi {
   setCursorIndex: (index: number) => void
   getItemCount: () => number
   findItemIndex: (name: string) => number
+  jumpToPrefix: (prefix: string) => string | null
   openCursorItem: () => void
   getRowUnderCursor: () => HubRow | null
   selectServer: (id: string) => void
@@ -863,6 +864,43 @@ describe('ServersHub nearby group', () => {
 
     api.openCursorItem()
     expect(onHostSelect).toHaveBeenCalledOnce()
+    await cleanup()
+  })
+
+  it('jumps to the first row whose name starts with the typed text, in any case', async () => {
+    h.listSavedServers.mockResolvedValue([savedSftp])
+    const { api, cleanup } = mountBehindBothHandlers()
+    await settle()
+
+    expect(api.jumpToPrefix('jUMP')).toBe('Jump box')
+    await settle()
+    expect(api.getRowUnderCursor()?.name).toBe('Jump box')
+    await cleanup()
+  })
+
+  it('leaves the cursor alone when no name starts with the typed text', async () => {
+    h.listSavedServers.mockResolvedValue([savedSftp])
+    const { api, cleanup } = mountBehindBothHandlers()
+    await settle()
+
+    // "Found nearby" is the group's header, and "Add server…" is no server: neither is a name to jump to.
+    for (const prefix of ['zz', 'found', 'add']) expect(api.jumpToPrefix(prefix)).toBeNull()
+    await settle()
+    expect(api.getRowUnderCursor()?.name).toBe('Jump box')
+    await cleanup()
+  })
+
+  it('opens the collapsed nearby group for a server the jump finds in it, without recording a choice', async () => {
+    h.listSavedServers.mockResolvedValue([savedSftp])
+    const { target, api, cleanup } = mountBehindBothHandlers()
+    await settle()
+    expect(rowNames(target)).toEqual(['Jump box'])
+
+    expect(api.jumpToPrefix('nas')).toBe('Naspolya')
+    await settle()
+    expect(api.getRowUnderCursor()?.name).toBe('Naspolya')
+    expect(rowNames(target)).toEqual(['Jump box', 'Attic', 'Naspolya'])
+    expect(h.setSetting).not.toHaveBeenCalled()
     await cleanup()
   })
 

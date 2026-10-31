@@ -1717,6 +1717,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Jelzés, ha egy törölt elem már nem volt meg",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Ha olyasmit törölsz, amit egy másik app már áthelyezett vagy törölt, a Cmdr késznek tekinti, és egy rövid üzenetben jelzi ezt. Kapcsold ki (vagy kattints az üzenet „Soha ne jelenjen meg újra” gombjára), és a Cmdr ezután kihagyja ezt az üzenetet.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "hiányzik, eltűnt, nincs meg, értesítés, buborék, figyelmeztetés, áthelyezve, törölve",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Megjegyzendő bezárt lapok száma panelenként",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
@@ -2852,9 +2864,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Teljesen az eszközödön futtat egy kis nyelvi modellt. Maximális adatvédelem: semmi sem hagyja el a számítógépedet. Offline is működik. Kb. 2 GB lemezterületet és kb. 400 MB memóriát használ (a kontextusmérettől függően változik). Apple silicon chippel szerelt Mac kell hozzá (M1+).",
+  "settings.ai.tooltipLocal": "Teljesen az eszközödön futtat egy kis nyelvi modellt. Maximális adatvédelem: semmi sem hagyja el a számítógépedet. Offline is működik. Kb. 2 GB lemezterületet és kb. 400 MB memóriát használ (a kontextusmérettől függően változik). Apple silicon chippel szerelt Mac (M1+) és macOS 14 vagy újabb kell hozzá.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "A helyi AI-hoz Apple silicon chippel szerelt Mac kell (M1 vagy újabb). Használd helyette a Felhő-AI-t.",
   "@settings.ai.tooltipLocalDisabled": {
@@ -3537,5 +3549,33 @@
   "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
   "@settings.multiRename.tagEditor.absSideFiles.keywords": {
     "sourceHash": "806b0cd"
+  },
+  "settings.servers.card.smbLinkConsents": "SMB-linkek bejelentkezései",
+  "@settings.servers.card.smbLinkConsents": {
+    "sourceHash": "831477d"
+  },
+  "settings.network.smbLinkConsents.keywords": "SMB, DFS, link, bejelentkezés, másik szerver, engedélyezés, megbízható, elfelejtés",
+  "@settings.network.smbLinkConsents.keywords": {
+    "sourceHash": "d88f7c7"
+  },
+  "settings.servers.smbLinkConsents.description": "Egy SMB-megosztásban lévő link egy másik szerveren lévő mappához is vezethet. A Cmdr rákérdez, mielőtt bejelentkezne oda, és itt jegyzi meg a válaszodat.",
+  "@settings.servers.smbLinkConsents.description": {
+    "sourceHash": "03ed8ee"
+  },
+  "settings.servers.smbLinkConsents.empty": "Még nincs engedélyezve semmi. Ha egy megosztásban lévő link másik szerverre vezet, a Cmdr előbb rákérdez.",
+  "@settings.servers.smbLinkConsents.empty": {
+    "sourceHash": "16326ce"
+  },
+  "settings.servers.smbLinkConsents.pair": "Innen: {server}, a linkek bejelentkezhetnek ide: {target}",
+  "@settings.servers.smbLinkConsents.pair": {
+    "sourceHash": "093a03d"
+  },
+  "settings.servers.smbLinkConsents.confirmTitle": "Elfelejted ezt a bejelentkezést?",
+  "@settings.servers.smbLinkConsents.confirmTitle": {
+    "sourceHash": "edc2567"
+  },
+  "settings.servers.smbLinkConsents.confirm": "Amikor legközelebb egy link innen: {server}, ide vezet: {target}, a Cmdr újra rákérdez.",
+  "@settings.servers.smbLinkConsents.confirm": {
+    "sourceHash": "0218465"
   }
 }

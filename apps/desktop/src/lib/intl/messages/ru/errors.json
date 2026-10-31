@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "Этот телефон держит эту папку закрытой",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android резервирует эту папку для системы и ее приложений, поэтому Cmdr не может ее открыть. С телефоном и подключением все в порядке.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "Ваши фотографии, загрузки и другие файлы находятся на общем накопителе телефона, поэтому попробуйте папку там.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "Сервер не открывает папку",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "Эта папка находится на сервере, а у учетной записи, с которой вы подключились, нет прав доступа, чтобы открыть эту папку. Это решает сервер, поэтому никакая настройка на этом компьютере этого не изменит.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Что можно сделать:\n- Проверьте права доступа к папке на сервере\n- Некоторые папки принадлежат системной учетной записи самого сервера и закрыты для всех остальных\n- Подключитесь с учетной записью, у которой есть доступ",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "Уже существует",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -562,6 +586,18 @@
   "errors.listing.notConnected.suggestion": "Что можно сделать:\n- Откройте телефон или сервер в переключателе томов для подключения\n- Разблокируйте телефон и подтвердите запросы на экране\n- Откройте это место после подключения",
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
+  },
+  "errors.listing.linkTargetUnreachable.title": "Сервер этой папки недоступен",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "К папке `{path}` ведет ссылка на другой сервер, а Cmdr сейчас не удается с ним связаться. С остальной частью этой общей папки все в порядке, и ничего не удалено.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Что можно сделать:\n- Убедитесь, что другой сервер работает и доступен из вашей сети\n- Откройте это место снова",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
   },
   "errors.listing.deviceReconnecting.title": "Повторное подключение к устройству",
   "@errors.listing.deviceReconnecting.title": {
@@ -1729,6 +1765,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Android резервирует это место для системы и ее приложений. Ваши фотографии, загрузки и другие файлы находятся на общем накопителе телефона, поэтому попробуйте папку там.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "Сервер отказал учетной записи, с которой вы подключились. Проверьте права доступа к папке на сервере или подключитесь с учетной записью, у которой есть доступ.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "Поставщик отказал, и у этого может быть две причины. Проверьте права ключа доступа или загляните в консоль поставщика: нет ли там превышенного лимита использования или уведомления об оплате.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2125,6 +2169,10 @@
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
   },
+  "errors.volume.linkTargetUnreachable": "К этому месту ведет ссылка на другой сервер, а Cmdr сейчас не удается с ним связаться.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
+  },
   "errors.volume.deviceSessionReset": "Устройство перезапустило соединение. Подождите несколько секунд и повторите попытку.",
   "@errors.volume.deviceSessionReset": {
     "sourceHash": "e5ad77d"
@@ -2261,29 +2309,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "Там еще открыты какие-то файлы. Закройте открытые файлы и приложения и повторите попытку.",
+  "errors.eject.unmountRefused": "Там еще что-то используется. Закройте открытые файлы и приложения и повторите попытку.",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} еще держит там файлы открытыми. Закройте их и повторите попытку.",
+  "errors.eject.unmountRefusedByApp": "{app} еще что-то там использует. Закройте это приложение и повторите попытку.",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} еще держат там файлы открытыми. Закройте их и повторите попытку.",
+  "errors.eject.unmountRefusedByApps": "{apps} еще что-то там используют. Закройте эти приложения и повторите попытку.",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "другие приложения",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "Процесс {process} еще держит там файлы открытыми. (Cmdr известно только имя процесса, а не название приложения.)",
+  "errors.eject.unmountRefusedByProcess": "Процесс {process} еще что-то там использует. (Cmdr известно только имя процесса, а не название приложения.)",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "Файлы там еще держат открытыми процессы ({countText}): {processes}. (Cmdr известны только имена процессов, а не названия приложений.)",
+  "errors.eject.unmountRefusedByProcesses": "Там еще что-то используют процессы ({countText}): {processes}. (Cmdr известны только имена процессов, а не названия приложений.)",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "другие",
   "@errors.eject.otherProcesses": {
@@ -2293,13 +2341,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "macOS еще держит там файлы открытыми. Подождите минуту и повторите попытку.",
+  "errors.eject.unmountRefusedBySystem": "macOS еще что-то там использует. Подождите минуту и повторите попытку.",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "Сам Cmdr еще держит там файлы открытыми. Подождите немного и повторите попытку, а если это повторяется, отправьте отчет.",
+  "errors.eject.unmountRefusedByCmdr": "Сам Cmdr еще что-то там использует. Подождите немного и повторите попытку, а если это повторяется, отправьте отчет.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "Диск еще не ответил, поэтому извлечение все еще может завершиться само.",
   "@errors.eject.timedOut": {
@@ -2488,5 +2536,33 @@
   "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Переместите или скопируйте объекты под их собственными именами, а затем переименуйте их на новом месте.",
   "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
     "sourceHash": "b1e881c"
+  },
+  "errors.listing.linkNeedsConsent.title": "Эта папка находится на другом сервере",
+  "@errors.listing.linkNeedsConsent.title": {
+    "sourceHash": "c37d453"
+  },
+  "errors.listing.linkNeedsConsent.explanation": "`{path}` — это ссылка на сервере **{server}**, которая ведет на **{target}**. Cmdr там не входил, поэтому {target} ничего от вас не получил.",
+  "@errors.listing.linkNeedsConsent.explanation": {
+    "sourceHash": "91b0171"
+  },
+  "errors.listing.linkNeedsConsent.suggestion": "Чтобы открыть эту папку, Cmdr должен войти на {target} с учетной записью, которую вы используете для {server}. Проверьте это, если доверяете {target}. Остальная часть этой общей папки работает как обычно.",
+  "@errors.listing.linkNeedsConsent.suggestion": {
+    "sourceHash": "991cb6c"
+  },
+  "errors.volume.linkNeedsConsent": "Это находится за ссылкой на другой сервер, куда Cmdr пока нельзя входить. Чтобы решить, откройте папку на панели.",
+  "@errors.volume.linkNeedsConsent": {
+    "sourceHash": "79ff9fe"
+  },
+  "errors.write.linkNeedsConsent.title": "Этот файл находится на другом сервере",
+  "@errors.write.linkNeedsConsent.title": {
+    "sourceHash": "ff31c7f"
+  },
+  "errors.write.linkNeedsConsent.message": "Ссылка на сервере {server} ведет на {target}, а входить туда Cmdr пока нельзя, поэтому на этот сервер ничего не отправлено.",
+  "@errors.write.linkNeedsConsent.message": {
+    "sourceHash": "7893ce9"
+  },
+  "errors.write.linkNeedsConsent.suggestion": "Откройте папку на панели и разрешите вход, если доверяете этому серверу, затем повторите попытку.",
+  "@errors.write.linkNeedsConsent.suggestion": {
+    "sourceHash": "cc25854"
   }
 }

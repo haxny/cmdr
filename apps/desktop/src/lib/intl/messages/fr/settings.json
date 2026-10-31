@@ -1723,6 +1723,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Signaler quand un élément supprimé avait déjà disparu",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Quand vous supprimez quelque chose qu’une autre app a déjà déplacé ou supprimé, Cmdr considère la suppression comme terminée et affiche une courte note pour le signaler. Désactivez cette option (ou cliquez sur « Ne plus afficher » dans la note) pour ne plus voir cette note.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "manquant, disparu, introuvable, déplacé, effacé, notification, avis, message, alerte",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Nombre d’onglets fermés à mémoriser par panneau",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
@@ -2863,9 +2875,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Exécute un petit modèle de langage entièrement sur votre appareil. Confidentialité maximale : rien ne quitte votre ordinateur. Fonctionne hors ligne. Utilise ~2 Go d’espace disque et ~400 Mo de mémoire (varie selon la taille du contexte). Nécessite Apple Silicon (M1+).",
+  "settings.ai.tooltipLocal": "Exécute un petit modèle de langage entièrement sur votre appareil. Confidentialité maximale : rien ne quitte votre ordinateur. Fonctionne hors ligne. Utilise ~2 Go d’espace disque et ~400 Mo de mémoire (varie selon la taille du contexte). Nécessite Apple Silicon (M1+) et macOS 14 ou version ultérieure.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "L’IA locale nécessite Apple Silicon (M1 ou ultérieur). Utilisez plutôt l’IA dans le cloud.",
   "@settings.ai.tooltipLocalDisabled": {
@@ -3549,5 +3561,33 @@
   "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
   "@settings.multiRename.tagEditor.absSideFiles.keywords": {
     "sourceHash": "806b0cd"
+  },
+  "settings.servers.card.smbLinkConsents": "Identifications par liens SMB",
+  "@settings.servers.card.smbLinkConsents": {
+    "sourceHash": "831477d"
+  },
+  "settings.network.smbLinkConsents.keywords": "SMB, DFS, lien, s’identifier, autre serveur, autoriser, confiance, oublier",
+  "@settings.network.smbLinkConsents.keywords": {
+    "sourceHash": "d88f7c7"
+  },
+  "settings.servers.smbLinkConsents.description": "Un lien dans un partage SMB peut mener à un dossier sur un autre serveur. Cmdr vous demande avant de s’y identifier, et mémorise votre réponse ici.",
+  "@settings.servers.smbLinkConsents.description": {
+    "sourceHash": "03ed8ee"
+  },
+  "settings.servers.smbLinkConsents.empty": "Rien d’autorisé pour l’instant. Quand un lien dans un partage mène à un autre serveur, Cmdr vous demande d’abord.",
+  "@settings.servers.smbLinkConsents.empty": {
+    "sourceHash": "16326ce"
+  },
+  "settings.servers.smbLinkConsents.pair": "Les liens sur {server} peuvent s’identifier sur {target}",
+  "@settings.servers.smbLinkConsents.pair": {
+    "sourceHash": "093a03d"
+  },
+  "settings.servers.smbLinkConsents.confirmTitle": "Oublier cette identification ?",
+  "@settings.servers.smbLinkConsents.confirmTitle": {
+    "sourceHash": "edc2567"
+  },
+  "settings.servers.smbLinkConsents.confirm": "La prochaine fois qu’un lien sur {server} mènera à {target}, Cmdr redemandera.",
+  "@settings.servers.smbLinkConsents.confirm": {
+    "sourceHash": "0218465"
   }
 }

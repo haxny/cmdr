@@ -22,7 +22,7 @@ use crate::agent::tools::line::{LineRef, ToolPreview, outcome_of, preview_of, re
 
 /// What the page's projection needs beyond the rows.
 pub struct PageContext<'a> {
-    /// The running turn's seq high-water mark (`chat::cancel::turn_in_flight_since_seq`): the
+    /// The running turn's seq high-water mark (`chat::cancel::turn_in_flight`): the
     /// turn holding rows after it is still running.
     pub in_flight_since_seq: Option<i64>,
     /// The memory folder, so a memory line's path can be a place to go.

@@ -742,6 +742,41 @@ describe('VolumeBreadcrumb phone rows', () => {
     await tick()
     expect(menuSurface()).toBeTruthy()
   })
+
+  /** The visible line under a row. */
+  function statusLine(): string | null {
+    return document.querySelector('[data-device-status]')?.textContent.trim() ?? null
+  }
+
+  it('says what to do under a phone waiting for its Allow tap, and shows no space line', async () => {
+    await openWith([phoneRow({ deviceReadiness: { kind: 'waiting_for_authorization' } })])
+    expect(statusLine()).toBe('Tap Allow on your phone')
+    expect(document.querySelector('.volume-space-info')).toBeNull()
+    // The line sits outside the row, so the row's own name has to carry it for a screen reader.
+    expect(volumeRows()[0].textContent).toContain('Tap Allow on your phone')
+    expect(document.querySelector('[data-device-status]')?.getAttribute('aria-hidden')).toBe('true')
+  })
+
+  it('shows a phone whose MTP session is still connecting: greyed, unopenable, and undetachable', async () => {
+    await openWith([
+      phoneRow({
+        id: 'mtp-pixel:waiting',
+        path: 'mtp://mtp-pixel/waiting',
+        fsType: 'mtp',
+        deviceReadiness: { kind: 'connecting' },
+      }),
+    ])
+    const row = volumeRows()[0]
+    expect(row.getAttribute('aria-disabled')).toBe('true')
+    expect(row.querySelector('.eject-button')).toBeNull()
+    expect(statusLine()).toBe('Still connecting. Unlock your phone and tap Allow if it asks.')
+    expect(document.querySelector('.volume-space-info')).toBeNull()
+  })
+
+  it('shows no status line under a ready phone', async () => {
+    await openWith([phoneRow({ deviceReadiness: { kind: 'ready' } })])
+    expect(statusLine()).toBeNull()
+  })
 })
 
 /**

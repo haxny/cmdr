@@ -20,9 +20,11 @@ import (
 // type-aware linting in the default (non-slow) suite. See
 // docs/notes/check-cpu-contention.md.
 //
-// Running all rules here (vs the non-type-aware `desktop-svelte-eslint`) also
-// catches stale eslint-disable comments that the fast check can't detect (it
-// suppresses reportUnusedDisableDirectives).
+// These two lanes are the desktop's whole ESLint coverage: the full config is a
+// superset of the `ESLINT_NO_TYPECHECK=1` one (it swaps `strict` for
+// `strictTypeChecked` and adds rules and unused-directive reporting, never
+// removes any). A red local run also auto-fixes what's safe, scoped to the lane's
+// files (`typeAwareFixPasses`).
 
 // RunDesktopESLintTypecheckSvelte runs the full type-aware ESLint config over
 // the `.svelte` files only.
@@ -38,10 +40,11 @@ func RunDesktopESLintTypecheckTypescript(ctx *CheckContext) (CheckResult, error)
 	return runScopedESLintTypecheck(ctx, "TypeScript", []string{".", "--ignore-pattern", "**/*.svelte"}, []string{"*.ts"})
 }
 
-// runScopedESLintTypecheck runs `eslint <scopeArgs>` with the full config
-// (no ESLINT_NO_TYPECHECK), check-only in every mode: `eslint-passes.go` says
-// why type-aware rules never auto-fix. countExts feeds an approximate src file
-// count for the success message.
+// runScopedESLintTypecheck runs `eslint <scopeArgs>` with the full config (no
+// ESLINT_NO_TYPECHECK) as the verdict; on a red local run it runs the safe fix
+// pass and the verdict again. `eslint-passes.go` says why type-aware rules
+// never auto-fix. countExts feeds an approximate src file count for the
+// success message.
 func runScopedESLintTypecheck(ctx *CheckContext, label string, scopeArgs, countExts []string) (CheckResult, error) {
 	dir := filepath.Join(ctx.RootDir, "apps", "desktop")
 
@@ -64,11 +67,26 @@ func runScopedESLintTypecheck(ctx *CheckContext, label string, scopeArgs, countE
 		fileCount = len(strings.Split(strings.TrimSpace(findOutput), "\n"))
 	}
 
-	output, err := runESLintPasses(dir, typeAwareESLintPasses(scopeArgs))
+	verdict := typeAwareESLintPasses(scopeArgs)
+	output, err := runESLintPasses(dir, verdict)
+	fixed := false
+	if fix := typeAwareFixPasses(scopeArgs, ctx.CI); err != nil && len(fix) > 0 {
+		// The fix pass's own exit code says nothing new: the re-run verdict reports whatever
+		// it couldn't fix, alongside the type-aware findings.
+		_, _ = runESLintPasses(dir, fix)
+		output, err = runESLintPasses(dir, verdict)
+		fixed = err == nil
+	}
 	if err != nil {
-		return CheckResult{}, fmt.Errorf("type-aware lint errors (%s); this lane never auto-fixes (#622), so fix them by hand\n%s", label, indentOutput(output))
+		if ctx.CI {
+			return CheckResult{}, fmt.Errorf("lint errors (%s), run `pnpm check eslint-typecheck-svelte eslint-typecheck-ts` locally to auto-fix what's safe\n%s", label, indentOutput(output))
+		}
+		return CheckResult{}, fmt.Errorf("lint errors (%s) the safe auto-fix couldn't resolve; type-aware findings never auto-fix (#622), so fix them by hand\n%s", label, indentOutput(output))
 	}
 
+	if fixed {
+		return SuccessWithChanges(fmt.Sprintf("%s files auto-fixed, then passed", label)), nil
+	}
 	if fileCount > 0 {
 		result := Success(fmt.Sprintf("%d %s %s passed", fileCount, label, Pluralize(fileCount, "file", "files")))
 		result.Total = fileCount

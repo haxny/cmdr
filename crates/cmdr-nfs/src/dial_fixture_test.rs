@@ -25,13 +25,13 @@ fn fixture_server() -> NfsServer {
 }
 
 /// The seeded tree's owner, which root-squash leaves the files to.
-const SEEDED: NfsIdentity = NfsIdentity { uid: 1000, gid: 1000 };
+const SEEDED: NfsIdentity = NfsIdentity::new(1000, 1000);
 
 async fn mount_insecure(typed: &str) -> MountedExport {
     mount(
         &fixture_server(),
         typed,
-        SEEDED,
+        &SEEDED,
         &DialOptions::PRODUCTION,
         &CancellationToken::new(),
     )
@@ -160,7 +160,7 @@ async fn a_missing_export_is_export_not_found() {
     let err = mount(
         &fixture_server(),
         "/no-such-export",
-        SEEDED,
+        &SEEDED,
         &DialOptions::PRODUCTION,
         &CancellationToken::new(),
     )
@@ -179,7 +179,7 @@ async fn the_secure_export_through_a_published_port_is_refused_by_number() {
     let err = mount(
         &fixture_server(),
         "/secure",
-        SEEDED,
+        &SEEDED,
         &DialOptions::PRODUCTION,
         &CancellationToken::new(),
     )
@@ -207,7 +207,7 @@ async fn the_secure_export_accepts_a_reserved_port_on_the_direct_path() {
     let mounted = mount(
         &server,
         "/secure",
-        SEEDED,
+        &SEEDED,
         &DialOptions::PRODUCTION,
         &CancellationToken::new(),
     )
@@ -295,7 +295,7 @@ async fn capture_knfsd_replies_as_decoding_fixtures() {
     nfs.fsstat(&mounted.root).await.unwrap();
     nfs.pathconf(&mounted.root).await.unwrap();
     let _ = nfs.lookup(&mounted.root, b"no-such-file").await;
-    let _ = mount(&fixture_server(), "/secure", SEEDED, &options, &cancel).await;
+    let _ = mount(&fixture_server(), "/secure", &SEEDED, &options, &cancel).await;
 
     let mut seen = std::collections::HashMap::<(u32, u32), usize>::new();
     for (procedure, record) in tap::take() {

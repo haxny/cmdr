@@ -2,8 +2,9 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, RwLock};
+use std::time::Duration;
 
-use cmdr_adb::{AdbDevice, AdbDeviceState, AdbVolume};
+use cmdr_adb::{AdbDevice, AdbDeviceState, AdbEndpoint, AdbVolume};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::{DeviceReadiness, DeviceUnavailableReason, Volume};
 
@@ -162,9 +163,36 @@ fn entries_for(devices: &[AdbDevice]) -> Vec<DeviceVolumeEntry> {
                 mount_is_read_only: false,
                 device_readiness: Some(readiness_of(d.state)?),
                 usb_speed: None,
+                device_serial: Some(d.serial.clone()),
             })
         })
         .collect()
+}
+
+/// How long a row waits on a phone it hasn't dialed. `df` answers in a fraction of a
+/// second; a phone that doesn't is a row with no figure, and its socket goes with this.
+const UNDIALED_SPACE_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// `(total, available)` bytes of a listed, ready phone nobody has dialed. A phone that
+/// isn't ready can't answer, so it isn't asked.
+async fn undialed_space(serial: &str) -> Option<(u64, u64)> {
+    if !cached_devices().iter().any(|d| d.serial == serial && d.is_ready()) {
+        return None;
+    }
+    let endpoint = AdbEndpoint::default_local();
+    let asking = cmdr_adb::shell::shared_storage_space(&endpoint, serial);
+    let parts = match tokio::time::timeout(UNDIALED_SPACE_TIMEOUT, asking).await {
+        Ok(Ok(parts)) => parts?,
+        Ok(Err(err)) => {
+            log::debug!(target: "volume", "no space figure from undialed adb device {serial}: {err}");
+            return None;
+        }
+        Err(_) => {
+            log::debug!(target: "volume", "undialed adb device {serial} didn't answer for space in time");
+            return None;
+        }
+    };
+    Some((parts.total_bytes, parts.available_bytes))
 }
 
 /// ADB's answer to `device_volumes::DeviceVolumeProvider`.
@@ -194,15 +222,20 @@ impl DeviceVolumeProvider for AdbDeviceProvider {
         })
     }
 
-    /// The connected phone's figure (its shared storage, like MTP's per-storage
-    /// figure) for any path on it; `None` until it's dialed. The pane's
-    /// indicator and the poller read this, so ❌ don't make it per path: two
-    /// panes on one phone would flip the shared, volume-keyed readout.
+    /// The phone's figure (its shared storage, like MTP's per-storage figure) for
+    /// any path on it. A phone no pane has dialed answers too, through one `df` that
+    /// dials nothing (only the pane dials): the switcher's row asks before anyone
+    /// opens it. `None` for a phone that isn't ready. The pane's indicator and the
+    /// poller read this, so ❌ don't make it per path: two panes on one phone would
+    /// flip the shared, volume-keyed readout.
     fn space_for_path<'a>(&'a self, path: &'a str) -> ProviderFuture<'a, Option<(u64, u64)>> {
         Box::pin(async move {
-            let volume = connected_volume(serial_of_path(path)?)?;
-            let space = volume.get_space_info().await.ok()?;
-            Some((space.total_bytes()?, space.available_bytes()?))
+            let serial = serial_of_path(path)?;
+            if let Some(volume) = connected_volume(serial) {
+                let space = volume.get_space_info().await.ok()?;
+                return Some((space.total_bytes()?, space.available_bytes()?));
+            }
+            undialed_space(serial).await
         })
     }
 
@@ -322,6 +355,64 @@ mod tests {
             "the registry no longer holds a volume for the ejected phone"
         );
         apply_device_list(Vec::new());
+    }
+
+    /// Points `AdbEndpoint::default_local`, which the provider asks through, at `fake`.
+    fn aim_at(fake: &cmdr_adb::testing::FakeAdbServer) {
+        // SAFETY: `std::env::set_var` is unsound only under concurrent env access. Each nextest
+        // test runs in its own process, and this runs on the test's one thread before anything
+        // in it reads the variable.
+        unsafe {
+            std::env::set_var("ANDROID_ADB_SERVER_PORT", fake.addr().port().to_string());
+        }
+    }
+
+    /// ❗ A row's figure on a phone no pane opened. Asking must not dial: only the pane dials, or
+    /// a look at the list would register a volume for every plugged-in phone.
+    #[tokio::test]
+    async fn a_ready_phone_nobody_dialed_answers_its_space_without_being_dialed() {
+        const SERIAL: &str = "R58M-Undialed-Space";
+        let fake = crate::adb::test_support::a_fake_phone(SERIAL).await;
+        aim_at(&fake);
+
+        let space = AdbDeviceProvider.space_for_path(&device_path(SERIAL)).await;
+
+        let (total, available) = space.expect("a ready phone has a figure before anyone opens it");
+        assert!(
+            total > 0 && available <= total,
+            "got {total} total, {available} available"
+        );
+        assert!(connected_volume(SERIAL).is_none(), "the figure dialed nothing");
+        assert!(
+            get_volume_manager()
+                .get(&cmdr_fs::volume::adb_volume_id(SERIAL))
+                .is_none(),
+            "the figure registered nothing"
+        );
+        apply_device_list(Vec::new());
+    }
+
+    /// A phone still owing its Allow tap can't answer, and asking it anyway only costs a socket.
+    #[tokio::test]
+    async fn a_phone_that_is_not_ready_has_no_space_to_ask_about() {
+        const SERIAL: &str = "R58M-Waiting-Space";
+        let fake = crate::adb::test_support::a_fake_phone(SERIAL).await;
+        aim_at(&fake);
+        apply_device_list(vec![device(SERIAL, AdbDeviceState::Unauthorized)]);
+
+        assert_eq!(AdbDeviceProvider.space_for_path(&device_path(SERIAL)).await, None);
+        apply_device_list(Vec::new());
+    }
+
+    /// A phone that left has no figure, though the server behind it would still answer.
+    #[tokio::test]
+    async fn a_phone_not_in_the_list_has_no_space_to_ask_about() {
+        const SERIAL: &str = "R58M-Gone-Space";
+        let fake = crate::adb::test_support::a_fake_phone(SERIAL).await;
+        aim_at(&fake);
+        apply_device_list(Vec::new());
+
+        assert_eq!(AdbDeviceProvider.space_for_path(&device_path(SERIAL)).await, None);
     }
 
     #[test]

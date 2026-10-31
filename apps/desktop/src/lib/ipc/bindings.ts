@@ -188,8 +188,11 @@ export const commands = {
         isArchive: boolean
         /**
          *  `true` for a macOS package (`Safari.app`, `Foo.bundle`, …): a directory
-         *  Finder presents as one item. A pure suffix test on the name
-         *  ([`crate::icons::packages::is_package_dir`]), so it costs no I/O. The
+         *  Finder presents as one item. The listing sets it from the name
+         *  ([`crate::file_extension::is_listed_package`], no I/O); for a dotted folder
+         *  the list doesn't know, the app asks macOS once the row is visible and
+         *  patches it in ([`FileEntry::set_package`]). It decides the row's extension
+         *  (`file_extension::NameKind`), its `pkg:` icon, and its accessible kind. The
          *  frontend names the row a "package" for screen readers from this, ❌ never
          *  from the `pkg:` prefix of `icon_id`. Always `false` for a file or a symlink.
          */
@@ -356,8 +359,11 @@ export const commands = {
         isArchive: boolean
         /**
          *  `true` for a macOS package (`Safari.app`, `Foo.bundle`, …): a directory
-         *  Finder presents as one item. A pure suffix test on the name
-         *  ([`crate::icons::packages::is_package_dir`]), so it costs no I/O. The
+         *  Finder presents as one item. The listing sets it from the name
+         *  ([`crate::file_extension::is_listed_package`], no I/O); for a dotted folder
+         *  the list doesn't know, the app asks macOS once the row is visible and
+         *  patches it in ([`FileEntry::set_package`]). It decides the row's extension
+         *  (`file_extension::NameKind`), its `pkg:` icon, and its accessible kind. The
          *  frontend names the row a "package" for screen readers from this, ❌ never
          *  from the `pkg:` prefix of `icon_id`. Always `false` for a file or a symlink.
          */
@@ -627,6 +633,17 @@ export const commands = {
    */
   enrichTags: (listingId: string, paths: string[]) =>
     __TAURI_INVOKE<TimedOut<null>>('enrich_tags', { listingId, paths }),
+  /**
+   *  Asks macOS which of the given VISIBLE paths of `listing_id` are packages the
+   *  package list doesn't know (`Logo.sketchbundle`), and patches the answers into
+   *  the cached listing, emitting a `directory-diff` only for rows that changed.
+   *  The frontend calls this after each visible-range fetch, like `enrich_tags`.
+   *  Paths the list already answers, a non-local volume, Linux, and the pending
+   *  FDA gate all make it a no-op. `timed_out` means this range keeps the list's
+   *  answer.
+   */
+  enrichPackages: (listingId: string, paths: string[]) =>
+    __TAURI_INVOKE<TimedOut<null>>('enrich_packages', { listingId, paths }),
   /**
    *  Toggles a Finder color tag (`color` 1..=7) across `paths`, then patches the
    *  resulting tags into the cached listing so the panes re-render immediately.
@@ -2122,15 +2139,16 @@ export const commands = {
   getIcons: (iconIds: string[], useAppIconsForDocuments: boolean) =>
     __TAURI_INVOKE<TimedOut<{ [key in string]: string }>>('get_icons', { iconIds, useAppIconsForDocuments }),
   /**
-   *  Detects which of the given VISIBLE directory paths carry a Finder custom-icon
-   *  flag, returning the `path:{dir}` icon id for each. The frontend calls this for
-   *  visible directory rows, then feeds the returned ids into `get_icons` to fetch
-   *  the real icons. The `getxattr` check is cheap (no NSWorkspace, no TCC), but
-   *  still deferred off the bulk-listing hot path, so it's safe to run without the
-   *  FDA gate. Empty result while there's nothing to report.
+   *  Detects which of the given VISIBLE directory paths carry a Finder custom icon,
+   *  returning the `path:{dir}` icon id for each plus whether macOS tints it with the
+   *  accent (so the gold recolor applies). The frontend calls this for visible
+   *  directory rows, then feeds the returned ids into `get_icons` to fetch the real
+   *  icons. The `getxattr` checks are cheap (no NSWorkspace, no TCC), but still
+   *  deferred off the bulk-listing hot path, so it's safe to run without the FDA
+   *  gate. Empty result while there's nothing to report.
    */
   getCustomFolderIconIds: (directoryPaths: string[]) =>
-    __TAURI_INVOKE<TimedOut<string[]>>('get_custom_folder_icon_ids', { directoryPaths }),
+    __TAURI_INVOKE<TimedOut<CustomFolderIconId[]>>('get_custom_folder_icon_ids', { directoryPaths }),
   /**
    *  Refreshes icons for a directory listing.
    *  Fetches icons in parallel for all directories and extensions.
@@ -3242,10 +3260,9 @@ export const commands = {
    *
    *  - An ALREADY-active drive: kicks off a fresh full scan (Stale ⇒ Scanning ⇒
    *    Fresh on clean completion), truncating and rebuilding its index.
-   *  - An SMB drive that's NOT active (e.g. a persisted Stale index loaded on
-   *    launch but never re-enabled this session): enable it, which scans. Returns
-   *    the typed refusal if the direct-smb2 gate blocks it.
-   *  - `root` that's not active: starts the local indexer.
+   *  - A drive that's NOT active (e.g. a persisted Stale index loaded on launch but
+   *    never re-enabled this session): start it, then the same scan
+   *    (`Index::rescan_volume`). Returns the typed refusal if a start's gate blocks it.
    */
   rescanDriveIndex: (volumeId: string) =>
     typedError<EnableIndexingOutcome, string>(__TAURI_INVOKE('rescan_drive_index', { volumeId })),
@@ -3879,6 +3896,11 @@ export const commands = {
    */
   cancelBulkRenameProposal: (proposalId: string) => __TAURI_INVOKE<void>('cancel_bulk_rename_proposal', { proposalId }),
   /**
+   *  Stops a running check for this proposal, leaving the review open. Answers whether one was
+   *  running. The stopped `preflight_bulk_rename` or `apply_bulk_rename` answers `Cancelled`.
+   */
+  cancelBulkRenameCheck: (proposalId: string) => __TAURI_INVOKE<boolean>('cancel_bulk_rename_check', { proposalId }),
+  /**
    *  Every sweep with at least one group still waiting on the user, newest first.
    *
    *  Counts only: not one op row is read here, because a group of 60 000 is legitimate and a list
@@ -3995,6 +4017,12 @@ export const commands = {
          *  (every other result-less call is settled). `None` when nothing runs.
          */
         turnInFlightSinceSeq: number | null
+        /**
+         *  The running turn's run (the `run` its events carry), set exactly when
+         *  `turn_in_flight_since_seq` is. A reloaded rail stops that turn before it says anything more,
+         *  so it needs to know which terminal is its own (#802).
+         */
+        turnInFlightRun: number | null
         /**
          *  The estimated spend (micro-USD) the running turn is paused at, waiting for Keep going or
          *  Stop, so a reloaded rail puts the question back on screen. `None` when no turn is paused.
@@ -4396,10 +4424,6 @@ export const commands = {
    *  the filesystem.
    */
   getVolumeSpace: (path: string) => __TAURI_INVOKE<TimedOut<SpaceInfo | null>>('get_volume_space', { path }),
-  /**
-   *  Gets every host discovery knows, including ones a stopped browse found: the
-   *  Servers view shows them straight away while a fresh browse runs.
-   */
   listNetworkHosts: () => __TAURI_INVOKE<NetworkHost[]>('list_network_hosts'),
   /**
    *  Resolves a network host by ID, returning the host with hostname and IP address populated.
@@ -4563,6 +4587,20 @@ export const commands = {
    *  last, and Edit is where it changes.
    */
   getUsernameHint: (serverName: string) => __TAURI_INVOKE<string | null>('get_username_hint', { serverName }),
+  /**
+   *  Gets every host discovery knows, including ones a stopped browse found: the
+   *  Servers view shows them straight away while a fresh browse runs.
+   *  Lets links on `server` sign in to `target`, after a person said yes in the
+   *  pane. ❌ Only the frontend's dialog calls this: no MCP or Ask Cmdr tool may.
+   *  `false` for a name Cmdr refuses to ask about.
+   */
+  allowSmbLinkTarget: (server: string, target: string) =>
+    __TAURI_INVOKE<boolean>('allow_smb_link_target', { server, target }),
+  // Takes a pair back, so links on `server` ask again on their next call.
+  forgetSmbLinkTarget: (server: string, target: string) =>
+    __TAURI_INVOKE<boolean>('forget_smb_link_target', { server, target }),
+  // Every pair a person allowed, for a settings screen.
+  listSmbLinkConsents: () => __TAURI_INVOKE<SmbLinkConsent[]>('list_smb_link_consents'),
   /**
    *  Saves SMB credentials to the Keychain.
    *  Credentials are stored under "Cmdr" service name.
@@ -4832,10 +4870,12 @@ export const commands = {
    *  frontend shouldn't wait for the volume to fully disappear: `volume-unmounted`
    *  (for disk volumes) or `mtp-device-disconnected` (for MTP) will fire shortly
    *  after and panes rooted at the volume redirect to root. It reads the outcome
-   *  for nothing today, and passing it through rather than dropping it is what
-   *  keeps the MCP tool's typed answer honest.
+   *  to say when a drive stays attached.
    */
   ejectVolume: (volumeId: string) => typedError<EjectOutcome, EjectError>(__TAURI_INVOKE('eject_volume', { volumeId })),
+  // Ejects every volume on `volume_id`'s physical disk, and the disk: the volume menu's "Eject all".
+  ejectAllOnDisk: (volumeId: string) =>
+    typedError<EjectOutcome, EjectError>(__TAURI_INVOKE('eject_all_on_disk', { volumeId })),
   /**
    *  Returns the IDs of volumes whose eject is still running. The volume picker
    *  bootstraps its ejecting set from this once on startup, then keeps it live via
@@ -5107,7 +5147,7 @@ export const commands = {
     __TAURI_INVOKE<GuessedNfsIdentity>('guess_nfs_identity', { host, port, exportPath }),
   /**
    *  Every NFS place the user has saved, for an edit sheet that has to show (and
-   *  resend) the uid, gid, and start folder the servers listing doesn't carry.
+   *  resend) the uid, groups, and start folder the servers listing doesn't carry.
    */
   getKnownNfsPlaces: () => __TAURI_INVOKE<SavedNfsPlace[]>('get_known_nfs_places'),
   /**
@@ -5782,6 +5822,7 @@ export const events = {
   aiStarting: makeEvent<AiStarting>('ai-starting'),
   aiVerifying: makeEvent<AiVerifying>('ai-verifying'),
   askCmdrTurn: makeEvent<AskCmdrTurn>('ask-cmdr-turn'),
+  bulkRenameCheckProgress: makeEvent<BulkRenameCheckProgress>('bulk-rename-check-progress'),
   clipboardPasteSettled: makeEvent<ClipboardPasteSettled>('clipboard-paste-settled'),
   closeAbout: makeEvent<CloseAbout>('close-about'),
   closeAllFileViewers: makeEvent<CloseAllFileViewers>('close-all-file-viewers'),
@@ -5906,6 +5947,7 @@ export const events = {
   viewerContextMenuAction: makeEvent<ViewerContextMenuAction>('viewer-context-menu-action'),
   viewerEditAction: makeEvent<ViewerEditAction>('viewer-edit-action'),
   viewerHistoryAction: makeEvent<ViewerHistoryAction>('viewer-history-action'),
+  viewerMediaLoad: makeEvent<ViewerMediaLoad>('viewer-media-load'),
   viewerPullProgress: makeEvent<ViewerPullProgress>('viewer-pull-progress'),
   viewerWordWrapToggled: makeEvent<ViewerWordWrapToggled>('viewer-word-wrap-toggled'),
   volumeConnectionChanged: makeEvent<VolumeConnectionChanged>('volume-connection-changed'),
@@ -6233,8 +6275,9 @@ export type AiEffortLevel = 'low' | 'medium' | 'high' | 'max'
 
 /**
  *  The Effort picker's menu for one model. The UI stores the pick in `ai.reasoningEfforts` as
- *  `"recommended"`, `"off"`, or a level's camelCase name; the backend maps a pick the model
- *  can't take to the nearest one it can, so this menu is a courtesy, never the guard.
+ *  `"recommended"` or a level's camelCase name; the backend maps a pick the model can't take to
+ *  the nearest one it can, so this menu is a courtesy, never the guard. There's no Off: thinking
+ *  stays on for users, and a stored `"off"` from an older build reads as Recommended.
  */
 export type AiEffortOptions = {
   /**
@@ -6243,7 +6286,6 @@ export type AiEffortOptions = {
    */
   reasons: boolean | null
   levels: AiEffortLevel[]
-  canTurnOff: boolean
   /**
    *  What Recommended amounts to, when anything knows; `None` while the provider decides
    *  per request.
@@ -6394,6 +6436,31 @@ export type AiTranslateErrorKind =
   | 'managed'
 
 export type AiVerifying = null
+
+/**
+ *  The top-level items a delete or trash found already gone when it started:
+ *  something else moved or deleted them first (ERR-X84HN: another app moved a
+ *  file out of a folder a pane still showed). Their absence is what the person
+ *  asked for, so the operation counts them as done and completes, ❌ never a
+ *  `SourceNotFound` failure. `delete/already_gone.rs`.
+ *
+ *  ❗ Only a POSITIVE absence (`NotFound`) lands here. "We couldn't look" stays
+ *  with the engine, whose own typed error says what really happened.
+ */
+export type AlreadyGone = {
+  // How many of the top-level items were already gone.
+  itemCount: number
+  /**
+   *  How many top-level items the operation was asked to handle, so the FE
+   *  can tell "all of it was gone" from "some of it was".
+   */
+  totalCount: number
+  /**
+   *  The gone item's own name when exactly one was gone, so the note can
+   *  name it. `None` for several.
+   */
+  name: string | null
+}
 
 export type AmendResult = {
   id: string
@@ -7014,12 +7081,19 @@ export type BulkRenameBlockReason =
   | 'targetExists'
   | 'volumeUnavailable'
 
+// How far one proposal's running check has got.
+export type BulkRenameCheckProgress = {
+  proposalId: string
+  // Rows finished so far. 0 is a real answer: the first stat is still out.
+  checked: number
+  total: number
+}
+
 /**
  *  Why a rename review couldn't be checked or applied.
  *
- *  ❌ Not prose: the review dialog words its own states (its per-row
- *  `askCmdr.renameReview.nameRejected` notice, and re-reading the plan when it
- *  has moved on); the variant is what the log records.
+ *  ❌ Not prose: the review dialog words each variant from the catalog
+ *  (`rename-review-status.ts`); a `detail` here is for the log.
  */
 export type BulkRenameError =
   /**
@@ -7054,9 +7128,12 @@ export type BulkRenameError =
        */
       reason: RenameStartError
     }
-  // The preflight didn't finish inside the command's wait.
-  | { type: 'timedOut' }
-  // Nothing above classifies it (a panicked task).
+  /**
+   *  The check was stopped before it answered: the user pressed Stop checking, the review
+   *  closed, or a newer check for this plan replaced it. Nothing ran.
+   */
+  | { type: 'cancelled' }
+  // Nothing above classifies it (a panicked task, Cmdr's own database not answering).
   | {
       type: 'unexpected'
       // What the runtime reported, for the log.
@@ -7898,6 +7975,12 @@ export type ConversationDetailView = {
    */
   turnInFlightSinceSeq: number | null
   /**
+   *  The running turn's run (the `run` its events carry), set exactly when
+   *  `turn_in_flight_since_seq` is. A reloaded rail stops that turn before it says anything more,
+   *  so it needs to know which terminal is its own (#802).
+   */
+  turnInFlightRun: number | null
+  /**
    *  The estimated spend (micro-USD) the running turn is paused at, waiting for Keep going or
    *  Stop, so a reloaded rail puts the question back on screen. `None` when no turn is paused.
    */
@@ -8331,6 +8414,24 @@ export type CreditInfoDto = {
   send_queue_depth: number
 }
 
+// One visible folder that carries a Finder custom icon, as `get_custom_folder_icon_ids` reports it.
+export type CustomFolderIconId = {
+  // The `path:{dir}` id to fetch the real icon with.
+  iconId: string
+  /**
+   *  True for a Customize Folder symbol or emoji that macOS tints with the system accent, so the
+   *  frontend applies the gold recolor to it like to a plain folder. False for pasted artwork and
+   *  for a color the person chose with a tag, which are drawn as-is.
+   */
+  followsAccent: boolean
+  /**
+   *  The emoji of an accent-following emoji customization, `None` otherwise (a symbol, artwork,
+   *  a tag color). The gold recolor grays the whole bitmap, so for these the frontend draws the
+   *  gold plain folder with this emoji on top in its own colors (#814).
+   */
+  emoji: string | null
+}
+
 // Why a wipe didn't start. Nothing was deleted in either case.
 export type DataWipeError =
   /**
@@ -8458,6 +8559,12 @@ export type DeviceReadiness =
    *  the moment the row turns ready.
    */
   | { kind: 'waiting_for_authorization' }
+  /**
+   *  The device is plugged in, its session hasn't opened, and the app keeps
+   *  trying. Not openable: there's no storage to land on yet, and the row
+   *  turns into the storage's own the moment one is there.
+   */
+  | { kind: 'connecting' }
   /**
    *  The device is visible to the daemon but can't be used. The row is
    *  disabled and the reason is its tooltip.
@@ -9069,6 +9176,16 @@ export type EjectError =
       detail: string
     }
   /**
+   *  An eject taking several volumes down stopped before it unmounted anything, since someone
+   *  is holding one of them. ❗ Nothing changed, where [`Self::UnmountRefused`] from the same
+   *  eject can mean some volumes already went.
+   */
+  | {
+      type: 'heldBeforeEject'
+      // Who's holding the disk.
+      holders: HolderScan
+    }
+  /**
    *  The `diskutil` / `umount` subprocess (or a device provider's eject) didn't
    *  finish within the timeout. ❗ The unmount was NOT cancelled; it may still land.
    */
@@ -9113,6 +9230,12 @@ export type EjectOutcome =
   | 'diskEjected'
   // Nothing was left to do: the volume had already gone before the teardown ran.
   | 'alreadyGone'
+  /**
+   *  One volume of a disk left the mount table, and the disk stays attached because other
+   *  volumes on it are still mounted. ❗ The drive is NOT safe to unplug, which is what the
+   *  frontend tells the person.
+   */
+  | 'volumeEjectedDiskStays'
 
 // Which pre-unmount step stalled, for [`EjectError::NotResponding`].
 export type EjectStep =
@@ -9581,8 +9704,11 @@ export type FileEntry = {
   isArchive: boolean
   /**
    *  `true` for a macOS package (`Safari.app`, `Foo.bundle`, …): a directory
-   *  Finder presents as one item. A pure suffix test on the name
-   *  ([`crate::icons::packages::is_package_dir`]), so it costs no I/O. The
+   *  Finder presents as one item. The listing sets it from the name
+   *  ([`crate::file_extension::is_listed_package`], no I/O); for a dotted folder
+   *  the list doesn't know, the app asks macOS once the row is visible and
+   *  patches it in ([`FileEntry::set_package`]). It decides the row's extension
+   *  (`file_extension::NameKind`), its `pkg:` icon, and its accessible kind. The
    *  frontend names the row a "package" for screen readers from this, ❌ never
    *  from the `pkg:` prefix of `icon_id`. Always `false` for a file or a symlink.
    */
@@ -10240,12 +10366,17 @@ export type GoToPathResolution =
   // Defensive: the input was empty or couldn't be turned into a path.
   | { kind: 'invalid'; reason: string }
 
-// The uid and gid the add form fills "User ID" and "Group ID" with.
+// The ids the add form fills "User ID", "Group ID", and "Other group IDs" with.
 export type GuessedNfsIdentity = {
   // The user id.
   uid: number
   // The group id.
   gid: number
+  /**
+   *  The person's other groups: the ones the export's files use, then this
+   *  Mac's when the guess is this Mac's. Empty when nothing suggests any.
+   */
+  otherGids: number[]
   // Why these.
   source: NfsIdentitySourceWire
 }
@@ -10335,8 +10466,8 @@ export type HolderKind =
 export type HolderScan =
   /**
    *  Every still-listed mount of the teardown was scanned, so `named` is the whole
-   *  story. Empty means no same-uid process held the drive (a root-owned holder is
-   *  invisible to this scan).
+   *  story. Empty means no same-uid process held the drive and no disk image is stored
+   *  on it (any other holder under another uid is invisible to this scan).
    */
   | {
       type: 'complete'
@@ -11413,6 +11544,16 @@ export type LineRef = {
   callId: string
 }
 
+// A sign-in on another server, through a link, that nobody has allowed.
+export type LinkSignIn = {
+  // The path that was refused.
+  path: string
+  // The server the share is on.
+  server: string
+  // The other server the link leads to.
+  target: string
+}
+
 // Cancelled event payload
 export type ListingCancelledEvent = {
   listingId: string
@@ -11663,6 +11804,20 @@ export type ListingErrorReason =
       // The path the failure was about.
       path: string
     }
+  /**
+   *  A phone (ADB, MTP) refused a folder: Android keeps it for the system and its
+   *  apps. Nothing on this Mac, and no retry, changes the answer. The pane shows
+   *  the path already, and a phone's app path carries its serial, so the words
+   *  don't take it.
+   */
+  | { reason: 'phoneRefused' }
+  /**
+   *  A connected server (SFTP, WebDAV, NFS) refused a folder for the account or
+   *  identity it was connected with. Unlike [`Self::RemotePermissionDenied`],
+   *  nothing is mounted, so there's no share to eject and mount again. The pane
+   *  shows the path already, and its app path is all scheme and account.
+   */
+  | { reason: 'serverRefused' }
   // `VolumeError::AlreadyExists`: the destination is taken.
   | {
       reason: 'alreadyExists'
@@ -11688,6 +11843,28 @@ export type ListingErrorReason =
       reason: 'notConnected'
       // The path the failure was about.
       path: string
+    }
+  /**
+   *  `VolumeError::LinkTargetUnreachable`: the folder sits behind a link to another server, and
+   *  that server is out of reach. The share itself is fine.
+   */
+  | {
+      reason: 'linkTargetUnreachable'
+      // The path the failure was about.
+      path: string
+    }
+  /**
+   *  `VolumeError::LinkNeedsConsent`: the folder sits behind a link to another server, and nobody
+   *  has allowed signing in there.
+   */
+  | {
+      reason: 'linkNeedsConsent'
+      // The path the failure was about.
+      path: string
+      // The server the share is on.
+      server: string
+      // The other server the link leads to.
+      target: string
     }
   // The volume or device is read-only.
   | { reason: 'readOnly' }
@@ -12076,6 +12253,12 @@ export type LocationInfo = {
    *  `disk_image::is_disk_image_mount`. Always `false` off macOS and for non-volume locations.
    */
   isDiskImage: boolean
+  /**
+   *  Whether another switcher row sits on this volume's physical disk, so Eject leaves the disk
+   *  attached and the row's menu also offers "Eject all". Set only by the listing
+   *  (`volume_listing::complete`), since no one row can answer it.
+   */
+  sharesDiskWithOthers: boolean
   /**
    *  Whether a cloud provider's own filesystem serves this mount (pCloud's `pcloudfs`,
    *  CloudMounter, …), so every entry read costs a round trip to that provider's daemon.
@@ -12611,6 +12794,13 @@ export type MediaIndexVolumeState = {
    */
   keptCount: number | null
 }
+
+export type MediaLoadStage =
+  | 'reading'
+  // The body is on its way to the webview.
+  | 'done'
+  // The volume stopped answering or refused the read.
+  | 'failed'
 
 // What the field picker shows: the read's progress, and each field's example.
 export type MediaOverview = {
@@ -13260,6 +13450,19 @@ export type MtpConnectionError =
       type: 'permissionDenied'
       // The device this is about.
       device_id: string
+    }
+  /**
+   *  The phone refused to READ this folder or file: Android keeps it for the
+   *  system and its apps. Nothing about the storage or the USB link, so ❌ never
+   *  `StoreReadOnly` (reading isn't writing) or `PermissionDenied` (the host's USB
+   *  access).
+   */
+  | {
+      type: 'readRefused'
+      // The device this is about.
+      device_id: string
+      // The refused object's path on the device.
+      path: string
     }
   /**
    *  The caller cancelled, and the operation stopped at a safe PTP boundary.
@@ -14880,6 +15083,17 @@ export type PermissionRefusal =
    *  One answer covers both, so the advice names both.
    */
   | 'objectStoreAccount'
+  /**
+   *  A phone (ADB, MTP) refused: Android keeps the path for the system and its
+   *  apps. ❌ Never macOS or Finder advice.
+   */
+  | 'phone'
+  /**
+   *  A connected server (SFTP, WebDAV, NFS, or a mounted SMB/AFP/NFS share) refused
+   *  the account or identity it was connected with. ❌ Never macOS or Finder advice,
+   *  even when the backend carries an errno (NFS's `NFS3ERR_ACCES` is `EACCES`).
+   */
+  | 'server'
 
 /**
  *  Which half of a transfer refused on permission grounds, for
@@ -15582,6 +15796,23 @@ export type RefusalReason =
   | { kind: 'memory'; refusal: MemoryRefusalKind }
 
 /**
+ *  Why a destination refused an item's name, for a
+ *  [`WriteConflictEvent::refused_name`] prompt.
+ */
+export type RefusedNameReason =
+  /**
+   *  The name is longer than the destination can store
+   *  (`WriteOperationError::NameTooLong`).
+   */
+  | 'tooLong'
+  /**
+   *  The destination can't store the name for another reason: a reserved
+   *  name (`CON`), or a character its filesystem can't hold
+   *  (`WriteOperationError::InvalidName`).
+   */
+  | 'notAllowed'
+
+/**
  *  Typed errors from a registration attempt. The FE branches on `kind`;
  *  never match on the message string.
  */
@@ -15836,11 +16067,12 @@ export type RequestedSort = {
  *  a transparent, user-friendly toast.
  */
 export type RescanReason =
-  // Event ID gap too large: app hasn't run for a long time.
-  | 'stale_index'
-  // FSEvents journal unavailable (gap detected during replay).
+  /**
+   *  The FSEvents journal can't serve the stored position: its history was
+   *  purged, or it runs behind the stored event id.
+   */
   | 'journal_gap'
-  // Replay processed too many events (safety limit exceeded).
+  // Replaying would process more paths than a full reconcile walks.
   | 'replay_overflow'
   // DriveWatcher failed to start for replay.
   | 'watcher_start_failed'
@@ -16485,6 +16717,8 @@ export type SavedNfsPlace = {
   uid: number
   // The group id every request acts as.
   gid: number
+  // The other groups every request carries.
+  otherGids: number[]
   /**
    *  The name a person gave its SERVER, empty when nobody did. ❗ The
    *  server's, ❌ never the place's: an export reads as its own path.
@@ -18004,7 +18238,7 @@ export type ServerTarget =
     }
   /**
    *  One NFS export: display name, host, an optional port, the export, the
-   *  uid and gid it acts as, an optional start folder, and the auto-reconnect
+   *  uid and groups it acts as, an optional start folder, and the auto-reconnect
    *  switch.
    */
   | {
@@ -18030,6 +18264,11 @@ export type ServerTarget =
       uid: number
       // The group id every request acts as. A setting, like `uid`.
       gid: number
+      /**
+       *  The person's other groups, sent with every request. A setting, like
+       *  `uid`.
+       */
+      otherGids: number[]
       /**
        *  Where a pane lands when the place is opened: an export-relative path
        *  (`/Photos`). `None` is the export's root.
@@ -18647,6 +18886,19 @@ export type SmbFellBackToOsMount = {
 }
 
 /**
+ *  One allowed pair: links on `server` may sign in to `target`, with the account
+ *  used for `server`.
+ */
+export type SmbLinkConsent = {
+  // The server the share is on.
+  server: string
+  // The other server the link leads to.
+  target: string
+  // When it was allowed, ISO 8601, so the settings screen can show it.
+  approvedAt: string
+}
+
+/**
  *  Typed `smb-os-mount-notice-withdrawn` Tauri event: the notice a
  *  [`SmbFellBackToOsMount`] raised for this volume has nothing left to offer, so
  *  the frontend takes it down.
@@ -18978,6 +19230,8 @@ export type StateFile =
   | 'smb_servers'
   // `known-sftp-hosts.json`: the SSH host keys the person approved.
   | 'sftp_host_keys'
+  // `smb-link-consents.json`: the other servers the person let SMB links sign in to.
+  | 'smb_link_consents'
   // `known-webdav-certificates.json`: the server certificates the person pinned.
   | 'webdav_certificates'
   // `ai/ai-state.json`: whether local AI is installed, its server, and a dismissed offer.
@@ -20849,6 +21103,12 @@ export type UpgradeFailure =
    *  ❌ never from the errno alone.
    */
   | 'blockedByThisMac'
+  /**
+   *  The share is a DFS namespace on another server, and nobody has allowed
+   *  signing in there, so Cmdr didn't. Repeating can't help: it stays on the
+   *  system connection.
+   */
+  | 'otherServerNotAllowed'
 
 /**
  *  Where a "Connect directly" left the volume.
@@ -21070,6 +21330,16 @@ export type ViewerError =
    *  nothing to preview yet and a Retry can't help.
    */
   | { kind: 'coldStorage' }
+  /**
+   *  The file sits behind a link to another server (a DFS link in an SMB share), and that
+   *  server is out of reach. Retry can help; nothing was deleted, so ❌ never `NotFound`.
+   */
+  | { kind: 'linkTargetUnreachable' }
+  /**
+   *  The file sits behind a link to another server (a DFS link in an SMB share), and nobody
+   *  has allowed signing in there. Opening its folder in a pane is where a person can.
+   */
+  | { kind: 'linkNeedsConsent' }
   | { kind: 'notEnoughSpace'; needed: number; available: number }
 
 /**
@@ -21087,6 +21357,19 @@ export type ViewerHistoryDirection =
   | 'back'
   // Go > Forward: undoes a Back.
   | 'forward'
+
+/**
+ *  `viewer-media-load`: how a volume-served picture's or PDF's request is going. Emitted
+ *  to the viewer window that asked, so it can show progress over an `<img>` that won't
+ *  say, and tell a dead server from a damaged file (an `<embed>` says neither).
+ */
+export type ViewerMediaLoad = {
+  // The token the request came in on, so a window ignores news of a closed session.
+  token: string
+  stage: MediaLoadStage
+  bytesDone: number
+  bytesTotal: number
+}
 
 // Result returned when opening a viewer session.
 export type ViewerOpenResult = {
@@ -21123,6 +21406,12 @@ export type ViewerOpenResult = {
    *  SVG, PDFs, text, or on any read error).
    */
   mediaDimensions: MediaDimensions | null
+  /**
+   *  The `cmdr-media://` request reads from a volume, so it can take a while and fail
+   *  for reasons the file has nothing to do with: the window follows it through
+   *  `viewer-media-load`. `false` for anything served from a local path.
+   */
+  mediaFromVolume: boolean
 }
 
 /**
@@ -21315,7 +21604,7 @@ export type VolumeContextAction = {
  *  The action vocabulary of a volume, server, or favorite row: what the user can
  *  pick from its menu.
  *
- *  Rust emits only `Eject`, from the native breadcrumb menu. Every other variant
+ *  Rust emits only `Eject` and `EjectAll`, from the native breadcrumb menu. Every other variant
  *  is picked in the frontend, from a row's in-app menu (the volume switcher's and
  *  the favorites menu's → submenus, the servers hub's right-click:
  *  `apps/desktop/src/lib/file-explorer/navigation/row-menu.ts`), and from the
@@ -21332,6 +21621,8 @@ export type VolumeContextActionKind =
   | 'open'
   // Unmount a removable disk, or retire a device session.
   | 'eject'
+  // Take every volume on this row's physical disk down, and the disk.
+  | 'eject-all'
   // Drop a server's session and leave it as a `saved` row.
   | 'disconnect'
   // Put a saved place in the switcher.
@@ -21446,6 +21737,30 @@ export type VolumeError =
    *  pane is what connects it.
    */
   | { type: 'notConnected'; data: string }
+  /**
+   *  The path sits behind a link to another server (a DFS link inside an SMB
+   *  share), and that server is out of reach. Carries the path.
+   *
+   *  The refusal is about this path alone: the share itself is fine, and paths
+   *  outside the link keep working. ❌ Never `DeviceDisconnected`, which sends
+   *  the whole share through a reconnect that can't help, and ❌ never
+   *  `NotFound`, which the frontend reads as "this folder was deleted". SMB-only
+   *  today.
+   */
+  | { type: 'linkTargetUnreachable'; data: string }
+  /**
+   *  The path sits behind a link to another server (a DFS link inside an SMB
+   *  share), and nobody has allowed signing in there, so nothing went to it.
+   *
+   *  The refusal is about this path alone. Only a pane navigation may ask the
+   *  person; everything else refuses. ❌ Never `DeviceDisconnected` or
+   *  `NotFound`, for the same reasons as [`Self::LinkTargetUnreachable`]. SMB-only
+   *  today.
+   *
+   *  Boxed: this is the rare error, and three strings inline would grow every
+   *  `Result` a volume returns.
+   */
+  | { type: 'linkNeedsConsent'; data: LinkSignIn }
   /**
    *  The device's session died mid-operation but the device itself is still
    *  attached, and a reopen is already running in the background (MTP: a PTP
@@ -22174,6 +22489,11 @@ export type WriteCompleteEvent = {
    *  the FE says nothing. See [`LockedKept`].
    */
   lockedKept?: LockedKept | null
+  /**
+   *  What a delete or trash found already gone and counted as done. `None`,
+   *  the ordinary case, means every item was there. See [`AlreadyGone`].
+   */
+  alreadyGone?: AlreadyGone | null
 }
 
 // Conflict event payload (emitted when Stop mode encounters a conflict).
@@ -22240,6 +22560,16 @@ export type WriteConflictEvent = {
    *  screen can show the difference. `look_alike.rs::is_look_alike_clash`.
    */
   destinationIsLookAlike?: boolean
+  /**
+   *  `Some` ⇒ this is NOT a clash: the destination refused to store the
+   *  item under its name, and nothing exists at `destination_path`. The only
+   *  answers are Skip (this item, or every refused name from here on with
+   *  apply-to-all) and cancelling the operation; any other resolution stops
+   *  the operation with the refusal as its error. Both sizes but the
+   *  source's, both mtimes, and the directory flags carry nothing for it.
+   *  `refused_name.rs`.
+   */
+  refusedName?: RefusedNameReason | null
 }
 
 /**
@@ -22585,6 +22915,19 @@ export type WriteOperationError =
   | { type: 'trash_not_supported'; path: string }
   // Network connection was interrupted or timed out.
   | { type: 'connection_interrupted'; path: string }
+  /**
+   *  The file sits behind a link to another server (a DFS link in an SMB share),
+   *  and nobody has allowed signing in there, so nothing went to it. Opening the
+   *  folder in a pane is where a person can.
+   */
+  | {
+      type: 'link_needs_consent'
+      path: string
+      // The server the share is on.
+      server: string
+      // The other server the link leads to.
+      target: string
+    }
   /**
    *  The connection to a SERVER (SMB, SFTP, WebDAV, S3) ended the operation:
    *  Cmdr waited for it to come back and gave up, or couldn't wait at all.

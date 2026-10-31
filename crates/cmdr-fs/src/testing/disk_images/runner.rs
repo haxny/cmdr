@@ -56,6 +56,9 @@ pub(super) enum Call<'a> {
     },
     /// `hdiutil attach -plist -nobrowse`.
     Attach { image: &'a Path },
+    /// `diskutil image attach --mountOptions nobrowse`: the DiskImages2 path Finder takes,
+    /// so a `diskimagesiod` serves the image rather than a same-uid helper.
+    AttachThroughDaemon { image: &'a Path },
     /// `hdiutil info -plist`.
     Info,
     /// `diskutil info -plist`.
@@ -93,7 +96,11 @@ impl Call<'_> {
     /// What the call changes, or `None` for a call that changes no existing disk.
     pub(super) fn target(&self) -> Option<Target<'_>> {
         match *self {
-            Call::Create { .. } | Call::Attach { .. } | Call::Info | Call::DiskInfo { .. } => None,
+            Call::Create { .. }
+            | Call::Attach { .. }
+            | Call::AttachThroughDaemon { .. }
+            | Call::Info
+            | Call::DiskInfo { .. } => None,
             Call::Detach { whole, .. } => Some(Target::Node(whole)),
             Call::AddApfsVolume { container, .. } => Some(Target::Node(container)),
             Call::PartitionTwoJhfs { whole, .. } => Some(Target::Node(whole)),
@@ -149,6 +156,11 @@ impl Call<'_> {
                 let mut args = owned(&["attach", "-plist", "-nobrowse"]);
                 args.push(image.to_string_lossy().into_owned());
                 ("hdiutil", args)
+            }
+            Call::AttachThroughDaemon { image } => {
+                let mut args = owned(&["image", "attach", "--mountOptions", "nobrowse"]);
+                args.push(image.to_string_lossy().into_owned());
+                ("diskutil", args)
             }
             Call::Info => ("hdiutil", owned(&["info", "-plist"])),
             Call::DiskInfo { target } => ("diskutil", owned(&["info", "-plist", target])),

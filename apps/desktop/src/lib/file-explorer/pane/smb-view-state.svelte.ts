@@ -16,7 +16,7 @@
  * question at all.
  */
 
-import { wordEjectRefusal } from '../navigation/eject-error-messages'
+import { ejectRefusalReport, wordEjectRefusal } from '../navigation/eject-error-messages'
 import { disconnectPlace, disconnectSmbVolume } from '#lib/tauri-commands/index.js'
 import { connectPlace } from '#lib/servers/connect-flow.js'
 import { openSignInForPlace } from '#lib/servers/open-sign-in.js'
@@ -291,6 +291,7 @@ export function createSmbViewState(deps: SmbViewStateDeps): SmbViewState {
       // the localized sentence; the raw `diskutil` text never reaches the toast.
       addToast(tString('fileExplorer.pane.disconnectFailedToast', { message: wordEjectRefusal(e) }), {
         level: 'error',
+        report: ejectRefusalReport(e),
       })
     })
     leaveVolume()

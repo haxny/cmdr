@@ -520,6 +520,18 @@
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
+  "servers.sheet.nfsOtherGids": "Other group IDs",
+  "@servers.sheet.nfsOtherGids": {
+    "sourceHash": "f9276b8"
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "Use group ID numbers separated by commas, like 100, 1001.",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "sourceHash": "a67ce61"
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "NFS carries up to 16 other groups, and this lists {count}.",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "sourceHash": "dc277f3"
+  },
   "servers.sheet.nfsIdentityHelp": "Server podle těchto čísel rozhoduje, co můžeš otevřít. NFS se na heslo neptá.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"

@@ -46,6 +46,7 @@ const PAYLOAD = {
   metadataLeftBehind: null,
   lockedKept: null,
   durabilityUnconfirmed: null,
+  alreadyGone: null,
 }
 
 function complete(): void {

@@ -213,6 +213,19 @@ impl Removal {
         }
     }
 
+    /// Whichever of two removals takes more, for two clears landing on one
+    /// teardown: the volume loses everything either would have taken. The store
+    /// sets nest (a rebuild's inside a forget's inside an unreachable id's), which
+    /// `tests::the_wider_removal_takes_every_store_either_takes` pins.
+    pub(crate) fn wider(self, other: Removal) -> Removal {
+        let reach = |removal: Removal| match removal {
+            Removal::IndexRebuild => 0,
+            Removal::Forgotten => 1,
+            Removal::Unreachable => 2,
+        };
+        if reach(other) > reach(self) { other } else { self }
+    }
+
     /// The stores this removal takes.
     fn stores(self) -> impl Iterator<Item = VolumeStore> {
         VolumeStore::ALL.into_iter().filter(move |store| self.takes(*store))
@@ -352,6 +365,23 @@ mod tests {
     use super::*;
 
     const VOLUME_ID: &str = "smb-192-168-1-111-445-naspi-bbe2c537964d80d0";
+
+    #[test]
+    fn the_wider_removal_takes_every_store_either_takes() {
+        let all = [Removal::IndexRebuild, Removal::Forgotten, Removal::Unreachable];
+        for a in all {
+            for b in all {
+                let wider = a.wider(b);
+                for store in VolumeStore::ALL {
+                    assert_eq!(
+                        wider.takes(store),
+                        a.takes(store) || b.takes(store),
+                        "{a:?}.wider({b:?}) = {wider:?} on {store:?}"
+                    );
+                }
+            }
+        }
+    }
 
     /// Write every file every store keeps for `volume_id`, and hand them back by
     /// store.

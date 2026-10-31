@@ -741,7 +741,7 @@
   "link": {
     "chosen": "enlace",
     "confidence": "high",
-    "forms": "web link → enlace web",
+    "forms": "web link → enlace web; a DFS link, sits behind a link → está detrás de un enlace (the insert stays subject of a genderless verb)",
     "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
   },
   "mcp-server": {
@@ -2653,6 +2653,12 @@
     "sources": "macOS Finder (Renombrar; RN1/RN2 Deshacer/Rehacer cambio de nombre)",
     "decision": "Palabras que se separaron"
   },
+  "name-mask": {
+    "chosen": "máscara de nombre",
+    "accept": ["máscara"],
+    "confidence": "high",
+    "sources": "Total Commander WCMD.LNG 6602 Máscara: nombre de fichero; Double Commander &File mask → Máscara de &archivos; catalog multiRename.nameMask Máscara de nombre"
+  },
   "rename-counter": {
     "chosen": "contador",
     "forms": "the popover: Contador; its ▾ button Editar el contador; fields Inicio / Incremento / Dígitos (a counter's step is Incremento, never the onboarding Paso); preview line Numera así: 1, 3, 5…",
@@ -3874,5 +3880,16 @@
     "chosen": "Nivel de pensamiento",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (Pensamiento de Gemini)"
+  },
+  "shared-storage": {
+    "chosen": "almacenamiento compartido",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-es storage_internal (read 2026-10-30): Almacenamiento interno compartido"
+  },
+  "busy": {
+    "chosen": "ocupado",
+    "confidence": "high",
+    "forms": "the greyed menu marker: the base label word for word, then (ocupado), invariable",
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)"
   }
 }

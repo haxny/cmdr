@@ -14,6 +14,7 @@ use super::host::OperationEventSink;
 use super::human_wait::HumanWaitClock;
 use super::locked_sources_slot::LockedSourcesSlot;
 use super::outage_slot::{CleanupPolicy, OutagePolicy, OutageSlot};
+use super::refused_names_latch::RefusedNames;
 use super::scope::OpScope;
 use super::sources_gone_slot::SourcesGoneSlot;
 use super::types::{
@@ -81,6 +82,10 @@ pub struct WriteOperationState {
     /// held across `.await` points (the latch re-check reads volume state), which a
     /// std mutex can't span.
     pub conflict_dispatch_lock: tokio::sync::Mutex<()>,
+    /// The operation's "Skip all" for names the destination refuses, latched
+    /// by the first such answer (`refused_name.rs`). Its own latch, apart from
+    /// the clash one: a refused name is no clash.
+    pub(crate) refused_names: RefusedNames,
     /// The question a queued operation asks when sources left while it waited:
     /// armed by `queued_sources.rs`, answered by `continue_without_gone_sources`,
     /// and abandoned by a cancel exactly like [`conflict_slot`](Self::conflict_slot).
@@ -323,6 +328,7 @@ impl WriteOperationState {
             progress_interval,
             conflict_slot: ConflictSlot::new(Arc::clone(&human_wait)),
             conflict_dispatch_lock: tokio::sync::Mutex::new(()),
+            refused_names: RefusedNames::default(),
             sources_gone: SourcesGoneSlot::default(),
             locked_sources: LockedSourcesSlot::new(Arc::clone(&human_wait)),
             waited_in_queue: AtomicBool::new(false),

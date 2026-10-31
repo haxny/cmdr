@@ -112,6 +112,23 @@ describe('createQuickFilterController', () => {
     expect(ipc.setListingNameFilter.mock.calls[1][1]).toBe('rep')
   })
 
+  it('replace puts a whole pattern on, the way ⌃S brings it back from Jump', async () => {
+    const { ctl } = setup()
+    ctl.replace('re')
+    await settle()
+    expect(ctl.pattern).toBe('re')
+    expect(ipc.setListingNameFilter.mock.calls[0][1]).toBe('re')
+  })
+
+  it('replace does nothing where the pane has no listing to filter', async () => {
+    const { ctl } = setup({ getHasBackendListing: () => false })
+    expect(ctl.canFilter()).toBe(false)
+    ctl.replace('re')
+    await settle()
+    expect(ctl.pattern).toBe('')
+    expect(ipc.setListingNameFilter).not.toHaveBeenCalled()
+  })
+
   it('drops a keystroke that would match nothing and keeps the rows', async () => {
     const { ctl, apply } = setup()
     ctl.append('t')

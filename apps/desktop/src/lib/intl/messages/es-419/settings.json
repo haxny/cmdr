@@ -319,9 +319,9 @@
   "@settings.appearance.tintGroupDescription": {
     "sourceHash": "25e3480"
   },
-  "settings.ai.tooltipLocal": "Ejecuta un modelo de lenguaje pequeño completamente en tu dispositivo. Privacidad máxima: nada sale de tu computadora. Funciona sin conexión. Usa ~2 GB de espacio en disco y ~400 MB de memoria (varía según el tamaño del contexto). Requiere Apple silicon (M1 o posterior).",
+  "settings.ai.tooltipLocal": "Ejecuta un modelo de lenguaje pequeño completamente en tu dispositivo. Privacidad máxima: nada sale de tu computadora. Funciona sin conexión. Usa ~2 GB de espacio en disco y ~400 MB de memoria (varía según el tamaño del contexto). Requiere Apple silicon (M1 o posterior) y macOS 14 o posterior.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "0093baa"
+    "sourceHash": "92a710f"
   },
   "settings.appearance.card.namesAndIcons": "Nombres e íconos",
   "@settings.appearance.card.namesAndIcons": {
@@ -506,5 +506,9 @@
   "settings.ai.reasoningEfforts.keywords": "esfuerzo de razonamiento, esfuerzo, razonamiento, pensar, pensamiento, reflexión, profundidad, velocidad, costo, calidad",
   "@settings.ai.reasoningEfforts.keywords": {
     "sourceHash": "59fad22"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Cuando eliminas algo que otra app ya movió o eliminó, Cmdr lo da por hecho y te avisa con una nota breve. Desactiva esta opción (o haz clic en “No volver a mostrar” en la nota) para omitir esa nota.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "8650516"
   }
 }

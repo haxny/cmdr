@@ -82,16 +82,60 @@ would cost a syscall per entry).
 Packages and custom-icon folders, both unbounded by nature, so the expensive NSWorkspace fetch is gated to folders that
 actually deviate, detected cheaply. Two signals with deliberately different detection timing:
 
-- **Packages** (`Safari.app`, `Foo.bundle`, …): `is_package_dir` is a pure, no-I/O suffix check on the directory name
-  against a bounded extension list (`.app`, `.bundle`, `.framework`, `.plugin`, `.kext`, `.prefpane`, …). Cheap enough
-  to run for every entry, so `get_icon_id` routes packages straight to a `pkg:{path}` key during listing. `.app` icons
-  are per-app (each distinct), so the key carries the full path; they can't share a bounded `special:`-style key.
+- **Packages** (`Safari.app`, `Foo.bundle`, …): `cmdr_fs::file_extension::is_listed_package` is a pure, no-I/O suffix
+  check against the product's one package list. Cheap enough to run for every entry, so `get_icon_id` routes a listed
+  package straight to a `pkg:{path}` key during listing. A dotted folder the list doesn't know gets the same key once
+  macOS calls it a package on a visible row (`apps/desktop/src-tauri/src/file_system/packages.rs` → `FileEntry::set_package`), arriving as a row
+  update. `.app` icons are per-app (each distinct), so the key carries the full path; they can't share a bounded
+  `special:`-style key.
 - **Custom-icon folders**: the `kHasCustomIcon` flag (`0x0400`) in the folder's `com.apple.FinderInfo` xattr (one
-  `getxattr`, no NSWorkspace, no TCC). `has_custom_folder_icon` needs a syscall, so it is NOT run during bulk listing (a
+  `getxattr`, no NSWorkspace, no TCC). `custom_folder_icon` needs syscalls, so it is NOT run during bulk listing (a
   `getxattr` per directory in a 100k-entry listing would regress the hot path). Instead the FE asks about the bounded
   set of visible directory paths via `get_custom_folder_icon_ids` (→ `icons::custom_folder_icon_ids`), which runs the
-  `getxattr` only for those and returns a `path:{dir}` id for each folder that truly has the flag. The
-  `finder_info_has_custom_icon` byte-buffer parser is split out pure for testing (flag at offset 8, big-endian `u16`).
+  `getxattr`s only for those and returns a `CustomFolderIconId { iconId: "path:{dir}", followsAccent }` for each folder
+  that truly has the flag. The `finder_info_has_custom_icon` byte-buffer parser is split out pure for testing (flag at
+  offset 8, big-endian `u16`).
+
+**Which custom icons get the gold recolor (`CustomFolderIcon`, issue #110).** macOS 26+ Finder's Customize Folder
+draws an SF symbol or an emoji on the plain folder, tinted with the system accent, so under Cmdr gold such a folder
+looked like the one accent-colored folder in a gold list. Three kinds, told apart from on-disk metadata alone (verified
+on macOS 27.0.1 by rendering `NSWorkspace iconForFile:` for folders built with `xattr -w`, `NSURL` tag writes, and
+`NSWorkspace setIcon:`, and by reading IconServices' `ISFolderIconConfiguration initWithURL:`, 2026-10-29):
+
+- **`AccentTinted`** (recolor): `kHasCustomIcon` plus the `com.apple.icon.folder#S` xattr (`{"sym":…}` or
+  `{"emoji":…}`), and no colored tag. The exact name matters: IconServices ignores a bare `com.apple.icon.folder`.
+  Without `kHasCustomIcon`, macOS draws neither the symbol nor artwork.
+- **`TagTinted`** (keep): the same, plus a tag with a color (`_kMDItemUserTags` entry `"Name\nN"`, `N` ≠ 0). Customize
+  Folder's color dots ARE Finder tags, so this is the color the person chose. Global
+  `AppleDisableTagBasedIconTinting` (Finder > Settings > Tags > "Tint folders based on tags" off) turns it back into
+  `AccentTinted`, so the classifier reads it, but only for this case. Legacy `FinderInfo` label bits don't tint.
+- **`Artwork`** (keep): `kHasCustomIcon` without the customization xattr, the pasted-image `Icon\r` case. When both a
+  customization and an `Icon\r` exist, macOS draws the symbol, so the xattr's presence alone decides.
+
+The FE keeps the flag beside the `path:` key (`isAccentTintedCustomFolder`, dropped with the key) and `FileIcon` adds
+the filter. A symbol is drawn in a darker shade of the accent, so the grayscale-first filter recolors it cleanly as one
+bitmap.
+
+**Emoji folders under gold are two layers (#814).** The filter grays the whole bitmap first, so on the macOS bitmap the
+emoji turned gold-sepia with the folder. So `classify_custom_folder_icon` parses the xattr value
+(`customization_emoji`: `{"emoji":"🍕"}` → `"🍕"`; a symbol, bad JSON, or text that can't be one emoji → `None`) and
+`AccentTinted { emoji }` reaches the FE as `CustomFolderIconId.emoji` (`getAccentTintedCustomFolderEmoji`). Under gold,
+`FileIcon` then draws the plain `dir` icon under the filter and the emoji as text in a sibling `.folder-emoji` span the
+filter never reaches. Gold off, it draws macOS's own bitmap as before.
+
+- Decision/Why FE layers, not a Rust composite: the gold recolor IS a CSS filter, so a Rust-side composite would have
+  to reimplement it in pixels and produce gold-dependent bitmaps under a key that doesn't vary with gold. Two layers
+  reuse the already-cached, variant-correct `dir` base (Increase contrast, dark mode) and change no cached pixels, so
+  no `CACHE_SCHEMA` bump and no new epoch-guarded write.
+- The span's size and nudge match macOS: at the 32 px fetch, both put a 🙂 at 16×15 px from (8, 9) (verified on macOS
+  27.0.1 by diffing an `NSWorkspace iconForFile:` render against the span in Chrome at 2× DPR, 2026-10-29). macOS
+  scales the emoji non-linearly with icon size (half the icon at 32 px, a third at 256 px), so the ratio holds for
+  the list's 16 pt icon only.
+
+Both flag and pixels share the
+`path:` key's lifecycle, so a tag change or a Finder tint-switch flip shows on the next re-detection (navigating back),
+not live; neither bumps the folder's mtime, so the disk tier can also serve pre-change pixels until the next accent or
+theme flush.
 
 **Why the detection split (perf decision)**: the bulk `list_directory` path runs `get_icon_id` per entry. The package
 suffix check is free (string op, no syscall), so it stays inline. The custom-icon `getxattr` is a syscall per dir, so
@@ -124,7 +168,7 @@ rewrites the id afterwards. So the RENDERER has to ask by path — `FileIcon.sve
 `getCachedCustomFolderIcon(entry.path)` before `getCachedIcon(entry.iconId)`. Looking up `iconId` alone drew the generic
 folder over an icon the prefetch had already fetched and cached: the whole chain worked and the result was invisible,
 with no error anywhere. The gold-recolor filter has to check the same thing, since `isFolderIcon` is true for these rows
-too and would repaint the user's artwork. Packages don't share the hazard — `pkg:` ids come straight off the listing.
+too and would repaint the user's artwork; it applies only when `isAccentTintedCustomFolder(path)`. Packages don't share the hazard — `pkg:` ids come straight off the listing.
 `FilePane` evicts a directory's `path:*` / `pkg:*` keys via `evictPerPathIconsForDir` when its listing ends (navigation
 away / unmount), keeping the working set tight and re-detecting a re-icon next time the folder is shown.
 

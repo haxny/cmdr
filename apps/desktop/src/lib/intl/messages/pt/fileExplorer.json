@@ -196,6 +196,18 @@
   "@fileExplorer.paneBoundary.reload": {
     "sourceHash": "a53cfeb"
   },
+  "fileExplorer.pane.ejectedDriveStaysToast": "O volume {volumeName} foi ejetado, mas mantenha o disco conectado: outros volumes nele ainda estão montados.",
+  "@fileExplorer.pane.ejectedDriveStaysToast": {
+    "sourceHash": "12eac5d"
+  },
+  "fileExplorer.pane.ejectAllFailedToast": "Não foi possível ejetar tudo neste disco: {message}",
+  "@fileExplorer.pane.ejectAllFailedToast": {
+    "sourceHash": "d824a11"
+  },
+  "fileExplorer.pane.ejectAllHeldToast": "Nada foi ejetado neste disco: {message}",
+  "@fileExplorer.pane.ejectAllHeldToast": {
+    "sourceHash": "9ef094c"
+  },
   "fileExplorer.pane.ejectFailedToast": "Não foi possível ejetar {volumeName}: {message}",
   "@fileExplorer.pane.ejectFailedToast": {
     "sourceHash": "f4072a7"
@@ -1554,6 +1566,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Tem certeza de que quer remover a extensão “.{oldExt}”? O macOS vai mostrar este item como uma pasta comum, e não como um item único.} other {Tem certeza de que quer remover a extensão “.{oldExt}”? Sem ela, seu Mac pode não saber com qual aplicativo abrir o arquivo.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Tem certeza de que quer adicionar a extensão “.{newExt}”? O macOS pode mostrar esta pasta como um item único.} other {Tem certeza de que quer adicionar a extensão “.{newExt}”? Seu arquivo pode abrir em um aplicativo diferente da próxima vez.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "Manter sem extensão",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": "Remover .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Permitir sempre alterações de extensão",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"
@@ -1872,6 +1900,14 @@
   "@fileExplorer.navigation.forgetSecretNoneToast": {
     "sourceHash": "3d40a09"
   },
+  "fileExplorer.navigation.ejectOneVolumeTooltip": "Ejeta só este volume. O disco continua conectado até os outros volumes também serem ejetados.",
+  "@fileExplorer.navigation.ejectOneVolumeTooltip": {
+    "sourceHash": "e1dd1cc"
+  },
+  "fileExplorer.navigation.ejectAllTooltip": "Ejeta todos os volumes deste disco para que você possa desconectá-lo.",
+  "@fileExplorer.navigation.ejectAllTooltip": {
+    "sourceHash": "9e86249"
+  },
   "fileExplorer.navigation.ejectVolumeAriaLabel": "Ejetar {name}",
   "@fileExplorer.navigation.ejectVolumeAriaLabel": {
     "sourceHash": "61db18b"
@@ -2074,6 +2110,18 @@
   "@fileExplorer.folderSizes.unreadable": {
     "sourceHash": "ad31a56"
   },
+  "fileExplorer.quickFilter.modeFilter": "Filtrar: só os nomes correspondentes aparecem",
+  "@fileExplorer.quickFilter.modeFilter": {
+    "sourceHash": "3febd29"
+  },
+  "fileExplorer.typeToJump.modeJump": "Ir para: todos os nomes aparecem, e o cursor vai até o nome correspondente",
+  "@fileExplorer.typeToJump.modeJump": {
+    "sourceHash": "292fdf5"
+  },
+  "fileExplorer.typeToJump.clear": "Limpar “Ir para”",
+  "@fileExplorer.typeToJump.clear": {
+    "sourceHash": "42ec82f"
+  },
   "fileExplorer.quickFilter.clear": "Limpar filtro",
   "@fileExplorer.quickFilter.clear": {
     "sourceHash": "ba59e2d"
@@ -2109,5 +2157,41 @@
   "fileExplorer.tags.skipped": "{count, plural, one {O Cmdr deixou as etiquetas de um item como estavam, porque não conseguiu ler as que o item já tinha. Confira se você consegue abri-lo ou adicione a etiqueta no Finder.} many {O Cmdr deixou as etiquetas de {countText} itens como estavam, porque não conseguiu ler as que os itens já tinham. Confira se você consegue abri-los ou adicione a etiqueta no Finder.} other {O Cmdr deixou as etiquetas de {countText} itens como estavam, porque não conseguiu ler as que os itens já tinham. Confira se você consegue abri-los ou adicione a etiqueta no Finder.}}",
   "@fileExplorer.tags.skipped": {
     "sourceHash": "31363ee"
+  },
+  "fileExplorer.errorPane.reviewLinkSignIn": "Revisar início de sessão",
+  "@fileExplorer.errorPane.reviewLinkSignIn": {
+    "sourceHash": "25a3cfe"
+  },
+  "fileExplorer.pane.directConnectionOtherServerNotAllowedToast": "{server} diz que os arquivos deste compartilhamento estão em outro servidor. O Cmdr não inicia sessão lá por conta própria, então ele continua na conexão do sistema.",
+  "@fileExplorer.pane.directConnectionOtherServerNotAllowedToast": {
+    "sourceHash": "c350d80"
+  },
+  "fileExplorer.network.osMountFallback.otherServerNotAllowed": "Não foi possível conectar diretamente a <shareName>{share}</shareName>, porque os arquivos estão em outro servidor e o Cmdr não inicia sessão lá por conta própria. Você continua conectado pela conexão de rede SMB nativa do macOS, que é bem mais lenta.",
+  "@fileExplorer.network.osMountFallback.otherServerNotAllowed": {
+    "sourceHash": "9c9c5a5"
+  },
+  "fileExplorer.smbLinkConsent.title": "Iniciar sessão em outro servidor?",
+  "@fileExplorer.smbLinkConsent.title": {
+    "sourceHash": "91458ea"
+  },
+  "fileExplorer.smbLinkConsent.message": "Um link em {server} leva a uma pasta em {target}. Para abri-la, o Cmdr inicia sessão em {target} com a conta que você usa em {server}.",
+  "@fileExplorer.smbLinkConsent.message": {
+    "sourceHash": "848be1b"
+  },
+  "fileExplorer.smbLinkConsent.warning": "Permita apenas se você confia em {target}. Um servidor que você não conhece pode usar um link assim para obter sua senha.",
+  "@fileExplorer.smbLinkConsent.warning": {
+    "sourceHash": "295e81e"
+  },
+  "fileExplorer.smbLinkConsent.note": "O Cmdr guarda sua resposta para estes dois servidores. Você pode esquecê-la em Ajustes, em Servidores.",
+  "@fileExplorer.smbLinkConsent.note": {
+    "sourceHash": "3f9615a"
+  },
+  "fileExplorer.smbLinkConsent.allow": "Permitir e iniciar sessão",
+  "@fileExplorer.smbLinkConsent.allow": {
+    "sourceHash": "d8192ad"
+  },
+  "fileExplorer.smbLinkConsent.notNow": "Agora não",
+  "@fileExplorer.smbLinkConsent.notNow": {
+    "sourceHash": "a0e63d7"
   }
 }

@@ -248,7 +248,6 @@
     "confidence": "high",
     "decision": "Eject refused",
     "exceptions": {
-      "main.instanceLock.alertBody": "The running app refers back to the other copy: 那一個.",
       "shortcuts.system.appWindows": "Names the macOS reserved shortcut by Apple's own label: 應用程式視窗."
     },
     "forms": "other apps → 其他 App; terminal app → 終端機 App; Choose an app… → 選擇 App⋯; spaced against Han",
@@ -417,7 +416,7 @@
     "chosen": "標記",
     "confidence": "high",
     "decision": "Onboarding checklist",
-    "forms": "the alpha status badge → 標記 (看到 <alpha></alpha> 標記的地方); the title-bar pill → 警告標記 (tentative)",
+    "forms": "the alpha status badge → 標記 (看到 <alpha></alpha> 標記的地方); the title-bar pill → 警告標記 (tentative); the pane's typed-text badge → 篩選標記 (tentative)",
     "sources": "catalog onboarding.stepBeta.openBeta"
   },
   "blocked": {
@@ -855,7 +854,7 @@
   "link": {
     "chosen": "連結",
     "confidence": "high",
-    "forms": "web link → 網頁連結",
+    "forms": "web link → 網頁連結; sits behind a DFS link → 要透過連結連到另一個伺服器",
     "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
   },
   "mcp-server": {
@@ -2605,7 +2604,8 @@
     "confidence": "high",
     "exceptions": {
       "feedback.sentToast": "We read every note → 我們每一則都會讀: the classifier 則 carries the note, and 留言 is named in feedback.dialog.description.",
-      "feedback.sentWithoutLogsToast": "Opens with feedback.sentToast verbatim (我們每一則都會讀), as its English does."
+      "feedback.sentWithoutLogsToast": "Opens with feedback.sentToast verbatim (我們每一則都會讀), as its English does.",
+      "settings.fileOperations.showAlreadyGoneToast.description": "This “note” is the short toast Cmdr shows, not text the user writes: 提示."
     },
     "forms": "a note on an error report → 備註; Ask Cmdr’s saved notes → 筆記; the feedback message → 留言",
     "sources": "MS (note → 備註, user-entered text); catalog errorReporter.dialog.noteLabel"
@@ -2637,7 +2637,7 @@
     "sources": "catalog fileOperations.delete.cloudOnlineOnly* (draft, not yet reviewed); Finder 僅限線上"
   },
   "open": {
-    "accept": ["打開", "開著", "開了"],
+    "accept": ["打開", "開著", "開了", "打不開"],
     "avoid": [
       {
         "form": "打開",
@@ -3194,6 +3194,12 @@
     "forms": "a network or API request → 請求; what the user asked for (as you requested, a refused tool request) → 要求",
     "sources": "catalog (請求 in 9 values); MS (request → 要求)"
   },
+  "reserved": {
+    "chosen": "保留",
+    "confidence": "high",
+    "forms": "reserved names (CON, NUL) → 保留名稱; reserved word → 保留字",
+    "sources": "MS 103481 reserved word → 保留字; catalog errors.listing.invalidName.suggestion and errors.write.invalidName.suggestion (保留名稱)"
+  },
   "reset": {
     "avoid": [
       {
@@ -3659,6 +3665,9 @@
     ],
     "chosen": "略過",
     "confidence": "confirmed",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "“Skip the note” means not seeing a toast, not leaving an item out of an operation: 就不會再看到這則提示."
+    },
     "sources": "AP-TW = AP-HK, NAU, THU, DC"
   },
   "slideshow": {
@@ -4120,10 +4129,10 @@
     "sources": "AP live Finder + AppKit TW 14 / HK 14 (macOS 27.0.1, loctable scan, 2026-10-10); catalog uses it for archives, phones, and the keychain"
   },
   "unplug": {
-    "accept": ["斷線", "中斷", "接上", "沒有連接", "插上"],
+    "accept": ["斷線", "中斷", "接上", "沒有連接", "插上", "插著"],
     "chosen": "拔",
     "confidence": "high",
-    "forms": "reseat the cable → 把連接線拔掉再插上; a drive pulled mid-transfer → 斷線了",
+    "forms": "reseat the cable → 把連接線拔掉再插上; a drive pulled mid-transfer → 斷線了; still plugged in → 還插著",
     "sources": "catalog errors.provider.macDroid.transient, errors.write.deviceDisconnected.*"
   },
   "unreachable": {
@@ -4542,5 +4551,23 @@
     "chosen": "思考層級",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (支援的層級)"
+  },
+  "shared-storage": {
+    "chosen": "共用儲存空間",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-zh-rTW storage_internal (read 2026-10-30): 內部共用儲存空間"
+  },
+  "this-computer": {
+    "accept": ["電腦"],
+    "chosen": "這台電腦",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
+  },
+  "busy": {
+    "chosen": "使用中",
+    "confidence": "high",
+    "forms": "the greyed menu marker: base label + （使用中）",
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)",
+    "accept": ["忙"]
   }
 }

@@ -903,27 +903,45 @@ fn a_local_volume_asks_its_host_about_the_absolute_path() {
 /// The streaming listing UI renders "Loaded N files..." off these ticks, so a local
 /// listing that never calls `on_progress` leaves a big folder on "Opening folder…"
 /// for its entire read.
+///
+/// The ticks are sampled on a timer, so the read holds after its first entry
+/// until a tick lands: under load the async side can otherwise wake only after a
+/// fast read is done, and see no tick at all (#755).
 #[tokio::test]
 async fn listing_a_local_directory_reports_progress_while_it_reads() {
+    const COUNT: usize = 500;
     let dir = TestDir::new("local_listing_progress");
-    for i in 0..5_000 {
+    for i in 0..COUNT {
         std::fs::write(dir.join(format!("file_{i:05}.txt")), b"x").expect("writing a scratch file succeeds");
     }
 
-    let volume = LocalPosixVolume::local_folder("Test", &*dir, VolumeHost::detached());
+    let (tick_seen, first_tick) = std::sync::mpsc::channel::<()>();
+    let first_tick = std::sync::Mutex::new(Some(first_tick));
+    let hold_until_a_tick: reading::ListingHook = std::sync::Arc::new(move || {
+        // Only the first entry holds; a bulk re-list counting from zero again doesn't.
+        if let Some(first_tick) = first_tick.lock_ignore_poison().take() {
+            // A safety net for a broken wiring, never the thing the test waits on.
+            let _ = first_tick.recv_timeout(std::time::Duration::from_secs(30));
+        }
+    });
+    let volume =
+        LocalPosixVolume::local_folder("Test", &*dir, VolumeHost::detached()).with_listing_hook(hold_until_a_tick);
     let ticks: std::sync::Mutex<Vec<ListingProgress>> = std::sync::Mutex::new(Vec::new());
-    let on_progress = |p: ListingProgress| ticks.lock_ignore_poison().push(p);
+    let on_progress = |p: ListingProgress| {
+        ticks.lock_ignore_poison().push(p);
+        let _ = tick_seen.send(());
+    };
 
     let entries = volume
         .list_directory(Path::new(""), Some(&on_progress))
         .await
         .expect("listing the scratch dir succeeds");
-    assert_eq!(entries.len(), 5_000);
+    assert_eq!(entries.len(), COUNT);
 
     let ticks = ticks.lock_ignore_poison();
     assert!(
         !ticks.is_empty(),
-        "expected at least one progress tick while reading 5,000 entries"
+        "expected a progress tick while the read was held after its first entry"
     );
     for tick in ticks.iter() {
         assert!(
@@ -931,8 +949,8 @@ async fn listing_a_local_directory_reports_progress_while_it_reads() {
             "a tick with nothing read yet would render 'Loaded 0 files...'"
         );
         assert!(
-            tick.entries() <= 5_000,
-            "a tick counted {} of 5,000 entries",
+            tick.entries() <= COUNT,
+            "a tick counted more than the folder holds: {} of {COUNT}",
             tick.entries()
         );
     }

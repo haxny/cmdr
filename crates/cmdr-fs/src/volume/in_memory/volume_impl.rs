@@ -182,6 +182,36 @@ impl Volume for InMemoryVolume {
         Box::pin(async move { self.stat_with(path, |metadata| metadata.is_directory) })
     }
 
+    fn read_link_target<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<PathBuf>, VolumeError>> + Send + 'a>> {
+        Box::pin(async move { self.stat_entry_with(path, |entry| entry.link_target.clone()) })
+    }
+
+    fn can_hold_links(&self) -> bool {
+        self.holds_links
+    }
+
+    fn create_symlink<'a>(
+        &'a self,
+        path: &'a Path,
+        target: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        Box::pin(async move {
+            if !self.holds_links || self.refuses_links {
+                return Err(VolumeError::NotSupported);
+            }
+            let mut entries = self.entries.write_ignore_poison();
+            let normalized = self.normalize(path);
+            if entries.contains_key(&normalized) {
+                return Err(VolumeError::AlreadyExists(normalized.display().to_string()));
+            }
+            Self::insert_link(&mut entries, normalized, target);
+            Ok(())
+        })
+    }
+
     fn create_file<'a>(
         &'a self,
         path: &'a Path,

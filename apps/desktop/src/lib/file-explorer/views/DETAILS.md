@@ -366,7 +366,8 @@ no per-view copy of any of it.
   `..` says "Parent folder" in place of its name, then its cells like any row, its size as "(this folder) 36,860"
   (`parentRowSize`): that cell shows the CURRENT folder's total, and bare it sounded like the parent's (VoiceOver
   listening run, 2026-10-15). The kind comes from typed fields only; "package" from `FileEntry.isPackage`, set in Rust
-  from `is_package_dir`, ❌ never the `pkg:` icon-id prefix.
+  from the package list or, for a visible dotted folder, from macOS (`enrich_packages`), ❌ never the `pkg:` icon-id
+  prefix.
 - ❗ **Label in name (WCAG 2.5.3, axe `label-content-name-mismatch`)**: the row's VISIBLE words must run through the
   name unbroken and in visible order (axe compares word tokens after dropping punctuation and parentheticals). So words
   only the name says sit in parentheses (VoiceOver doesn't speak them), the size says `<dir>` while the cell shows it,
@@ -426,10 +427,10 @@ repeats a key in the keyed `#each` and shifts the old rows by one. Pinned in `fu
 Virtual scrolling renders only ~50 items, so prefetch only visible. Re-fetch on scroll. The same visible-range pass in
 `fetchVisibleRange` also drives Tier-C custom-folder icons: it collects the visible directory rows' paths and calls
 `prefetchCustomFolderIcons` (→ backend `get_custom_folder_icon_ids`), which runs the `kHasCustomIcon` `getxattr` only
-for that bounded on-screen set and returns `path:{dir}` ids to fetch. The bulk listing never pays the per-entry syscall;
-packages already arrive as `pkg:` ids from `get_icon_id`. `FilePane` evicts a directory's `path:*` / `pkg:*` icons via
-`evictPerPathIconsForDir(loadedPath)` when its listing ends (navigation away / unmount), so a folder re-iconed while
-away is re-detected next time it's shown.
+for that bounded on-screen set and returns `path:{dir}` ids to fetch, each flagged `followsAccent` for the gold recolor.
+The bulk listing never pays the per-entry syscall; packages already arrive as `pkg:` ids from `get_icon_id`. `FilePane`
+evicts a directory's `path:*` / `pkg:*` icons via `evictPerPathIconsForDir(loadedPath)` when its listing ends
+(navigation away / unmount), so a folder re-iconed while away is re-detected next time it's shown.
 
 **Decision**: Finder tag dots (`TagDots.svelte`) ride the same visible-range pass as custom-folder icons, and reserve
 their cluster width in the column math **Why**: Tags (`com.apple.metadata:_kMDItemUserTags`) are a per-file `getxattr`,

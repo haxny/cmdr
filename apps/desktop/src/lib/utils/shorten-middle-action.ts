@@ -120,6 +120,10 @@ export function useShortenMiddle(node: HTMLElement, params: ShortenMiddleParams)
       // Pretext unavailable; CSS text-overflow: ellipsis remains as fallback
     })
 
+  // ❗ The node's width must not depend on its own text (a flex item needs a `0` basis, not
+  // `auto`, when a sibling also shrinks): this callback rewrites the text, and a width that
+  // follows it resizes the node again in the same round, which WebKit reports as a
+  // "ResizeObserver loop" error event (cmdr-reports#86, `QueueRowSummary`'s `.path.dest`).
   const observer = new ResizeObserver(() => {
     truncate()
   })

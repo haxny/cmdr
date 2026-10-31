@@ -289,7 +289,7 @@ export function listFocusCases(mountList: MountFocusableList): void {
 function renaming(path: string, name: string): RenameState {
   return {
     active: true,
-    target: { path, originalName: name, parentPath: '/root', isDirectory: false },
+    target: { path, originalName: name, parentPath: '/root', isDirectory: false, nameKind: 'file' },
     currentName: name,
     validation: { severity: 'ok', message: '' },
     shaking: false,

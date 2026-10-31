@@ -474,13 +474,13 @@ quoted so the 45-char id can be found, `rejtett` first so it isn't lost.
 
 ## Ki fogja a meghajtót (`errors.eject.unmountRefusedBy*`, `errors.eject.other*`)
 
-- Skeleton `X még nyitva tart ott fájlokat.` + `…, majd próbáld újra.`, active, over Apple's passive
+- Skeleton `X még használ ott valamit.` + `…, majd próbáld újra.`, active, over Apple's passive
   `által használatban van`; `ott`, never `ezt a meghajtót` (a share or phone may be meant).
-- `{app}` leads bare, unquoted; `{apps}` takes a plural verb (`tartanak`), `Zárd be őket` points at `fájlokat`;
+- `{app}` leads bare, unquoted; `{apps}` takes a plural verb (`használnak`), `Zárd be az appot` / `ezeket az appokat`;
   `A Cmdr nem ismeri…`, never `nem ismerjük`.
 - `egyéb alkalmazások` (Thunar) over `más`; `egyéb folyamatok`; `lemezkép`; `még nyitva van` over `csatolva van`;
   `Maga a Cmdr`; `küldj jelentést`, never `hibajelentést`. `Várj egy percet` (system) vs `Várj egy pillanatot` (Cmdr).
-  `Egy {process} nevű folyamat…`; the plural lists after a colon.
+  `Egy {process} nevű folyamat…`; the plural lists after a colon. Eject all → `Összes kiadása` (Finder `N199.1`).
 
 ## Azonos fajta kijelölése (`menu.select.*`, `commands.selectionSelectSameKind.*`, `menu.context.selection`)
 

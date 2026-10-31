@@ -19,6 +19,11 @@ Some notes here are load-bearing rather than historical. Those are grouped below
   (#415). Before half only; its committed Criterion baseline sits beside it, and its driver is
   `scripts/transfer-baseline/`.
 
+**Dated records:**
+
+- `docs/hackathon-submission.md`: what changed for OpenAI Build Week (2026) and how it was built. Kept for the record;
+  nothing current depends on it.
+
 **QA handoffs**, deleted once QA'd:
 
 - `smb2-030-qa-2026-10-14.md` — what the `smb2` 0.30.0 upgrade changed for a share user, how to see each change, and the

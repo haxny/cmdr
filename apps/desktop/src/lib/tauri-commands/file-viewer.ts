@@ -14,6 +14,7 @@ import {
   type MediaDimensions,
   type RangeEnd,
   type RowText,
+  type ViewerMediaLoad,
   type SavedAs,
   type SearchMatch as ViewerSearchMatch,
   type SearchMode as ViewerSearchMode,
@@ -62,6 +63,16 @@ export function onViewerPullProgress(
   })
 }
 
+/**
+ * Listens for `viewer-media-load` on ONE viewer window: how the `cmdr-media://` request
+ * for a picture or PDF on a volume is going, which `<img>` and `<embed>` won't say.
+ */
+export function onViewerMediaLoad(window: Window, handler: (load: ViewerMediaLoad) => void): Promise<UnlistenFn> {
+  return events.viewerMediaLoad(window).listen((event) => {
+    handler(event.payload)
+  })
+}
+
 /** Backend capabilities. */
 export interface BackendCapabilities {
   supportsLineSeek: boolean
@@ -105,6 +116,8 @@ export interface ViewerOpenResult {
    * images; `null` for HEIC, SVG, PDF, text, or on any read error.
    */
   mediaDimensions: MediaDimensions | null
+  /** The media request reads from a volume: follow it through `onViewerMediaLoad`. */
+  mediaFromVolume: boolean
 }
 
 /** Current status of a viewer session. */

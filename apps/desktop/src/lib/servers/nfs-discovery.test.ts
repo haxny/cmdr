@@ -80,7 +80,7 @@ describe('createNfsDiscovery: the export list', () => {
 })
 
 describe('createNfsDiscovery: the identity guess', () => {
-  const guess: GuessedNfsIdentity = { uid: 1000, gid: 100, source: 'most_common_owner' }
+  const guess: GuessedNfsIdentity = { uid: 1000, gid: 100, otherGids: [], source: 'most_common_owner' }
 
   it('answers the guess for the export asked about', async () => {
     const guessNfsIdentity = vi.fn(() => Promise.resolve(guess))
@@ -98,7 +98,7 @@ describe('createNfsDiscovery: the identity guess', () => {
     })
     const stale = discovery.guessFor({ host: 'nas', port: null, exportPath: '/Pub' })
     expect(await discovery.guessFor({ host: 'nas', port: null, exportPath: '/Public' })).toEqual(guess)
-    first.resolve({ uid: 1, gid: 1, source: 'root_owner' })
+    first.resolve({ uid: 1, gid: 1, otherGids: [], source: 'root_owner' })
     expect(await stale).toBeNull()
     expect(await discovery.guessFor({ host: 'nas', port: null, exportPath: '/Public' })).toBeNull()
   })

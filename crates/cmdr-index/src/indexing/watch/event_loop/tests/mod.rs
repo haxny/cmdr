@@ -1,6 +1,7 @@
 //! Tests for the event loop, clustered onto the production seams:
 //! - `activity`: the per-folder activity tap end to end through `process_live_batch`.
 //! - `creations`: directory creations through `process_live_batch`, level by level.
+//! - `history`: the purged-history check a resumed live loop runs on its first event.
 //! - `merge`: `merge_fs_events` dedup/flag-priority, buffer overflow/mode, and
 //!   replay-dedup tests (the event-buffer behavior).
 //! - `rename`: inode rename pre-pass, removal-storm coalescing, and the
@@ -20,6 +21,7 @@ use super::*;
 
 mod activity;
 mod creations;
+mod history;
 mod holds;
 mod ingestion;
 mod merge;

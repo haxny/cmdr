@@ -23,7 +23,7 @@
 //! `fidelity: "request_struct"`. The byte-identical per-adapter wire payload lives behind
 //! genai's `AdapterDispatcher::to_web_request_data`, whose types
 //! (`AdapterDispatcher`/`WebRequestData`/`ServiceType`/`ChatOptionsSet`) are re-exported
-//! `pub(crate)` in `genai =0.6.0-beta.19` and are therefore unreachable from Cmdr — see
+//! `pub(crate)` in genai 0.7.1 and are therefore unreachable from Cmdr — see
 //! `DETAILS.md`. The `ChatRequest` serialization still carries the full assembled prompt:
 //! system, tools, history, and the context envelope. Responses log the assembled final
 //! (streamed text plus stop reason and usage), marked `fidelity: "assembled"`, or the

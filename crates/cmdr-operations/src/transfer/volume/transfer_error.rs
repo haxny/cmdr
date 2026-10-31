@@ -153,6 +153,13 @@ pub(crate) enum FailureCause {
     /// folder an Overwrite would set aside, `PathedVolumeError::refused`): it
     /// already is the user's answer, and it outranks everything else here.
     Refused(WriteOperationError),
+    /// The destination refused a NAME, and the landing is the evidence that its
+    /// length is why: the staged temp in the same folder, at most
+    /// `MAX_SCRATCH_NAME_BYTES` long, was accepted, and the final name is
+    /// longer (`PathedVolumeError::from_landing`). SMB answers both a reserved
+    /// name and an overlong one with `STATUS_OBJECT_NAME_INVALID`, so the errno
+    /// alone can't tell them apart (cmdr-reports#83).
+    NameTooLong,
 }
 
 /// Maps with the side the failure carries. Both directions have cost a user a
@@ -169,13 +176,15 @@ pub(crate) enum FailureCause {
 /// it already is the answer.
 impl From<PathedVolumeError> for WriteFailure {
     fn from(e: PathedVolumeError) -> Self {
-        let lost = match e.cause.map(|cause| *cause) {
+        let (lost, too_long) = match e.cause.map(|cause| *cause) {
             Some(FailureCause::Refused(refusal)) => return Self { error: refusal },
-            Some(FailureCause::LostConnection(lost)) => Some(lost),
-            None => None,
+            Some(FailureCause::LostConnection(lost)) => (Some(lost), false),
+            Some(FailureCause::NameTooLong) => (None, true),
+            None => (None, false),
         };
         let path = e.path.display().to_string();
         let error = match (e.aftermath, lost) {
+            (None, None) if too_long => WriteOperationError::NameTooLong { path },
             (Some(LandingAftermath::NewDataKeptAt(kept_at)), _) => WriteOperationError::NewDataKeptAt {
                 path,
                 kept_at: kept_at.display().to_string(),
@@ -244,13 +253,20 @@ impl PathedVolumeError {
     /// swap) with the destination name the new bytes were meant to take. It
     /// is entirely the destination's, and its `aftermath` says where the bytes
     /// went when it rescued them, or that it refused before clearing anything.
+    ///
+    /// A refused NAME whose final form is longer than any temp Cmdr mints
+    /// carries [`FailureCause::NameTooLong`]: the temp sat in the same folder
+    /// under a name of at most `MAX_SCRATCH_NAME_BYTES`, so the length is what
+    /// the destination refused.
     pub(super) fn from_landing(failure: FinalizeFailure, dest_path: &Path) -> Self {
+        let too_long = matches!(failure.error, VolumeError::InvalidName(_))
+            && leaf_bytes(dest_path) > cmdr_fs::staging::MAX_SCRATCH_NAME_BYTES;
         Self {
             path: dest_path.to_path_buf(),
             role: PathRole::Destination,
             error: failure.error,
             aftermath: failure.aftermath,
-            cause: None,
+            cause: too_long.then(|| Box::new(FailureCause::NameTooLong)),
         }
     }
 
@@ -414,14 +430,11 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
                 PathRole::Source => PermissionSide::Source,
                 PathRole::Destination => PermissionSide::Destination,
             });
-            // An S3 refusal is the account's (its keys, or a provider that paused
-            // it over a usage cap or billing), read off the app path's own
-            // scheme, ❌ never the message.
-            if raw_os_error.is_none()
-                && cmdr_fs::volume::server_of_path(context_path)
-                    .is_some_and(|server| server.kind == cmdr_fs::volume::BackendKind::S3)
-            {
-                return WriteOperationError::object_store_refused(context_path.to_string(), message, side);
+            // A phone's, a server's, or an S3 account's refusal (its keys, or a
+            // provider that paused it), read off the app path's own scheme, ❌ never
+            // the message.
+            if let Some(refuser) = cmdr_fs::volume::refuser_of_path(context_path) {
+                return WriteOperationError::refused_by(context_path.to_string(), message, raw_os_error, refuser, side);
             }
             WriteOperationError::permission_denied(context_path.to_string(), message, raw_os_error, None, side)
         }
@@ -483,6 +496,17 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
         VolumeError::DeviceSessionReset(_) => WriteOperationError::ConnectionInterrupted {
             path: context_path.to_string(),
         },
+        // A link's other server is out of reach, so this file's copy stopped and
+        // trying again is the fix. The share itself is fine.
+        VolumeError::LinkTargetUnreachable(_) => WriteOperationError::ConnectionInterrupted {
+            path: context_path.to_string(),
+        },
+        // Nobody allowed signing in to the link's other server, so nothing went
+        // there and trying again can't help until someone does.
+        VolumeError::LinkNeedsConsent(sign_in) => {
+            let cmdr_fs::volume::LinkSignIn { path, server, target } = *sign_in;
+            WriteOperationError::LinkNeedsConsent { path, server, target }
+        }
         VolumeError::Cancelled(_) => WriteOperationError::Cancelled {
             message: "Operation cancelled by user".into(),
         },
@@ -522,6 +546,17 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
         // Retry button that re-runs the identical, still-impossible request.
         // `context_path` is the item the walker was on, so the message names the
         // file to rename rather than the folder it lives in.
+        //
+        // A destination name past every limit a filesystem counts in (255
+        // UTF-8 bytes AND 255 UTF-16 units) was refused for its length, whatever
+        // the backend's errno lumps it with, so the user hears "too long".
+        VolumeError::InvalidName(_)
+            if role == PathRole::Destination && over_every_name_limit(Path::new(context_path)) =>
+        {
+            WriteOperationError::NameTooLong {
+                path: context_path.to_string(),
+            }
+        }
         VolumeError::InvalidName(message) => WriteOperationError::InvalidName {
             path: context_path.to_string(),
             message,
@@ -576,6 +611,22 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
                 .into(),
         },
     }
+}
+
+/// The UTF-8 byte length of `path`'s last component.
+fn leaf_bytes(path: &Path) -> usize {
+    path.file_name().map_or(0, |name| name.as_encoded_bytes().len())
+}
+
+/// Whether `path`'s last component is longer than any filesystem Cmdr writes
+/// to can store: APFS and ext4 count 255 UTF-8 bytes, NTFS, exFAT, and HFS+
+/// 255 UTF-16 units, so only a name over both is too long everywhere.
+fn over_every_name_limit(path: &Path) -> bool {
+    let max = cmdr_fs::validation::MAX_NAME_BYTES;
+    leaf_bytes(path) > max
+        && path
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().encode_utf16().count() > max)
 }
 
 /// What tier 2 reports when it ends a wait.

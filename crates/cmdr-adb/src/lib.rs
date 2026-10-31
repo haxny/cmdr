@@ -31,6 +31,7 @@ use cmdr_adb as _;
 pub(crate) mod devices;
 pub(crate) mod errors;
 pub(crate) mod features;
+pub(crate) mod lz4;
 pub(crate) mod params;
 pub mod server;
 pub mod shell;

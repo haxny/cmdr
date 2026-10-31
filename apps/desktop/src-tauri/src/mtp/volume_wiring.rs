@@ -16,7 +16,7 @@ use cmdr_fs::volume::DeviceReadiness;
 use cmdr_mtp::MtpVolume;
 
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::mtp::MtpVolumeRegistrar;
+use crate::mtp::{MtpDeviceInfo, MtpVolumeRegistrar};
 
 /// How this app turns an attached storage into a browsable volume.
 ///
@@ -63,8 +63,39 @@ pub(crate) fn volume_registrar() -> MtpVolumeRegistrar {
 // The device provider
 // ============================================================================
 
+/// What a device is called: its product, else its manufacturer.
+fn device_name(device: &MtpDeviceInfo) -> &str {
+    device
+        .product
+        .as_deref()
+        .or(device.manufacturer.as_deref())
+        .unwrap_or("Mobile device")
+}
+
+/// The row of a phone whose session hasn't opened (`auto_connect.rs`).
+///
+/// It stands for the device, since its storages aren't known yet. ❗ The id and path name no
+/// storage on purpose. `waiting` fails `split_volume_id`'s numeric tail, so nothing can read this
+/// row as a storage, and the path sits BESIDE the phone's `mtp://<device>/<storage>` rather than
+/// over it, so `device_volume_for_path` can't resolve a remembered path on the phone to this row
+/// and tell a pane the phone is here. Carries the serial so an unauthorized ADB row of the same
+/// phone takes its name (`name_serial_only_entries`).
+fn waiting_entry(device: &MtpDeviceInfo) -> DeviceVolumeEntry {
+    DeviceVolumeEntry {
+        id: format!("{}:waiting", device.id),
+        name: device_name(device).to_string(),
+        path: format!("mtp://{}/waiting", device.id),
+        fs_type: "mtp",
+        mount_is_read_only: false,
+        device_readiness: Some(DeviceReadiness::Connecting),
+        usb_speed: None,
+        device_serial: device.serial_number.clone(),
+    }
+}
+
 /// MTP's answer to `device_volumes::DeviceVolumeProvider`: the connected
-/// devices' storages, from the connection manager's cached device list.
+/// devices' storages, from the connection manager's cached device list, plus a
+/// row for each phone still connecting.
 struct MtpDeviceProvider;
 
 impl DeviceVolumeProvider for MtpDeviceProvider {
@@ -80,14 +111,16 @@ impl DeviceVolumeProvider for MtpDeviceProvider {
         Box::pin(async {
             let devices = crate::mtp::connection_manager().get_all_connected_devices().await;
             let mut entries = Vec::new();
+            // ❗ Against the list above: the row can outlive a connect by a moment, since the
+            // storages attach inside `connect()` and the row is settled right after it.
+            let waiting: Vec<_> = crate::mtp::watcher::waiting_devices()
+                .iter()
+                .filter(|waiting| !devices.iter().any(|d| d.device.id == waiting.id))
+                .map(waiting_entry)
+                .collect();
             for device in devices {
                 let multi = device.storages.len() > 1;
-                let device_name = device
-                    .device
-                    .product
-                    .as_deref()
-                    .or(device.device.manufacturer.as_deref())
-                    .unwrap_or("Mobile device");
+                let device_name = device_name(&device.device);
                 for storage in &device.storages {
                     let name = if multi {
                         format!("{} - {}", device_name, storage.name)
@@ -105,9 +138,11 @@ impl DeviceVolumeProvider for MtpDeviceProvider {
                         // left to wait for.
                         device_readiness: Some(DeviceReadiness::Ready),
                         usb_speed: device.device.usb_speed,
+                        device_serial: device.device.serial_number.clone(),
                     });
                 }
             }
+            entries.extend(waiting);
             entries
         })
     }
@@ -160,4 +195,57 @@ impl DeviceVolumeProvider for MtpDeviceProvider {
 /// resolution see its storages. Call once at startup.
 pub(crate) fn install_device_provider() {
     register_device_provider(Arc::new(MtpDeviceProvider));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn phone() -> MtpDeviceInfo {
+        MtpDeviceInfo {
+            id: "mtp-46061fdas000a4".to_string(),
+            location_id: 1,
+            vendor_id: 0x18d1,
+            product_id: 0x4ee1,
+            manufacturer: Some("Google".to_string()),
+            product: Some("Pixel 9 Pro XL".to_string()),
+            serial_number: Some("46061FDAS000A4".to_string()),
+            usb_speed: None,
+        }
+    }
+
+    #[test]
+    fn a_waiting_row_names_the_phone_and_says_it_is_connecting() {
+        let entry = waiting_entry(&phone());
+        assert_eq!(entry.name, "Pixel 9 Pro XL");
+        assert_eq!(entry.fs_type, "mtp");
+        assert_eq!(entry.device_readiness, Some(DeviceReadiness::Connecting));
+        assert_eq!(entry.device_serial.as_deref(), Some("46061FDAS000A4"));
+    }
+
+    #[test]
+    fn a_waiting_row_falls_back_to_the_manufacturer_like_a_connected_one() {
+        let device = MtpDeviceInfo {
+            product: None,
+            ..phone()
+        };
+        assert_eq!(waiting_entry(&device).name, "Google");
+    }
+
+    /// Nothing may read the row as a storage, or an eject or an index lookup finds a volume there.
+    #[test]
+    fn a_waiting_row_is_not_a_storage() {
+        let entry = waiting_entry(&phone());
+        assert_eq!(cmdr_fs::volume::mtp_ids::split_volume_id(&entry.id), None);
+        assert!(!cmdr_fs::volume::mtp_ids::is_mtp_volume_id(&entry.id));
+    }
+
+    /// `device_volume_for_path` answers with the row a path falls under. Over the phone's own
+    /// paths, the row would tell a restored tab that a phone with no session is here.
+    #[test]
+    fn a_waiting_row_does_not_claim_the_phones_paths() {
+        let entry = waiting_entry(&phone());
+        let on_the_phone = "mtp://mtp-46061fdas000a4/65537/DCIM";
+        assert!(!cmdr_fs::volume::app_paths::path_is_under(on_the_phone, &entry.path));
+    }
 }

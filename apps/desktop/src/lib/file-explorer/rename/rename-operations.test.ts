@@ -35,8 +35,15 @@ const FILE: RenameTarget = {
   originalName: 'notes.txt',
   parentPath: '/dir',
   isDirectory: false,
+  nameKind: 'file',
 }
-const FOLDER: RenameTarget = { ...FILE, path: '/dir/notes', originalName: 'notes', isDirectory: true }
+const FOLDER: RenameTarget = {
+  ...FILE,
+  path: '/dir/notes',
+  originalName: 'notes',
+  isDirectory: true,
+  nameKind: 'folder',
+}
 
 /** Runs a save the backend refuses with `error`, and hands back what it said. */
 async function messageFor(error: unknown, target: RenameTarget = FILE): Promise<string> {
@@ -177,11 +184,41 @@ describe('the extension question on save', () => {
   })
 
   it('still asks before a macOS package folder loses its extension', async () => {
-    const app: RenameTarget = { ...FOLDER, path: '/dir/Cmdr.app', originalName: 'Cmdr.app' }
+    const app: RenameTarget = { ...FOLDER, path: '/dir/Cmdr.app', originalName: 'Cmdr.app', nameKind: 'package' }
 
     const result = await executeRenameSave(app, 'Cmdr.old', 'ask')
 
+    // A package's extension is whatever follows its last dot, before and after.
     expect(result).toEqual({ type: 'extension-ask', oldExtension: 'app', newExtension: 'old' })
+  })
+
+  it('asks for a package only macOS knew about, read off the entry', async () => {
+    const sketch: RenameTarget = {
+      ...FOLDER,
+      path: '/dir/Logo.sketchbundle',
+      originalName: 'Logo.sketchbundle',
+      nameKind: 'package',
+    }
+
+    const result = await executeRenameSave(sketch, 'Logo', 'ask')
+
+    expect(result).toEqual({ type: 'extension-ask', oldExtension: 'sketchbundle', newExtension: '' })
+  })
+
+  it('asks before a plain folder turns into a listed package', async () => {
+    const plugins: RenameTarget = { ...FOLDER, path: '/dir/Plugins', originalName: 'Plugins' }
+
+    const result = await executeRenameSave(plugins, 'Plugins.bundle', 'ask')
+
+    expect(result).toEqual({ type: 'extension-ask', oldExtension: '', newExtension: 'bundle' })
+  })
+
+  it('reads the extensions by the product rule, so a compound tar is one', async () => {
+    const tarball: RenameTarget = { ...FILE, path: '/dir/src.tar.gz', originalName: 'src.tar.gz' }
+
+    const result = await executeRenameSave(tarball, 'src.zip', 'ask')
+
+    expect(result).toEqual({ type: 'extension-ask', oldExtension: 'tar.gz', newExtension: 'zip' })
   })
 })
 

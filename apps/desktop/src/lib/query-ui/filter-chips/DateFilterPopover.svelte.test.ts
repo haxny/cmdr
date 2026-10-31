@@ -98,7 +98,11 @@ describe('DateFilterPopover', () => {
     customCell.click()
     await tick()
     expect(m.setDateValue).toHaveBeenCalledWith('')
-    expect(document.querySelector('input[type="date"]')).not.toBeNull()
+    const field = document.querySelector('input[type="date"]')
+    expect(field).not.toBeNull()
+    // One press also puts the caret there, and the field isn't inside a button.
+    expect(document.activeElement).toBe(field)
+    expect(field?.closest('button')).toBeNull()
     cleanup(m)
   })
 

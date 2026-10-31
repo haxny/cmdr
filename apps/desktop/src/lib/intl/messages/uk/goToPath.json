@@ -1,0 +1,54 @@
+{
+  "goToPath.dialog.title": "Перейти до папки",
+  "@goToPath.dialog.title": {
+    "sourceHash": "26fc1cf"
+  },
+  "goToPath.dialog.inputAriaLabel": "Шлях для переходу",
+  "@goToPath.dialog.inputAriaLabel": {
+    "sourceHash": "ac4d152"
+  },
+  "goToPath.dialog.inputPlaceholder": "Введіть або вставте шлях, наприклад ~/Documents",
+  "@goToPath.dialog.inputPlaceholder": {
+    "sourceHash": "d84d343"
+  },
+  "goToPath.dialog.recentsAriaLabel": "Недавні шляхи",
+  "@goToPath.dialog.recentsAriaLabel": {
+    "sourceHash": "b698143"
+  },
+  "goToPath.dialog.removeFromList": "Вилучити зі списку",
+  "@goToPath.dialog.removeFromList": {
+    "sourceHash": "82963c7"
+  },
+  "goToPath.dialog.cancel": "Скасувати",
+  "@goToPath.dialog.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "goToPath.dialog.confirm": "Перейти",
+  "@goToPath.dialog.confirm": {
+    "sourceHash": "6cc8519"
+  },
+  "goToPath.dialog.ancestorHint": "Цього шляху не існує. Найближче місце, куди можна перейти: {dir}.",
+  "@goToPath.dialog.ancestorHint": {
+    "sourceHash": "e6eefca"
+  },
+  "goToPath.toast.landedOnAncestor": "Шляху <req>{requested}</req> не існує, тож відкрито найближчу папку: <land>{landed}</land>.",
+  "@goToPath.toast.landedOnAncestor": {
+    "sourceHash": "9af3d3a"
+  },
+  "goToPath.toast.pressToGoBack": "Натисніть <chip></chip>, щоб повернутися назад.",
+  "@goToPath.toast.pressToGoBack": {
+    "sourceHash": "ee851b2"
+  },
+  "goToPath.dialog.opensServer": "Відкриває «{name}»",
+  "@goToPath.dialog.opensServer": {
+    "sourceHash": "e3fb00e"
+  },
+  "goToPath.dialog.addsServer": "Додає сервер",
+  "@goToPath.dialog.addsServer": {
+    "sourceHash": "8e73f74"
+  },
+  "goToPath.dialog.snapshotNotAPath": "До результатів пошуку не можна перейти за шляхом.",
+  "@goToPath.dialog.snapshotNotAPath": {
+    "sourceHash": "1332610"
+  }
+}

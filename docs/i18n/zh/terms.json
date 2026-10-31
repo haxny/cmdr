@@ -725,7 +725,7 @@
   "link": {
     "chosen": "链接",
     "confidence": "high",
-    "forms": "web link → 网页链接",
+    "forms": "web link → 网页链接; “sits behind a DFS link” → 访问 X 要通过一个指向另一台服务器的链接 (`*.linkTargetUnreachable*`, one frame; a literal 链接后面 isn't natural Chinese)",
     "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
   },
   "mcp-server": {
@@ -1589,7 +1589,10 @@
     "chosen": "分组",
     "confidence": "tentative",
     "exceptions": {
-      "servers.sheet.nfsGid": "A Unix file group, not a group of rows: 群组 ID, Finder's own word for a permission group (Get Info 选择新用户或群组, IN_S20.1) and Synology DSM's 用户与群组."
+      "servers.sheet.nfsGid": "A Unix file group, not a group of rows: 群组 ID, Finder's own word for a permission group (Get Info 选择新用户或群组, IN_S20.1) and Synology DSM's 用户与群组.",
+      "servers.sheet.nfsOtherGids": "Same Unix group as servers.sheet.nfsGid, so the field reads 其他群组 ID right under 群组 ID.",
+      "servers.sheet.nfsOtherGidsNotIds": "Same Unix group as servers.sheet.nfsGid; names that field's 群组 ID.",
+      "servers.sheet.nfsOtherGidsTooMany": "Same Unix group as servers.sheet.nfsGid; counts what that field calls 群组."
     },
     "forms": "a named group takes the quoted name before it (“网络”分组); the servers found nearby → 附近服务器分组",
     "sources": "catalog (servers.pinHint.title); macOS Finder zh-CN MenuBar (Group By → 分组方式, Use Groups → 使用群组), verified on macOS 27.0 (26A428), live bundle, 2026-09-30"
@@ -2189,6 +2192,9 @@
     "accept": ["笔记", "留言", "记下"],
     "chosen": "备注",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "This “note” is the short toast Cmdr shows, not text the user writes: 提示."
+    },
     "forms": "a note on an error report 备注 (添加备注（可选）); the feedback message 留言; Ask Cmdr's saved notes 笔记; saving one 记下",
     "sources": "macOS"
   },
@@ -2243,7 +2249,7 @@
     "sources": "Finder wording for evicted files"
   },
   "open": {
-    "accept": ["开着"],
+    "accept": ["开着", "打不开"],
     "chosen": "打开",
     "confidence": "high",
     "exceptions": {
@@ -2419,7 +2425,8 @@
     "chosen": "模式",
     "confidence": "high",
     "exceptions": {
-      "queryUi.bar.placeholder.regex": "\"Regular expression pattern\" folds into 正则表达式; the noun needs no second word in Chinese."
+      "queryUi.bar.placeholder.regex": "\"Regular expression pattern\" folds into 正则表达式; the noun needs no second word in Chinese.",
+      "commands.paneQuickFilter.description": "The pattern is the typed text (quick-filter-session.svelte.ts carries it over), and beside 筛选 / 跳转 the word 模式 would read as the typing mode, so 当前输入的内容, like fileExplorer.quickFilter.intro.title's 输入内容."
     },
     "forms": "a match pattern 模式; a rename pattern 重命名规则",
     "sources": "standard"
@@ -3171,6 +3178,9 @@
   "skip": {
     "chosen": "跳过",
     "confidence": "confirmed",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "“Skip the note” means not seeing a toast, not leaving an item out of an operation: 就不会再看到这条提示."
+    },
     "forms": "Skip all 全部跳过 (Chinese collapses one/other, so the single case reads 全部 too); skipped 已跳过",
     "sources": "Double Commander; Nautilus"
   },
@@ -3960,5 +3970,23 @@
     "chosen": "思考级别",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (支持的级别)"
+  },
+  "shared-storage": {
+    "chosen": "共享存储空间",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-zh-rCN storage_internal (read 2026-10-30): 内部共享存储空间"
+  },
+  "this-computer": {
+    "accept": ["电脑"],
+    "chosen": "这台电脑",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
+  },
+  "busy": {
+    "chosen": "占用中",
+    "confidence": "high",
+    "forms": "the greyed menu marker: base label + （占用中）",
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)",
+    "accept": ["忙"]
   }
 }

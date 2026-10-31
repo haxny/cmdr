@@ -47,6 +47,10 @@
   "@viewer.error.coldStorage": {
     "sourceHash": "236cd1b"
   },
+  "viewer.error.linkTargetUnreachable": "К этому файлу ведет ссылка на другой сервер, а Cmdr сейчас не удается с ним связаться. Проверьте, что сервер работает, и попробуйте еще раз.",
+  "@viewer.error.linkTargetUnreachable": {
+    "sourceHash": "8dcb736"
+  },
   "viewer.error.retry": "Повторить",
   "@viewer.error.retry": {
     "sourceHash": "942087c"
@@ -476,5 +480,9 @@
   "viewer.selection.toEndOfFileNoLine": "Выделено до конца файла",
   "@viewer.selection.toEndOfFileNoLine": {
     "sourceHash": "e7e0442"
+  },
+  "viewer.error.linkNeedsConsent": "Этот файл находится за ссылкой на другой сервер, куда Cmdr пока нельзя входить. Чтобы решить, откройте его папку на панели.",
+  "@viewer.error.linkNeedsConsent": {
+    "sourceHash": "b9b3e1f"
   }
 }

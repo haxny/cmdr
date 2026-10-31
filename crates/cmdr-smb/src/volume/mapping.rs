@@ -122,6 +122,23 @@ pub(super) fn map_smb_error(err: smb2::Error, path: &str) -> VolumeError {
         };
     }
 
+    // This path alone, and nothing went to that server. A name no person could
+    // read gets no prompt at all: it's a plain refusal.
+    if let smb2::Error::DfsTargetNotAllowed { server, target, .. } = &err {
+        return if crate::link_consent::is_presentable_host(target) {
+            VolumeError::LinkNeedsConsent(Box::new(cmdr_fs::volume::LinkSignIn {
+                path: path.to_string(),
+                server: server.clone(),
+                target: target.clone(),
+            }))
+        } else {
+            VolumeError::PermissionDenied {
+                path: path.to_string(),
+                raw_os_error: None,
+            }
+        };
+    }
+
     match err.kind() {
         ErrorKind::NotFound => VolumeError::NotFound(path.to_string()),
         ErrorKind::AlreadyExists => VolumeError::AlreadyExists(path.to_string()),
@@ -136,6 +153,8 @@ pub(super) fn map_smb_error(err: smb2::Error, path: &str) -> VolumeError {
         ErrorKind::ConnectionLost | ErrorKind::SessionExpired => {
             VolumeError::DeviceDisconnected(err.to_string().into())
         }
+        // This path alone: the share's own connection is fine (vdavid/smb2#28).
+        ErrorKind::DfsTargetUnreachable => VolumeError::LinkTargetUnreachable(path.to_string()),
         ErrorKind::TimedOut => VolumeError::ConnectionTimeout(err.to_string().into()),
         ErrorKind::DiskFull => VolumeError::StorageFull {
             message: err.to_string().into(),

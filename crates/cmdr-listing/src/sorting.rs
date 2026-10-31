@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use cmdr_collation::{NameCollator, NameKey};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::file_extension::NameKind;
 use cmdr_fs::volume::SupportedDates;
 
 // ============================================================================
@@ -154,11 +155,20 @@ pub trait SortableEntry {
     fn recursive_size(&self) -> Option<u64>;
     /// Whether [`SortableEntry::recursive_size`] is exact. See [`known_dir_size`].
     fn recursive_size_complete(&self) -> Option<bool>;
+    /// Whether the row's name is a file's, a folder's, or a package's, which
+    /// decides its extension. The default reads the name through the package
+    /// list; a row that knows better (`FileEntry::is_package`) says so.
+    fn name_kind(&self) -> NameKind {
+        NameKind::by_name(self.name(), self.is_directory())
+    }
 }
 
 impl SortableEntry for FileEntry {
     fn name(&self) -> &str {
         &self.name
+    }
+    fn name_kind(&self) -> NameKind {
+        FileEntry::name_kind(self)
     }
     fn is_directory(&self) -> bool {
         self.is_directory
@@ -185,24 +195,18 @@ impl SortableEntry for FileEntry {
 
 /// Extracts file extension for sorting purposes.
 /// Returns: (is_dotfile, has_extension, extension_lowercase)
-/// Dotfiles (names starting with .) sort first, then files without extension, then by extension.
-fn extract_extension_for_sort(name: &str) -> (bool, bool, String) {
+/// Dotfiles (names starting with .) sort first, then names without extension, then by extension.
+/// What an extension IS comes from the product's one rule, `cmdr_fs::file_extension`.
+fn extract_extension_for_sort(name: &str, kind: NameKind) -> (bool, bool, String) {
     // Dotfiles (like .gitignore) sort first
     if name.starts_with('.') && !name[1..].contains('.') {
         return (true, false, String::new());
     }
 
-    // Check for extension
-    if let Some(dot_pos) = name.rfind('.')
-        && dot_pos > 0
-        && dot_pos < name.len() - 1
-    {
-        let ext = name[dot_pos + 1..].to_lowercase();
-        return (false, true, ext);
+    match cmdr_fs::file_extension::extension_of(name, kind) {
+        Some(ext) => (false, true, ext.to_lowercase()),
+        None => (false, false, String::new()),
     }
-
-    // No extension
-    (false, false, String::new())
 }
 
 /// A row paired with the collation key for its name, so a bulk sort collates
@@ -247,6 +251,9 @@ impl<E: SortableEntry + ?Sized> SortableEntry for Keyed<'_, E> {
     }
     fn recursive_size_complete(&self) -> Option<bool> {
         self.row.recursive_size_complete()
+    }
+    fn name_kind(&self) -> NameKind {
+        self.row.name_kind()
     }
 }
 
@@ -409,8 +416,8 @@ fn compare_by_column<E: SortableEntry + ?Sized>(
     match sort_by {
         SortColumn::Name => a.compare_name(b, collator),
         SortColumn::Extension => {
-            let (a_dotfile, a_has_ext, a_ext) = extract_extension_for_sort(a.name());
-            let (b_dotfile, b_has_ext, b_ext) = extract_extension_for_sort(b.name());
+            let (a_dotfile, a_has_ext, a_ext) = extract_extension_for_sort(a.name(), a.name_kind());
+            let (b_dotfile, b_has_ext, b_ext) = extract_extension_for_sort(b.name(), b.name_kind());
 
             // Dotfiles first, then no extension, then by extension alphabetically
             match (a_dotfile, b_dotfile) {
@@ -471,8 +478,11 @@ pub(crate) fn sort_key_changed<E: SortableEntry + ?Sized>(old: &E, new: &E, sort
         return true;
     }
     match sort.column {
-        // The name already compared above, and an extension is part of it.
-        SortColumn::Name | SortColumn::Extension => false,
+        // The name already compared above.
+        SortColumn::Name => false,
+        // The name compared above, but a folder macOS just called a package
+        // gains an extension under the same name.
+        SortColumn::Extension => old.name_kind() != new.name_kind(),
         // A directory ranks by its `known_dir_size` under every Size sort but
         // AlwaysByName's, a file by its `size`; both, so no mode is missed.
         SortColumn::Size => {

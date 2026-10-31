@@ -630,12 +630,14 @@ fn test_validate_path_length_ok() {
 fn test_validate_path_length_name_too_long() {
     use super::validate_path_length;
 
-    // 256-byte filename exceeds the 255-byte APFS limit
+    // 256-byte filename exceeds the 255-byte APFS limit. Typed as the name being
+    // too long, so the dialog says so and the transfer can offer a Skip
+    // (`refused_name.rs`), ❌ never a generic I/O failure with a Retry.
     let long_name = "a".repeat(256);
     let path = PathBuf::from("/tmp").join(&long_name);
     let result = validate_path_length(&path);
     assert!(
-        matches!(result, Err(WriteOperationError::IoError { ref message, .. }) if message.to_string().contains("File name")),
+        matches!(result, Err(WriteOperationError::NameTooLong { ref path }) if path.ends_with(&long_name)),
         "Should reject file names exceeding 255 bytes, got: {:?}",
         result
     );

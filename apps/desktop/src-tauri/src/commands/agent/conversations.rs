@@ -5,7 +5,7 @@ use tauri::AppHandle;
 use super::{
     AskCmdrToolResultError, ConversationDetailView, ToolResultDetailView, with_read_connection, with_write_connection,
 };
-use crate::agent::chat::cancel::{paused_spend, turn_in_flight_since_seq};
+use crate::agent::chat::cancel::{paused_spend, turn_in_flight};
 use crate::agent::chat::message_view::thread::{PageContext, project_page, tool_result_detail};
 use crate::agent::store::{self, ConversationRow, ConversationSearchHit, TurnContext};
 
@@ -28,7 +28,8 @@ pub async fn ask_cmdr_get_conversation(
     with_read_connection(app, None, move |conn| {
         // Read before the rows, so a turn that ends in between reads as running for one load
         // rather than as settled with its last results missing.
-        let turn_in_flight_since_seq = turn_in_flight_since_seq(id);
+        let in_flight = turn_in_flight(id);
+        let turn_in_flight_since_seq = in_flight.map(|turn| turn.since_seq);
         let Some(detail) = store::get_conversation(conn, id, msg_limit, msg_offset)? else {
             return Ok(None);
         };
@@ -57,6 +58,7 @@ pub async fn ask_cmdr_get_conversation(
             total_messages: detail.total_messages,
             last_context_usage,
             turn_in_flight_since_seq,
+            turn_in_flight_run: in_flight.map(|turn| turn.run),
             spend_paused_micros: paused_spend(id),
         }))
     })

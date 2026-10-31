@@ -1,31 +1,41 @@
-//! Single-instance guard: exactly one Cmdr process per data dir.
+//! Single-instance guard: exactly one Cmdr process per data dir, cache dir, and log dir.
 //!
 //! Two processes sharing one data dir means two index writers on one SQLite file. They seed their
 //! entry-ID counter independently, hand out the same IDs, and the loser drowns in
 //! `UNIQUE constraint failed: entries.id` plus a `SQLITE_BUSY` storm. That's silent index
-//! corruption, so it has to be structurally impossible rather than merely unlikely.
+//! corruption, so it has to be structurally impossible rather than merely unlikely. The cache dir
+//! holds the drive index and the log dir the rotating `cmdr.log`, and each can be redirected on its
+//! own (`CMDR_CACHE_DIR`, `CMDR_LOG_DIR`), so each gets its own lock: two processes that resolved
+//! different data dirs but one cache or log dir corrupted the index and split each other's logs
+//! (#812). A lock held on ANY of the three refuses the launch.
 //!
 //! The mechanism is an advisory whole-file lock (`std::fs::File::try_lock`, `flock` on unix and
-//! `LockFileEx` on Windows) on `<data dir>/.instance.lock`. The kernel owns the lock, so it's
+//! `LockFileEx` on Windows) on `.instance.lock` in each dir. The kernel owns the lock, so it's
 //! released when the process dies for ANY reason, `SIGKILL` and a panic included. There is no such
 //! thing as a stale lock to clean up, which is exactly why this isn't a PID file.
 //!
-//! The pid we write into the file is diagnostics only: it names the holder in the log line when
-//! acquisition fails. Nothing branches on it, and unreadable or garbage content is treated as
-//! "unknown holder".
+//! The pid we write into the file is diagnostics only: it names the holder in the refusal line.
+//! Nothing branches on it, and unreadable or garbage content is treated as "unknown holder".
+//!
+//! The claim runs BEFORE the logger is installed (`lib.rs`), so a refused instance never opens the
+//! shared log files: it used to append to `cmdr.log`, and near 50 MB it could rotate the running
+//! app's live file (#812). So nothing here logs during the claim. A refusal goes to stderr and the
+//! alert; every other outcome comes back as a [`Claim`] that `lib.rs` logs once the logger is up.
 
 use cmdr_fs::log_private::LogPrivate;
 use std::fmt;
 use std::fs::{File, OpenOptions};
-use std::io::{Seek as _, SeekFrom, Write as _};
+use std::io::{Seek as _, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
+use tauri::{AppHandle, Runtime};
 
-/// Lock file name inside the resolved data dir.
+/// Lock file name inside each claimed dir.
 const LOCK_FILE_NAME: &str = ".instance.lock";
 
-/// How long we keep retrying before declaring the data dir taken.
+/// How long we keep retrying before declaring a dir taken. One budget for all three dirs, not
+/// one each: the overlap it waits out is the same old process holding all of them.
 ///
 /// A bounded retry, not a single attempt: two legitimate flows briefly overlap two processes
 /// against one data dir, and both must survive.
@@ -39,12 +49,12 @@ const ACQUIRE_WINDOW: Duration = Duration::from_secs(5);
 /// Poll interval inside [`ACQUIRE_WINDOW`].
 const RETRY_INTERVAL: Duration = Duration::from_millis(50);
 
-/// The acquired lock file, parked for the process lifetime.
+/// The acquired lock files, parked for the process lifetime.
 ///
-/// Dropping the `File` closes the descriptor, and closing it releases the kernel lock. So the
-/// handle must outlive everything that touches the data dir, which in practice means "forever":
+/// Dropping a `File` closes the descriptor, and closing it releases the kernel lock. So the
+/// handles must outlive everything that touches the dirs, which in practice means "forever":
 /// a second Cmdr could otherwise walk in mid-session and start writing the same index.
-static HELD_LOCK: OnceLock<File> = OnceLock::new();
+static HELD_LOCKS: OnceLock<Vec<File>> = OnceLock::new();
 
 /// Catalog key for the alert title shown when another instance owns the data dir.
 ///
@@ -69,17 +79,42 @@ const ALERT_TIMEOUT: Duration = Duration::from_secs(60);
 #[cfg(target_os = "macos")]
 const ALERT_WATCHDOG_GRACE: Duration = Duration::from_secs(10);
 
-/// Path of the lock file for a given data dir.
-pub fn lock_path(data_dir: &Path) -> PathBuf {
-    data_dir.join(LOCK_FILE_NAME)
+/// Which of the app's dirs a lock guards.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DirKind {
+    Data,
+    Cache,
+    Logs,
 }
 
-/// Why we couldn't take the lock.
+impl DirKind {
+    fn label(self) -> &'static str {
+        match self {
+            DirKind::Data => "data dir",
+            DirKind::Cache => "cache dir",
+            DirKind::Logs => "log dir",
+        }
+    }
+}
+
+/// One dir to claim, or why it couldn't be resolved.
 #[derive(Debug)]
-pub enum AcquireError {
+pub struct Target {
+    kind: DirKind,
+    dir: Result<PathBuf, String>,
+}
+
+/// Path of the lock file for a given dir.
+fn lock_path(dir: &Path) -> PathBuf {
+    dir.join(LOCK_FILE_NAME)
+}
+
+/// Why we couldn't take a lock.
+#[derive(Debug)]
+enum AcquireError {
     /// Another process holds it. `holder_pid` is best-effort diagnostics.
     Busy { holder_pid: Option<u32> },
-    /// We couldn't open or lock the file at all (permissions, read-only mount, ...).
+    /// We couldn't create, open, or lock the file at all (permissions, read-only mount, ...).
     Io(std::io::Error),
 }
 
@@ -91,7 +126,7 @@ fn parse_holder_pid(contents: &str) -> Option<u32> {
     contents.trim().parse::<u32>().ok().filter(|&pid| pid > 0)
 }
 
-/// Pure core: how we name the holder in the log line.
+/// Pure core: how we name the holder in the refusal line.
 fn holder_description(holder_pid: Option<u32>) -> String {
     match holder_pid {
         Some(pid) => format!("process {pid}"),
@@ -99,30 +134,23 @@ fn holder_description(holder_pid: Option<u32>) -> String {
     }
 }
 
-/// Pure core: the operator-facing log line for a refused acquisition, its data dir marked for the
-/// error report. Log text only: it goes straight into `log_error!`.
-fn busy_log_message(data_dir: &Path, holder_pid: Option<u32>) -> impl fmt::Display + '_ {
-    fmt::from_fn(move |f| {
-        write!(
-            f,
-            "Another Cmdr instance ({}) already owns the data dir {}. Two processes on one data dir corrupt the index, so this one is stopping.",
-            holder_description(holder_pid),
-            LogPrivate::dir_path(data_dir)
-        )
-    })
-}
-
-/// Best-effort: stamp our pid into the lock file for diagnostics.
+/// Best-effort, diagnostics-only: stamp our pid into the lock file. A failure only leaves a
+/// refused second instance naming "an unknown process". Nothing to log it to yet (module docs).
 fn write_pid(file: &File) {
     let mut file = file;
-    let result = file
+    // Best-effort: the pid is diagnostics only, and the logger isn't up yet to report a failure.
+    let _ = file
         .set_len(0)
         .and_then(|()| file.seek(SeekFrom::Start(0)))
         .and_then(|_| file.write_all(std::process::id().to_string().as_bytes()))
         .and_then(|()| file.flush());
-    if let Err(e) = result {
-        log::debug!(target: "instance_lock", "Couldn't stamp our pid into the lock file: {e}");
-    }
+}
+
+/// One line to stderr, for the stretch of startup before the logger exists. Best-effort: a closed
+/// stderr has nobody to tell.
+fn to_stderr(line: impl fmt::Display) {
+    // Best-effort: stderr is the last resort; there's nowhere to report its failure.
+    let _ = writeln!(std::io::stderr(), "{line}");
 }
 
 /// Best-effort: who holds the lock right now, per the file's contents.
@@ -130,12 +158,10 @@ fn read_holder_pid(path: &Path) -> Option<u32> {
     std::fs::read_to_string(path).ok().as_deref().and_then(parse_holder_pid)
 }
 
-/// Takes the lock, retrying for `window` before giving up.
-///
-/// `window` is a parameter so tests can prove the refusal path without burning the full production
-/// wait.
-fn acquire_within(data_dir: &Path, window: Duration) -> Result<File, AcquireError> {
-    let path = lock_path(data_dir);
+/// Takes the lock in `dir` (creating the dir if needed), retrying until `deadline`.
+fn acquire_until(dir: &Path, deadline: Instant) -> Result<File, AcquireError> {
+    std::fs::create_dir_all(dir).map_err(AcquireError::Io)?;
+    let path = lock_path(dir);
     let file = OpenOptions::new()
         .read(true)
         .write(true)
@@ -144,7 +170,6 @@ fn acquire_within(data_dir: &Path, window: Duration) -> Result<File, AcquireErro
         .open(&path)
         .map_err(AcquireError::Io)?;
 
-    let deadline = Instant::now() + window;
     loop {
         match file.try_lock() {
             Ok(()) => {
@@ -164,50 +189,228 @@ fn acquire_within(data_dir: &Path, window: Duration) -> Result<File, AcquireErro
     }
 }
 
-/// Takes the lock for this data dir, retrying for [`ACQUIRE_WINDOW`].
-pub fn acquire(data_dir: &Path) -> Result<File, AcquireError> {
-    acquire_within(data_dir, ACQUIRE_WINDOW)
+/// One dir's outcome, for the log.
+#[derive(Debug)]
+enum Outcome {
+    Held,
+    /// We couldn't open or lock the file at all, so this dir runs unlocked.
+    Unlocked(std::io::Error),
+    /// We couldn't resolve the dir, so there was nothing to lock.
+    Unresolved(String),
+    /// Same dir as an earlier target (say `CMDR_LOG_DIR` pointing at the data dir): its lock
+    /// already covers it, and a second `flock` from this process would refuse ourselves.
+    SameAsEarlier,
 }
 
-/// Claims the data dir for this process, or tells the user and exits.
+/// What claiming the dirs found, held until the logger is up. `lib.rs` calls [`Claim::log`]
+/// right after `logging::startup::init`.
+#[must_use = "log the claim once the logger is up"]
+#[derive(Debug)]
+pub struct Claim {
+    outcomes: Vec<(DirKind, Option<PathBuf>, Outcome)>,
+    /// A lock set was already parked (a second call keeps the first).
+    twice: bool,
+}
+
+impl Claim {
+    /// Records the claim in the log. Call once, after the logger is installed.
+    pub fn log(self) {
+        if self.twice {
+            log::warn!(target: "instance_lock", "Instance locks claimed twice; keeping the first set.");
+        }
+        for (kind, dir, outcome) in self.outcomes {
+            let label = kind.label();
+            let dir = dir.unwrap_or_default();
+            match outcome {
+                Outcome::Held => log::debug!(
+                    target: "instance_lock",
+                    // allowed-log-private: `label` is a fixed dir-kind name, not a user value
+                    "Instance lock held for the {label} {}",
+                    LogPrivate::dir_path(&dir)
+                ),
+                Outcome::SameAsEarlier => log::debug!(
+                    target: "instance_lock",
+                    // allowed-log-private: `label` is a fixed dir-kind name, not a user value
+                    "The {label} {} is already locked as another of the app's dirs",
+                    LogPrivate::dir_path(&dir)
+                ),
+                Outcome::Unlocked(error) => log::warn!(
+                    target: "instance_lock",
+                    // allowed-log-private: `label` is a fixed dir-kind name, not a user value
+                    "Couldn't take the instance lock in the {label} {}: {error}. Continuing without it; don't run a second Cmdr on this dir.",
+                    LogPrivate::dir_path(&dir)
+                ),
+                Outcome::Unresolved(error) => log::warn!(
+                    target: "instance_lock",
+                    // allowed-log-private: `label` is a fixed dir-kind name, not a user value
+                    "Couldn't resolve the {label} for the instance lock: {error}. Continuing without it."
+                ),
+            }
+        }
+    }
+}
+
+/// A refused claim: which dir another process holds, and who.
+#[derive(Debug)]
+struct Refusal {
+    kind: DirKind,
+    dir: PathBuf,
+    holder_pid: Option<u32>,
+}
+
+/// Pure core: the operator-facing line for a refused claim. It goes to stderr, never the log
+/// (see the module docs), so the dir is plain text: nothing here reaches an error report.
+impl fmt::Display for Refusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Another Cmdr instance ({}) already owns the {} {}. Two processes on one {} corrupt the index or the logs, so this one is stopping.",
+            holder_description(self.holder_pid),
+            self.kind.label(),
+            self.dir.display(),
+            self.kind.label()
+        )
+    }
+}
+
+/// Takes every target's lock within one `window`, in order. The first busy one refuses the
+/// claim, and the locks taken so far drop with the returned error. An I/O problem on one dir
+/// runs that dir unlocked and keeps going.
+fn claim_within(targets: Vec<Target>, window: Duration) -> Result<(Vec<File>, Claim), Refusal> {
+    let deadline = Instant::now() + window;
+    let mut files = Vec::new();
+    let mut locked: Vec<PathBuf> = Vec::new();
+    let mut outcomes = Vec::new();
+    for Target { kind, dir } in targets {
+        let dir = match dir {
+            Ok(dir) => dir,
+            Err(error) => {
+                outcomes.push((kind, None, Outcome::Unresolved(error)));
+                continue;
+            }
+        };
+        // Compare real paths, so a symlinked or `..`-spelled duplicate is caught too. A dir that
+        // doesn't exist yet can't be a duplicate of one we've locked (those exist).
+        let real = std::fs::canonicalize(&dir).unwrap_or_else(|_| dir.clone());
+        if locked.contains(&real) {
+            outcomes.push((kind, Some(dir), Outcome::SameAsEarlier));
+            continue;
+        }
+        match acquire_until(&dir, deadline) {
+            Ok(file) => {
+                files.push(file);
+                locked.push(std::fs::canonicalize(&dir).unwrap_or(real));
+                outcomes.push((kind, Some(dir), Outcome::Held));
+            }
+            Err(AcquireError::Busy { holder_pid }) => return Err(Refusal { kind, dir, holder_pid }),
+            Err(AcquireError::Io(error)) => outcomes.push((kind, Some(dir), Outcome::Unlocked(error))),
+        }
+    }
+    Ok((files, Claim { outcomes, twice: false }))
+}
+
+/// The three dirs this process writes: data (`config::resolved_app_data_dir`), cache
+/// (`config::app_cache_dir`), and logs (`config::app_log_dir`), each honoring its env override.
+fn app_targets<R: Runtime>(app: &AppHandle<R>) -> Vec<Target> {
+    vec![
+        Target {
+            kind: DirKind::Data,
+            dir: crate::config::resolved_app_data_dir(app),
+        },
+        Target {
+            kind: DirKind::Cache,
+            dir: crate::config::app_cache_dir().ok_or_else(|| "the OS has no cache dir".to_string()),
+        },
+        Target {
+            kind: DirKind::Logs,
+            dir: Ok(crate::config::app_log_dir()),
+        },
+    ]
+}
+
+/// Claims the app's data, cache, and log dirs for this process, or tells the user and exits.
 ///
-/// Call this once at startup, right after the logger is up and before anything opens a database. On
-/// refusal the process is gone before it can touch a single index file.
+/// Call this once at startup, BEFORE the logger and before anything opens a database: a refused
+/// instance must touch neither the shared log files nor a single index file. It logs nothing
+/// itself; log the returned [`Claim`] once the logger is up.
 ///
 /// Tauri has already created the config-declared main window by the time `setup` runs, so this is
 /// not "before a window exists". It is before one is ever shown: that window is `"visible": false`
 /// and only gets shown later in startup, which the refusal path never reaches.
 ///
-/// An I/O problem (unwritable data dir, exotic filesystem with no `flock`) is NOT treated as
-/// refusal: that would turn an unrelated filesystem fault into "Cmdr won't start". We log it loudly
-/// and continue unlocked, which is exactly the behavior we had before this guard existed.
-pub fn claim_data_dir_or_exit(data_dir: &Path) {
-    match acquire(data_dir) {
-        Ok(file) => {
-            if HELD_LOCK.set(file).is_err() {
-                log::warn!(target: "instance_lock", "Instance lock claimed twice; keeping the first handle.");
-            }
-            log::debug!(target: "instance_lock", "Instance lock held for {}", LogPrivate::dir_path(data_dir));
+/// An I/O problem (unwritable dir, exotic filesystem with no `flock`) is NOT treated as refusal:
+/// that would turn an unrelated filesystem fault into "Cmdr won't start". That dir runs unlocked,
+/// logged loudly, which is exactly the behavior we had before this guard existed.
+pub fn claim_app_dirs_or_exit<R: Runtime>(app: &AppHandle<R>) -> Claim {
+    let targets = app_targets(app);
+    let data_dir = targets
+        .iter()
+        .find(|target| target.kind == DirKind::Data)
+        .and_then(|target| target.dir.as_ref().ok().cloned());
+    match claim_within(targets, ACQUIRE_WINDOW) {
+        Ok((files, mut claim)) => {
+            claim.twice = HELD_LOCKS.set(files).is_err();
+            claim
         }
-        Err(AcquireError::Busy { holder_pid }) => {
-            // allowed-log-private: `busy_log_message` marks the dir itself
-            crate::log_error!(target: "instance_lock", "{}", busy_log_message(data_dir, holder_pid));
+        Err(refusal) => {
+            write_refusal(&mut std::io::stderr(), &refusal);
             // Under E2E nobody is there to click OK, and a modal that waits forever turns a clear
-            // "data dir already taken" into an opaque harness timeout. The log line above is what
-            // a test run needs; exit straight away.
+            // "dir already taken" into an opaque harness timeout. The stderr line above is what a
+            // test run needs; exit straight away.
             if !crate::test_mode::is_e2e_mode() {
+                if let Some(language) = data_dir.as_deref().and_then(read_saved_language) {
+                    // The "did it move" answer is for rebuilding a menu bar, which never exists in this process.
+                    let _ = crate::intl::set_language_preference(Some(language));
+                }
                 show_already_running_alert();
             }
             std::process::exit(1);
         }
-        Err(AcquireError::Io(e)) => {
-            log::warn!(
-                target: "instance_lock",
-                "Couldn't take the instance lock in {}: {e}. Continuing without it; don't run a second Cmdr on this data dir.",
-                LogPrivate::dir_path(data_dir)
-            );
-        }
     }
+}
+
+/// The largest `settings.json` the refusal alert reads for the language. Real ones are a few kB.
+const SETTINGS_READ_CAP: u64 = 1024 * 1024;
+
+/// How long the refusal waits for that read before speaking the OS language instead.
+const SETTINGS_READ_TIMEOUT: Duration = Duration::from_millis(500);
+
+/// The language the user pinned in Cmdr, read READ-ONLY from the data dir's `settings.json`, so
+/// the refusal alert speaks it. `menu_t` otherwise only knows the OS language: the frontend pushes
+/// the pin after startup, which a refused copy never reaches. Bounded on both size and time (on a
+/// worker thread, so a stalled data dir can't hold the alert), and `None` for anything off:
+/// missing, unreadable, or slow file, or no usable pin (see [`saved_language`]).
+fn read_saved_language(data_dir: &Path) -> Option<String> {
+    use std::io::Read as _;
+    let path = data_dir.join("settings.json");
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let mut contents = String::new();
+        let read = File::open(&path).and_then(|file| file.take(SETTINGS_READ_CAP).read_to_string(&mut contents));
+        // Best-effort: a receiver that timed out has stopped listening, which is fine.
+        let _ = tx.send(read.ok().map(|_| contents));
+    });
+    rx.recv_timeout(SETTINGS_READ_TIMEOUT)
+        .ok()
+        .flatten()
+        .and_then(|contents| saved_language(&contents))
+}
+
+/// Pure core of [`read_saved_language`]: the pinned `appearance.language` in a `settings.json`
+/// (flat dot-notation keys, `settings::loader`), when it's a catalog this build ships. `'system'`,
+/// an unknown tag, a non-string, or unparseable JSON means "speak the OS language", today's
+/// behavior.
+fn saved_language(settings_json: &str) -> Option<String> {
+    let json: serde_json::Value = serde_json::from_str(settings_json).ok()?;
+    let language = json.get("appearance.language")?.as_str()?;
+    (language != "system" && crate::intl::is_shipped_locale(language)).then(|| language.to_string())
+}
+
+/// The refusal, for a dev's terminal or a test harness's captured stderr. Not the log: a refused
+/// instance never installs one (module docs).
+fn write_refusal(out: &mut impl Write, refusal: &Refusal) {
+    // Best-effort: stderr is the last resort; there's nowhere to report its failure.
+    let _ = writeln!(out, "{refusal}");
 }
 
 /// Native "already running" alert, shown without ever pumping our own run loop.
@@ -255,7 +458,9 @@ fn show_already_running_alert() {
         )
     };
     if err != 0 {
-        log::warn!(target: "instance_lock", "Couldn't show the already-running alert (CFUserNotification error {err}).");
+        to_stderr(format_args!(
+            "Couldn't show the already-running alert (CFUserNotification error {err})."
+        ));
     }
 }
 
@@ -268,26 +473,45 @@ fn show_already_running_alert() {
 fn spawn_exit_watchdog(after: Duration) {
     std::thread::spawn(move || {
         std::thread::sleep(after);
-        log::warn!(target: "instance_lock", "The already-running alert never returned; exiting anyway.");
+        to_stderr("The already-running alert never returned; exiting anyway.");
         std::process::exit(1);
     });
 }
 
-/// Non-macOS: no native alert surface we can rely on at this point in startup, so the log line and
-/// the non-zero exit are the whole story.
+/// Non-macOS: no native alert surface we can rely on at this point in startup, so the stderr lines
+/// and the non-zero exit are the whole story.
 #[cfg(not(target_os = "macos"))]
 fn show_already_running_alert() {
-    log::warn!(
-        target: "instance_lock",
+    to_stderr(format_args!(
         "{}. {}",
         crate::intl::menu_t(ALERT_TITLE_KEY),
         crate::intl::menu_t(ALERT_BODY_KEY)
-    );
+    ));
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const NOW: Duration = Duration::from_millis(0);
+    const BRIEFLY: Duration = Duration::from_millis(120);
+
+    fn targets(data: &Path, cache: &Path, logs: &Path) -> Vec<Target> {
+        vec![
+            Target {
+                kind: DirKind::Data,
+                dir: Ok(data.to_path_buf()),
+            },
+            Target {
+                kind: DirKind::Cache,
+                dir: Ok(cache.to_path_buf()),
+            },
+            Target {
+                kind: DirKind::Logs,
+                dir: Ok(logs.to_path_buf()),
+            },
+        ]
+    }
 
     /// Two `File` handles opened independently in the SAME process DO conflict under POSIX
     /// `flock`: the lock belongs to the open file description, not the process. That's what makes
@@ -296,9 +520,9 @@ mod tests {
     fn second_acquisition_is_refused_while_the_first_lives() {
         let dir = tempfile::tempdir().expect("create temp dir");
 
-        let first = acquire_within(dir.path(), Duration::from_millis(0)).expect("first acquire");
+        let first = acquire_until(dir.path(), Instant::now()).expect("first acquire");
 
-        let second = acquire_within(dir.path(), Duration::from_millis(120));
+        let second = acquire_until(dir.path(), Instant::now() + BRIEFLY);
         assert!(
             matches!(second, Err(AcquireError::Busy { .. })),
             "a second acquisition must be refused while the first handle is alive, got {second:?}"
@@ -311,21 +535,127 @@ mod tests {
     fn acquisition_succeeds_again_after_the_first_guard_drops() {
         let dir = tempfile::tempdir().expect("create temp dir");
 
-        let first = acquire_within(dir.path(), Duration::from_millis(0)).expect("first acquire");
+        let first = acquire_until(dir.path(), Instant::now()).expect("first acquire");
         drop(first);
 
         // The kernel released the lock on close, so this must go through immediately.
-        acquire_within(dir.path(), Duration::from_millis(0)).expect("re-acquire after drop");
+        acquire_until(dir.path(), Instant::now()).expect("re-acquire after drop");
     }
 
     #[test]
     fn acquiring_stamps_our_pid_and_names_the_holder() {
         let dir = tempfile::tempdir().expect("create temp dir");
 
-        let held = acquire_within(dir.path(), Duration::from_millis(0)).expect("acquire");
+        let held = acquire_until(dir.path(), Instant::now()).expect("acquire");
         assert_eq!(read_holder_pid(&lock_path(dir.path())), Some(std::process::id()));
 
         drop(held);
+    }
+
+    /// #812: two apps with different data dirs shared one cache and one log dir. A lock held on
+    /// ANY of the three dirs refuses a second claim, and names the dir it found taken.
+    #[test]
+    fn a_lock_held_on_any_one_of_the_three_dirs_refuses_a_second_claim() {
+        for taken in [DirKind::Data, DirKind::Cache, DirKind::Logs] {
+            let root = tempfile::tempdir().expect("create temp dir");
+            let (data, cache, logs) = (
+                root.path().join("data"),
+                root.path().join("cache"),
+                root.path().join("logs"),
+            );
+            let held_dir = match taken {
+                DirKind::Data => &data,
+                DirKind::Cache => &cache,
+                DirKind::Logs => &logs,
+            };
+            let _other_app = acquire_until(held_dir, Instant::now()).expect("the other app's lock");
+
+            let refused = claim_within(targets(&data, &cache, &logs), BRIEFLY);
+
+            match refused {
+                Err(refusal) => {
+                    assert_eq!(refusal.kind, taken);
+                    assert_eq!(&refusal.dir, held_dir);
+                    assert_eq!(refusal.holder_pid, Some(std::process::id()));
+                }
+                Ok(_) => panic!("a claim went through while the {} was taken", taken.label()),
+            }
+        }
+    }
+
+    #[test]
+    fn a_free_set_is_claimed_whole_and_then_refuses_a_second_claim() {
+        let root = tempfile::tempdir().expect("create temp dir");
+        let (data, cache, logs) = (
+            root.path().join("data"),
+            root.path().join("cache"),
+            root.path().join("logs"),
+        );
+
+        let (files, claim) = claim_within(targets(&data, &cache, &logs), NOW).expect("first claim");
+        assert_eq!(files.len(), 3);
+        assert!(claim.outcomes.iter().all(|(_, _, o)| matches!(o, Outcome::Held)));
+        assert!(
+            logs.join(LOCK_FILE_NAME).exists(),
+            "a missing dir is created to hold its lock"
+        );
+
+        assert!(claim_within(targets(&data, &cache, &logs), BRIEFLY).is_err());
+    }
+
+    /// `CMDR_LOG_DIR` pointed at the data dir: one lock covers both. A second `flock` from this
+    /// same process would conflict with the first and refuse ourselves.
+    #[test]
+    fn the_same_dir_named_twice_is_locked_once_and_never_refuses_itself() {
+        let root = tempfile::tempdir().expect("create temp dir");
+        let data = root.path().join("data");
+        let spelled_differently = root.path().join("data/../data");
+
+        let (files, claim) = claim_within(targets(&data, &root.path().join("cache"), &spelled_differently), NOW)
+            .expect("one dir named twice still claims");
+
+        assert_eq!(files.len(), 2);
+        assert!(matches!(claim.outcomes[2].2, Outcome::SameAsEarlier));
+    }
+
+    #[test]
+    fn an_unresolved_dir_runs_unlocked_and_the_rest_are_still_claimed() {
+        let root = tempfile::tempdir().expect("create temp dir");
+        let mut targets = targets(
+            &root.path().join("data"),
+            &root.path().join("cache"),
+            &root.path().join("logs"),
+        );
+        targets[1].dir = Err("no cache dir".to_string());
+
+        let (files, claim) = claim_within(targets, NOW).expect("claim");
+
+        assert_eq!(files.len(), 2);
+        assert!(matches!(claim.outcomes[1].2, Outcome::Unresolved(_)));
+    }
+
+    /// The refusal alert speaks the language the user pinned in Cmdr, else the OS's.
+    #[test]
+    fn the_alert_language_is_a_shipped_pin_and_nothing_else() {
+        assert_eq!(saved_language(r#"{"appearance.language":"hu"}"#).as_deref(), Some("hu"));
+        assert_eq!(
+            saved_language(r#"{"appearance.language":"zh-Hant","x":1}"#).as_deref(),
+            Some("zh-Hant")
+        );
+        assert_eq!(saved_language(r#"{"appearance.language":"system"}"#), None);
+        assert_eq!(saved_language(r#"{"appearance.language":"tlh"}"#), None, "not shipped");
+        assert_eq!(saved_language(r#"{"appearance.language":null}"#), None);
+        assert_eq!(saved_language(r#"{"listing.showHiddenFiles":true}"#), None);
+        assert_eq!(saved_language("{not json"), None);
+        assert_eq!(saved_language(""), None);
+    }
+
+    #[test]
+    fn a_missing_settings_file_reads_as_no_pin() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        assert_eq!(read_saved_language(dir.path()), None);
+        std::fs::write(dir.path().join("settings.json"), r#"{"appearance.language":"de"}"#).expect("seed");
+        assert_eq!(read_saved_language(dir.path()).as_deref(), Some("de"));
     }
 
     #[test]
@@ -345,30 +675,21 @@ mod tests {
         assert_eq!(holder_description(None), "an unknown process");
     }
 
+    /// The refusal is a plain stderr line, with no log markers: a refused instance never installs
+    /// the logger, so nothing would ever read them (#812).
     #[test]
-    fn busy_log_message_names_the_dir_and_the_holder() {
-        let message = format!("{}", busy_log_message(Path::new("/tmp/cmdr-data"), Some(42)));
+    fn the_refusal_is_one_plain_line_naming_the_dir_and_the_holder() {
+        let mut out = Vec::new();
+        let refusal = Refusal {
+            kind: DirKind::Logs,
+            dir: PathBuf::from("/tmp/cmdr-logs"),
+            holder_pid: Some(42),
+        };
+        write_refusal(&mut out, &refusal);
         assert_eq!(
-            crate::redact::display_line(&message),
-            "Another Cmdr instance (process 42) already owns the data dir /tmp/cmdr-data. \
-             Two processes on one data dir corrupt the index, so this one is stopping."
-        );
-    }
-
-    /// The bundle form of the line: the dir goes as one marked value, and the prose after it
-    /// stays, which the regex alone couldn't tell apart from a name with spaces.
-    #[test]
-    fn busy_log_message_ships_the_dir_as_one_token() {
-        let data_dir = Path::new("/Users/me/Summer (Lake House) 2026/Cmdr data");
-        let line = format!(
-            "2026-10-19T10:00:00.000+02:00 ERROR ·instance_lock  {}",
-            busy_log_message(data_dir, None)
-        );
-        assert_eq!(
-            crate::redact::redact_line(&line),
-            "2026-10-19T10:00:00.000+02:00 ERROR ·instance_lock  Another Cmdr instance (an unknown process) \
-             already owns the data dir $HOME/<dir>/<dir>. Two processes on one data dir corrupt the index, so \
-             this one is stopping."
+            String::from_utf8(out).expect("utf-8"),
+            "Another Cmdr instance (process 42) already owns the log dir /tmp/cmdr-logs. \
+             Two processes on one log dir corrupt the index or the logs, so this one is stopping.\n"
         );
     }
 }

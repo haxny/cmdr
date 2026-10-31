@@ -413,7 +413,7 @@ mod device_tests {
         // 5 s `ListingCache` entry the primed root left behind can't answer from
         // memory and skip the device entirely.
         assert!(
-            mtp_rs::force_operation_wedge(crate::virtual_device::VIRTUAL_DEVICE_SERIAL),
+            mtp_rs::virtual_device::force_operation_wedge(crate::virtual_device::VIRTUAL_DEVICE_SERIAL),
             "the connected virtual device must be armable",
         );
         let err = connection_manager()

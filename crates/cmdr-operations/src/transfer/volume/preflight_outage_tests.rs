@@ -71,6 +71,7 @@ async fn scan(
         WriteOperationType::Copy,
         state,
         events,
+        &crate::transfer::volume::link_carry::LinkCarry::default(),
     )
     .await
 }

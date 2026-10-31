@@ -364,7 +364,7 @@ pub(super) fn listed_in_parent_listing(
 /// one HEAD per selected file, the one its cost estimate counts.
 ///
 /// [`BackendKind::has_symlinks`]: cmdr_fs::volume::BackendKind::has_symlinks
-async fn top_level_entry(volume: &dyn Volume, path: &Path) -> Result<Listed, VolumeError> {
+pub(super) async fn top_level_entry(volume: &dyn Volume, path: &Path) -> Result<Listed, VolumeError> {
     if volume.backend_kind().has_symlinks() {
         return volume.entry_kind(path).await.map(|kind| Listed { kind, size: None });
     }

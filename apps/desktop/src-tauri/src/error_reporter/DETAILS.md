@@ -269,13 +269,13 @@ command exists in every build: under `DisableCrashAndErrorReports` the dialog's 
   3. Otherwise call `tail_walker::walk_tail`, which reads the file from the END
      backward in 64 KB chunks and yields lines newest-first. The walker stops the
      moment it hits a leading ISO-8601 stamp older than the cutoff.
-  4. Each line passes through the report `RedactionContext`, then streams
-     into a `ZipWriter` over a `CountingCursor` (a `Cursor<Vec<u8>>` wrapper holding
-     an `AtomicU64` of bytes written through it).
-  5. After every line, the running compressed-byte counter is polled. The instant
-     it crosses `FLOW_A_BUNDLE_CAP_MB * 1024 * 1024`, streaming stops mid-file.
+  4. Lines pass through the report `RedactionContext` newest-first while
+     `NewestFirstFit` measures how many fit what's left of the compressed budget
+     (90% of `FLOW_A_BUNDLE_CAP_MB`, read off a `CountingCursor` under the real
+     `ZipWriter`). See § "Both pipelines measure the fit" below.
+  5. That newest tail streams into the zip in file order.
   6. Walking continues to older rotations only if the cutoff hasn't fired yet AND
-     the cap hasn't been reached.
+     this file fit whole.
 
   No `cap_bundle_to_mb` post-pass is needed for this scope (the streaming pipeline
   already enforces the cap). The trailing call in `commands/error_reporter.rs` is
@@ -340,6 +340,22 @@ rather than dropping whole files. Always preserves `manifest.json` verbatim and 
 auto-dispatcher's bundle is built with the legacy pipeline and trimmed afterwards) and
 as a defense-in-depth pass on Flow A in case a future manifest grows large enough to
 exceed the cap on its own.
+
+### Both pipelines measure the fit in compressed bytes, newest lines first
+
+`bundle_capper::NewestFirstFit` decides how much of each file ships: it deflates the file's lines newest-first into a
+scratch entry at the real entry's level, sync-flushing every 16 KB of raw text to read the compressed size, and says how
+many of the newest lines fit what's left of the budget. The entry is then written oldest-first from that tail.
+
+- **Decision**: measure, never estimate. **Why**: the cap is on the compressed bundle. The capper used to budget raw
+  bytes against it, which on real log text (17× compression) kept a seventeenth of what fits: a 1 MB cap shipped 54 KB.
+- **Decision**: pick the tail before writing, ❌ never stop at the cap mid-write. **Why**: an entry is written
+  oldest-first, so the streaming builder's old mid-file stop shipped a busy file's first minutes and dropped its newest
+  ones. Both bugs hit ERR-YCZXP (cmdr-reports#84, verbose logging, big SMB deletes): the streamed live file stopped at
+  09:20:26, the post-pass then cut the rest to 0.9 MB raw, and the bundle jumped from 09:20 to 09:30:47, skipping the
+  09:30:30 failure. (verified by unpacking the R2 bundle, 2026-10-29: 943,627 raw bytes, the capper's old raw budget to
+  the byte)
+- The streaming builder targets 90% of the cap, so the post-pass stays a no-op; the live file keeps its 50-line floor.
 
 ## Flow B (auto-send on error)
 

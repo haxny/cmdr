@@ -394,6 +394,24 @@ impl MtpConnectionManager {
         mapped
     }
 
+    /// [`map_device_error`](Self::map_device_error) for an operation that only READS.
+    ///
+    /// ❗ `mtp_rs::Error::AccessDenied` folds PTP's read-only storage, write-protected
+    /// object, and plain denial into one variant, and says nothing about the direction,
+    /// so only the call site knows. A write refused this way is the read-only answer; a
+    /// read refused this way is the phone keeping a folder (`/Android/data`) private, and
+    /// showing that as "read-only" tells someone to find a different destination for a
+    /// folder they were only opening.
+    pub(super) fn map_device_read_error(&self, e: mtp_rs::Error, device_id: &str, path: &str) -> MtpConnectionError {
+        if matches!(e, mtp_rs::Error::AccessDenied) {
+            return MtpConnectionError::ReadRefused {
+                device_id: device_id.to_string(),
+                path: path.to_string(),
+            };
+        }
+        self.map_device_error(e, device_id)
+    }
+
     /// Connects to an MTP device by ID.
     ///
     /// Opens an MTP session and retrieves storage information.
@@ -488,7 +506,7 @@ impl MtpConnectionManager {
             .ok()
             .and_then(|devs| devs.into_iter().find(|d| d.location_id == location_id))
             .and_then(|d| d.speed)
-            .map(crate::types::usb_speed_from_device);
+            .and_then(crate::types::usb_speed_from_device);
 
         let device_info = MtpDeviceInfo {
             id: device_id.to_string(),

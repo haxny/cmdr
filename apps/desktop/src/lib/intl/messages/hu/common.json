@@ -81,5 +81,9 @@
   "@common.sizeUnit.petabyte": {
     "sourceHash": "f9085bf",
     "sameAsSourceJustification": "International unit symbol; Hungarian macOS Finder writes PB (LocalizableMerged SP22)."
+  },
+  "common.sizeComparison.same": "(azonos méretű)",
+  "@common.sizeComparison.same": {
+    "sourceHash": "2d0f788"
   }
 }

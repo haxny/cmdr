@@ -13,7 +13,7 @@ the per-volume paced listing budget, `system_dirs.rs` the non-recursed NAS dirs 
 - **BFS, not DFS.** A directory's id must be known before its children are listed, so the concurrency pump processes
   results serially.
 - **Never wrap a round trip's future in the timeout — race its JOIN HANDLE** (`LIST_TIMEOUT`). Dropping the future
-  cancels it mid-round-trip, and on MTP that abandons a PTP transaction and wedges the phone.
+  cancels it mid-round-trip, which wedges an MTP phone. It counts only ACTIVE time (`ScanListingClock`).
 - **Terminal disconnect keeps an honest partial; user cancel discards.** A typed disconnect (or the
   `CONSECUTIVE_FAILURE_ABORT` backstop) runs `finish_partial_scan`, so scanned subtrees roll up exact-stale, unscanned
   ones stay `0`, and the DB is kept. A user cancel writes no marks or aggregate.

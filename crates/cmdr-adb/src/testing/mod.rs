@@ -12,15 +12,18 @@
 //! - `host:transport:<serial>`: `OKAY` for a listed [`AdbDeviceState::Ready`]
 //!   device, `FAIL` otherwise. The socket then takes ONE device service:
 //! - `host-serial:<serial>:features`: the string set by
-//!   [`FakeAdbServer::set_features`] (all four this crate reads, by default).
+//!   [`FakeAdbServer::set_features`] (all five this crate reads, by default).
 //! - `sync:` with `STAT`/`STA2`/`LIST`/`LIS2`/`RECV`/`RCV2`/`SEND`/`SND2`/`QUIT`
 //!   over the [`FakeTree`]. `SEND` creates its file at open, as a device's
 //!   does, so an upload that never reaches `DONE` leaves a torn file behind.
+//!   `RCV2`/`SND2` honor the LZ4 flag, one frame cut into `DATA` packets, refuse
+//!   it where `set_features` doesn't list `sendrecv_v2_lz4`, and record every flags
+//!   word for [`FakeAdbServer::transfer_flags`].
 //! - `shell,v2,raw:<cmd>` with `mkdir [-p]`, `rmdir`, `rm [-rf]`, `mv`,
 //!   `cp [-f]`, `df -k [path...]` (per [`FakeTree::mount_for`], in toybox's
-//!   layout: a missing path prints the bare header and exits 1), `readlink -f`, `test -e|-d|-f|-w` (`-w` follows
-//!   [`FakeTree::read_only`]), and `stat -c '%f %s %Y'`; anything else exits
-//!   127.
+//!   layout: a missing path prints the bare header and exits 1), `readlink -f`, `test -e|-d|-f|-w|-r|-x` (`-w`
+//!   follows [`FakeTree::read_only`], `-r` follows [`FakeTree::deny_read`]), and `stat -c '%f %s %Y'`, chained with
+//!   `&&`; anything else exits 127.
 //!
 //! ## Faults
 //!

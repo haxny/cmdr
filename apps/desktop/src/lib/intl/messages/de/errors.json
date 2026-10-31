@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "Dieses Telefon hält diesen Ordner privat",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android reserviert diesen Ordner für das System und seine Apps, deshalb kann Cmdr ihn nicht öffnen. Mit deinem Telefon und der Verbindung ist alles in Ordnung.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "Deine Fotos, Downloads und anderen Dateien liegen im gemeinsamen Speicher des Telefons. Versuche es also mit einem Ordner dort.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "Der Server lässt diesen Ordner nicht öffnen",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "Dieser Ordner liegt auf einem Server, und das Konto, mit dem du verbunden bist, hat keine Berechtigung, den Ordner zu öffnen. Das entscheidet der Server, deshalb ändert keine Einstellung auf diesem Computer etwas daran.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Das kannst du versuchen:\n- Prüfe die Zugriffsrechte des Ordners auf dem Server\n- Manche Ordner gehören dem Systemkonto des Servers selbst und bleiben für alle anderen verschlossen\n- Verbinde dich mit einem Konto, das Zugriff hat",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "Existiert bereits",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -562,6 +586,18 @@
   "errors.listing.notConnected.suggestion": "Das kannst du versuchen:\n- Öffne das Telefon oder den Server über die Volume-Auswahl, um die Verbindung herzustellen\n- Entsperre ein Telefon und bestätige jede Abfrage, die es anzeigt\n- Navigiere erneut hierher, sobald die Verbindung steht",
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
+  },
+  "errors.listing.linkTargetUnreachable.title": "Der Server dieses Ordners ist nicht erreichbar",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` liegt hinter einem Link zu einem anderen Server, und Cmdr kann diesen Server gerade nicht erreichen. Der Rest dieser Freigabe ist in Ordnung, und es wurde nichts gelöscht.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Das kannst du versuchen:\n- Prüfe, ob der andere Server läuft und über dein Netzwerk erreichbar ist\n- Navigiere erneut hierher, um es noch einmal zu versuchen",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
   },
   "errors.listing.deviceReconnecting.title": "Verbindung zum Gerät wird wiederhergestellt",
   "@errors.listing.deviceReconnecting.title": {
@@ -1729,6 +1765,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Android reserviert diesen Ort für das System und seine Apps. Deine Fotos, Downloads und anderen Dateien liegen im gemeinsamen Speicher des Telefons. Versuche es also mit einem Ordner dort.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "Der Server hat das für das Konto abgelehnt, mit dem du verbunden bist. Prüfe die Zugriffsrechte des Ordners auf dem Server, oder verbinde dich mit einem Konto, das Zugriff hat.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "Der Anbieter hat abgelehnt, und das kann zweierlei bedeuten. Prüfe die Berechtigungen des Zugriffsschlüssels oder sieh in der Konsole deines Anbieters nach einem Nutzungslimit oder einem Hinweis zur Abrechnung.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2125,6 +2169,10 @@
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
   },
+  "errors.volume.linkTargetUnreachable": "Das liegt hinter einem Link zu einem anderen Server, und Cmdr kann diesen Server gerade nicht erreichen.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
+  },
   "errors.volume.deviceSessionReset": "Das Gerät hat seine Verbindung neu gestartet. Warte ein paar Sekunden und versuche es dann erneut.",
   "@errors.volume.deviceSessionReset": {
     "sourceHash": "e5ad77d"
@@ -2261,29 +2309,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "Dort sind noch Dateien geöffnet. Schließe offene Dateien und beende laufende Apps, dann versuche es erneut.",
+  "errors.eject.unmountRefused": "Dort wird noch etwas verwendet. Schließe offene Dateien und beende laufende Apps, dann versuche es erneut.",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} hat dort noch Dateien geöffnet. Schließe sie, dann versuche es erneut.",
+  "errors.eject.unmountRefusedByApp": "{app} verwendet dort noch etwas. Schließe die App, dann versuche es erneut.",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} haben dort noch Dateien geöffnet. Schließe sie, dann versuche es erneut.",
+  "errors.eject.unmountRefusedByApps": "{apps} verwenden dort noch etwas. Schließe diese Apps, dann versuche es erneut.",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "andere Apps",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "Ein Prozess namens {process} hat dort noch Dateien geöffnet. (Cmdr kennt keinen App-Namen, nur den Prozessnamen.)",
+  "errors.eject.unmountRefusedByProcess": "Ein Prozess namens {process} verwendet dort noch etwas. (Cmdr kennt keinen App-Namen, nur den Prozessnamen.)",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "{countText} Prozesse namens {processes} haben dort noch Dateien geöffnet. (Cmdr kennt keine App-Namen, nur die Prozessnamen.)",
+  "errors.eject.unmountRefusedByProcesses": "{countText} Prozesse namens {processes} verwenden dort noch etwas. (Cmdr kennt keine App-Namen, nur die Prozessnamen.)",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "weitere",
   "@errors.eject.otherProcesses": {
@@ -2293,13 +2341,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "macOS hat dort noch Dateien geöffnet. Warte eine Minute, dann versuche es erneut.",
+  "errors.eject.unmountRefusedBySystem": "macOS verwendet dort noch etwas. Warte eine Minute, dann versuche es erneut.",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "Cmdr selbst hat dort noch Dateien geöffnet. Warte einen Moment und versuche es erneut, oder sende einen Fehlerbericht, wenn das immer wieder passiert.",
+  "errors.eject.unmountRefusedByCmdr": "Cmdr selbst verwendet dort noch etwas. Warte einen Moment und versuche es erneut, oder sende einen Fehlerbericht, wenn das immer wieder passiert.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "Das Laufwerk hat noch nicht geantwortet, das Auswerfen klappt also womöglich trotzdem noch.",
   "@errors.eject.timedOut": {
@@ -2488,5 +2536,33 @@
   "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Bewege oder kopiere die Objekte unter ihren eigenen Namen und benenne sie dann dort um.",
   "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
     "sourceHash": "b1e881c"
+  },
+  "errors.listing.linkNeedsConsent.title": "Dieser Ordner liegt auf einem anderen Server",
+  "@errors.listing.linkNeedsConsent.title": {
+    "sourceHash": "c37d453"
+  },
+  "errors.listing.linkNeedsConsent.explanation": "`{path}` ist ein Link auf **{server}**, der zu **{target}** führt. Cmdr hat sich dort nicht angemeldet, {target} hat also nichts von dir erhalten.",
+  "@errors.listing.linkNeedsConsent.explanation": {
+    "sourceHash": "91b0171"
+  },
+  "errors.listing.linkNeedsConsent.suggestion": "Um diesen Ordner zu öffnen, muss sich Cmdr bei {target} mit dem Konto anmelden, das du für {server} verwendest. Prüfe das, wenn du {target} vertraust. Der Rest dieser Freigabe funktioniert wie gewohnt.",
+  "@errors.listing.linkNeedsConsent.suggestion": {
+    "sourceHash": "991cb6c"
+  },
+  "errors.volume.linkNeedsConsent": "Das liegt hinter einem Link zu einem anderen Server, bei dem sich Cmdr noch nicht anmelden darf. Öffne den Ordner in einem Bereich, um zu entscheiden.",
+  "@errors.volume.linkNeedsConsent": {
+    "sourceHash": "79ff9fe"
+  },
+  "errors.write.linkNeedsConsent.title": "Diese Datei liegt auf einem anderen Server",
+  "@errors.write.linkNeedsConsent.title": {
+    "sourceHash": "ff31c7f"
+  },
+  "errors.write.linkNeedsConsent.message": "Ein Link auf {server} führt zu {target}, und Cmdr darf sich dort noch nicht anmelden, daher ging nichts an diesen Server.",
+  "@errors.write.linkNeedsConsent.message": {
+    "sourceHash": "7893ce9"
+  },
+  "errors.write.linkNeedsConsent.suggestion": "Öffne den Ordner in einem Bereich, erlaube die Anmeldung, wenn du diesem Server vertraust, und versuche es dann erneut.",
+  "@errors.write.linkNeedsConsent.suggestion": {
+    "sourceHash": "cc25854"
   }
 }

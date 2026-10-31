@@ -24,13 +24,16 @@ mod smb;
 #[cfg(test)]
 mod test_support;
 
-pub use fs_type::{get_volume_space, supports_trash_for_mount};
+// The platform facade `commands/volumes.rs` reaches as `platform::get_volume_space`, the
+// same `cmdr-local` reading macOS's `volumes::get_volume_space` re-exports (#465).
+pub use cmdr_local::space::get_volume_space;
+pub use fs_type::supports_trash_for_mount;
 pub use mounts::get_mounted_volumes;
 pub use smb::{SmbMountInfo, enrich_from_volume_registry, get_smb_mount_info};
 
 pub(crate) use fs_type::get_mount_point;
 pub(crate) use ids::volume_id_for_mount;
-pub(crate) use mounts::{mount_roots, registrable_mount_roots};
+pub(crate) use mounts::{mount_rows, registrable_mount_roots};
 pub(crate) use smb::{parse_gvfs_smb_dirname, smb_mounts};
 
 #[allow(
@@ -75,6 +78,9 @@ pub struct LocationInfo {
     /// Whether this volume is a mounted disk image (`.dmg`). Always `false` on Linux;
     /// mirrors the macOS shape so the shared `LocationInfo`/`VolumeInfo` type stays identical.
     pub is_disk_image: bool,
+    /// Twin of the macOS field: whether another row sits on this volume's physical disk, which
+    /// offers "Eject all". Always `false` here: only macOS ejects per physical disk.
+    pub shares_disk_with_others: bool,
     /// Twin of the macOS field: whether a cloud provider's own filesystem serves this mount, so
     /// every entry read costs a round trip to that provider's daemon. Groups the row under CLOUD
     /// and suppresses the index affordances. Always `false` here today: the Linux cloud clients
@@ -223,6 +229,7 @@ fn favorite_location(
         fs_type,
         mount_is_read_only: false,
         is_disk_image: false,
+        shares_disk_with_others: false,
         is_cloud_mount: false,
         connection_state: None,
         pinned: None,
@@ -253,6 +260,7 @@ fn get_main_volume(mounts: &[MountEntry]) -> Option<LocationInfo> {
         supports_trash,
         mount_is_read_only: false,
         is_disk_image: false,
+        shares_disk_with_others: false,
         is_cloud_mount: false,
         connection_state: None,
         pinned: None,
@@ -298,6 +306,7 @@ pub fn resolve_path_volume_fast(path: &str) -> Option<VolumeInfo> {
         supports_trash,
         mount_is_read_only: false,
         is_disk_image: false,
+        shares_disk_with_others: false,
         is_cloud_mount: false,
         connection_state: None,
         pinned: None,

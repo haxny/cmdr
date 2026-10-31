@@ -82,5 +82,9 @@
   "@common.sizeUnit.petabyte": {
     "sourceHash": "f9085bf",
     "sameAsSourceJustification": "SI unit symbol, identical in Spanish (same family as KB, MB, GB, which macOS es writes unchanged)."
+  },
+  "common.sizeComparison.same": "(mismo tamaño)",
+  "@common.sizeComparison.same": {
+    "sourceHash": "2d0f788"
   }
 }

@@ -75,6 +75,15 @@ impl WrittenFile {
         }
     }
 
+    /// A symlink landed through a `Volume` backend, holding `target`.
+    pub(crate) fn volume_link(path: PathBuf, target: PathBuf) -> Self {
+        Self {
+            path,
+            identity: WrittenIdentity::VolumeLink { target },
+            landed_modified: LandedModified::Unknown,
+        }
+    }
+
     /// The same file, with the landed modified time its write reported.
     #[must_use]
     pub(crate) fn landed_at(mut self, landed: LandedModified) -> Self {
@@ -112,6 +121,10 @@ pub(crate) enum WrittenIdentity {
     /// offers a stable node id, so these carry the same-size exposure the
     /// operation log's own reversal has always carried.
     VolumeFile { size: u64 },
+    /// A symlink on a `Volume` backend: the target it landed holding. A link has
+    /// no size worth comparing (`LocalPosixVolume` reports none), and its target
+    /// IS its content.
+    VolumeLink { target: PathBuf },
     /// Nothing could be established about the entry — the stat that would have
     /// snapshotted it failed. Unprovable, so a reversal fails safe and leaves it.
     Unverifiable,
@@ -149,7 +162,7 @@ impl WrittenIdentity {
     pub(crate) fn node(&self) -> Option<NodeId> {
         match self {
             Self::LocalFile { node, .. } | Self::LocalDir { node } => Some(*node),
-            Self::VolumeFile { .. } | Self::Unverifiable => None,
+            Self::VolumeFile { .. } | Self::VolumeLink { .. } | Self::Unverifiable => None,
         }
     }
 
@@ -176,7 +189,7 @@ impl WrittenIdentity {
     pub(crate) fn recorded_size(&self) -> Option<u64> {
         match self {
             Self::LocalFile { size, .. } | Self::VolumeFile { size } => Some(*size),
-            Self::LocalDir { .. } | Self::Unverifiable => None,
+            Self::LocalDir { .. } | Self::VolumeLink { .. } | Self::Unverifiable => None,
         }
     }
 }

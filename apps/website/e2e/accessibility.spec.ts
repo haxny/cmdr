@@ -26,6 +26,7 @@ const pages: { name: string; path: string; slow?: boolean }[] = [
   { name: 'Trust and security', path: '/trust' },
   { name: 'How Cmdr is built', path: '/trust/development' },
   { name: 'Accessibility conformance report', path: '/trust/accessibility' },
+  { name: 'Accessibility guide', path: '/trust/accessibility-guide' },
   { name: 'Renew', path: '/renew' },
 ]
 
@@ -42,8 +43,13 @@ for (const theme of ['light', 'dark'] as const) {
           document.documentElement.setAttribute('data-theme', t)
         }, theme)
 
-        // Brief wait for any theme-dependent styles to settle
-        await page.waitForTimeout(200)
+        // Wait for the theme's color transitions to finish. A fixed wait raced them: the feature cards
+        // transition over 300 ms, so axe sampled half-switched colors (dark text on the light surface).
+        // Only transitions: an infinite decorative animation would never settle.
+        await page.evaluate(async () => {
+          const transitions = document.getAnimations().filter((a) => a instanceof CSSTransition)
+          await Promise.all(transitions.map((a) => a.finished.catch(() => undefined)))
+        })
 
         const results = await new AxeBuilder({ page }).analyze()
 

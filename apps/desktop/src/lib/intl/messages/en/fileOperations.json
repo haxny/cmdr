@@ -1044,6 +1044,34 @@
     "screenshot": "conflict-dialog.png"
   },
 
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Name too long for the destination",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "description": "Dialog title when a copy or move pauses because the destination (often a network drive) refused to store one item: its file name is longer than the destination allows. Nothing already exists there; the user can only skip the item (or every such item) or stop. Heads the same two dialogs as the 'File already exists' title.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
+  },
+
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Name not allowed at the destination",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "description": "Dialog title when a copy or move pauses because the destination (often a network drive) refused to store one item under its name for a reason other than length: a reserved name such as CON, or a character the destination can’t hold. The user can only skip the item (or every such item) or stop. Heads the same two dialogs as the 'File already exists' title.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
+  },
+
+  "fileOperations.transferProgress.refusedNameTooLongBody": "The destination can’t store a name this long. Skip this item to carry on with the rest, then rename it and try it again.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "description": "Explanation under the file name in the 'Name too long for the destination' prompt of a copy or move. The buttons below it are Skip, Skip all, Cancel, and Rollback. 'This item' is a file or folder.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
+  },
+
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "The destination can’t store this name. It may be too long, be a reserved name, or use a character the destination doesn’t allow. Skip this item to carry on with the rest, then rename it and try it again.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "description": "Explanation under the file name in the 'Name not allowed at the destination' prompt of a copy or move. 'Reserved name' means names like CON or NUL that some systems keep for themselves. The buttons below it are Skip, Skip all, Cancel, and Rollback. 'This item' is a file or folder.",
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
+  },
+
   "fileOperations.transferProgress.conflictPolicyCaption": "If a file already exists: {policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "description": "Quiet one-line caption in the copy/move progress dialog, right under the 'from → to' folder names. It says what the running transfer does when a file it brings already exists at the destination. It changes mid-transfer when the person answers a clash with an 'all' button (like 'Overwrite all'). Keep it short: it sits on one line in a fixed-width dialog.",
@@ -1454,6 +1482,26 @@
       "totalText": "how many items the operation was started with, ready to drop into the sentence (for example 22)",
       "total": "the same number, used only to pick singular or plural"
     }
+  },
+
+  "fileOperations.alreadyGone.one": "“{name}” was already gone. Another app probably moved or deleted it.",
+  "@fileOperations.alreadyGone.one": {
+    "description": "Informational toast after the user deleted or moved to trash one file or folder that turned out to be gone already: another app (a sync client, a download manager, the Finder) moved or deleted it before Cmdr got to it, while the file list still showed it. Cmdr treats that as done, and the list refreshes. Nothing went wrong and nothing was lost, so it must not read as a failure or a warning. Disappears on its own after a few seconds. Never use the words “error” or “failed”.",
+    "placeholders": {
+      "name": "the file or folder’s name, for example song.m4a"
+    }
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} item was already gone. Another app probably moved or deleted it.} other {{countText} items were already gone. Another app probably moved or deleted them.}}",
+  "@fileOperations.alreadyGone.many": {
+    "description": "Informational toast after the user deleted or moved to trash several files or folders and some or all of them turned out to be gone already: another app moved or deleted them before Cmdr got to them, while the file list still showed them. Cmdr treats them as done, and the list refreshes. Nothing went wrong and nothing was lost, so it must not read as a failure or a warning. Never use the words “error” or “failed”.",
+    "placeholders": {
+      "countText": "how many items were already gone, ready to drop into the sentence (for example 1,234)",
+      "count": "the same number, used only to pick singular or plural"
+    }
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Never show this again",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "description": "Button on the “already gone” toast (fileOperations.alreadyGone.one / .many) that closes it and turns that toast off for good. The person can turn it back on in Settings > Advanced (settings.fileOperations.showAlreadyGoneToast.label). Keep it short: it sits on a small button."
   },
 
   "fileOperations.lockedSources.title": "Move locked items?",

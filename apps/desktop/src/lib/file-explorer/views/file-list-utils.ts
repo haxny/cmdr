@@ -4,6 +4,7 @@
 
 import type { FileEntry, SyncStatus } from '../types'
 import {
+  enrichPackages,
   enrichTags,
   getFileRange,
   getDirStatsBatch,
@@ -299,9 +300,13 @@ export async function fetchVisibleRange(params: FetchRangeParams): Promise<Fetch
   // Detect + fetch custom-folder icons for the visible directory rows. The
   // backend defers the kHasCustomIcon getxattr off the bulk-listing hot path, so
   // we drive it here only for the bounded set of directories on screen. Plain
-  // folders stay generic; packages already arrive as `pkg:` ids above.
+  // folders stay generic; listed packages already arrive as `pkg:` ids above.
   const visibleDirPaths = entries.filter((e) => e.isDirectory && !e.isSymlink).map((e) => e.path)
   void prefetchCustomFolderIcons(visibleDirPaths, useAppIcons)
+  // Ask macOS about the visible dotted folders the package list doesn't know; a
+  // package comes back as a `directory-diff` carrying `isPackage` and a `pkg:`
+  // icon. The backend filters the names and no-ops off the local disk.
+  if (visibleDirPaths.length > 0) void enrichPackages(listingId, visibleDirPaths).catch(() => {})
 
   // Commit rows past the newest 5,000 arrive uncounted; count the ones on screen.
   requestPendingCommitCounts(listingId, entries)

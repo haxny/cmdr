@@ -271,6 +271,7 @@ fn volume_wire_words_read_back_to_report_enums_and_unknown_ones_are_absent() {
             R::WaitingForAuthorization,
             ReportDeviceReadiness::WaitingForAuthorization,
         ),
+        (R::Connecting, ReportDeviceReadiness::Connecting),
         (
             R::Unavailable { reason: Why::Offline },
             ReportDeviceReadiness::UnavailableOffline,

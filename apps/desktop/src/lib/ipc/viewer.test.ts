@@ -56,6 +56,7 @@ const openResult: ViewerOpenResult = {
   kind: 'text',
   mediaToken: null,
   mediaDimensions: null,
+  mediaFromVolume: false,
 }
 
 describe('commands.viewerOpen', () => {

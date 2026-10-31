@@ -35,10 +35,12 @@ use super::super::transfer_driver::{
     build_pre_skip_set, drive_transfer_serial_async, emit_source_outcome,
 };
 use super::displaced_destination::DisplacedLedger;
+use super::link_carry::LinkCarry;
 use super::preflight::SourceFileFacts;
 use super::preflight::{SourceHint, scan_volume_sources, sources_in_tree_order};
+use super::refused_item::{RefusalSubject, has_no_content, skip_if_refused};
 use super::strategy::{copy_single_path, resolve_source_is_directory};
-use super::transfer_error::{PathRole, WriteFailure, map_volume_error, source_not_removed};
+use super::transfer_error::{PathRole, PathedVolumeError, WriteFailure, map_volume_error, source_not_removed};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::log_error::LogError;
 use cmdr_fs::log_private::LogPrivate;
@@ -123,6 +125,7 @@ pub async fn move_volumes_with_progress(
         WriteOperationType::Move,
         state,
         &*events,
+        &LinkCarry::default(),
     )
     .await?;
     state
@@ -397,6 +400,7 @@ pub async fn move_volumes_with_progress(
                             Err(e) => return Err(map_volume_error(&source_path.display().to_string(), PathRole::Source, e)),
                         };
                     let source_facts = SourceFileFacts::from_hint(hint);
+                    let source_size = source_facts.size;
 
                     // The driver's tally of every PRIOR source, which the leaves
                     // below add their own bytes on top of.
@@ -443,6 +447,7 @@ pub async fn move_volumes_with_progress(
                             source_row,
                         }),
                         locked: Some(&locked),
+                        links: None,
                     };
                     // This driver streams the source ITSELF, so from here until
                     // the next iteration nothing else could be stuck: the phase
@@ -501,23 +506,34 @@ pub async fn move_volumes_with_progress(
                         .await
                     {
                         Ok(b) => b,
-                        Err(e) => {
-                            // Log and report the path the walker actually failed
-                            // on, which for a directory source is an item deep
-                            // inside it, on the side that refused — ❌ never
-                            // `source_path`, the top-level item, which tells the
-                            // user nothing they can act on.
-                            log::warn!(
-                                target: "move",
-                                "move_between_volumes: copy phase failed for {} on the {:?} (under {} -> {}): {}",
-                                LogPrivate::path(&e.path),
-                                e.role,
-                                LogPrivate::path(&source_path),
-                                LogPrivate::path(&dest_item_path),
-                                LogError(&e.error)
-                            );
-                            return Err(WriteFailure::from(e).error);
+                        // A file with no bytes and no way to land as itself: one
+                        // counted skip, before the sweep, so its only copy stays.
+                        Err(e) if !source_is_dir && has_no_content(&e) => {
+                            return Ok(TransferOutcome::Skipped {
+                                bytes_accounted: source_size.unwrap_or(0),
+                            });
                         }
+                        // The destination refused this source's OWN name (a
+                        // deep one is its walker's to ask about) and nothing of
+                        // it landed. A Skip returns BEFORE the sweep, so the
+                        // source stays whole: its only copy.
+                        Err(e) if created.files.lock_ignore_poison().is_empty() => {
+                            let subject = RefusalSubject {
+                                source: &source_path,
+                                dest: &dest_item_path,
+                                source_size,
+                                source_is_directory: source_is_dir,
+                            };
+                            match skip_if_refused(&merge_ctx, &subject, e).await {
+                                Ok(()) => {
+                                    return Ok(TransferOutcome::Skipped {
+                                        bytes_accounted: source_size.unwrap_or(0),
+                                    });
+                                }
+                                Err(e) => return Err(copy_phase_failed(e, &source_path, &dest_item_path)),
+                            }
+                        }
+                        Err(e) => return Err(copy_phase_failed(e, &source_path, &dest_item_path)),
                     };
                     // Past the last byte. Set directly on the handle rather than
                     // through the task-local, whose scope ended with the copy:
@@ -541,7 +557,9 @@ pub async fn move_volumes_with_progress(
                     // constantly), an item that appeared while the folder
                     // copied, or an original saved over after the copy read it.
                     let skipped = created.skipped_source_paths();
-                    deep_skipped_files.fetch_add(skipped.len(), Ordering::Relaxed);
+                    // The FILE count, ❌ never `skipped.len()`: one skipped
+                    // folder (a refused name) is one path but every file in it.
+                    deep_skipped_files.fetch_add(created.skipped_file_count(), Ordering::Relaxed);
                     // The copy landed, so the item is done with for now; the
                     // sweep below speaks again, and its word is the last
                     // (`../../DETAILS.md` § "Per-source outcomes"). A folder
@@ -701,6 +719,7 @@ pub async fn move_volumes_with_progress(
                 metadata_left_behind: state.metadata_losses.left_behind(operation_id),
                 durability_unconfirmed: None,
                 locked_kept: locked.kept(),
+                already_gone: None,
             });
             Ok(())
         }
@@ -740,6 +759,23 @@ pub async fn move_volumes_with_progress(
             Err(WriteFailure::synthetic(err.with_new_files_kept(&staged_leftovers)))
         }
     }
+}
+
+/// A move's copy phase that failed, logged and reported at the path the walker
+/// actually failed on, which for a directory source is an item deep inside it,
+/// on the side that refused: ❌ never `source_path`, the top-level item, which
+/// tells the user nothing they can act on.
+fn copy_phase_failed(e: PathedVolumeError, source_path: &Path, dest_item_path: &Path) -> WriteOperationError {
+    log::warn!(
+        target: "move",
+        "move_between_volumes: copy phase failed for {} on the {:?} (under {} -> {}): {}",
+        LogPrivate::path(&e.path),
+        e.role,
+        LogPrivate::path(source_path),
+        LogPrivate::path(dest_item_path),
+        LogError(&e.error)
+    );
+    WriteFailure::from(e).error
 }
 
 // The move suite is split by subject: cross-volume (`tests`), same-volume

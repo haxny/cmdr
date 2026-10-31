@@ -10,7 +10,8 @@ Decision rationale. `CLAUDE.md` holds the must-knows.
 
 ## Dependencies
 
-`linux_mounts` (`/proc/mounts` parsing + fstype lookup), `dirs`, `libc` (`statvfs`, `poll`), `notify` (inotify on the
+`linux_mounts` (`/proc/mounts` parsing + fstype lookup), `dirs`, `libc` (`poll`), `cmdr_local::space::get_volume_space` (free space, re-exported as the `platform::get_volume_space`
+facade; `crates/cmdr-local/DETAILS.md` § "Local volume space"), `notify` (inotify on the
 GVFS directory), and `crate::file_system::volume::{manager::get_volume_manager, LocalPosixVolume}`.
 
 ## One command module
@@ -105,7 +106,7 @@ filter, every bind mount shows as a separate "volume" in the sidebar, cluttering
 **Decision**: a FUSE mount (`fuse`, `fuse.*`, `fuseblk`) whose options carry a `user_id=` other than this process's uid
 and no `allow_other` is another account's own, and hidden: `mounts::is_private_to_another_user`. `get_mounted_volumes`
 gives it no row, `registrable_mount_roots` keeps it out of the registry sweep, and the watcher's `real_mounts` leaves
-it out of the diff, so it never fires `volume-mounted` or `volume-unmounted`. `mount_roots` still lists it, because
+it out of the diff, so it never fires `volume-mounted` or `volume-unmounted`. `mount_rows` still lists it, because
 the index cuts its boot scan at every mount, one it can't enter included.
 
 **Why**: the twin of macOS `volumes/DETAILS.md` § "Another account's mounts", which has the report behind it (a second

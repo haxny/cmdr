@@ -46,6 +46,8 @@ export interface LayoutMetrics {
    * when there's free space.
    */
   pillChrome: number
+  /** A pill's rendered floor in pixels, `PILL_MIN_WIDTH_PX` in the app. */
+  pillMinWidth: number
 }
 
 /**
@@ -56,6 +58,9 @@ export interface LayoutMetrics {
  * collapse even when there's free space.
  */
 export const PILL_CHROME_PX = 4
+
+/** A pill's rendered floor (`.pill`'s `min-width`, WCAG 2.5.8), which one-letter folders hit. */
+export const PILL_MIN_WIDTH_PX = 24
 
 /** Gap between consecutive pills (`--spacing-xxs` ≈ 2 px on each side of the separator). */
 export const PILL_SEPARATOR_GAP_PX = 4
@@ -83,10 +88,16 @@ export function splitPath(input: string): Segment[] {
 }
 
 /** Sum of pill widths plus separators between them. */
-export function totalWidth(labels: string[], measure: (s: string) => number, chrome: number, sep: number): number {
+export function totalWidth(
+  labels: string[],
+  measure: (s: string) => number,
+  chrome: number,
+  sep: number,
+  minWidth: number,
+): number {
   let w = 0
   for (let i = 0; i < labels.length; i++) {
-    w += measure(labels[i]) + chrome
+    w += Math.max(measure(labels[i]) + chrome, minWidth)
     if (i < labels.length - 1) w += sep
   }
   return w
@@ -165,7 +176,7 @@ export function scheduleStableWidthMeasure(
  *      doesn't fit, drop the `…` and let CSS `overflow: hidden` swallow whatever's left.
  */
 export function computePathPillsLayout(segments: Segment[], metrics: LayoutMetrics): Layout {
-  const { containerWidth, measureWidth, separatorWidth, pillChrome } = metrics
+  const { containerWidth, measureWidth, separatorWidth, pillChrome, pillMinWidth } = metrics
 
   if (segments.length === 0) {
     return { leading: [], collapsed: [], trailing: [] }
@@ -178,7 +189,7 @@ export function computePathPillsLayout(segments: Segment[], metrics: LayoutMetri
 
   // Phase 1: try all segments uncollapsed.
   const allLabels = segments.map((s) => s.label)
-  if (totalWidth(allLabels, measure, pillChrome, separatorWidth) <= containerWidth) {
+  if (totalWidth(allLabels, measure, pillChrome, separatorWidth, pillMinWidth) <= containerWidth) {
     return { leading: segments, collapsed: [], trailing: [] }
   }
 
@@ -193,17 +204,17 @@ export function computePathPillsLayout(segments: Segment[], metrics: LayoutMetri
     const candidate = middle[i]
     const newTrailing = [candidate, ...trailing]
     const labels = [first.label, '…', ...newTrailing.map((s) => s.label)]
-    if (totalWidth(labels, measure, pillChrome, separatorWidth) > containerWidth) break
+    if (totalWidth(labels, measure, pillChrome, separatorWidth, pillMinWidth) > containerWidth) break
     trailing.unshift(candidate)
     collapsed.pop()
   }
 
   const finalLabels = [first.label, '…', ...trailing.map((s) => s.label)]
-  if (totalWidth(finalLabels, measure, pillChrome, separatorWidth) > containerWidth) {
+  if (totalWidth(finalLabels, measure, pillChrome, separatorWidth, pillMinWidth) > containerWidth) {
     // Even first + `…` + last doesn't fit; drop first. The `…` stays so we still
     // signal "more here".
     const labelsNoFirst = ['…', ...trailing.map((s) => s.label)]
-    if (totalWidth(labelsNoFirst, measure, pillChrome, separatorWidth) > containerWidth) {
+    if (totalWidth(labelsNoFirst, measure, pillChrome, separatorWidth, pillMinWidth) > containerWidth) {
       // Still doesn't fit. Keep only `last`; CSS overflow handles the rest.
       return { leading: [], collapsed: [first, ...collapsed], trailing }
     }

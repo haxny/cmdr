@@ -1,10 +1,11 @@
 //! What a per-file retry (`retry.rs`) must not disturb, driven through the real
 //! `copy_volumes_with_progress` pipeline.
 //!
-//! The retry itself is pinned in `volume/strategy_retry_tests.rs`. These two
-//! cover the operation-level invariants a retry sits inside, because they are the
-//! ones whose failure mode is silent: a merge that quietly loses a dest-only
-//! file, and a transfer that asks the user the same question twice.
+//! The retry itself is pinned in `volume/strategy_retry_tests.rs`. These cover
+//! the operation-level invariants a retry sits inside, because they are the ones
+//! whose failure mode is silent: a merge that quietly loses a dest-only file, a
+//! finished copy that leaves a failed attempt's temp behind, and a transfer that
+//! asks the user the same question twice.
 
 use super::tests::make_state;
 use super::*;
@@ -34,6 +35,9 @@ struct FlakyMergeDest {
     error: VolumeError,
     name: String,
     calls: AtomicUsize,
+    /// How many more `.cmdr-tmp-*` deletes to turn down, as a share does while
+    /// the failed attempt's handle is still open.
+    temp_deletes_to_refuse: AtomicUsize,
 }
 
 impl FlakyMergeDest {
@@ -44,6 +48,7 @@ impl FlakyMergeDest {
             error,
             name: name.to_owned(),
             calls: AtomicUsize::new(0),
+            temp_deletes_to_refuse: AtomicUsize::new(0),
         })
     }
 
@@ -112,6 +117,22 @@ impl Volume for FlakyMergeDest {
         self.inner.create_file(path, content)
     }
     fn delete<'a>(&'a self, path: &'a Path) -> StdPin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        let is_temp = path
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().contains(".cmdr-tmp-"));
+        let refused = is_temp
+            && self
+                .temp_deletes_to_refuse
+                .try_update(Ordering::SeqCst, Ordering::SeqCst, |left| left.checked_sub(1))
+                .is_ok();
+        if refused {
+            return Box::pin(async {
+                Err(VolumeError::IoError {
+                    message: "sharing violation".into(),
+                    raw_os_error: None,
+                })
+            });
+        }
         self.inner.delete(path)
     }
     fn rename<'a>(
@@ -276,6 +297,70 @@ async fn a_retried_merge_child_still_leaves_dest_only_files_alone() {
         Some(&b"SRC-clash"[..]),
         "the shadowed file follows the policy, exactly as without the blip"
     );
+}
+
+/// ❗ A finished copy still owes the cleanup a stopped one gets: a retried file's
+/// first temp outlives its attempt when the share turns its delete down
+/// (`StagedWrite::abandon` keeps it listed for the post-loop), and a copy whose
+/// files then all landed must not walk away from it. The sweep takes that temp
+/// and ❌ nothing else: every landed file and the dest-only file stay whole.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_finished_copy_removes_the_temp_a_retried_file_could_not_delete() {
+    let engine = TestOperations::new();
+    let (source, dest_inner) = merge_fixture().await;
+    let state = make_state(&engine);
+    let op = engine.register_state("retry-refused-temp", Arc::clone(&state));
+    let flaky = FlakyMergeDest::wrap(
+        Arc::clone(&dest_inner),
+        1,
+        VolumeError::ConnectionTimeout("send timed out".into()),
+        "fresh.txt",
+    );
+    flaky.temp_deletes_to_refuse.store(1, Ordering::SeqCst);
+    let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
+    let config = VolumeCopyConfig {
+        conflict_resolution: ConflictResolution::Overwrite,
+        progress_interval_ms: 0,
+        ..VolumeCopyConfig::default()
+    };
+
+    copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        op.id().as_str(),
+        &state,
+        Arc::clone(&source),
+        &[PathBuf::from("/album")],
+        Arc::clone(&dest),
+        Path::new("/"),
+        &config,
+    )
+    .await
+    .expect("a blip on one file must not fail the copy");
+    engine.leftover_cleanups_settled().await;
+
+    assert_eq!(flaky.write_calls(), 2, "the fixture must actually have blipped");
+    assert_eq!(
+        flaky.temp_deletes_to_refuse.load(Ordering::SeqCst),
+        0,
+        "the attempt's delete must actually have been refused"
+    );
+    let mut names: Vec<String> = dest_inner
+        .list_directory(Path::new("/album"), None)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|entry| entry.name)
+        .collect();
+    names.sort();
+    assert_eq!(names, ["clash.txt", "fresh.txt", "keep.txt"], "no temp stays behind");
+    assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
+    for (path, content) in [
+        ("/album/clash.txt", &b"SRC-clash"[..]),
+        ("/album/fresh.txt", &b"SRC-fresh"[..]),
+        ("/album/keep.txt", &b"DEST-keep"[..]),
+    ] {
+        assert_eq!(read_all(&dest_inner, path).await.as_deref(), Some(content), "{path}");
+    }
 }
 
 /// A retry must not ask the user again. Conflict resolution runs on the driver,

@@ -49,7 +49,29 @@ export function renderListingError(error: ListingError, where?: ListingErrorPlac
     retryHint: error.retryHint,
     actionKind: error.actionKind,
     listingReason: error.reason.reason,
+    linkConsent:
+      error.reason.reason === 'linkNeedsConsent'
+        ? { server: error.reason.server, target: error.reason.target }
+        : undefined,
   }
+}
+
+/**
+ * Reasons where the other side said no on purpose: a phone, a server, a share, or a
+ * storage account. Nothing in Cmdr broke and Cmdr can't change the answer, so a report
+ * would only say what the screen already does.
+ */
+const REFUSALS: ReadonlySet<ListingErrorReason['reason']> = new Set([
+  'phoneRefused',
+  'serverRefused',
+  'remotePermissionDenied',
+  'objectStoreRefused',
+  'linkNeedsConsent',
+])
+
+/** Whether the error screen offers "Send error report…". An untyped failure does: it may be a bug. */
+export function offersErrorReport(reason: ListingErrorReason['reason'] | null | undefined): boolean {
+  return reason == null || !REFUSALS.has(reason)
 }
 
 /** Picks the base message: the git factory for `git`, else the listing factory. */

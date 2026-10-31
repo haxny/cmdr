@@ -94,6 +94,27 @@ fn a_volume_never_connected_is_not_a_transport_fault() {
     assert_eq!(VolumeError::NotConnected("/smb/nas".into()).transport_fault(), None);
 }
 
+/// A dead link's other server isn't this volume's outage: its own connection is
+/// fine, so waiting for it to come back would wait for nothing.
+#[test]
+fn a_dead_link_target_is_not_a_transport_fault() {
+    assert_eq!(
+        VolumeError::LinkTargetUnreachable("/smb/nas/data".into()).transport_fault(),
+        None
+    );
+}
+
+/// A link nobody allowed isn't an outage either: only a person's yes changes it.
+#[test]
+fn a_link_without_consent_is_not_a_transport_fault() {
+    let err = VolumeError::LinkNeedsConsent(Box::new(crate::volume::LinkSignIn {
+        path: "/smb/nas/data".into(),
+        server: "nas".into(),
+        target: "fs01".into(),
+    }));
+    assert_eq!(err.transport_fault(), None);
+}
+
 /// Refusals and facts about the data: asking again fails the same way.
 #[test]
 fn refusals_and_data_facts_are_not_transport_faults() {

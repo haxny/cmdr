@@ -546,8 +546,9 @@ pub enum AiEffortLevel {
 }
 
 /// The Effort picker's menu for one model. The UI stores the pick in `ai.reasoningEfforts` as
-/// `"recommended"`, `"off"`, or a level's camelCase name; the backend maps a pick the model
-/// can't take to the nearest one it can, so this menu is a courtesy, never the guard.
+/// `"recommended"` or a level's camelCase name; the backend maps a pick the model can't take to
+/// the nearest one it can, so this menu is a courtesy, never the guard. There's no Off: thinking
+/// stays on for users, and a stored `"off"` from an older build reads as Recommended.
 #[derive(Debug, Clone, serde::Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AiEffortOptions {
@@ -555,7 +556,6 @@ pub struct AiEffortOptions {
     /// picker then offers Recommended alone).
     pub reasons: Option<bool>,
     pub levels: Vec<AiEffortLevel>,
-    pub can_turn_off: bool,
     /// What Recommended amounts to, when anything knows; `None` while the provider decides
     /// per request.
     pub recommended: Option<AiEffortLevel>,
@@ -607,7 +607,6 @@ fn effort_view(
     AiEffortOptions {
         reasons: options.reasons,
         levels: options.levels.into_iter().map(level).collect(),
-        can_turn_off: options.can_turn_off,
         recommended: options.recommended.map(level),
         source: options.source.map(|source| match source {
             KnowledgeSource::Provider => AiModelLimitsSource::Provider,

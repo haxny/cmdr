@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "Deze telefoon houdt deze map privé",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android reserveert deze map voor het systeem en zijn apps, dus Cmdr kan hem niet openen. Er is niets mis met je telefoon of de verbinding.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "Je foto's, downloads en andere bestanden staan in de gedeelde opslag van de telefoon, dus probeer daar een map.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "De server opent deze map niet",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "Deze map staat op een server, en het account waarmee je verbinding hebt gemaakt heeft geen bevoegdheid om de map te openen. De server beslist daarover, dus geen enkele instelling op deze computer verandert dat.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Dit kun je proberen:\n- Controleer de bevoegdheden van de map op de server\n- Sommige mappen horen bij het systeemaccount van de server zelf en blijven voor iedereen anders gesloten\n- Maak verbinding met een account dat toegang heeft",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "Bestaat al",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -562,6 +586,18 @@
   "errors.listing.notConnected.suggestion": "Dit kun je proberen:\n- Open de telefoon of server via de volumekiezer om er verbinding mee te maken\n- Als het een telefoon is, ontgrendel die dan en accepteer elke melding die verschijnt\n- Navigeer hier opnieuw heen zodra de verbinding er is",
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
+  },
+  "errors.listing.linkTargetUnreachable.title": "De server van deze map is onbereikbaar",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` ligt achter een link naar een andere server, en Cmdr kan die server nu niet bereiken. De rest van deze netwerkshare is in orde, en er is niets verwijderd.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Dit kun je proberen:\n- Controleer of de andere server draait en of je netwerk die kan bereiken\n- Navigeer hier opnieuw heen om het nog eens te proberen",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
   },
   "errors.listing.deviceReconnecting.title": "Opnieuw verbinden met het apparaat",
   "@errors.listing.deviceReconnecting.title": {
@@ -1729,6 +1765,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Android reserveert deze locatie voor het systeem en zijn apps. Je foto's, downloads en andere bestanden staan in de gedeelde opslag van de telefoon, dus probeer daar een map.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "De server heeft dit geweigerd voor het account waarmee je verbinding hebt gemaakt. Controleer de bevoegdheden van de map op de server, of maak verbinding met een account dat toegang heeft.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "De aanbieder heeft geweigerd, en dat kan twee dingen betekenen. Controleer de bevoegdheden van de toegangssleutel, of kijk in de console van je aanbieder of er een gebruikslimiet of een factureringsmelding is.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2125,6 +2169,10 @@
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
   },
+  "errors.volume.linkTargetUnreachable": "Dit ligt achter een link naar een andere server, en Cmdr kan die server nu niet bereiken.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
+  },
   "errors.volume.deviceSessionReset": "Het apparaat heeft zijn verbinding opnieuw gestart. Geef het een paar seconden en probeer het opnieuw.",
   "@errors.volume.deviceSessionReset": {
     "sourceHash": "e5ad77d"
@@ -2261,29 +2309,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "Iets heeft daar nog bestanden open. Sluit open bestanden, stop geopende apps en probeer het daarna opnieuw.",
+  "errors.eject.unmountRefused": "Daar is nog iets in gebruik. Sluit open bestanden, stop geopende apps en probeer het daarna opnieuw.",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} heeft daar nog bestanden open. Sluit ze en probeer het daarna opnieuw.",
+  "errors.eject.unmountRefusedByApp": "{app} gebruikt daar nog iets. Sluit de app en probeer het daarna opnieuw.",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} hebben daar nog bestanden open. Sluit ze en probeer het daarna opnieuw.",
+  "errors.eject.unmountRefusedByApps": "{apps} gebruiken daar nog iets. Sluit die apps en probeer het daarna opnieuw.",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "andere apps",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "Een proces met de naam {process} heeft daar nog bestanden open. (Cmdr heeft geen appnaam, alleen de procesnaam.)",
+  "errors.eject.unmountRefusedByProcess": "Een proces met de naam {process} gebruikt daar nog iets. (Cmdr heeft geen appnaam, alleen de procesnaam.)",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "{countText} processen met de namen {processes} hebben daar nog bestanden open. (Cmdr heeft geen appnamen, alleen de procesnamen.)",
+  "errors.eject.unmountRefusedByProcesses": "{countText} processen met de namen {processes} gebruiken daar nog iets. (Cmdr heeft geen appnamen, alleen de procesnamen.)",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "nog andere",
   "@errors.eject.otherProcesses": {
@@ -2293,13 +2341,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "macOS heeft daar nog bestanden open. Wacht een minuutje en probeer het daarna opnieuw.",
+  "errors.eject.unmountRefusedBySystem": "macOS gebruikt daar nog iets. Wacht een minuutje en probeer het daarna opnieuw.",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "Cmdr zelf heeft daar nog bestanden open. Wacht even en probeer het opnieuw, of verstuur een rapport als het blijft gebeuren.",
+  "errors.eject.unmountRefusedByCmdr": "Cmdr zelf gebruikt daar nog iets. Wacht even en probeer het opnieuw, of verstuur een rapport als het blijft gebeuren.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "De schijf heeft nog niet gereageerd, dus hij wordt misschien toch nog uitgeworpen.",
   "@errors.eject.timedOut": {
@@ -2488,5 +2536,33 @@
   "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Verplaats of kopieer ze onder hun eigen namen en wijzig de namen daarna ter plekke.",
   "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
     "sourceHash": "b1e881c"
+  },
+  "errors.listing.linkNeedsConsent.title": "Deze map staat op een andere server",
+  "@errors.listing.linkNeedsConsent.title": {
+    "sourceHash": "c37d453"
+  },
+  "errors.listing.linkNeedsConsent.explanation": "`{path}` is een link op **{server}** die naar **{target}** leidt. Cmdr heeft daar niet ingelogd, dus {target} heeft niets van je ontvangen.",
+  "@errors.listing.linkNeedsConsent.explanation": {
+    "sourceHash": "91b0171"
+  },
+  "errors.listing.linkNeedsConsent.suggestion": "Om deze map te openen, moet Cmdr bij {target} inloggen met het account dat je voor {server} gebruikt. Bekijk dit als je {target} vertrouwt. De rest van deze gedeelde map werkt zoals gewoonlijk.",
+  "@errors.listing.linkNeedsConsent.suggestion": {
+    "sourceHash": "991cb6c"
+  },
+  "errors.volume.linkNeedsConsent": "Dit ligt achter een link naar een andere server waar Cmdr nog niet mag inloggen. Open de map in een paneel om te beslissen.",
+  "@errors.volume.linkNeedsConsent": {
+    "sourceHash": "79ff9fe"
+  },
+  "errors.write.linkNeedsConsent.title": "Dit bestand staat op een andere server",
+  "@errors.write.linkNeedsConsent.title": {
+    "sourceHash": "ff31c7f"
+  },
+  "errors.write.linkNeedsConsent.message": "Een link op {server} leidt naar {target}, en Cmdr mag daar nog niet inloggen, dus er is niets naar die server gegaan.",
+  "@errors.write.linkNeedsConsent.message": {
+    "sourceHash": "7893ce9"
+  },
+  "errors.write.linkNeedsConsent.suggestion": "Open de map in een paneel en sta het inloggen toe als je die server vertrouwt. Probeer het daarna opnieuw.",
+  "@errors.write.linkNeedsConsent.suggestion": {
+    "sourceHash": "cc25854"
   }
 }

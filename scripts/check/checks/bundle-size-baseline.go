@@ -14,10 +14,11 @@ import (
 // `desktop-bundle-size`): walk a built output directory, total it, compare
 // against a committed baseline, and ratchet that baseline DOWN on a local run.
 //
-// Warn-only by design, and the ratchet is one-directional: a bundle may shrink
-// freely, and growth past the budget is a warning nobody can silence by editing
-// a number (raising a baseline means deleting it and regenerating, with David's
-// OK, per `scripts/check/checks/DETAILS.md` § Allowlist consent).
+// The ratchet is one-directional: a bundle may shrink freely, and growth past
+// the budget is a warning (or, for a `failOnGrowth` lane, a failure) nobody can
+// silence by editing a number. Raising a baseline means deleting it and
+// regenerating, which is free (`scripts/check/checks/DETAILS.md` § Allowlist
+// consent): the signal is the moment of growth, not the number.
 //
 // One implementation rather than one per app: the two lanes differ only in which
 // directory they measure, what produces it, and what the message tells you to
@@ -69,6 +70,10 @@ type bundleSizeSpec struct {
 	// `name.hash.ext` shape; a lane whose emitter names files differently
 	// supplies its own.
 	normalize func(relPath string) string
+	// failOnGrowth turns growth past the budget (and, in CI, a missing baseline)
+	// from a warning into a failure. The desktop lane sets it: it gates every
+	// release, so shipping a bigger bundle takes a deliberate baseline refresh.
+	failOnGrowth bool
 }
 
 // contentHashRE matches the content-hash segment Astro/Vite inject into emitted
@@ -177,7 +182,7 @@ func hasBuildOutput(dir string) bool {
 }
 
 // runBundleSizeCheck is the whole lane: produce or find the output, scan it,
-// and compare against the baseline. Warn-only; it never fails the suite.
+// and compare against the baseline. Growth warns, or fails a `failOnGrowth` lane.
 func runBundleSizeCheck(ctx *CheckContext, spec bundleSizeSpec) (CheckResult, error) {
 	if spec.prepare != nil {
 		if err := spec.prepare(ctx); err != nil {
@@ -212,13 +217,16 @@ func runBundleSizeCheck(ctx *CheckContext, spec bundleSizeSpec) (CheckResult, er
 
 	switch {
 	case scan.totalBytes > warnCeiling:
-		msg := fmt.Sprintf("%s grew %+.1f%% over baseline: %s vs %s (warn-only)\nLargest assets:",
+		msg := fmt.Sprintf("%s grew %+.1f%% over baseline: %s vs %s\nLargest assets:",
 			spec.label, growthPct, formatBundleBytes(scan.totalBytes), formatBundleBytes(baseline.TotalBytes))
 		for _, line := range describeTopAssets(scan.assets, baseline.TopAssets) {
 			msg += "\n  - " + line
 		}
 		msg += fmt.Sprintf("\nIf the growth is intended, refresh the baseline: delete %s and run `%s`. No need to ask first.",
 			spec.baselineRel, spec.refreshCmd)
+		if spec.failOnGrowth {
+			return CheckResult{}, fmt.Errorf("%s", msg)
+		}
 		return CheckResult{Code: ResultWarning, Message: msg, Total: -1, Issues: -1, Changes: -1}, nil
 
 	case scan.totalBytes < ratchetFloor && ctx.CI:
@@ -246,6 +254,9 @@ func createBundleBaseline(ctx *CheckContext, spec bundleSizeSpec, scan bundleSca
 	if ctx.CI {
 		msg := fmt.Sprintf("no committed baseline (%s); run `%s` locally after a build to create it",
 			spec.baselineRel, spec.refreshCmd)
+		if spec.failOnGrowth {
+			return CheckResult{}, fmt.Errorf("%s", msg)
+		}
 		return CheckResult{Code: ResultWarning, Message: msg, Total: -1, Issues: -1, Changes: -1}, nil
 	}
 	if err := writeBundleBaseline(ctx, spec, scan, baselinePath); err != nil {

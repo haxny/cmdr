@@ -5,6 +5,7 @@
 
 import type { TransferOperationType } from '#lib/file-explorer/types.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
+import type { WriteConflictEvent } from '#lib/ipc/bindings.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import { isPathOnVolume, isPlainFilesystemPath, parentOf, toCanonical } from '#lib/path/canonical.js'
 import { suggestCompressArchiveName } from './transfer-compress-name'
@@ -36,6 +37,23 @@ export function generateTitle(operationType: TransferOperationType, files: numbe
  */
 export function conflictDialogWidthStyle(floorPx: number): string {
   return `width: max-content; min-width: ${String(floorPx)}px; max-width: calc(100vw - 2 * var(--spacing-xl))`
+}
+
+/**
+ * The title over a conflict prompt: a clash heads as a name that exists, a name
+ * the destination refused (`refusedName`, `refused_name.rs`) as what it refused.
+ * Shared by the progress dialog and the standalone prompt, which ask the same
+ * question.
+ */
+export function conflictTitle(event: Pick<WriteConflictEvent, 'refusedName'>): string {
+  switch (event.refusedName) {
+    case 'tooLong':
+      return tString('fileOperations.transferProgress.titleRefusedNameTooLong')
+    case 'notAllowed':
+      return tString('fileOperations.transferProgress.titleRefusedNameNotAllowed')
+    default:
+      return tString('fileOperations.transferProgress.titleConflict')
+  }
 }
 
 /**

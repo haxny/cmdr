@@ -23,6 +23,46 @@ afterAll(() => {
   _setLocaleForTests(null)
 })
 
+describe('the Mobile group', () => {
+  const waiting = { kind: 'waiting_for_authorization' } as const
+
+  function mobileRow(overrides: Partial<VolumeInfo>): VolumeInfo {
+    return {
+      id: 'mtp-46061fdas000a4-abc:65537',
+      name: 'Pixel 9 Pro XL',
+      path: 'mtp://mtp-46061fdas000a4-abc/65537',
+      category: 'mobile_device',
+      isEjectable: true,
+      fsType: 'mtp',
+      deviceReadiness: { kind: 'ready' },
+      ...overrides,
+    }
+  }
+
+  const adbRow = (overrides: Partial<VolumeInfo>): VolumeInfo =>
+    mobileRow({ id: 'adb-46061fdas000a4-def', path: 'adb://46061FDAS000A4', fsType: 'adb', ...overrides })
+
+  function mobileIds(vols: VolumeInfo[]): string[] {
+    return (groupByCategory(vols).find((g) => g.category === 'mobile_device')?.items ?? []).map((v) => v.id)
+  }
+
+  it('shows a phone once while its ADB half still owes the Allow tap', () => {
+    const mtp = mobileRow({})
+    expect(mobileIds([mtp, adbRow({ deviceReadiness: waiting })])).toEqual([mtp.id])
+  })
+
+  it('shows both halves once both can be opened: one row per protocol', () => {
+    const mtp = mobileRow({})
+    const adb = adbRow({})
+    expect(mobileIds([mtp, adb])).toEqual([mtp.id, adb.id])
+  })
+
+  it('keeps the waiting row when it is the only way to see the phone', () => {
+    const adb = adbRow({ deviceReadiness: waiting })
+    expect(mobileIds([adb])).toEqual([adb.id])
+  })
+})
+
 function serverRow(overrides: Partial<VolumeInfo>): VolumeInfo {
   return {
     id: 'sftp-nas-22-ada',

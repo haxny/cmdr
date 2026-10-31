@@ -8,7 +8,7 @@ use log::warn;
 
 use super::SmbVolume;
 use super::mapping::attributes_of;
-use super::state::{SessionGeneration, ends_the_session};
+use super::state::{RanOn, ends_the_session};
 
 /// What a copy stamps on what it wrote, in one `FILE_BASIC_INFORMATION`: the
 /// source's `LastWriteTime` and `CreationTime`, and `HIDDEN` when the source is
@@ -51,7 +51,7 @@ impl SmbVolume {
         writer: &mut smb2::client::stream::FileWriter,
         times: smb2::FileTimes,
         smb_path: &str,
-        ran_on: SessionGeneration,
+        ran_on: impl Into<RanOn>,
     ) -> Result<bool, VolumeError> {
         let result = writer.set_times(times).await;
         self.stamp_taken(smb_path, ran_on, result)
@@ -71,7 +71,7 @@ impl SmbVolume {
     pub(super) fn stamp_taken(
         &self,
         smb_path: &str,
-        ran_on: SessionGeneration,
+        ran_on: impl Into<RanOn>,
         result: Result<(), smb2::Error>,
     ) -> Result<bool, VolumeError> {
         match result {

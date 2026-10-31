@@ -12,6 +12,7 @@ import { tString } from '#lib/intl/messages.svelte.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type { GitCountKind, GitEntryMeta, ResticSnapshotMeta } from '#lib/ipc/bindings.js'
 import { formatUnitList } from '#lib/intl/list-format.js'
+import { fileExtension, nameKindOf, nameWithoutExtension, type NameKind } from '#lib/utils/file-extension.js'
 
 /** Layout constants for Full mode */
 export const FULL_LIST_ROW_HEIGHT = 20
@@ -31,24 +32,19 @@ export function getVisibleItemsCount(containerHeight: number, rowHeight: number 
 // ============================================================================
 
 /**
- * Extracts the display extension from a filename (no dot). Matches Rust sorting logic:
- * dotfiles without a secondary dot → empty, no extension → empty, otherwise last segment.
+ * The extension the Ext column shows (no dot): the product's one rule,
+ * `#lib/utils/file-extension`, which Rust's extension sort also follows.
  */
-export function getDisplayExtension(name: string, isDirectory: boolean): string {
-  if (isDirectory) return ''
-  if (name.startsWith('.') && !name.slice(1).includes('.')) return ''
-  const dotPos = name.lastIndexOf('.')
-  if (dotPos <= 0 || dotPos === name.length - 1) return ''
-  return name.slice(dotPos + 1)
+export function getDisplayExtension(name: string, kind: NameKind): string {
+  return fileExtension(name, kind)
 }
 
 /**
  * Returns the filename with the display extension (and its separating dot) stripped,
  * so the name and extension columns don't duplicate the extension.
  */
-export function getDisplayName(name: string, isDirectory: boolean): string {
-  const ext = getDisplayExtension(name, isDirectory)
-  return ext ? name.slice(0, -(ext.length + 1)) : name
+export function getDisplayName(name: string, kind: NameKind): string {
+  return nameWithoutExtension(name, kind)
 }
 
 /**
@@ -61,8 +57,8 @@ export function getDisplayName(name: string, isDirectory: boolean): string {
  * The renderer (`FullList.svelte`) and the measurer (`measure-column-widths.ts`)
  * both call this so the on-screen name and any width math stay in lockstep.
  */
-export function getNameColumnText(name: string, isDirectory: boolean, showExtensionInName: boolean): string {
-  return showExtensionInName ? name : getDisplayName(name, isDirectory)
+export function getNameColumnText(name: string, kind: NameKind, showExtensionInName: boolean): string {
+  return showExtensionInName ? name : getDisplayName(name, kind)
 }
 
 /**
@@ -72,7 +68,7 @@ export function getNameColumnText(name: string, isDirectory: boolean, showExtens
  */
 export function extCellText(entry: FileEntry): string {
   if (entry.resticMeta != null) return entry.resticMeta.hostname
-  return getDisplayExtension(entry.name, entry.isDirectory)
+  return getDisplayExtension(entry.name, nameKindOf(entry))
 }
 
 /**

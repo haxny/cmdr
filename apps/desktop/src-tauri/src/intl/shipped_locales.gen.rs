@@ -111,6 +111,13 @@ pub(crate) const SHIPPED_LOCALES: &[ShippedLocale] = &[
         covers: &[],
     },
     ShippedLocale {
+        tag: "uk",
+        script: "cyrl",
+        default_script: "cyrl",
+        region_scripts: &[],
+        covers: &[],
+    },
+    ShippedLocale {
         tag: "vi",
         script: "latn",
         default_script: "latn",

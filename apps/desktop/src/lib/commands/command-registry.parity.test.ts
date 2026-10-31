@@ -129,6 +129,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'pane.rightVolumeChooser': 'Open right volume switcher',
   'pane.copyPathLeftToRight': 'Copy path from left to right pane',
   'pane.copyPathRightToLeft': 'Copy path from right to left pane',
+  'pane.quickFilter': 'Quick filter',
   'pane.refresh': 'Refresh pane',
   'pane.moveDividerLeft': 'Move pane divider left',
   'pane.moveDividerRight': 'Move pane divider right',
@@ -267,7 +268,7 @@ const EXPECTED_DESCRIPTIONS: Record<string, string | undefined> = {
   'view.calculateFolderSizes':
     'Shows the size of every folder in this pane that doesn’t have one yet. Esc stops the calculation.',
   'file.multiRename':
-    'Renames the selected files (or the whole folder) with a name mask, counter, and search & replace',
+    'Renames the selected files (or the file under the cursor) with a name mask, counter, and search & replace',
   'file.editTags': 'Opens the selected audio files’ tags in their own window',
   'app.checkForUpdates': 'Check whether a newer version of Cmdr is available, and download it if so',
   'app.toggleCliCommand': 'Type cmdr and a path in a terminal to open that file or folder in Cmdr',
@@ -292,6 +293,7 @@ const EXPECTED_DESCRIPTIONS: Record<string, string | undefined> = {
   'favorites.open': 'Open the favorites menu on the focused pane, and press a number to jump to that favorite.',
   'downloads.goToLatest': 'Open ~/Downloads and select the most recent file.',
   'pane.clone': 'Open this pane’s folder in the other pane too.',
+  'pane.quickFilter': 'Opens the filter badge on the current pattern. Press again to switch between Filter and Jump',
   'pane.focusControls':
     'Reach the focused pane’s tabs, location bar, and sort buttons from the keyboard. Arrow keys move between them, and Escape takes you back to the files.',
   'app.focusNotifications':

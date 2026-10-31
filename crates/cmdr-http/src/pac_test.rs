@@ -53,7 +53,7 @@ fn via_proxy() -> Vec<Entry> {
 #[test]
 fn a_pac_file_routes_each_host_its_own_way() {
     let pac = pac_server(Some(SCRIPT));
-    let evaluator = MacPac::new(TIMEOUT);
+    let evaluator = MacPac::new(ANSWER_BUDGET);
     let source = PacSource::Url(pac);
     assert_eq!(
         evaluator.evaluate(&source, &url("https://example.com")),
@@ -67,7 +67,7 @@ fn a_pac_file_routes_each_host_its_own_way() {
 
 #[test]
 fn an_inline_pac_script_runs_too() {
-    let evaluator = MacPac::new(TIMEOUT);
+    let evaluator = MacPac::new(ANSWER_BUDGET);
     let source = PacSource::Script(SCRIPT.into());
     assert_eq!(
         evaluator.evaluate(&source, &url("http://example.com")),
@@ -78,7 +78,7 @@ fn an_inline_pac_script_runs_too() {
 /// What CFNetwork makes of a PAC that answers `answer` for every URL.
 fn pac_answer(answer: &str) -> Option<Vec<Entry>> {
     let script = format!(r#"function FindProxyForURL(url, host) {{ return "{answer}"; }}"#);
-    MacPac::new(TIMEOUT).evaluate(&PacSource::Script(script), &url("https://example.com"))
+    MacPac::new(ANSWER_BUDGET).evaluate(&PacSource::Script(script), &url("https://example.com"))
 }
 
 fn socks_test(port: u16) -> Entry {
@@ -111,7 +111,7 @@ fn cfnetwork_drops_the_versioned_socks_keywords() {
 #[test]
 fn an_answer_is_cached_per_host() {
     let pac = pac_server(Some(SCRIPT));
-    let evaluator = MacPac::new(TIMEOUT);
+    let evaluator = MacPac::new(ANSWER_BUDGET);
     let source = PacSource::Url(pac);
     // Judged by the evaluations run, ❌ never by the server's hits: one evaluation can take
     // CFNetwork more than one fetch (three, on macOS 27.0), and a late one can land after the

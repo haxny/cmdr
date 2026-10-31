@@ -154,6 +154,14 @@ fn reach_of_row(row: &LocationInfo, on_disk: OnDisk) -> FavoriteReach {
         }
         // The pane's device view waits for the tap.
         Some(DeviceReadiness::WaitingForAuthorization) => return FavoriteReach::Connects,
+        // No pane can stand on it. A favorite names a storage, so its row isn't this one
+        // anyway (`mtp/volume_wiring.rs::waiting_entry`).
+        Some(DeviceReadiness::Connecting) => {
+            return FavoriteReach::Unplugged {
+                device: UnpluggedKind::Phone,
+                reason: None,
+            };
+        }
         Some(DeviceReadiness::Ready) | None => {}
     }
     // A device listed but not registered (an ADB phone nobody dialed yet): the pane dials it.

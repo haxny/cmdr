@@ -299,9 +299,9 @@
   "@onboarding.stepAi.local.note": {
     "sourceHash": "af89d60"
   },
-  "onboarding.stepAi.localTooltip": "Для локальной LLM нужен Mac с чипом Apple. Облачный ИИ работает и на Intel.",
+  "onboarding.stepAi.localTooltip": "Для локальной LLM нужен Mac с чипом Apple и macOS 14 или новее. Облачный ИИ работает на любом Mac.",
   "@onboarding.stepAi.localTooltip": {
-    "sourceHash": "75c6d48"
+    "sourceHash": "f95b4a9"
   },
   "onboarding.stepAi.missingKeyWarning": "Вы включили ИИ, но не ввели API-ключ. ИИ не будет работать, и появится предупреждение. Исправьте это выше.\n\n<strong>Нажмите «{nextLabel}» снова, чтобы пропустить предупреждение и продолжить.</strong>",
   "@onboarding.stepAi.missingKeyWarning": {

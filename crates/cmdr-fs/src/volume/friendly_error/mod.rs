@@ -251,6 +251,16 @@ pub enum ListingErrorReason {
         /// The path the failure was about.
         path: String,
     },
+    /// A phone (ADB, MTP) refused a folder: Android keeps it for the system and its
+    /// apps. Nothing on this Mac, and no retry, changes the answer. The pane shows
+    /// the path already, and a phone's app path carries its serial, so the words
+    /// don't take it.
+    PhoneRefused,
+    /// A connected server (SFTP, WebDAV, NFS) refused a folder for the account or
+    /// identity it was connected with. Unlike [`Self::RemotePermissionDenied`],
+    /// nothing is mounted, so there's no share to eject and mount again. The pane
+    /// shows the path already, and its app path is all scheme and account.
+    ServerRefused,
     /// `VolumeError::AlreadyExists`: the destination is taken.
     AlreadyExists {
         /// The path the failure was about.
@@ -272,6 +282,22 @@ pub enum ListingErrorReason {
     NotConnected {
         /// The path the failure was about.
         path: String,
+    },
+    /// `VolumeError::LinkTargetUnreachable`: the folder sits behind a link to another server, and
+    /// that server is out of reach. The share itself is fine.
+    LinkTargetUnreachable {
+        /// The path the failure was about.
+        path: String,
+    },
+    /// `VolumeError::LinkNeedsConsent`: the folder sits behind a link to another server, and nobody
+    /// has allowed signing in there.
+    LinkNeedsConsent {
+        /// The path the failure was about.
+        path: String,
+        /// The server the share is on.
+        server: String,
+        /// The other server the link leads to.
+        target: String,
     },
     /// The volume or device is read-only.
     ReadOnly,

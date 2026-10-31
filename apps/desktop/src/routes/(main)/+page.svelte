@@ -19,6 +19,7 @@
     import MultiRenameDialog from '#lib/multi-rename/MultiRenameDialog.svelte'
     import type { MultiRenameRun } from '#lib/multi-rename/last-run.svelte.js'
     import { closeMultiRename as endMultiRenameSession, openMultiRename as openMultiRenameSession } from '#lib/tauri-commands/index.js'
+    import { openSettled } from '#lib/multi-rename/open-settled.js'
     import type { MultiRenameOpened, MultiRenameStarted } from '#lib/tauri-commands/index.js'
     import GoToPathDialog from '#lib/go-to-path/GoToPathDialog.svelte'
     import WhatsNewDialog from '#lib/whats-new/WhatsNewDialog.svelte'
@@ -152,8 +153,6 @@
      */
     let showSelectionDialog = $state<'add' | 'remove' | null>(null)
     let multiRenameSession = $state.raw<MultiRenameOpened | null>(null)
-    /** The session took the whole folder because nothing was selected. */
-    let multiRenameNothingSelected = $state(false)
     let openingMultiRename = false
     const multiRenameLog = getAppLogger('multiRename')
     let selectionDialogSnapshot = $state.raw<{
@@ -577,26 +576,29 @@
 
     /**
      * Opens the Multi-Rename Tool on the focused pane (⌃M): the backend resolves the
-     * selection into its files once, here. A read-only pane (an archive, the `.git`
-     * portal) refuses with F2's alert before any session opens. A pane with no real
-     * listing has nothing to rename; a selection the listing moved past is refused,
-     * as F5 refuses it.
+     * selection, or the file under the cursor, into its files once, here. A read-only
+     * pane (an archive, the `.git` portal) refuses with F2's alert before any session
+     * opens. `resolveMultiRenameTarget` answers `null` when there's nothing to open,
+     * and says why; rows the listing moved past wait to settle, as F5 waits.
      */
     async function openMultiRename(): Promise<void> {
         if (multiRenameSession || openingMultiRename || !explorerRef) return
         if (explorerRef.refuseMultiRename()) return
-        const target = explorerRef.getFocusedPaneRenameTarget()
-        if (!target) return
+        const explorer = explorerRef
         openingMultiRename = true
         try {
-            const opened = await openMultiRenameSession(
-                target.listingId,
-                getShowHiddenFiles(),
-                target.selectedIndices,
-                target.expectedSequence,
+            const opened = await openSettled(
+                () => explorer.resolveMultiRenameTarget(),
+                (target) =>
+                    openMultiRenameSession(
+                        target.listingId,
+                        getShowHiddenFiles(),
+                        target.selectedIndices,
+                        target.expectedSequence,
+                    ),
             )
+            if (!opened) return
             if (opened.ok) {
-                multiRenameNothingSelected = target.nothingSelected
                 multiRenameSession = opened.value
                 return
             }
@@ -857,7 +859,6 @@
             {#if multiRenameSession}
                 <MultiRenameDialog
                     session={multiRenameSession}
-                    nothingSelected={multiRenameNothingSelected}
                     onApplied={handleMultiRenameApplied}
                     onUndoStarted={handleMultiRenameUndoStarted}
                     onClose={closeMultiRename}

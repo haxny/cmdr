@@ -176,6 +176,13 @@ export interface QueryFilterState {
   setLastAiPrompt(value: string | null): void
   getLastAiCaveat(): string | null
   setLastAiCaveat(value: string | null): void
+  /**
+   * The chips now mirror the translation of `lastAiPrompt`, so the strip may list what the
+   * agent did. False from the moment an AI run starts until its answer lands (and after a
+   * failed one): until then the chips still hold the PREVIOUS query's state (#762).
+   */
+  getAiTrailReady(): boolean
+  setAiTrailReady(value: boolean): void
 
   // Results + cursor
   getResults(): SearchResultEntry[]
@@ -263,6 +270,7 @@ export function createQueryFilterState(options: CreateQueryFilterStateOptions = 
 
   let lastAiPrompt = $state<string | null>(null)
   let lastAiCaveat = $state<string | null>(null)
+  let aiTrailReady = $state(false)
 
   const handTyped = $state<{ ai: string; filename: string; regex: string }>({
     ai: '',
@@ -525,6 +533,10 @@ export function createQueryFilterState(options: CreateQueryFilterStateOptions = 
     setLastAiCaveat: (v) => {
       lastAiCaveat = v
     },
+    getAiTrailReady: () => aiTrailReady,
+    setAiTrailReady: (v) => {
+      aiTrailReady = v
+    },
 
     getResults: () => results,
     setResults: (v) => {
@@ -613,6 +625,7 @@ export function createQueryFilterState(options: CreateQueryFilterStateOptions = 
       isSearching = false
       lastAiPrompt = null
       lastAiCaveat = null
+      aiTrailReady = false
       handTyped.ai = ''
       handTyped.filename = ''
       handTyped.regex = ''

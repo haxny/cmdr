@@ -553,7 +553,7 @@ describe('SearchFilterChips: scope popover behavior', () => {
     })
   })
 
-  it('R3 U3: Size Custom cell holds the input inline (not below) so one click focuses it', async () => {
+  it('R3 U3: Size Custom cell turns into the field in place (not below) and one click focuses it', async () => {
     clearSearchState()
     setSizeFilter('gte')
     setSizeValue('')
@@ -568,9 +568,13 @@ describe('SearchFilterChips: scope popover behavior', () => {
     expect(customCell).not.toBeUndefined()
     customCell?.click()
     await tick()
-    // The input now lives INSIDE the same cell, not as a sibling below it.
-    const innerInput = customCell?.querySelector<HTMLInputElement>('input[type="number"]')
+    // The field now sits in the cell's slot, in a label, never inside a button.
+    const innerInput = document.querySelector<HTMLInputElement>(
+      '.list-col:nth-child(2) .list-cell-custom input[type="number"]',
+    )
     expect(innerInput).not.toBeNull()
+    expect(innerInput?.closest('button')).toBeNull()
+    expect(document.activeElement).toBe(innerInput)
     cleanup()
     document.querySelectorAll('.ui-popover').forEach((el) => {
       el.remove()

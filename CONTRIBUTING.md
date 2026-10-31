@@ -20,6 +20,24 @@ is managed separately by `rustup`. This version is tested with Rust 1.92.0.
 `gofmt`), so CI's formatting checks stay green without an extra step. If a push finds something unformatted, it adds a
 format commit and asks you to push again.
 
+## Signing your commits (optional, appreciated)
+
+The maintainer signs every commit, so anyone can check that it came from them. Please sign yours too: it shows a
+"Verified" badge on GitHub and keeps the history checkable end to end. An unsigned PR still gets merged, so don't let
+this stop you from contributing.
+
+With an SSH key you already use for GitHub, it's three commands:
+
+```sh
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519.pub
+git config --global commit.gpgsign true
+```
+
+Then add the same public key to GitHub a second time, as a **Signing key** (Settings > SSH and GPG keys > New SSH key >
+Key type: Signing Key). GitHub's guide covers GPG keys and the details:
+[About commit signature verification](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification).
+
 ## Dev signing certificate (macOS, optional)
 
 Cmdr stores SMB credentials in macOS Keychain. Keychain ties item access to the binary's code signature; production
@@ -43,7 +61,7 @@ Once the certificate exists, the E2E check script (`pnpm check desktop-e2e-playw
 launching. For manual E2E runs, sign after building:
 
 ```bash
-codesign --force -s "Cmdr Dev" ./target/$(rustc -vV | grep host | cut -d' ' -f2)/release/Cmdr
+codesign --force -s "Cmdr Dev" ./target/$(rustc -vV | grep host | cut -d' ' -f2)/e2e/Cmdr
 ```
 
 If you already have Cmdr Keychain items from unsigned builds, delete them so they get re-created with the correct ACL:

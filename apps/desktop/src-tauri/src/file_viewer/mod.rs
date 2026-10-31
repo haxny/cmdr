@@ -23,6 +23,7 @@ pub mod media;
 mod media_backend;
 pub mod media_protocol;
 mod media_session;
+mod media_volume;
 mod open_with_copies;
 pub(crate) mod open_with_extract;
 mod origin;
@@ -69,6 +70,8 @@ mod media_protocol_test;
 #[cfg(test)]
 mod media_session_test;
 #[cfg(test)]
+mod media_volume_test;
+#[cfg(test)]
 mod open_with_extract_test;
 #[cfg(test)]
 mod row_characterization_test;
@@ -94,6 +97,7 @@ pub use encoding::FileEncoding;
 pub use markdown_links::MarkdownLink;
 pub use markdown_session::{MarkdownRender, allow_remote_images, render_markdown_session, resolve_markdown_link};
 pub use materialize::init_materialize_dir;
+pub use media_volume::{MediaLoadStage, ViewerMediaLoad};
 pub use open_with_extract::init_open_with_extract_dir;
 pub use pending_open::{AbandonReason, PendingOpen, ViewerPullProgress, begin_pending_open, end_pending_open};
 pub use range_read::RangeEnd;
@@ -294,6 +298,12 @@ pub enum ViewerError {
     /// Deep Archive) and can't be read until someone restores it, so there's
     /// nothing to preview yet and a Retry can't help.
     ColdStorage,
+    /// The file sits behind a link to another server (a DFS link in an SMB share), and that
+    /// server is out of reach. Retry can help; nothing was deleted, so ❌ never `NotFound`.
+    LinkTargetUnreachable,
+    /// The file sits behind a link to another server (a DFS link in an SMB share), and nobody
+    /// has allowed signing in there. Opening its folder in a pane is where a person can.
+    LinkNeedsConsent,
     NotEnoughSpace {
         needed: u64,
         available: u64,
@@ -338,6 +348,8 @@ impl ErrorLogText for ViewerError {
             Self::DestinationIsReadOnly => write!(out, "Can't save into a read-only location"),
             Self::Archive { message, .. } => out.error(message),
             Self::ColdStorage => write!(out, "The file is archived and needs a restore before it can be read"),
+            Self::LinkTargetUnreachable => write!(out, "A link's other server is out of reach"),
+            Self::LinkNeedsConsent => write!(out, "A link's other server isn't allowed yet"),
             Self::NotEnoughSpace { needed, available } => {
                 write!(
                     out,

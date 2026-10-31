@@ -85,6 +85,27 @@ impl MountIdentity {
     }
 }
 
+/// One row of the host's mount table, as [`VolumeProvider::mount_points`] reports it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MountPoint {
+    /// Where it's mounted, as the table spells it.
+    pub path: PathBuf,
+    /// What's mounted there (`/dev/sda2`, `server:/export`, `//server/share`), when
+    /// the table names it.
+    pub source: Option<String>,
+    /// The filesystem type (`ext4`, `nfs4`, `cifs`, `apfs`), when the table names it.
+    pub fs_type: Option<String>,
+}
+
+impl MountPoint {
+    /// Whether this is a KNOWN local disk, by the one shared allowlist
+    /// ([`cmdr_fs::filesystem_kind::mount_is_local_disk`]): anything it doesn't
+    /// know (a network share, FUSE, a row with no type) reads as not local.
+    pub fn is_local_disk(&self) -> bool {
+        cmdr_fs::filesystem_kind::mount_is_local_disk(self.source.as_deref(), self.fs_type.as_deref())
+    }
+}
+
 /// One MTP object, resolved from the bare PTP handle a device change event carries.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ResolvedMtpObject {
@@ -159,15 +180,17 @@ pub trait VolumeProvider: Send + Sync {
     /// mounted.
     fn is_mounted(&self, identity: MountIdentity) -> Option<bool>;
 
-    /// Every mount point in the host's mount table right now, as the table spells
-    /// it (the boot disk's `/` included), or `None` when the table couldn't be read.
+    /// Every mount in the host's mount table right now, its point as the table
+    /// spells it (the boot disk's `/` included), or `None` when the table couldn't
+    /// be read.
     ///
     /// **Non-blocking**, like [`mount_identity`](Self::mount_identity): the table,
-    /// ❌ never the mounts. The boot-disk index stops at every filesystem mounted
-    /// inside its tree (`scanner::boot_tree_mounts`), and re-reads this at most
-    /// once a second while something asks. ❌ A caller never reads `None` as
-    /// "nothing is mounted".
-    fn mount_points(&self) -> Option<Vec<PathBuf>>;
+    /// ❌ never the mounts. The boot-disk index stops at filesystems mounted inside
+    /// its tree (`scanner::boot_tree_mounts`; on Linux only the ones that aren't a
+    /// local disk, which is what each row's source and type decide), and re-reads
+    /// this at most once a second while something asks. ❌ A caller never reads
+    /// `None` as "nothing is mounted".
+    fn mount_points(&self) -> Option<Vec<MountPoint>>;
 
     /// The SMB volume id for `path` when it resolves to an `smbfs`/`cifs` mount.
     ///
@@ -311,7 +334,7 @@ impl VolumeProvider for NoVolumes {
         Some(true)
     }
     /// A host that mounts nothing has nothing mounted inside the boot tree.
-    fn mount_points(&self) -> Option<Vec<PathBuf>> {
+    fn mount_points(&self) -> Option<Vec<MountPoint>> {
         Some(Vec::new())
     }
     fn smb_volume_id_for_path(&self, _path: &str) -> Option<String> {
@@ -343,9 +366,15 @@ pub struct FakeVolumeProvider {
     network_mounts: RwLock<std::collections::HashSet<PathBuf>>,
     untrusted_inode_mounts: RwLock<std::collections::HashSet<PathBuf>>,
     mounts: RwLock<std::collections::HashMap<PathBuf, MountIdentity>>,
+    /// Each listed mount's kind, for the ones a test gave one.
+    mount_kinds: RwLock<std::collections::HashMap<PathBuf, FakeMountKind>>,
     /// Inverted so `Default` means a table that reads fine.
     table_unreadable: RwLock<bool>,
 }
+
+/// A fake mount's `(source, fs_type)`, as [`FakeVolumeProvider::set_mount_kind`] set it.
+#[cfg(any(test, feature = "testing"))]
+type FakeMountKind = (Option<String>, Option<String>);
 
 #[cfg(any(test, feature = "testing"))]
 impl FakeVolumeProvider {
@@ -377,6 +406,17 @@ impl FakeVolumeProvider {
     /// drive reads. A root nothing was mounted at has no identity.
     pub fn mount(&self, root: impl Into<PathBuf>, identity: MountIdentity) -> &Self {
         self.mounts.write_ignore_poison().insert(root.into(), identity);
+        table_changed();
+        self
+    }
+
+    /// Give the filesystem listed at `root` a mount source and type, the way the
+    /// table reports them. A mount listed without this reports neither, which reads
+    /// as "not a known local disk".
+    pub fn set_mount_kind(&self, root: impl Into<PathBuf>, source: Option<&str>, fs_type: Option<&str>) -> &Self {
+        self.mount_kinds
+            .write_ignore_poison()
+            .insert(root.into(), (source.map(str::to_string), fs_type.map(str::to_string)));
         table_changed();
         self
     }
@@ -457,11 +497,25 @@ impl VolumeProvider for FakeVolumeProvider {
         )
     }
 
-    fn mount_points(&self) -> Option<Vec<PathBuf>> {
+    fn mount_points(&self) -> Option<Vec<MountPoint>> {
         if *self.table_unreadable.read_ignore_poison() {
             return None;
         }
-        Some(self.mounts.read_ignore_poison().keys().cloned().collect())
+        let kinds = self.mount_kinds.read_ignore_poison();
+        Some(
+            self.mounts
+                .read_ignore_poison()
+                .keys()
+                .map(|path| {
+                    let (source, fs_type) = kinds.get(path).cloned().unwrap_or_default();
+                    MountPoint {
+                        path: path.clone(),
+                        source,
+                        fs_type,
+                    }
+                })
+                .collect(),
+        )
     }
 
     fn smb_volume_id_for_path(&self, _path: &str) -> Option<String> {

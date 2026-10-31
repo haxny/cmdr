@@ -585,6 +585,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Nome longo demais para o destino",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Nome não permitido no destino",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "O destino não consegue armazenar um nome tão longo. Ignore este item para seguir com o restante; depois, renomeie-o e tente de novo.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "O destino não consegue armazenar este nome. Ele pode ser longo demais, ser um nome reservado ou usar um caractere que o destino não permite. Ignore este item para seguir com o restante; depois, renomeie-o e tente de novo.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "Se um arquivo já existir: {policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -800,6 +816,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Nada mais a copiar: {total, plural, one {o item que seria copiado foi movido ou apagado} many {todos os {totalText} itens que seriam copiados foram movidos ou apagados} other {todos os {totalText} itens que seriam copiados foram movidos ou apagados}} enquanto a operação aguardava sua vez.} move {Nada mais a mover: {total, plural, one {o item que seria movido foi movido ou apagado} many {todos os {totalText} itens que seriam movidos foram movidos ou apagados} other {todos os {totalText} itens que seriam movidos foram movidos ou apagados}} enquanto a operação aguardava sua vez.} delete {Nada mais a apagar: {total, plural, one {o item que seria apagado foi movido ou apagado} many {todos os {totalText} itens que seriam apagados foram movidos ou apagados} other {todos os {totalText} itens que seriam apagados foram movidos ou apagados}} enquanto a operação aguardava sua vez.} trash {Nada mais a mover para o Lixo: {total, plural, one {o item que seria movido para o Lixo foi movido ou apagado} many {todos os {totalText} itens que seriam movidos para o Lixo foram movidos ou apagados} other {todos os {totalText} itens que seriam movidos para o Lixo foram movidos ou apagados}} enquanto a operação aguardava sua vez.} other {Nada mais a fazer: {total, plural, one {o item desta operação foi movido ou apagado} many {todos os {totalText} itens desta operação foram movidos ou apagados} other {todos os {totalText} itens desta operação foram movidos ou apagados}} enquanto a operação aguardava sua vez.}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "“{name}” já tinha sumido. Provavelmente outro app moveu ou apagou esse item.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} item já tinha sumido. Provavelmente outro app moveu ou apagou esse item.} many {{countText} itens já tinham sumido. Provavelmente outro app moveu ou apagou esses itens.} other {{countText} itens já tinham sumido. Provavelmente outro app moveu ou apagou esses itens.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Nunca mais mostrar",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "Mover itens bloqueados?",
   "@fileOperations.lockedSources.title": {

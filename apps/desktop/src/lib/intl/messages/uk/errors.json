@@ -1,0 +1,2568 @@
+{
+  "errors.listing.interrupted.title": "Перервано",
+  "@errors.listing.interrupted.title": {
+    "sourceHash": "132d124"
+  },
+  "errors.listing.interrupted.explanation": "Системну операцію перервано, перш ніж вона встигла завершитися. Майже завжди це поодинокий випадок: на мить завадив сигнал або фоновий процес.",
+  "@errors.listing.interrupted.explanation": {
+    "sourceHash": "7f88a37"
+  },
+  "errors.listing.interrupted.suggestion": "Знову перейдіть сюди, щоб спробувати ще раз. Таке переривання майже ніколи не трапляється двічі поспіль.",
+  "@errors.listing.interrupted.suggestion": {
+    "sourceHash": "2fe74e8"
+  },
+  "errors.listing.notEnoughMemory.title": "Не вистачає памʼяті",
+  "@errors.listing.notEnoughMemory.title": {
+    "sourceHash": "96dc194"
+  },
+  "errors.listing.notEnoughMemory.explanation": "Під час читання цієї папки системі забракло вільної памʼяті (RAM). Таке буває, коли одночасно відкрито багато програм або коли в папці дуже багато файлів.",
+  "@errors.listing.notEnoughMemory.explanation": {
+    "sourceHash": "ff103cd"
+  },
+  "errors.listing.notEnoughMemory.suggestion": "Що можна спробувати:\n- Закрийте кілька програм, щоб звільнити памʼять, особливо ті, що споживають багато ресурсів (браузери з багатьма вкладками, редактори, медіапрограми)\n- Перевірте використання памʼяті в програмі **Монітор активності** (знайдіть її через Spotlight)\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.listing.notEnoughMemory.suggestion": {
+    "sourceHash": "d05a4e4"
+  },
+  "errors.listing.resourceBusy.title": "Ресурс зайнятий",
+  "@errors.listing.resourceBusy.title": {
+    "sourceHash": "3ad6486"
+  },
+  "errors.listing.resourceBusy.explanation": "Cmdr не вдалося отримати доступ до папки `{path}`: її зараз монопольно використовує інша програма або процес. Зазвичай це тимчасово.",
+  "@errors.listing.resourceBusy.explanation": {
+    "sourceHash": "18a07d9"
+  },
+  "errors.listing.resourceBusy.suggestion": "Зачекайте трохи, а потім знову перейдіть сюди. Якщо це повторюється, перевірте, яка програма може тримати файл відкритим (у Терміналі виконайте `lsof +D <folder-path>`, щоб побачити, які процеси використовують цю папку).",
+  "@errors.listing.resourceBusy.suggestion": {
+    "sourceHash": "fa266e6"
+  },
+  "errors.listing.temporarilyUnavailable.title": "Тимчасово недоступно",
+  "@errors.listing.temporarilyUnavailable.title": {
+    "sourceHash": "3c86be3"
+  },
+  "errors.listing.temporarilyUnavailable.explanation": "Система зараз надто зайнята, щоб обробити цей запит. Це тимчасовий стан, який зазвичай минає сам за лічені секунди.",
+  "@errors.listing.temporarilyUnavailable.explanation": {
+    "sourceHash": "2193876"
+  },
+  "errors.listing.temporarilyUnavailable.suggestion": "Знову перейдіть сюди, щоб спробувати ще раз. Зазвичай це минає само собою. Якщо це повторюється, можливо, система сильно навантажена. Перевірте в програмі **Монітор активності**, які програми споживають багато ресурсів.",
+  "@errors.listing.temporarilyUnavailable.suggestion": {
+    "sourceHash": "1ec4aef"
+  },
+  "errors.listing.networkDown.title": "Мережа не працює",
+  "@errors.listing.networkDown.title": {
+    "sourceHash": "399ab40"
+  },
+  "errors.listing.networkDown.explanation": "Ваш Mac не підʼєднаний до мережі, тож цей том для Cmdr недоступний. Можливо, Wi-Fi відʼєднано, кабель Ethernet витягнуто або мережевий інтерфейс вимкнено.",
+  "@errors.listing.networkDown.explanation": {
+    "sourceHash": "179f8bb"
+  },
+  "errors.listing.networkDown.suggestion": "Що можна спробувати:\n- Перевірте стан Wi-Fi або Ethernet: **{system_settings} > Мережа**\n- Якщо ви користуєтеся Wi-Fi, спробуйте вимкнути його й увімкнути знову\n- У Терміналі виконайте `ping google.com`, щоб перевірити підʼєднання\n- Знову перейдіть сюди, щойно мережа запрацює",
+  "@errors.listing.networkDown.suggestion": {
+    "sourceHash": "bf4b517"
+  },
+  "errors.listing.networkConnectionDropped.title": "Підʼєднання до мережі обірвалося",
+  "@errors.listing.networkConnectionDropped.title": {
+    "sourceHash": "5654be9"
+  },
+  "errors.listing.networkConnectionDropped.explanation": "Підʼєднання до мережі неочікувано скинулося, поки Cmdr читав цю папку. Таке буває, коли перезапускається роутер, VPN знову підʼєднується або мережа тимчасово нестабільна.",
+  "@errors.listing.networkConnectionDropped.explanation": {
+    "sourceHash": "b155930"
+  },
+  "errors.listing.networkConnectionDropped.suggestion": "Що можна спробувати:\n- Перевірте підʼєднання до мережі\n- Якщо ви користуєтеся VPN, переконайтеся, що VPN досі підʼєднано\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.listing.networkConnectionDropped.suggestion": {
+    "sourceHash": "228b9a8"
+  },
+  "errors.listing.connectionDropped.title": "Підʼєднання обірвалося",
+  "@errors.listing.connectionDropped.title": {
+    "sourceHash": "9049f3d"
+  },
+  "errors.listing.connectionDropped.explanation": "Сервер або мережа обірвали підʼєднання, перш ніж Cmdr встиг дочитати папку. Часто це означає, що сервер перевантажений або перезапускається.",
+  "@errors.listing.connectionDropped.explanation": {
+    "sourceHash": "2d447c3"
+  },
+  "errors.listing.connectionDropped.suggestion": "Що можна спробувати:\n- Перевірте, чи сервер працює й відповідає\n- Перевірте підʼєднання до мережі\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.listing.connectionDropped.suggestion": {
+    "sourceHash": "3e3446f"
+  },
+  "errors.listing.connectionReset.title": "Підʼєднання скинуто",
+  "@errors.listing.connectionReset.title": {
+    "sourceHash": "6346f08"
+  },
+  "errors.listing.connectionReset.explanation": "Віддалений сервер неочікувано закрив підʼєднання. Таке буває, коли сервер перезапускається, коли вичерпується час очікування або коли на сервері виникає внутрішня проблема.",
+  "@errors.listing.connectionReset.explanation": {
+    "sourceHash": "3ccfa1c"
+  },
+  "errors.listing.connectionReset.suggestion": "Що можна спробувати:\n- Перевірте, чи сервер працює\n- У Терміналі виконайте `ping <hostname>`, щоб перевірити, чи доступний сервер\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.listing.connectionReset.suggestion": {
+    "sourceHash": "d980663"
+  },
+  "errors.listing.connectionTimedOutErrno.title": "Вичерпався час очікування підʼєднання",
+  "@errors.listing.connectionTimedOutErrno.title": {
+    "sourceHash": "2e0b4a7"
+  },
+  "errors.listing.connectionTimedOutErrno.explanation": "Cmdr не вдалося прочитати цю папку: підʼєднання не відповіло вчасно. Зазвичай це означає, що сервер або пристрій працює повільно чи недоступний, або що мережа між вами перевантажена.",
+  "@errors.listing.connectionTimedOutErrno.explanation": {
+    "sourceHash": "c088c41"
+  },
+  "errors.listing.connectionTimedOutErrno.suggestion": "Що можна спробувати:\n- Перевірте, чи пристрій або сервер увімкнений і доступний\n- Перевірте підʼєднання Wi-Fi або Ethernet\n- У Терміналі виконайте `ping <hostname>`, щоб перевірити звʼязок\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.listing.connectionTimedOutErrno.suggestion": {
+    "sourceHash": "230ef64"
+  },
+  "errors.listing.hostDown.title": "Хост не працює",
+  "@errors.listing.hostDown.title": {
+    "sourceHash": "a99606a"
+  },
+  "errors.listing.hostDown.explanation": "Віддалений хост (компʼютер або сервер, на якому розміщено цей том) не відповідає. Можливо, його вимкнено, він у режимі сну або тимчасово недоступний.",
+  "@errors.listing.hostDown.explanation": {
+    "sourceHash": "e175712"
+  },
+  "errors.listing.hostDown.suggestion": "Що можна спробувати:\n- Перевірте, чи хост увімкнений і підʼєднаний до мережі\n- У Терміналі виконайте `ping <hostname>`, щоб перевірити, чи хост доступний\n- Якщо це NAS або сервер, перевірте його інтерфейс керування\n- Знову перейдіть сюди, щойно хост запрацює",
+  "@errors.listing.hostDown.suggestion": {
+    "sourceHash": "7a8ecd8"
+  },
+  "errors.listing.staleConnection.title": "Застаріле підʼєднання",
+  "@errors.listing.staleConnection.title": {
+    "sourceHash": "f03c43c"
+  },
+  "errors.listing.staleConnection.explanation": "Cmdr намагається отримати доступ до цієї папки за старим посиланням, яке сервер більше не розпізнає. Таке часто буває з мережевими дисками (NFS, SMB) після перезапуску сервера, повторного монтування спільної папки або переривання підʼєднання.",
+  "@errors.listing.staleConnection.explanation": {
+    "sourceHash": "3712df2"
+  },
+  "errors.listing.staleConnection.suggestion": "Що можна спробувати:\n- Перейдіть із цієї папки деінде й поверніться\n- Якщо це мережевий диск, спробуйте відмонтувати його у Finder і змонтувати знову\n- Перевірте, чи працює сервер, на якому розміщено цю папку\n- У Терміналі виконайте `mount`, щоб побачити змонтовані зараз томи",
+  "@errors.listing.staleConnection.suggestion": {
+    "sourceHash": "73de81d"
+  },
+  "errors.listing.lockUnavailable.title": "Блокування недоступне",
+  "@errors.listing.lockUnavailable.title": {
+    "sourceHash": "3123ad5"
+  },
+  "errors.listing.lockUnavailable.explanation": "У системі закінчилися блокування файлів. Через них програми узгоджують доступ до спільних файлів, щоб дві програми не записували в той самий файл одночасно. Зазвичай блокування закінчуються, коли надто багато програм одночасно працюють із файлами.",
+  "@errors.listing.lockUnavailable.explanation": {
+    "sourceHash": "154df3c"
+  },
+  "errors.listing.lockUnavailable.suggestion": "Що можна спробувати:\n- Закрийте кілька програм, особливо ті, що працюють із багатьма файлами (редактори, IDE, засоби резервного копіювання)\n- У Терміналі виконайте `lsof | wc -l`, щоб побачити, скільки файлів відкрито в усіх програмах\n- Якщо проблема не зникає, можна підвищити ліміт командою `ulimit -n 4096` у Терміналі\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.listing.lockUnavailable.suggestion": {
+    "sourceHash": "a9f23bd"
+  },
+  "errors.listing.cancelledErrno.title": "Скасовано",
+  "@errors.listing.cancelledErrno.title": {
+    "sourceHash": "13ca2ee"
+  },
+  "errors.listing.cancelledErrno.explanation": "Операцію скасовано, перш ніж вона встигла завершитися.",
+  "@errors.listing.cancelledErrno.explanation": {
+    "sourceHash": "da19c15"
+  },
+  "errors.listing.cancelledErrno.suggestion": "Знову перейдіть сюди, коли будете готові спробувати ще раз.",
+  "@errors.listing.cancelledErrno.suggestion": {
+    "sourceHash": "d9107b5"
+  },
+  "errors.listing.notPermitted.title": "Не дозволено",
+  "@errors.listing.notPermitted.title": {
+    "sourceHash": "8ec5f4b"
+  },
+  "errors.listing.notPermitted.explanation": "macOS заблокувала Cmdr доступ до папки `{path}`. Зазвичай це означає, що папку захищають політики безпеки macOS або що Cmdr ще не надано потрібного доступу.",
+  "@errors.listing.notPermitted.explanation": {
+    "sourceHash": "e28dd0e"
+  },
+  "errors.listing.notPermitted.suggestion": "Що можна спробувати:\n- Відкрийте **{system_settings} > {privacy_and_security} > {files_and_folders}** і надайте Cmdr доступ\n- Якщо цю папку захищає система, можливо, потрібно надати Cmdr **{full_disk_access}** у розділі {privacy_and_security}\n- У Терміналі виконайте `ls -la` для цього шляху, щоб перевірити власника й привілеї",
+  "@errors.listing.notPermitted.suggestion": {
+    "sourceHash": "2926956"
+  },
+  "errors.listing.pathNotFoundErrno.title": "Шлях не знайдено",
+  "@errors.listing.pathNotFoundErrno.title": {
+    "sourceHash": "cce25f6"
+  },
+  "errors.listing.pathNotFoundErrno.explanation": "Cmdr не вдалося знайти шлях `{path}`. Можливо, цей елемент перемістили, перейменували або видалили, поки Cmdr намагався отримати до нього доступ.",
+  "@errors.listing.pathNotFoundErrno.explanation": {
+    "sourceHash": "bfb9636"
+  },
+  "errors.listing.pathNotFoundErrno.suggestion": "Що можна спробувати:\n- Перевірте, чи правильно написано шлях\n- Якщо він на мережевому диску, переконайтеся, що диск підʼєднано, а спільна папка доступна\n- Перейдіть до батьківської папки й пошукайте елемент там\n- У Терміналі виконайте `ls -la` для батьківської папки, щоб побачити, що в ній є",
+  "@errors.listing.pathNotFoundErrno.suggestion": {
+    "sourceHash": "8a51477"
+  },
+  "errors.listing.noPermissionErrno.title": "Доступ заборонено",
+  "@errors.listing.noPermissionErrno.title": {
+    "sourceHash": "201c89b"
+  },
+  "errors.listing.noPermissionErrno.explanation": "Cmdr не має доступу до папки `{path}`. macOS визначає, які програми можуть відкривати які папки, а Cmdr ще не надано доступу до цієї.",
+  "@errors.listing.noPermissionErrno.explanation": {
+    "sourceHash": "3871273"
+  },
+  "errors.listing.noPermissionErrno.suggestion": "Що можна спробувати:\n- Відкрийте **{system_settings} > {privacy_and_security} > {files_and_folders}** і надайте Cmdr доступ\n- Перевірте привілеї папки у Finder: клацніть її правою кнопкою, виберіть «Досьє» і подивіться в розділі «Спільний доступ і привілеї»\n- Якщо це спільна папка, попросіть власника оновити привілеї\n- У Терміналі виконайте `ls -la` для цього шляху, щоб побачити поточні привілеї",
+  "@errors.listing.noPermissionErrno.suggestion": {
+    "sourceHash": "4b513ef"
+  },
+  "errors.listing.alreadyExistsErrno.title": "Уже існує",
+  "@errors.listing.alreadyExistsErrno.title": {
+    "sourceHash": "2dbc546"
+  },
+  "errors.listing.alreadyExistsErrno.explanation": "За шляхом `{path}` уже існує файл або папка, тож Cmdr не може створити там ще один елемент.",
+  "@errors.listing.alreadyExistsErrno.explanation": {
+    "sourceHash": "630e6d8"
+  },
+  "errors.listing.alreadyExistsErrno.suggestion": "Перейменуйте наявний елемент або виберіть іншу назву для нового.",
+  "@errors.listing.alreadyExistsErrno.suggestion": {
+    "sourceHash": "8761a72"
+  },
+  "errors.listing.crossDeviceOperation.title": "Операція між різними томами",
+  "@errors.listing.crossDeviceOperation.title": {
+    "sourceHash": "a50dc58"
+  },
+  "errors.listing.crossDeviceOperation.explanation": "Cmdr не може перемістити цей елемент напряму, бо джерело і призначення на різних томах (наприклад, на внутрішньому диску й USB-флешці). Щоб перемістити елемент між томами, потрібно скопіювати дані, а потім видалити оригінал.",
+  "@errors.listing.crossDeviceOperation.explanation": {
+    "sourceHash": "a6742d3"
+  },
+  "errors.listing.crossDeviceOperation.suggestion": "Замість переміщення скопіюйте елемент у місце призначення. Cmdr подбає про копіювання автоматично.",
+  "@errors.listing.crossDeviceOperation.suggestion": {
+    "sourceHash": "7700cc3"
+  },
+  "errors.listing.notAFolder.title": "Це не папка",
+  "@errors.listing.notAFolder.title": {
+    "sourceHash": "78a92a5"
+  },
+  "errors.listing.notAFolder.explanation": "Cmdr очікував, що за шляхом `{path}` буде папка, але там файл. Таке буває, якщо щось нещодавно перейменували або замінили.",
+  "@errors.listing.notAFolder.explanation": {
+    "sourceHash": "7ab65a3"
+  },
+  "errors.listing.notAFolder.suggestion": "Перевірте шлях і переконайтеся, що він веде до папки, а не до файлу.",
+  "@errors.listing.notAFolder.suggestion": {
+    "sourceHash": "433a2d7"
+  },
+  "errors.listing.isAFolderErrno.title": "Це папка",
+  "@errors.listing.isAFolderErrno.title": {
+    "sourceHash": "6deee63"
+  },
+  "errors.listing.isAFolderErrno.explanation": "Cmdr очікував, що за шляхом `{path}` буде файл, але там папка. Таке буває, якщо щось нещодавно перейменували або замінили.",
+  "@errors.listing.isAFolderErrno.explanation": {
+    "sourceHash": "8c3b294"
+  },
+  "errors.listing.isAFolderErrno.suggestion": "Перевірте шлях і переконайтеся, що він веде до файлу, а не до папки.",
+  "@errors.listing.isAFolderErrno.suggestion": {
+    "sourceHash": "c12c3c1"
+  },
+  "errors.listing.diskFullErrno.title": "Диск заповнений",
+  "@errors.listing.diskFullErrno.title": {
+    "sourceHash": "293beb8"
+  },
+  "errors.listing.diskFullErrno.explanation": "На цьому томі недостатньо вільного місця, щоб завершити операцію.",
+  "@errors.listing.diskFullErrno.explanation": {
+    "sourceHash": "3915993"
+  },
+  "errors.listing.diskFullErrno.suggestion": "Що можна спробувати:\n- Звільніть місце: перемістіть або видаліть файли, які вам більше не потрібні\n- Очистіть Смітник (клацніть іконку Смітника в Dock правою кнопкою)\n- У Терміналі виконайте `df -h`, щоб побачити, скільки місця залишилося на кожному томі\n- Перевірте, що займає місце: **{system_settings} > Загальні > Сховище**",
+  "@errors.listing.diskFullErrno.suggestion": {
+    "sourceHash": "f2eb27b"
+  },
+  "errors.listing.readOnlyVolumeErrno.title": "Том тільки для читання",
+  "@errors.listing.readOnlyVolumeErrno.title": {
+    "sourceHash": "e2d3bf1"
+  },
+  "errors.listing.readOnlyVolumeErrno.explanation": "Цей том змонтовано тільки для читання, тож Cmdr не може вносити в нього зміни. Можливо, на пристрої є фізичний перемикач захисту від запису, образ диска змонтовано тільки для читання або файлова система не підтримує запис.",
+  "@errors.listing.readOnlyVolumeErrno.explanation": {
+    "sourceHash": "e6bcf10"
+  },
+  "errors.listing.readOnlyVolumeErrno.suggestion": "Що можна спробувати:\n- Якщо на пристрої є фізичний перемикач захисту від запису (такі часто бувають на SD-картках), вимкніть захист\n- Якщо це образ диска, змонтуйте його знову з доступом на запис\n- Або спершу скопіюйте файли в місце, доступне для запису",
+  "@errors.listing.readOnlyVolumeErrno.suggestion": {
+    "sourceHash": "15fa759"
+  },
+  "errors.listing.notSupportedErrno.title": "Не підтримується",
+  "@errors.listing.notSupportedErrno.title": {
+    "sourceHash": "74e8477"
+  },
+  "errors.listing.notSupportedErrno.explanation": "Ця операція не підтримується в цій файловій системі. Різні файлові системи (як-от FAT32, NTFS чи мережеві спільні папки) мають різні можливості, і ця не підтримує те, що намагається зробити Cmdr.",
+  "@errors.listing.notSupportedErrno.explanation": {
+    "sourceHash": "a0ca28f"
+  },
+  "errors.listing.notSupportedErrno.suggestion": "Спробуйте інший спосіб або виконайте цю операцію у Finder. Якщо ви працюєте із зовнішнім диском, можливо, його відформатовано у файловій системі з обмеженнями (наприклад, FAT32 не може зберігати файли розміром 4 ГіБ і більше).",
+  "@errors.listing.notSupportedErrno.suggestion": {
+    "sourceHash": "8fea918"
+  },
+  "errors.listing.networkUnreachable.title": "Мережа недоступна",
+  "@errors.listing.networkUnreachable.title": {
+    "sourceHash": "7b83c7c"
+  },
+  "errors.listing.networkUnreachable.explanation": "Cmdr не вдається звʼязатися з мережею, у якій розміщено цей том. Часто це означає, що ви підʼєднані не до тієї мережі або VPN вимкнено.",
+  "@errors.listing.networkUnreachable.explanation": {
+    "sourceHash": "d3c1975"
+  },
+  "errors.listing.networkUnreachable.suggestion": "Що можна спробувати:\n- Перевірте підʼєднання Wi-Fi або Ethernet\n- Переконайтеся, що ви в потрібній мережі (наприклад, у робочій мережі Wi-Fi чи VPN)\n- У Терміналі виконайте `ping <hostname>`, щоб перевірити, чи доступний сервер\n- Знову перейдіть сюди, щойно підʼєднаєтеся",
+  "@errors.listing.networkUnreachable.suggestion": {
+    "sourceHash": "7feb3cb"
+  },
+  "errors.listing.connectionRefused.title": "Підʼєднання відхилено",
+  "@errors.listing.connectionRefused.title": {
+    "sourceHash": "1a28032"
+  },
+  "errors.listing.connectionRefused.explanation": "Сервер відхилив запит на підʼєднання. Зазвичай це означає, що серверне програмне забезпечення (наприклад, сервіс SMB або NFS) не працює або налаштоване відхиляти підʼєднання з цього Mac.",
+  "@errors.listing.connectionRefused.explanation": {
+    "sourceHash": "88e1ac7"
+  },
+  "errors.listing.connectionRefused.suggestion": "Що можна спробувати:\n- Перевірте, чи сервер працює і чи ввімкнено на ньому сервіс спільного доступу до файлів\n- Перевірте, чи правильно вказано адресу сервера й порт\n- У Терміналі виконайте `ping <hostname>`, щоб перевірити, чи сервер узагалі доступний\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.listing.connectionRefused.suggestion": {
+    "sourceHash": "17decc3"
+  },
+  "errors.listing.symlinkLoopErrno.title": "Зациклені символічні посилання",
+  "@errors.listing.symlinkLoopErrno.title": {
+    "sourceHash": "3d41981"
+  },
+  "errors.listing.symlinkLoopErrno.explanation": "За шляхом `{path}` є замкнений ланцюжок символічних посилань (ярликів, що вказують на інші ярлики). Ці посилання ведуть по колу, тож Cmdr не може дістатися до самого файлу чи папки.",
+  "@errors.listing.symlinkLoopErrno.explanation": {
+    "sourceHash": "4157be6"
+  },
+  "errors.listing.symlinkLoopErrno.suggestion": "Що можна спробувати:\n- У Терміналі виконайте `ls -la` для цього шляху, щоб побачити, куди вказують символічні посилання\n- Знайдіть і виправте посилання, яке створює цикл\n- Якщо незрозуміло, яке посилання проблемне, перевірте їх по черзі командою `readlink <path>`",
+  "@errors.listing.symlinkLoopErrno.suggestion": {
+    "sourceHash": "eed9a5a"
+  },
+  "errors.listing.nameTooLongErrno.title": "Задовга назва",
+  "@errors.listing.nameTooLongErrno.title": {
+    "sourceHash": "de4bc1d"
+  },
+  "errors.listing.nameTooLongErrno.explanation": "Назва файлу чи папки перевищує системний ліміт (255 символів на більшості томів Mac). Таке також буває, коли повний шлях (усі папки разом) перевищує максимальну довжину шляху в системі.",
+  "@errors.listing.nameTooLongErrno.explanation": {
+    "sourceHash": "8b9a6ff"
+  },
+  "errors.listing.nameTooLongErrno.suggestion": "Перейменуйте елемент, щоб назва була коротшою. Якщо назва не здається надто довгою, можливо, задовгий повний шлях (разом з усіма батьківськими папками). Спробуйте перемістити елемент у місце з коротшим шляхом.",
+  "@errors.listing.nameTooLongErrno.suggestion": {
+    "sourceHash": "a0497b1"
+  },
+  "errors.listing.hostUnreachable.title": "Хост недоступний",
+  "@errors.listing.hostUnreachable.title": {
+    "sourceHash": "eae08c7"
+  },
+  "errors.listing.hostUnreachable.explanation": "Cmdr не вдається знайти мережевий маршрут до хоста, на якому розміщено цей том. Зазвичай це означає, що хост в іншій мережі чи за брандмауером або що потрібно оновити налаштування маршрутизації.",
+  "@errors.listing.hostUnreachable.explanation": {
+    "sourceHash": "184b0fc"
+  },
+  "errors.listing.hostUnreachable.suggestion": "Що можна спробувати:\n- Перевірте, чи хост увімкнений і чи він у тій самій мережі\n- Якщо для доступу до нього потрібен VPN, переконайтеся, що VPN підʼєднано\n- У Терміналі виконайте `ping <hostname>`, щоб перевірити звʼязок\n- Знову перейдіть сюди, щойно хост стане доступним",
+  "@errors.listing.hostUnreachable.suggestion": {
+    "sourceHash": "c222f76"
+  },
+  "errors.listing.folderNotEmpty.title": "Папка не порожня",
+  "@errors.listing.folderNotEmpty.title": {
+    "sourceHash": "a8c9ac6"
+  },
+  "errors.listing.folderNotEmpty.explanation": "Cmdr не може видалити папку `{path}`, бо в ній досі є файли або підпапки. Щоб видалити папку таким способом, система вимагає, щоб вона була порожньою.",
+  "@errors.listing.folderNotEmpty.explanation": {
+    "sourceHash": "26871a4"
+  },
+  "errors.listing.folderNotEmpty.suggestion": "Спершу видаліть вміст папки, а потім спробуйте видалити папку ще раз.",
+  "@errors.listing.folderNotEmpty.suggestion": {
+    "sourceHash": "a440845"
+  },
+  "errors.listing.quotaExceeded.title": "Квоту перевищено",
+  "@errors.listing.quotaExceeded.title": {
+    "sourceHash": "a940827"
+  },
+  "errors.listing.quotaExceeded.explanation": "Ви досягли своєї дискової квоти (максимального обсягу місця, виділеного вашому обліковому запису) на цьому томі. Таке часто буває на спільних серверах і мережевих дисках, де адміністратор встановлює ліміти для кожного користувача.",
+  "@errors.listing.quotaExceeded.explanation": {
+    "sourceHash": "b9b0b0e"
+  },
+  "errors.listing.quotaExceeded.suggestion": "Що можна спробувати:\n- Звільніть місце: видаліть із цього тому файли, які вам більше не потрібні\n- Попросіть системного адміністратора збільшити вашу квоту\n- У Терміналі виконайте `quota`, щоб побачити поточне використання й ліміт",
+  "@errors.listing.quotaExceeded.suggestion": {
+    "sourceHash": "1b5f0df"
+  },
+  "errors.listing.authRequiredEauth.title": "Потрібна автентифікація",
+  "@errors.listing.authRequiredEauth.title": {
+    "sourceHash": "0fcfb12"
+  },
+  "errors.listing.authRequiredEauth.explanation": "Cmdr не вдалося пройти автентифікацію на цьому томі. Можливо, у збережених облікових даних сплив термін дії або сервер відхиляє поточний вхід.",
+  "@errors.listing.authRequiredEauth.explanation": {
+    "sourceHash": "654cbb2"
+  },
+  "errors.listing.authRequiredEauth.suggestion": "Що можна спробувати:\n- Відʼєднайте том, знову підʼєднайте його й ще раз введіть імʼя користувача та пароль\n- Перевірте, чи пароль не змінився і чи не сплив термін його дії\n- Якщо це сервер компанії, зверніться до свого ІТ-відділу",
+  "@errors.listing.authRequiredEauth.suggestion": {
+    "sourceHash": "3469202"
+  },
+  "errors.listing.authRequiredEneedauth.title": "Потрібна автентифікація",
+  "@errors.listing.authRequiredEneedauth.title": {
+    "sourceHash": "0fcfb12"
+  },
+  "errors.listing.authRequiredEneedauth.explanation": "Цей том потребує входу, але облікові дані ще не надано.",
+  "@errors.listing.authRequiredEneedauth.explanation": {
+    "sourceHash": "b4e86e5"
+  },
+  "errors.listing.authRequiredEneedauth.suggestion": "Що можна спробувати:\n- Відʼєднайте том у Finder і знову підʼєднайте його\n- Коли зʼявиться запит, введіть імʼя користувача та пароль\n- Якщо ви не впевнені щодо облікових даних, зверніться до адміністратора сервера",
+  "@errors.listing.authRequiredEneedauth.suggestion": {
+    "sourceHash": "a90b520"
+  },
+  "errors.listing.devicePoweredOff.title": "Пристрій вимкнено",
+  "@errors.listing.devicePoweredOff.title": {
+    "sourceHash": "d0b7a88"
+  },
+  "errors.listing.devicePoweredOff.explanation": "Пристрій вимкнено або він у режимі глибокого сну, тож Cmdr не може з ним звʼязатися.",
+  "@errors.listing.devicePoweredOff.explanation": {
+    "sourceHash": "782a157"
+  },
+  "errors.listing.devicePoweredOff.suggestion": "Увімкніть пристрій, зачекайте, поки він повністю запуститься, а потім знову перейдіть сюди.",
+  "@errors.listing.devicePoweredOff.suggestion": {
+    "sourceHash": "39fc3b5"
+  },
+  "errors.listing.attributeNotFound.title": "Атрибут не знайдено",
+  "@errors.listing.attributeNotFound.title": {
+    "sourceHash": "e12f4be"
+  },
+  "errors.listing.attributeNotFound.explanation": "Cmdr намагався прочитати атрибут файлу (додаткові метадані, як-от теги чи привілеї), якого в цього елемента немає. Таке буває, коли файлова система не підтримує розширені атрибути або коли атрибут вилучили.",
+  "@errors.listing.attributeNotFound.explanation": {
+    "sourceHash": "ee39dd8"
+  },
+  "errors.listing.attributeNotFound.suggestion": "Можливо, ця файлова система не підтримує метадані, потрібні Cmdr. Спробуйте виконати операцію на іншому томі або спершу скопіюйте файл на внутрішній диск свого Mac.",
+  "@errors.listing.attributeNotFound.suggestion": {
+    "sourceHash": "463ee44"
+  },
+  "errors.listing.diskReadProblem.title": "Проблема з читанням диска",
+  "@errors.listing.diskReadProblem.title": {
+    "sourceHash": "b953ef4"
+  },
+  "errors.listing.diskReadProblem.explanation": "Cmdr натрапив на апаратну проблему з читанням за шляхом `{path}`. Це означає, що дані не вдалося нормально прочитати з диска або пристрою: це може бути тимчасовий збій або ознака того, що диск виходить з ладу.",
+  "@errors.listing.diskReadProblem.explanation": {
+    "sourceHash": "9e9cd43"
+  },
+  "errors.listing.diskReadProblem.suggestion": "Що можна спробувати:\n- Перевірте, чи диск або пристрій досі надійно підʼєднано\n- Відкрийте програму **Дискова утиліта** (знайдіть її через Spotlight), виберіть цей том і натисніть **Швидка допомога**\n- Якщо це повторюється, якнайшвидше створіть резервну копію даних. Можливо, на диску зʼявляються пошкоджені сектори або він починає зношуватися.",
+  "@errors.listing.diskReadProblem.suggestion": {
+    "sourceHash": "614a5fe"
+  },
+  "errors.listing.unexpectedSystemResponse.title": "Неочікувана відповідь системи",
+  "@errors.listing.unexpectedSystemResponse.title": {
+    "sourceHash": "e854b77"
+  },
+  "errors.listing.unexpectedSystemResponse.explanation": "Система повернула неочікувану відповідь на цю операцію. Таке буває, коли у файловій системі тому є неузгодженості або коли том у незвичному стані.",
+  "@errors.listing.unexpectedSystemResponse.explanation": {
+    "sourceHash": "a834896"
+  },
+  "errors.listing.unexpectedSystemResponse.suggestion": "Що можна спробувати:\n- Знову перейдіть сюди, щоб спробувати ще раз\n- Якщо це повторюється, відкрийте програму **Дискова утиліта** (знайдіть її через Spotlight), виберіть цей том і натисніть **Швидка допомога**, щоб перевірити файлову систему на проблеми",
+  "@errors.listing.unexpectedSystemResponse.suggestion": {
+    "sourceHash": "f63d225"
+  },
+  "errors.listing.deviceProblem.title": "Проблема з пристроєм",
+  "@errors.listing.deviceProblem.title": {
+    "sourceHash": "3febba2"
+  },
+  "errors.listing.deviceProblem.explanation": "Пристрій повідомив про апаратну проблему. Причиною може бути погане зʼєднання, зношений кабель або несправність самого пристрою.",
+  "@errors.listing.deviceProblem.explanation": {
+    "sourceHash": "a809613"
+  },
+  "errors.listing.deviceProblem.suggestion": "Що можна спробувати:\n- Відʼєднайте пристрій і знову підʼєднайте його\n- Спробуйте інший USB-порт або кабель\n- Якщо це зовнішній диск, спробуйте підʼєднати його до іншого компʼютера, щоб зрозуміти, чи проблема саме в пристрої\n- Якщо це повторюється, можливо, пристрій потребує ремонту або заміни",
+  "@errors.listing.deviceProblem.suggestion": {
+    "sourceHash": "5ce793b"
+  },
+  "errors.listing.couldntReadUnknown.title": "Не вдалося прочитати цю папку",
+  "@errors.listing.couldntReadUnknown.title": {
+    "sourceHash": "af30f30"
+  },
+  "errors.listing.couldntReadUnknown.explanation": "Cmdr натрапив на неочікувану проблему під час читання шляху `{path}`. Перевірте розділ «Технічні деталі» нижче: там є конкретний системний код, який може допомогти зʼясувати причину.",
+  "@errors.listing.couldntReadUnknown.explanation": {
+    "sourceHash": "80b9ff5"
+  },
+  "errors.listing.couldntReadUnknown.suggestion": "Що можна спробувати:\n- Перевірте, чи диск або пристрій досі підʼєднано\n- Знову перейдіть сюди, щоб спробувати ще раз\n- Якщо це повторюється, відкрийте програму **Дискова утиліта**, виберіть цей том і натисніть **Швидка допомога**",
+  "@errors.listing.couldntReadUnknown.suggestion": {
+    "sourceHash": "5155626"
+  },
+  "errors.listing.notFound.title": "Шлях не знайдено",
+  "@errors.listing.notFound.title": {
+    "sourceHash": "cce25f6"
+  },
+  "errors.listing.notFound.explanation": "Cmdr не вдалося знайти шлях `{path}`. Можливо, цей елемент перемістили, перейменували або видалили, поки Cmdr намагався отримати до нього доступ.",
+  "@errors.listing.notFound.explanation": {
+    "sourceHash": "bfb9636"
+  },
+  "errors.listing.notFound.suggestion": "Що можна спробувати:\n- Перевірте, чи правильно написано шлях\n- Якщо він на мережевому диску, переконайтеся, що диск підʼєднано, а спільна папка доступна\n- Перейдіть до батьківської папки й пошукайте елемент там\n- У Терміналі виконайте `ls -la` для батьківської папки, щоб побачити, що в ній є",
+  "@errors.listing.notFound.suggestion": {
+    "sourceHash": "8a51477"
+  },
+  "errors.listing.tccRestricted.title": "macOS обмежує доступ до цієї папки",
+  "@errors.listing.tccRestricted.title": {
+    "sourceHash": "26b5166"
+  },
+  "errors.listing.tccRestricted.explanation": "Cmdr не може прочитати папку `{path}`, бо macOS ще не надала доступу до неї. Це захист приватності, а не помилка Cmdr.",
+  "@errors.listing.tccRestricted.explanation": {
+    "sourceHash": "1f3fc35"
+  },
+  "errors.listing.tccRestricted.suggestion": "Це можна виправити двома способами:\n- Щоб зняти всі такі обмеження одразу, надайте Cmdr **{full_disk_access}**: **{system_settings} → {privacy_and_security} → {full_disk_access}**.\n- Або надайте доступ лише до цієї папки: **{system_settings} → {privacy_and_security} → {files_and_folders} → Cmdr**.",
+  "@errors.listing.tccRestricted.suggestion": {
+    "sourceHash": "6d9d93d"
+  },
+  "errors.listing.permissionDenied.title": "Доступ заборонено",
+  "@errors.listing.permissionDenied.title": {
+    "sourceHash": "201c89b"
+  },
+  "errors.listing.permissionDenied.explanation": "Cmdr не має доступу до папки `{path}`. macOS визначає, які програми можуть відкривати які папки, а Cmdr ще не надано доступу до цієї.",
+  "@errors.listing.permissionDenied.explanation": {
+    "sourceHash": "3871273"
+  },
+  "errors.listing.permissionDenied.suggestion": "Що можна спробувати:\n- Відкрийте **{system_settings} > {privacy_and_security} > {files_and_folders}** і надайте Cmdr доступ\n- Перевірте привілеї папки у Finder: клацніть папку правою кнопкою, виберіть «Досьє» і подивіться в розділі «Спільний доступ і привілеї»\n- Якщо це спільна папка, попросіть власника оновити привілеї\n- У Терміналі виконайте `ls -la` для шляху, щоб побачити поточні привілеї",
+  "@errors.listing.permissionDenied.suggestion": {
+    "sourceHash": "3450aff"
+  },
+  "errors.listing.objectStoreRefused.title": "Ваш постачальник сховища відмовив у доступі",
+  "@errors.listing.objectStoreRefused.title": {
+    "sourceHash": "2c26546"
+  },
+  "errors.listing.objectStoreRefused.explanation": "Шлях `{path}` веде до хмарного сховища, і постачальник відхилив запит. Або ключ доступу не має тут потрібних привілеїв, або постачальник призупинив доступ до облікового запису, наприклад через досягнутий ліміт використання чи проблему з оплатою.",
+  "@errors.listing.objectStoreRefused.explanation": {
+    "sourceHash": "b9f0f12"
+  },
+  "errors.listing.objectStoreRefused.suggestion": "Перевірте привілеї ключа доступу або подивіться в консолі постачальника, чи немає там повідомлення про ліміт використання чи оплату.",
+  "@errors.listing.objectStoreRefused.suggestion": {
+    "sourceHash": "718da2a"
+  },
+  "errors.listing.remotePermissionDenied.title": "Сервер не відкриває цю папку",
+  "@errors.listing.remotePermissionDenied.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.remotePermissionDenied.explanation": "Папка `{path}` розташована у спільній папці в мережі, і обліковий запис, з яким ви підʼєдналися, не має привілеїв, щоб відкрити цю папку. Сервер відхиляє запит ще до того, як до справи береться macOS, тож це не параметр приватності на вашому Mac.",
+  "@errors.listing.remotePermissionDenied.explanation": {
+    "sourceHash": "d8463b0"
+  },
+  "errors.listing.remotePermissionDenied.suggestion": "Що можна спробувати:\n- Перевірте привілеї папки на сервері, а також обліковий запис, з яким ви змонтували спільну папку\n- Деякі папки належать власному системному обліковому запису сервера (наприклад, `lost+found` у спільній папці Linux) і закриті для всіх інших\n- Щоб підʼєднатися під іншим обліковим записом, вийміть спільну папку й змонтуйте її знову з потрібними обліковими даними",
+  "@errors.listing.remotePermissionDenied.suggestion": {
+    "sourceHash": "3e6497d"
+  },
+  "errors.listing.phoneRefused.title": "Цей телефон тримає цю папку закритою",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android резервує цю папку для системи та її програм, тому Cmdr не може її відкрити. З телефоном і підʼєднанням усе гаразд.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "Ваші фото, викачане й інші файли зберігаються у спільному сховищі телефону, тож спробуйте папку там.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "Сервер не відкриває цю папку",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "Ця папка на сервері, і обліковий запис, з яким ви підʼєдналися, не має привілеїв, щоб відкрити цю папку. Це вирішує сервер, тому жоден параметр на цьому компʼютері цього не змінить.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Що можна спробувати:\n- Перевірте привілеї папки на сервері\n- Деякі папки належать власному системному обліковому запису сервера і закриті для всіх інших\n- Підʼєднайтеся обліковим записом, який має доступ",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
+  "errors.listing.alreadyExists.title": "Уже існує",
+  "@errors.listing.alreadyExists.title": {
+    "sourceHash": "2dbc546"
+  },
+  "errors.listing.alreadyExists.explanation": "За шляхом `{path}` уже існує файл або папка, тож Cmdr не може створити там ще один елемент.",
+  "@errors.listing.alreadyExists.explanation": {
+    "sourceHash": "630e6d8"
+  },
+  "errors.listing.alreadyExists.suggestion": "Перейменуйте наявний елемент або виберіть іншу назву для нового.",
+  "@errors.listing.alreadyExists.suggestion": {
+    "sourceHash": "8761a72"
+  },
+  "errors.listing.cancelled.title": "Скасовано",
+  "@errors.listing.cancelled.title": {
+    "sourceHash": "13ca2ee"
+  },
+  "errors.listing.cancelled.explanation": "Операцію скасовано, перш ніж вона встигла завершитися.",
+  "@errors.listing.cancelled.explanation": {
+    "sourceHash": "da19c15"
+  },
+  "errors.listing.cancelled.suggestion": "Знову перейдіть сюди, коли будете готові спробувати ще раз.",
+  "@errors.listing.cancelled.suggestion": {
+    "sourceHash": "d9107b5"
+  },
+  "errors.listing.deviceDisconnected.title": "Пристрій відʼєднано",
+  "@errors.listing.deviceDisconnected.title": {
+    "sourceHash": "f0acd34"
+  },
+  "errors.listing.deviceDisconnected.explanation": "Пристрій, на якому розміщено `{path}`, відʼєднано під час операції. Таке буває, якщо USB-кабель відійшов, телефон перейшов у режим сну або мережевий диск втратив підʼєднання.",
+  "@errors.listing.deviceDisconnected.explanation": {
+    "sourceHash": "c8b7b10"
+  },
+  "errors.listing.deviceDisconnected.suggestion": "Що можна спробувати:\n- Знову підʼєднайте пристрій і переконайтеся, що кабель надійно тримається\n- Якщо це телефон, відімкніть його й переконайтеся, що ввімкнено режим передачі файлів\n- Знову перейдіть сюди, щойно пристрій повернеться",
+  "@errors.listing.deviceDisconnected.suggestion": {
+    "sourceHash": "6940094"
+  },
+  "errors.listing.notConnected.title": "Ще не підʼєднано",
+  "@errors.listing.notConnected.title": {
+    "sourceHash": "8985693"
+  },
+  "errors.listing.notConnected.explanation": "Телефон чи сервер, на якому розміщено `{path}`, ще не підʼєднано до Cmdr, тож тут поки нема чого показати. Нічого не відʼєднано й нічого не видалено.",
+  "@errors.listing.notConnected.explanation": {
+    "sourceHash": "93ca2df"
+  },
+  "errors.listing.notConnected.suggestion": "Що можна спробувати:\n- Відкрийте телефон або сервер у перемикачі томів, щоб підʼєднатися до нього\n- Якщо це телефон, відімкніть його й підтвердьте запити, які він покаже\n- Знову перейдіть сюди, щойно його буде підʼєднано",
+  "@errors.listing.notConnected.suggestion": {
+    "sourceHash": "652f289"
+  },
+  "errors.listing.linkTargetUnreachable.title": "Сервер цієї папки недоступний",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "Шлях `{path}` веде через посилання на інший сервер, і Cmdr зараз не вдається звʼязатися з цим сервером. З рештою цієї спільної папки все гаразд, і нічого не видалено.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Що можна спробувати:\n- Перевірте, чи інший сервер працює і чи доступний він із вашої мережі\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
+  "errors.listing.deviceReconnecting.title": "Повторне підʼєднання до пристрою",
+  "@errors.listing.deviceReconnecting.title": {
+    "sourceHash": "6157c60"
+  },
+  "errors.listing.deviceReconnecting.explanation": "Підʼєднання до пристрою, на якому розміщено `{path}`, перезапустилося, тож ця дія не виконалася. Пристрій досі підʼєднано, і Cmdr прямо зараз знову його відкриває. Зазвичай таке трапляється після скасованої або перерваної передачі.",
+  "@errors.listing.deviceReconnecting.explanation": {
+    "sourceHash": "0327639"
+  },
+  "errors.listing.deviceReconnecting.suggestion": "Зачекайте кілька секунд, а потім спробуйте ще раз. Відʼєднувати нічого не потрібно.",
+  "@errors.listing.deviceReconnecting.suggestion": {
+    "sourceHash": "4dac2e7"
+  },
+  "errors.listing.readOnly.title": "Тільки читання",
+  "@errors.listing.readOnly.title": {
+    "sourceHash": "72bb908"
+  },
+  "errors.listing.readOnly.explanation": "Цей том доступний тільки для читання, тож Cmdr не може вносити в нього зміни. Можливо, на пристрої є фізичний перемикач захисту від запису, образ диска змонтовано тільки для читання або файлова система не підтримує запис.",
+  "@errors.listing.readOnly.explanation": {
+    "sourceHash": "d8080b8"
+  },
+  "errors.listing.readOnly.suggestion": "Що можна спробувати:\n- Якщо на пристрої є фізичний перемикач захисту від запису (такі часто бувають на SD-картках), вимкніть захист\n- Якщо це образ диска, змонтуйте його знову з доступом на запис\n- Або спершу скопіюйте файли в місце, доступне для запису",
+  "@errors.listing.readOnly.suggestion": {
+    "sourceHash": "15fa759"
+  },
+  "errors.listing.storageFull.title": "Диск заповнений",
+  "@errors.listing.storageFull.title": {
+    "sourceHash": "293beb8"
+  },
+  "errors.listing.storageFull.explanation": "На цьому томі недостатньо вільного місця, щоб завершити операцію.",
+  "@errors.listing.storageFull.explanation": {
+    "sourceHash": "3915993"
+  },
+  "errors.listing.storageFull.suggestion": "Що можна спробувати:\n- Звільніть місце: перемістіть або видаліть файли, які вам більше не потрібні\n- Очистіть Смітник (клацніть іконку Смітника в Dock правою кнопкою)\n- У Терміналі виконайте `df -h`, щоб побачити, скільки місця залишилося на кожному томі",
+  "@errors.listing.storageFull.suggestion": {
+    "sourceHash": "101099b"
+  },
+  "errors.listing.connectionTimedOut.title": "Вичерпався час очікування підʼєднання",
+  "@errors.listing.connectionTimedOut.title": {
+    "sourceHash": "2e0b4a7"
+  },
+  "errors.listing.connectionTimedOut.explanation": "Cmdr не вдалося отримати доступ до цього ресурсу: підʼєднання не відповіло вчасно. Зазвичай це означає, що сервер або пристрій повільно відповідає чи мережеве підʼєднання нестабільне.",
+  "@errors.listing.connectionTimedOut.explanation": {
+    "sourceHash": "15d3054"
+  },
+  "errors.listing.connectionTimedOut.suggestion": "Що можна спробувати:\n- Перевірте, чи пристрій або сервер увімкнений і доступний\n- Перевірте підʼєднання Wi-Fi або Ethernet\n- У Терміналі виконайте `ping <hostname>`, щоб перевірити, чи доступний сервер\n- Спробуйте ще раз",
+  "@errors.listing.connectionTimedOut.suggestion": {
+    "sourceHash": "f474938"
+  },
+  "errors.listing.notSupported.title": "Не підтримується",
+  "@errors.listing.notSupported.title": {
+    "sourceHash": "74e8477"
+  },
+  "errors.listing.notSupported.explanation": "Ця операція не підтримується на томі такого типу. Деякі томи (як-от сховище телефону чи окремі мережеві диски) підтримують не всі операції.",
+  "@errors.listing.notSupported.explanation": {
+    "sourceHash": "d074574"
+  },
+  "errors.listing.notSupported.suggestion": "Спробуйте інший спосіб або виконайте цю операцію у Finder.",
+  "@errors.listing.notSupported.suggestion": {
+    "sourceHash": "d4e3965"
+  },
+  "errors.listing.deletePending.title": "Файл видаляється",
+  "@errors.listing.deletePending.title": {
+    "sourceHash": "1e5741a"
+  },
+  "errors.listing.deletePending.explanation": "Файл `{path}` ось-ось зникне. Сервер позначив цей файл для видалення, але його досі тримає інший відкритий дескриптор, доки той не закриється.",
+  "@errors.listing.deletePending.explanation": {
+    "sourceHash": "047ad2f"
+  },
+  "errors.listing.deletePending.suggestion": "Що можна спробувати:\n- Зачекайте трохи й спробуйте ще раз: щойно останній дескриптор закриється, файл зникне\n- Закрийте інші програми, у яких цей файл може бути відкритий\n- Якщо файл не зникає, перезапустіть Cmdr, щоб звільнити дескриптори, які Cmdr ще може тримати",
+  "@errors.listing.deletePending.suggestion": {
+    "sourceHash": "0531cd8"
+  },
+  "errors.listing.coldStorage.title": "Цей файл в архівному сховищі",
+  "@errors.listing.coldStorage.title": {
+    "sourceHash": "73da082"
+  },
+  "errors.listing.coldStorage.explanation": "Файл `{path}` в архівному сховищі, тож прочитати його вміст можна буде лише після відновлення.",
+  "@errors.listing.coldStorage.explanation": {
+    "sourceHash": "78f52d7"
+  },
+  "errors.listing.coldStorage.suggestion": "Що можна спробувати:\n- Відновіть файл у консолі свого постачальника сховища, а тоді відкрийте його знову\n- Відновлення може тривати від кількох хвилин до двох днів",
+  "@errors.listing.coldStorage.suggestion": {
+    "sourceHash": "0becf43"
+  },
+  "errors.listing.invalidName.title": "Ця назва тут не підійде",
+  "@errors.listing.invalidName.title": {
+    "sourceHash": "7ced906"
+  },
+  "errors.listing.invalidName.explanation": "Місце призначення не може зберігати назву елемента `{path}`, тому відхилило саму назву, навіть не шукаючи файл.",
+  "@errors.listing.invalidName.explanation": {
+    "sourceHash": "ac27ddb"
+  },
+  "errors.listing.invalidName.suggestion": "Що можна спробувати:\n- Перейменуйте елемент: дайте йому коротшу й простішу назву\n- Деякі місця призначення не приймають зарезервовані назви, як-от `CON`, `NUL` чи `LPT1`\n- Дуже довга назва може перевищити власний ліміт місця призначення, навіть якщо кожен символ у ній допустимий",
+  "@errors.listing.invalidName.suggestion": {
+    "sourceHash": "f5cf683"
+  },
+  "errors.listing.ambiguousName.title": "Цій назві відповідає кілька елементів",
+  "@errors.listing.ambiguousName.title": {
+    "sourceHash": "b72d687"
+  },
+  "errors.listing.ambiguousName.explanation": "Шляху `{path}` на сервері відповідає кілька елементів. Їхні назви на вигляд однакові, але сервер зберігає їх по-різному (літеру з діакритичним знаком можна записати двома способами, а деякі сервери розрізняють верхній і нижній регістр), тож Cmdr не став вибирати за вас.",
+  "@errors.listing.ambiguousName.explanation": {
+    "sourceHash": "f1e1509"
+  },
+  "errors.listing.ambiguousName.suggestion": "Що можна спробувати:\n- Відкрийте батьківську папку й виберіть потрібний елемент зі списку\n- Щоб уникнути цього надалі, перейменуйте один з елементів так, аби назви чітко відрізнялися",
+  "@errors.listing.ambiguousName.suggestion": {
+    "sourceHash": "55b960c"
+  },
+  "errors.listing.duplicateName.title": "Цю назву має кілька елементів",
+  "@errors.listing.duplicateName.title": {
+    "sourceHash": "3ce4c53"
+  },
+  "errors.listing.duplicateName.explanation": "Шлях `{path}` вказує на кілька елементів на цьому пристрої. Телефони й камери можуть зберігати в одній папці кілька файлів з абсолютно однаковою назвою, тож Cmdr не став вибирати за вас.",
+  "@errors.listing.duplicateName.explanation": {
+    "sourceHash": "cea78b8"
+  },
+  "errors.listing.duplicateName.suggestion": "Що можна спробувати:\n- Відкрийте папку, у якій вони лежать, і виберіть зі списку потрібний\n- Або перейменуйте один з них, щоб кожен мав власну назву",
+  "@errors.listing.duplicateName.suggestion": {
+    "sourceHash": "1059be1"
+  },
+  "errors.listing.ioSerious.title": "Не вдалося прочитати цю папку",
+  "@errors.listing.ioSerious.title": {
+    "sourceHash": "af30f30"
+  },
+  "errors.listing.ioSerious.explanation": "У Cmdr виникла проблема з папкою `{path}`: {osMessage}. Це може бути тимчасовий збій або ознака того, що диск чи пристрій потребує уваги.",
+  "@errors.listing.ioSerious.explanation": {
+    "sourceHash": "6c3b625"
+  },
+  "errors.listing.ioSerious.suggestion": "Що можна спробувати:\n- Перевірте, чи диск або пристрій досі підʼєднаний\n- Спробуйте ще раз\n- Якщо це повторюється, спробуйте перевірити цей том: **Дискова утиліта > Швидка допомога**",
+  "@errors.listing.ioSerious.suggestion": {
+    "sourceHash": "6e83ebb"
+  },
+  "errors.listing.isADirectory.title": "Це папка, а не файл",
+  "@errors.listing.isADirectory.title": {
+    "sourceHash": "7ca2cdd"
+  },
+  "errors.listing.isADirectory.explanation": "Cmdr намагався відкрити елемент `{path}` як файл, але це папка.",
+  "@errors.listing.isADirectory.explanation": {
+    "sourceHash": "03331bd"
+  },
+  "errors.listing.isADirectory.suggestion": "Перейдіть у цю папку, замість того щоб відкривати її як файл.",
+  "@errors.listing.isADirectory.suggestion": {
+    "sourceHash": "fcf6f9d"
+  },
+  "errors.listing.archiveUnreadable.title": "Не вдається відкрити цей архів",
+  "@errors.listing.archiveUnreadable.title": {
+    "sourceHash": "939ba84"
+  },
+  "errors.listing.archiveUnreadable.explanation": "Цей файл схожий на архів, але Cmdr не вдалося прочитати його вміст. Можливо, архів пошкоджено, зашифровано або він має формат, який Cmdr поки не вміє відкривати.",
+  "@errors.listing.archiveUnreadable.explanation": {
+    "sourceHash": "b1e7d8b"
+  },
+  "errors.listing.archiveUnreadable.suggestion": "Спробуйте відкрити архів в іншій програмі або попросіть відправника надіслати нову копію.",
+  "@errors.listing.archiveUnreadable.suggestion": {
+    "sourceHash": "67b7e70"
+  },
+  "errors.listing.archiveNeedsPassword.title": "Для цього архіву потрібен пароль",
+  "@errors.listing.archiveNeedsPassword.title": {
+    "sourceHash": "d6d0ad4"
+  },
+  "errors.listing.archiveNeedsPassword.explanation": "Цей архів захищено, тож його вміст залишається замкненим, доки ви його не відімкнете.",
+  "@errors.listing.archiveNeedsPassword.explanation": {
+    "sourceHash": "f566496"
+  },
+  "errors.listing.archiveNeedsPassword.suggestion": "Введіть пароль, щоб переглянути архів.",
+  "@errors.listing.archiveNeedsPassword.suggestion": {
+    "sourceHash": "4043af6"
+  },
+  "errors.listing.resticRepoNeedsPassword.title": "Для цієї резервної копії потрібен пароль",
+  "@errors.listing.resticRepoNeedsPassword.title": {
+    "sourceHash": "8d09953"
+  },
+  "errors.listing.resticRepoNeedsPassword.explanation": "Цю резервну копію restic зашифровано, тож її знімки залишаються замкненими, доки ви її не відімкнете.",
+  "@errors.listing.resticRepoNeedsPassword.explanation": {
+    "sourceHash": "8b4fb1b"
+  },
+  "errors.listing.resticRepoNeedsPassword.suggestion": "Введіть пароль, щоб переглянути знімки.",
+  "@errors.listing.resticRepoNeedsPassword.suggestion": {
+    "sourceHash": "dc91e8c"
+  },
+  "errors.listing.emptyRootICloud.title": "Схоже, в iCloud Drive нічого немає",
+  "@errors.listing.emptyRootICloud.title": {
+    "sourceHash": "413a7d1"
+  },
+  "errors.listing.emptyRootICloud.explanation": "Cmdr відкрив iCloud Drive, але не отримав жодного файлу. macOS приховує вміст iCloud Drive від програм без доступу **{full_disk_access}**, тож найімовірніше допоможе надати Cmdr цей доступ.\n\nЯкщо у вашому iCloud Drive справді нічого немає, можете не зважати на цю підказку.",
+  "@errors.listing.emptyRootICloud.explanation": {
+    "sourceHash": "4222270"
+  },
+  "errors.listing.emptyRootICloud.suggestion": "Що можна спробувати:\n- Відкрийте [**{system_settings} > {privacy_and_security}**](x-apple.systempreferences:com.apple.preference.security?Privacy) і виберіть **{full_disk_access}**\n- Додайте Cmdr (натисніть кнопку **+**) і ввімкніть перемикач\n- Завершіть Cmdr і відкрийте знову\n- Поверніться сюди й спробуйте ще раз",
+  "@errors.listing.emptyRootICloud.suggestion": {
+    "sourceHash": "2e6e702"
+  },
+  "errors.git.notARepo.title": "Тут немає репозиторію git",
+  "@errors.git.notARepo.title": {
+    "sourceHash": "e2b31ec"
+  },
+  "errors.git.notARepo.message": "Cmdr переглянув дерево папок угору й не знайшов тут `.git`.",
+  "@errors.git.notARepo.message": {
+    "sourceHash": "736d43c"
+  },
+  "errors.git.notARepo.suggestion": "Відкрийте папку всередині клону git, щоб побачити мітку репозиторію.",
+  "@errors.git.notARepo.suggestion": {
+    "sourceHash": "f50fd0b"
+  },
+  "errors.git.orphanedWorktree.title": "Цей worktree залишився без основного репозиторію",
+  "@errors.git.orphanedWorktree.title": {
+    "sourceHash": "158755e"
+  },
+  "errors.git.orphanedWorktree.message": "Це повʼязаний worktree, але його основного репозиторію немає, тож git не може перейти за посиланням.",
+  "@errors.git.orphanedWorktree.message": {
+    "sourceHash": "a29d806"
+  },
+  "errors.git.orphanedWorktree.suggestion": "Спробуйте відкрити основний репозиторій або вилучіть цей worktree командою `git worktree prune`.",
+  "@errors.git.orphanedWorktree.suggestion": {
+    "sourceHash": "5da694d"
+  },
+  "errors.git.corruptRepo.title": "Схоже, цей репозиторій пошкоджено",
+  "@errors.git.corruptRepo.title": {
+    "sourceHash": "b270cef"
+  },
+  "errors.git.corruptRepo.message": "Частину даних репозиторію на диску не вдається прочитати. Можливо, папку змінювали в обхід git.",
+  "@errors.git.corruptRepo.message": {
+    "sourceHash": "6dd5095"
+  },
+  "errors.git.corruptRepo.suggestion": "Виконайте `git fsck`, щоб перевірити репозиторій. Часто допомагає свіжий клон.",
+  "@errors.git.corruptRepo.suggestion": {
+    "sourceHash": "fa12c36"
+  },
+  "errors.git.indexLocked.title": "Інший процес git саме записує дані",
+  "@errors.git.indexLocked.title": {
+    "sourceHash": "2b4fd84"
+  },
+  "errors.git.indexLocked.message": "Індекс git заблоковано. Зазвичай це означає, що ще виконується інша команда git.",
+  "@errors.git.indexLocked.message": {
+    "sourceHash": "95399bb"
+  },
+  "errors.git.indexLocked.suggestion": "Зачекайте, доки виконувана команда git завершиться, а потім знову перейдіть сюди.",
+  "@errors.git.indexLocked.suggestion": {
+    "sourceHash": "deba96c"
+  },
+  "errors.git.permissionDenied.title": "Cmdr не вдається прочитати цей репозиторій",
+  "@errors.git.permissionDenied.title": {
+    "sourceHash": "2fb725c"
+  },
+  "errors.git.permissionDenied.message": "Система не дає Cmdr відкрити папку `.git`, тож інформація git недоступна.",
+  "@errors.git.permissionDenied.message": {
+    "sourceHash": "53012e9"
+  },
+  "errors.git.permissionDenied.suggestion": "Відкрийте **{system_settings} > {privacy_and_security} > {files_and_folders}** і надайте Cmdr доступ до папки.",
+  "@errors.git.permissionDenied.suggestion": {
+    "sourceHash": "7396b5a"
+  },
+  "errors.git.bareRepo.title": "Bare-репозиторії поки не підтримуються",
+  "@errors.git.bareRepo.title": {
+    "sourceHash": "a378648"
+  },
+  "errors.git.bareRepo.message": "У bare-репозиторіях немає робочого дерева, а оглядач git побудовано саме навколо нього.",
+  "@errors.git.bareRepo.message": {
+    "sourceHash": "1839f25"
+  },
+  "errors.git.bareRepo.suggestion": "Клонуйте репозиторій у робочу папку, щоб користуватися оглядачем git.",
+  "@errors.git.bareRepo.suggestion": {
+    "sourceHash": "8ae4757"
+  },
+  "errors.git.blobTooLarge.title": "Цей файл завеликий, щоб завантажити його з історії",
+  "@errors.git.blobTooLarge.title": {
+    "sourceHash": "480f6ba"
+  },
+  "errors.git.blobTooLarge.message": "Cmdr читає blob-обʼєкти git цілими файлами за раз, а цей перевищує безпечний ліміт.",
+  "@errors.git.blobTooLarge.message": {
+    "sourceHash": "d5609a4"
+  },
+  "errors.git.blobTooLarge.suggestion": "Щоб прочитати цей файл, зробіть його checkout у робоче дерево.",
+  "@errors.git.blobTooLarge.suggestion": {
+    "sourceHash": "cae2b3d"
+  },
+  "errors.git.shallowBoundary.title": "За межею неглибокого клону",
+  "@errors.git.shallowBoundary.title": {
+    "sourceHash": "9fc0175"
+  },
+  "errors.git.shallowBoundary.message": "Цей коміт лежить за межею вашого неглибокого клону, тож його даних немає на диску.",
+  "@errors.git.shallowBoundary.message": {
+    "sourceHash": "66bac24"
+  },
+  "errors.git.shallowBoundary.suggestion": "Виконайте `git fetch --unshallow` (або `--depth=N`), щоб отримати в клон більше історії.",
+  "@errors.git.shallowBoundary.suggestion": {
+    "sourceHash": "7b8888e"
+  },
+  "errors.git.missingObject.title": "Бракує обʼєкта git",
+  "@errors.git.missingObject.title": {
+    "sourceHash": "c12863e"
+  },
+  "errors.git.missingObject.message": "Git шукає обʼєкт, якого вже немає у файлах пакунків. Можливо, репозиторій отримано не повністю або пошкоджено.",
+  "@errors.git.missingObject.message": {
+    "sourceHash": "1eb902f"
+  },
+  "errors.git.missingObject.suggestion": "Спробуйте `git fetch`, щоб відновити відсутній обʼєкт, або `git fsck`, щоб перевірити пошкодження.",
+  "@errors.git.missingObject.suggestion": {
+    "sourceHash": "b221f85"
+  },
+  "errors.git.gitDirPermissionDenied.title": "Cmdr не вдається відкрити папку `.git`",
+  "@errors.git.gitDirPermissionDenied.title": {
+    "sourceHash": "23c216a"
+  },
+  "errors.git.gitDirPermissionDenied.message": "Система заборонила доступ до папки `.git`, хоча робоче дерево можна прочитати.",
+  "@errors.git.gitDirPermissionDenied.message": {
+    "sourceHash": "2db5cf0"
+  },
+  "errors.git.gitDirPermissionDenied.suggestion": "Відкрийте **{system_settings} > {privacy_and_security} > {files_and_folders}** і надайте Cmdr доступ. У Терміналі команда `ls -la .git` покаже поточного власника й режим доступу.",
+  "@errors.git.gitDirPermissionDenied.suggestion": {
+    "sourceHash": "b091738"
+  },
+  "errors.git.volumeGone.title": "Диск із цим репозиторієм зник",
+  "@errors.git.volumeGone.title": {
+    "sourceHash": "cf5deff"
+  },
+  "errors.git.volumeGone.message": "Cmdr читав цей репозиторій, коли диск відʼєднався. Читання зупинено на цьому місці, тож ви не побачите нічого прочитаного наполовину.",
+  "@errors.git.volumeGone.message": {
+    "sourceHash": "10914cd"
+  },
+  "errors.git.volumeGone.suggestion": "Знову підʼєднайте диск, а тоді ще раз відкрийте папку.",
+  "@errors.git.volumeGone.suggestion": {
+    "sourceHash": "44f27e8"
+  },
+  "errors.provider.dropbox.displayName": "Dropbox",
+  "@errors.provider.dropbox.displayName": {
+    "sourceHash": "4750d0a",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.dropbox.appName": "Dropbox",
+  "@errors.provider.dropbox.appName": {
+    "sourceHash": "4750d0a",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.googleDrive.displayName": "Google Drive",
+  "@errors.provider.googleDrive.displayName": {
+    "sourceHash": "915ef4b",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.googleDrive.appName": "Google Drive",
+  "@errors.provider.googleDrive.appName": {
+    "sourceHash": "915ef4b",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.oneDrive.displayName": "OneDrive",
+  "@errors.provider.oneDrive.displayName": {
+    "sourceHash": "8a7a54d",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.oneDrive.appName": "OneDrive",
+  "@errors.provider.oneDrive.appName": {
+    "sourceHash": "8a7a54d",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.box.displayName": "Box",
+  "@errors.provider.box.displayName": {
+    "sourceHash": "512fd3c",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.box.appName": "Box Drive",
+  "@errors.provider.box.appName": {
+    "sourceHash": "93fe945",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.pCloud.displayName": "pCloud",
+  "@errors.provider.pCloud.displayName": {
+    "sourceHash": "8cfc474",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.pCloud.appName": "pCloud Drive",
+  "@errors.provider.pCloud.appName": {
+    "sourceHash": "bfaba70",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.nextcloud.displayName": "Nextcloud",
+  "@errors.provider.nextcloud.displayName": {
+    "sourceHash": "337128a",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.nextcloud.appName": "Nextcloud",
+  "@errors.provider.nextcloud.appName": {
+    "sourceHash": "337128a",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.synologyDrive.displayName": "Synology Drive",
+  "@errors.provider.synologyDrive.displayName": {
+    "sourceHash": "118537c",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.synologyDrive.appName": "Synology Drive",
+  "@errors.provider.synologyDrive.appName": {
+    "sourceHash": "118537c",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.tresorit.displayName": "Tresorit",
+  "@errors.provider.tresorit.displayName": {
+    "sourceHash": "9189473",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.tresorit.appName": "Tresorit",
+  "@errors.provider.tresorit.appName": {
+    "sourceHash": "9189473",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.protonDrive.displayName": "Proton Drive",
+  "@errors.provider.protonDrive.displayName": {
+    "sourceHash": "ae94a23",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.protonDrive.appName": "Proton Drive",
+  "@errors.provider.protonDrive.appName": {
+    "sourceHash": "ae94a23",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.sync.displayName": "Sync.com",
+  "@errors.provider.sync.displayName": {
+    "sourceHash": "31eb68b",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.sync.appName": "Sync.com",
+  "@errors.provider.sync.appName": {
+    "sourceHash": "31eb68b",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.egnyte.displayName": "Egnyte",
+  "@errors.provider.egnyte.displayName": {
+    "sourceHash": "daa69d3",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.egnyte.appName": "Egnyte Connect",
+  "@errors.provider.egnyte.appName": {
+    "sourceHash": "6beb18f",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.macDroid.displayName": "MacDroid",
+  "@errors.provider.macDroid.displayName": {
+    "sourceHash": "99388b1",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.macDroid.appName": "MacDroid",
+  "@errors.provider.macDroid.appName": {
+    "sourceHash": "99388b1",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.iCloud.displayName": "iCloud Drive",
+  "@errors.provider.iCloud.displayName": {
+    "sourceHash": "416264f",
+    "sameAsSourceJustification": "Apple keeps iCloud Drive in Latin in Ukrainian macOS (terms.json icloud-drive ruling)."
+  },
+  "errors.provider.pCloudFuse.displayName": "pCloud",
+  "@errors.provider.pCloudFuse.displayName": {
+    "sourceHash": "8cfc474",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.pCloudFuse.appName": "pCloud Drive",
+  "@errors.provider.pCloudFuse.appName": {
+    "sourceHash": "bfaba70",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.macFuse.displayName": "macFUSE",
+  "@errors.provider.macFuse.displayName": {
+    "sourceHash": "229fed1",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.veraCrypt.displayName": "VeraCrypt",
+  "@errors.provider.veraCrypt.displayName": {
+    "sourceHash": "46eeb7a",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.veraCrypt.appName": "VeraCrypt",
+  "@errors.provider.veraCrypt.appName": {
+    "sourceHash": "46eeb7a",
+    "sameAsSourceJustification": "Brand name kept verbatim, as the @key says; Ukrainian leaves foreign product names in Latin (style.md § Brand)."
+  },
+  "errors.provider.cmVolumes.displayName": "Змонтоване хмарне сховище",
+  "@errors.provider.cmVolumes.displayName": {
+    "sourceHash": "8dabeba"
+  },
+  "errors.provider.genericCloudStorage.displayName": "ваш хмарний сервіс",
+  "@errors.provider.genericCloudStorage.displayName": {
+    "sourceHash": "1066349"
+  },
+  "errors.provider.macDroid.transient": "Цією папкою керує **MacDroid**. Що можна спробувати:\n- Відкрийте програму MacDroid і перевірте, чи телефон підʼєднано\n- Переконайтеся, що телефон відімкнено і ввімкнено режим передачі файлів\n- Відʼєднайте USB-кабель і підʼєднайте знову, а тоді ще раз перейдіть сюди",
+  "@errors.provider.macDroid.transient": {
+    "sourceHash": "5df1c20"
+  },
+  "errors.provider.macDroid.needsAction": "Цією папкою керує **MacDroid**. Що можна спробувати:\n- Відкрийте програму MacDroid і перевірте, чи телефон підʼєднано\n- Переконайтеся, що телефон відімкнено, а його екран увімкнено\n- Перевірте, чи на телефоні ввімкнено режим передачі файлів через USB",
+  "@errors.provider.macDroid.needsAction": {
+    "sourceHash": "5fe56e6"
+  },
+  "errors.provider.macDroid.serious": "Цією папкою керує **MacDroid**. Що можна спробувати:\n- Відʼєднайте USB-кабель і підʼєднайте знову\n- Перезапустіть програму MacDroid\n- Спробуйте інший USB-порт або кабель",
+  "@errors.provider.macDroid.serious": {
+    "sourceHash": "a79e0b6"
+  },
+  "errors.provider.iCloud.transient": "Цією папкою керує **{name}**. Що можна спробувати:\n- Перевірте підʼєднання до інтернету\n- Переконайтеся, що ви ввійшли в iCloud у програмі {system_settings}\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.provider.iCloud.transient": {
+    "sourceHash": "6a98b24"
+  },
+  "errors.provider.iCloud.needsAction": "Цією папкою керує **{name}**. Що можна спробувати:\n- Перевірте, чи ввімкнено iCloud Drive: **{system_settings} > Обліковий запис Apple > iCloud**\n- Переконайтеся, що ви ввійшли в потрібний обліковий запис Apple\n- Перевірте, чи не заповнене ваше сховище iCloud",
+  "@errors.provider.iCloud.needsAction": {
+    "sourceHash": "48c7123"
+  },
+  "errors.provider.iCloud.serious": "Цією папкою керує **{name}**. Що можна спробувати:\n- Вийдіть з iCloud у програмі {system_settings} і ввійдіть знову\n- Перевірте [сторінку стану систем Apple](https://www.apple.com/support/systemstatus/)",
+  "@errors.provider.iCloud.serious": {
+    "sourceHash": "4f730c7"
+  },
+  "errors.provider.macFuse.transient": "Це том, змонтований через **macFUSE**. Віддалений сервер може повільно відповідати або бути недоступним. Що можна спробувати:\n- Перевірте підʼєднання до мережі\n- Перевірте, чи працює віддалений сервер\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.provider.macFuse.transient": {
+    "sourceHash": "66fcc6b"
+  },
+  "errors.provider.macFuse.needsAction": "Це том, змонтований через **macFUSE**. Що можна спробувати:\n- Перевірте, чи досі працює процес FUSE, що обслуговує цей том\n- За потреби примусово відмонтуйте том і змонтуйте знову\n- Переконайтеся, що версія macFUSE актуальна: **{system_settings} > Загальні > Автозапуск і розширення**",
+  "@errors.provider.macFuse.needsAction": {
+    "sourceHash": "0c2981f"
+  },
+  "errors.provider.macFuse.serious": "Це том, змонтований через **macFUSE**. Схоже, процес FUSE, що обслуговує цей том, аварійно завершив роботу або відʼєднався. Що можна спробувати:\n- Примусово відмонтуйте том: у Терміналі виконайте `umount -f /Volumes/<name>`\n- Змонтуйте том знову тією самою командою, що й першого разу\n- Якщо це повторюється, перевірте, чи версія macFUSE актуальна",
+  "@errors.provider.macFuse.serious": {
+    "sourceHash": "8da8430"
+  },
+  "errors.provider.pCloudFuse.transient": "Ця папка розташована на віртуальному диску **pCloud**. Що можна спробувати:\n- Перевірте підʼєднання до інтернету\n- Переконайтеся, що програма pCloud працює\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.provider.pCloudFuse.transient": {
+    "sourceHash": "b51abf9"
+  },
+  "errors.provider.pCloudFuse.needsAction": "Ця папка розташована на віртуальному диску **pCloud**. Що можна спробувати:\n- Переконайтеся, що програма pCloud працює і ви ввійшли у свій обліковий запис\n- Перевірте підʼєднання до інтернету\n- Після оновлення macOS знову схваліть системне розширення pCloud: **{system_settings} > Загальні > Автозапуск і розширення**",
+  "@errors.provider.pCloudFuse.needsAction": {
+    "sourceHash": "42ff4c9"
+  },
+  "errors.provider.pCloudFuse.serious": "Ця папка розташована на віртуальному диску **pCloud**. Можливо, процес FUSE програми pCloud аварійно завершив роботу. Що можна спробувати:\n- Завершіть програму pCloud і відкрийте знову\n- Якщо диск не зʼявиться знову, примусово відмонтуйте його: у Терміналі виконайте `umount -f /Volumes/pCloudDrive`\n- Після оновлення macOS знову схваліть системне розширення pCloud: **{system_settings} > Загальні > Автозапуск і розширення**",
+  "@errors.provider.pCloudFuse.serious": {
+    "sourceHash": "232d806"
+  },
+  "errors.provider.veraCrypt.transient": "Це зашифрований том **{name}**. Що можна спробувати:\n- Перевірте, чи том VeraCrypt досі змонтовано\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.provider.veraCrypt.transient": {
+    "sourceHash": "125eaf9"
+  },
+  "errors.provider.veraCrypt.needsAction": "Це зашифрований том **{name}**. Що можна спробувати:\n- Відкрийте програму VeraCrypt і перевірте, чи цей том змонтовано\n- За потреби відмонтуйте том і змонтуйте знову",
+  "@errors.provider.veraCrypt.needsAction": {
+    "sourceHash": "09d12a7"
+  },
+  "errors.provider.veraCrypt.serious": "Це зашифрований том **{name}**. Що можна спробувати:\n- Відмонтуйте том у програмі VeraCrypt і змонтуйте знову\n- Якщо з томом і далі виникають проблеми, перевірте його інструментами відновлення VeraCrypt",
+  "@errors.provider.veraCrypt.serious": {
+    "sourceHash": "a0737db"
+  },
+  "errors.provider.cmVolumes.transient": "Це змонтоване хмарне сховище. Що можна спробувати:\n- Перевірте підʼєднання до інтернету\n- Перевірте, чи працює програма для монтування (CloudMounter, Mountain Duck тощо)\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.provider.cmVolumes.transient": {
+    "sourceHash": "b7ae13e"
+  },
+  "errors.provider.cmVolumes.nonTransient": "Це змонтоване хмарне сховище. Що можна спробувати:\n- Перевірте, чи працює програма для монтування (CloudMounter, Mountain Duck тощо)\n- Відʼєднайте сховище й знову підʼєднайте його\n- Перевірте, чи не сплив термін дії ваших облікових даних",
+  "@errors.provider.cmVolumes.nonTransient": {
+    "sourceHash": "4474047"
+  },
+  "errors.provider.genericCloudStorage.transient": "Цією папкою керує хмарний сервіс. Що можна спробувати:\n- Перевірте підʼєднання до інтернету\n- Перевірте, чи працює програма синхронізації\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.provider.genericCloudStorage.transient": {
+    "sourceHash": "9a454cf"
+  },
+  "errors.provider.genericCloudStorage.nonTransient": "Цією папкою керує хмарний сервіс. Що можна спробувати:\n- Перевірте, чи працює програма синхронізації\n- Вийдіть з облікового запису в програмі хмарного сервісу й увійдіть знову\n- Перевірте підʼєднання до інтернету",
+  "@errors.provider.genericCloudStorage.nonTransient": {
+    "sourceHash": "3b8d2a6"
+  },
+  "errors.provider.appBased.transient": "Цією папкою керує **{name}**. Що можна спробувати:\n- Перевірте підʼєднання до інтернету\n- Відкрийте програму {app} і переконайтеся, що вона працює і все синхронізовано\n- Знову перейдіть сюди, щоб спробувати ще раз",
+  "@errors.provider.appBased.transient": {
+    "sourceHash": "ba634b7"
+  },
+  "errors.provider.appBased.needsAction": "Цією папкою керує **{name}**. Що можна спробувати:\n- Відкрийте програму {app} і перевірте стан синхронізації\n- Переконайтеся, що ви ввійшли в програму {app}\n- Перевірте, чи є у вас доступ до цієї папки в сервісі {name}",
+  "@errors.provider.appBased.needsAction": {
+    "sourceHash": "f69fe61"
+  },
+  "errors.provider.appBased.serious": "Цією папкою керує **{name}**. Що можна спробувати:\n- Завершіть програму {app} і відкрийте знову\n- Вийдіть з облікового запису в програмі {app} і ввійдіть знову\n- Перевірте на сторінці стану сервісу {name}, чи немає збоїв",
+  "@errors.provider.appBased.serious": {
+    "sourceHash": "5a4e14e"
+  },
+  "errors.write.sourceNotFound.title": "Не вдалося знайти файл",
+  "@errors.write.sourceNotFound.title": {
+    "sourceHash": "eff005a"
+  },
+  "errors.write.sourceNotFound.message.copy": "Файлу чи папки, які ви намагалися скопіювати, більше немає.",
+  "@errors.write.sourceNotFound.message.copy": {
+    "sourceHash": "e572507"
+  },
+  "errors.write.sourceNotFound.message.move": "Файлу чи папки, які ви намагалися перемістити, більше немає.",
+  "@errors.write.sourceNotFound.message.move": {
+    "sourceHash": "4c07735"
+  },
+  "errors.write.sourceNotFound.message.delete": "Файлу чи папки, які ви намагалися видалити, більше немає.",
+  "@errors.write.sourceNotFound.message.delete": {
+    "sourceHash": "cb0ab8f"
+  },
+  "errors.write.sourceNotFound.message.trash": "Файлу чи папки, які ви намагалися перемістити в Смітник, більше немає.",
+  "@errors.write.sourceNotFound.message.trash": {
+    "sourceHash": "dbc0bbe"
+  },
+  "errors.write.sourceNotFound.suggestion": "Можливо, елемент переміщено, перейменовано або видалено. Спробуйте оновити список файлів.",
+  "@errors.write.sourceNotFound.suggestion": {
+    "sourceHash": "1a6cd17"
+  },
+  "errors.write.destinationNotFound.title": "Не вдалося знайти папку призначення",
+  "@errors.write.destinationNotFound.title": {
+    "sourceHash": "ae77ee8"
+  },
+  "errors.write.destinationNotFound.message.copy": "Папки, у яку ви копіюєте, більше немає, тож ваші файли не було куди покласти. Оригінали не змінено.",
+  "@errors.write.destinationNotFound.message.copy": {
+    "sourceHash": "b747547"
+  },
+  "errors.write.destinationNotFound.message.move": "Папки, у яку ви переміщуєте, більше немає, тож ваші файли не було куди покласти. Оригінали не змінено.",
+  "@errors.write.destinationNotFound.message.move": {
+    "sourceHash": "20fb725"
+  },
+  "errors.write.destinationNotFound.suggestion": "Можливо, її перейменовано чи видалено, або диск відʼєднався. Виберіть інше місце призначення або знову відкрийте папку й спробуйте ще раз.",
+  "@errors.write.destinationNotFound.suggestion": {
+    "sourceHash": "2e99059"
+  },
+  "errors.write.destinationNotAFolder.title": "Заважає файл",
+  "@errors.write.destinationNotAFolder.title": {
+    "sourceHash": "d371870"
+  },
+  "errors.write.destinationNotAFolder.message": "Cmdr не вдалося створити папку призначення, бо за шляхом «{path}» є файл, а там має бути папка. Нічого не записано, оригінали не змінено.",
+  "@errors.write.destinationNotAFolder.message": {
+    "sourceHash": "98178cb"
+  },
+  "errors.write.destinationNotAFolder.suggestion": "Виберіть інше місце призначення або перейменуйте чи перемістіть цей файл і спробуйте ще раз.",
+  "@errors.write.destinationNotAFolder.suggestion": {
+    "sourceHash": "c410ecf"
+  },
+  "errors.write.notConnected.title": "Ще не підʼєднано",
+  "@errors.write.notConnected.title": {
+    "sourceHash": "8985693"
+  },
+  "errors.write.notConnected.message.source": "Телефон чи сервер, де зберігаються ці файли, ще не підʼєднано до Cmdr, тож нічого не змінилося.",
+  "@errors.write.notConnected.message.source": {
+    "sourceHash": "7869dce"
+  },
+  "errors.write.notConnected.message.destination": "Телефон чи сервер призначення ще не підʼєднано до Cmdr, тож нічого не змінилося. Ваші файли не змінено.",
+  "@errors.write.notConnected.message.destination": {
+    "sourceHash": "3b5063d"
+  },
+  "errors.write.notConnected.suggestion": "Відкрийте його в перемикачі томів, щоб підʼєднатися, а тоді спробуйте ще раз. Якщо це телефон, відімкніть його й підтвердьте запити, які він покаже.",
+  "@errors.write.notConnected.suggestion": {
+    "sourceHash": "3fdc936"
+  },
+  "errors.write.noLongerConnected.title": "Більше не підʼєднано",
+  "@errors.write.noLongerConnected.title": {
+    "sourceHash": "3974fa0"
+  },
+  "errors.write.noLongerConnected.message": "Телефон чи сервер, де зберігаються ці файли, більше не підʼєднано, тож нічого не змінилося.",
+  "@errors.write.noLongerConnected.message": {
+    "sourceHash": "d0827c4"
+  },
+  "errors.write.noLongerConnected.suggestion": "Знову підʼєднайте телефон кабелем або відкрийте сервер у перемикачі томів, а тоді спробуйте ще раз.",
+  "@errors.write.noLongerConnected.suggestion": {
+    "sourceHash": "850ecdb"
+  },
+  "errors.write.destinationExists.title": "Файл уже існує",
+  "@errors.write.destinationExists.title": {
+    "sourceHash": "ae71a9a"
+  },
+  "errors.write.destinationExists.message": "У місці призначення вже є файл із такою назвою.",
+  "@errors.write.destinationExists.message": {
+    "sourceHash": "cdcfb7b"
+  },
+  "errors.write.destinationExists.suggestion": "Виберіть іншу назву чи розташування або спершу видаліть наявний файл.",
+  "@errors.write.destinationExists.suggestion": {
+    "sourceHash": "37d7702"
+  },
+  "errors.write.destinationInsideSource.title.copy": "Неможливо скопіювати папку в саму себе",
+  "@errors.write.destinationInsideSource.title.copy": {
+    "sourceHash": "f8dd7f6"
+  },
+  "errors.write.destinationInsideSource.title.move": "Неможливо перемістити папку в саму себе",
+  "@errors.write.destinationInsideSource.title.move": {
+    "sourceHash": "48b9b42"
+  },
+  "errors.write.destinationInsideSource.message.copy": "Ви намагаєтеся скопіювати папку в одну з її власних підпапок.",
+  "@errors.write.destinationInsideSource.message.copy": {
+    "sourceHash": "26785f5"
+  },
+  "errors.write.destinationInsideSource.message.move": "Ви намагаєтеся перемістити папку в одну з її власних підпапок.",
+  "@errors.write.destinationInsideSource.message.move": {
+    "sourceHash": "4fcd446"
+  },
+  "errors.write.destinationInsideSource.suggestion.copy": "Виберіть місце призначення поза папкою, яку ви копіюєте.",
+  "@errors.write.destinationInsideSource.suggestion.copy": {
+    "sourceHash": "9c446bf"
+  },
+  "errors.write.destinationInsideSource.suggestion.move": "Виберіть місце призначення поза папкою, яку ви переміщуєте.",
+  "@errors.write.destinationInsideSource.suggestion.move": {
+    "sourceHash": "ab985a6"
+  },
+  "errors.write.symlinkLoop.title": "Виявлено цикл посилань",
+  "@errors.write.symlinkLoop.title": {
+    "sourceHash": "0bbdc9c"
+  },
+  "errors.write.symlinkLoop.message": "Ця папка містить символічні посилання, які утворюють нескінченний цикл.",
+  "@errors.write.symlinkLoop.message": {
+    "sourceHash": "00931eb"
+  },
+  "errors.write.symlinkLoop.suggestion": "У структурі папок є посилання, що ведуть по колу. Можливо, доведеться видалити деякі символічні посилання.",
+  "@errors.write.symlinkLoop.suggestion": {
+    "sourceHash": "87ddbca"
+  },
+  "errors.write.cancelled.title.copy": "Копіювання скасовано",
+  "@errors.write.cancelled.title.copy": {
+    "sourceHash": "7edfd40"
+  },
+  "errors.write.cancelled.title.move": "Переміщення скасовано",
+  "@errors.write.cancelled.title.move": {
+    "sourceHash": "8b7eec1"
+  },
+  "errors.write.cancelled.title.delete": "Видалення скасовано",
+  "@errors.write.cancelled.title.delete": {
+    "sourceHash": "546aac1"
+  },
+  "errors.write.cancelled.title.trash": "Переміщення в Смітник скасовано",
+  "@errors.write.cancelled.title.trash": {
+    "sourceHash": "52a8954"
+  },
+  "errors.write.cancelled.message.copy": "Операцію копіювання скасовано.",
+  "@errors.write.cancelled.message.copy": {
+    "sourceHash": "da308bc"
+  },
+  "errors.write.cancelled.message.move": "Операцію переміщення скасовано.",
+  "@errors.write.cancelled.message.move": {
+    "sourceHash": "6369672"
+  },
+  "errors.write.cancelled.message.delete": "Операцію видалення скасовано.",
+  "@errors.write.cancelled.message.delete": {
+    "sourceHash": "8e573dc"
+  },
+  "errors.write.cancelled.message.trash": "Операцію переміщення в Смітник скасовано.",
+  "@errors.write.cancelled.message.trash": {
+    "sourceHash": "9585f1b"
+  },
+  "errors.write.cancelled.suggestion": "Можна спробувати ще раз, коли будете готові.",
+  "@errors.write.cancelled.suggestion": {
+    "sourceHash": "21cafca"
+  },
+  "errors.write.deviceDisconnected.title": "Пристрій відʼєднано",
+  "@errors.write.deviceDisconnected.title": {
+    "sourceHash": "f0acd34"
+  },
+  "errors.write.deviceDisconnected.message.copy": "Пристрій відʼєднано під час копіювання.",
+  "@errors.write.deviceDisconnected.message.copy": {
+    "sourceHash": "828908f"
+  },
+  "errors.write.deviceDisconnected.message.move": "Пристрій відʼєднано під час переміщення.",
+  "@errors.write.deviceDisconnected.message.move": {
+    "sourceHash": "4177ee9"
+  },
+  "errors.write.deviceDisconnected.message.delete": "Пристрій відʼєднано під час видалення.",
+  "@errors.write.deviceDisconnected.message.delete": {
+    "sourceHash": "195562e"
+  },
+  "errors.write.deviceDisconnected.message.trash": "Пристрій відʼєднано під час переміщення в Смітник.",
+  "@errors.write.deviceDisconnected.message.trash": {
+    "sourceHash": "9d5a47a"
+  },
+  "errors.write.deviceDisconnected.suggestion": "Переконайтеся, що пристрій надійно підʼєднано, і спробуйте ще раз.",
+  "@errors.write.deviceDisconnected.suggestion": {
+    "sourceHash": "f003d9c"
+  },
+  "errors.write.deviceDisconnected.sided.destination.copy": "«{volumeName}» відʼєднано, коли Cmdr копіював туди файли: скопійовано {done} з {total}. Ваші оригінали не змінено, і вони там, де й були, тож нічого не втрачено.",
+  "@errors.write.deviceDisconnected.sided.destination.copy": {
+    "sourceHash": "37342c4"
+  },
+  "errors.write.deviceDisconnected.sided.destination.move": "«{volumeName}» відʼєднано, перш ніж Cmdr встиг завершити переміщення, тож усі ваші файли досі на диску «{counterpart}».",
+  "@errors.write.deviceDisconnected.sided.destination.move": {
+    "sourceHash": "7da0918"
+  },
+  "errors.write.deviceDisconnected.sided.source.copy": "«{volumeName}» відʼєднано, коли Cmdr копіював файли на диск «{counterpart}»: скопійовано {done} з {total}. Решта файлів досі на відʼєднаному диску.",
+  "@errors.write.deviceDisconnected.sided.source.copy": {
+    "sourceHash": "70d4976"
+  },
+  "errors.write.deviceDisconnected.sided.source.move": "«{volumeName}» відʼєднано, коли Cmdr переміщував файли на диск «{counterpart}»: переміщено {done} з {total}. Решта файлів досі на відʼєднаному диску.",
+  "@errors.write.deviceDisconnected.sided.source.move": {
+    "sourceHash": "bf2d6e7"
+  },
+  "errors.write.moveNotConfirmed.title": "Не вдалося підтвердити переміщення",
+  "@errors.write.moveNotConfirmed.title": {
+    "sourceHash": "8f1fe29"
+  },
+  "errors.write.moveNotConfirmed.message.named": "Cmdr не вдалося підтвердити, що переміщені файли збережено на диску «{volumeName}», тож ваші оригінали лишилися там, де були.",
+  "@errors.write.moveNotConfirmed.message.named": {
+    "sourceHash": "442f2fe"
+  },
+  "errors.write.moveNotConfirmed.message.unnamed": "Cmdr не вдалося підтвердити, що переміщені файли збережено в місці призначення, тож ваші оригінали лишилися там, де були.",
+  "@errors.write.moveNotConfirmed.message.unnamed": {
+    "sourceHash": "565e4b8"
+  },
+  "errors.write.moveNotConfirmed.suggestion": "Перегляньте місце призначення, а тоді спробуйте перемістити ще раз. Ваші оригінали лишилися на місці.",
+  "@errors.write.moveNotConfirmed.suggestion": {
+    "sourceHash": "4d7fedc"
+  },
+  "errors.write.trashNotSupported.title": "Смітник не підтримується",
+  "@errors.write.trashNotSupported.title": {
+    "sourceHash": "af90a02"
+  },
+  "errors.write.trashNotSupported.message": "Цей том не підтримує Смітник.",
+  "@errors.write.trashNotSupported.message": {
+    "sourceHash": "911688a"
+  },
+  "errors.write.trashNotSupported.suggestion": "Натомість натисніть {deletePermanentlyKey}, щоб видалити остаточно.",
+  "@errors.write.trashNotSupported.suggestion": {
+    "sourceHash": "450dd8f"
+  },
+  "errors.write.connectionInterrupted.title": "Підʼєднання перервано",
+  "@errors.write.connectionInterrupted.title": {
+    "sourceHash": "183383d"
+  },
+  "errors.write.connectionInterrupted.message": "Підʼєднання було перервано.",
+  "@errors.write.connectionInterrupted.message": {
+    "sourceHash": "286af83"
+  },
+  "errors.write.connectionInterrupted.suggestion": "Перевірте підʼєднання і спробуйте ще раз. Якщо ви копіюєте в мережеве розташування, переконайтеся, що сервер доступний.",
+  "@errors.write.connectionInterrupted.suggestion": {
+    "sourceHash": "d8d3c79"
+  },
+  "errors.write.serverConnectionLost.title": "Втрачено підʼєднання до сервера «{volumeName}»",
+  "@errors.write.serverConnectionLost.title": {
+    "sourceHash": "6e49126"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.copy": "Cmdr чекав {duration}, поки сервер «{volumeName}» знову стане доступним, а тоді зупинився. Копіювався файл «{fileName}».",
+  "@errors.write.serverConnectionLost.message.gaveUp.copy": {
+    "sourceHash": "6792b15"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.move": "Cmdr чекав {duration}, поки сервер «{volumeName}» знову стане доступним, а тоді зупинився. Переміщувався файл «{fileName}».",
+  "@errors.write.serverConnectionLost.message.gaveUp.move": {
+    "sourceHash": "6d31e2f"
+  },
+  "errors.write.serverConnectionLost.message.dropped.copy": "Підʼєднання до сервера «{volumeName}» обірвалося, коли Cmdr копіював файл «{fileName}».",
+  "@errors.write.serverConnectionLost.message.dropped.copy": {
+    "sourceHash": "d231ea7"
+  },
+  "errors.write.serverConnectionLost.message.dropped.move": "Підʼєднання до сервера «{volumeName}» обірвалося, коли Cmdr переміщував файл «{fileName}».",
+  "@errors.write.serverConnectionLost.message.dropped.move": {
+    "sourceHash": "52b2997"
+  },
+  "errors.write.serverConnectionLost.suggestion.copy": "Перевірте, чи сервер увімкнений і чи працює мережа, а тоді спробуйте ще раз. Уже скопійовані файли на місці.",
+  "@errors.write.serverConnectionLost.suggestion.copy": {
+    "sourceHash": "f042899"
+  },
+  "errors.write.serverConnectionLost.suggestion.move": "Перевірте, чи сервер увімкнений і чи працює мережа, а тоді спробуйте ще раз. Уже переміщені файли на місці.",
+  "@errors.write.serverConnectionLost.suggestion.move": {
+    "sourceHash": "fc87dc3"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.delete": "Cmdr чекав {duration}, поки сервер «{volumeName}» знову стане доступним, а тоді зупинився. Видалявся файл «{fileName}».",
+  "@errors.write.serverConnectionLost.message.gaveUp.delete": {
+    "sourceHash": "d8b7332"
+  },
+  "errors.write.serverConnectionLost.message.dropped.delete": "Підʼєднання до сервера «{volumeName}» обірвалося, коли Cmdr видаляв файл «{fileName}».",
+  "@errors.write.serverConnectionLost.message.dropped.delete": {
+    "sourceHash": "2f9bcba"
+  },
+  "errors.write.serverConnectionLost.suggestion.delete": "Перевірте, чи сервер увімкнений і чи працює мережа, а тоді спробуйте ще раз. Файли, які Cmdr уже видалив, не повернути.",
+  "@errors.write.serverConnectionLost.suggestion.delete": {
+    "sourceHash": "a683a38"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.compress": "Cmdr чекав {duration}, поки сервер «{volumeName}» знову стане доступним, а тоді зупинився. Створювався архів «{fileName}».",
+  "@errors.write.serverConnectionLost.message.gaveUp.compress": {
+    "sourceHash": "0637cfc"
+  },
+  "errors.write.serverConnectionLost.message.dropped.compress": "Підʼєднання до сервера «{volumeName}» обірвалося, коли Cmdr створював архів «{fileName}».",
+  "@errors.write.serverConnectionLost.message.dropped.compress": {
+    "sourceHash": "1617cf2"
+  },
+  "errors.write.serverConnectionLost.suggestion.compress": "Перевірте, чи сервер увімкнений і чи працює мережа, а тоді спробуйте ще раз.",
+  "@errors.write.serverConnectionLost.suggestion.compress": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.serverConnectionLost.message.gaveUp.archiveEdit": "Cmdr чекав {duration}, поки сервер «{volumeName}» знову стане доступним, а тоді зупинився. Оновлювався архів «{fileName}».",
+  "@errors.write.serverConnectionLost.message.gaveUp.archiveEdit": {
+    "sourceHash": "85da906"
+  },
+  "errors.write.serverConnectionLost.message.dropped.archiveEdit": "Підʼєднання до сервера «{volumeName}» обірвалося, коли Cmdr оновлював архів «{fileName}».",
+  "@errors.write.serverConnectionLost.message.dropped.archiveEdit": {
+    "sourceHash": "86f371f"
+  },
+  "errors.write.serverConnectionLost.suggestion.archiveEdit": "Перевірте, чи сервер увімкнений і чи працює мережа, а тоді спробуйте ще раз.",
+  "@errors.write.serverConnectionLost.suggestion.archiveEdit": {
+    "sourceHash": "a21db21"
+  },
+  "errors.write.changedWhileDisconnected.title": "Cmdr не чіпав змінений файл",
+  "@errors.write.changedWhileDisconnected.title": {
+    "sourceHash": "eab1f60"
+  },
+  "errors.write.changedWhileDisconnected.message": "Підʼєднання до «{volumeName}» обірвалося під час видалення. Коли воно відновилося, файл «{fileName}» уже не був тим, який Cmdr бачив у списку, тож Cmdr не став його чіпати й зупинився.",
+  "@errors.write.changedWhileDisconnected.message": {
+    "sourceHash": "d9c623c"
+  },
+  "errors.write.changedWhileDisconnected.suggestion": "Перевірте, що там тепер, і видаліть ще раз, якщо цей файл досі не потрібен. Файли, які Cmdr видалив до нього, не повернути.",
+  "@errors.write.changedWhileDisconnected.suggestion": {
+    "sourceHash": "15f35df"
+  },
+  "errors.write.replySignatureRefused.title": "Відповідь сервера відхилено",
+  "@errors.write.replySignatureRefused.title": {
+    "sourceHash": "829a591"
+  },
+  "errors.write.replySignatureRefused.message": "У відповіді сервера не було дійсного підпису, тож Cmdr зупинився.",
+  "@errors.write.replySignatureRefused.message": {
+    "sourceHash": "299f4c3"
+  },
+  "errors.write.replySignatureRefused.suggestion": "Причиною може бути ненадійний мережевий пристрій, а може й хтось, хто втручається в трафік між вами та сервером. Підʼєднайтеся ще раз, а якщо це повториться, перевірте мережу.",
+  "@errors.write.replySignatureRefused.suggestion": {
+    "sourceHash": "1fc6259"
+  },
+  "errors.write.readError.title.copy": "Не вдалося скопіювати",
+  "@errors.write.readError.title.copy": {
+    "sourceHash": "dbb854f"
+  },
+  "errors.write.readError.title.move": "Не вдалося перемістити",
+  "@errors.write.readError.title.move": {
+    "sourceHash": "ceb5c7e"
+  },
+  "errors.write.readError.title.delete": "Не вдалося видалити",
+  "@errors.write.readError.title.delete": {
+    "sourceHash": "b1165b2"
+  },
+  "errors.write.readError.title.trash": "Не вдалося перемістити в Смітник",
+  "@errors.write.readError.title.trash": {
+    "sourceHash": "44e3a2e"
+  },
+  "errors.write.readError.message": "Не вдалося прочитати дані з джерела.",
+  "@errors.write.readError.message": {
+    "sourceHash": "ead860d"
+  },
+  "errors.write.readError.suggestion": "Спробуйте ще раз. Якщо проблема не зникає, перевірте розділ «Технічні деталі» нижче.",
+  "@errors.write.readError.suggestion": {
+    "sourceHash": "791f737"
+  },
+  "errors.write.writeError.title.copy": "Не вдалося скопіювати",
+  "@errors.write.writeError.title.copy": {
+    "sourceHash": "dbb854f"
+  },
+  "errors.write.writeError.title.move": "Не вдалося перемістити",
+  "@errors.write.writeError.title.move": {
+    "sourceHash": "ceb5c7e"
+  },
+  "errors.write.writeError.title.delete": "Не вдалося видалити",
+  "@errors.write.writeError.title.delete": {
+    "sourceHash": "b1165b2"
+  },
+  "errors.write.writeError.title.trash": "Не вдалося перемістити в Смітник",
+  "@errors.write.writeError.title.trash": {
+    "sourceHash": "44e3a2e"
+  },
+  "errors.write.writeError.message": "Не вдалося записати дані в місце призначення.",
+  "@errors.write.writeError.message": {
+    "sourceHash": "ec1a179"
+  },
+  "errors.write.writeError.suggestion": "Спробуйте ще раз. Якщо проблема не зникає, перевірте розділ «Технічні деталі» нижче.",
+  "@errors.write.writeError.suggestion": {
+    "sourceHash": "791f737"
+  },
+  "errors.write.nameTooLong.title": "Задовга назва",
+  "@errors.write.nameTooLong.title": {
+    "sourceHash": "de4bc1d"
+  },
+  "errors.write.nameTooLong.message": "Назва файлу задовга для місця призначення.",
+  "@errors.write.nameTooLong.message": {
+    "sourceHash": "03258f0"
+  },
+  "errors.write.nameTooLong.suggestion": "Спробуйте перейменувати файл, щоб назва стала коротшою.",
+  "@errors.write.nameTooLong.suggestion": {
+    "sourceHash": "840936a"
+  },
+  "errors.write.archiveEntryNameRefused.title": "Така назва не підходить для zip-архіву",
+  "@errors.write.archiveEntryNameRefused.title": {
+    "sourceHash": "14570b6"
+  },
+  "errors.write.archiveEntryNameRefused.message.parentTraversal": "Назва елемента «{entry}» вказує за межі zip-архіву, якщо зворотну скісну риску вважати роздільником папок, а саме так її читають програми для zip-архівів. Якщо відкрити архів, цей елемент буде приховано, а деякі програми розпакують його поза папкою, яку для цього вибрано.",
+  "@errors.write.archiveEntryNameRefused.message.parentTraversal": {
+    "sourceHash": "9f2ba46"
+  },
+  "errors.write.archiveEntryNameRefused.message.tooDeep": "Елемент «{entry}» вкладено в більше папок, ніж zip-архів може безпечно вмістити, тож якщо відкрити архів, цей елемент буде приховано.",
+  "@errors.write.archiveEntryNameRefused.message.tooDeep": {
+    "sourceHash": "1bf6d16"
+  },
+  "errors.write.archiveEntryNameRefused.message.empty": "Назва елемента «{entry}» у zip-архіві стає порожньою, тож якщо відкрити архів, цей елемент буде приховано.",
+  "@errors.write.archiveEntryNameRefused.message.empty": {
+    "sourceHash": "01e89c2"
+  },
+  "errors.write.archiveEntryNameRefused.suggestion": "Перейменуйте його або приберіть із вибраного, а тоді створіть архів ще раз.",
+  "@errors.write.archiveEntryNameRefused.suggestion": {
+    "sourceHash": "c306071"
+  },
+  "errors.write.archiveEntryNamesCollide.title": "Два елементи отримали б одну назву в zip-архіві",
+  "@errors.write.archiveEntryNamesCollide.title": {
+    "sourceHash": "3d59f36"
+  },
+  "errors.write.archiveEntryNamesCollide.message": "Елементи «{entry}» і «{other}» обидва потрапили б у zip-архіві за шляхом «{archivePath}», бо програми для zip-архівів читають зворотну скісну риску як роздільник папок. Якщо відкрити архів, буде показано лише один із них.",
+  "@errors.write.archiveEntryNamesCollide.message": {
+    "sourceHash": "59d028d"
+  },
+  "errors.write.archiveEntryNamesCollide.suggestion": "Перейменуйте один із них або приберіть один із вибраного, а тоді створіть архів ще раз.",
+  "@errors.write.archiveEntryNamesCollide.suggestion": {
+    "sourceHash": "33fd97c"
+  },
+  "errors.write.archiveDuplicateEntryName.title": "У цьому zip-архіві є два елементи з однаковою назвою",
+  "@errors.write.archiveDuplicateEntryName.title": {
+    "sourceHash": "19c70ac"
+  },
+  "errors.write.archiveDuplicateEntryName.message": "У zip-архіві «{path}» є два елементи з назвою «{name}». Cmdr показує лише пізніший, а якщо змінити архів, ранніший буде втрачено назавжди.",
+  "@errors.write.archiveDuplicateEntryName.message": {
+    "sourceHash": "9159f89"
+  },
+  "errors.write.archiveDuplicateEntryName.messageUnnamed": "У zip-архіві «{path}» є два елементи з однаковою назвою. Cmdr показує лише пізніший, а якщо змінити архів, ранніший буде втрачено назавжди.",
+  "@errors.write.archiveDuplicateEntryName.messageUnnamed": {
+    "sourceHash": "a4acaaa"
+  },
+  "errors.write.archiveDuplicateEntryName.suggestion": "Перейменуйте один із двох елементів в іншій програмі для zip-архівів, а тоді спробуйте ще раз.",
+  "@errors.write.archiveDuplicateEntryName.suggestion": {
+    "sourceHash": "f34b1f1"
+  },
+  "errors.write.archiveEncryptedEntry.title": "У цьому zip-архіві є елемент, захищений паролем",
+  "@errors.write.archiveEncryptedEntry.title": {
+    "sourceHash": "32bf063"
+  },
+  "errors.write.archiveEncryptedEntry.message": "Елемент «{name}» у zip-архіві «{path}» захищено паролем, а Cmdr не може зберегти такий елемент цілим, коли змінює архів. Cmdr залишив архів без змін.",
+  "@errors.write.archiveEncryptedEntry.message": {
+    "sourceHash": "4787626"
+  },
+  "errors.write.archiveEncryptedEntry.suggestion": "Натомість скопіюйте із zip-архіву те, що потрібно, або змініть архів у програмі, яка підтримує паролі.",
+  "@errors.write.archiveEncryptedEntry.suggestion": {
+    "sourceHash": "349350a"
+  },
+  "errors.write.archiveEntryUnderFile.title": "Cmdr не може покласти елемент усередину файлу",
+  "@errors.write.archiveEntryUnderFile.title": {
+    "sourceHash": "e0d0138"
+  },
+  "errors.write.archiveEntryUnderFile.message": "Елемент «{entry}» мав би опинитися всередині «{file}» у zip-архіві «{path}», але «{file}» там є файлом, тож жодна програма для zip-архівів не змогла б показати чи відкрити такий елемент. Cmdr залишив архів без змін.",
+  "@errors.write.archiveEntryUnderFile.message": {
+    "sourceHash": "556f6a3"
+  },
+  "errors.write.archiveEntryUnderFile.suggestion": "Перейменуйте цей файл у zip-архіві або покладіть елемент деінде, а тоді спробуйте ще раз.",
+  "@errors.write.archiveEntryUnderFile.suggestion": {
+    "sourceHash": "6ae33d1"
+  },
+  "errors.write.invalidName.title": "Неприпустима назва файлу",
+  "@errors.write.invalidName.title": {
+    "sourceHash": "1fb1e45"
+  },
+  "errors.write.invalidName.message": "Назву файлу «{path}» неможливо зберегти в місці призначення.",
+  "@errors.write.invalidName.message": {
+    "sourceHash": "ad395af"
+  },
+  "errors.write.invalidName.suggestion": "Перейменуйте файл на щось коротше й простіше, а тоді спробуйте ще раз. Деякі місця призначення не приймають табуляцію чи розриви рядків у назві, а деякі не приймають зарезервованих назв, як-от CON, NUL чи LPT1.",
+  "@errors.write.invalidName.suggestion": {
+    "sourceHash": "77cff09"
+  },
+  "errors.write.trashRefused.title": "Не вдалося перемістити в Смітник",
+  "@errors.write.trashRefused.title": {
+    "sourceHash": "44e3a2e"
+  },
+  "errors.write.trashRefused.message.notPermitted": "macOS не дозволила Cmdr торкатися вибраних елементів (кількість: {count}).",
+  "@errors.write.trashRefused.message.notPermitted": {
+    "sourceHash": "57a38d7"
+  },
+  "errors.write.trashRefused.message.locked": "macOS не переміщує замкнені елементи, тому вибрані елементи (кількість: {count}) лишилися на місці.",
+  "@errors.write.trashRefused.message.locked": {
+    "sourceHash": "5733f47"
+  },
+  "errors.write.trashRefused.message.folderNotWritable": "Cmdr не дозволено змінювати папку, у якій лежать вибрані елементи (кількість: {count}), тож вони лишилися на місці.",
+  "@errors.write.trashRefused.message.folderNotWritable": {
+    "sourceHash": "d2f7954"
+  },
+  "errors.write.trashRefused.message.noTrashForVolume": "macOS не вдалося знайти Смітник для вибраних елементів (кількість: {count}).",
+  "@errors.write.trashRefused.message.noTrashForVolume": {
+    "sourceHash": "702ae17"
+  },
+  "errors.write.trashRefused.message.other": "macOS не перемістила вибрані елементи (кількість: {count}) у Смітник.",
+  "@errors.write.trashRefused.message.other": {
+    "sourceHash": "6f71e12"
+  },
+  "errors.write.trashRefused.suggestion.notPermitted": "Можливо, ці елементи лежать у місці, яке macOS береже лише для себе.",
+  "@errors.write.trashRefused.suggestion.notPermitted": {
+    "sourceHash": "f544942"
+  },
+  "errors.write.trashRefused.suggestion.locked": "Щоб їх перемістити, спершу відімкніть їх у Finder: відкрийте «Досьє» й зніміть позначку «Замкнено».",
+  "@errors.write.trashRefused.suggestion.locked": {
+    "sourceHash": "ece70f5"
+  },
+  "errors.write.trashRefused.suggestion.folderNotWritable": "Щоб їх перемістити, потрібні привілеї на зміну їхньої папки. Хто їх має, Finder показує в «Досьє» папки, у розділі «Спільний доступ і привілеї».",
+  "@errors.write.trashRefused.suggestion.folderNotWritable": {
+    "sourceHash": "8614665"
+  },
+  "errors.write.trashRefused.suggestion.noTrashForVolume": "Деякі місця не мають власного Смітника, зокрема хмарні папки й більшість мережевих дисків. Ці елементи все одно можна остаточно видалити клавішами Shift+F8.",
+  "@errors.write.trashRefused.suggestion.noTrashForVolume": {
+    "sourceHash": "b6d08fa"
+  },
+  "errors.write.trashRefused.suggestion.other": "Перевірте розділ «Технічні деталі» нижче: там видно, що саме повідомила macOS.",
+  "@errors.write.trashRefused.suggestion.other": {
+    "sourceHash": "b61b3c1"
+  },
+  "errors.write.trashRefused.suggestion.noFullDiskAccess": "До того ж Cmdr не має повного доступу до диска на цьому Mac, а це поширена причина. Значок «Немає повного доступу до диска» в заголовку вікна відкриває це налаштування.",
+  "@errors.write.trashRefused.suggestion.noFullDiskAccess": {
+    "sourceHash": "ee5e9f7"
+  },
+  "errors.write.ioError.title.copy": "Не вдалося скопіювати",
+  "@errors.write.ioError.title.copy": {
+    "sourceHash": "dbb854f"
+  },
+  "errors.write.ioError.title.move": "Не вдалося перемістити",
+  "@errors.write.ioError.title.move": {
+    "sourceHash": "ceb5c7e"
+  },
+  "errors.write.ioError.title.delete": "Не вдалося видалити",
+  "@errors.write.ioError.title.delete": {
+    "sourceHash": "b1165b2"
+  },
+  "errors.write.ioError.title.trash": "Не вдалося перемістити в Смітник",
+  "@errors.write.ioError.title.trash": {
+    "sourceHash": "44e3a2e"
+  },
+  "errors.write.ioError.message.copy": "Не вдалося скопіювати файл.",
+  "@errors.write.ioError.message.copy": {
+    "sourceHash": "f25dd52"
+  },
+  "errors.write.ioError.message.move": "Не вдалося перемістити файл.",
+  "@errors.write.ioError.message.move": {
+    "sourceHash": "5f929ee"
+  },
+  "errors.write.ioError.message.delete": "Не вдалося видалити файл.",
+  "@errors.write.ioError.message.delete": {
+    "sourceHash": "9e79007"
+  },
+  "errors.write.ioError.message.trash": "Не вдалося перемістити файл у Смітник.",
+  "@errors.write.ioError.message.trash": {
+    "sourceHash": "948e289"
+  },
+  "errors.write.ioError.suggestion": "Спробуйте ще раз. Якщо проблема не зникає, перевірте розділ «Технічні деталі» нижче.",
+  "@errors.write.ioError.suggestion": {
+    "sourceHash": "791f737"
+  },
+  "errors.write.permissionDenied.title": "Не вдалося отримати доступ до цього розташування",
+  "@errors.write.permissionDenied.title": {
+    "sourceHash": "bc7f0ff"
+  },
+  "errors.write.permissionDenied.message.copy": "У вас немає привілеїв, щоб копіювати файли сюди.",
+  "@errors.write.permissionDenied.message.copy": {
+    "sourceHash": "91272c0"
+  },
+  "errors.write.permissionDenied.message.move": "У вас немає привілеїв, щоб переміщувати файли сюди.",
+  "@errors.write.permissionDenied.message.move": {
+    "sourceHash": "5b0fc94"
+  },
+  "errors.write.permissionDenied.message.delete": "У вас немає привілеїв, щоб видаляти файли тут.",
+  "@errors.write.permissionDenied.message.delete": {
+    "sourceHash": "0c03fc4"
+  },
+  "errors.write.permissionDenied.message.trash": "У вас немає привілеїв, щоб переміщувати звідси файли в Смітник.",
+  "@errors.write.permissionDenied.message.trash": {
+    "sourceHash": "cca028a"
+  },
+  "errors.write.permissionDenied.suggestion.deleteMac": "Перевірте, чи є у вас доступ на запис до батьківської папки. Можливо, файл замкнено. Відімкніть його у Finder: відкрийте «Досьє» і зніміть позначку «Замкнено», а тоді спробуйте ще раз.",
+  "@errors.write.permissionDenied.suggestion.deleteMac": {
+    "sourceHash": "1e6e123"
+  },
+  "errors.write.permissionDenied.suggestion.deleteOther": "Перевірте, чи є у вас доступ на запис до батьківської папки. Можливо, файл захищено. Перевірте його привілеї (наприклад, командою chmod або у файловому менеджері) і спробуйте ще раз.",
+  "@errors.write.permissionDenied.suggestion.deleteOther": {
+    "sourceHash": "650bb53"
+  },
+  "errors.write.permissionDenied.suggestion.default": "Перевірте, чи є у вас доступ на запис до папки призначення. Можливо, потрібно відімкнути пристрій або змінити привілеї папки.",
+  "@errors.write.permissionDenied.suggestion.default": {
+    "sourceHash": "ec02093"
+  },
+  "errors.write.permissionDenied.message.named": "Ваш користувач macOS не може змінювати папку {folder}.",
+  "@errors.write.permissionDenied.message.named": {
+    "sourceHash": "0ffd79b"
+  },
+  "errors.write.permissionDenied.suggestion.phone": "Android резервує це розташування для системи та її програм. Ваші фото, викачане й інші файли зберігаються у спільному сховищі телефону, тож спробуйте папку там.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "Сервер відмовив обліковому запису, з яким ви підʼєдналися. Перевірте привілеї папки на сервері або підʼєднайтеся обліковим записом, який має доступ.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
+  "errors.write.permissionDenied.suggestion.objectStoreAccount": "Постачальник відмовив, і це може означати дві речі. Перевірте привілеї ключа доступу або подивіться в консолі постачальника, чи немає там повідомлення про ліміт використання чи оплату.",
+  "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
+    "sourceHash": "31deca5"
+  },
+  "errors.write.permissionDenied.suggestion.needsAdminMac": "Змінити це можна лише з правами адміністратора. Щоб надати доступ своєму обліковому запису, виберіть папку у Finder, відкрийте «Досьє» і подивіться в розділі «Спільний доступ і привілеї».",
+  "@errors.write.permissionDenied.suggestion.needsAdminMac": {
+    "sourceHash": "674192a"
+  },
+  "errors.write.permissionDenied.suggestion.needsAdminOther": "Змінити це можна лише з правами адміністратора. Щоб надати доступ своєму обліковому запису, змініть привілеї папки (наприклад, командою chmod) і спробуйте ще раз.",
+  "@errors.write.permissionDenied.suggestion.needsAdminOther": {
+    "sourceHash": "5ce034b"
+  },
+  "errors.write.permissionDenied.suggestion.systemProtectedMac": "macOS захищає цей елемент сама, тож права адміністратора тут нічого не змінять. Можливо, елемент замкнено: виберіть його у Finder, відкрийте «Досьє» і зніміть позначку «Замкнено».",
+  "@errors.write.permissionDenied.suggestion.systemProtectedMac": {
+    "sourceHash": "64a71c8"
+  },
+  "errors.write.permissionDenied.suggestion.systemProtectedOther": "Система захищає цей елемент сама, тож права адміністратора тут нічого не змінять. Можливо, на елементі стоїть прапорець захисту, який спершу треба зняти.",
+  "@errors.write.permissionDenied.suggestion.systemProtectedOther": {
+    "sourceHash": "a4856dc"
+  },
+  "errors.write.permissionDenied.message.sourceCopy": "У вас немає привілеїв, щоб прочитати цей елемент, тож скопіювати його неможливо.",
+  "@errors.write.permissionDenied.message.sourceCopy": {
+    "sourceHash": "849f411"
+  },
+  "errors.write.permissionDenied.message.sourceMove": "У вас немає привілеїв, щоб перемістити цей елемент із його папки.",
+  "@errors.write.permissionDenied.message.sourceMove": {
+    "sourceHash": "7704fca"
+  },
+  "errors.write.permissionDenied.suggestion.sourceRead": "Перевірте, чи є у вас доступ до цього елемента й до папки, у якій він лежить.",
+  "@errors.write.permissionDenied.suggestion.sourceRead": {
+    "sourceHash": "978e180"
+  },
+  "errors.write.insufficientSpace.title": "У місці призначення може не вистачити вільного місця",
+  "@errors.write.insufficientSpace.title": {
+    "sourceHash": "9db6685"
+  },
+  "errors.write.insufficientSpace.message": "Для цього потрібно до {required}, а в місці призначення вільно {available}.",
+  "@errors.write.insufficientSpace.message": {
+    "sourceHash": "931f1e0"
+  },
+  "errors.write.insufficientSpace.suggestion": "Якщо частина файлів уже є в місці призначення, для копіювання може знадобитися менше місця. Якщо місце призначення заповниться, Cmdr зупиниться й скаже вам про це. Щоб не ризикувати, звільніть трохи місця або виберіть інше розташування.",
+  "@errors.write.insufficientSpace.suggestion": {
+    "sourceHash": "91fafd3"
+  },
+  "errors.write.destinationFull.title": "Місце призначення заповнене",
+  "@errors.write.destinationFull.title": {
+    "sourceHash": "1a2382d"
+  },
+  "errors.write.destinationFull.message": "У місці призначення закінчилося вільне місце, перш ніж усе встигло записатися.",
+  "@errors.write.destinationFull.message": {
+    "sourceHash": "1271eab"
+  },
+  "errors.write.destinationFull.suggestion": "Звільніть трохи місця в місці призначення або виберіть інше розташування. Якщо в місці призначення є квота сховища, можливо, ви її вичерпали.",
+  "@errors.write.destinationFull.suggestion": {
+    "sourceHash": "6aead38"
+  },
+  "errors.write.filesTooLargeForFilesystem.title.one": "Файл завеликий для цього диска",
+  "@errors.write.filesTooLargeForFilesystem.title.one": {
+    "sourceHash": "d8e95aa"
+  },
+  "errors.write.filesTooLargeForFilesystem.title.many": "Деякі файли завеликі для цього диска",
+  "@errors.write.filesTooLargeForFilesystem.title.many": {
+    "sourceHash": "6b148d5"
+  },
+  "errors.write.filesTooLargeForFilesystem.message.one": "Файл {name} має розмір {size}, але цей диск відформатовано у FAT32, а ця файлова система не може зберігати файли, більші за {maxSize}.",
+  "@errors.write.filesTooLargeForFilesystem.message.one": {
+    "sourceHash": "f5c262a"
+  },
+  "errors.write.filesTooLargeForFilesystem.message.many": "Файлів, завеликих для цього диска: {count}. Його відформатовано у FAT32, а ця файлова система не може зберігати файли, більші за {maxSize}.",
+  "@errors.write.filesTooLargeForFilesystem.message.many": {
+    "sourceHash": "9720069"
+  },
+  "errors.write.filesTooLargeForFilesystem.suggestion": "Щоб зберігати такі великі файли, використайте диск, відформатований у exFAT: там такого обмеження немає.",
+  "@errors.write.filesTooLargeForFilesystem.suggestion": {
+    "sourceHash": "bb4ac05"
+  },
+  "errors.write.readOnlyDevice.destination.title": "Пристрій тільки для читання",
+  "@errors.write.readOnlyDevice.destination.title": {
+    "sourceHash": "3f79690"
+  },
+  "errors.write.readOnlyDevice.destination.message": "{deviceName}: тільки для читання. Звідти можна копіювати файли, але не туди.",
+  "@errors.write.readOnlyDevice.destination.message": {
+    "sourceHash": "932e2ed"
+  },
+  "errors.write.readOnlyDevice.destination.suggestion": "Виберіть інше місце призначення, яке підтримує запис.",
+  "@errors.write.readOnlyDevice.destination.suggestion": {
+    "sourceHash": "caced4a"
+  },
+  "errors.write.destinationNotWritable.readOnlyFilesystem.title": "Папка тільки для читання",
+  "@errors.write.destinationNotWritable.readOnlyFilesystem.title": {
+    "sourceHash": "24c9063"
+  },
+  "errors.write.destinationNotWritable.readOnlyFilesystem.message": "Ця папка доступна тільки для читання, тож у неї нічого не можна скопіювати чи перемістити.",
+  "@errors.write.destinationNotWritable.readOnlyFilesystem.message": {
+    "sourceHash": "0c50a60"
+  },
+  "errors.write.destinationNotWritable.readOnlyFilesystem.suggestion": "Виберіть іншу папку призначення.",
+  "@errors.write.destinationNotWritable.readOnlyFilesystem.suggestion": {
+    "sourceHash": "a41f65a"
+  },
+  "errors.write.destinationNotWritable.noPermission.title": "Немає привілеїв, щоб додавати сюди файли",
+  "@errors.write.destinationNotWritable.noPermission.title": {
+    "sourceHash": "19f57db"
+  },
+  "errors.write.destinationNotWritable.noPermission.message": "У вас немає привілеїв, щоб додавати файли в цю папку.",
+  "@errors.write.destinationNotWritable.noPermission.message": {
+    "sourceHash": "a7e0efa"
+  },
+  "errors.write.destinationNotWritable.noPermission.suggestion": "Виберіть іншу папку призначення або змініть привілеї цієї папки й спробуйте ще раз.",
+  "@errors.write.destinationNotWritable.noPermission.suggestion": {
+    "sourceHash": "3851384"
+  },
+  "errors.write.destinationNotWritable.unexplained.title": "Ця папка не приймає файлів",
+  "@errors.write.destinationNotWritable.unexplained.title": {
+    "sourceHash": "c98e2c3"
+  },
+  "errors.write.destinationNotWritable.unexplained.message": "Ця папка не приймає нових файлів, тож у неї нічого не можна скопіювати чи перемістити.",
+  "@errors.write.destinationNotWritable.unexplained.message": {
+    "sourceHash": "13b79ec"
+  },
+  "errors.write.destinationNotWritable.unexplained.suggestion": "Виберіть іншу папку призначення.",
+  "@errors.write.destinationNotWritable.unexplained.suggestion": {
+    "sourceHash": "a41f65a"
+  },
+  "errors.write.readOnlyDevice.destination.fallbackName": "Місце призначення",
+  "@errors.write.readOnlyDevice.destination.fallbackName": {
+    "sourceHash": "ef2429e"
+  },
+  "errors.write.fileLocked.title": "Файл замкнено",
+  "@errors.write.fileLocked.title": {
+    "sourceHash": "5a38c61"
+  },
+  "errors.write.fileLocked.message": "Файл замкнено, тож видалити його неможливо.",
+  "@errors.write.fileLocked.message": {
+    "sourceHash": "84925b0"
+  },
+  "errors.write.fileLocked.suggestion.mac": "Відімкніть його у Finder: відкрийте «Досьє» і зніміть позначку «Замкнено», а тоді спробуйте ще раз.",
+  "@errors.write.fileLocked.suggestion.mac": {
+    "sourceHash": "8f84de5"
+  },
+  "errors.write.fileLocked.suggestion.other": "Можливо, файл захищено. Перевірте його привілеї (наприклад, командою chmod або у файловому менеджері) і спробуйте ще раз.",
+  "@errors.write.fileLocked.suggestion.other": {
+    "sourceHash": "6856879"
+  },
+  "errors.write.deletePending.title": "Файл видаляється",
+  "@errors.write.deletePending.title": {
+    "sourceHash": "1e5741a"
+  },
+  "errors.write.deletePending.message": "Файл {path} ось-ось зникне. Сервер позначив цей файл для видалення, але його досі тримає інший відкритий дескриптор, доки той не закриється.",
+  "@errors.write.deletePending.message": {
+    "sourceHash": "7e73fd6"
+  },
+  "errors.write.deletePending.suggestion": "Зачекайте трохи й спробуйте ще раз: щойно останній дескриптор закриється, файл зникне. Якщо файл не зникає, закрийте інші програми, у яких він може бути відкритий.",
+  "@errors.write.deletePending.suggestion": {
+    "sourceHash": "39e64a9"
+  },
+  "errors.write.sourceInColdStorage.title": "Цей файл в архівному сховищі",
+  "@errors.write.sourceInColdStorage.title": {
+    "sourceHash": "73da082"
+  },
+  "errors.write.sourceInColdStorage.message": "Файл {path} в архівному сховищі, тож прочитати його можна буде лише після відновлення.",
+  "@errors.write.sourceInColdStorage.message": {
+    "sourceHash": "1015fe5"
+  },
+  "errors.write.sourceInColdStorage.suggestion": "Відновіть файл у консолі свого постачальника сховища, а тоді спробуйте ще раз. Відновлення може тривати від кількох хвилин до двох днів.",
+  "@errors.write.sourceInColdStorage.suggestion": {
+    "sourceHash": "f279603"
+  },
+  "errors.write.mountedVolumeInside.title": "Заважає змонтований диск",
+  "@errors.write.mountedVolumeInside.title": {
+    "sourceHash": "eedcbbc"
+  },
+  "errors.write.mountedVolumeInside.message.delete": "У папці {mountPoint} змонтовано диск або сервер, і видалення там стерло б усе, що на ньому є. Cmdr зупинився ще до видалення, тож нічого не видалено.",
+  "@errors.write.mountedVolumeInside.message.delete": {
+    "sourceHash": "b7dc0f0"
+  },
+  "errors.write.mountedVolumeInside.message.replace": "У папці {mountPoint} змонтовано диск або сервер, тож заміна папки, у якій він міститься, стерла б усе на диску. Cmdr залишив і цю папку, і диск без змін.",
+  "@errors.write.mountedVolumeInside.message.replace": {
+    "sourceHash": "39a5185"
+  },
+  "errors.write.mountedVolumeInside.message.move": "У папці {mountPoint} змонтовано диск або сервер, тож переміщення папки, у якій він міститься, забрало б із диска все, що на ньому є. Cmdr зупинився ще до переміщення, тож нічого не переміщено.",
+  "@errors.write.mountedVolumeInside.message.move": {
+    "sourceHash": "6e79bae"
+  },
+  "errors.write.mountedVolumeInside.suggestion.delete": "Вийміть цей диск, а тоді видаліть ще раз. Щоб очистити сам диск, відкрийте його й видаліть його вміст там.",
+  "@errors.write.mountedVolumeInside.suggestion.delete": {
+    "sourceHash": "9825fac"
+  },
+  "errors.write.mountedVolumeInside.suggestion.replace": "Вийміть цей диск, а тоді спробуйте ще раз. Щоб залишити папку як є, виберіть «Пропустити» або «Перейменувати» замість «Перезаписати».",
+  "@errors.write.mountedVolumeInside.suggestion.replace": {
+    "sourceHash": "4f08af3"
+  },
+  "errors.write.mountedVolumeInside.suggestion.move": "Вийміть цей диск, а тоді перемістіть ще раз. Щоб перемістити те, що на диску, відкрийте його й перемістіть файли звідти.",
+  "@errors.write.mountedVolumeInside.suggestion.move": {
+    "sourceHash": "a5d37f6"
+  },
+  "errors.write.sourceChanged.title": "Цей файл змінився під час копіювання",
+  "@errors.write.sourceChanged.title": {
+    "sourceHash": "1c63c8b"
+  },
+  "errors.write.sourceChanged.message": "Файл {path} змінився, поки Cmdr його копіював, тож Cmdr нічого не зберіг. Файл лишається там, де був.",
+  "@errors.write.sourceChanged.message": {
+    "sourceHash": "4c404e0"
+  },
+  "errors.write.sourceChanged.suggestion": "Спробуйте ще раз, щоб скопіювати версію, яка там зараз.",
+  "@errors.write.sourceChanged.suggestion": {
+    "sourceHash": "97fc945"
+  },
+  "errors.write.landingNotRecorded.title": "Cmdr не замінив цей файл",
+  "@errors.write.landingNotRecorded.title": {
+    "sourceHash": "c4a4940"
+  },
+  "errors.write.landingNotRecorded.message": "Cmdr не вдалося зберегти свою нотатку про заміну файлу {path}, тож файл залишено на місці. Там нічого не змінилося.",
+  "@errors.write.landingNotRecorded.message": {
+    "sourceHash": "6ca4881"
+  },
+  "errors.write.landingNotRecorded.suggestion": "Спробуйте ще раз. Якщо це повторюватиметься, перевірте, чи є вільне місце на диску вашого Mac, а тоді перезапустіть Cmdr.",
+  "@errors.write.landingNotRecorded.suggestion": {
+    "sourceHash": "e99aa6e"
+  },
+  "errors.write.newDataKeptAt.title": "Ваш новий файл має іншу назву",
+  "@errors.write.newDataKeptAt.title": {
+    "sourceHash": "06bc297"
+  },
+  "errors.write.newDataKeptAt.message": "Новий файл {path} повністю записано, але місце призначення не дозволило йому отримати цю назву, а файл, який він замінював, уже зник. Новий файл тут: {keptAt}.",
+  "@errors.write.newDataKeptAt.message": {
+    "sourceHash": "93d07be"
+  },
+  "errors.write.newDataKeptAt.suggestion": "Відкрийте файл {keptAt}, щоб перевірити його, а тоді перейменуйте. Якщо місце призначення є спільною папкою чи телефоном, спершу підʼєднайтеся ще раз, і перейменування спрацює.",
+  "@errors.write.newDataKeptAt.suggestion": {
+    "sourceHash": "54c279d"
+  },
+  "errors.write.originalsKeptAside.title": "Ваш файл тепер має нову назву",
+  "@errors.write.originalsKeptAside.title": {
+    "sourceHash": "1db5ba0"
+  },
+  "errors.write.originalsKeptAside.message.one": "Папка зайняла назву {path}, тож ваш файл тепер тут: {keptAt}. Нічого не втрачено.",
+  "@errors.write.originalsKeptAside.message.one": {
+    "sourceHash": "e3bc267"
+  },
+  "errors.write.originalsKeptAside.message.many": "Папки зайняли назви ваших файлів (файлів: {count}), тож ці файли тепер мають нові назви. Нічого не втрачено: у розділі «Технічні деталі» нижче перелічено кожен файл.",
+  "@errors.write.originalsKeptAside.message.many": {
+    "sourceHash": "9430f63"
+  },
+  "errors.write.originalsKeptAside.suggestion.one": "Відкрийте файл {keptAt}, щоб перевірити його. Щойно ви перемістите папку деінде, файлу можна буде повернути стару назву.",
+  "@errors.write.originalsKeptAside.suggestion.one": {
+    "sourceHash": "5cbe5bb"
+  },
+  "errors.write.originalsKeptAside.suggestion.many": "Перевірте в деталях нижче, де тепер кожен файл. Щойно ви перемістите папки деінде, файлам можна буде повернути старі назви.",
+  "@errors.write.originalsKeptAside.suggestion.many": {
+    "sourceHash": "2b05c26"
+  },
+  "errors.write.sourceNotRemoved.title": "Копія на місці, але оригінал залишився",
+  "@errors.write.sourceNotRemoved.title": {
+    "sourceHash": "ac5a888"
+  },
+  "errors.write.sourceNotRemoved.message": "Усе вже дійшло до місця призначення ({landedAt}), але Cmdr не вдалося видалити оригінал {path}, тож тепер він є в обох місцях. Нічого не втрачено.",
+  "@errors.write.sourceNotRemoved.message": {
+    "sourceHash": "6800fe4"
+  },
+  "errors.write.sourceNotRemoved.suggestion": "Щоб завершити переміщення, видаліть оригінал самостійно.",
+  "@errors.write.sourceNotRemoved.suggestion": {
+    "sourceHash": "8d2fc8b"
+  },
+  "errors.write.newFilesKept.landing.one": "Файл {name} уже повністю записано на «{volumeName}» під тимчасовою назвою. Він отримає свою назву, коли Cmdr наступного разу підʼєднається до «{volumeName}».",
+  "@errors.write.newFilesKept.landing.one": {
+    "sourceHash": "ae7aea2"
+  },
+  "errors.write.newFilesKept.landing.many": "Повністю записаних файлів, що чекають на «{volumeName}» під тимчасовими назвами: {count}. Кожен отримає свою назву, коли Cmdr наступного разу підʼєднається до «{volumeName}».",
+  "@errors.write.newFilesKept.landing.many": {
+    "sourceHash": "51da3d5"
+  },
+  "errors.write.newFilesKept.rescued.one": "Cmdr зберіг повністю записаний новий файл на «{volumeName}» під назвою {name}, бо файл не зміг отримати свою назву. Перевірте його, а тоді дайте йому потрібну назву.",
+  "@errors.write.newFilesKept.rescued.one": {
+    "sourceHash": "4c10d90"
+  },
+  "errors.write.newFilesKept.rescued.many": "Cmdr зберіг на «{volumeName}» повністю записані нові файли під назвами з «(recovered)» (файлів: {count}), бо вони не змогли отримати свої назви. Перевірте їх, а тоді дайте їм потрібні назви.",
+  "@errors.write.newFilesKept.rescued.many": {
+    "sourceHash": "37f1a4b"
+  },
+  "errors.write.fallback.title.copy": "Не вдалося скопіювати",
+  "@errors.write.fallback.title.copy": {
+    "sourceHash": "dbb854f"
+  },
+  "errors.write.fallback.title.move": "Не вдалося перемістити",
+  "@errors.write.fallback.title.move": {
+    "sourceHash": "ceb5c7e"
+  },
+  "errors.write.fallback.title.delete": "Не вдалося видалити",
+  "@errors.write.fallback.title.delete": {
+    "sourceHash": "b1165b2"
+  },
+  "errors.write.fallback.title.trash": "Не вдалося перемістити в Смітник",
+  "@errors.write.fallback.title.trash": {
+    "sourceHash": "44e3a2e"
+  },
+  "errors.write.fallback.message.copy": "Під час копіювання щось пішло не так.",
+  "@errors.write.fallback.message.copy": {
+    "sourceHash": "271fa92"
+  },
+  "errors.write.fallback.message.move": "Під час переміщення щось пішло не так.",
+  "@errors.write.fallback.message.move": {
+    "sourceHash": "a2cf93f"
+  },
+  "errors.write.fallback.message.delete": "Під час видалення щось пішло не так.",
+  "@errors.write.fallback.message.delete": {
+    "sourceHash": "9a08b89"
+  },
+  "errors.write.fallback.message.trash": "Під час переміщення в Смітник щось пішло не так.",
+  "@errors.write.fallback.message.trash": {
+    "sourceHash": "63f8393"
+  },
+  "errors.write.fallback.suggestion": "Спробуйте ще раз або перевірте розділ «Технічні деталі» нижче, щоб отримати більше інформації.",
+  "@errors.write.fallback.suggestion": {
+    "sourceHash": "23de5a9"
+  },
+  "errors.mutation.notFound": "За шляхом «{path}» більше нічого немає.",
+  "@errors.mutation.notFound": {
+    "sourceHash": "9c068a2"
+  },
+  "errors.mutation.cantRenameVolumeRoot": "Кореневу папку тому звідси не можна перейменувати.",
+  "@errors.mutation.cantRenameVolumeRoot": {
+    "sourceHash": "0845c57"
+  },
+  "errors.mutation.parentNotWritable": "Cmdr не може записувати в папку «{path}». Перевірте привілеї папки у Finder.",
+  "@errors.mutation.parentNotWritable": {
+    "sourceHash": "e0a7ad6"
+  },
+  "errors.mutation.fileLocked": "Цей елемент замкнено. Відімкніть його у Finder через «Досьє», а тоді спробуйте ще раз.",
+  "@errors.mutation.fileLocked": {
+    "sourceHash": "4be163f"
+  },
+  "errors.mutation.sipProtected": "Цей елемент під захистом цілісності системи macOS, тож перейменувати його не можна.",
+  "@errors.mutation.sipProtected": {
+    "sourceHash": "2189822"
+  },
+  "errors.mutation.volumeGone": "Цей том більше недоступний, тож нічого не змінилося.",
+  "@errors.mutation.volumeGone": {
+    "sourceHash": "2d24729"
+  },
+  "errors.mutation.archiveNotEditable": "Cmdr зараз не може відкрити цей архів для редагування.",
+  "@errors.mutation.archiveNotEditable": {
+    "sourceHash": "47c44dd"
+  },
+  "errors.mutation.archiveReadOnly": "Змінювати можна лише zip-архіви, а цей архів доступний тільки для читання.",
+  "@errors.mutation.archiveReadOnly": {
+    "sourceHash": "a636f2a"
+  },
+  "errors.mutation.renameOutOfArchive": "Перейменуванням не можна винести елемент з архіву. Натомість перемістіть його.",
+  "@errors.mutation.renameOutOfArchive": {
+    "sourceHash": "5e82283"
+  },
+  "errors.mutation.renameAcrossArchives": "Перейменуванням не можна перенести елемент з одного архіву в інший. Натомість перемістіть його.",
+  "@errors.mutation.renameAcrossArchives": {
+    "sourceHash": "89b3231"
+  },
+  "errors.mutation.archiveEditNotReady": "Cmdr ще запускається, тож редагування архівів поки недоступне.",
+  "@errors.mutation.archiveEditNotReady": {
+    "sourceHash": "1a71ae7"
+  },
+  "errors.mutation.archiveEditCouldntStart": "Не вдалося розпочати редагування архіву.",
+  "@errors.mutation.archiveEditCouldntStart": {
+    "sourceHash": "c67e249"
+  },
+  "errors.mutation.timedOut": "Том ще не відповів, тож зміна, можливо, ще відбудеться.",
+  "@errors.mutation.timedOut": {
+    "sourceHash": "94a8419"
+  },
+  "errors.mutation.unexpected": "Щось пішло не так, і Cmdr не вдалося зʼясувати, що саме.",
+  "@errors.mutation.unexpected": {
+    "sourceHash": "2978e2a"
+  },
+  "errors.volume.notFound": "За шляхом «{path}» більше нічого немає.",
+  "@errors.volume.notFound": {
+    "sourceHash": "9c068a2"
+  },
+  "errors.volume.permissionDenied": "Cmdr не має доступу до «{path}».",
+  "@errors.volume.permissionDenied": {
+    "sourceHash": "2c188b6"
+  },
+  "errors.volume.alreadyExists": "За шляхом «{path}» уже щось є.",
+  "@errors.volume.alreadyExists": {
+    "sourceHash": "8763243"
+  },
+  "errors.volume.notSupported": "Цей том цього не підтримує.",
+  "@errors.volume.notSupported": {
+    "sourceHash": "b645086"
+  },
+  "errors.volume.deviceDisconnected": "Пристрій відʼєднався, перш ніж зміну було внесено.",
+  "@errors.volume.deviceDisconnected": {
+    "sourceHash": "50b46bf"
+  },
+  "errors.volume.notConnected": "Cmdr ще не підʼєднався до цього телефона чи сервера, тож спершу відкрийте його.",
+  "@errors.volume.notConnected": {
+    "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "Цей шлях веде через посилання на інший сервер, і Cmdr зараз не вдається звʼязатися з цим сервером.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
+  },
+  "errors.volume.deviceSessionReset": "Пристрій перезапустив підʼєднання. Зачекайте кілька секунд і спробуйте ще раз.",
+  "@errors.volume.deviceSessionReset": {
+    "sourceHash": "e5ad77d"
+  },
+  "errors.volume.readOnly": "Цей том доступний тільки для читання.",
+  "@errors.volume.readOnly": {
+    "sourceHash": "240b952"
+  },
+  "errors.volume.storageFull": "На цьому томі не залишилося вільного місця.",
+  "@errors.volume.storageFull": {
+    "sourceHash": "1fcdb67"
+  },
+  "errors.volume.connectionTimeout": "Відповідь не надійшла вчасно.",
+  "@errors.volume.connectionTimeout": {
+    "sourceHash": "f21c934"
+  },
+  "errors.volume.cancelled": "Cmdr зупинив це на ваш запит.",
+  "@errors.volume.cancelled": {
+    "sourceHash": "a88c4fc"
+  },
+  "errors.volume.isADirectory": "Шлях «{path}» веде до папки, а не до файлу.",
+  "@errors.volume.isADirectory": {
+    "sourceHash": "224ae5e"
+  },
+  "errors.volume.notADirectory": "За шляхом «{path}» є файл, а там має бути папка.",
+  "@errors.volume.notADirectory": {
+    "sourceHash": "2f66bc8"
+  },
+  "errors.volume.invalidNameNamed": "Назву «{name}» тут зберегти неможливо. Виберіть іншу назву.",
+  "@errors.volume.invalidNameNamed": {
+    "sourceHash": "6f65c40"
+  },
+  "errors.volume.invalidName": "Місце призначення не підтримує таку назву. Виберіть іншу.",
+  "@errors.volume.invalidName": {
+    "sourceHash": "531488f"
+  },
+  "errors.volume.deletePending": "Цей файл ось-ось зникне, але його досі щось тримає відкритим. Спробуйте ще раз за мить.",
+  "@errors.volume.deletePending": {
+    "sourceHash": "f7d0ab7"
+  },
+  "errors.volume.coldStorage": "Файл «{path}» в архівному сховищі. Спершу відновіть його в консолі свого постачальника сховища.",
+  "@errors.volume.coldStorage": {
+    "sourceHash": "c742f7c"
+  },
+  "errors.volume.sourceChanged": "Файл «{path}» змінився, поки Cmdr його копіював, тож Cmdr нічого не зберіг. Спробуйте ще раз, щоб скопіювати нову версію.",
+  "@errors.volume.sourceChanged": {
+    "sourceHash": "18062cb"
+  },
+  "errors.volume.noContent": "Елемент «{path}» — це символічне посилання або спеціальний файл, тож у ньому немає вмісту, який Cmdr міг би скопіювати.",
+  "@errors.volume.noContent": {
+    "sourceHash": "8b56bde"
+  },
+  "errors.volume.ambiguousName": "На сервері шляху «{path}» відповідає кілька елементів, тож Cmdr не став вибирати. Натомість виберіть потрібний елемент у його папці.",
+  "@errors.volume.ambiguousName": {
+    "sourceHash": "0f0e74d"
+  },
+  "errors.volume.duplicateName": "Шлях «{path}» вказує на кілька елементів на пристрої, тож Cmdr не став вибирати. Виберіть потрібний у його папці або перейменуйте один з них, щоб кожен мав власну назву.",
+  "@errors.volume.duplicateName": {
+    "sourceHash": "c68223a"
+  },
+  "errors.volume.staleDestinationHandle": "Cmdr більше не знаходить папку призначення на пристрої. Відкрийте її знову, а тоді спробуйте ще раз.",
+  "@errors.volume.staleDestinationHandle": {
+    "sourceHash": "b31958a"
+  },
+  "errors.volume.signatureInvalid": "У відповіді сервера не було дійсного підпису, тож Cmdr зупинився.",
+  "@errors.volume.signatureInvalid": {
+    "sourceHash": "299f4c3"
+  },
+  "errors.volume.ioError": "На томі не вдалося завершити цю дію.",
+  "@errors.volume.ioError": {
+    "sourceHash": "59e7d6a"
+  },
+  "errors.volume.needsPassword": "Цей архів захищено паролем.",
+  "@errors.volume.needsPassword": {
+    "sourceHash": "8d9f648"
+  },
+  "errors.volume.passwordRejected": "Цей пароль не підійшов.",
+  "@errors.volume.passwordRejected": {
+    "sourceHash": "fe9b44a"
+  },
+  "errors.mutation.trashNotSupported": "На цьому томі немає Смітника, тож можна лише видалити остаточно.",
+  "@errors.mutation.trashNotSupported": {
+    "sourceHash": "525ef25"
+  },
+  "errors.mutation.trashRefused": "macOS не перемістила це в Смітник.",
+  "@errors.mutation.trashRefused": {
+    "sourceHash": "7a6d1a5"
+  },
+  "errors.serverRequest.unreachable": "Cmdr не вдалося звʼязатися зі своїм сервером. Перевірте підʼєднання до інтернету й спробуйте ще раз.",
+  "@errors.serverRequest.unreachable": {
+    "sourceHash": "186a0f6"
+  },
+  "errors.serverRequest.timedOut": "Сервер Cmdr не відповів вчасно. Спробуйте ще раз за мить.",
+  "@errors.serverRequest.timedOut": {
+    "sourceHash": "1413608"
+  },
+  "errors.serverRequest.serverBusy": "На сервері Cmdr зараз виникли проблеми. Спробуйте ще раз пізніше.",
+  "@errors.serverRequest.serverBusy": {
+    "sourceHash": "1f21e5d"
+  },
+  "errors.serverRequest.refused": "Сервер Cmdr відхилив цей запит. Якщо це повторюється, викачайте найновіший Cmdr із getcmdr.com.",
+  "@errors.serverRequest.refused": {
+    "sourceHash": "6a83e2a"
+  },
+  "errors.serverRequest.unexpected": "Проблема виникла в самому Cmdr. Спробуйте ще раз, а якщо це повторюється, перезапустіть Cmdr.",
+  "@errors.serverRequest.unexpected": {
+    "sourceHash": "5be7ebd"
+  },
+  "errors.serverRequest.blockedByPolicy": "Ваша установа вимкнула цю функцію для Cmdr.",
+  "@errors.serverRequest.blockedByPolicy": {
+    "sourceHash": "acbeb5b"
+  },
+  "errors.eject.busy": "Cmdr там ще працює з файлами. Спробуйте ще раз, коли він закінчить.",
+  "@errors.eject.busy": {
+    "sourceHash": "4054483"
+  },
+  "errors.eject.volumeNotFound": "Цей диск уже не підʼєднано, тож виймати нічого.",
+  "@errors.eject.volumeNotFound": {
+    "sourceHash": "75b7870"
+  },
+  "errors.eject.notEjectable": "Цей диск незнімний, тож він залишається підʼєднаним.",
+  "@errors.eject.notEjectable": {
+    "sourceHash": "cc7e9ee"
+  },
+  "errors.eject.notAnSmbVolume": "Це не спільна папка в мережі, тож відʼєднувати нічого.",
+  "@errors.eject.notAnSmbVolume": {
+    "sourceHash": "230d2dc"
+  },
+  "errors.eject.remoteNotConnected": "Цей сервер уже не підʼєднано, тож закривати більше нічого.",
+  "@errors.eject.remoteNotConnected": {
+    "sourceHash": "3f38dd0"
+  },
+  "errors.eject.deviceDisconnectRefused": "Пристрій відмовився закривати підʼєднання. Відʼєднайте кабель, коли пристрій не буде зайнятий.",
+  "@errors.eject.deviceDisconnectRefused": {
+    "sourceHash": "5b99318"
+  },
+  "errors.eject.unmountRefused": "Там досі щось використовується. Закрийте всі відкриті файли й програми, а тоді спробуйте ще раз.",
+  "@errors.eject.unmountRefused": {
+    "sourceHash": "f855a33"
+  },
+  "errors.eject.unmountRefusedByApp": "{app} досі щось там використовує. Закрийте цю програму, а тоді спробуйте ще раз.",
+  "@errors.eject.unmountRefusedByApp": {
+    "sourceHash": "6ccda65"
+  },
+  "errors.eject.unmountRefusedByApps": "{apps} досі щось там використовують. Закрийте ці програми, а тоді спробуйте ще раз.",
+  "@errors.eject.unmountRefusedByApps": {
+    "sourceHash": "f46e410"
+  },
+  "errors.eject.otherApps": "інші програми",
+  "@errors.eject.otherApps": {
+    "sourceHash": "09fe5b1"
+  },
+  "errors.eject.unmountRefusedByProcess": "Процес {process} досі щось там використовує. (Cmdr не знає назви програми, лише назву процесу.)",
+  "@errors.eject.unmountRefusedByProcess": {
+    "sourceHash": "a1a2c6d"
+  },
+  "errors.eject.unmountRefusedByProcesses": "Процеси {processes} (усього: {countText}) досі щось там використовують. (Cmdr не знає назв програм, лише назви процесів.)",
+  "@errors.eject.unmountRefusedByProcesses": {
+    "sourceHash": "a40d1c0"
+  },
+  "errors.eject.otherProcesses": "інші",
+  "@errors.eject.otherProcesses": {
+    "sourceHash": "01db91d"
+  },
+  "errors.eject.unmountRefusedByDiskImage": "Образ диска, що зберігається там, досі відкритий. Спершу вийміть цей образ, а тоді спробуйте ще раз.",
+  "@errors.eject.unmountRefusedByDiskImage": {
+    "sourceHash": "1fa3d53"
+  },
+  "errors.eject.unmountRefusedBySystem": "macOS досі щось там використовує. Зачекайте хвилину, а тоді спробуйте ще раз.",
+  "@errors.eject.unmountRefusedBySystem": {
+    "sourceHash": "9b066c9"
+  },
+  "errors.eject.unmountRefusedByCmdr": "Сам Cmdr досі щось там використовує. Зачекайте трохи й спробуйте ще раз, а якщо це повторюється, надішліть звіт.",
+  "@errors.eject.unmountRefusedByCmdr": {
+    "sourceHash": "1f682f4"
+  },
+  "errors.eject.timedOut": "Диск ще не відповів, тож він, можливо, ще вийметься сам.",
+  "@errors.eject.timedOut": {
+    "sourceHash": "3feb944"
+  },
+  "errors.eject.notResponding": "Диск не відповідає, тож він досі підʼєднаний. Спробуйте ще раз за мить.",
+  "@errors.eject.notResponding": {
+    "sourceHash": "a3d9d82"
+  },
+  "errors.eject.unexpected": "Щось пішло не так, і Cmdr не вдалося зʼясувати, що саме.",
+  "@errors.eject.unexpected": {
+    "sourceHash": "2978e2a"
+  },
+  "errors.mount.hostUnreachable": "Cmdr не вдалося звʼязатися із сервером «{server}». Перевірте, чи сервер увімкнено й чи він у тій самій мережі, що й цей компʼютер.",
+  "@errors.mount.hostUnreachable": {
+    "sourceHash": "45ac92c"
+  },
+  "errors.mount.timeout": "Cmdr чекав, але сервер «{server}» не відповів вчасно. Перевірте, чи сервер увімкнено й чи він доступний, а тоді спробуйте ще раз.",
+  "@errors.mount.timeout": {
+    "sourceHash": "d0629fe"
+  },
+  "errors.mount.signInHelperStuck": "Сервер «{server}» відповідає, але служба мережевого входу macOS, схоже, зависла, тож зараз не вдається підʼєднати жодну спільну папку. Щоб перезапустити службу, відкрийте програму «Термінал», виконайте killall NetAuthSysAgent, а потім спробуйте ще раз. macOS сама запустить службу знову.",
+  "@errors.mount.signInHelperStuck": {
+    "sourceHash": "90a4cf1"
+  },
+  "errors.mount.shareNotFound": "На сервері «{server}» немає спільної папки «{share}». Натисніть «Назад» і виберіть папку зі списку.",
+  "@errors.mount.shareNotFound": {
+    "sourceHash": "10f3c59"
+  },
+  "errors.mount.authRequired": "Увійдіть, щоб відкрити «{share}» на сервері «{server}».",
+  "@errors.mount.authRequired": {
+    "sourceHash": "b2af295"
+  },
+  "errors.mount.authFailed": "Це імʼя користувача й пароль не підійшли для сервера «{server}». Перевірте їх і ввійдіть знову.",
+  "@errors.mount.authFailed": {
+    "sourceHash": "b88b224"
+  },
+  "errors.mount.permissionDenied": "Ви ввійшли на сервер «{server}» як «{username}», але цей обліковий запис не може відкрити «{share}». Увійдіть з іншим обліковим записом.",
+  "@errors.mount.permissionDenied": {
+    "sourceHash": "05611b7"
+  },
+  "errors.mount.cancelled": "Підʼєднання до спільної папки «{share}» зупинилося до завершення. Спробуйте ще раз, коли будете готові.",
+  "@errors.mount.cancelled": {
+    "sourceHash": "bc771b3"
+  },
+  "errors.mount.unsupportedProtocol": "Цей компʼютер і сервер «{server}» не мають спільної версії SMB. Увімкніть SMB 2 або новішу версію в параметрах сервера, а тоді спробуйте ще раз.",
+  "@errors.mount.unsupportedProtocol": {
+    "sourceHash": "8afe4cb"
+  },
+  "errors.mount.mountRefused": "Ви ввійшли на сервер «{server}», але він не дозволив відкрити спільну папку «{share}». Перевірте параметри цієї папки на сервері, а тоді спробуйте ще раз.",
+  "@errors.mount.mountRefused": {
+    "sourceHash": "6cf694d"
+  },
+  "errors.mount.mountMissing": "Компʼютер повідомив, що спільну папку «{share}» на сервері «{server}» підʼєднано, але вона так і не зʼявилася. Спробуйте ще раз.",
+  "@errors.mount.mountMissing": {
+    "sourceHash": "72ab946"
+  },
+  "errors.mount.gvfsMissing": "Щоб підʼєднуватися до спільних папок у мережі на Linux, потрібен GVFS. Інсталюйте пакет gvfs-smb для свого дистрибутива, а тоді спробуйте ще раз.",
+  "@errors.mount.gvfsMissing": {
+    "sourceHash": "b67831e"
+  },
+  "errors.mount.unexpected": "Під час підʼєднання до спільної папки «{share}» на сервері «{server}» щось пішло не так. Спробуйте ще раз за мить.",
+  "@errors.mount.unexpected": {
+    "sourceHash": "1ab5cca"
+  },
+  "errors.shareList.hostUnreachable": "Cmdr не вдалося звʼязатися із сервером «{server}». Перевірте, чи сервер увімкнено й чи він у тій самій мережі, що й цей компʼютер.",
+  "@errors.shareList.hostUnreachable": {
+    "sourceHash": "45ac92c"
+  },
+  "errors.shareList.timeout": "Cmdr чекав, але сервер «{server}» не відповів вчасно. Спробуйте ще раз за мить.",
+  "@errors.shareList.timeout": {
+    "sourceHash": "0c2c6ec"
+  },
+  "errors.shareList.authRequired": "Увійдіть, щоб побачити спільні папки на сервері «{server}».",
+  "@errors.shareList.authRequired": {
+    "sourceHash": "68f86c4"
+  },
+  "errors.shareList.signingRequired": "Сервер «{server}» не показує свої спільні папки гостям. Увійдіть, щоб їх побачити.",
+  "@errors.shareList.signingRequired": {
+    "sourceHash": "6e92125"
+  },
+  "errors.shareList.authFailed": "Це імʼя користувача й пароль не підійшли для сервера «{server}». Перевірте їх і ввійдіть знову.",
+  "@errors.shareList.authFailed": {
+    "sourceHash": "b88b224"
+  },
+  "errors.shareList.signatureInvalid": "Сервер «{server}» відповів без дійсного підпису, тож Cmdr не довірився відповіді. Причиною може бути ненадійний мережевий пристрій, а може й хтось, хто втручається в підʼєднання. Спробуйте ще раз, а якщо це повторюється, перевірте свою мережу.",
+  "@errors.shareList.signatureInvalid": {
+    "sourceHash": "6523e32"
+  },
+  "errors.shareList.protocolError": "Під час запиту списку спільних папок сервера «{server}» щось пішло не так. Спробуйте ще раз за мить.",
+  "@errors.shareList.protocolError": {
+    "sourceHash": "da302ca"
+  },
+  "errors.shareList.resolutionFailed": "Cmdr не вдалося знайти сервер «{server}» у мережі. Перевірте назву сервера або спробуйте ще раз, щойно він знову зʼявиться в мережі.",
+  "@errors.shareList.resolutionFailed": {
+    "sourceHash": "9be124a"
+  },
+  "errors.shareList.missingDependency": "Щоб переглядати спільні папки на цьому компʼютері, потрібна програма smbclient, але її не інстальовано. Інсталюйте її, а тоді спробуйте ще раз.",
+  "@errors.shareList.missingDependency": {
+    "sourceHash": "6ffa8a9"
+  },
+  "errors.write.readOnlyDevice.source.title": "Джерело тільки для читання",
+  "@errors.write.readOnlyDevice.source.title": {
+    "sourceHash": "5d77aa4"
+  },
+  "errors.write.readOnlyDevice.source.message": "{deviceName}: тільки для читання. Звідти можна копіювати файли, але не переміщувати.",
+  "@errors.write.readOnlyDevice.source.message": {
+    "sourceHash": "ec7d263"
+  },
+  "errors.write.readOnlyDevice.source.suggestion": "Скопіюйте файли замість переміщення. Оригінали залишаться на місці.",
+  "@errors.write.readOnlyDevice.source.suggestion": {
+    "sourceHash": "f6a307b"
+  },
+  "errors.write.readOnlyDevice.source.fallbackName": "Джерело",
+  "@errors.write.readOnlyDevice.source.fallbackName": {
+    "sourceHash": "599f98e"
+  },
+  "errors.write.duplicateSourceNames.title": "Два елементи мають однакову назву",
+  "@errors.write.duplicateSourceNames.title": {
+    "sourceHash": "518672d"
+  },
+  "errors.write.duplicateSourceNames.message": "Ви вибрали два елементи з назвою «{name}», тож обидва потрапили б в одне й те саме місце: {first} і {second}.",
+  "@errors.write.duplicateSourceNames.message": {
+    "sourceHash": "f4517fc"
+  },
+  "errors.write.duplicateSourceNames.suggestion.copy": "Скопіюйте їх по одному або спершу перейменуйте один із них.",
+  "@errors.write.duplicateSourceNames.suggestion.copy": {
+    "sourceHash": "8bc2d76"
+  },
+  "errors.write.sourcesSpanVolumes.title": "Частина вибраного міститься у віртуальній папці",
+  "@errors.write.sourcesSpanVolumes.title": {
+    "sourceHash": "0dad5e0"
+  },
+  "errors.write.sourcesSpanVolumes.message": "Елемент {path} лежить у знімках резервної копії, в архіві чи в історії репозиторію, а решта вибраного лежить поза ними, тож Cmdr не може прочитати все це разом. Нічого не змінено.",
+  "@errors.write.sourcesSpanVolumes.message": {
+    "sourceHash": "46a2988"
+  },
+  "errors.write.sourcesSpanVolumes.suggestion": "Зробіть це у два кроки: спершу окремо елементи з віртуальної папки, потім решту.",
+  "@errors.write.sourcesSpanVolumes.suggestion": {
+    "sourceHash": "c2f9729"
+  },
+  "errors.write.duplicateSourceNames.suggestion.move": "Перемістіть їх по одному або спершу перейменуйте один із них.",
+  "@errors.write.duplicateSourceNames.suggestion.move": {
+    "sourceHash": "8af755e"
+  },
+  "errors.write.namedLeavesRefused.title": "Ці нові назви використати неможливо",
+  "@errors.write.namedLeavesRefused.title": {
+    "sourceHash": "08c8600"
+  },
+  "errors.write.namedLeavesRefused.message.notASource": "Одна з нових назв призначена для елемента {path}, якого немає в цій пропозиції, тож нічого не розпочато.",
+  "@errors.write.namedLeavesRefused.message.notASource": {
+    "sourceHash": "12b2cb4"
+  },
+  "errors.write.namedLeavesRefused.message.sameName": "Два елементи опинилися б тут: {path}. Багато дисків вважають такі назви однією, тож один елемент замінив би інший.",
+  "@errors.write.namedLeavesRefused.message.sameName": {
+    "sourceHash": "95e02b9"
+  },
+  "errors.write.namedLeavesRefused.message.ontoASource": "Один з елементів опинився б тут: {path}. Там лежить інший елемент цієї ж пропозиції, і його було б замінено.",
+  "@errors.write.namedLeavesRefused.message.ontoASource": {
+    "sourceHash": "724f9c3"
+  },
+  "errors.write.namedLeavesRefused.message.alreadyInDestination": "Елемент {path} уже лежить у папці призначення, тож дати йому там нову назву означає перейменувати його.",
+  "@errors.write.namedLeavesRefused.message.alreadyInDestination": {
+    "sourceHash": "06a0593"
+  },
+  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr не може дати кожному елементу власну назву дорогою в zip-архів або з нього, тож у папку {path} нічого не потрапило.",
+  "@errors.write.namedLeavesRefused.message.routeCannotName": {
+    "sourceHash": "f2e48ca"
+  },
+  "errors.write.namedLeavesRefused.suggestion.notASource": "Попросіть Cmdr запропонувати це знову.",
+  "@errors.write.namedLeavesRefused.suggestion.notASource": {
+    "sourceHash": "c1dbe85"
+  },
+  "errors.write.namedLeavesRefused.suggestion.sameName": "Попросіть Cmdr запропонувати для кожного елемента окрему назву.",
+  "@errors.write.namedLeavesRefused.suggestion.sameName": {
+    "sourceHash": "76257a9"
+  },
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Попросіть Cmdr запропонувати назви, які не збігаються з назвами елементів, що переміщуються чи копіюються.",
+  "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
+    "sourceHash": "9ab88ec"
+  },
+  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Перейменуйте елементи, які вже лежать у тій папці, а тоді перемістіть або скопіюйте решту.",
+  "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {
+    "sourceHash": "8917a8e"
+  },
+  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Перемістіть або скопіюйте їх під їхніми власними назвами, а тоді перейменуйте там.",
+  "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
+    "sourceHash": "b1e881c"
+  },
+  "errors.listing.linkNeedsConsent.title": "Ця папка на іншому сервері",
+  "@errors.listing.linkNeedsConsent.title": {
+    "sourceHash": "c37d453"
+  },
+  "errors.listing.linkNeedsConsent.explanation": "`{path}` — це посилання на сервері **{server}**, яке веде на **{target}**. Cmdr там не входив, тому {target} нічого від вас не отримав.",
+  "@errors.listing.linkNeedsConsent.explanation": {
+    "sourceHash": "91b0171"
+  },
+  "errors.listing.linkNeedsConsent.suggestion": "Щоб відкрити цю папку, Cmdr має увійти на {target} з обліковим записом, який ви використовуєте для {server}. Перегляньте це, якщо довіряєте {target}. Решта цієї спільної папки працює як зазвичай.",
+  "@errors.listing.linkNeedsConsent.suggestion": {
+    "sourceHash": "991cb6c"
+  },
+  "errors.volume.linkNeedsConsent": "Це розташовано за посиланням на інший сервер, куди Cmdr поки що не можна входити. Щоб вирішити, відкрийте папку на панелі.",
+  "@errors.volume.linkNeedsConsent": {
+    "sourceHash": "79ff9fe"
+  },
+  "errors.write.linkNeedsConsent.title": "Цей файл на іншому сервері",
+  "@errors.write.linkNeedsConsent.title": {
+    "sourceHash": "ff31c7f"
+  },
+  "errors.write.linkNeedsConsent.message": "Посилання на сервері {server} веде на {target}, а входити туди Cmdr поки що не можна, тому на цей сервер нічого не надіслано.",
+  "@errors.write.linkNeedsConsent.message": {
+    "sourceHash": "7893ce9"
+  },
+  "errors.write.linkNeedsConsent.suggestion": "Відкрийте папку на панелі й дозвольте вхід, якщо довіряєте цьому серверу, а потім спробуйте ще раз.",
+  "@errors.write.linkNeedsConsent.suggestion": {
+    "sourceHash": "cc25854"
+  }
+}

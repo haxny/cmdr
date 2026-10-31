@@ -523,16 +523,11 @@ fn rewrite_a_dotfile_beside_a_visible_file(
     tag: &str,
     hidden: bool,
 ) -> (crate::test_support::TestDir, cmdr_listing::testing::TestListingGuard) {
-    use crate::file_system::watcher::handle_directory_change_incremental;
+    use crate::file_system::watcher::{ListingChange, handle_directory_change_incremental};
     use cmdr_fs::testing::unique_test_id;
     use cmdr_listing::testing::TestListing;
     use cmdr_listing::testing::hold_diffs;
     use cmdr_local::reading::list_directory_core;
-    use notify_debouncer_full::DebouncedEvent;
-    use notify_debouncer_full::notify::{
-        Event,
-        event::{DataChange, EventKind, ModifyKind},
-    };
 
     let scratch = crate::test_support::TestDir::new(tag);
     let dotfile = scratch.join(".zsh_history");
@@ -551,15 +546,7 @@ fn rewrite_a_dotfile_beside_a_visible_file(
     hold_diffs(listing.engine(), listing.id());
 
     std::fs::write(&dotfile, b"ls\ncd ~\n").expect("scratch dir is writable");
-    let event = Event {
-        kind: EventKind::Modify(ModifyKind::Data(DataChange::Content)),
-        paths: vec![dotfile],
-        attrs: Default::default(),
-    };
-    handle_directory_change_incremental(
-        listing.id(),
-        vec![DebouncedEvent::new(event, std::time::Instant::now())],
-    );
+    handle_directory_change_incremental(listing.id(), vec![ListingChange::Content(dotfile)]);
     (scratch, listing)
 }
 

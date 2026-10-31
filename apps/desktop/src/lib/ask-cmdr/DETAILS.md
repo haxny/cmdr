@@ -44,8 +44,8 @@ Three things follow from the subscription being conversation-keyed rather than p
   reloaded rail lands on the same thread and the rest of the turn renders. There is no second `assistantStarted` to
   hear, so `adoptLiveTurn` treats ANY live event for the thread on screen as proof a turn is running, and the reducer
   creates the streaming bubble if there isn't one (`ensureAssistant`). The load itself adopts too when the backend says
-  a turn runs there (`turnInFlightSinceSeq`, `resumeThread`), so a turn sitting in a long tool call doesn't look idle
-  until its next event.
+  a turn runs there (`turnInFlightRun`, `resumeThread`), so a turn sitting in a long tool call doesn't look idle until
+  its next event, and its Stop knows the turn's run.
 - **Only a STREAMING bubble is written into** (`streamingAssistant`). An ended turn's bubble stays closed, so a turn the
   rail never typed (a wake, or one a reload caught before its first row landed) opens its own. A reload that caught rows
   of the running turn folds that bubble still streaming, which is how the rest of the turn lands in it.
@@ -174,11 +174,12 @@ Stop reached (`CancelOutcomeView`: `tripped`, the turns it newly stopped; `live`
 - A turn thread that panics still emits a terminal (`Failed`, `unfinishedReply`) before it unregisters.
 - **A terminal ends only its own turn.** Every event carries its turn's `run` (`AskCmdrTurn.run`, the backend's cancel
   registration generation), and the send answers it too, so the rail knows the run of the turn it streams (`liveRun`:
-  from the send's answer, or a picked-up turn's first event) and each stop holds its own. A terminal settles the stop of
-  its run, else the oldest of its thread whose run is unknown. A terminal emitted just before the Stop can reach the
-  rail AFTER the `live: 0` answer: that stop's run goes to `settledRuns`, and its terminal is swallowed on arrival.
-  Regression anchor: it used to end whatever turn the user had sent since (`ask-cmdr-stop-and-reload.test.ts`, "a
-  stopped turn's late terminal"). Residual: a turn a reload adopted that said nothing before its Stop has no known run.
+  from the send's answer, a thread load's `turnInFlightRun`, or a picked-up turn's first event) and each stop holds its
+  own. A terminal settles the stop of its run, else the oldest of its thread whose run is unknown. A terminal emitted
+  just before the Stop can reach the rail AFTER the `live: 0` answer: that stop's run goes to `settledRuns`, and its
+  terminal is swallowed on arrival. Regression anchor: it used to end whatever turn the user had sent since
+  (`ask-cmdr-stop-and-reload.test.ts`, "a stopped turn's late terminal"), and, for a turn a reload adopted that went
+  quiet before its Stop, until the load named its run (#802, "Stop on a quiet turn picked up after a reload").
 
 A "load earlier" that joins a stopped bubble with its older half builds a new object, so the stop follows it
 (`followJoinedBubble`).
@@ -625,12 +626,12 @@ reading. Two more were considered and rejected:
   `rejectGroup`), so 500 files never mean 500 clicks.
 
 **The grouping is presentational; the proposal stays the unit.** `BulkRenameReview` is a list of
-`BulkRenameReviewProposal`s, each with its own rows, `preflighting`, `expired`, `revision`, `changed`, and
-`requestVersion`, because preflight, revise, apply, and cancel are all keyed by proposal id on the backend
-(`propose/rename/store.rs`). So every guardrail stays per row: the evidence check, pane-scoped source validation, the
-fingerprinted preflight, and the fingerprint recheck at write time. Apply loops over the batches in STAGING order, one
-`apply_bulk_rename` each, and stops at the first refusal, leaving the rest revalidated and still answerable. A batch the
-user turned down whole is consumed with the rest when Apply finishes: they answered it.
+`BulkRenameReviewProposal`s, each with its own rows, `preflighting`, `expired`, `revision`, `changed`, `checkFailed`,
+`checkProgress`, and `requestVersion`, because preflight, revise, apply, and cancel are all keyed by proposal id on the
+backend (`propose/rename/store.rs`). So every guardrail stays per row: the evidence check, pane-scoped source
+validation, the fingerprinted preflight, and the fingerprint recheck at write time. Apply loops over the batches in
+STAGING order, one `apply_bulk_rename` each, and stops at the first refusal, leaving the rest revalidated and still
+answerable. A batch the user turned down whole is consumed with the rest when Apply finishes: they answered it.
 
 A rename group binds one parent folder (`start_bulk_rename` refuses a row that would change it), so a job across folders
 is several batches. The dialog puts a folder heading above each run of rows for exactly that case, and shows none at all
@@ -669,6 +670,34 @@ previously blocked rows. This keeps target-exists and source-missing warnings li
 external process removes the clash or restores a missing source; matching names are only an IPC filter, never filesystem
 authority. `TargetExists` and `SourceMissing` rows are deselected and show specific red warnings, while the write
 engine's exclusive final rename remains the data-safety boundary.
+
+## A check with no time limit
+
+Checking and applying used to get a fixed five seconds, so a 500-row job on a NAS could time out every time while
+working fine. David's call (#152): no hard cap. A slow check shows a count and Stop checking, and a stuck stat can't
+hold the review hostage. Mechanism, including why the waiter owns the progress clock and how a stop detaches the scan:
+`apps/desktop/src-tauri/src/agent/tools/propose/rename/check.rs`.
+
+- **Progress**: `bulk-rename-check-progress` lands in `proposal.checkProgress`, and `renameCheckProgress` sums the
+  batches that reported. A finished batch stays in the sum at its full count until the last one ends, so the job's total
+  holds still. A check that ends inside the backend's quiet period emits nothing, which is why a local toggle doesn't
+  flicker.
+- **Stop checking is not Cancel.** Cancel closes the review and consumes its proposals (which also stops their checks).
+  Stop keeps the review open, marks the batch `checkFailed`, and shows Check again.
+- **`checkFailed` holds everything until the user answers it.** Rename stays disabled, and toggles, edits, and watcher
+  events don't recheck that batch (`recheckUnlessStopped`): restarting by itself is how a slow volume used to burn a
+  whole check per toggle. Check again is the only restart. A breakdown logs once through a `LogOnceGate`; a stop doesn't
+  log.
+- **Apply can run a check too.** The review checks every row, so a user who denied one arrives at `apply_bulk_rename`
+  with a subset, which reruns the check. So Stop checking works during Apply, and `applyingReview` keeps a watcher
+  recheck from replacing the check Apply is waiting on (a new check for a proposal stops the old one).
+  `applyStopRequested` and the closed-review test cover the gap between batches, when the backend has nothing to stop.
+
+**Every refusal gets its own answer** (`noteApplyRefusal`, `noteReviseRefusal`, exhaustive on `BulkRenameError`, carried
+by `BulkRenameFailure`): `listChanged` and `reviewExpired` mark the batch, `cancelled` marks it unchecked,
+`needsAnotherLook` / `nothingToApply` / `couldntStart` are a notice above the list (`review.notice`, worded in
+`rename-review-status.ts`; a volume's refusal adds the transfer dialogs' own sentence). On an edit, only `rowRefused`
+says "try a different name"; a store hiccup says `nameNotSaved`, since the name was fine.
 
 ## Undo after a batch lands
 
@@ -824,15 +853,14 @@ cancellation.
 
 ## Spend pause
 
-A user-started turn whose estimated spend passed `askCmdr.spendPause` (Settings › AI › Ask Cmdr, default
-$2) stops
+A user-started turn whose estimated spend passed `askCmdr.spendPause` (Settings › AI › Ask Cmdr, default $2) stops
 between rounds and emits `spendPaused { costMicros }`. The rail holds it in `askCmdrState.spendPausedMicros` and renders
-`AskCmdrSpendPause` under the thread while the turn streams: "This answer has used about $X
-so far. Keep going?", the list-price caveat, Keep going (`keepGoingPastSpend` → `keepGoingAskCmdr`) and Stop (the
-ordinary `stopStreaming`). The turn is quiet on purpose while it waits, so the pause clears the progress watchdog and
-the thinking/stalled labels; Keep going or `spendResumed` re-arms it. A paused turn emits nothing to re-adopt, so a
-thread load reads the question back from `ConversationDetailView.spendPausedMicros` (`resumeThread`). The turn ending,
-Stop, and a discard clear it. Backend side: `src-tauri/src/agent/chat/DETAILS.md` § Budgets and cancellation.
+`AskCmdrSpendPause` under the thread while the turn streams: "This answer has used about $X so far. Keep going?", the
+list-price caveat, Keep going (`keepGoingPastSpend` → `keepGoingAskCmdr`) and Stop (the ordinary `stopStreaming`). The
+turn is quiet on purpose while it waits, so the pause clears the progress watchdog and the thinking/stalled labels; Keep
+going or `spendResumed` re-arms it. A paused turn emits nothing to re-adopt, so a thread load reads the question back
+from `ConversationDetailView.spendPausedMicros` (`resumeThread`). The turn ending, Stop, and a discard clear it. Backend
+side: `src-tauri/src/agent/chat/DETAILS.md` § Budgets and cancellation.
 
 ## The context gauge (how full the chat is)
 
@@ -942,18 +970,15 @@ backend's slot status does that (`ask_cmdr_slot_status` reads `test_mode::ask_cm
 - **Cost footer** (`AskCmdrCostFooter.svelte` + pure `ask-cmdr-cost.ts`): the active thread's cumulative tokens + cost,
   refetched (`ask_cmdr_conversation_cost`) when the thread changes, after each metered call (`costRevision`), and when a
   turn finishes streaming. Honest miss-path (`costReading`): a local-only thread reads "free, on-device", an unpriced
-  model reads "cost unknown", a priced thread shows "about {amount}" — never a silent
-  $0. The amount rounds to cents
-  ("about $0.83", `costEstimateText`), and a real cost below half a cent reads "under
-  $0.01" so it never looks free. The
+  model reads "cost unknown", a priced thread shows "about {amount}" — never a silent $0. The amount rounds to cents
+  ("about $0.83", `costEstimateText`), and a real cost below half a cent reads "under $0.01" so it never looks free. The
   money is written wholly in the UI language (`getNumberFormatter`, so an English app on a Swedish-formatted Mac reads
-  "$0.83";
-  `#lib/intl/number-format.ts`). Its tooltip says it's USD and ignores provider-side prompt caching (the meter prices
-  every prompt token at the full rate, `src-tauri/src/agent/pricing.rs`). Token counts (here and in the per-turn stats
-  line) go compact from 2,000 up through `formatTokenCount` (`Intl` compact notation in the UI language: "2.2K", "1.3M",
-  zh "2.2万", one decimal at most), with the exact count in a tooltip. Always shown with the chat; a thread with nothing
-  metered reads zero (§ The context gauge). A fetched total is keyed by the thread it was read for: a thread switch
-  drops it at once, and a slow read for a thread the user already left is dropped.
+  "$0.83"; `#lib/intl/number-format.ts`). Its tooltip says it's USD and ignores provider-side prompt caching (the meter
+  prices every prompt token at the full rate, `src-tauri/src/agent/pricing.rs`). Token counts (here and in the per-turn
+  stats line) go compact from 2,000 up through `formatTokenCount` (`Intl` compact notation in the UI language: "2.2K",
+  "1.3M", zh "2.2万", one decimal at most), with the exact count in a tooltip. Always shown with the chat; a thread with
+  nothing metered reads zero (§ The context gauge). A fetched total is keyed by the thread it was read for: a thread
+  switch drops it at once, and a slow read for a thread the user already left is dropped.
 - **Settings section** (`settings/sections/AskCmdrSection.svelte`, top-level `Ask Cmdr`): the `askCmdr.enabled` switch,
   a "cloud AI is off" hint plus an "Open AI settings" button when it's on over Cloud without consent, the provider hint
   (reads `ai.provider`) + the interactive-model row (`askCmdr.interactiveModel`), the two memory controls, and the

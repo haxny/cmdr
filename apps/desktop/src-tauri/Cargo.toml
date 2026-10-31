@@ -1,6 +1,6 @@
 [package]
 name = "cmdr"
-version = "0.57.0"
+version = "0.58.0"
 description = "A blazing fast, keyboard-driven, two-pane file manager built, Rust, Tauri, and ❤️"
 authors = ["David Veszelovszki <david@getcmdr.com>"]
 edition = "2024"
@@ -311,7 +311,7 @@ mdns-sd = { version = "0.21.6", features = ["logging"] }
 # SMB2/3 protocol client for share enumeration (pure Rust, pipelined I/O).
 # When bumping: also re-vendor the test containers per
 # apps/desktop/test/smb-servers/.compose/VENDORED.md
-smb2 = { version = "0.36.0", features = ["serde"] }
+smb2 = { version = "0.38.0", features = ["serde"] }
 # NFD normalization for APFS collation and SMB path normalization
 unicode-normalization = "0.1"
 # Percent-decoding for MCP resource URI query strings (cross-platform).
@@ -422,6 +422,10 @@ objc2-quick-look-ui = { version = "0.3.2", default-features = false, features = 
     "std", "QLPreviewPanel", "QLPreviewItem", "objc2-app-kit",
 ] }
 block2 = "0.6"
+# A pane's per-listing FSEvents watch (`file_system/watcher/fsevents.rs`). Our vendored fork, the
+# indexer's FSEvents layer too: unlike `notify`, it hands us every event, so a dropped-events or
+# must-scan signal anchored above the pane's folder still reaches it.
+cmdr-fsevent-stream = { path = "../../../crates/fsevent-stream" }
 # Whether the user turned Cmdr's notifications off (`notifications.rs`): the notification plugin
 # posts through `NSUserNotificationCenter`, which can't say, so we ask `UNUserNotificationCenter`.
 # Already in the lockfile through the objc2 family (published 2025-10-04). UserNotifications

@@ -48,8 +48,12 @@
 - A connected place's edit applies live over its session (`network/live_server_edit.rs`).
 - `save_place_edit` is the edit an approved Ask Cmdr card saves: the STORED entry with only `PlaceEdit`'s fields (name,
   root, start folder, NFS uid and gid) set, through `save_edit`. **Why not a `ServerTarget` built from the card**: a
-  card carries no key file, SSH-agent switch, or "Reconnect automatically", and a target that defaulted them would
-  quietly reset the user's own choices. An SMB share answers `AccountChanged`: its edit is the host's (`edit_host`).
+  card carries no key file, SSH-agent switch, "Reconnect automatically", or NFS other groups, and a target that
+  defaulted them would quietly reset the user's own choices. An SMB share answers `AccountChanged`: its edit is the
+  host's (`edit_host`).
+- An NFS place's identity is a uid, a gid, and its other groups (#677). `this_mac_identity` fills the groups from
+  `getgroups`, each once, without the primary and ❌ never group 0, which `cmdr_nfs::guess_identity` doesn't claim for an
+  export's files either.
 
 ## Saving without contact
 

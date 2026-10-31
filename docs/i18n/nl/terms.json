@@ -2105,6 +2105,11 @@
     "forms": "column Naam; a pronoun never refers back to an uncontrolled {name}",
     "sources": "macOS Finder (Name → Naam)"
   },
+  "name-mask": {
+    "chosen": "naammasker",
+    "confidence": "high",
+    "sources": "catalog (multiRename.nameMask); TC 6602 (Hernoemmasker: bestandsnaam); DC (Masker, Bestandmasker)"
+  },
   "nas": {
     "chosen": "NAS",
     "confidence": "high",
@@ -2206,6 +2211,9 @@
     "accept": ["notities", "bericht"],
     "chosen": "notitie",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: the “note” is Cmdr’s own short toast, not text the user writes, so it takes the notification ruling’s melding (as settings.suggestedOps.suppressApprovalNotice.description does)"
+    },
     "forms": "error-report notes and the free-text field → notitie; the feedback dialog's Your note → je bericht (that surface only; never mix the two in one dialog)",
     "sources": "MS (note → notitie)"
   },
@@ -3167,6 +3175,9 @@
     "accept": ["overslaan", "overgeslagen", "slaat", "sla", "sloeg"],
     "chosen": "Sla over",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: “skip the note” means not seeing a toast again, not leaving an item out of an operation (om geen melding meer te krijgen)"
+    },
     "forms": "button Sla over / Sla alles over; outcome Overgeslagen; Cmdr skips anything it isn't sure about → Cmdr slaat alles over waar het niet zeker van is",
     "sources": "Nautilus (Overslaan), bare-stem imperative per the button rule"
   },
@@ -3493,6 +3504,13 @@
     "confidence": "high",
     "forms": "the server protocol column Type (same as English)",
     "sources": "macOS System Settings (Type → Type)"
+  },
+  "type-to-jump": {
+    "accept": ["typ-om-te-springen"],
+    "chosen": "Ga naar",
+    "confidence": "high",
+    "forms": "the mode and badge word Ga naar (Ga naar: …), beside Filter; quoted in running text (Schakel naar ‘Ga naar’); clear the typed text → Getypte tekst wissen (a bare Ga naar wissen doesn't parse)",
+    "sources": "catalog (fileExplorer.typeToJump.prefix, settings.fileExplorer.typeToJump.mode.opt.jump)"
   },
   "typo": {
     "accept": ["typefouten"],
@@ -3989,5 +4007,23 @@
     "chosen": "Denkniveau",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
+  },
+  "shared-storage": {
+    "chosen": "gedeelde opslag",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-nl storage_internal (read 2026-10-30): Interne gedeelde opslag"
+  },
+  "this-computer": {
+    "accept": ["computer"],
+    "chosen": "deze computer",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
+  },
+  "busy": {
+    "chosen": "bezet",
+    "confidence": "high",
+    "forms": "the greyed menu marker: the base label word for word, then (bezet)",
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)",
+    "accept": ["druk", "in gebruik"]
   }
 }

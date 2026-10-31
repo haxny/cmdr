@@ -149,6 +149,11 @@ export function createQueryRunner<E>(deps: QueryRunnerDeps<E>): QueryRunner {
   const highlightedFields = new SvelteSet<string>()
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   /**
+   * Bumped by every run the user starts (AI or not), so an AI translation that answers
+   * after a newer run began knows it's stale. Plain, not `$state`: nothing renders it.
+   */
+  let aiRunSeq = 0
+  /**
    * IME composition flag. While true, `scheduleSearch` is a no-op so we don't fire
    * mid-character on Chinese/Japanese/Korean input. On `compositionend` the bar calls
    * `scheduleSearch` once so the user gets exactly one fire post-composition.
@@ -417,6 +422,7 @@ export function createQueryRunner<E>(deps: QueryRunnerDeps<E>): QueryRunner {
     const { fromAiTranslation = false, fromAutoApply = false } = options
     const config = deps.getConfig()
     if (debounceTimer) clearTimeout(debounceTimer)
+    if (!fromAiTranslation) aiRunSeq += 1
     // Nothing to run: an empty bar with every filter at its default isn't a query, and the
     // backend refuses it ("Query too broad"), which surfaced as a warning toast the moment
     // the user cleared the field. This is the choke point every path goes through
@@ -474,9 +480,10 @@ export function createQueryRunner<E>(deps: QueryRunnerDeps<E>): QueryRunner {
 
   /**
    * Runs an AI translation for `prompt`, then executes the query. The consumer's
-   * `translateAi` owns applying every AI-returned filter (size / date / scope / AI pattern +
-   * label / etc); the runner captures the prompt, flashes any highlighted fields, sets the
-   * caveat, and runs the query.
+   * `translateAi` answers with an `apply` that writes every AI-returned filter (size / date /
+   * scope / AI pattern + label / etc); the runner captures the prompt, calls `apply` only
+   * while this run is still the newest, flashes the fields it reports, sets the caveat, and
+   * runs the query.
    *
    * The spinner covers the WHOLE round-trip: we flip `isSearching` on before the cloud
    * translate (the slow part: seconds) and leave it on through `executeQuery`, which clears
@@ -494,6 +501,11 @@ export function createQueryRunner<E>(deps: QueryRunnerDeps<E>): QueryRunner {
     // pattern lives separately via the consumer's extras).
     config.state.setLastAiPrompt(trimmed)
     config.state.setLastAiCaveat(null)
+    // The chips still mirror the previous query until this answer lands, so the strip
+    // lists no agent steps meanwhile (#762). A newer run makes this one's answer stale.
+    config.state.setAiTrailReady(false)
+    aiRunSeq += 1
+    const seq = aiRunSeq
     // Show the spinner for the slow cloud translate, not just the post-translate query.
     hasSearched = true
     config.state.setIsSearching(true)
@@ -502,6 +514,7 @@ export function createQueryRunner<E>(deps: QueryRunnerDeps<E>): QueryRunner {
     try {
       result = await config.translateAi(trimmed)
     } catch (err) {
+      if (seq !== aiRunSeq) return
       // Surface WHY the translation failed (quota, key, timeout, empty answer, …) as a
       // specific toast instead of a silent no-op. Both Search and Selection route here, so
       // the error UX lives in one place. The consumer's `translateAi` lets the typed error
@@ -513,20 +526,26 @@ export function createQueryRunner<E>(deps: QueryRunnerDeps<E>): QueryRunner {
       }
       return
     }
+    // A newer run (AI or not) superseded this one while it translated: its answer must not
+    // write a filter, flash, caveat, or vouch for the strip the newer run owns. This is the
+    // ONE guard: the consumer's writes live in `apply`, which only this line lets through.
+    if (seq !== aiRunSeq) return
     if (!result) {
       config.state.setIsSearching(false)
       return
     }
 
-    // Flash the changed fields so the user sees what the AI touched.
-    if (result.highlightedFields && result.highlightedFields.length > 0) {
+    // Write the answer into state, then flash the fields the AI touched.
+    const changed = result.apply()
+    if (changed.length > 0) {
       highlightedFields.clear()
-      for (const field of result.highlightedFields) highlightedFields.add(field)
+      for (const field of changed) highlightedFields.add(field)
       setTimeout(() => {
         highlightedFields.clear()
       }, AI_HIGHLIGHT_FLASH_MS)
     }
     config.state.setLastAiCaveat(result.caveat)
+    config.state.setAiTrailReady(true)
 
     // `executeQuery` sets `isSearching` true again (idempotent) and clears it in `finally`.
     await executeQuery({ fromAiTranslation: true })

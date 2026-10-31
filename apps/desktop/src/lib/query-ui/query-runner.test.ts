@@ -323,7 +323,7 @@ describe('scheduleSearch (auto-apply gates)', () => {
 })
 
 describe('runAiSearch', () => {
-  const translated: AiTranslateResult = { caveat: 'Guessed 10 MB as "big"', highlightedFields: ['size', 'query'] }
+  const translated: AiTranslateResult = { caveat: 'Guessed 10 MB as "big"', apply: () => ['size', 'query'] }
 
   it('captures the prompt before the IPC, then runs the query and scrolls to the top', async () => {
     const seen: (string | null)[] = []
@@ -388,6 +388,58 @@ describe('runAiSearch', () => {
     expect(config.state.getLastAiPrompt()).toBe('big photos')
   })
 
+  it('marks the agent trail ready only once this prompt’s answer lands (#762)', async () => {
+    let answer: (r: AiTranslateResult) => void = () => {}
+    const { runner, config } = makeRunner({
+      query: 'big photos',
+      translateAi: () =>
+        new Promise((resolve) => {
+          answer = resolve
+        }),
+    })
+    config.state.setAiTrailReady(true) // left over from an earlier AI run
+    const done = runner.runAiSearch('big photos')
+    expect(config.state.getAiTrailReady()).toBe(false)
+    answer(translated)
+    await done
+    expect(config.state.getAiTrailReady()).toBe(true)
+  })
+
+  it('keeps the trail unready after a failed translation', async () => {
+    const { runner, config } = makeRunner({ query: 'x', translateAi: () => Promise.reject(new Error('boom')) })
+    config.state.setAiTrailReady(true)
+    await runner.runAiSearch('big photos')
+    expect(config.state.getAiTrailReady()).toBe(false)
+  })
+
+  it('drops a translation that answers after a newer run started', async () => {
+    const answers: ((r: AiTranslateResult) => void)[] = []
+    const { runner, config, calls } = makeRunner({
+      query: 'big photos',
+      translateAi: () =>
+        new Promise((resolve) => {
+          answers.push(resolve)
+        }),
+    })
+    const first = runner.runAiSearch('old question')
+    const second = runner.runAiSearch('new question')
+    const applied: string[] = []
+    const applying = (name: string, field: string) => (): string[] => {
+      applied.push(name)
+      return [field]
+    }
+    answers[1]({ caveat: 'new caveat', apply: applying('new', 'size') })
+    await second
+    answers[0]({ caveat: 'old caveat', apply: applying('old', 'date') })
+    await first
+    expect(config.state.getLastAiPrompt()).toBe('new question')
+    expect(config.state.getLastAiCaveat()).toBe('new caveat')
+    // The stale answer's writes never run, so it can't touch a filter.
+    expect(applied).toEqual(['new'])
+    expect([...runner.highlightedFields]).toEqual(['size'])
+    expect(calls.runQuery).toBe(1)
+  })
+
   it('treats a null translation as a benign no-op, spinner off', async () => {
     const { runner, config, calls } = makeRunner({ query: 'big photos', translateAi: () => Promise.resolve(null) })
     await runner.runAiSearch('big photos')
@@ -407,7 +459,7 @@ describe('run / runFromButton', () => {
   it('routes to the AI round-trip in AI mode', async () => {
     const { runner, config, calls } = makeRunner({
       query: 'big photos',
-      translateAi: () => Promise.resolve({ caveat: null }),
+      translateAi: () => Promise.resolve({ caveat: null, apply: () => [] }),
     })
     config.state.setMode('ai')
     runner.runFromButton()
@@ -427,14 +479,14 @@ describe('run / runFromButton', () => {
   it('runAiFromQuery stays quiet when AI is off or the query is blank', async () => {
     const offConfig = makeRunner({
       query: 'big photos',
-      translateAi: () => Promise.resolve({ caveat: null }),
+      translateAi: () => Promise.resolve({ caveat: null, apply: () => [] }),
       overrides: { aiEnabled: false },
     })
     offConfig.runner.runAiFromQuery()
     await Promise.resolve()
     expect(offConfig.calls.translateAi).toEqual([])
 
-    const blank = makeRunner({ query: '', translateAi: () => Promise.resolve({ caveat: null }) })
+    const blank = makeRunner({ query: '', translateAi: () => Promise.resolve({ caveat: null, apply: () => [] }) })
     blank.runner.runAiFromQuery()
     await Promise.resolve()
     expect(blank.calls.translateAi).toEqual([])

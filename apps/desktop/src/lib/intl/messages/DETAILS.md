@@ -230,14 +230,14 @@ his hands off the laptop until it finishes; the app's YELLOW `SCREENSHOT` title 
 `../../app-mode.ts`).
 
 **An idle machine is NOT enough: no other app may hold the front position.** The harness spawns the raw
-`target/<triple>/release/Cmdr` binary (not an `.app` through LaunchServices), and macOS 14+ cooperative activation won't
-let a process like that take the front from an app that already has it. `shoot()`'s `set_focus` remedy is then a no-op,
-and only a window that was JUST created gets composited once. Measured on 2026-08-08 (macOS 26, two consecutive runs):
-with Chrome frontmost and nobody touching the laptop, `lsappinfo front` reported Chrome for 40 of 40 samples over two
-minutes while Cmdr never once came forward; both runs captured exactly 13–14 of ~71 surfaces, and every success was the
-first shot after a window opened (`main-window`, then the four `settings-appearance*` sections, the five `viewer*`
-ones). So: quit or hide whatever app is frontmost before starting a run, and don't read "the computer was in use" as the
-only explanation.
+`target/<triple>/e2e/Cmdr` binary (not an `.app` through LaunchServices), and macOS 14+ cooperative activation won't let
+a process like that take the front from an app that already has it. `shoot()`'s `set_focus` remedy is then a no-op, and
+only a window that was JUST created gets composited once. Measured on 2026-08-08 (macOS 26, two consecutive runs): with
+Chrome frontmost and nobody touching the laptop, `lsappinfo front` reported Chrome for 40 of 40 samples over two minutes
+while Cmdr never once came forward; both runs captured exactly 13–14 of ~71 surfaces, and every success was the first
+shot after a window opened (`main-window`, then the four `settings-appearance*` sections, the five `viewer*` ones). So:
+quit or hide whatever app is frontmost before starting a run, and don't read "the computer was in use" as the only
+explanation.
 
 ⚠️ A blank-heavy run also loses the surfaces that WOULD have worked. Three retries each across ~50 blank surfaces blow
 the spec's 300 s Playwright timeout, so the run dies part-way and `pnpm i18n:shots` never reaches `i18n:couple` (`&&`).
@@ -357,15 +357,12 @@ job.
 
 ## Dead-key honesty + the orphan check
 
-Two layers look for catalog keys never referenced in code:
-
-- The codegen prints a non-fatal dead-key WARNING. Its usage scan only sees STATICALLY-written keys (`t('literal')`,
-  `<Trans key="literal">`), so a dynamically-built key reads as dead there.
-- `desktop-message-keys-unused` (Go check, error-level) is the enforced net: a catalog key whose literal appears in NO
-  `apps/desktop/src/` file (test files included) and isn't covered by an allowlisted dynamic prefix is a hard failure,
-  because an orphan key is dead translation work that costs money once human translators are involved. It credits any
-  indirection that stores the literal (registry `*Key` fields, Record maps), so the only keys it flags are genuinely
-  absent ones.
+One layer owns catalog keys never referenced in code: `desktop-message-keys-unused` (Go check, error-level, fast lane).
+A catalog key whose literal appears in NO `apps/desktop/src/` or `src-tauri/src/` file (test files included) and isn't
+covered by an allowlisted dynamic prefix is a hard failure, because an orphan key is dead translation work that costs
+money once human translators are involved. It credits any indirection that stores the literal (registry `*Key` fields,
+Record maps), so the only keys it flags are genuinely absent ones. It matches every key in one pass per file (an
+Aho-Corasick automaton); the codegen only answers the inverse (keys used in code but missing from the catalog).
 
 Keys assembled at runtime never appear verbatim, so they're carried by a closed, documented dynamic-prefix allowlist
 (`unusedKeyDynamicPrefixes` in `scripts/check/checks/desktop-message-keys-unused.go`, the single source). Today that's

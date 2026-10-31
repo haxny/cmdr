@@ -128,10 +128,11 @@ first. For everything the local guarded walker reads, in the order the function 
 - **`index_needs_rebuild` set** ⇒ `RebuildThenCoverInPhases`, or `ScanTheVolume` with the phased first index switched
   off. Asked FIRST, ahead of every other cell: an index that may have lost rows to a leaving drive looks healthy to all
   of them, so anything else here would replay or reconcile in place over holes. § "The rebuild marker".
-- **journal replayable, gap too wide** ⇒ `start_scan("stale index: journal gap too large")`. Unchanged, and reachable
-  ONLY on a volume that completed a scan, since replaying at all requires one, so NO volume being covered in phases can
-  take it. Its phased counterpart is `ensure_branch_watch`'s conditional epoch bump: a resume that can't replay the gap
-  keeps the rows and says they're stale (`a_relaunch_with_no_replayable_journal_bumps_the_epoch`).
+- **journal replayable, but running BEHIND the stored id** ⇒ `start_scan("journal runs behind the stored event id")`. ❌
+  A wide id gap alone is not this cell: the replay bounds its own cost (`../watch/DETAILS.md` § "Replay cost, not event
+  count"). Reachable ONLY on a volume that completed a scan, since replaying at all requires one, so NO volume being
+  covered in phases can take it. Its phased counterpart is `ensure_branch_watch`'s conditional epoch bump: a resume that
+  can't replay the gap keeps the rows and says they're stale (`a_relaunch_with_no_replayable_journal_bumps_the_epoch`).
 - **journal replayable** ⇒ `start_replay`. An install that already finished its first index loses nothing.
 - **`scan_completed_at` set** ⇒ `start_scan("rescan of existing index")`, which reconciles in place. ⚠️ This is the path
   a `LocalExternal` drive takes at EVERY mount (`has_event_journal()` is `Local`-only) and the Linux boot disk's normal
@@ -313,8 +314,17 @@ the new `-shm` for its own, truncated it as the first user it believed it was, a
 in `walIndexAppend` (verified on macOS 27.0, a 40-round stress of `cold_drive_tests` plus an lldb backtrace,
 2026-10-19). So the clear waits up to five seconds on the volume's hold, which every drive-reading worker carries, and
 keeps the files (an error) if something still holds it. The manager is dropped before the wait, since it carries a
-share. ⚠️ The one exception is the CLAIMED clear (`finish_the_claimed_teardown`): it runs on the scan start that handed
-the manager back, which may hold a share itself, so it deletes at once.
+share. **Every clear waits, with no exception**: the CLAIMED clear (`finish_the_claimed_teardown`, run at a `Detached`
+volume's handback) once deleted at once on the guess that its thread might hold a share, and that was the second SIGBUS
+(#620): stop, forget, and start inside one detached window, landing while the drive's first index was still in phases,
+cleared at the handback while that index's phase machine still read its frontier, and the start riding the claim built
+the new database under it (verified on macOS 27.0, 13 SIGBUS in 1,305 nextest stress rounds without the wait, 0 in 1,303
+with it, 2026-10-29). The price is the invariant that makes the wait answerable: ⚠️ **the thread that runs a clear holds
+no share of the volume.** The manager drops its share before the wait, and no caller of `off_the_registry` (an IPC
+rescan, the spawned `run_owed_now` and `perform_registry_rescan` tasks, the maintenance tick's phase resume) carries a
+`VolumeWork`. ❌ Don't call `off_the_registry` from a worker that does: its clear would wait five seconds on itself and
+keep the files. Pinned by
+`cold_drive_tests::toggles::a_clear_claimed_on_a_detached_drive_waits_for_the_volume_to_be_let_go`.
 
 **Freeing a slot and withdrawing its handles is ONE critical section** (`remove_instance_and_handles`, the start-up
 failure path). The two orders are not equivalent: withdraw-then-free is safe because the key still exists while the
@@ -357,9 +367,9 @@ captured up front cancels correctly in that case.
 
 ## The `IndexPhase` machine (and where the pipeline-phase EVENT lives)
 
-`IndexPhase` (state.rs) is the LIFECYCLE state: `Initializing { store }` → `Running` → `ShuttingDown { restart }`
-(transient) → absent, plus the terminal `Failed { reason, db_path }` and the transient `Detached { writer, teardown }` a
-scan start publishes (§ "The detached window").
+`IndexPhase` (state.rs) is the LIFECYCLE state: `Initializing { store }` → `Running` →
+`ShuttingDown { restart, then_clear }` (transient) → absent, plus the terminal `Failed { reason, db_path }` and the
+transient `Detached { writer, teardown }` a scan start publishes (§ "The detached window").
 
 Five phases, and what each one does with a request that arrives while it holds the volume's key:
 
@@ -372,8 +382,8 @@ Five phases, and what each one does with a request that arrives while it holds t
   teardown drains it.
 - **`Detached { writer, teardown }`** — transient, § "The detached window". A teardown CLAIMS it. A start does nothing
   unless a teardown has already claimed it, in which case it rides that claim.
-- **`ShuttingDown { restart }`** — transient, § "The shutting-down window". A start is RECORDED and carried out by the
-  drain; a further teardown DROPS what was recorded.
+- **`ShuttingDown { restart, then_clear }`** — transient, § "The shutting-down window". A start is RECORDED and carried
+  out by the drain; a further teardown DROPS the recorded start, and a CLEAR is recorded too (`then_clear`).
 - **`Failed { reason, db_path }`** — the database died, § "The Failed state". A start CLEARS it and rebuilds, at the
   choke point, before it ever reserves.
 
@@ -433,7 +443,7 @@ every path, deferred ones included. Anchor:
   claim table refuses the walk one line later anyway (`claim_the_volume` takes the volume `Exclusive`ly before every
   blocking call in `start_scan`), so the phase check is belt over braces.
 
-## The shutting-down window (`IndexPhase::ShuttingDown { restart }`)
+## The shutting-down window (`IndexPhase::ShuttingDown { restart, then_clear }`)
 
 The mirror of the detached window, pointing the other way: a volume is on its way OUT, its key is still in the registry,
 and a START lands. The window is the blocking drain, up to **five seconds** wide (`mgr.shutdown()` waits on the
@@ -458,14 +468,25 @@ particular decides between indexing a drive and standing a writer up for a searc
 
 **Toggles collapse rather than queue.** Everything after the first toggle lands in the same window, so N clicks cost one
 drain and one index: each start overwrites the `Option`, each teardown clears it (`stop_the_volume` and `clear_index`
-both publish a FRESH `ShuttingDown { restart: None }`), and the far side acts on whatever is left. The `Stopped` path
-also SKIPS `record_the_disable` when a restart is pending — the enable is already on disk from the start that superseded
-it, so writing the veto after it would make "off" the last word on a drive that was just turned on.
+both publish a FRESH marker with `restart: None`), and the far side acts on whatever is left. The `Stopped` path also
+SKIPS `record_the_disable` when a restart is pending — the enable is already on disk from the start that superseded it,
+so writing the veto after it would make "off" the last word on a drive that was just turned on.
 
 **A start riding a claim.** A start meeting `Detached` with a teardown claimed on it goes into `ClaimedTeardown.restart`
 rather than a second `Option` of its own, so "restart a volume nothing is tearing down" is unrepresentable; the claim
 carries it into the `ShuttingDown` that `hand_the_manager_back` publishes, where it joins the one honoring path. A
 teardown arriving after a start drops it either way: the user's last word is off.
+
+**A clear meeting the drain is RECORDED too** (`then_clear`). It used to bail on "another teardown is already draining
+this volume", which holds only when that teardown is a clear: a STOP's drain (the user's disable, an eject, a move)
+keeps the database, so forgetting a drive while its stop drained reported success and left the index on disk. Now
+`clear_index` writes its `Removal` onto the drain (the wider of two, `Removal::wider`), and every drain's far side
+deletes before carrying out any start: `finish_stopping` and `finish_clearing` through `remove_once_let_go` (the same
+wait for the volume to be let go, the manager's share dropped first), `finish_failing` through `clear_index` over the
+`Failed` it just installed. A start recorded after the clear still runs, onto a fresh database. ⚠️ A later stop's fresh
+marker drops the recorded start but CARRIES `then_clear` over, and skips the veto (the database is going). Pinned by
+`cold_drive_tests::toggles::a_forget_during_a_stop_deletes_the_index_once_the_stop_is_done` and
+`a_stop_after_a_forget_in_one_drain_still_deletes_the_index`.
 
 **`is_active` is not the question a start asks.** A `Detached` volume with a claim on it reads active right up to the
 moment it stops, so the four "already indexing, no-op" gates (`Index::start_volume` and the three transport enables) ask

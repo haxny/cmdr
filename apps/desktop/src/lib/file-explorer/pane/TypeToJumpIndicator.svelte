@@ -12,9 +12,14 @@
      * fresh buffer.
      *
      * `kind="filter"` shows the quick filter's pattern instead ("Filter: …"),
-     * which stays up for as long as the filter narrows the list, with a × that
-     * clears it by mouse (`onClear`). The × takes no focus: the keyboard's way out
-     * is Esc, and a click must leave focus on the pane it filters.
+     * which stays up for as long as the filter narrows the list. Set `onClear` for a ×
+     * that clears it by mouse. The × takes no focus: the keyboard's way out is Esc, and
+     * a click must leave focus on the pane it filters.
+     *
+     * `caret` marks a badge ⌃S opened, where typing edits the pattern. It's drawn, ❌ not a
+     * text field: DOM focus stays on the list (`CLAUDE.md` § Must-knows), so arrows keep
+     * moving the cursor while the pattern stays editable at its end. It holds still on
+     * purpose: a blink would keep the compositor awake for as long as the badge is up.
      *
      * ❌ Not a live region: it mounts together with its text, and a region inserted with its
      * message may say nothing. A jump speaks through the cursor row it lands on; the filter's
@@ -26,11 +31,13 @@
         visible: boolean
         stale: boolean
         kind?: 'jump' | 'filter'
-        /** Clears the filter; shows the × when set (filter only). */
+        /** Draws a caret after the pattern. */
+        caret?: boolean
+        /** Clears the pattern; shows the × when set. */
         onClear?: () => void
     }
 
-    const { buffer, visible, stale, kind = 'jump', onClear }: Props = $props()
+    const { buffer, visible, stale, kind = 'jump', caret = false, onClear }: Props = $props()
 </script>
 
 {#if visible}
@@ -38,14 +45,17 @@
         <span>
             {kind === 'filter'
                 ? tString('fileExplorer.quickFilter.prefix')
-                : tString('fileExplorer.typeToJump.prefix')}<span class="buffer">{buffer}</span>
+                : tString('fileExplorer.typeToJump.prefix')}<span class="buffer">{buffer}</span>{#if caret}<span
+                    class="caret"
+                    aria-hidden="true"
+                ></span>{/if}
         </span>
-        {#if kind === 'filter' && onClear}
+        {#if onClear}
             <button
                 type="button"
                 class="clear"
                 tabindex="-1"
-                aria-label={tString('fileExplorer.quickFilter.clear')}
+                aria-label={tString(kind === 'filter' ? 'fileExplorer.quickFilter.clear' : 'fileExplorer.typeToJump.clear')}
                 onmousedown={(e: MouseEvent) => {
                     e.preventDefault()
                 }}
@@ -94,6 +104,15 @@
         font-family: var(--font-mono);
         color: var(--color-accent-text);
         transition: color var(--transition-base);
+    }
+
+    .caret {
+        display: inline-block;
+        width: 1px;
+        height: 1em;
+        margin-left: 1px;
+        background-color: var(--color-accent-text);
+        vertical-align: text-bottom;
     }
 
     /* The overlay lets clicks through to the list; only the × takes them. */

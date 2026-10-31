@@ -186,6 +186,25 @@ describe('the letter for each answer', () => {
   })
 })
 
+describe('a name the destination refused', () => {
+  // Nothing exists to overwrite or rename around, so only the skips answer
+  // (`refused_name.rs` stops the operation on anything else).
+  it('offers only Skip and Skip all, and their letters', () => {
+    props.conflictEvent = { ...clash(), refusedName: 'tooLong' }
+    const target = render()
+    arm()
+    const buttons = [...target.querySelectorAll('.conflict-buttons button')].map(buttonLabel)
+    expect(buttons).toEqual(['Skip', 'Skip all'])
+
+    press(letter(CONFLICT_KEYS.overwrite))
+    press(letter(CONFLICT_KEYS.rename))
+    expect(onResolve).not.toHaveBeenCalled()
+
+    press(letter(CONFLICT_KEYS.skipAll))
+    expect(onResolve).toHaveBeenCalledWith('skip', true)
+  })
+})
+
 describe('Enter and Escape', () => {
   it('Enter skips this one file: the safe default, never an overwrite', () => {
     render()

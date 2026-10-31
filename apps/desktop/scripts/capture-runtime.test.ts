@@ -19,12 +19,12 @@ describe('binaryPathFromRunnerOutput', () => {
   // `scripts/check.sh --ensure-e2e-binary` prints the path as its LAST stdout line. Anything
   // before it (a worktree-warming note) must not be mistaken for the binary.
   it('takes the last non-empty line as the binary path', () => {
-    const stdout = 'Waiting for the worktree to finish warming…\n/repo/target/aarch64-apple-darwin/release/Cmdr\n\n'
-    expect(binaryPathFromRunnerOutput(stdout)).toBe('/repo/target/aarch64-apple-darwin/release/Cmdr')
+    const stdout = 'Waiting for the worktree to finish warming…\n/repo/target/aarch64-apple-darwin/e2e/Cmdr\n\n'
+    expect(binaryPathFromRunnerOutput(stdout)).toBe('/repo/target/aarch64-apple-darwin/e2e/Cmdr')
   })
 
   it('trims the whitespace around the path', () => {
-    expect(binaryPathFromRunnerOutput('  /repo/target/x/release/Cmdr  \r\n')).toBe('/repo/target/x/release/Cmdr')
+    expect(binaryPathFromRunnerOutput('  /repo/target/x/e2e/Cmdr  \r\n')).toBe('/repo/target/x/e2e/Cmdr')
   })
 
   it('answers null when the runner printed nothing', () => {

@@ -270,6 +270,7 @@ describe('an answer to a suggestion', () => {
       totalMessages: messages.length,
       lastContextUsage: null,
       turnInFlightSinceSeq: null,
+      turnInFlightRun: null,
       spendPausedMicros: null,
     }
   }

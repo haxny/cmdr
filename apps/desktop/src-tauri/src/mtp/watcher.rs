@@ -13,12 +13,14 @@ use std::sync::{Mutex, OnceLock};
 use tauri::AppHandle;
 
 use super::MtpDisconnectReason;
+use super::auto_connect::{Arrival, AutoConnectEnd, KnownDevices, WAITING_ROW_DELAY, connect_while_present};
 
 /// Global app handle for emitting events from the watcher
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 
-/// Track known MTP device IDs for comparison
-static KNOWN_DEVICES: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+/// The MTP devices the watcher last saw, each with the arrival that saw it come.
+/// An auto-connect retry loop keeps going only while its arrival is current.
+static KNOWN_DEVICES: OnceLock<Mutex<KnownDevices>> = OnceLock::new();
 
 /// Flag to indicate watcher has been started
 static WATCHER_STARTED: OnceLock<()> = OnceLock::new();
@@ -68,8 +70,10 @@ pub async fn set_mtp_enabled(enabled: bool) {
         }
 
         // Clear known devices so re-enable detects everything as new
-        if let Some(known) = KNOWN_DEVICES.get() {
-            known.lock_ignore_poison().clear();
+        if let Some(known) = KNOWN_DEVICES.get()
+            && known.lock_ignore_poison().clear()
+        {
+            crate::volume_broadcast::emit_volumes_changed();
         }
 
         // Restore ptpcamerad on macOS
@@ -114,23 +118,21 @@ fn check_for_device_changes() {
         None => return,
     };
 
-    let mut known_guard = known.lock_ignore_poison();
-
-    let new_devices: Vec<_> = current_devices.difference(&known_guard).cloned().collect();
-    let removed_devices: Vec<_> = known_guard.difference(&current_devices).cloned().collect();
-
     // Update known devices before async work to avoid re-triggering
-    *known_guard = current_devices;
-    drop(known_guard);
+    let changes = known.lock_ignore_poison().reconcile(&current_devices);
+    let removed_devices = changes.left;
+    if changes.a_waiting_row_left {
+        crate::volume_broadcast::emit_volumes_changed();
+    }
 
     // Auto-connect newly detected devices
-    if !new_devices.is_empty() {
+    if !changes.arrived.is_empty() {
         #[cfg(target_os = "macos")]
-        suppress_ptpcamerad_if_needed(new_devices.iter().map(String::as_str));
+        suppress_ptpcamerad_if_needed(changes.arrived.iter().map(|(id, _)| id.as_str()));
 
-        for device_id in new_devices {
+        for (device_id, arrival) in changes.arrived {
             info!("MTP device detected, auto-connecting: {}", device_id);
-            auto_connect_device(device_id);
+            auto_connect_device(device_id, arrival);
         }
     }
 
@@ -146,33 +148,107 @@ fn check_for_device_changes() {
     }
 }
 
-/// What `KNOWN_DEVICES` should hold once the watcher starts, given the devices
-/// found at startup and whether MTP is enabled.
-///
-/// When MTP is off we're not connecting those devices, so recording them as
-/// known would make a later `set_mtp_enabled(true)` see no change and leave an
-/// already-plugged device unconnected until it's physically replugged. An empty
-/// set makes them read as new, mirroring the disable path (which clears the set).
-fn initial_known_devices(enabled: bool, discovered: &HashSet<String>) -> HashSet<String> {
-    if enabled { discovered.clone() } else { HashSet::new() }
+/// Whether `device_id` is still plugged in from the same `arrival`, and MTP is
+/// still on: the condition an auto-connect retry loop keeps going under.
+fn auto_connect_still_wanted(device_id: &str, arrival: Arrival) -> bool {
+    is_mtp_enabled()
+        && KNOWN_DEVICES
+            .get()
+            .is_some_and(|known| known.lock_ignore_poison().is_still_present(device_id, arrival))
 }
 
-/// Spawns an async task to connect a newly detected MTP device.
-fn auto_connect_device(device_id: String) {
+/// The phones whose auto-connect has run long enough to have a waiting row, for
+/// the volume list to show.
+pub(super) fn waiting_devices() -> Vec<super::MtpDeviceInfo> {
+    KNOWN_DEVICES
+        .get()
+        .map(|known| known.lock_ignore_poison().waiting_devices())
+        .unwrap_or_default()
+}
+
+/// Gives the phone a waiting row once its auto-connect has run for a while.
+///
+/// A timer of its own rather than a race around the attempt: ❌ an mtp-rs future must
+/// run to its end, and this way nothing can drop one. [`KnownDevices::settle`] is what
+/// keeps a late firing from showing a row for a connect that already ended.
+fn show_waiting_row_after_a_while(device_id: String, arrival: Arrival) {
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(WAITING_ROW_DELAY).await;
+        let Some(known) = KNOWN_DEVICES.get() else {
+            return;
+        };
+        if !known.lock_ignore_poison().is_still_trying(&device_id, arrival) {
+            return;
+        }
+        // The row's name, read once rather than on every listing: the listing runs on every
+        // `volumes-changed`, and enumerating USB there is the traffic it must not cause.
+        let Some(device) = super::list_mtp_devices().into_iter().find(|d| d.id == device_id) else {
+            return;
+        };
+        if known.lock_ignore_poison().mark_waiting(&device_id, arrival, device) {
+            info!("MTP {device_id}: auto-connect is taking a while; showing its waiting row");
+            crate::volume_broadcast::emit_volumes_changed();
+        }
+    });
+}
+
+/// Ends this arrival's auto-connect, taking its waiting row away if it had one.
+fn settle_auto_connect(device_id: &str, arrival: Arrival) {
+    if let Some(known) = KNOWN_DEVICES.get()
+        && known.lock_ignore_poison().settle(device_id, arrival)
+    {
+        crate::volume_broadcast::emit_volumes_changed();
+    }
+}
+
+/// Spawns an async task to connect a newly detected MTP device, retrying a
+/// failure a wait can fix (a phone holding its session behind Android's "Allow
+/// access" prompt times out) for as long as this arrival of the device stays
+/// plugged in and MTP stays on. See `auto_connect.rs`.
+fn auto_connect_device(device_id: String, arrival: Arrival) {
+    show_waiting_row_after_a_while(device_id.clone(), arrival);
     tauri::async_runtime::spawn(async move {
         let cm = super::connection_manager();
-        match cm.connect(&device_id, super::DeviceWatch::Live).await {
-            Ok(info) => {
+        let end = connect_while_present(
+            &device_id,
+            || cm.connect(&device_id, super::DeviceWatch::Live),
+            || auto_connect_still_wanted(&device_id, arrival),
+            tokio::time::sleep,
+        )
+        .await;
+        settle_auto_connect(&device_id, arrival);
+        match end {
+            AutoConnectEnd::Connected { value: info, attempts } => {
                 info!(
-                    "Auto-connected MTP device: {} ({} storages)",
+                    "Auto-connected MTP device: {} ({} storages, attempt {})",
                     device_id,
-                    info.storages.len()
+                    info.storages.len(),
+                    attempts
                 );
+                // An attempt in flight always runs to its end, so MTP may have
+                // been switched off while it ran, after the disable path had
+                // already disconnected everything it could see.
+                if !is_mtp_enabled() {
+                    info!(
+                        "MTP was turned off while {} was connecting; disconnecting it",
+                        device_id
+                    );
+                    auto_disconnect_device(device_id, MtpDisconnectReason::User);
+                }
             }
-            Err(e) => {
+            AutoConnectEnd::Refused { error, attempts } => {
                 // Connection errors (exclusive access, permission) are already
                 // emitted as events by the connection manager
-                warn!("Failed to auto-connect MTP device {}: {:?}", device_id, e);
+                warn!(
+                    "Failed to auto-connect MTP device {} (attempt {}): {:?}",
+                    device_id, attempts, error
+                );
+            }
+            AutoConnectEnd::Withdrawn { attempts } => {
+                info!(
+                    "Stopped auto-connecting MTP device {} after {} attempts: it left, was replugged, or MTP was turned off",
+                    device_id, attempts
+                );
             }
         }
     });
@@ -208,26 +284,33 @@ pub fn start_mtp_watcher(app: &AppHandle) {
     // watcher task spawns, so the stream's initial `Arrived` burst diffs to
     // nothing instead of connecting the same devices twice. It also covers
     // virtual devices, which mtp-rs's USB-only watch never reports.
+    //
+    // When MTP is off the set is deliberately left empty: we're not connecting
+    // those devices, so recording them as known would make a later
+    // `set_mtp_enabled(true)` see no change and leave an already-plugged device
+    // unconnected until it's physically replugged. That mirrors the disable
+    // path, which clears the set.
     let enabled = is_mtp_enabled();
     let initial_devices = get_current_mtp_devices();
-    let known = KNOWN_DEVICES.get_or_init(|| Mutex::new(HashSet::new()));
-    let mut known_guard = known.lock_ignore_poison();
-    *known_guard = initial_known_devices(enabled, &initial_devices);
-    debug!("Initial MTP devices: {:?}", known_guard);
-    drop(known_guard);
+    let known = KNOWN_DEVICES.get_or_init(|| Mutex::new(KnownDevices::default()));
+    let arrived = if enabled {
+        known.lock_ignore_poison().reconcile(&initial_devices).arrived
+    } else {
+        Vec::new()
+    };
 
     debug!(
         "Starting MTP device watcher (found {} initial device(s))",
         initial_devices.len()
     );
 
-    // Auto-connect any devices already plugged in at startup (skip if MTP is disabled)
-    if !initial_devices.is_empty() && enabled {
+    // Auto-connect any devices already plugged in at startup (none if MTP is disabled)
+    if !arrived.is_empty() {
         #[cfg(target_os = "macos")]
-        suppress_ptpcamerad_if_needed(initial_devices.iter().map(String::as_str));
+        suppress_ptpcamerad_if_needed(arrived.iter().map(|(id, _)| id.as_str()));
 
-        for device_id in &initial_devices {
-            auto_connect_device(device_id.clone());
+        for (device_id, arrival) in arrived {
+            auto_connect_device(device_id, arrival);
         }
     }
 
@@ -399,22 +482,6 @@ mod tests {
         let devices = get_current_mtp_devices();
         // The function should complete without error (even if empty)
         assert!(devices.is_empty() || !devices.is_empty());
-    }
-
-    #[test]
-    fn seeds_known_devices_when_mtp_is_enabled() {
-        // The seed is what keeps the hotplug stream's initial `Arrived` burst
-        // from connecting the same devices a second time.
-        let discovered = HashSet::from(["mtp-A".to_string(), "mtp-B".to_string()]);
-        assert_eq!(initial_known_devices(true, &discovered), discovered);
-    }
-
-    #[test]
-    fn leaves_known_devices_empty_when_mtp_is_disabled() {
-        // Pre-fix this seeded the set regardless, so toggling MTP on later
-        // diffed to no change and the plugged-in device never connected.
-        let discovered = HashSet::from(["mtp-A".to_string()]);
-        assert!(initial_known_devices(false, &discovered).is_empty());
     }
 
     /// A virtual device is filesystem-backed and claims no USB interface, so it must

@@ -549,6 +549,22 @@ describe('TransferConflictDialog a11y', () => {
     await expectNoA11yViolations(target)
   })
 
+  it('same-size conflict (the "same size" note) has no a11y violations', async () => {
+    const target = mountDialog({
+      conflictEvent: fileConflict({
+        sourceSize: { kind: 'exact', bytes: 2048 },
+        destinationSize: { kind: 'exact', bytes: 2048 },
+        sizeDifference: 0,
+      }),
+      isCopy: true,
+      isMove: false,
+      rollbackSupport: 'supported',
+    })
+    await tick()
+    expect(target.querySelector('.conflict-annotation.same')).not.toBeNull()
+    await expectNoA11yViolations(target)
+  })
+
   it('same-volume move (rollback disabled) has no a11y violations', async () => {
     const target = mountDialog({
       conflictEvent: fileConflict(),

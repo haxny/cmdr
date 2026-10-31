@@ -5,8 +5,9 @@ use std::sync::Arc;
 
 use super::*;
 use crate::test_fixtures::{
-    FixtureFile, build_aes_zip, build_zip, build_zipcrypto_zip, deflated, dir, encrypted_entry, overstate_record_count,
-    patch_equal_len, plain_entry, set_first_entry_encrypted, stored, zip64_stored,
+    FixtureFile, build_aes_zip, build_zip, build_zipcrypto_zip, cloak_first_central_name, deflated, dir,
+    encrypted_entry, overstate_record_count, patch_equal_len, plain_entry, set_first_entry_encrypted, stored,
+    zip64_stored,
 };
 use cmdr_fs::testing::TestDir;
 
@@ -110,6 +111,69 @@ fn zip_slip_traversal_entry_is_quarantined_not_browsable() {
     assert_eq!(quarantined.len(), 1);
     assert_eq!(quarantined[0].0, "../evil.txt");
     assert_eq!(quarantined[0].1, QuarantineReason::ParentTraversal);
+}
+
+// ---- Zip cloaking (GHSA-m665-v7pm-7grj): local and central names disagree ----
+//
+// Listing and extraction both take an entry's name from the central directory,
+// so a cloaked zip extracts exactly what it lists: the local header's name never
+// reaches the tree, the sanitizer, or a destination path.
+
+#[tokio::test]
+async fn cloaked_entry_lists_and_reads_under_its_central_directory_name() {
+    let mut zip = build_zip(&[deflated("cron_worker.sh", "#!/bin/sh\necho pwned\n")]);
+    cloak_first_central_name(&mut zip, b"doc_report.pdf");
+
+    let index = parse(&zip).unwrap();
+    assert_eq!(names(&index, ""), vec!["doc_report.pdf"]);
+    assert!(!index.exists("cron_worker.sh"));
+
+    let mut reader = index.open_read("doc_report.pdf", bytes_source(zip), None).unwrap();
+    let (data, _) = read_all(&mut reader).await.unwrap();
+    assert_eq!(data, b"#!/bin/sh\necho pwned\n");
+}
+
+#[test]
+fn cloaked_traversal_in_the_local_header_never_reaches_the_tree() {
+    let mut zip = build_zip(&[stored("zz/evil.sh", "pwned")]);
+    patch_equal_len(&mut zip, b"zz/evil.sh", b"../evil.sh");
+    cloak_first_central_name(&mut zip, b"safe/a.txt");
+
+    let index = parse(&zip).unwrap();
+    assert_eq!(names(&index, ""), vec!["safe"]);
+    assert_eq!(names(&index, "safe"), vec!["a.txt"]);
+    assert!(index.quarantined().is_empty());
+}
+
+#[test]
+fn cloaked_traversal_in_the_central_directory_is_quarantined() {
+    let mut zip = build_zip(&[stored("safe.txt", "ok"), stored("zz/evil.sh", "pwned")]);
+    // The second entry's central record is the second hit; cloak via a full patch,
+    // then restore the local header's benign name.
+    patch_equal_len(&mut zip, b"zz/evil.sh", b"../evil.sh");
+    let local = zip.windows(10).position(|w| w == b"../evil.sh").unwrap();
+    zip[local..local + 10].copy_from_slice(b"zz/evil.sh");
+
+    let index = parse(&zip).unwrap();
+    assert_eq!(names(&index, ""), vec!["safe.txt"]);
+    assert_eq!(index.quarantined().len(), 1);
+    assert_eq!(index.quarantined()[0].0, "../evil.sh");
+}
+
+#[tokio::test]
+async fn cloaked_encrypted_entry_decrypts_under_its_central_directory_name() {
+    // Encrypted entries read through the `zip` crate's `ZipArchive`, a second
+    // reader: it must agree with rc-zip on the name and the bytes.
+    let mut zip = build_zipcrypto_zip(&[encrypted_entry("cron_worker.sh", "payload")], "pw");
+    cloak_first_central_name(&mut zip, b"doc_report.pdf");
+
+    let index = parse(&zip).unwrap();
+    assert_eq!(names(&index, ""), vec!["doc_report.pdf"]);
+    let mut reader = index
+        .open_read("doc_report.pdf", bytes_source(zip), Some("pw"))
+        .unwrap();
+    let (data, _) = read_all(&mut reader).await.unwrap();
+    assert_eq!(data, b"payload");
 }
 
 // ---- Encrypted / corrupt / not-an-archive → typed errors -------------------

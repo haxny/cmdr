@@ -165,10 +165,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "Index tvého disku je zastaralý. Vypadá to, že aplikace nějakou dobu neběžela. Spouští se nové prohledání, aby index zase odpovídal.",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "Systémový protokol změn souborů nesahá dost daleko do minulosti. Spouští se nové prohledání, které index sestaví znovu.",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

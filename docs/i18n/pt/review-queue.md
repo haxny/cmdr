@@ -87,3 +87,9 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
   either gender (`Data de captura`, `Título`), so `inserted` after it became `já na máscara`; confirm it reads right
   after the name, or suggest better. Music and photo metadata `tags` stay `tags` (as in `tags ID3`) so they never read
   as the Finder's `etiquetas`; confirm.
+- **Clear the Jump badge** (`fileExplorer.typeToJump.clear`): `Limpar “Ir para”` keeps the mode's label as a quoted
+  name, like `Mudar para “Ir para”`. Confirm a screen reader's reading makes sense, or suggest
+  `Limpar texto de “Ir para”`.
+- **DFS link messages** (`*.linkTargetUnreachable*`): `O acesso a … passa por um link para outro servidor` replaces the
+  English "sits behind a link". Confirm it reads naturally. Also: `settings.fileExplorer.typeToJump.resetDelay.*` still
+  say `digitar-para-pular` while the mode is `Ir para`; decide whether to align them.

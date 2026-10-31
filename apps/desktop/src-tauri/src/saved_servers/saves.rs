@@ -58,7 +58,7 @@ pub(crate) async fn save_edit(id: &str, server: ServerTarget) -> SavedServerOutc
         (SavedEntry::S3(_), entry @ Entry::S3 { .. }) if entry.s3_place_id().as_deref() == Some(id) => {
             save_entry(entry).await
         }
-        // ❗ The host, port, and export are the place itself; the uid, gid, name,
+        // ❗ The host, port, and export are the place itself; the uid, groups, name,
         // start folder, and switch are what an edit moves. A changed address is
         // another place, so it's refused rather than saved beside this one.
         (SavedEntry::Nfs(_), entry @ Entry::Nfs { .. }) if entry.nfs_place_id().as_deref() == Some(id) => {
@@ -138,6 +138,7 @@ pub(crate) async fn save_place_edit(id: &str, edit: PlaceEdit) -> SavedServerOut
             export: place.export,
             uid: uid.unwrap_or(place.uid),
             gid: gid.unwrap_or(place.gid),
+            other_gids: place.other_gids,
             start_folder,
             auto_reconnect: place.auto_reconnect,
         },

@@ -27,6 +27,7 @@ use crate::error_classification::IoResultExt;
 use crate::event_sinks::OperationEventSink;
 use crate::ledger::{CopyTransaction, WrittenFile};
 use crate::overwrite::{PostLanding, displace_with_directory, safe_overwrite_dir};
+use crate::refused_name::{RefusedItem, RefusedNameAnswer, ask_blocking, refusal_reason};
 use crate::scan_source_tracker::FileVerdict;
 use crate::state::WriteOperationState;
 use crate::transfer_tree::TreeLeaf;
@@ -95,6 +96,45 @@ fn record_file_done(
         *bytes_done,
         ctx.bytes_total,
     );
+}
+
+/// A file write that failed with `error`: when the destination refused the
+/// file's NAME, asks the person (`crate::refused_name`), and a Skip counts the
+/// file as skipped. Anything else, a Stop included, is the failure it was.
+///
+/// Nothing of the file is at the destination by then and nothing is in the
+/// ledger, so a cross-FS move's sweep (which deletes the ledger) keeps its
+/// source.
+fn skip_if_refused(
+    error: WriteOperationError,
+    source: &Path,
+    dest: &Path,
+    write_weight: u64,
+    ctx: &PerFileCtx<'_>,
+    files_done: &mut usize,
+    bytes_done: &mut u64,
+) -> Result<FileVerdict, WriteOperationError> {
+    let Some(reason) = refusal_reason(&error) else {
+        return Err(error);
+    };
+    let item = RefusedItem {
+        operation_id: ctx.operation_id,
+        source_path: source,
+        dest_path: dest,
+        source_size: Some(write_weight),
+        source_is_directory: false,
+        reason,
+    };
+    match ask_blocking(ctx.state, ctx.events, &item) {
+        RefusedNameAnswer::Skip => {
+            record_file_done(ctx, source, write_weight, files_done, bytes_done, FileVerdict::Skipped);
+            Ok(FileVerdict::Skipped)
+        }
+        RefusedNameAnswer::Stop => Err(error),
+        RefusedNameAnswer::Cancelled => Err(WriteOperationError::Cancelled {
+            message: "Operation cancelled by user".into(),
+        }),
+    }
 }
 
 /// Where a landed file should be RECORDED when the write goes somewhere else
@@ -568,8 +608,20 @@ pub(in crate::transfer) fn copy_single_item(
             (dest_path.clone(), false)
         };
 
-        // Validate destination path length limits
-        validate_path_length(&actual_dest)?;
+        // Validate destination path length limits. A name the destination
+        // can't hold is one item the person decides about, ❌ never the end of
+        // the batch.
+        if let Err(e) = validate_path_length(&actual_dest) {
+            return skip_if_refused(
+                e,
+                source,
+                &actual_dest,
+                write_weight,
+                &progress_ctx,
+                files_done,
+                bytes_done,
+            );
+        }
 
         // Prevent copying a file over itself via symlinks (same inode + device)
         if is_same_file(source, &actual_dest) {
@@ -661,14 +713,31 @@ pub(in crate::transfer) fn copy_single_item(
         } else {
             PostLanding::Apply
         };
-        let outcome = copy_file_with_strategy(
+        let outcome = match copy_file_with_strategy(
             state,
             source,
             announced_dest,
             needs_safe_overwrite,
             post_landing,
             Some(progress_cb),
-        )?;
+        ) {
+            Ok(outcome) => outcome,
+            // The landing refused the name (`ENAMETOOLONG` from a FAT stick or
+            // a mounted share). `stage_and_land_file` took its temp back, so
+            // nothing of the file is there. An overwrite never meets one: the
+            // name it replaces is one the destination already holds.
+            Err(e) => {
+                return skip_if_refused(
+                    e,
+                    source,
+                    &actual_dest,
+                    write_weight,
+                    &progress_ctx,
+                    files_done,
+                    bytes_done,
+                );
+            }
+        };
         if let Some(deferred) = deferred_landed
             && !outcome.handed_back.is_empty()
         {

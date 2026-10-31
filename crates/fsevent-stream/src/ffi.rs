@@ -273,4 +273,8 @@ extern "C" {
     fn FSEventStreamRelease(stream_ref: SysFSEventStreamRef);
 
     pub fn FSEventsGetCurrentEventId() -> FSEventStreamEventId;
+
+    /// The UUID of the FSEvents journal on device `dev` (a `dev_t`), or null when
+    /// fseventsd has none for it. Create rule: the caller owns the returned ref.
+    pub fn FSEventsCopyUUIDForDevice(dev: std::os::raw::c_int) -> core_foundation::uuid::CFUUIDRef;
 }

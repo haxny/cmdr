@@ -18,7 +18,7 @@ use super::super::branches::{Admission, WatchScope};
 use super::super::watcher;
 use super::{
     BacklogTracker, IngestionPressure, LIVE_FLUSH_INTERVAL_MS, THROTTLE_SWEEP_INTERVAL_MS, classify_ingestion_pressure,
-    merge_fs_events, open_read_conn_with_retry, report_backlog, storm,
+    history_was_purged, merge_fs_events, open_read_conn_with_retry, report_backlog, storm,
 };
 use crate::indexing::DEBUG_STATS;
 use crate::indexing::IndexPathSpace;
@@ -154,6 +154,12 @@ pub(in crate::indexing) struct LiveConfig {
     pub(in crate::indexing) watcher_overflow: Option<Arc<AtomicBool>>,
     /// How much of the volume this loop answers for.
     pub(in crate::indexing) scope: WatchScope,
+    /// The stored id a resumed `sinceWhen` stream replays from, when its first
+    /// event can tell whether that history survived (a stream that sees every
+    /// write: [`history_was_purged`]). If it didn't,
+    /// the loop bumps the epoch before writing anything, so the covered rows
+    /// render stale instead of current. `None` checks nothing.
+    pub(in crate::indexing) history_check: Option<u64>,
 }
 
 /// Why a live loop ended, which is what its owner has left to do.
@@ -192,6 +198,7 @@ pub(in crate::indexing) async fn run_live_event_loop(
         space,
         watcher_overflow,
         scope,
+        mut history_check,
     } = config;
     log::info!("Live event processing: started");
     log::info!(target: "stall_probe::reconciler", "live_event_loop_started");
@@ -266,6 +273,18 @@ pub(in crate::indexing) async fn run_live_event_loop(
             event = event_rx.recv() => {
                 match event {
                     Some(event) => {
+                        if let Some(since_event_id) = history_check.take()
+                            && history_was_purged(since_event_id, event.event_id)
+                        {
+                            // Queued ahead of every write this loop makes, so nothing
+                            // replayed after the hole reads as current by accident.
+                            log::info!(
+                                "Live event processing: the journal no longer holds the history after \
+                                 event_id={since_event_id} (first delivered: {}); marking covered rows stale",
+                                event.event_id
+                            );
+                            let _ = writer.send(WriteMessage::BumpCurrentEpoch);
+                        }
                         // Keep the dedup key + stored path ABSOLUTE (the FS reads and
                         // FE emit use it); the mount-relative strip happens only at
                         // the reconciler's `resolve_abs`. `absolute` firmlink-

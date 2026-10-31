@@ -288,6 +288,7 @@ impl From<VolumeKind> for ReportVolumeKind {
 pub enum ReportDeviceReadiness {
     Ready,
     WaitingForAuthorization,
+    Connecting,
     UnavailableOffline,
     UnavailableNoPermissions,
 }
@@ -299,6 +300,7 @@ impl ReportDeviceReadiness {
         match token {
             "ready" => Some(Self::Ready),
             "waiting_for_authorization" => Some(Self::WaitingForAuthorization),
+            "connecting" => Some(Self::Connecting),
             "unavailable_offline" => Some(Self::UnavailableOffline),
             "unavailable_no_permissions" => Some(Self::UnavailableNoPermissions),
             _ => None,

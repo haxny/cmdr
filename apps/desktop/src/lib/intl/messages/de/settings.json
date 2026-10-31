@@ -1720,6 +1720,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Hinweis anzeigen, wenn ein gelöschtes Objekt bereits weg war",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Wenn du etwas löschst, das eine andere App schon bewegt oder gelöscht hat, wertet Cmdr das als erledigt und zeigt einen kurzen Hinweis dazu an. Schalte das aus (oder klicke im Hinweis auf „Nicht mehr anzeigen“), damit der Hinweis wegbleibt.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "fehlend, verschwunden, nicht mehr da, verschoben, entfernt, Benachrichtigung, Meldung, Mitteilung, Toast",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Anzahl der pro Bereich gemerkten geschlossenen Tabs",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
@@ -2859,9 +2871,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Führt ein kleines Sprachmodell vollständig auf deinem Gerät aus. Maximaler Datenschutz: nichts verlässt deinen Computer. Funktioniert offline. Nutzt ~2 GB Speicherplatz und ~400 MB Arbeitsspeicher (variiert mit der Kontextgröße). Erfordert Apple silicon (M1+).",
+  "settings.ai.tooltipLocal": "Führt ein kleines Sprachmodell vollständig auf deinem Gerät aus. Maximaler Datenschutz: nichts verlässt deinen Computer. Funktioniert offline. Nutzt ~2 GB Speicherplatz und ~400 MB Arbeitsspeicher (variiert mit der Kontextgröße). Erfordert Apple silicon (M1+) und macOS 14 oder neuer.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "Lokale KI erfordert Apple silicon (M1 oder neuer). Nutze stattdessen Cloud-KI.",
   "@settings.ai.tooltipLocalDisabled": {
@@ -3548,5 +3560,33 @@
   "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
   "@settings.multiRename.tagEditor.absSideFiles.keywords": {
     "sourceHash": "806b0cd"
+  },
+  "settings.servers.card.smbLinkConsents": "Anmeldungen über SMB-Links",
+  "@settings.servers.card.smbLinkConsents": {
+    "sourceHash": "831477d"
+  },
+  "settings.network.smbLinkConsents.keywords": "SMB, DFS, Link, anmelden, anderer Server, erlauben, vertrauen, vergessen",
+  "@settings.network.smbLinkConsents.keywords": {
+    "sourceHash": "d88f7c7"
+  },
+  "settings.servers.smbLinkConsents.description": "Ein Link in einer SMB-Freigabe kann zu einem Ordner auf einem anderen Server führen. Cmdr fragt nach, bevor es sich dort anmeldet, und merkt sich deine Antwort hier.",
+  "@settings.servers.smbLinkConsents.description": {
+    "sourceHash": "03ed8ee"
+  },
+  "settings.servers.smbLinkConsents.empty": "Noch nichts erlaubt. Wenn ein Link in einer Freigabe zu einem anderen Server führt, fragt Cmdr zuerst.",
+  "@settings.servers.smbLinkConsents.empty": {
+    "sourceHash": "16326ce"
+  },
+  "settings.servers.smbLinkConsents.pair": "Links auf {server} dürfen sich bei {target} anmelden",
+  "@settings.servers.smbLinkConsents.pair": {
+    "sourceHash": "093a03d"
+  },
+  "settings.servers.smbLinkConsents.confirmTitle": "Diese Anmeldung vergessen?",
+  "@settings.servers.smbLinkConsents.confirmTitle": {
+    "sourceHash": "edc2567"
+  },
+  "settings.servers.smbLinkConsents.confirm": "Wenn ein Link auf {server} das nächste Mal zu {target} führt, fragt Cmdr erneut.",
+  "@settings.servers.smbLinkConsents.confirm": {
+    "sourceHash": "0218465"
   }
 }

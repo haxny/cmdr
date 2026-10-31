@@ -43,6 +43,14 @@
   "@adb.readiness.waitingForAuthorization": {
     "sourceHash": "679558e"
   },
+  "adb.readiness.tapAllow": "Toca Permitir en tu teléfono",
+  "@adb.readiness.tapAllow": {
+    "sourceHash": "68c770f"
+  },
+  "adb.unnamedPhone": "Teléfono Android",
+  "@adb.unnamedPhone": {
+    "sourceHash": "fae4ea5"
+  },
   "adb.readiness.offline": "Tu teléfono no responde. Activa su pantalla o vuelve a conectar el cable.",
   "@adb.readiness.offline": {
     "sourceHash": "6061885"

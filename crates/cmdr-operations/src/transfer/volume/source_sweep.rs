@@ -84,6 +84,11 @@ impl SourceLedger {
         self.files.insert(file, stamp);
     }
 
+    /// Takes back a file the walk recorded as carried but never landed.
+    pub(super) fn forget_carried_file(&mut self, file: &Path) {
+        self.files.remove(file);
+    }
+
     /// Whether the move carried this path, as a file or as a folder it walked.
     fn carried(&self, path: &Path) -> bool {
         self.files.contains_key(path) || self.walked_dirs.contains(path)

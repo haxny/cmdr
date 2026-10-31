@@ -35,12 +35,21 @@
  */
 
 import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
-import { formatDriveFigure, formatFileSizeWithFormat, formatTieredSize, type TieredSize } from './byte-size'
+import {
+  formatDriveFigure,
+  formatFileSizeWithFormat,
+  formatSizePairWithFormat,
+  formatTieredSize,
+  type SizePair,
+  type TieredSize,
+} from './byte-size'
 
 export {
   type ByteCount,
   type BytesPerSecond,
   type TieredSize,
+  type SizePair,
+  formatExactBytes,
   bytes,
   bytesPerSecond,
   baseFor,
@@ -83,4 +92,13 @@ export function formatDriveSize(byteCount: number, driveBytes: number): string {
  */
 export function formatByteSizeTiered(byteCount: number): TieredSize {
   return formatTieredSize(byteCount, getFileSizeFormat())
+}
+
+/**
+ * Two exact sizes shown side by side (the conflict prompts), honoring the
+ * user's binary/SI setting: exact bytes on both sides when the friendly forms
+ * would look the same but differ. See `formatSizePairWithFormat`.
+ */
+export function formatSizePair(first: number, second: number): SizePair {
+  return formatSizePairWithFormat(first, second, getFileSizeFormat())
 }

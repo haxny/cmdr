@@ -81,23 +81,25 @@ pub(crate) fn get_space_info_statvfs(path: &Path) -> Result<SpaceInfo, VolumeErr
     }
 }
 
-/// Get space information for a volume containing the given path.
+/// Get space information for a volume containing the given path, `None` when the
+/// path can't be asked (missing, or holding a NUL).
 ///
 /// A mounted filesystem always has a capacity, so this is always
-/// [`SpaceInfo::Bounded`]. NSURL reports no used figure of its own, so
-/// [`SpaceInfo::bounded`] derives it.
+/// [`SpaceInfo::Bounded`]. On macOS it's NSURL's figure, which reports no used figure
+/// of its own, so [`SpaceInfo::bounded`] derives it. On Linux it's `statvfs`, the one
+/// `unsafe` call every Linux space reader (the switcher's IPC command, the space
+/// poller, a local `Volume`) goes through, so they can't disagree on one disk (#465).
 ///
-/// ❗ A test build (`crate::TEST_FAST_PATHS`) answers from `statvfs` instead (the same
-/// figure minus purgeable space): the first NSURL call in a process `readdir`s the test
-/// binary's own directory, which stalled parallel tests for seconds on a bloated
+/// ❗ A macOS test build (`crate::TEST_FAST_PATHS`) answers from `statvfs` instead (the
+/// same figure minus purgeable space): the first NSURL call in a process `readdir`s the
+/// test binary's own directory, which stalled parallel tests for seconds on a bloated
 /// `target/debug/deps` (#357). Tests of NSURL itself call `nsurl_volume_space`.
-#[cfg(target_os = "macos")]
 pub fn get_volume_space(path: &str) -> Option<SpaceInfo> {
-    if crate::TEST_FAST_PATHS {
-        get_space_info_statvfs(Path::new(path)).ok()
-    } else {
-        nsurl_volume_space(path)
+    #[cfg(target_os = "macos")]
+    if !crate::TEST_FAST_PATHS {
+        return nsurl_volume_space(path);
     }
+    get_space_info_statvfs(Path::new(path)).ok()
 }
 
 /// [`get_volume_space`]'s real answer, from NSURL.
@@ -126,6 +128,33 @@ fn nsurl_volume_space(path: &str) -> Option<SpaceInfo> {
 thread_local! {
     /// How many NSURL space queries this thread made, so a test can prove it made none.
     static NSURL_SPACE_QUERIES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(all(test, not(target_os = "macos")))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_root_volume_reports_a_bounded_capacity_it_has_not_filled() {
+        let space = get_volume_space("/").expect("statvfs answers for the root");
+
+        let SpaceInfo::Bounded {
+            total_bytes,
+            available_bytes,
+            used_bytes,
+        } = space
+        else {
+            panic!("a mounted filesystem always has a capacity, got {space:?}");
+        };
+        assert!(total_bytes > 0);
+        assert!(available_bytes <= total_bytes);
+        assert!(used_bytes <= total_bytes);
+    }
+
+    #[test]
+    fn a_missing_path_has_no_space() {
+        assert!(get_volume_space("/nonexistent/path/does/not/exist").is_none());
+    }
 }
 
 #[cfg(all(test, target_os = "macos"))]

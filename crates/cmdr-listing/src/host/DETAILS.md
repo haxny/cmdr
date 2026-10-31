@@ -107,6 +107,14 @@ the stored spelling), so no observer reads the cache back, which in a test would
 while the entry is still there lets a racing arm re-take what the close gave back. Both calls sit on the open and close
 paths, so an observer does cheap, non-blocking work and detaches the rest.
 
+**The serving volume comes first.** Before any observer hears an open, the engine asks the volume that served the read
+for `Volume::watch_listing(path)` and holds the answer (a `ListingWatch`) in `Inner::volume_watches` until the close,
+which drops it before the observers hear the close. It's for a backend whose watch arms per shown directory rather than
+per volume (the SMB backend's DFS link watch, `crates/cmdr-smb/DETAILS.md` § "A DFS link inside the share"). Built into
+the engine rather than an app observer because every host needs it the same way, and it's keyed by the volume the read
+used, which only the engine has in hand. A close racing the open is caught the same way as an observer's (`still_open()`
+after the insert). Pinned by `lifecycle_order_test.rs::a_volume_keeps_its_listing_watch_until_the_listing_closes`.
+
 **Decision:** arming a watch belongs to the BACKEND side of the engine, ❌ never to a frontend subscription. **Why:** a
 breadcrumb chip's subscription was once the only thing starting a repo's watcher, so a pane on `branches/` with nothing
 else open went stale, and turning both git features off stopped every watcher in the app. An observer holds for a pane

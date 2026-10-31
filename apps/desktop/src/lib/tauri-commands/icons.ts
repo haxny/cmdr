@@ -1,7 +1,9 @@
 // Icon fetching and cache management
 
 import type { TimedOut } from './ipc-types'
-import { commands } from '#lib/ipc/bindings.js'
+import { commands, type CustomFolderIconId } from '#lib/ipc/bindings.js'
+
+export type { CustomFolderIconId }
 
 /**
  * Gets icon data URLs for the requested icon IDs.
@@ -33,14 +35,15 @@ export async function refreshDirectoryIcons(
 }
 
 /**
- * Detects which of the given VISIBLE directory paths carry a Finder custom-icon
- * flag, returning the `path:{dir}` icon id for each. Called for visible directory
- * rows so the bulk listing never pays the `getxattr` per entry. Feed the result
- * into `getIcons` / `prefetchIcons` to fetch the real icons.
+ * Detects which of the given VISIBLE directory paths carry a Finder custom icon,
+ * returning the `path:{dir}` icon id for each plus whether macOS tints it with the
+ * system accent. Called for visible directory rows so the bulk listing never pays
+ * the `getxattr` per entry. Feed the ids into `getIcons` / `prefetchIcons` to fetch
+ * the real icons.
  * @param directoryPaths - Directory paths of the visible rows
- * @returns `path:{dir}` ids for the folders that have a custom icon, with timeout flag
+ * @returns One entry per folder that has a custom icon, with timeout flag
  */
-export async function getCustomFolderIconIds(directoryPaths: string[]): Promise<TimedOut<string[]>> {
+export async function getCustomFolderIconIds(directoryPaths: string[]): Promise<TimedOut<CustomFolderIconId[]>> {
   return commands.getCustomFolderIconIds(directoryPaths)
 }
 

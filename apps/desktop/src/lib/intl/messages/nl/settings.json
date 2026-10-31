@@ -1720,6 +1720,18 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Melden wanneer een verwijderd onderdeel al weg was",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "sourceHash": "3fd8c41"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "Als je iets verwijdert dat een andere app al heeft verplaatst of verwijderd, beschouwt Cmdr dat als klaar en toont het daar een korte melding over. Zet dit uit (of klik in de melding op ‘Toon dit nooit meer’) om geen melding meer te krijgen.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "sourceHash": "84abd5b"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "ontbreekt, verdwenen, kwijt, weg, verschoven, gewist, melding, notificatie, pop-up, waarschuwing",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "sourceHash": "e1dfc5a"
+  },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Aantal gesloten tabbladen om per paneel te onthouden",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
     "sourceHash": "726894f"
@@ -2861,9 +2873,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Draait een klein taalmodel volledig op je apparaat. Maximale privacy: er verlaat niets je computer. Werkt offline. Gebruikt ~2 GB schijfruimte en ~400 MB geheugen (varieert met de contextgrootte). Vereist Apple silicon (M1+).",
+  "settings.ai.tooltipLocal": "Draait een klein taalmodel volledig op je apparaat. Maximale privacy: er verlaat niets je computer. Werkt offline. Gebruikt ~2 GB schijfruimte en ~400 MB geheugen (varieert met de contextgrootte). Vereist Apple silicon (M1+) en macOS 14 of later.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "Lokale AI vereist Apple silicon (M1 of later). Gebruik in plaats daarvan Cloud-AI.",
   "@settings.ai.tooltipLocalDisabled": {
@@ -3550,5 +3562,33 @@
   "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
   "@settings.multiRename.tagEditor.absSideFiles.keywords": {
     "sourceHash": "806b0cd"
+  },
+  "settings.servers.card.smbLinkConsents": "Inloggen via SMB-links",
+  "@settings.servers.card.smbLinkConsents": {
+    "sourceHash": "831477d"
+  },
+  "settings.network.smbLinkConsents.keywords": "SMB, DFS, link, inloggen, andere server, toestaan, vertrouwen, vergeten",
+  "@settings.network.smbLinkConsents.keywords": {
+    "sourceHash": "d88f7c7"
+  },
+  "settings.servers.smbLinkConsents.description": "Een link in een gedeelde SMB-map kan naar een map op een andere server leiden. Cmdr vraagt het je voordat het daar inlogt, en onthoudt je antwoord hier.",
+  "@settings.servers.smbLinkConsents.description": {
+    "sourceHash": "03ed8ee"
+  },
+  "settings.servers.smbLinkConsents.empty": "Nog niets toegestaan. Als een link in een gedeelde map naar een andere server leidt, vraagt Cmdr het eerst.",
+  "@settings.servers.smbLinkConsents.empty": {
+    "sourceHash": "16326ce"
+  },
+  "settings.servers.smbLinkConsents.pair": "Links op {server} mogen inloggen bij {target}",
+  "@settings.servers.smbLinkConsents.pair": {
+    "sourceHash": "093a03d"
+  },
+  "settings.servers.smbLinkConsents.confirmTitle": "Dit inloggen vergeten?",
+  "@settings.servers.smbLinkConsents.confirmTitle": {
+    "sourceHash": "edc2567"
+  },
+  "settings.servers.smbLinkConsents.confirm": "De volgende keer dat een link op {server} naar {target} leidt, vraagt Cmdr het opnieuw.",
+  "@settings.servers.smbLinkConsents.confirm": {
+    "sourceHash": "0218465"
   }
 }

@@ -87,8 +87,8 @@ Key shape: `errors.listing.<reason>.{title,explanation,suggestion}`, `errors.git
 the provider keys. Param tokens (`{path}`, `{osMessage}`) are substituted by `interpolate(...)` in
 `listing-error-messages.ts` AFTER `esc(...)`, on a token set disjoint from `expandSystemStrings`' so the two compose in
 any order. The keys are built dynamically from the reason/kind/provider discriminant; TypeScript still proves each
-resolves to a valid `MessageKey` (the catalog covers every discriminant). The cost is that the codegen's static usage
-scan can't see them, so all `errors.*` keys show in the (non-fatal) dead-key report.
+resolves to a valid `MessageKey` (the catalog covers every discriminant). The cost is that no literal scan can see them,
+so `desktop-message-keys-unused` carries their prefixes on its closed dynamic allowlist.
 
 ### Provider suggestion catalog layout
 

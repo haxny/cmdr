@@ -302,10 +302,6 @@
   "@queryUi.results.countOnly.soFar": {
     "sourceHash": "dbdb208"
   },
-  "queryUi.pathPills.hiddenAria": "Skryté části cesty: {segments}",
-  "@queryUi.pathPills.hiddenAria": {
-    "sourceHash": "f62e273"
-  },
   "queryUi.recent.trailingTooltip": "Zobrazit všechna poslední hledání",
   "@queryUi.recent.trailingTooltip": {
     "sourceHash": "e0de323"

@@ -77,7 +77,7 @@ pub(super) fn finish_the_claimed_teardown(
         TeardownClaim::Failed(reason) => super::supervisor::finish_failing(events, volume_id, mgr, reason),
         TeardownClaim::Stopped(persist) => finish_stopping(volume_id, mgr, persist),
         TeardownClaim::Cleared(why) => {
-            if let Err(e) = finish_clearing(volume_id, mgr, why, LetGo::CallerMayHoldIt) {
+            if let Err(e) = finish_clearing(volume_id, mgr, why) {
                 log::warn!("Drive index clear for '{volume_id}' finished with: {e}");
             }
         }
@@ -205,6 +205,9 @@ enum StopTarget {
     /// A scan start has the manager out and took the request; it finishes the job,
     /// the sticky veto included.
     Claimed,
+    /// A drain is running with a clear recorded on it, so the database is going and
+    /// there is nothing to write a veto into.
+    BeingCleared,
 }
 
 /// Stop a volume, optionally recording the user's sticky "keep this drive off"
@@ -243,7 +246,13 @@ fn stop_the_volume(volume_id: &str, persist: PersistDisable) -> Result<(), Strin
             // Publishing a FRESH `ShuttingDown` here also drops whatever start a
             // drain already in flight was carrying, which is the point: the user's
             // last word is off.
-            match std::mem::replace(&mut instance.phase, IndexPhase::ShuttingDown { restart: None }) {
+            match std::mem::replace(
+                &mut instance.phase,
+                IndexPhase::ShuttingDown {
+                    restart: None,
+                    then_clear: None,
+                },
+            ) {
                 IndexPhase::Running(mgr) => StopTarget::Drain(mgr),
                 IndexPhase::Initializing { .. } => {
                     // Cancel this start's root stop signal FIRST: it stops the walks
@@ -270,14 +279,25 @@ fn stop_the_volume(volume_id: &str, persist: PersistDisable) -> Result<(), Strin
                     log::info!("Indexing disabled for a failed volume '{volume_id}'");
                     StopTarget::NothingToDrain
                 }
-                IndexPhase::ShuttingDown { .. } | IndexPhase::Detached { .. } => {
+                IndexPhase::ShuttingDown { then_clear, .. } => {
                     // Another teardown is draining this volume and frees the slot
                     // when it's done. ❌ Don't put its phase back: the fresh marker
                     // is what drops the start it was carrying, and restoring the old
-                    // one brought the drive back up over this stop. (`Detached` is
-                    // unreachable: `claim_the_teardown` above took it.)
-                    StopTarget::NothingToDrain
+                    // one brought the drive back up over this stop. ⚠️ A clear it
+                    // carries stays, though: dropping it is what left a forgotten
+                    // drive's index on disk.
+                    instance.phase = IndexPhase::ShuttingDown {
+                        restart: None,
+                        then_clear,
+                    };
+                    if then_clear.is_some() {
+                        StopTarget::BeingCleared
+                    } else {
+                        StopTarget::NothingToDrain
+                    }
                 }
+                // Unreachable: `claim_the_teardown` above took it.
+                IndexPhase::Detached { .. } => StopTarget::NothingToDrain,
             }
         }
     };
@@ -285,7 +305,7 @@ fn stop_the_volume(volume_id: &str, persist: PersistDisable) -> Result<(), Strin
     match target {
         StopTarget::Drain(mgr) => finish_stopping(volume_id, mgr, persist),
         StopTarget::NothingToDrain => record_the_disable(volume_id, persist),
-        StopTarget::Claimed => {}
+        StopTarget::Claimed | StopTarget::BeingCleared => {}
     }
     Ok(())
 }
@@ -297,8 +317,24 @@ fn stop_the_volume(volume_id: &str, persist: PersistDisable) -> Result<(), Strin
 pub(super) fn finish_stopping(volume_id: &str, mut mgr: Box<IndexManager>, persist: PersistDisable) {
     withdraw_from_the_read_path(volume_id);
     // Guard released: run the blocking drain without holding the registry lock.
+    let db_path = mgr.db_path().to_path_buf();
     mgr.shutdown();
-    let restart = retire_the_instance(volume_id);
+    // The manager carries a share of the volume's hold: dropped ahead of a recorded
+    // clear's wait, or the clear would wait on itself.
+    drop(mgr);
+    let Retired { restart, then_clear } = retire_the_instance(volume_id);
+    if let Some(why) = then_clear {
+        // A forget met this drain. It deletes now, and a start that came after it
+        // still runs (`finish_clearing` says why it runs even if the files stay).
+        match remove_once_let_go(volume_id, &db_path, why) {
+            Ok(()) => log::info!("Indexing stopped for '{volume_id}' and its index cleared, as asked mid-stop"),
+            Err(e) => log::warn!("Drive index clear for '{volume_id}' after its stop finished with: {e}"),
+        }
+        if let Some(request) = restart {
+            start_again(volume_id, request);
+        }
+        return;
+    }
     log::info!("Indexing stopped for '{volume_id}' (DB preserved on disk)");
     match restart {
         // ⚠️ The veto is SKIPPED, and that is not a tidy-up. `record_drive_index_enabled`
@@ -310,20 +346,28 @@ pub(super) fn finish_stopping(volume_id: &str, mut mgr: Box<IndexManager>, persi
     }
 }
 
+/// What a drain's far side still owes: the requests that met the drain.
+#[derive(Default)]
+struct Retired {
+    restart: Option<StartRequest>,
+    then_clear: Option<Removal>,
+}
+
 /// Take a drained volume's instance out of the registry and hand back the start
-/// that landed while the drain ran, if one did.
+/// and the clear that landed while the drain ran, if any did.
 ///
-/// ⚠️ **Freeing the slot and reading the request are ONE step, and ❌ never a bare
-/// `remove`.** A start that met the drain was told the request was recorded, and
-/// this is the only moment anything looks at it: the slot has to be free before it
-/// can be reserved, and nothing else is watching for the moment it becomes free.
-fn retire_the_instance(volume_id: &str) -> Option<StartRequest> {
+/// ⚠️ **Freeing the slot and reading the requests are ONE step, and ❌ never a
+/// bare `remove`.** A start or clear that met the drain was told the request was
+/// recorded, and this is the only moment anything looks at it: the slot has to be
+/// free before it can be reserved, and nothing else is watching for the moment it
+/// becomes free.
+fn retire_the_instance(volume_id: &str) -> Retired {
     INDEX_REGISTRY
         .lock_ignore_poison()
         .remove(volume_id)
-        .and_then(|instance| match instance.phase {
-            IndexPhase::ShuttingDown { restart } => restart,
-            _ => None,
+        .map_or_else(Retired::default, |instance| match instance.phase {
+            IndexPhase::ShuttingDown { restart, then_clear } => Retired { restart, then_clear },
+            _ => Retired::default(),
         })
 }
 
@@ -354,7 +398,13 @@ pub(crate) fn while_stopping_for_test(volume_id: &str, f: impl FnOnce()) {
     let mgr = {
         let mut reg = INDEX_REGISTRY.lock_ignore_poison();
         let instance = reg.get_mut(volume_id).expect("a registered volume to stop");
-        match std::mem::replace(&mut instance.phase, IndexPhase::ShuttingDown { restart: None }) {
+        match std::mem::replace(
+            &mut instance.phase,
+            IndexPhase::ShuttingDown {
+                restart: None,
+                then_clear: None,
+            },
+        ) {
             IndexPhase::Running(mgr) => mgr,
             other => {
                 instance.phase = other;
@@ -505,7 +555,7 @@ pub(crate) fn clear_index(volume_id: &str, why: Removal) -> Result<(), String> {
                 // files can go straight away.
                 drop(reg);
                 let db_path = resolved_index_db_path(volume_id)?;
-                remove_once_let_go(volume_id, &db_path, why, LetGo::WaitFirst)?;
+                remove_once_let_go(volume_id, &db_path, why)?;
                 log::info!("Drive index cleared for '{volume_id}' (no live index; database deleted)");
                 return Ok(());
             }
@@ -517,7 +567,13 @@ pub(crate) fn clear_index(volume_id: &str, why: Removal) -> Result<(), String> {
             log::info!("Drive index clear for '{volume_id}' lands as its scan start hands the manager back");
             return Ok(());
         }
-        match std::mem::replace(&mut instance.phase, IndexPhase::ShuttingDown { restart: None }) {
+        match std::mem::replace(
+            &mut instance.phase,
+            IndexPhase::ShuttingDown {
+                restart: None,
+                then_clear: None,
+            },
+        ) {
             IndexPhase::Running(mgr) => ClearTarget::Running { mgr },
             IndexPhase::Initializing { store } => {
                 // Same as the stop: cancel this start's stop signal so it can tell
@@ -538,14 +594,22 @@ pub(crate) fn clear_index(volume_id: &str, why: Removal) -> Result<(), String> {
                 reg.remove(volume_id);
                 ClearTarget::NoWriter { db_path }
             }
-            IndexPhase::ShuttingDown { .. } | IndexPhase::Detached { .. } => {
-                // Another teardown is already draining this volume. It will
-                // remove the instance and (for clear) delete the DB; don't race
-                // a second delete. Bail on the fresh marker published above, which
-                // also drops any start that drain was carrying: forgetting a drive
-                // is the user's last word. (`Detached` is unreachable:
-                // `claim_the_teardown` above took it.)
-                log::info!("Drive index clear requested but '{volume_id}' is already shutting down");
+            IndexPhase::ShuttingDown { then_clear, .. } => {
+                // Another teardown is already draining this volume, and that may be
+                // a STOP, which keeps the database. So the clear is RECORDED on the
+                // drain and whoever ends it deletes, with the same wait for the
+                // volume to be let go; ❌ bailing here left a forgotten drive's index
+                // on disk. The start that drain was carrying stays dropped:
+                // forgetting a drive is the user's last word.
+                instance.phase = IndexPhase::ShuttingDown {
+                    restart: None,
+                    then_clear: Some(then_clear.map_or(why, |recorded| recorded.wider(why))),
+                };
+                log::info!("Drive index clear for '{volume_id}' lands as the drain already running ends");
+                return Ok(());
+            }
+            IndexPhase::Detached { .. } => {
+                // Unreachable: `claim_the_teardown` above took it.
                 return Ok(());
             }
         }
@@ -553,9 +617,9 @@ pub(crate) fn clear_index(volume_id: &str, why: Removal) -> Result<(), String> {
 
     // Guard released: run the blocking drain (Running only) without the lock.
     match target {
-        ClearTarget::Running { mgr } => finish_clearing(volume_id, mgr, why, LetGo::WaitFirst),
+        ClearTarget::Running { mgr } => finish_clearing(volume_id, mgr, why),
         ClearTarget::NoWriter { db_path } => {
-            remove_once_let_go(volume_id, &db_path, why, LetGo::WaitFirst)?;
+            remove_once_let_go(volume_id, &db_path, why)?;
             log::info!("Drive index cleared for '{volume_id}' (DB deleted)");
             Ok(())
         }
@@ -567,20 +631,18 @@ pub(crate) fn clear_index(volume_id: &str, why: Removal) -> Result<(), String> {
 /// too, so a clear blocks no longer than it already could.
 const CLEAR_WAITS_FOR_RELEASE: Duration = Duration::from_secs(5);
 
-/// Whether a clear may wait for the volume's hold before deleting its files.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LetGo {
-    /// The clearing thread holds no share of the volume: wait for the rest to drop.
-    WaitFirst,
-    /// The clear runs on the scan start that handed its manager back, which may
-    /// carry a share of its own, so a wait could only time out on itself. Deletes at
-    /// once, as every clear did before #459. ⚠️ The one path a straggler can still
-    /// race; nothing has hit it yet.
-    CallerMayHoldIt,
-}
-
 /// Delete the files `why` takes for `volume_id`, but only once no worker holds the
-/// volume any more (#459).
+/// volume any more (#459, #620). EVERY clear waits, the one claimed on a `Detached`
+/// volume and carried out at the handback included: that path deleted at once, so
+/// the old generation's phase machine could still open the database after the
+/// start riding the claim built a new one.
+///
+/// ⚠️ **So the thread that runs a clear must hold no share of the volume**, or the
+/// wait can only time out on itself (and keep the files). The manager's share is
+/// dropped before the wait (`finish_clearing`), and no caller of the detached
+/// window (`off_the_registry`: an IPC rescan, the spawned `run_owed_now` and
+/// `perform_registry_rescan` tasks, the maintenance tick's phase resume) carries
+/// a `VolumeWork`. ❌ Don't call `off_the_registry` from a worker that does.
 ///
 /// ❗ **A worker that outlives its manager's drain may still open a connection**
 /// (the phase machine reading its frontier, a cancelled walk finishing a
@@ -594,10 +656,8 @@ enum LetGo {
 /// Still held when the wait runs out ⇒ the files stay and this is an error: a
 /// dead index left on disk is a rebuild later, a truncated `-shm` under a live
 /// writer is a crash now.
-fn remove_once_let_go(volume_id: &str, db_path: &std::path::Path, why: Removal, let_go: LetGo) -> Result<(), String> {
-    if let_go == LetGo::WaitFirst
-        && let hold::Release::StillHeld(holders) = hold::wait_until_released(volume_id, CLEAR_WAITS_FOR_RELEASE)
-    {
+fn remove_once_let_go(volume_id: &str, db_path: &std::path::Path, why: Removal) -> Result<(), String> {
+    if let hold::Release::StillHeld(holders) = hold::wait_until_released(volume_id, CLEAR_WAITS_FOR_RELEASE) {
         return Err(format!(
             "'{volume_id}' is still held by {holders:?} after {CLEAR_WAITS_FOR_RELEASE:?}; keeping its database rather than deleting it under a live reader"
         ));
@@ -614,16 +674,20 @@ fn remove_once_let_go(volume_id: &str, db_path: &std::path::Path, why: Removal, 
 /// `mgr.shutdown()` fires the volume's stop signal, which is what stops an
 /// importance pass, so by the time `volume_files::remove` asks the importance
 /// writer to let go nothing is feeding it.
-fn finish_clearing(volume_id: &str, mut mgr: Box<IndexManager>, why: Removal, let_go: LetGo) -> Result<(), String> {
+fn finish_clearing(volume_id: &str, mut mgr: Box<IndexManager>, why: Removal) -> Result<(), String> {
     withdraw_from_the_read_path(volume_id);
     let db_path = mgr.db_path().to_path_buf();
     mgr.shutdown();
     // The manager carries a share of the volume's hold: dropped here, ahead of the
     // wait, or the clear would wait on itself.
     drop(mgr);
-    let restart = retire_the_instance(volume_id);
-    let deleted = remove_once_let_go(volume_id, &db_path, why, let_go);
-    log::info!("Drive index cleared for '{volume_id}' (DB deleted)");
+    let Retired { restart, then_clear } = retire_the_instance(volume_id);
+    // A second clear that met this drain may take more (a forget over a rebuild).
+    let why = then_clear.map_or(why, |recorded| recorded.wider(why));
+    let deleted = remove_once_let_go(volume_id, &db_path, why);
+    if deleted.is_ok() {
+        log::info!("Drive index cleared for '{volume_id}' (DB deleted)");
+    }
     // A start that landed mid-clear runs even if the files wouldn't go: it asked for
     // this drive to be indexed, and a locked database file is not an answer to that.
     if let Some(request) = restart {

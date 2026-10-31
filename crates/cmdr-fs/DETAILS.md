@@ -35,19 +35,21 @@ the next section.
   (how background work learns it stopped being the live volume); `connection_cell.rs` (a backend's connection state
   packed with its session generation, § "Three questions a remote volume gets asked"); `channel_stream.rs` (a network
   backend's read path, consumer half); `scan_boundary.rs` + `scan_stop.rs` + `scan_recorder.rs` (the one seam a copy
-  scan touches per entry: counts, Cancel, Pause, and the transfer tree's recorder); `scan_walk.rs`, `mkdir_all.rs`,
-  `patching.rs`, and `secret_store.rs` (the bodies a stat-and-listing backend gets for free); `listing_progress.rs`
-  (`report_while`: a long listing's running count sampled on a timer from the async side that owns `on_progress`, which
-  can't ride into the blocking reader); `http_session.rs` (the HTTP backends' shared connection lifecycle, § "The HTTP
-  backends' connection lifecycle"); `liveness.rs` (their silence watch, which tells a server gone silent from one that's
-  only slow: `crates/cmdr-webdav/DETAILS.md` § "Silent or slow") and `tls.rs` (their connect probes' TLS-refusal test,
-  by the typed `io::ErrorKind`); `app_paths.rs` (whether an app path sits under a volume root, segment-wise, and
-  rebasing it onto a moved root); `remote_paths.rs` (a server tree's `<scheme>://user@host:port` app spelling, and the
-  ONE translation); `friendly_error/` (typed, word-free classification); `usb_speed.rs` (❗ its doc comment reaches
-  `bindings.ts`); `in_memory.rs` (the store and its knobs; `in_memory/volume_impl.rs` is its `impl Volume`);
-  `conformance.rs` (+ `conformance/directory_creation.rs`, the three `create_directory_all` promises, and
-  `conformance/modification_date.rs`, the two date ones); and `host/` (what a backend needs from the app, as named
-  traits; read `src/volume/host/CLAUDE.md` before writing a backend).
+  scan touches per entry: counts, Cancel, Pause, and the transfer tree's recorder); `scan_listing_clock.rs` (an index
+  walk's per-listing wedge timer, which a backend pauses while it parks the listing by its own choice); `scan_walk.rs`,
+  `mkdir_all.rs`, `patching.rs`, and `secret_store.rs` (the bodies a stat-and-listing backend gets for free);
+  `listing_progress.rs` (`report_while`: a long listing's running count sampled on a timer from the async side that owns
+  `on_progress`, which can't ride into the blocking reader); `http_session.rs` (the HTTP backends' shared connection
+  lifecycle, § "The HTTP backends' connection lifecycle"); `liveness.rs` (their silence watch, which tells a server gone
+  silent from one that's only slow: `crates/cmdr-webdav/DETAILS.md` § "Silent or slow") and `tls.rs` (their connect
+  probes' TLS-refusal test, by the typed `io::ErrorKind`); `app_paths.rs` (whether an app path sits under a volume root,
+  segment-wise, and rebasing it onto a moved root); `remote_paths.rs` (a server tree's `<scheme>://user@host:port` app
+  spelling, and the ONE translation); `friendly_error/` (typed, word-free classification); `usb_speed.rs` (❗ its doc
+  comment reaches `bindings.ts`); `in_memory.rs` (the store and its knobs; `in_memory/volume_impl.rs` is its
+  `impl Volume`); `conformance.rs` (+ `conformance/directory_creation.rs`, the three `create_directory_all` promises,
+  and `conformance/modification_date.rs`, the two date ones, and `src/volume/conformance/link_landing.rs`, what
+  `can_hold_links` promises); and `host/` (what a backend needs from the app, as named traits; read
+  `src/volume/host/CLAUDE.md` before writing a backend).
 - `entry.rs` + `icons/`: `FileEntry` and the classifiers behind `get_icon_id`.
 - `sqlite_util.rs`: the ONE process-wide page-cache slab, the connection factories every store opens through, and the
   one way a database file is deleted. `src/sqlite_util/thread_conn_cache.rs` is the per-thread read-connection cache and
@@ -63,8 +65,9 @@ the next section.
   behind it (and behind `temp_sibling_name` / `_path` / `_prefix` for the backends that name their own upload temps).
 - Leaves: `apple_double.rs` (whether a listed `._name` is the AppleDouble sidecar the kernel serves as `name`'s xattrs
   on a volume with none of its own, so a copy walk leaves it out), `archive_format.rs` (sole source of truth for archive
-  detection, and the extension-only split of a path at its archive component), `restic_view.rs` (the `Browse snapshots`
-  name and the lexical split of a path at it, here so the listing engine and the write guards ask it without linking
+  detection, and the extension-only split of a path at its archive component), `file_extension.rs` (what counts as a
+  name's extension, product-wide: § "What counts as an extension"), `restic_view.rs` (the `Browse snapshots` name and
+  the lexical split of a path at it, here so the listing engine and the write guards ask it without linking
   `rustic_core`; `cmdr-restic` confirms), `benchmark.rs` (the env-gated `[TIMELINE]` stderr events,
   `docs/guides/benchmarking-file-loading.md`), `cloud_provider.rs` (macOS: which cloud provider owns a path, and what it
   can do; pure path rules, its module docs say why it's a type), `validation.rs` (the platform's name and path-length
@@ -100,6 +103,51 @@ the next section.
   runner, § "`testing::disk_images`") and `metadata_fixture.rs` (files and folders carrying birth, flags, an ACL,
   xattrs, and mode, for the copy-keeps-metadata cells; its `Drop` unlocks and strips ACLs so a Locked leftover can't
   fail the cleanup).
+
+## What counts as an extension (`file_extension`)
+
+One rule, everywhere a name is split at its extension: sorting by extension (`cmdr-listing`), the Ext column and "select
+same kind", the rename field's pre-selection, its F2 cycle and dot stops, both extension-change warnings (the rename
+field's and Ask Cmdr's bulk-rename preflight), the New folder name suggestion, the viewer's raw-view banner, and the
+drag image's truncation. The past pain that justifies it: with each site taking the last-dot segment (any length, files
+and folders alike), `Smlouva v. 2 final` pre-selected `Smlouva v` and raised the extension warning on a file that has
+none, and the column, the sort, and the warning could disagree about one name.
+
+- **The rule takes a `NameKind` (`File`, `Folder`, `Package`), ❌ never a bare `is_directory`.** A plain folder has
+  none: a dot in its name is part of the name (`release.v1.2`, `Project 1.5 backup`). A package's extension is whatever
+  follows its last dot, any length (`Cmdr.app` has `app`, `Library.photoslibrary` has `photoslibrary`). An entry says
+  which it is (`FileEntry::name_kind`, from `is_package`); `NameKind::by_name` reads the name through the list for a
+  caller with no entry.
+- **What's a package: the list first, then macOS.** `PACKAGE_EXTENSIONS` is the free, I/O-less fast path and the
+  product's ONE list: `FileEntry::new` sets `is_package` from it, `get_icon_id` gives a hit its `pkg:` key, and the
+  listing's Ext sort follows. A dotted folder the list doesn't know (`Logo.sketchbundle`, any folder with the
+  `kHasBundle` bit) is asked of macOS once its row is visible (`apps/desktop/src-tauri/src/file_system/packages.rs`,
+  `NSURLIsPackageKey`), and a yes lands through `FileEntry::set_package` (the `pkg:` icon too) as an ordinary row
+  update. Only a volume on the local filesystem asks: SMB, MTP, S3, every other backend, and Linux keep the list's
+  answer. Why visible rows only: an NSURL read per dotted folder on the bulk listing would cost a 100k-entry directory,
+  the same reason custom folder icons and Finder tags wait for visibility.
+- **A file's extension is 1–10 ASCII letters and digits after the last dot.** Anything else after it (a space, an
+  underscore, a hyphen, a non-ASCII letter, 11+ characters) makes it part of the name: `J. Novak - notes`,
+  `db.sqlite3-journal`, and `photo.jpg_old` have none. The cost is the odd real extension that breaks the shape, which
+  then reads as part of the name; the misfires it removes are far more common.
+- **A compressed tar counts as one** (`COMPOUND_EXTENSIONS`: `tar.gz`, `tar.bz2`, `tar.xz`, `tar.zst`), exactly the
+  dotted `ArchiveFormat::label`s (a test pins it), so the archive the app browses and the extension the rename field
+  selects agree on where the name ends.
+- **A leading dot isn't one, and needs a stem**: `.gitignore` has none, `.config.json` has `json`, `.tar.gz` has `gz`. A
+  trailing dot (`file.`) has none.
+- **The answer keeps the name's case and drops the dot.** Callers lowercase to compare.
+
+**Decision: a Rust rule with a TypeScript mirror, pinned by one shared case file.** The frontend asks on every keystroke
+in the rename field, about names that exist nowhere but that field, so an IPC hop per keystroke is out (the same reason
+filename validation stays frontend-pure). `apps/desktop/src/lib/utils/file-extension.ts` mirrors the rule, and both
+suites run `src/file_extension_cases.json` (each case names its kind; plus both lists), so the two languages can't
+drift: a new case goes in the JSON and both sides answer it. The frontend reads packageness off the entry
+(`nameKindOf`), and its copy of the package list serves only names no entry describes yet: a plain folder renamed to
+`Plugins.bundle` becomes a package, which the rename warning asks about (`kindOfRenamedName`).
+
+**Out of scope on purpose: OS type lookups.** Icon UTIs (`derive_icon_id`, `fileIconId`), "Open with" defaults, the
+archive Enter policy, and the viewer's content sniffing keep `Path::extension` semantics: there, what macOS calls the
+extension is the truth, and a bogus one only finds no match.
 
 ## Why each thing is here rather than in the app
 
@@ -1050,10 +1098,11 @@ with the allocator that's installed. The one exception: only a binary that insta
 binaries install their own counting allocator over `System`, so the mimalloc readers' tests allocate through `mi_malloc`
 directly and run only in a `--features mimalloc` test build.
 
-**What keeps the unused path alive**: the `clippy-mimalloc` check lane (slow, macOS) clippies the workspace with
-`cmdr/mimalloc` in its own target dir, and `rustdoc`'s `--all-features` documents it. `THIRD-PARTY-NOTICES.md` covers
-the default macOS build, so it doesn't credit mimalloc: shipping macOS on mimalloc again means making it that build's
-default (the rule in `build.rs`), which brings the credit back with it.
+**What keeps the unused path alive**: the `clippy-mimalloc` check lane (pre-release, macOS: before every release tag and
+every six days in CI) clippies the workspace with `cmdr/mimalloc` in its own target dir, and `rustdoc`'s
+`--all-features` documents it. `THIRD-PARTY-NOTICES.md` covers the default macOS build, so it doesn't credit mimalloc:
+shipping macOS on mimalloc again means making it that build's default (the rule in `build.rs`), which brings the credit
+back with it.
 
 ### The readers
 
@@ -1211,13 +1260,14 @@ would drift apart.
 - **The runner (`runner.rs`).** The closed `Call` enum IS the verb list: `hdiutil create`, `attach -plist -nobrowse`,
   `info -plist`, `detach` and `detach -force`; `diskutil info -plist`, `apfs addVolume … -nomount`,
   `partitionDisk … JHFS+ … R`, `mount -mountOptions nobrowse` (optionally `-mountPoint <dir>`, a mount inside a test's
-  own folder), `unmount`, `unmountDisk`, `renameVolume`, and `eject`; plus `/sbin/umount`. `unmount` and `unmountDisk`
-  are what a DiskArbitration approval test drives, since both go through DA. `/sbin/umount` is the opposite case and the
-  one verb that isn't a disk tool: it goes straight to the kernel, so DA asks nobody and a session hears about it only
-  afterwards, which is how a vanished drive is driven without pulling a real cable. It's ownership-checked like every
-  other change. A verb gets added with its first caller. Every call is SIGKILLed past 30 s and reaped. Output goes to
-  anonymous temp files rather than pipes, so a large plist can't stall the tool and a helper holding a pipe can't block
-  a read past the kill.
+  own folder), `image attach --mountOptions nobrowse` (the DiskImages2 path Finder takes, for `attach_stored_here`: an
+  image on another image's volume, served by a `diskimagesiod` under its own uid), `unmount`, `unmountDisk`,
+  `renameVolume`, and `eject`; plus `/sbin/umount`. `unmount` and `unmountDisk` are what a DiskArbitration approval test
+  drives, since both go through DA. `/sbin/umount` is the opposite case and the one verb that isn't a disk tool: it goes
+  straight to the kernel, so DA asks nobody and a session hears about it only afterwards, which is how a vanished drive
+  is driven without pulling a real cable. It's ownership-checked like every other change. A verb gets added with its
+  first caller. Every call is SIGKILLed past 30 s and reaped. Output goes to anonymous temp files rather than pipes, so
+  a large plist can't stall the tool and a helper holding a pipe can't block a read past the kill.
 - **Ownership before every change (`facts.rs`).** A call that changes a disk runs only after `diskutil info -plist`
   walks its target to the physical whole disk (a partition's `ParentWholeDisk`; for an APFS volume or container, through
   `APFSPhysicalStores` to the store's parent) and `hdiutil info -plist` lists BOTH the node and that whole disk under
@@ -1236,9 +1286,12 @@ would drift apart.
   mounts both browsable, so each is unmounted and remounted nobrowse. A volume `addVolume` or `partitionDisk` made is
   found by its unique name among the nodes `hdiutil info` lists under the image (it lists them at once), ❌ never parsed
   from the tool's text. Names are `CMDR<pid><n>`.
-- **Teardown.** `DiskImage`'s `Drop` resolves the whole disk fresh, detaches, falls back to a guarded `-force`, and then
-  its `TestDir` deletes the file. An image that's already gone (an eject detached it) is fine; one that won't detach
-  panics the test unless it's already panicking, so a leak never passes silently.
+- **Teardown.** `DiskImage`'s `Drop` resolves the whole disk fresh, detaches, falls back to a guarded `-force`, waits
+  until `hdiutil info` stops listing the image, and then its `TestDir` deletes the file. The wait is load-bearing: a
+  detach can exit 0 while `hdiutil info` still lists the image, which flaked a test asserting "detached" right after the
+  drop under load (#830, the sparse two-volume image, about 1 run in 100). An image that's already gone (an eject
+  detached it) is fine; one that won't detach panics the test unless it's already panicking, so a leak never passes
+  silently.
 - **Leftovers are reclaimed at `acquire`**, because no `Drop` runs when the test process is SIGKILLed — which is what
   nextest does to a test past its cap, and what left six images attached on 2026-09-16. `reclaim_orphans` detaches only
   what `facts::orphan_verdict` proves is ours on EVERY count: the backing file under this process's temp dir, in a

@@ -19,6 +19,7 @@ use super::super::super::state::WriteOperationState;
 use super::super::super::types::VolumeCopyConfig;
 use super::super::transfer_probe::{OperationProbe, TaskRow};
 use super::displaced_destination::DisplacedLedger;
+use super::link_carry::LinkCarry;
 use super::preflight::SourceHint;
 use super::source_sweep::{SourceLedger, SourceStamp};
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -132,6 +133,9 @@ pub(super) struct MergeCtx<'a> {
     /// copy whole, like a conflict Skip, and the sweep keeps it. `None` on a
     /// copy, which never touches an original (`locked_sources.rs`).
     pub locked: Option<&'a LockedPlan>,
+    /// Which symlinks this operation lands as symlinks. `None` on a move, which
+    /// follows them (`link_carry.rs`).
+    pub links: Option<&'a LinkCarry>,
 }
 
 /// The in-flight table as a merge walk sees it: the operation's probe, plus the
@@ -220,6 +224,16 @@ impl CreatedPaths {
         }
     }
 
+    /// Takes back a carried source file that never landed (a refused name the
+    /// person skipped), so nothing about it reads as carried. The sweep spares
+    /// a skipped path whatever the ledger says; this keeps the ledger true as
+    /// well. A no-op on a copy.
+    pub(super) fn forget_carried_source(&self, file: &Path) {
+        if let Some(ledger) = &self.source_ledger {
+            ledger.lock_ignore_poison().forget_carried_file(file);
+        }
+    }
+
     /// The source ledger a move's sweep reads, handed over whole. Empty on a
     /// copy.
     pub(super) fn take_source_ledger(&self) -> SourceLedger {
@@ -236,6 +250,13 @@ impl CreatedPaths {
             .push(WrittenFile::volume(path, size).landed_at(landed));
     }
 
+    /// Notes a symlink the copy landed at `path`, holding `target`.
+    pub(super) fn record_link(&self, path: PathBuf, target: PathBuf) {
+        self.files
+            .lock_ignore_poison()
+            .push(WrittenFile::volume_link(path, target));
+    }
+
     pub(super) fn record_dir(&self, path: PathBuf) {
         self.dirs.lock_ignore_poison().push(path);
     }
@@ -243,9 +264,16 @@ impl CreatedPaths {
     /// Tally one child a deep merge skipped (conflict resolved to Skip), and
     /// remember its SOURCE path so a move's source sweep can spare it.
     pub(super) fn record_skip(&self, source: PathBuf, size: u64) {
+        self.record_skipped_subtree(source, 1, size);
+    }
+
+    /// [`record_skip`](Self::record_skip) for a whole subtree left out at once
+    /// (a folder whose own name the destination refused): `files` leaves of
+    /// `bytes` under `source`, which a move's sweep then spares whole.
+    pub(super) fn record_skipped_subtree(&self, source: PathBuf, files: usize, bytes: u64) {
         use std::sync::atomic::Ordering;
-        self.skipped_files.fetch_add(1, Ordering::Relaxed);
-        self.skipped_bytes.fetch_add(size, Ordering::Relaxed);
+        self.skipped_files.fetch_add(files, Ordering::Relaxed);
+        self.skipped_bytes.fetch_add(bytes, Ordering::Relaxed);
         self.skipped_sources.lock_ignore_poison().push(source);
     }
 

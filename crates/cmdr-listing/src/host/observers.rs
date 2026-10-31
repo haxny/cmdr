@@ -12,6 +12,7 @@
 
 use std::path::Path;
 
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::Volume;
 
 use crate::Inner;
@@ -63,21 +64,45 @@ pub trait ListingObserver: Send + Sync {
 }
 
 impl Inner {
-    /// Tells every observer, in order, that a listing opened.
+    /// Asks the serving volume what it keeps alive while the listing is shown
+    /// (`Volume::watch_listing`), then tells every observer, in order, that a
+    /// listing opened.
     pub(crate) fn listing_opened(&self, opened: &OpenedListing<'_>) {
+        self.keep_volume_watch(opened);
         for observer in self.observers() {
             observer.listing_opened(opened);
         }
     }
 
-    /// Tells every observer, in order, that `id` left the cache.
+    /// Tells every observer, in order, that `id` left the cache, after letting
+    /// go of what its volume kept for it.
     ///
     /// ❗ Call it AFTER the cache removal, never before: an observer's own detached
     /// arm reconciles against cache membership, so releasing while the entry is
     /// still there lets a racing arm re-take what the close just gave back.
     pub(crate) fn listing_closed(&self, id: &ListingId) {
+        let released = self.volume_watches.lock_ignore_poison().remove(id.as_str());
+        drop(released); // outside the lock: a backend's release may do work
         for observer in self.observers() {
             observer.listing_closed(id);
+        }
+    }
+
+    /// Holds the volume's [`ListingWatch`](cmdr_fs::volume::ListingWatch) for
+    /// the listing's life. A close racing this open may already have run, so
+    /// the hold is kept only while the listing is still in the cache.
+    fn keep_volume_watch(&self, opened: &OpenedListing<'_>) {
+        let Some(hold) = opened.volume.watch_listing(opened.path) else {
+            return;
+        };
+        let replaced = self
+            .volume_watches
+            .lock_ignore_poison()
+            .insert(opened.id.as_str().to_string(), hold);
+        drop(replaced);
+        if !opened.still_open() {
+            let released = self.volume_watches.lock_ignore_poison().remove(opened.id.as_str());
+            drop(released);
         }
     }
 }

@@ -294,6 +294,8 @@ pub const NETWORK_HOST_EDIT_ID: &str = "network_host_edit";
 
 /// Menu item ID for "Eject (name)" in the breadcrumb context menu.
 pub const EJECT_VOLUME_ID: &str = "eject_volume";
+/// Menu item ID for "Eject all" in the breadcrumb context menu, on a disk with several volumes.
+pub const EJECT_ALL_VOLUMES_ID: &str = "eject_all_volumes";
 
 /// Menu item ID for About window.
 pub const ABOUT_ID: &str = "about";

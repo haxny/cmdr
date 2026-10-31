@@ -302,10 +302,6 @@
   "@queryUi.results.countOnly.soFar": {
     "sourceHash": "dbdb208"
   },
-  "queryUi.pathPills.hiddenAria": "Скрытые части пути: {segments}",
-  "@queryUi.pathPills.hiddenAria": {
-    "sourceHash": "f62e273"
-  },
   "queryUi.recent.trailingTooltip": "Показать все недавние запросы",
   "@queryUi.recent.trailingTooltip": {
     "sourceHash": "e0de323"

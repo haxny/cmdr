@@ -165,10 +165,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "你的驱动器索引已过期。看起来应用有一阵子没运行了。正在重新扫描以跟上变化。",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "系统的文件更改日志记录得不够久远。正在重新扫描以重建索引。",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

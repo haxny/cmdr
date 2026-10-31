@@ -245,7 +245,7 @@ pub(super) fn local_source_is_gone(source: &Path) -> bool {
 
 /// [`local_source_is_gone`] asked of a volume. ❌ Not `Volume::exists`, which
 /// answers `false` for an unreachable source too.
-async fn volume_source_is_gone(volume: &dyn Volume, source: &Path) -> bool {
+pub(super) async fn volume_source_is_gone(volume: &dyn Volume, source: &Path) -> bool {
     matches!(volume.get_metadata(source).await, Err(VolumeError::NotFound(_)))
 }
 

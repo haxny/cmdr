@@ -420,8 +420,9 @@ impl StagedWrite {
         };
         // Retired only once it's gone: a destination that turned the delete
         // down (a share that's out, a handle still open) leaves it listed, so
-        // the stop's cleanup takes it later, or the ledger does on the share's
-        // next reconnect. Retired first, it would be forgotten on the share.
+        // the driver's post-loop cleanup takes it later, whatever the ending, or
+        // the ledger does on the share's next reconnect. Retired first, it would
+        // be forgotten on the share.
         match dest_volume.delete(temp.path()).await {
             // The cut-off upload may land after this delete (a WebDAV server
             // still reading the dropped PUT stores what arrived, #732), so the

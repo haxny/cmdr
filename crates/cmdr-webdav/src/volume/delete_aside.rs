@@ -246,7 +246,7 @@ impl WebdavVolume {
     }
 
     /// Another handle on this volume, for work that must outlive the call.
-    fn twin(&self) -> Self {
+    pub(super) fn twin(&self) -> Self {
         Self {
             name: self.name.clone(),
             root: self.root.clone(),

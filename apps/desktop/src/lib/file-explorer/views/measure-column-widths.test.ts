@@ -122,7 +122,8 @@ describe('computeFullListColumnWidths', () => {
   it('widens ext column based on actual extensions', () => {
     _setMeasureForTests(fakeMeasure)
     const short = computeFullListColumnWidths({ ...baseArgs, entries: [entry({ name: 'a.js' })] })
-    const long = computeFullListColumnWidths({ ...baseArgs, entries: [entry({ name: 'a.verylongext' })] })
+    // Ten characters, the longest a plain extension gets (`#lib/utils/file-extension`).
+    const long = computeFullListColumnWidths({ ...baseArgs, entries: [entry({ name: 'a.verylongx' })] })
     expect(long.ext).toBeGreaterThan(short.ext)
   })
 
@@ -139,11 +140,11 @@ describe('computeFullListColumnWidths', () => {
 
   it('caps the ext column so a pathological extension cannot dominate the row', () => {
     _setMeasureForTests(fakeMeasure)
-    const longExt = 'extension-extension-extension-extension-extension'
-    // Cap sample is "extensionxx" (11 chars × 7 = 77 px), text only, no chrome.
+    // A plain extension tops out at ten characters, but a package folder's can be
+    // longer (`photoslibrary`, 13). Cap sample is "extensionxx" (11 chars × 7 = 77 px), text only, no chrome.
     const capped = computeFullListColumnWidths({
       ...baseArgs,
-      entries: [entry({ name: `a.${longExt}` })],
+      entries: [entry({ name: 'Photos Library.photoslibrary', isDirectory: true })],
     })
     // 11 × 7 = 77 measured + 2 px MEASUREMENT_SAFETY_PAD = 79.
     expect(capped.ext).toBe('extensionxx'.length * 7 + 2)

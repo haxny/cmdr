@@ -585,6 +585,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Name too long for the destination",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Name not allowed at the destination",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "The destination can’t store a name this long. Skip this item to carry on with the rest, then rename it and try it again.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "The destination can’t store this name. It may be too long, be a reserved name, or use a character the destination doesn’t allow. Skip this item to carry on with the rest, then rename it and try it again.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "Pokud soubor už existuje: {policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -800,6 +816,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Není co kopírovat: {total, plural, one {položka, na kterou kopírování čekalo, se} few {všechny {totalText} položky, na které kopírování čekalo, se} many {všech {totalText} položky, na které kopírování čekalo, se} other {všech {totalText} položek, na které kopírování čekalo, se}} od zařazení do fronty přesunulo nebo smazalo.} move {Není co přesouvat: {total, plural, one {položka, na kterou přesun čekal, se} few {všechny {totalText} položky, na které přesun čekal, se} many {všech {totalText} položky, na které přesun čekal, se} other {všech {totalText} položek, na které přesun čekal, se}} od zařazení do fronty přesunulo nebo smazalo.} delete {Není co mazat: {total, plural, one {položka, na kterou mazání čekalo, se} few {všechny {totalText} položky, na které mazání čekalo, se} many {všech {totalText} položky, na které mazání čekalo, se} other {všech {totalText} položek, na které mazání čekalo, se}} od zařazení do fronty přesunulo nebo smazalo.} trash {Není co přesouvat do koše: {total, plural, one {položka, na kterou přesun do koše čekal, se} few {všechny {totalText} položky, na které přesun do koše čekal, se} many {všech {totalText} položky, na které přesun do koše čekal, se} other {všech {totalText} položek, na které přesun do koše čekal, se}} od zařazení do fronty přesunulo nebo smazalo.} other {Není co dělat: {total, plural, one {položka, na kterou operace čekala, se} few {všechny {totalText} položky, na které operace čekala, se} many {všech {totalText} položky, na které operace čekala, se} other {všech {totalText} položek, na které operace čekala, se}} od zařazení do fronty přesunulo nebo smazalo.}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "“{name}” was already gone. Another app probably moved or deleted it.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} item was already gone. Another app probably moved or deleted it.} other {{countText} items were already gone. Another app probably moved or deleted them.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Never show this again",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "Přesunout zamčené položky?",
   "@fileOperations.lockedSources.title": {

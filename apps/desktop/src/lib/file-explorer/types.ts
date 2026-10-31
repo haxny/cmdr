@@ -31,9 +31,11 @@ export interface FileEntry {
   isArchive?: boolean
   /**
    * True for a macOS package (`Safari.app`, `Foo.bundle`): a directory Finder presents as
-   * one item. Set backend-side from the name (`is_package_dir`); the row's accessible name
-   * says "package" from it. ❌ Never sniff the `pkg:` prefix of `iconId` instead. Optional
-   * for the same synthetic entries as `isArchive`.
+   * one item. Set backend-side from the package list, or from macOS once the row is
+   * visible (`enrichPackages`). It decides the row's extension (`nameKindOf`), and the
+   * accessible name says "package" from it. ❌ Never sniff the `pkg:` prefix of `iconId`
+   * instead. Optional for the same synthetic entries as `isArchive`, which fall back to
+   * the list.
    */
   isPackage?: boolean
   size?: number
@@ -187,6 +189,9 @@ export interface FriendlyError {
   /** The typed listing reason this was rendered from, which "Send error report…" names.
    *  Unset on one that came from anywhere else (a debug injection). */
   listingReason?: ListingErrorReason['reason']
+  /** Set on a folder behind a link to another server nobody allowed: the pair the error
+   *  screen's button asks about. */
+  linkConsent?: { server: string; target: string }
 }
 
 /**
@@ -321,6 +326,11 @@ export interface VolumeInfo {
   mountIsReadOnly?: boolean
   /** Whether this volume is a mounted disk image (.dmg): no indexing affordances, no space bars. */
   isDiskImage?: boolean
+  /**
+   * Whether another row sits on this volume's physical disk, so its Eject leaves the disk attached
+   * and its menu also offers "Eject all". Rust's answer (`volume_listing::complete`).
+   */
+  sharesDiskWithOthers?: boolean
   /**
    * Whether a cloud provider's own filesystem serves this mount (pCloud's `pcloudfs`, CloudMounter, …),
    * so every entry read costs a round trip to that provider's daemon: grouped under CLOUD, and no

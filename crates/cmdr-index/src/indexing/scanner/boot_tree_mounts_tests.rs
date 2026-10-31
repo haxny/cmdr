@@ -4,19 +4,92 @@
 use std::sync::Arc;
 
 use super::*;
-use crate::indexing::host::volumes::{self, FakeVolumeProvider, MountIdentity};
+use crate::indexing::host::volumes::{self, FakeVolumeProvider, MountIdentity, MountPoint};
 use crate::indexing::scanner::exclusions::excluded_by_boot_prefixes;
 use crate::indexing::scanner::{ExclusionScope, should_exclude};
 
+/// A table row the way the host reports it.
+fn row(path: &str, source: &str, fs_type: &str) -> MountPoint {
+    MountPoint {
+        path: path.into(),
+        source: Some(source.to_string()),
+        fs_type: Some(fs_type.to_string()),
+    }
+}
+
+/// A set of rows with no source or type, which no platform reads as a local disk.
 fn set_of(points: &[&str]) -> BootTreeMounts {
-    BootTreeMounts::from_mount_table(points.iter().map(|p| (*p).to_string()), excluded_by_boot_prefixes)
+    BootTreeMounts::from_mount_table(
+        points.iter().map(|p| MountPoint {
+            path: (*p).into(),
+            source: None,
+            fs_type: None,
+        }),
+        excluded_by_boot_prefixes,
+    )
+}
+
+/// The table a Linux machine with a separate `/home` and three shares inside its
+/// tree reads.
+fn linux_table() -> BootTreeMounts {
+    BootTreeMounts::from_mount_table(
+        [
+            row("/", "/dev/nvme0n1p3", "btrfs"),
+            row("/home", "/dev/nvme0n1p3", "btrfs"),
+            row("/srv/data", "/dev/sdb1", "ext4"),
+            row("/home/someone/nas", "naspi:/share", "nfs4"),
+            row("/home/someone/smb", "//naspi/photos", "cifs"),
+            row("/home/someone/remote", "someone@host:", "fuse.sshfs"),
+        ],
+        excluded_by_boot_prefixes,
+    )
+}
+
+/// #731: on Linux the boot scan stops at a network or FUSE mount inside its tree,
+/// so a share under the home folder isn't crawled at local-walker speed, but keeps
+/// walking into a local disk mounted there, so a separate `/home` stays indexed.
+#[test]
+#[cfg(not(target_os = "macos"))]
+fn linux_cuts_only_the_mounts_that_arent_a_local_disk() {
+    assert_eq!(
+        paths(&linux_table()),
+        vec!["/home/someone/nas", "/home/someone/remote", "/home/someone/smb"]
+    );
+}
+
+/// macOS stops at every mount inside its tree, a local disk image included: each
+/// has its own index.
+#[test]
+#[cfg(target_os = "macos")]
+fn macos_cuts_every_mount_inside_its_tree() {
+    assert_eq!(
+        paths(&linux_table()),
+        vec![
+            "/home",
+            "/home/someone/nas",
+            "/home/someone/remote",
+            "/home/someone/smb",
+            "/srv/data"
+        ]
+    );
+}
+
+/// The two rules fingerprint differently, so moving a platform from one to the
+/// other rebuilds its boot index once.
+#[test]
+fn the_two_cut_rules_fingerprint_differently() {
+    assert_ne!(
+        BootTreeCut::Every.fingerprint_tag(),
+        BootTreeCut::NotALocalDisk.fingerprint_tag()
+    );
 }
 
 fn paths(set: &BootTreeMounts) -> Vec<&str> {
     set.mounts.iter().map(|mount| mount.path.as_str()).collect()
 }
 
-/// A host whose mount table lists `points`, installed for the rest of the test.
+/// A host whose mount table lists `points` (no source or type, so every platform
+/// cuts them), installed for the rest of the test.
 fn install_mount_table(points: &[&str]) -> (volumes::TestProviderGuard, Arc<FakeVolumeProvider>) {
     let provider = FakeVolumeProvider::shared();
     for (i, point) in points.iter().enumerate() {
@@ -117,6 +190,29 @@ fn should_exclude_stops_the_boot_disk_at_a_mount_inside_its_tree() {
         ),
         "the mount's OWN index walks all of it"
     );
+}
+
+/// #731 at the gate: what the host reports for each row decides it, so an NFS
+/// share under the home folder is cut while the local `/home` holding it isn't.
+#[test]
+#[cfg(not(target_os = "macos"))]
+fn linux_should_exclude_stops_at_a_share_but_not_at_a_local_home() {
+    let _serialized = crate::indexing::handle::test_lock();
+    let (_installed, provider) = install_mount_table(&["/", "/home", "/home/someone/nas"]);
+    provider.set_mount_kind("/", Some("/dev/nvme0n1p3"), Some("btrfs"));
+    provider.set_mount_kind("/home", Some("/dev/nvme0n1p4"), Some("ext4"));
+    provider.set_mount_kind("/home/someone/nas", Some("naspi:/share"), Some("nfs4"));
+    let boot = ExclusionScope::boot_disk();
+
+    assert!(
+        !should_exclude("/home/someone/docs/a.txt", &boot),
+        "a local `/home` stays the boot disk's"
+    );
+    assert!(
+        should_exclude("/home/someone/nas", &boot),
+        "the share's mount point gets no row"
+    );
+    assert!(should_exclude("/home/someone/nas/photos/a.jpg", &boot));
 }
 
 /// A mount that appears is picked up without anyone calling anything: the next ask

@@ -7,8 +7,7 @@
  *    (dropping ARB-style `@key` metadata entries),
  *  - scan frontend source for `t()`/`tString()`/`getMessage()`/`<Trans key=…>`
  *    key usages,
- *  - diff the two to report keys used-but-missing (a build failure) and
- *    catalog-keys-never-used (a dead-key warning),
+ *  - diff the two to report keys used-but-missing (a build failure),
  *  - emit the `keys.gen.ts` source.
  *
  * Key shape is a dotted path (`area.feature.leaf`); the codegen does not
@@ -42,8 +41,8 @@ export function collectCatalogKeys(files: Record<string, Record<string, unknown>
  * (`t`, `tString`, `getMessage`) called with a single-quoted/double-quoted/
  * backtick-no-expression string literal, and the `<Trans key="…">` /
  * `<Trans key='…'>` markup attribute. Dynamic (non-literal) keys are not
- * matchable and are intentionally skipped (see the dead-key honesty caveat in
- * the docs: a dynamically-built key reads as "unused" to this scan).
+ * matchable and are intentionally skipped, so a typo in a runtime-built key
+ * isn't caught here.
  */
 const KEY_REFERENCE_RE =
   // t('x') | tString("x") | getMessage(`x`)
@@ -74,51 +73,13 @@ export function extractUsedKeys(source: string): Set<string> {
 }
 
 /**
- * Of the given catalog keys, returns those whose exact text appears anywhere in
- * `source`. Used ONLY for dead-key suppression: a key reached through a Record
- * map or other indirection (the section-title / tint-color maps, the registry's
- * `labelKey` fields) still has its literal in source, so a substring hit marks
- * it "not dead" even when `extractUsedKeys` (strict, for missing detection) saw
- * no direct reference. Scoped to the catalog (a substring scan over real keys),
- * so it never produces a phantom "missing key"; it only narrows `dead`.
+ * Returns the keys referenced in code but absent from the catalog, sorted. The
+ * inverse question (catalog keys nobody references) belongs to the
+ * `message-keys-unused` Go check, which scans every key in one pass per file.
  */
-export function findCatalogKeyMentions(source: string, catalogKeys: string[]): Set<string> {
-  const mentioned = new Set<string>()
-  for (const key of catalogKeys) {
-    if (source.includes(key)) mentioned.add(key)
-  }
-  return mentioned
-}
-
-/**
- * Arguments to `diffKeys`.
- *
- * - `usedKeys`: keys from direct reference forms (drives missing detection).
- * - `literalKeys` (optional): keys whose exact literal appears anywhere in
- *   source; suppresses the dead warning for keys reached through indirection.
- */
-export interface DiffKeysArgs {
-  catalogKeys: string[]
-  usedKeys: Set<string>
-  literalKeys?: Set<string>
-}
-
-/** The result of `diffKeys`. */
-export interface KeyDiff {
-  /** Used in code, absent from the catalog (a build failure). */
-  missing: string[]
-  /** In the catalog, never referenced in code (a warning). */
-  dead: string[]
-}
-
-/**
- * Diffs the catalog keys against the keys referenced in code.
- */
-export function diffKeys({ catalogKeys, usedKeys, literalKeys }: DiffKeysArgs): KeyDiff {
+export function findMissingKeys(catalogKeys: string[], usedKeys: Set<string>): string[] {
   const catalogSet = new Set(catalogKeys)
-  const missing = [...usedKeys].filter((key) => !catalogSet.has(key)).sort()
-  const dead = catalogKeys.filter((key) => !usedKeys.has(key) && !(literalKeys?.has(key) ?? false)).sort()
-  return { missing, dead }
+  return [...usedKeys].filter((key) => !catalogSet.has(key)).sort()
 }
 
 /**

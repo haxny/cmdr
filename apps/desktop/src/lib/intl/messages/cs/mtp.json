@@ -76,6 +76,14 @@
   "@mtp.ptpcameradDialog.retry": {
     "sourceHash": "eccee4e"
   },
+  "mtp.readiness.connecting": "Still connecting. Unlock your phone and tap Allow if it asks.",
+  "@mtp.readiness.connecting": {
+    "sourceHash": "389b779"
+  },
+  "mtp.readiness.connectingTooltip": "Cmdr keeps trying while your phone stays plugged in, and you can open it once it connects.",
+  "@mtp.readiness.connectingTooltip": {
+    "sourceHash": "4f4066b"
+  },
   "mtp.deviceFallbackName": "Zařízení MTP",
   "@mtp.deviceFallbackName": {
     "sourceHash": "8ba7a69"

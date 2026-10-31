@@ -3,13 +3,9 @@
   "@multiRename.title": {
     "sourceHash": "5ceb1a2"
   },
-  "multiRename.scope.selection": "{count, plural, one {{countText} vybraný soubor} few {{countText} vybrané soubory} many {{countText} vybraného souboru} other {{countText} vybraných souborů}}",
-  "@multiRename.scope.selection": {
-    "sourceHash": "30a7b9f"
-  },
-  "multiRename.scope.wholeFolder": "{count, plural, one {Jediný soubor v této složce (nic není vybráno)} few {Všechny {countText} soubory v této složce (nic není vybráno)} many {Všech {countText} souboru v této složce (nic není vybráno)} other {Všech {countText} souborů v této složce (nic není vybráno)}}",
-  "@multiRename.scope.wholeFolder": {
-    "sourceHash": "37dc7a2"
+  "multiRename.noFileSelected": "No file selected",
+  "@multiRename.noFileSelected": {
+    "sourceHash": "26bfbd5"
   },
   "multiRename.nameMask": "Maska názvu",
   "@multiRename.nameMask": {

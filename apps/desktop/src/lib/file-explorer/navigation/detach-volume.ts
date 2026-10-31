@@ -1,8 +1,9 @@
-import { ejectVolume } from '#lib/tauri-commands/index.js'
+import { ejectAllOnDisk, ejectVolume } from '#lib/tauri-commands/index.js'
 import { isVolumeBusy, isVolumeEjecting } from '#lib/stores/volume-busy-store.svelte.js'
 import { addToast } from '#lib/ui/toast/index.js'
 import { tString } from '#lib/intl/messages.svelte.js'
-import { wordEjectRefusal } from './eject-error-messages'
+import { asEjectError } from './eject-error'
+import { ejectRefusalReport, wordEjectRefusal } from './eject-error-messages'
 import { disconnectServerPlace } from './server-row-actions'
 import type { DetachAction } from './detach-control'
 import type { VolumeInfo } from '../types'
@@ -30,17 +31,51 @@ export async function runDetach(volume: VolumeInfo, action: DetachAction): Promi
  * don't tear down a volume mid-transfer, and don't ask twice (the backend would only join
  * the eject already running).
  *
- * Success says nothing: the volume leaves the list on its own through `volume-unmounted` /
+ * Success mostly says nothing: the volume leaves the list on its own through `volume-unmounted` /
  * `mtp-device-disconnected`, which is the feedback. A refusal speaks the catalog through
  * `wordEjectRefusal`, ❌ never `diskutil`'s stderr.
  */
 export async function detachVolume(volume: VolumeInfo): Promise<void> {
   if (isVolumeBusy(volume.id) || isVolumeEjecting(volume.id)) return
+  await ejectAndSay(volume.id, volume.name)
+}
+
+/** The volume menu's "Eject all", with the same guards as {@link detachVolume}. */
+export async function detachAllOnDisk(volume: VolumeInfo): Promise<void> {
+  if (isVolumeBusy(volume.id) || isVolumeEjecting(volume.id)) return
+  await ejectAllAndSay(volume.id)
+}
+
+/**
+ * Ejects one volume and says what the person needs to hear. A drive that stays attached is the one
+ * success with words: the row leaving the list would otherwise read as "safe to unplug".
+ */
+export async function ejectAndSay(volumeId: string, volumeName: string): Promise<void> {
   try {
-    await ejectVolume(volume.id)
+    const outcome = await ejectVolume(volumeId)
+    if (outcome === 'volumeEjectedDiskStays') {
+      addToast(tString('fileExplorer.pane.ejectedDriveStaysToast', { volumeName }), { level: 'info' })
+    }
   } catch (e) {
-    addToast(tString('fileExplorer.pane.ejectFailedToast', { volumeName: volume.name, message: wordEjectRefusal(e) }), {
+    addToast(tString('fileExplorer.pane.ejectFailedToast', { volumeName, message: wordEjectRefusal(e) }), {
       level: 'error',
+      report: ejectRefusalReport(e),
     })
+  }
+}
+
+/**
+ * Ejects every volume on the disk, saying whether a refusal left the drive exactly as it was.
+ * Success says nothing, since every row leaves the list.
+ */
+export async function ejectAllAndSay(volumeId: string): Promise<void> {
+  try {
+    await ejectAllOnDisk(volumeId)
+  } catch (e) {
+    const key =
+      asEjectError(e)?.type === 'heldBeforeEject'
+        ? 'fileExplorer.pane.ejectAllHeldToast'
+        : 'fileExplorer.pane.ejectAllFailedToast'
+    addToast(tString(key, { message: wordEjectRefusal(e) }), { level: 'error', report: ejectRefusalReport(e) })
   }
 }

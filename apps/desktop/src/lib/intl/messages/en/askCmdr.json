@@ -57,11 +57,13 @@
   },
   "askCmdr.tool.appState.doing": "Checking what you’re looking at",
   "@askCmdr.tool.appState.doing": {
-    "description": "Present-tense status for the assistant reading the user's current view (open folders, cursor, selection). Shown while the tool runs. The apostrophe is U+2019."
+    "description": "Present-tense status for the assistant reading the user's current view (open folders, cursor, selection). Shown while the tool runs. The apostrophe is U+2019.",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.appState.done": "Looked at what you’re looking at",
   "@askCmdr.tool.appState.done": {
-    "description": "Past-tense label after the assistant read the user's current view. The apostrophe is U+2019."
+    "description": "Past-tense label after the assistant read the user's current view. The apostrophe is U+2019.",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.listDir.doing": "Listing a folder",
   "@askCmdr.tool.listDir.doing": {
@@ -89,11 +91,13 @@
   },
   "askCmdr.tool.listVolumes.doing": "Checking your drives",
   "@askCmdr.tool.listVolumes.doing": {
-    "description": "Present-tense status for the assistant listing the user's drives and their index freshness."
+    "description": "Present-tense status for the assistant listing the user's drives and their index freshness.",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.listVolumes.done": "Checked your drives",
   "@askCmdr.tool.listVolumes.done": {
-    "description": "Past-tense label after the assistant listed the user's drives."
+    "description": "Past-tense label after the assistant listed the user's drives.",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.operationsList.doing": "Searching your file history",
   "@askCmdr.tool.operationsList.doing": {
@@ -221,7 +225,8 @@
   },
   "askCmdr.tool.unknown.doing": "Working",
   "@askCmdr.tool.unknown.doing": {
-    "description": "Present-tense fallback status for a tool the rail doesn't have a specific label for."
+    "description": "Present-tense fallback status for a tool the rail doesn't have a specific label for.",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.unknown.done": "Used a tool",
   "@askCmdr.tool.unknown.done": {
@@ -420,12 +425,14 @@
   "askCmdr.tool.unknown.named.doing": "Asking for “{name}”",
   "@askCmdr.tool.unknown.named.doing": {
     "description": "Present-tense label on a tool line in the Ask Cmdr chat rail when the assistant asked for a tool Ask Cmdr doesn’t have (a made-up or mistyped name). {name} is that name exactly as the assistant wrote it; keep the quotes, in your language’s quote marks, and never translate the name. Pairs with askCmdr.tool.unknown.named.done.",
-    "placeholders": { "name": "The tool name the assistant asked for, for example delete." }
+    "placeholders": { "name": "The tool name the assistant asked for, for example delete." },
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.unknown.named.done": "Asked for “{name}”",
   "@askCmdr.tool.unknown.named.done": {
     "description": "Past-tense label on the same tool line once the request came back (a short note follows saying it isn’t a tool it has). {name} is the name exactly as the assistant wrote it; keep the quotes. Pairs with askCmdr.tool.unknown.named.doing.",
-    "placeholders": { "name": "The tool name the assistant asked for, for example delete." }
+    "placeholders": { "name": "The tool name the assistant asked for, for example delete." },
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.showInPane": "Show {path} in a pane",
   "@askCmdr.tool.showInPane": {
@@ -434,11 +441,13 @@
   },
   "askCmdr.tool.repeat": "Same as above",
   "@askCmdr.tool.repeat": {
-    "description": "A small tag at the end of an Ask Cmdr tool line saying the assistant made this exact request earlier in the same answer, so the person can tell a repeat apart from new work. Not a fault. Sentence case, no period."
+    "description": "A small tag at the end of an Ask Cmdr tool line saying the assistant made this exact request earlier in the same answer, so the person can tell a repeat apart from new work. Not a fault. Sentence case, no period.",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.outcomeSeparator": ", ",
   "@askCmdr.tool.outcomeSeparator": {
-    "description": "Read by screen readers only, never shown: the pause between an Ask Cmdr tool line’s label and the short note on what came back, so “Listed Desktop” and “showed 5 of 6” read as two parts of one line. On screen a middle dot separates them. Use your language’s comma and its usual spacing."
+    "description": "Read by screen readers only, never shown: the pause between an Ask Cmdr tool line’s label and the short note on what came back, so “Listed Desktop” and “showed 5 of 6” read as two parts of one line. On screen a middle dot separates them. Use your language’s comma and its usual spacing.",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.outcome.items": "{count, plural, one {{countText} item} other {{countText} items}}",
   "@askCmdr.tool.outcome.items": {
@@ -446,7 +455,8 @@
     "placeholders": {
       "countText": "How many entries, as a formatted number.",
       "count": "The same count as a number, to pick the plural form."
-    }
+    },
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.outcome.itemsShown": "showed {shownText} of {totalText}",
   "@askCmdr.tool.outcome.itemsShown": {
@@ -510,7 +520,8 @@
   },
   "askCmdr.tool.outcome.toolUnavailable": "not a tool it has",
   "@askCmdr.tool.outcome.toolUnavailable": {
-    "description": "What came back, after a tool line’s label: the assistant asked for something Ask Cmdr can’t do (it’s read-only, or the name was made up), so nothing ran. “It” is the assistant. Lowercase where your language allows. A translation may name the assistant outright where a bare “it” would be unclear."
+    "description": "What came back, after a tool line’s label: the assistant asked for something Ask Cmdr can’t do (it’s read-only, or the name was made up), so nothing ran. “It” is the assistant. Lowercase where your language allows. A translation may name the assistant outright where a bare “it” would be unclear.",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.outcome.repeatedCall": "skipped: it tried this already",
   "@askCmdr.tool.outcome.repeatedCall": {
@@ -638,11 +649,13 @@
   },
   "askCmdr.tool.details": "What came back",
   "@askCmdr.tool.details": {
-    "description": "Accessible name of the small arrow button at the end of an Ask Cmdr tool line that opens a peek at what the request returned to the assistant. Screen readers announce it together with whether it’s open; it isn’t shown."
+    "description": "Accessible name of the small arrow button at the end of an Ask Cmdr tool line that opens a peek at what the request returned to the assistant. Screen readers announce it together with whether it’s open; it isn’t shown.",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.preview.loading": "Getting what came back",
   "@askCmdr.tool.preview.loading": {
-    "description": "Screen-reader text for the small spinner shown while an opened Ask Cmdr tool line fetches what its request returned. Usually takes a moment."
+    "description": "Screen-reader text for the small spinner shown while an opened Ask Cmdr tool line fetches what its request returned. Usually takes a moment.",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.preview.given": "Showed the model {givenText} of {totalText}",
   "@askCmdr.tool.preview.given": {
@@ -719,11 +732,13 @@
   },
   "askCmdr.tool.preview.copy": "Copy",
   "@askCmdr.tool.preview.copy": {
-    "description": "A small button in an opened Ask Cmdr tool line that copies the full, raw result the AI model received (as JSON text) to the clipboard. For advanced users. Verb, short."
+    "description": "A small button in an opened Ask Cmdr tool line that copies the full, raw result the AI model received (as JSON text) to the clipboard. For advanced users. Verb, short.",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.preview.copyLabel": "Copy the whole result as JSON",
   "@askCmdr.tool.preview.copyLabel": {
-    "description": "Accessible name of the Copy button in an opened Ask Cmdr tool line. Screen readers announce it; it isn’t shown. Keep “JSON” as is (a text format)."
+    "description": "Accessible name of the Copy button in an opened Ask Cmdr tool line. Screen readers announce it; it isn’t shown. Keep “JSON” as is (a text format).",
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.tool.preview.copied": "Copied",
   "@askCmdr.tool.preview.copied": {
@@ -736,12 +751,14 @@
   "askCmdr.toolGroup.summary": "Looked around: {parts}",
   "@askCmdr.toolGroup.summary": {
     "description": "The one-line header of a group of Ask Cmdr tool lines, once every request in it came back: what the assistant looked at, as counts. Clicking it opens or closes the group. Sentence case.",
-    "placeholders": { "parts": "Counts already joined into a list, for example “6 folders, 2 searches”." }
+    "placeholders": { "parts": "Counts already joined into a list, for example “6 folders, 2 searches”." },
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.toolGroup.summaryRunning": "Looking around: {parts}",
   "@askCmdr.toolGroup.summaryRunning": {
     "description": "Like askCmdr.toolGroup.summary, while some requests in the group are still running. Sentence case.",
-    "placeholders": { "parts": "Counts already joined into a list, for example “6 folders, 2 searches”." }
+    "placeholders": { "parts": "Counts already joined into a list, for example “6 folders, 2 searches”." },
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.toolGroup.folders": "{count, plural, one {{countText} folder} other {{countText} folders}}",
   "@askCmdr.toolGroup.folders": {
@@ -773,7 +790,8 @@
     "placeholders": {
       "countText": "How many, as a formatted number.",
       "count": "The same count as a number, to pick the plural form."
-    }
+    },
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.toolGroup.plans": "{count, plural, one {{countText} plan} other {{countText} plans}}",
   "@askCmdr.toolGroup.plans": {
@@ -797,7 +815,8 @@
     "placeholders": {
       "countText": "How many, as a formatted number.",
       "count": "The same count as a number, to pick the plural form."
-    }
+    },
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.turnStats.summary": "{calls, plural, one {{callsText} tool call} other {{callsText} tool calls}} · {duration} · {tokens, plural, one {{tokensText} token} other {{tokensText} tokens}}",
   "@askCmdr.turnStats.summary": {
@@ -808,7 +827,8 @@
       "duration": "How long the answer took, already formatted, for example 4.2s or 1m 5s.",
       "tokensText": "How many tokens, already formatted: exact below 2,000 (like 1,234), compact above (like 194.8k or 1.3M).",
       "tokens": "The same count as a number, to pick the plural form."
-    }
+    },
+    "screenshot": "ask-cmdr-tools.png"
   },
   "askCmdr.turnStats.summaryNoDuration": "{calls, plural, one {{callsText} tool call} other {{callsText} tool calls}} · {tokens, plural, one {{tokensText} token} other {{tokensText} tokens}}",
   "@askCmdr.turnStats.summaryNoDuration": {
@@ -1166,12 +1186,12 @@
       "countText": "The token count, already formatted: exact below 2,000 (like 1,234), compact above (like 194.8k or 1.3M). The tooltip on it shows the exact count.",
       "count": "The raw token count as an integer, used only to pick the singular or plural word."
     },
-    "screenshot": "settings-ai-ask-cmdr.png"
+    "screenshot": "ask-cmdr-empty.png"
   },
   "askCmdr.cost.free": "free, on-device",
   "@askCmdr.cost.free": {
     "description": "Cost readout for a chat answered entirely by the local on-device model: it costs nothing. Lowercase, shown after the token count.",
-    "screenshot": "settings-ai-ask-cmdr.png"
+    "screenshot": "ask-cmdr-empty.png"
   },
   "askCmdr.cost.estimate": "about {amount}",
   "@askCmdr.cost.estimate": {
@@ -1197,7 +1217,8 @@
   },
   "askCmdr.cost.label": "This chat’s usage",
   "@askCmdr.cost.label": {
-    "description": "Accessible label for the chat's cost footer region (token count and estimated cost). The apostrophe is U+2019."
+    "description": "Accessible label for the chat's cost footer region (token count and estimated cost). The apostrophe is U+2019.",
+    "screenshot": "ask-cmdr-empty.png"
   },
   "askCmdr.renameReview.title": "Review file renames",
   "@askCmdr.renameReview.title": {
@@ -1404,6 +1425,50 @@
     "description": "Message when the server-side rename proposal is no longer reviewable, because it was already applied, turned down, or replaced. ❗ \"Ask Cmdr to prepare it again\" is an instruction to the reader, with \"ask\" as the verb and \"Cmdr\" as the thing being asked. It is NOT the \"Ask Cmdr\" panel name, so translate \"ask\" normally.",
     "screenshot": "bulk-rename-review-expired.png"
   },
+  "askCmdr.renameReview.checking": "Checked {checkedText} of {totalText} {total, plural, one {file} other {files}}",
+  "@askCmdr.renameReview.checking": {
+    "description": "Progress line in the bulk rename review while Cmdr checks that the files are still there and the new names are free. Only appears when the check takes a moment, typically on a network drive. Both numbers arrive preformatted with thousands separators.",
+    "placeholders": {
+      "checkedText": "How many files Cmdr has checked so far, preformatted.",
+      "totalText": "How many files it will check in all, preformatted.",
+      "total": "The same total as a raw number, for choosing the plural."
+    }
+  },
+  "askCmdr.renameReview.checkingLabel": "Checking the files",
+  "@askCmdr.renameReview.checkingLabel": {
+    "description": "Screen-reader name of the progress bar in the bulk rename review, while Cmdr checks that the files are still there and the new names are free."
+  },
+  "askCmdr.renameReview.stopChecking": "Stop checking",
+  "@askCmdr.renameReview.stopChecking": {
+    "description": "Button beside the progress bar in the bulk rename review. Stops the check and keeps the review open, so it's different from the dialog's Cancel, which closes the review and renames nothing."
+  },
+  "askCmdr.renameReview.checkUnfinished": "Cmdr hasn’t finished checking {count, plural, one {# file} other {# files}}, so it can’t rename yet.",
+  "@askCmdr.renameReview.checkUnfinished": {
+    "description": "Notice in the bulk rename review when the check of some files didn't finish, because the user stopped it or it broke down. Sits beside a Check again button. Never the words error or failed. The apostrophes are curly typographic apostrophes (U+2019).",
+    "placeholders": {
+      "count": "How many files are still unchecked."
+    }
+  },
+  "askCmdr.renameReview.checkAgain": "Check again",
+  "@askCmdr.renameReview.checkAgain": {
+    "description": "Button in the bulk rename review that restarts a check that didn't finish."
+  },
+  "askCmdr.renameReview.needsAnotherLook": "Something changed since Cmdr checked these names, so it didn’t rename anything. Take another look and try again.",
+  "@askCmdr.renameReview.needsAnotherLook": {
+    "description": "Notice above the list in the bulk rename review when the user pressed Rename but the plan moved under them, for example a name they just edited hasn't been checked yet. Nothing was renamed. The apostrophe is a curly typographic apostrophe (U+2019)."
+  },
+  "askCmdr.renameReview.couldntStart": "Cmdr couldn’t start this rename, and nothing changed. Try again in a moment.",
+  "@askCmdr.renameReview.couldntStart": {
+    "description": "Notice above the list in the bulk rename review when the rename wouldn't start. Nothing was renamed. A more specific explanation may follow it, for example that the drive isn't connected. Never the words error or failed. The apostrophe is a curly typographic apostrophe (U+2019)."
+  },
+  "askCmdr.renameReview.nothingToApply": "There’s nothing left to rename here.",
+  "@askCmdr.renameReview.nothingToApply": {
+    "description": "Notice above the list in the bulk rename review when the user pressed Rename but none of the files is left to rename, because they're gone or were turned off. The apostrophe is a curly typographic apostrophe (U+2019)."
+  },
+  "askCmdr.renameReview.nameNotSaved": "Cmdr couldn’t save that name. Nothing’s wrong with the name, so try it again.",
+  "@askCmdr.renameReview.nameNotSaved": {
+    "description": "Notice above the list in the bulk rename review when the name the user typed was fine but Cmdr's own storage didn't take it, so the row went back to the name it had. Different from the per-row message saying a name isn't usable. Never the words error or failed. The apostrophes are curly typographic apostrophes (U+2019)."
+  },
   "askCmdr.renameReview.status": "{allowed, plural, one {# rename allowed} other {# renames allowed}}; {blocked, plural, one {# blocked} other {# blocked}}",
   "@askCmdr.renameReview.status": {
     "description": "Screen-reader status summary for the bulk rename review list. allowed and blocked are raw counts.",
@@ -1595,7 +1660,7 @@
   "askCmdr.context.label": "How full this chat is",
   "@askCmdr.context.label": {
     "description": "Accessible label for the chat's context-usage gauge in the rail footer.",
-    "screenshot": "ask-cmdr-chat.png"
+    "screenshot": "ask-cmdr-empty.png"
   },
   "askCmdr.context.tooltip": "{usedText} of {budgetText} {budget, plural, one {token} other {tokens}} used (estimated)",
   "@askCmdr.context.tooltip": {
@@ -1614,7 +1679,8 @@
       "usedText": "how many tokens the fixed part of every message takes, preformatted (for example 6,300)",
       "budgetText": "the room one message has, in tokens, preformatted (for example 16,000)",
       "budget": "the same budget number (drives the singular/plural form of the noun)"
-    }
+    },
+    "screenshot": "ask-cmdr-empty.png"
   },
   "askCmdr.wake.thinking": "Cmdr is having a look at what changed. Open the chat.",
   "@askCmdr.wake.thinking": {

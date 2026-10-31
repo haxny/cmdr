@@ -164,7 +164,7 @@ which for a cloud drive named by its own `volumeId` is `root`. An answer for a v
 
 Each action tool: (1) captures a precondition snapshot (typically `snapshot_generation(app)`); (2) emits its event /
 runs its command; (3) calls `wait_for_ack(app, signal, DEFAULT_ACK_TIMEOUT)` (default 1500 ms; nav family uses
-`NAV_ACK_TIMEOUT` = 5 s); (4) returns `OK` on signal, or `ToolError::internal` naming the missing signal and elapsed
+`NAV_ACK_TIMEOUT` = 5 s); (4) returns `OK` on signal, or `ToolError::outcome_unknown` naming the missing signal and elapsed
 budget on timeout.
 
 `AckSignal` variants, when they fire, and who uses them:

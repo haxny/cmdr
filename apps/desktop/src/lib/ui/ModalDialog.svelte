@@ -842,8 +842,8 @@
     .resize-band[data-direction='ne'],
     .resize-band[data-direction='sw'],
     .resize-band[data-direction='se'] {
-        width: 14px;
-        height: 14px;
+        width: var(--spacing-xl);
+        height: var(--spacing-xl);
     }
 
     .resize-band[data-direction='nw'],
@@ -857,23 +857,23 @@
     }
 
     .resize-band[data-direction='nw'] {
-        top: -4px;
-        left: -4px;
+        top: -14px;
+        left: -14px;
     }
 
     .resize-band[data-direction='ne'] {
-        top: -4px;
-        right: -4px;
+        top: -14px;
+        right: -14px;
     }
 
     .resize-band[data-direction='sw'] {
-        bottom: -4px;
-        left: -4px;
+        bottom: -14px;
+        left: -14px;
     }
 
     .resize-band[data-direction='se'] {
-        bottom: -4px;
-        right: -4px;
+        bottom: -14px;
+        right: -14px;
     }
 
     /* Fixed square + `--radius-full` so the hover fill is a circle around the glyph,

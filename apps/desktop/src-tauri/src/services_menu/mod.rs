@@ -38,6 +38,7 @@ pub fn install(app: &AppHandle<Wry>) {
         return;
     };
     responder::register_send_types(mtm);
+    responder::answer_from_menu_windows();
 
     let Some(window) = app.get_webview_window("main") else {
         log::warn!(target: "services_menu", "No main window to attach the selection responder to");

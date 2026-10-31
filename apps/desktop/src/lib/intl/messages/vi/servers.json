@@ -519,6 +519,18 @@
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
+  "servers.sheet.nfsOtherGids": "ID nhóm khác",
+  "@servers.sheet.nfsOtherGids": {
+    "sourceHash": "f9276b8"
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "Hãy dùng các số ID nhóm, ngăn cách bằng dấu phẩy, như 100, 1001.",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "sourceHash": "a67ce61"
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "NFS gửi được tối đa 16 nhóm khác, còn danh sách này có {count} nhóm.",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "sourceHash": "dc277f3"
+  },
   "servers.sheet.nfsIdentityHelp": "Máy chủ dựa vào các số này để quyết định bạn được mở những gì. NFS không hỏi mật khẩu.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"

@@ -28,16 +28,20 @@ already protocol-serial-correct via its per-transaction `operation_lock`):
 plus a `tokio::sync::Notify`. It owns no device handle and does no I/O, so its ordering is unit-tested with synthetic
 counters (`scheduler.rs` tests).
 
-- `foreground_guard()` (RAII): increments the counter on entry, decrements on drop, and `notify_one`s when it hits zero.
-  Every foreground device op takes one for its whole lifetime (`MtpConnectionManager::foreground_guard(device_id)`).
-- `background_yield_point()`: `while foreground_pending > 0 { drained.notified().await }`. The scan calls it between
-  units. Returns immediately at zero pending, so an idle scan never stalls.
+- `foreground_guard()` (RAII): increments the counter on entry, decrements on drop, and `notify_waiters`es when it hits
+  zero. Every foreground device op takes one for its whole lifetime
+  (`MtpConnectionManager::foreground_guard(device_id)`).
+- `background_yield_point()`: in a loop, registers a `drained.notified()` future (`enable`), returns if the counter is
+  zero, else awaits it. The scan calls it between units. Returns immediately at zero pending, so an idle scan never
+  stalls.
 
-We use `notify_one`, NOT `notify_waiters`: `notify_one` STORES a permit when no waiter is parked, so a foreground drain
-that races the yield point's check-then-await is not lost (the stored permit makes the `.await` return, and the `while`
-re-reads the counter). A leftover permit at most causes one extra wake on a later yield, which re-checks and re-parks —
-never a wrong "proceed", since the loop gates on the counter, not the wake. `notify_waiters` keeps no permit and would
-deadlock on that race.
+**The drain wakes EVERY parked unit, ❌ never `notify_one`.** A walk keeps many listings in flight and each parks here
+on its own, so `notify_one` freed one and left the rest asleep until the next foreground op. On an idle pane that's
+never: the walk froze the moment browsing stopped, and before the clock below stopped counting the wait, those sleepers
+were the healthy folders timing out exactly `LIST_TIMEOUT` after the throttle began (verified on Pixel 9 Pro XL, Android
+17, dev build, the log's `reconciling…` line stopping until the next pane listing, 2026-10-30). `notify_waiters` keeps
+no permit, which is why a unit registers BEFORE reading the counter: a drain after the read reaches the registered
+future, and a drain before it reads as zero. The loop gates on the counter, not the wake, so a stale wake just re-parks.
 
 **Per-unit scan listing (`list_directory_for_scan`).** Splits one folder into bounded UNITS, each a separate device-lock
 acquisition with a yield point between:
@@ -47,6 +51,10 @@ acquisition with a yield point between:
   release/re-acquire.
 - Units 1..n: yield → lock → up to `SCAN_METADATA_BATCH` (32) `listing.next()` calls (each one `GetObjectInfo`) →
   release.
+- The walk's `ScanListingClock` is PAUSED around every yield and every device-lock wait, and runs during each PTP
+  transaction, so the index walk's `LIST_TIMEOUT` counts only time the phone was asked something. Without it, a walk
+  throttled while the user browsed turned dozens of healthy folders into timeouts (#835). ❌ Never pause it around a
+  transaction: that hides the wedge the timeout catches.
 
 **Batch sizing.** Worst-case foreground wait is one in-flight unit = one metadata batch. A `GetObjectInfo` is
 single-digit-to-low-tens of ms over USB, so 32 keeps a unit well under ~1 s while keeping lock-acquire overhead
@@ -141,7 +149,7 @@ resolve fails cleanly, matching the existing per-storage skip.
 only OS lock and always released at a unit boundary — no lock-ordering cycle. Foreground never waits on
 `background_yield_point` (it only raises the counter and contends for the device lock, which the scan holds for ≤ one
 batch). Background always progresses when idle (the yield returns at zero pending) and a parked scan is always woken
-(the last guard drop decrements to zero and `notify_one`s). No priority inversion: the scan yields at every unit
+(the last guard drop decrements to zero and wakes them all). No priority inversion: the scan yields at every unit
 boundary and foreground gets the device after the current in-flight transaction (mtp-rs guarantees it's atomic and
 bounded). The scan's `cancelled` flag is checked at every unit boundary AND threaded into `mtp-rs` per `GetObjectInfo`,
 so a cancel stops within one round trip; heal-to-rescan, freshness, and buffer/replay/overflow are untouched.
@@ -411,14 +419,14 @@ Inserting a reset converts a self-healing situation into a replug.
 **The Galaxy evidence doesn't outweigh that**, even though the reset appeared to help there: the control was never run,
 so spaced reopens alone may well have carried it. Ambiguous evidence on one device loses to a proven kill on another.
 
-**Coverage** (`session_reset.rs` § `device_tests`). `mtp_rs::force_operation_wedge(serial)` (mtp-rs ≥ 0.29.0, feature
-`virtual-device`) arms a one-shot so the next PTP operation returns `DeviceReset`, which is what makes
-`a_wedged_listing_recovers_without_dropping_the_device` a real end-to-end run through Cmdr's own path: an ordinary
-`list_directory` trips it, and the test asserts the whole chain (mapped to `SessionReset`, recovery ran, the volume
-stayed in the sidebar, the disconnect teardown never ran, the caches came back empty, the device serves listings again).
-❌ Don't reach for the older `force_cancel_wedge`: it arms on `cancel_transfer`, which Cmdr never calls. What the
-virtual device CANNOT model is the aftermath: a real session stays dead until a spaced-retry reopen, while the virtual
-one is healthy on the very next call, so the test proves the plumbing, not the timing.
+**Coverage** (`session_reset.rs` § `device_tests`). `mtp_rs::virtual_device::force_operation_wedge(serial)` (mtp-rs ≥
+0.37.0 at this path, feature `virtual-device`) arms a one-shot so the next PTP operation returns `DeviceReset`, which is
+what makes `a_wedged_listing_recovers_without_dropping_the_device` a real end-to-end run through Cmdr's own path: an
+ordinary `list_directory` trips it, and the test asserts the whole chain (mapped to `SessionReset`, recovery ran, the
+volume stayed in the sidebar, the disconnect teardown never ran, the caches came back empty, the device serves listings
+again). ❌ Don't reach for the older `force_cancel_wedge`: it arms on `cancel_transfer`, which Cmdr never calls. What
+the virtual device CANNOT model is the aftermath: a real session stays dead until a spaced-retry reopen, while the
+virtual one is healthy on the very next call, so the test proves the plumbing, not the timing.
 
 **The failing operation is not retried, and reports a RECOVERABLE reason.** `MtpConnectionError::SessionReset` maps to
 `VolumeError::DeviceSessionReset` → the `DeviceReconnecting` listing reason (`Transient`, retry hint) and
@@ -628,3 +636,12 @@ The check covers both trees, so none of them needs watching by hand.
 **The two deliberate exceptions**, both annotated `// allowed-dropping-timeout:`: the device-lock wait
 (`acquire_device_lock` — a `tokio::Mutex`, nothing on the wire) and the event loop's 5 s `next_event()` poll (the
 INTERRUPT endpoint, not the bulk pipe; mtp-rs leaves that transfer pending on drop and picks it up next poll).
+
+## A refused read
+
+`mtp_rs::Error::AccessDenied` folds read-only storage, a write-protected object, and a plain denial into one variant,
+with no direction. A write refused this way stays `StoreReadOnly`; a listing or a byte read goes through
+`map_device_read_error`, which makes it `ReadRefused`, so a folder the phone keeps private (`/Android/data`) reads as
+the phone refusing, never as read-only. The USB-level `ExclusiveAccess` and `PermissionDenied` are about this machine
+reaching the phone: they map to `VolumeError::NotConnected` (`../volume/mapping.rs`), never to a folder refusal. (Found
+by reading the code, 2026-10-30; not reproduced on a phone.)

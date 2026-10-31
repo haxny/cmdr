@@ -5,6 +5,7 @@
     import { getVolumeSpace, DEFAULT_VOLUME_ID, type SpaceInfo } from '#lib/tauri-commands/index.js'
     import type { ConflictResolution, TransferOperationType } from '#lib/file-explorer/types.js'
     import type { ConfirmOptions, TransferConfirmPayload, TransferConfirmer } from '#lib/file-explorer/pane/dialog-props.js'
+    import { isStillConnecting } from '#lib/adb/device-readiness.js'
     import StartInBackgroundButton from '../StartInBackgroundButton.svelte'
     import { isStartInBackgroundKey, swallowHeldKeyRepeat } from '../start-in-background-key'
     import {
@@ -203,7 +204,9 @@
     let rememberConflictChoice = $state(savedConflictPolicy !== null && rememberStartsTicked(savedConflictPolicy))
 
     // Filter to only actual volumes (not favorites)
-    const actualVolumes = $derived(volumes.filter((v) => v.category !== 'favorite' && v.category !== 'network'))
+    const actualVolumes = $derived(
+        volumes.filter((v) => v.category !== 'favorite' && v.category !== 'network' && !isStillConnecting(v)),
+    )
 
     const volumeItems = $derived<SelectItem[]>(actualVolumes.map((v) => ({ value: v.id, label: v.name })))
 

@@ -111,6 +111,23 @@ pub enum PermissionRefusal {
     /// the provider may have paused the account (a usage cap, a billing hold).
     /// One answer covers both, so the advice names both.
     ObjectStoreAccount,
+    /// A phone (ADB, MTP) refused: Android keeps the path for the system and its
+    /// apps. ❌ Never macOS or Finder advice.
+    Phone,
+    /// A connected server (SFTP, WebDAV, NFS, or a mounted SMB/AFP/NFS share) refused
+    /// the account or identity it was connected with. ❌ Never macOS or Finder advice,
+    /// even when the backend carries an errno (NFS's `NFS3ERR_ACCES` is `EACCES`).
+    Server,
+}
+
+impl From<cmdr_fs::volume::RemoteRefuser> for PermissionRefusal {
+    fn from(refuser: cmdr_fs::volume::RemoteRefuser) -> Self {
+        match refuser {
+            cmdr_fs::volume::RemoteRefuser::Phone => Self::Phone,
+            cmdr_fs::volume::RemoteRefuser::Server => Self::Server,
+            cmdr_fs::volume::RemoteRefuser::ObjectStore => Self::ObjectStoreAccount,
+        }
+    }
 }
 
 impl PermissionRefusal {
@@ -450,6 +467,16 @@ pub enum WriteOperationError {
     ConnectionInterrupted {
         path: String,
     },
+    /// The file sits behind a link to another server (a DFS link in an SMB share),
+    /// and nobody has allowed signing in there, so nothing went to it. Opening the
+    /// folder in a pane is where a person can.
+    LinkNeedsConsent {
+        path: String,
+        /// The server the share is on.
+        server: String,
+        /// The other server the link leads to.
+        target: String,
+    },
     /// The connection to a SERVER (SMB, SFTP, WebDAV, S3) ended the operation:
     /// Cmdr waited for it to come back and gave up, or couldn't wait at all.
     /// The connection is the cause; `path` (the file it was on) is context only.
@@ -680,6 +707,7 @@ macro_rules! item_path_of {
             | WriteOperationError::PermissionDenied { path, .. }
             | WriteOperationError::DestinationFull { path }
             | WriteOperationError::ConnectionInterrupted { path }
+            | WriteOperationError::LinkNeedsConsent { path, .. }
             | WriteOperationError::ServerConnectionLost { path, .. }
             | WriteOperationError::ChangedWhileDisconnected { path, .. }
             | WriteOperationError::ReplySignatureRefused { path, .. }
@@ -745,7 +773,11 @@ impl WriteOperationError {
     /// The one way to build [`PermissionDenied`](Self::PermissionDenied).
     ///
     /// It derives `refusal` from `errno`, so no caller can ship a variant whose
-    /// advice contradicts the errno it was built from.
+    /// advice contradicts the errno it was built from. ❗ Except on a mounted network
+    /// share, which has no scheme for [`refused_by`](Self::refused_by) to read: there
+    /// the file server said no, whatever the errno, and Finder's Locked box or this
+    /// Mac's folder permissions are the wrong advice. Costs a `statfs` (and a directory
+    /// read on the share) on a refusal under `/Volumes`, and nothing elsewhere.
     pub fn permission_denied(
         path: String,
         message: String,
@@ -753,25 +785,54 @@ impl WriteOperationError {
         refused_folder: Option<String>,
         side: Option<PermissionSide>,
     ) -> Self {
+        let server_refused = cmdr_fs::tcc_paths::mounted_share_refused(std::path::Path::new(&path));
+        Self::permission_denied_on(path, message, errno, refused_folder, side, server_refused)
+    }
+
+    /// [`permission_denied`](Self::permission_denied) with the mount's answer passed in,
+    /// so a test needs no live share.
+    fn permission_denied_on(
+        path: String,
+        message: String,
+        errno: Option<i32>,
+        refused_folder: Option<String>,
+        side: Option<PermissionSide>,
+        server_refused: bool,
+    ) -> Self {
+        let (refusal, refused_folder) = if server_refused {
+            // No folder: `access(W_OK)` only speaks for this Mac's view of a share.
+            (PermissionRefusal::Server, None)
+        } else {
+            (PermissionRefusal::from_errno(errno), refused_folder)
+        };
         Self::PermissionDenied {
             path,
             message: message.into(),
             errno,
-            refusal: PermissionRefusal::from_errno(errno),
+            refusal,
             refused_folder,
             side,
         }
     }
 
-    /// [`PermissionDenied`](Self::PermissionDenied) from an object store
-    /// account (S3), which carries no errno: the refusal names the account, so
-    /// the advice covers both of its causes (`PermissionRefusal::ObjectStoreAccount`).
-    pub fn object_store_refused(path: String, message: String, side: Option<PermissionSide>) -> Self {
+    /// [`PermissionDenied`](Self::PermissionDenied) from a backend whose own scheme
+    /// says who refused ([`cmdr_fs::volume::refuser_of_path`]). That beats the errno
+    /// for advice: NFS's `EACCES` is the server's, and reading it as this Mac's folder
+    /// permissions would send someone to Finder. The errno still rides for the details
+    /// block. No folder: proving one takes `access(W_OK)`, which only speaks for
+    /// local paths.
+    pub fn refused_by(
+        path: String,
+        message: String,
+        errno: Option<i32>,
+        refuser: cmdr_fs::volume::RemoteRefuser,
+        side: Option<PermissionSide>,
+    ) -> Self {
         Self::PermissionDenied {
             path,
             message: message.into(),
-            errno: None,
-            refusal: PermissionRefusal::ObjectStoreAccount,
+            errno,
+            refusal: refuser.into(),
             refused_folder: None,
             side,
         }
@@ -817,3 +878,6 @@ pub struct OversizedFile {
     pub name: String,
     pub size: u64,
 }
+
+#[cfg(test)]
+mod permission_denied_tests;

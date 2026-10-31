@@ -585,6 +585,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "A név túl hosszú a célhelyhez",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "A célhely nem engedélyezi ezt a nevet",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "A célhely nem tud ilyen hosszú nevet tárolni. Ugord át ezt az elemet, hogy a többivel folytatódjon a művelet, aztán nevezd át, és próbáld újra.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "A célhely nem tudja tárolni ezt a nevet. Lehet, hogy túl hosszú, fenntartott név, vagy olyan karakter van benne, amelyet a célhely nem engedélyez. Ugord át ezt az elemet, hogy a többivel folytatódjon a művelet, aztán nevezd át, és próbáld újra.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "Ha a fájl már létezik: {policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -800,6 +816,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Nincs mit másolni: {total, plural, one {a másolásra váró elem} other {a másolásra váró összes elem ({totalText})}} máshová került vagy törlődött, amíg a művelet a sorára várt.} move {Nincs mit áthelyezni: {total, plural, one {a áthelyezésre váró elem} other {a áthelyezésre váró összes elem ({totalText})}} máshová került vagy törlődött, amíg a művelet a sorára várt.} delete {Nincs mit törölni: {total, plural, one {a törlésre váró elem} other {a törlésre váró összes elem ({totalText})}} máshová került vagy törlődött, amíg a művelet a sorára várt.} trash {Nincs mit a Kukába helyezni: {total, plural, one {a Kukába helyezésre váró elem} other {a Kukába helyezésre váró összes elem ({totalText})}} máshová került vagy törlődött, amíg a művelet a sorára várt.} other {Nincs több teendő: {total, plural, one {a művelethez tartozó elem} other {a művelethez tartozó összes elem ({totalText})}} máshová került vagy törlődött, amíg a művelet a sorára várt.}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "„{name}” már nem volt meg. Valószínűleg egy másik app áthelyezte vagy törölte.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} elem már nem volt meg. Valószínűleg egy másik app áthelyezte vagy törölte.} other {{countText} elem már nem volt meg. Valószínűleg egy másik app áthelyezte vagy törölte őket.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Soha ne jelenjen meg újra",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "Áthelyezed a zárolt elemeket?",
   "@fileOperations.lockedSources.title": {

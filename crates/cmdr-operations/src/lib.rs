@@ -98,6 +98,8 @@ mod create_numbered;
 mod locked_sources;
 mod locked_sources_slot;
 mod queued_sources;
+mod refused_name;
+mod refused_names_latch;
 mod rename;
 mod reversal;
 mod rollback;

@@ -6,6 +6,7 @@
 //! [`SmbVolume::handle_smb_result`]. The `Volume` methods in `volume_impl.rs`
 //! are thin wrappers over these.
 
+use super::dfs_links::{link_bare_stat, link_stat};
 use super::links::stat_through_link;
 use super::mapping::{directory_entry_to_file_entry, file_info_to_file_entry, fs_info_to_space_info};
 use super::session::SessionLease;
@@ -14,7 +15,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::{EntryKind, ListingProgress, SpaceInfo, VolumeError};
 use log::{debug, trace};
-use smb2::client::{Connection, Tree};
+use smb2::DirectoryReader;
 use std::path::Path;
 use std::time::Duration;
 use tokio::runtime::Handle;
@@ -40,26 +41,22 @@ pub(super) enum ListingStop {
     Cancelled,
 }
 
-/// Lists `smb_path` one server batch at a time (smb2's `DirectoryReader`), so a
-/// big folder reports `on_progress` as each batch lands and a `cancel` stops it
-/// between batches. Entries are mapped as they arrive, so the raw smb2 entries
-/// of a 100,000-entry folder are never held at once.
+/// Reads an open listing one server batch at a time (smb2's `DirectoryReader`),
+/// so a big folder reports `on_progress` as each batch lands and a `cancel`
+/// stops it between batches. Entries are mapped as they arrive, so the raw smb2
+/// entries of a 100,000-entry folder are never held at once. The open is the
+/// caller's, so one behind a DFS link can go through the link
+/// (`dfs_links.rs`); the reader owns its connection either way.
 ///
 /// A cancelled reader is closed on `runtime`, so the caller gets its answer
 /// without waiting out the batch in flight and the CLOSE behind it.
 pub(super) async fn read_listing(
-    tree: &Tree,
-    conn: Connection,
-    smb_path: &str,
+    mut reader: DirectoryReader,
     display_path: &str,
     on_progress: Option<&(dyn Fn(ListingProgress) + Sync)>,
     cancel: Option<&CancellationToken>,
     runtime: &Handle,
 ) -> Result<Vec<FileEntry>, ListingStop> {
-    let mut reader = tree
-        .open_directory_reader(conn, smb_path)
-        .await
-        .map_err(ListingStop::Smb)?;
     let mut entries = Vec::new();
     let mut tally = ListingProgress::default();
     loop {
@@ -130,8 +127,21 @@ impl SmbVolume {
         let start = std::time::Instant::now();
 
         let SessionLease { tree, conn, generation } = self.clone_session().await?;
-        let runtime = self.inner.host().runtime();
-        let listed = read_listing(&tree, conn, &smb_path, &display_path, on_progress, cancel, &runtime).await;
+        let opened = self
+            .or_through_link(
+                generation,
+                &smb_path,
+                tree.open_directory_reader(conn, &smb_path),
+                |client, tree, path| Box::pin(client.open_directory_reader(tree, path)),
+            )
+            .await;
+        let listed = match opened {
+            Ok(reader) => {
+                let runtime = self.inner.host().runtime();
+                read_listing(reader, &display_path, on_progress, cancel, &runtime).await
+            }
+            Err(e) => Err(ListingStop::Smb(e)),
+        };
         slow_calls::note(&self.inner.share_name, "list_directory", start.elapsed());
         let entries = match listed {
             Ok(entries) => entries,
@@ -187,7 +197,14 @@ impl SmbVolume {
                 mut conn,
                 generation,
             } = self.clone_session().await?;
-            let r = stat_through_link(&tree, &mut conn, &smb_path).await;
+            let r = self
+                .or_through_link(
+                    generation,
+                    &smb_path,
+                    stat_through_link(&tree, &mut conn, &smb_path),
+                    link_stat,
+                )
+                .await;
             slow_calls::note(&self.inner.share_name, "get_metadata", start.elapsed());
             if let Err(e) = &r
                 && e.status() == Some(smb2::types::status::NtStatus::DELETE_PENDING)
@@ -229,9 +246,12 @@ impl SmbVolume {
             Ok(SessionLease {
                 tree,
                 mut conn,
-                generation: _,
+                generation,
             }) => {
-                let found = tree.stat(&mut conn, &smb_path).await.is_ok();
+                let found = self
+                    .or_through_link(generation, &smb_path, tree.stat(&mut conn, &smb_path), link_bare_stat)
+                    .await
+                    .is_ok();
                 slow_calls::note(&self.inner.share_name, "exists", start.elapsed());
                 found
             }
@@ -253,7 +273,14 @@ impl SmbVolume {
                 mut conn,
                 generation,
             } = self.clone_session().await?;
-            let r = stat_through_link(&tree, &mut conn, &smb_path).await;
+            let r = self
+                .or_through_link(
+                    generation,
+                    &smb_path,
+                    stat_through_link(&tree, &mut conn, &smb_path),
+                    link_stat,
+                )
+                .await;
             slow_calls::note(&self.inner.share_name, "is_directory", start.elapsed());
             self.handle_smb_result("is_directory", &smb_path, generation, r)?
         };
@@ -278,7 +305,9 @@ impl SmbVolume {
             mut conn,
             generation,
         } = self.clone_session().await?;
-        let r = tree.stat(&mut conn, &smb_path).await;
+        let r = self
+            .or_through_link(generation, &smb_path, tree.stat(&mut conn, &smb_path), link_bare_stat)
+            .await;
         slow_calls::note(&self.inner.share_name, "entry_kind", start.elapsed());
         let info = self.handle_smb_result("entry_kind", &smb_path, generation, r)?;
 

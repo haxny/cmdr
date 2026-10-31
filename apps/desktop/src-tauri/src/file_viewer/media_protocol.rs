@@ -1,5 +1,5 @@
 //! The `cmdr-media://` async URI scheme handler: serves the bytes of a token-named
-//! local file to the viewer's `<img>` / `<embed>`.
+//! file to the viewer's `<img>` / `<embed>`.
 //!
 //! Registered once in the `tauri::Builder` chain (see `lib.rs`); the registration runs
 //! before any window exists, which is correct because `viewer-*` windows are created
@@ -9,7 +9,8 @@
 //! [`super::media`]). The handler resolves the token to a [`super::media::MediaEntry`];
 //! an unknown token is a **404**, so there's no way to name an arbitrary file. A
 //! deferred token (an image in a Markdown document) first fetches its file under a stall
-//! rule ([`fetch_deferred`]), then serves it the same way.
+//! rule ([`fetch_deferred`]), then serves it the same way. A volume token reads by
+//! position through its session's source ([`serve_volume`]), under a stall rule too.
 //!
 //! The handler is a **thin shell over pure functions** ([`parse_token_from_uri`],
 //! [`resolve_range`], the `Content-Type` from the entry) so the testable logic lives
@@ -32,8 +33,10 @@ use std::time::Duration;
 
 use cmdr_fs::deadline::{StallWatch, blocking_typed_result_until_stalled};
 use tauri::http::{Request, Response, StatusCode, header};
+use tauri_specta::Event as _;
 
 use super::media::{DeferredMedia, MediaEntry, MediaSource, resolve_token};
+use super::media_volume::{MediaLoadStage, MediaReadFailure, ReadProgress, ReadWatch, ViewerMediaLoad, VolumeMedia};
 
 /// The scheme name registered with Tauri. The frontend builds URLs as
 /// `cmdr-media://localhost/<token>` (macOS/Linux origin shape).
@@ -203,35 +206,42 @@ fn build_response(entry: &MediaEntry, range_header: Option<String>) -> Response<
     };
 
     match resolve_range(range_header.as_deref(), total) {
-        RangeOutcome::Unsatisfiable { total } => Response::builder()
-            .status(StatusCode::RANGE_NOT_SATISFIABLE)
-            .header(header::CONTENT_RANGE, format!("bytes */{total}"))
-            .header(header::ACCEPT_RANGES, "bytes")
-            .body(Vec::new())
-            .unwrap_or_else(|_| not_found()),
+        RangeOutcome::Unsatisfiable { total } => unsatisfiable(total),
         RangeOutcome::Serve(range) => match read_byte_range(&entry.canonical_path, &range) {
-            Ok(body) => {
-                let status = if range.is_partial {
-                    StatusCode::PARTIAL_CONTENT
-                } else {
-                    StatusCode::OK
-                };
-                let mut builder = Response::builder()
-                    .status(status)
-                    .header(header::CONTENT_TYPE, &entry.mime)
-                    .header(header::ACCEPT_RANGES, "bytes")
-                    .header(header::CONTENT_LENGTH, body.len().to_string());
-                if range.is_partial {
-                    builder = builder.header(
-                        header::CONTENT_RANGE,
-                        format!("bytes {}-{}/{}", range.start, range.end, range.total),
-                    );
-                }
-                builder.body(body).unwrap_or_else(|_| not_found())
-            }
+            Ok(body) => with_body(&entry.mime, &range, body),
             Err(_) => not_found(),
         },
     }
+}
+
+fn unsatisfiable(total: u64) -> Response<Vec<u8>> {
+    Response::builder()
+        .status(StatusCode::RANGE_NOT_SATISFIABLE)
+        .header(header::CONTENT_RANGE, format!("bytes */{total}"))
+        .header(header::ACCEPT_RANGES, "bytes")
+        .body(Vec::new())
+        .unwrap_or_else(|_| not_found())
+}
+
+/// The 200 or 206 for a body read for `range`.
+fn with_body(mime: &str, range: &ResolvedRange, body: Vec<u8>) -> Response<Vec<u8>> {
+    let status = if range.is_partial {
+        StatusCode::PARTIAL_CONTENT
+    } else {
+        StatusCode::OK
+    };
+    let mut builder = Response::builder()
+        .status(status)
+        .header(header::CONTENT_TYPE, mime)
+        .header(header::ACCEPT_RANGES, "bytes")
+        .header(header::CONTENT_LENGTH, body.len().to_string());
+    if range.is_partial {
+        builder = builder.header(
+            header::CONTENT_RANGE,
+            format!("bytes {}-{}/{}", range.start, range.end, range.total),
+        );
+    }
+    builder.body(body).unwrap_or_else(|_| not_found())
 }
 
 fn not_found() -> Response<Vec<u8>> {
@@ -248,10 +258,11 @@ fn timed_out() -> Response<Vec<u8>> {
         .unwrap_or_else(|_| Response::new(Vec::new()))
 }
 
-/// How long a deferred fetch may go without progress before its request answers 504.
-/// The viewer's pull rule (`commands::file_viewer::PULL_STALL_LIMIT`), for the same
-/// reason: above every volume's own read timeout, so a dead connection answers first.
-const DEFERRED_STALL_LIMIT: Duration = Duration::from_secs(45);
+/// How long a fetch or a read from a volume may go without progress before its request
+/// answers 504. The viewer's pull rule (`commands::file_viewer::PULL_STALL_LIMIT`), for
+/// the same reason: above every volume's own read timeout, so a dead connection answers
+/// first.
+const VOLUME_STALL_LIMIT: Duration = Duration::from_secs(45);
 
 /// Why a deferred fetch produced nothing to serve.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -304,11 +315,74 @@ pub(super) async fn fetch_deferred(
     .await
 }
 
+/// Serves `range_header` of a volume token's file: read by position on a blocking thread
+/// with no total deadline, only `stall_limit` without a byte, telling `emit` as it goes.
+/// A closed session's read answers 404 and tells nobody.
+pub(crate) async fn serve_volume(
+    media: Arc<VolumeMedia>,
+    token: String,
+    range_header: Option<String>,
+    stall_limit: Duration,
+    mut emit: impl FnMut(ViewerMediaLoad) + Send,
+) -> Response<Vec<u8>> {
+    let range = match resolve_range(range_header.as_deref(), media.total_bytes()) {
+        RangeOutcome::Unsatisfiable { total } => return unsatisfiable(total),
+        RangeOutcome::Serve(range) => range,
+    };
+    let mime = media.mime().to_string();
+    let progress = Arc::new(ReadProgress::new());
+    let bytes_total = range.len();
+    let mut watch = ReadWatch {
+        progress: Arc::clone(&progress),
+        bytes_total,
+        token: token.clone(),
+        emit: &mut emit,
+        last_emitted: None,
+    };
+    let read_progress = Arc::clone(&progress);
+    let start = range.start;
+    let outcome = blocking_typed_result_until_stalled(
+        stall_limit,
+        &mut watch,
+        |_join_failure| MediaReadFailure::Unreadable,
+        move || media.read(start, bytes_total, &read_progress),
+    )
+    .await;
+    let mut report = |stage| {
+        emit(ViewerMediaLoad {
+            token: token.clone(),
+            stage,
+            bytes_done: progress.done(),
+            bytes_total,
+        });
+    };
+    match outcome {
+        Ok(body) => {
+            report(MediaLoadStage::Done);
+            with_body(&mime, &range, body)
+        }
+        Err(MediaReadFailure::Closed) => not_found(),
+        Err(MediaReadFailure::Stalled) => {
+            report(MediaLoadStage::Failed);
+            timed_out()
+        }
+        Err(MediaReadFailure::Unreadable) => {
+            report(MediaLoadStage::Failed);
+            not_found()
+        }
+    }
+}
+
 /// The Tauri async URI scheme handler. Thin shell: resolve the token, then run the
 /// blocking read under its own timeout off the IPC thread, and respond.
 ///
 /// Registered via `register_asynchronous_uri_scheme_protocol(SCHEME, handle_request)`.
-pub fn handle_request(request: Request<Vec<u8>>, responder: tauri::UriSchemeResponder) {
+pub fn handle_request(
+    app: tauri::AppHandle,
+    window: String,
+    request: Request<Vec<u8>>,
+    responder: tauri::UriSchemeResponder,
+) {
     let token = parse_token_from_uri(request.uri().path()).map(str::to_string);
     let range_header = request
         .headers()
@@ -330,8 +404,16 @@ pub fn handle_request(request: Request<Vec<u8>>, responder: tauri::UriSchemeResp
     // response, so it can't reuse the command layer's timeout helpers.
     tauri::async_runtime::spawn(async move {
         let entry = match source {
+            MediaSource::Volume(media) => {
+                let emit = move |load: ViewerMediaLoad| {
+                    // Best-effort: a window that closed mid-read has no one left to tell.
+                    let _ = load.emit_to(&app, window.as_str());
+                };
+                responder.respond(serve_volume(media, token, range_header, VOLUME_STALL_LIMIT, emit).await);
+                return;
+            }
             MediaSource::Ready(entry) => entry,
-            MediaSource::Deferred(deferred) => match fetch_deferred(deferred, DEFERRED_STALL_LIMIT).await {
+            MediaSource::Deferred(deferred) => match fetch_deferred(deferred, VOLUME_STALL_LIMIT).await {
                 Ok(entry) => entry,
                 Err(failure) => {
                     responder.respond(failure.response());

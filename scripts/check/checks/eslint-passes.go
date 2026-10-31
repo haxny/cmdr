@@ -35,19 +35,22 @@ func appESLintPasses(ci bool) []eslintPass {
 	return []eslintPass{{args: append([]string{"."}, safeFixArgs...), noTypecheck: true}, check}
 }
 
-// nonTypeAwareESLintPasses plans the desktop's fast lane: the config minus its type-aware rules,
-// auto-fixed locally.
-func nonTypeAwareESLintPasses(ci bool) []eslintPass {
-	if ci {
-		return []eslintPass{{args: []string{"."}, noTypecheck: true}}
-	}
-	return []eslintPass{{args: append([]string{"."}, safeFixArgs...), noTypecheck: true}}
-}
-
-// typeAwareESLintPasses plans one of the desktop's type-aware lanes over scopeArgs: check-only in
-// every mode, since the fast lane already auto-fixes everything that's safe to.
+// typeAwareESLintPasses plans the verdict of one of the desktop's two type-aware lanes over
+// scopeArgs: the full config, check-only in every mode. The two scopes partition `eslint .`, so
+// together they cover everything the config minus its type-aware rules would.
 func typeAwareESLintPasses(scopeArgs []string) []eslintPass {
 	return []eslintPass{{args: append([]string{}, scopeArgs...)}}
+}
+
+// typeAwareFixPasses plans what a desktop type-aware lane runs when its verdict is red on a local
+// run: a fix pass without type information over the lane's own scope (so the Svelte and
+// TypeScript lanes, running in parallel, never fix the same file), after which the lane re-runs
+// its verdict. Running it only on red keeps a green run at one ESLint invocation. CI never fixes.
+func typeAwareFixPasses(scopeArgs []string, ci bool) []eslintPass {
+	if ci {
+		return nil
+	}
+	return []eslintPass{{args: append(append([]string{}, scopeArgs...), safeFixArgs...), noTypecheck: true}}
 }
 
 // runESLintPasses runs every pass in order in dir. The final pass is the verdict: a fix pass exits

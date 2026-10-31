@@ -584,6 +584,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Nombre demasiado largo para el destino",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Nombre no permitido en el destino",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "El destino no puede guardar un nombre tan largo. Omite este elemento para seguir con el resto; después, renómbralo e inténtalo de nuevo.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "El destino no puede guardar este nombre. Puede que sea demasiado largo, que sea un nombre reservado o que use un carácter que el destino no permite. Omite este elemento para seguir con el resto; después, renómbralo e inténtalo de nuevo.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "Si un archivo ya existe: {policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -799,6 +815,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {No queda nada que copiar: {total, plural, one {el elemento que esta copia tenía pendiente se ha movido o eliminado} many {todos los {totalText} elementos que esta copia tenía pendientes se han movido o eliminado} other {todos los {totalText} elementos que esta copia tenía pendientes se han movido o eliminado}} mientras esperaba su turno.} move {No queda nada que mover: {total, plural, one {el elemento que este movimiento tenía pendiente se ha movido o eliminado} many {todos los {totalText} elementos que este movimiento tenía pendientes se han movido o eliminado} other {todos los {totalText} elementos que este movimiento tenía pendientes se han movido o eliminado}} mientras esperaba su turno.} delete {No queda nada que eliminar: {total, plural, one {el elemento que esta eliminación tenía pendiente se ha movido o eliminado} many {todos los {totalText} elementos que esta eliminación tenía pendientes se han movido o eliminado} other {todos los {totalText} elementos que esta eliminación tenía pendientes se han movido o eliminado}} mientras esperaba su turno.} trash {No queda nada que mover a la papelera: {total, plural, one {el elemento que este movimiento a la papelera tenía pendiente se ha movido o eliminado} many {todos los {totalText} elementos que este movimiento a la papelera tenía pendientes se han movido o eliminado} other {todos los {totalText} elementos que este movimiento a la papelera tenía pendientes se han movido o eliminado}} mientras esperaba su turno.} other {No queda nada que hacer: {total, plural, one {el elemento que esta operación tenía pendiente se ha movido o eliminado} many {todos los {totalText} elementos que esta operación tenía pendientes se han movido o eliminado} other {todos los {totalText} elementos que esta operación tenía pendientes se han movido o eliminado}} mientras esperaba su turno.}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "“{name}” ya no estaba. Seguramente se ha movido o eliminado desde otra app.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} elemento ya no estaba. Seguramente se ha movido o eliminado desde otra app.} many {{countText} elementos ya no estaban. Seguramente se han movido o eliminado desde otra app.} other {{countText} elementos ya no estaban. Seguramente se han movido o eliminado desde otra app.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "No volver a mostrar",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "¿Mover elementos bloqueados?",
   "@fileOperations.lockedSources.title": {

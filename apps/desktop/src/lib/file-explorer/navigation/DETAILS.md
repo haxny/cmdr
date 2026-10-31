@@ -556,6 +556,18 @@ through one `detachButton` snippet, and its words, glyph, and three states (ejec
 compiling until it has words for it. Backend classification and the variant list:
 `src-tauri/src/file_system/volume/DETAILS.md`; the whole error-path map is `docs/guides/error-handling.md`.
 
+**Eject and Eject all** (`src-tauri/src/file_system/volume/DETAILS.md` § "How far an eject reaches"). A row whose
+`sharesDiskWithOthers` is set gets "Eject all" under its Eject, in the row menu (`row-menu.ts`) and the breadcrumb's
+native menu, plus a tooltip on each saying what stays. The inline button stays plain Eject. `ejectAndSay` /
+`ejectAllAndSay` (`detach-volume.ts`) are the two doors every surface goes through. One success has words:
+`volumeEjectedDiskStays` toasts "keep the drive plugged in", since the row leaving the list otherwise reads as safe to
+unplug. Eject all's refusal picks its lead-in from the variant: `heldBeforeEject` says nothing was ejected, and anything
+else says it couldn't eject everything, which may mean some volumes went.
+
+**"Send error report…" isn't on every refusal** (`ejectRefusalReport`). It stays where something may really be broken:
+Cmdr held the drive (its sentence asks for one), the scan named nobody, and what nothing classifies. A refusal that
+names a holder, or a known cause like a running transfer, isn't a bug, and offering a report read as if it were.
+
 #### A refused unmount names who held the drive
 
 `unmountRefused` carries `holders`, a `HolderScan` of the processes the backend found holding the drive
@@ -579,9 +591,10 @@ runs most-actionable first over `holders.named`:
 6. **A `complete` scan that named nobody** → `errors.eject.unmountRefusedBySystem`, the same "wait" as rule 4. The walk
    sees same-uid processes only, so a refusal it can't name came from a holder it can't see, almost always a root
    daemon: ERR-ZPABB was `diskutil` naming a launchd child (likely `syspolicyd` scanning a freshly mounted DMG) while
-   the scan found nobody. The other ways to land here (a holder that let go before the scan ran, a memory-map-only
-   holder) are served by "wait, then try again" too. Naming the daemon itself is the deferred DiskArbitration teardown
-   (GitHub [#249](https://github.com/vdavid/cmdr/issues/249)).
+   the scan found nobody. A `diskimagesiod` is the exception: it's invisible to the walk too, but the backend names its
+   image as a `DiskImage` holder, so that refusal reads rule 2. The other ways to land here (a holder that let go before
+   the scan ran, a memory-map-only holder) are served by "wait, then try again" too. Naming the daemon itself is the
+   deferred DiskArbitration teardown (GitHub [#249](https://github.com/vdavid/cmdr/issues/249)).
 7. Otherwise (an `incomplete` scan that named nobody) the unnamed `errors.eject.unmountRefused` line.
 
 ❗ **`Unclassified` is worded as a PROCESS, ❌ never an app or a tool.** It means "named, but nothing said what kind"
@@ -590,11 +603,15 @@ about what a person should go and close. The sentence says outright that it's on
 `System`, `Cmdr`, and `DiskImage` because each of those carries more advice than a cryptic name does. These are RAW
 `errors.*` values (no ICU), so singular and plural are two keys, like the app pair.
 
-❗ **Every refusal sentence names neither the volume kind nor the verb** ("…still has files open there. Close them, then
-try again."). The same sentence follows both `fileExplorer.pane.ejectFailedToast` ("Couldn't eject {volumeName}: …", any
-detachable kind, shares and phones included) and `disconnectFailedToast` ("Couldn't disconnect: …", the SMB reconnect
-view, whose holder scan runs on the share's mount path), and the prefix already says both. "This drive" or "eject again"
-would read wrong after a share's disconnect.
+**The sentences say "using something there", ❌ never "has files open"**: the walk can't tell an open file from a shell
+`cd`'d into the folder, and calling that shell's terminal a holder of open files sent people hunting for a file (GitHub
+#839).
+
+❗ **Every refusal sentence names neither the volume kind nor the verb** ("…is still using something there. Close it,
+then try again."). The same sentence follows both `fileExplorer.pane.ejectFailedToast` ("Couldn't eject {volumeName}:
+…", any detachable kind, shares and phones included) and `disconnectFailedToast` ("Couldn't disconnect: …", the SMB
+reconnect view, whose holder scan runs on the share's mount path), and the prefix already says both. "This drive" or
+"eject again" would read wrong after a share's disconnect.
 
 ❗ **The two `HolderScan` arms word the same while they carry names, and neither ever says the drive is free.**
 `Incomplete` means the scan couldn't cover every mount, so its names are worth saying while its emptiness says nothing
@@ -951,7 +968,8 @@ Gotchas for the four other places that name has to match, one of which is Rust.
 1. Favorites: no checkmark shown even if current path is a favorite
 2. main_volume + attached_volume: merged into one group
 3. Cloud drives
-4. Mobile (MTP) devices: filtered from unified volume list (`category === 'mobile_device'`)
+4. Mobile devices: filtered from unified volume list (`category === 'mobile_device'`), minus an ADB row that can't be
+   used yet while the same phone has an MTP row (`deviceRowDefersToMtpTwin`, `#lib/adb/DETAILS.md`)
 5. Network: always includes the synthetic `'network'` hub row (`smb://`, labelled "Servers") plus any mounted SMB shares
    and every SFTP or WebDAV place the listing carried. ❗ The row is there whatever `network.enabled` says, and opening
    it always navigates. That switch gates mDNS discovery and SMB, which is what the macOS Local Network permission is
@@ -1000,6 +1018,13 @@ are removed from there, so the switcher's unpin has nothing to say about them.
 
 Reactive state machine for fetching, retrying, and caching disk space info per volume. Created via
 `createVolumeSpaceManager()` (functional factory, no classes).
+
+The switcher's rows read this one-shot fetch on open, ❌ not `volume-space-changed`: the poller only watches what a pane
+stands on. A phone that isn't `ready` isn't asked, and `spaceRefreshKey` re-asks when it turns ready, since its id
+stays.
+
+A phone's row (`category === 'mobile_device'`) shows the figure or nothing: no dashed bar, spinner, or "Unavailable",
+which read as broken on a phone that's only waiting for its Allow tap. Everything below is every other volume's.
 
 `getVolumeSpace()` returns `TimedOut<T>` wrappers. The manager tracks timeout state and exposes reactive sets for the
 component to render inline indicators (no toasts):

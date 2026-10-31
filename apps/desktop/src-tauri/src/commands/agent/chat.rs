@@ -425,6 +425,7 @@ async fn drive_turn(
         offset,
         tx,
         cancel,
+        run,
     );
     let (_, result) = tokio::join!(forward, drive);
     if let Err(e) = result {

@@ -2,7 +2,7 @@
 
 ## Why this crate looks the way it does
 
-- **One shared crate, not a `fuzz/` per crate.** Nine targets across five crates plus three app decoders share one
+- **One shared crate, not a `fuzz/` per crate.** Ten targets across five crates plus three app decoders share one
   instrumented build (one `target/`, one lock, one CI cache). Per-crate dirs would build the common dependency graph
   (tokio, quick-xml, the codecs) once per crate.
 - **Outside the workspace** (`[workspace]` in its own `Cargo.toml`): the sanitizer build needs nightly flags no other
@@ -16,7 +16,12 @@
 
 ## Targets
 
-- `adb_sync`: `SyncSession` stat, listing, and pull against device-chosen bytes; first byte picks v1/v2 verbs.
+- `adb_sync`: `SyncSession` stat, listing, and pull against device-chosen bytes; first byte picks v1/v2 verbs and the
+  compressed pull.
+- `adb_lz4`: the frame reader behind a compressed pull, on its own so a mutation doesn't have to survive a stat and a
+  listing first; the first byte picks the packet size, and a chunk past `MAX_DATA_CHUNK` panics. Seeds: `liblz4`'s
+  linked frame (`crates/cmdr-adb/src/testing/liblz4_frame.bin`), plus stored, independent, checksummed, and 4 MiB-block
+  ones.
 - `adb_shell`: shell v2 frames, bounded and unbounded, then `parse_df_k` on stdout.
 - `webdav_propfind`: `parse_multistatus` (namespaces, entities, hrefs, RFC 3339 and HTTP dates).
 - `s3_xml`: every S3 response parser over one body (`xml::parse_tree` plus the per-document readers).

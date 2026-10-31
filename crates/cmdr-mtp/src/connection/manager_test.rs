@@ -24,6 +24,28 @@ fn detached_manager() -> Arc<MtpConnectionManager> {
     )
 }
 
+/// `mtp_rs::Error::AccessDenied` doesn't say read or write, so the read path says it:
+/// a folder the phone keeps private is a refused read, ❌ never "read-only" storage.
+#[test]
+fn a_read_answered_access_denied_is_a_refused_read() {
+    let mapped = detached_manager().map_device_read_error(mtp_rs::Error::AccessDenied, "mtp-1", "Android/data");
+    assert!(
+        matches!(&mapped, super::MtpConnectionError::ReadRefused { device_id, path }
+            if device_id == "mtp-1" && path == "Android/data"),
+        "got {mapped:?}"
+    );
+}
+
+/// Every other answer to a read classifies as it does for anything else.
+#[test]
+fn a_read_answered_anything_else_classifies_as_usual() {
+    let mapped = detached_manager().map_device_read_error(mtp_rs::Error::Disconnected, "mtp-1", "DCIM");
+    assert!(
+        matches!(mapped, super::MtpConnectionError::Disconnected { .. }),
+        "got {mapped:?}"
+    );
+}
+
 /// A manager nobody has told anything has to be ON. The app pushes the
 /// persisted setting in at startup, and a manager that started out refusing
 /// would drop a session-reset recovery in the window before that push, which

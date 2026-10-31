@@ -10,6 +10,7 @@
 
 import type {
   ArchiveNameRefusal,
+  FilesystemKind,
   ItemKinds,
   MountedVolumeAction,
   NamedLeavesRefusal,
@@ -170,10 +171,18 @@ export type UnwritableReason = 'readOnlyFilesystem' | 'noPermission' | 'unexplai
  * rights change nothing, so the advice has to be different. `unclassified` is a
  * backend that words its own refusals (MTP, SMB) or an errno outside the two.
  * `objectStoreAccount` is an S3 account refusing: its keys, or a provider that
- * paused it (a usage cap, a billing hold), which one answer covers. The
- * backend derives it from the errno and the frontend ❌ never re-derives one.
+ * paused it (a usage cap, a billing hold), which one answer covers. `phone` and
+ * `server` are a phone or a connected server (a mounted share included) refusing,
+ * whose advice can't mention this Mac. The backend derives it from the errno, the
+ * path's scheme, and the mount, and the frontend ❌ never re-derives one.
  */
-export type PermissionRefusal = 'folderPermissions' | 'systemProtected' | 'unclassified' | 'objectStoreAccount'
+export type PermissionRefusal =
+  | 'folderPermissions'
+  | 'systemProtected'
+  | 'unclassified'
+  | 'objectStoreAccount'
+  | 'phone'
+  | 'server'
 
 /** Error types for write operations (discriminated union). */
 export type WriteOperationError =
@@ -247,6 +256,7 @@ export type WriteOperationError =
   | { type: 'file_locked'; path: string }
   | { type: 'trash_not_supported'; path: string }
   | { type: 'connection_interrupted'; path: string }
+  | { type: 'link_needs_consent'; path: string; server: string; target: string }
   // The connection to a SERVER (SMB, SFTP, WebDAV, S3) ended the operation, as the
   // backend's outage wait saw it: the connection is the cause, `path` (the file it was
   // on) only context. `gaveUpAfterSecs` is how long Cmdr waited, `null` when it didn't
@@ -269,8 +279,8 @@ export type WriteOperationError =
   | { type: 'source_changed'; path: string }
   | {
       type: 'files_too_large_for_filesystem'
-      /** The destination filesystem kind (snake_case tag, e.g. 'fat32'). */
-      filesystem: string
+      /** The destination filesystem, so the message can name it ("FAT32"). */
+      filesystem: FilesystemKind
       maxSize: number
       files: OversizedFile[]
       totalCount: number

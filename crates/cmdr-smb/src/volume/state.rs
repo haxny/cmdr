@@ -54,6 +54,33 @@ impl SessionGeneration {
     }
 }
 
+/// Which installed transfer session a call ran on (`transfer_session.rs`), so a
+/// loss from one a reconnect already replaced moves nothing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct TransferGeneration(u64);
+
+impl TransferGeneration {
+    pub(super) fn new(count: u64) -> Self {
+        Self(count)
+    }
+}
+
+/// Which session a call ran on: what the error funnel needs to mark the right
+/// one lost (`SmbVolumeInner::note_error`). A transfer session's loss ❌ never
+/// moves the main session's state: the share is still up, and the transfer's
+/// retry rides the main session while the transfer session reconnects.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum RanOn {
+    Main(SessionGeneration),
+    Transfer(TransferGeneration),
+}
+
+impl From<SessionGeneration> for RanOn {
+    fn from(generation: SessionGeneration) -> Self {
+        Self::Main(generation)
+    }
+}
+
 /// The share's connection state and the generation of its installed session, in
 /// ONE atomic, so a transition can check which session it's about and act in the
 /// same step.
@@ -285,6 +312,23 @@ impl SmbVolumeInner {
             self.transition_to_disconnected(ran_on);
         }
         ends
+    }
+
+    /// [`note_smb_error`](Self::note_smb_error) for a call on EITHER session: a
+    /// transfer session's loss marks only that one lost (`transfer_session.rs`),
+    /// and the share stays `Direct`.
+    pub(super) fn note_error(&self, ran_on: RanOn, err: &smb2::Error) -> bool {
+        match ran_on {
+            RanOn::Main(generation) => self.note_smb_error(generation, err),
+            RanOn::Transfer(generation) => {
+                super::session::report_security_refusal(&self.host, &self.volume_id, err);
+                let ends = ends_the_session(err);
+                if ends {
+                    self.transfer.lose(generation);
+                }
+                ends
+            }
+        }
     }
 
     /// Marks session `ran_on` lost, and emits `volume-connection-changed` if

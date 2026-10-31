@@ -1,6 +1,7 @@
 //! The preflight engine: what blocks a row, what only warns, and how it reads a rename
 //! graph. All of it runs over an in-memory proposal, so nothing here needs a store.
 
+use super::super::check::{CheckTally, RenameChecks};
 use super::super::preflight::{
     allowed_rows, initial_rows, mark_cycle_warnings, mark_duplicate_destinations, preflight_local, rename_warnings,
 };
@@ -58,7 +59,8 @@ fn extension_warnings_cover_changes_additions_removals_and_filename_edges() {
         ("README", "README.md"),
         (".env", ".env.txt"),
         ("archive.tar.gz", "archive.tar.zip"),
-        ("trailing.", "trailing"),
+        // `tar.gz` is one extension (`cmdr_fs::file_extension`), so this is a format change.
+        ("archive.tar.gz", "renamed.gz"),
     ] {
         assert_eq!(
             rename_warnings(source, destination),
@@ -71,7 +73,10 @@ fn extension_warnings_cover_changes_additions_removals_and_filename_edges() {
         ("photo.png", "renamed.png"),
         ("photo.PNG", "renamed.png"),
         (".env", ".config"),
-        ("archive.tar.gz", "renamed.gz"),
+        // Neither side has an extension: a trailing dot isn't one, and a dot
+        // followed by words is part of the name.
+        ("trailing.", "trailing"),
+        ("Smlouva v. 2 final", "Smlouva v. 3 final"),
     ] {
         assert!(
             rename_warnings(source, destination).is_empty(),
@@ -95,7 +100,7 @@ fn local_preflight_blocks_a_source_that_no_longer_exists() {
         )],
     };
 
-    let outcome = preflight_local(&proposal, &["row".into()]);
+    let outcome = preflight_local(&proposal, &["row".into()], &CheckTally::default()).expect("nothing stopped it");
 
     assert_eq!(outcome.status, BulkRenamePreflightStatus::Blocked);
     assert_eq!(
@@ -103,6 +108,23 @@ fn local_preflight_blocks_a_source_that_no_longer_exists() {
         Some(BulkRenameBlockReason::SourceMissing)
     );
     assert!(outcome.fingerprints.is_empty());
+}
+
+/// A stopped check answers nothing about its rows, ❌ never a partial list that reads as "these
+/// were fine": everything apply trusts comes from an outcome that saw every allowed row.
+#[test]
+fn a_check_stopped_before_its_first_row_answers_nothing() {
+    let proposal = RenameProposal {
+        proposal_id: "proposal".into(),
+        revision: 0,
+        volume_id: "root".into(),
+        rows: vec![proposal_row("row", "/definitely/not/there.png", "renamed.png")],
+    };
+    let checks = RenameChecks::default();
+    let running = checks.begin("proposal");
+    assert!(checks.cancel("proposal"));
+
+    assert!(preflight_local(&proposal, &["row".into()], &running.tally).is_none());
 }
 
 #[test]

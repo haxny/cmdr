@@ -347,10 +347,13 @@ which rides `TurnParams.call` into every `respond` of the turn.
   documented one (Anthropic high, OpenAI Responses medium), else none (Gemini thinks dynamically). A local model, and
   a model nothing knows, offer Recommended only; a model known not to reason gets no picker.
 - **`resolve_effort`**: Recommended sends `ProviderDefault`, the one value safe everywhere. A pick the model can't take
-  maps to the nearest level it can (ties to the cheaper; Off without an off switch to the cheapest; no known levels to
-  Recommended), and `session.rs` logs the mapping. ❌ Never send an explicit level the options don't list: it's a 400.
+  maps to the nearest level it can (ties to the cheaper; no known levels to Recommended), and `session.rs` logs the
+  mapping. ❌ Never send an explicit level the options don't list: it's a 400.
+- **No Off for users** (David, 2026-10-28, #770): thinking stays on, so `EffortChoice` has no Off and a stored `"off"`
+  from an older build parses as Recommended. `ReasoningEffort::Off` and its genai mapping stay for Cmdr's own internal
+  calls, sent only where `EffortOptions::can_turn_off` says the model can stop (no such call exists yet).
 - **`reply_room`**: thinking spends the reply's `max_tokens`, so the ceiling grows with the level: 12,000
-  (`AGENT_MAX_OUTPUT_TOKENS`, Off / Low / unknown), 16,000 Medium, 32,000 High, 64,000 Max, capped at the model's
+  (`AGENT_MAX_OUTPUT_TOKENS`, Low / unknown), 16,000 Medium, 32,000 High, 64,000 Max, capped at the model's
   reported `max_output_tokens`. Recommended sizes for what the provider will do (Claude's default is high, so 32,000).
   Decision/Why: at a flat 12,000, a High or Max think could hit `MaxTokens` before the tool call and end the turn
   unfinished; a ceiling is not a charge, the provider bills what the model writes.
@@ -664,7 +667,13 @@ state is unambiguous:
 - **(d)** cost is metered per completed `End` via `store::record_cost`, so completed turns
   count once, never double, never lost. Pricing is a per-model table (`pricing.rs`): a local
   model is free + priced, a known cloud model is estimated + priced, and an unknown cloud model
-  records tokens with `priced = false` (cost "unknown", never a silent $0 — spec §2.4).
+  records tokens with `priced = false` (cost "unknown", never a silent $0 — spec §2.4). The
+  prompt's cached share prices at the cache rates: reads at the model's discount (Claude 0.1x
+  of input, 0.05x on Opus and Sonnet 5.5; OpenAI's published cached rate), writes at the
+  surcharge where there is one (Claude 1.25x, GPT-5.6+'s 30-minute rate), and
+  `cache_read_tokens` / `cache_write_tokens` land in the meter beside the totals. `meter_cost`
+  logs each call's split at debug (`agent::chat` target), the quickest proof the cache works.
+  An OpenRouter id (`anthropic/claude-sonnet-5.5`) prices off its maker's table.
 
 `TurnResult` (`Answered` / `Failed(kind)` / `Cancelled`) is the caller's bookkeeping; the
 `AgentChatEvent`s already told the frontend everything.
@@ -804,9 +813,11 @@ leave a token for the next turn on the same thread to be stopped by.
 mark: the thread's last `seq` when the turn took the single-flight lock (`store::last_seq`, `-1`
 for an empty thread). `ChatRuntime::send_message` and `wake` set it right after acquiring the lock
 and drop it before releasing it, so at most one mark per thread exists and it is always the
-running turn's. `turn_in_flight_since_seq(id)` reads it: rows after the mark belong to the
-running turn, which is how a reload tells that turn's result-less calls (still running) from a
-crashed turn's (settled, no answer recorded).
+running turn's. The mark also names the turn's run. `turn_in_flight(id)` reads both: rows after
+the mark belong to the running turn, which is how a reload tells that turn's result-less calls
+(still running) from a crashed turn's (settled, no answer recorded), and the run
+(`ConversationDetailView.turn_in_flight_run`) is how a reloaded rail's Stop knows which terminal
+is its own before the turn says anything more (#802).
 
 ### Stop reaches every tool call
 
@@ -903,7 +914,7 @@ what the live one did: the same `tools::line` functions over the stored argument
   `turn_id` comes from `store::turn_opener_at`, since it is projected alone.
 - **One stats rule**: the turn's stats ride its LAST assistant view, from its `TurnFinished` row,
   else rebuilt from its rows (every result row a call, tokens summed per row, `wall_ms: None`).
-  The turn holding rows after `turn_in_flight_since_seq` gets no rebuilt stats: it is still
+  The turn holding rows after the in-flight mark gets no rebuilt stats: it is still
   running, and the live terminal event brings them. The mark is read BEFORE the rows, so a turn
   ending in between reads as running for one load, never as settled with its last results
   missing.

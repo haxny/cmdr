@@ -73,8 +73,7 @@
     "description": "For screen readers only (never shown): what the pane says when the keyboard arrives in a folder with nothing in it, as in “Left pane, Downloads, empty folder”. Same moment as fileExplorer.pane.location, which it wraps.",
     "placeholders": {
       "location": "the pane and folder, already worded by fileExplorer.pane.location (e.g. Left pane, Downloads)"
-    },
-    "screenshot": "transfer-dialog.png"
+    }
   },
   "fileExplorer.pane.selectedCount": "{count, plural, =0 {Nothing selected} one {{countText} selected} other {{countText} selected}}",
   "@fileExplorer.pane.selectedCount": {
@@ -290,6 +289,27 @@
   "fileExplorer.paneBoundary.reload": "Reload pane",
   "@fileExplorer.paneBoundary.reload": {
     "description": "Button under \"This pane hit a problem\" that rebuilds the broken file pane and opens its folder again. A verb phrase; \"pane\" is one of the two side-by-side file lists."
+  },
+  "fileExplorer.pane.ejectedDriveStaysToast": "{volumeName} is ejected, but keep the drive plugged in: other volumes on it are still mounted.",
+  "@fileExplorer.pane.ejectedDriveStaysToast": {
+    "description": "Information toast after ejecting ONE volume of a physical drive that has several. The volume is gone from Cmdr, but the drive isn't safe to unplug yet, and that warning is the point of this message. A \"volume\" is one of the separately named parts of a drive; use the word your macOS Finder uses.",
+    "placeholders": {
+      "volumeName": "the display name of the volume that was ejected"
+    }
+  },
+  "fileExplorer.pane.ejectAllFailedToast": "Couldn’t eject everything on this drive: {message}",
+  "@fileExplorer.pane.ejectAllFailedToast": {
+    "description": "Error toast when \"Eject all\" didn't finish: some volumes of the drive may have been ejected, and at least one is still mounted. {message} is one sentence saying why, which may name an app.",
+    "placeholders": {
+      "message": "the reason, already translated, one sentence that reads after a colon"
+    }
+  },
+  "fileExplorer.pane.ejectAllHeldToast": "Nothing on this drive was ejected: {message}",
+  "@fileExplorer.pane.ejectAllHeldToast": {
+    "description": "Error toast when \"Eject all\" found something using one of the drive's volumes and stopped BEFORE ejecting any of them, so the whole drive is exactly as it was. Saying that nothing changed is the point of this message. {message} is one sentence naming who's using it.",
+    "placeholders": {
+      "message": "the reason, already translated, one sentence that reads after a colon"
+    }
   },
   "fileExplorer.pane.ejectFailedToast": "Couldn’t eject {volumeName}: {message}",
   "@fileExplorer.pane.ejectFailedToast": {
@@ -2279,6 +2299,37 @@
     },
     "screenshot": "extension-change.png"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Are you sure you want to remove the “.{oldExt}” extension? macOS will show this as an ordinary folder instead of a single item.} other {Are you sure you want to remove the “.{oldExt}” extension? Your Mac may not know which app opens the file without it.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "description": "Body of the extension-change confirmation when the new name has NO extension any more (the user deleted it). The folder branch is for a macOS package folder such as an app (“Cmdr.app”), which turns into an ordinary folder without its extension; the other branch is for a file. Write each branch as complete, natural sentences. The leading dot is part of the displayed extension.",
+    "placeholders": {
+      "kind": "what is being renamed: \"folder\" for a folder, anything else for a file",
+      "oldExt": "the current extension without the dot (e.g. txt, app)"
+    },
+    "screenshot": "extension-change-removed-extension.png"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Are you sure you want to add the “.{newExt}” extension? macOS may show this folder as a single item instead.} other {Are you sure you want to add the “.{newExt}” extension? Your file may open in a different app next time you open it.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "description": "Body of the extension-change confirmation when the old name had NO extension and the new one has one (for example “README” to “README.md”). The folder branch is for a folder getting a macOS package extension such as “.app”, which makes Finder show it as one item; the other branch is for a file. Write each branch as complete, natural sentences. The leading dot is part of the displayed extension.",
+    "placeholders": {
+      "kind": "what is being renamed: \"folder\" for a folder, anything else for a file",
+      "newExt": "the new extension without the dot (e.g. md, app)"
+    },
+    "screenshot": "extension-change-added-extension.png"
+  },
+  "fileExplorer.extensionChange.keepNone": "Keep no extension",
+  "@fileExplorer.extensionChange.keepNone": {
+    "description": "Button in the extension-change confirmation that keeps the name without an extension, as it was before the rename (the user had added one). Pairs with “Use .{newExt}”.",
+    "screenshot": "extension-change-added-extension.png"
+  },
+  "fileExplorer.extensionChange.removeExtension": "Remove .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "description": "Button in the extension-change confirmation that applies the rename and so removes the extension (the user deleted it from the name). Pairs with “Keep .{oldExt}”. The leading dot is part of the displayed extension.",
+    "placeholders": {
+      "oldExt": "the current extension without the dot (e.g. txt, app)"
+    },
+    "screenshot": "extension-change-removed-extension.png"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Always allow extension changes",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "description": "Checkbox in the extension-change dialog to stop asking for confirmation on future extension changes.",
@@ -2710,6 +2761,14 @@
       "name": "the server's display name, like \"Naspolya\""
     }
   },
+  "fileExplorer.navigation.ejectOneVolumeTooltip": "Ejects only this volume. Its drive stays connected until the other volumes are ejected too.",
+  "@fileExplorer.navigation.ejectOneVolumeTooltip": {
+    "description": "Tooltip on the Eject item in a volume's menu, shown only when its physical drive has other volumes mounted. It explains that the drive can't be unplugged yet. A \"volume\" is one of the separately named parts of a drive; use the word your macOS Finder uses."
+  },
+  "fileExplorer.navigation.ejectAllTooltip": "Ejects every volume on this drive, so you can unplug it.",
+  "@fileExplorer.navigation.ejectAllTooltip": {
+    "description": "Tooltip on the \"Eject all\" item in a volume's menu, shown only when its physical drive has several volumes mounted. A \"volume\" is one of the separately named parts of a drive; use the word your macOS Finder uses."
+  },
   "fileExplorer.navigation.ejectVolumeAriaLabel": "Eject {name}",
   "@fileExplorer.navigation.ejectVolumeAriaLabel": {
     "description": "Accessibility label and tooltip for the eject button on a volume in the breadcrumb and switcher. {name} is the volume’s display name.",
@@ -3015,6 +3074,18 @@
       "count": "how many folders couldn't be read, wholly or in part"
     }
   },
+  "fileExplorer.quickFilter.modeFilter": "Filter: only matching names show",
+  "@fileExplorer.quickFilter.modeFilter": {
+    "description": "For screen readers only (never shown): said when the Quick filter command opens the badge in a pane or switches it to filtering, so typed text now hides the files and folders whose names don't match. On screen only the badge's word changes, to fileExplorer.quickFilter.prefix; start with that same word."
+  },
+  "fileExplorer.typeToJump.modeJump": "Jump: all names show, and the cursor goes to the match",
+  "@fileExplorer.typeToJump.modeJump": {
+    "description": "For screen readers only (never shown): said when the Quick filter command switches the badge in a pane to jumping, so every file and folder shows and typed text moves the cursor to the matching name. On screen only the badge's word changes, to fileExplorer.typeToJump.prefix; start with that same word."
+  },
+  "fileExplorer.typeToJump.clear": "Clear jump",
+  "@fileExplorer.typeToJump.clear": {
+    "description": "Accessible name of the small × button on the Jump badge in a file pane, which removes the typed text so the pane goes back to how plain typing works. Sits next to fileExplorer.typeToJump.prefix; the Filter badge's own button says fileExplorer.quickFilter.clear."
+  },
   "fileExplorer.quickFilter.clear": "Clear filter",
   "@fileExplorer.quickFilter.clear": {
     "description": "Accessible name and tooltip-less label of the small × on the \"Filter: …\" badge in a pane's corner. Clicking it shows every file again (same as Esc)."
@@ -3054,5 +3125,56 @@
       "countText": "how many files were left unchanged, already formatted for display (e.g. 1,204)",
       "count": "the same number (drives the singular/plural form)"
     }
+  },
+  "fileExplorer.errorPane.reviewLinkSignIn": "Review sign-in",
+  "@fileExplorer.errorPane.reviewLinkSignIn": {
+    "description": "Button on the error screen shown in place of a file list, for a folder behind a link to another server. Opens a dialog that asks whether Cmdr may sign in there."
+  },
+  "fileExplorer.pane.directConnectionOtherServerNotAllowedToast": "{server} says this share’s files live on another server. Cmdr won’t sign in there on its own, so it stays on the system connection.",
+  "@fileExplorer.pane.directConnectionOtherServerNotAllowedToast": {
+    "description": "Toast shown when connecting a network share directly found that the share (a DFS namespace) lives on a different server the person hasn’t allowed Cmdr to sign in to. Not temporary, so avoid wording like \"try again\".",
+    "placeholders": {
+      "server": "the server’s friendly name or IP address, for example Naspolya or 192.168.1.111"
+    }
+  },
+  "fileExplorer.network.osMountFallback.otherServerNotAllowed": "Couldn’t directly connect to <shareName>{share}</shareName>, because its files live on another server and Cmdr won’t sign in there on its own. You are still connected through macOS’s native SMB network connection, which is a lot slower.",
+  "@fileExplorer.network.osMountFallback.otherServerNotAllowed": {
+    "description": "Body of the same notification as \"osMountFallback.message\", for a share (a DFS namespace) that lives on a different server the person hasn’t allowed Cmdr to sign in to. There is no retry button. <shareName> wraps the share’s name and renders it bold; keep the tag around the name wherever your grammar puts it. \"macOS\", \"SMB\", and \"Cmdr\" are names; keep them.",
+    "placeholders": {
+      "share": "the name of the network share, for example archive or Photos"
+    },
+    "screenshot": "servers-hub.png",
+    "screenshotNote": "Network (SMB) browsing and connection flow. This shows the servers list it starts from; your string appears here or on the closely related browsing, sign-in, or reconnect states reached from it."
+  },
+  "fileExplorer.smbLinkConsent.title": "Sign in to another server?",
+  "@fileExplorer.smbLinkConsent.title": {
+    "description": "Title of a security dialog: a link in an SMB share leads to a folder on a different server, and Cmdr asks before it signs in there."
+  },
+  "fileExplorer.smbLinkConsent.message": "A link on {server} leads to a folder on {target}. To open it, Cmdr signs in to {target} with the account you use for {server}.",
+  "@fileExplorer.smbLinkConsent.message": {
+    "description": "Body of that dialog: what would happen.",
+    "placeholders": {
+      "server": "the server the share is on, like nas.local",
+      "target": "the other server the link leads to, like fs01.example.com"
+    }
+  },
+  "fileExplorer.smbLinkConsent.warning": "Allow this only if you trust {target}. A server you don’t know could use a link like this to collect your password.",
+  "@fileExplorer.smbLinkConsent.warning": {
+    "description": "Second paragraph of that dialog: the risk, stated calmly.",
+    "placeholders": {
+      "target": "the other server the link leads to"
+    }
+  },
+  "fileExplorer.smbLinkConsent.note": "Cmdr remembers your answer for these two servers. You can forget it in Settings, under Servers.",
+  "@fileExplorer.smbLinkConsent.note": {
+    "description": "Small note at the end of that dialog. \"Settings\" is the app’s settings window, \"Servers\" its page; translate them the way the settings window does."
+  },
+  "fileExplorer.smbLinkConsent.allow": "Allow and sign in",
+  "@fileExplorer.smbLinkConsent.allow": {
+    "description": "The dialog’s confirming button."
+  },
+  "fileExplorer.smbLinkConsent.notNow": "Not now",
+  "@fileExplorer.smbLinkConsent.notNow": {
+    "description": "The dialog’s cancel button. Nothing is sent, and it will ask again next time."
   }
 }

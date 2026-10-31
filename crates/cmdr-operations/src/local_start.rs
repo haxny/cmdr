@@ -12,6 +12,7 @@ use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::{Initiator, OperationId};
 
+use super::delete::already_gone::{self, AlreadyGoneSink};
 use super::delete::delete_files_with_progress_inner;
 use super::delete::trash::trash_files_with_progress;
 use super::leaf_validation::{LeafIdentity, validate_transfer_leaves};
@@ -482,8 +483,18 @@ impl Operations {
                 None,
                 None,
                 move |events, op_id, state| {
+                    // An item that's already gone is done (`delete/already_gone.rs`).
+                    let split = already_gone::split_local(&*events, &op_id, &sources);
+                    if split.kept.is_empty()
+                        && let Some(gone) = split.already_gone
+                    {
+                        already_gone::complete_all_gone(&*events, &op_id, WriteOperationType::Delete, gone);
+                        return Ok(());
+                    }
+                    let sources = split.select(&sources);
+                    let events = AlreadyGoneSink::new(&*events, split.already_gone);
                     let Some(sources) = retain_bound_sources(
-                        &*events,
+                        &events,
                         &op_id,
                         WriteOperationType::Delete,
                         &state,
@@ -493,7 +504,7 @@ impl Operations {
                         return Ok(());
                     };
                     validate_sources(&sources)?;
-                    delete_files_with_progress_inner(&*events, &op_id, &state, &sources, &config)
+                    delete_files_with_progress_inner(&events, &op_id, &state, &sources, &config)
                 },
             )
             .await
@@ -563,8 +574,19 @@ impl Operations {
             None,
             None,
             move |events, op_id, state| {
+                // An item that's already gone is done (`delete/already_gone.rs`).
+                let split = already_gone::split_local(&*events, &op_id, &sources);
+                if split.kept.is_empty()
+                    && let Some(gone) = split.already_gone
+                {
+                    already_gone::complete_all_gone(&*events, &op_id, WriteOperationType::Trash, gone);
+                    return Ok(());
+                }
+                let sources = split.select(&sources);
+                let item_sizes = item_sizes.map(|sizes| split.select(&sizes));
+                let events = AlreadyGoneSink::new(&*events, split.already_gone);
                 let Some((sources, item_sizes)) = retain_bound_sources_with_sizes(
-                    &*events,
+                    &events,
                     &op_id,
                     WriteOperationType::Trash,
                     &state,
@@ -575,7 +597,7 @@ impl Operations {
                     return Ok(());
                 };
                 validate_sources(&sources)?;
-                trash_files_with_progress(&*events, &op_id, &state, &sources, item_sizes.as_deref())
+                trash_files_with_progress(&events, &op_id, &state, &sources, item_sizes.as_deref())
             },
         )
         .await

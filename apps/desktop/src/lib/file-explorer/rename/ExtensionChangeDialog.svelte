@@ -6,13 +6,37 @@
     import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
+        /** The extension before the rename, no dot; `''` when the name had none. */
         oldExtension: string
+        /** The extension after it, no dot; `''` when the rename removes it. */
         newExtension: string
+        /** A folder (a macOS package, since only those have extensions) words its consequence differently. */
+        isDirectory?: boolean
         onKeepOld: () => void
         onUseNew: () => void
     }
 
-    const { oldExtension, newExtension, onKeepOld, onUseNew }: Props = $props()
+    const { oldExtension, newExtension, isDirectory = false, onKeepOld, onUseNew }: Props = $props()
+
+    // Three different changes, each worded on its own so nothing ever reads "Use ." or "to “.”".
+    const kind = $derived(isDirectory ? 'folder' : 'file')
+    const description = $derived(
+        !newExtension
+            ? tString('fileExplorer.extensionChange.descriptionRemove', { kind, oldExt: oldExtension })
+            : !oldExtension
+              ? tString('fileExplorer.extensionChange.descriptionAdd', { kind, newExt: newExtension })
+              : tString('fileExplorer.extensionChange.description', { oldExt: oldExtension, newExt: newExtension }),
+    )
+    const keepLabel = $derived(
+        oldExtension
+            ? tString('fileExplorer.extensionChange.keepOld', { oldExt: oldExtension })
+            : tString('fileExplorer.extensionChange.keepNone'),
+    )
+    const useLabel = $derived(
+        newExtension
+            ? tString('fileExplorer.extensionChange.useNew', { newExt: newExtension })
+            : tString('fileExplorer.extensionChange.removeExtension', { oldExt: oldExtension }),
+    )
 
     let alwaysAllow = $state(false)
 
@@ -43,7 +67,7 @@
     {#snippet title()}{tString('fileExplorer.extensionChange.title')}{/snippet}
 
     <p id="extension-change-description" class="description">
-        {tString('fileExplorer.extensionChange.description', { oldExt: oldExtension, newExt: newExtension })}
+        {description}
     </p>
 
     <div class="always-allow">
@@ -51,8 +75,8 @@
     </div>
 
     {#snippet footer()}
-        <Button variant="secondary" onclick={onKeepOld}>{tString('fileExplorer.extensionChange.keepOld', { oldExt: oldExtension })}</Button>
-        <Button variant="primary" onclick={handleUseNew}>{tString('fileExplorer.extensionChange.useNew', { newExt: newExtension })}</Button>
+        <Button variant="secondary" onclick={onKeepOld}>{keepLabel}</Button>
+        <Button variant="primary" onclick={handleUseNew}>{useLabel}</Button>
     {/snippet}
 </ModalDialog>
 

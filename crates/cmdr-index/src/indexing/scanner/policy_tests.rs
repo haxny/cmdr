@@ -273,14 +273,15 @@ fn a_file_provider_domain_is_walked_into_rather_than_cut_at() {
 
 // ── Filesystems mounted inside the boot tree ─────────────────────────
 
-/// Lists `tree/<relative>` in the host's mount table for the rest of the test.
-#[cfg(target_os = "macos")]
+/// Lists `tree/<relative>` in the host's mount table for the rest of the test, as
+/// a network share, which every platform's boot scan stops at.
 fn mount_inside_the_tree(tree: &Tree, relative: &str) -> crate::indexing::host::volumes::TestProviderGuard {
     use crate::indexing::host::volumes::{self, FakeVolumeProvider, MountIdentity};
     let provider = FakeVolumeProvider::shared();
     provider
         .mount("/", MountIdentity::from_raw(1))
-        .mount(tree.path(relative), MountIdentity::from_raw(2));
+        .mount(tree.path(relative), MountIdentity::from_raw(2))
+        .set_mount_kind(tree.path(relative), Some("naspi:/share"), Some("nfs4"));
     volumes::install_for_test(provider)
 }
 
@@ -291,7 +292,6 @@ fn mount_inside_the_tree(tree: &Tree, relative: &str) -> crate::indexing::host::
 /// A rebuild is the walk FSEvents verification and the per-navigation verifier
 /// hand a new directory to, and a full scan runs the same visitor.
 #[test]
-#[cfg(target_os = "macos")]
 fn a_boot_disk_walk_stops_at_a_mount_inside_the_boot_tree() {
     let _serialized = crate::indexing::handle::test_lock();
     let tree = Tree::new();
@@ -316,7 +316,6 @@ fn a_boot_disk_walk_stops_at_a_mount_inside_the_boot_tree() {
 /// The search walk too, whatever device the mount reports: the mount table says
 /// it's a mount, and that's the whole question.
 #[test]
-#[cfg(target_os = "macos")]
 fn a_search_walk_stops_at_a_mount_inside_the_boot_tree() {
     let _serialized = crate::indexing::handle::test_lock();
     let tree = Tree::new();

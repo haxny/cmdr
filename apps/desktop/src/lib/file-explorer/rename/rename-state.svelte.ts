@@ -1,5 +1,6 @@
 /** Reactive state for inline rename. Must be .svelte.ts for $state(). */
 
+import type { NameKind } from '#lib/utils/file-extension.js'
 import type { ValidationResult, ValidationSeverity } from '#lib/utils/filename-validation.js'
 
 /**
@@ -21,6 +22,11 @@ export interface RenameTarget {
   parentPath: string
   /** Whether the entry is a directory */
   isDirectory: boolean
+  /**
+   * File, folder, or package, from the entry (`nameKindOf`): what decides the
+   * name's extension for the selection stages and the extension-change check.
+   */
+  nameKind: NameKind
 }
 
 export interface RenameState {

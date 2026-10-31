@@ -5,6 +5,22 @@
    hoists to the top of the sheet, which would put these rules BEFORE the base
    styles they sit after). See apps/desktop/src/DETAILS.md § Global stylesheets. */
 
+/* A small control's unpainted 24-by-24 hit box, centered on it (WCAG 2.5.8). Clicks on it land on
+   the control. Its parent mustn't clip it, and its neighbors need 2px of room per 20px control. */
+.hit-target {
+  position: relative;
+}
+
+.hit-target::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--spacing-xl);
+  height: var(--spacing-xl);
+  transform: translate(-50%, -50%);
+}
+
 /* =============================================================================
    Size tier color utility classes (used dynamically via class bindings)
    ============================================================================= */

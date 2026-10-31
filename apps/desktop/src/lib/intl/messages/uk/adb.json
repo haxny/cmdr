@@ -1,0 +1,91 @@
+{
+  "adb.connect.adbNotInstalled": "Cmdr не вдалося знайти Android platform tools.",
+  "@adb.connect.adbNotInstalled": {
+    "sourceHash": "a842454"
+  },
+  "adb.connect.openSettings": "Відкрити параметри",
+  "@adb.connect.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "adb.connect.serverUnreachable": "Інструменти Android на цьому Mac не відповіли.",
+  "@adb.connect.serverUnreachable": {
+    "sourceHash": "b53716b"
+  },
+  "adb.connect.deviceGone": "Ваш телефон більше не підʼєднано.",
+  "@adb.connect.deviceGone": {
+    "sourceHash": "00d5254"
+  },
+  "adb.connect.unauthorized": "Перевірте телефон і торкніться «Дозволити».",
+  "@adb.connect.unauthorized": {
+    "sourceHash": "6c2cf77"
+  },
+  "adb.connect.deviceTooOld": "Версія Android на цьому телефоні надто стара, тому Cmdr не може його переглядати.",
+  "@adb.connect.deviceTooOld": {
+    "sourceHash": "9ce52c1"
+  },
+  "adb.connect.timedOut": "Ваш телефон не відповів вчасно.",
+  "@adb.connect.timedOut": {
+    "sourceHash": "20ddfdc"
+  },
+  "adb.connect.transport": "Cmdr втратив підʼєднання до вашого телефона.",
+  "@adb.connect.transport": {
+    "sourceHash": "d90c37c"
+  },
+  "adb.connect.cancelled": "Ви зупинили відкриття телефона.",
+  "@adb.connect.cancelled": {
+    "sourceHash": "bc525aa"
+  },
+  "adb.connect.waitingHint": "Cmdr відкриє ваш телефон, щойно ви це зробите.",
+  "@adb.connect.waitingHint": {
+    "sourceHash": "d1df048"
+  },
+  "adb.readiness.waitingForAuthorization": "Очікування: торкніться «Дозволити» на телефоні",
+  "@adb.readiness.waitingForAuthorization": {
+    "sourceHash": "679558e"
+  },
+  "adb.readiness.tapAllow": "Торкніться «Дозволити» на телефоні",
+  "@adb.readiness.tapAllow": {
+    "sourceHash": "68c770f"
+  },
+  "adb.unnamedPhone": "Телефон Android",
+  "@adb.unnamedPhone": {
+    "sourceHash": "fae4ea5"
+  },
+  "adb.readiness.offline": "Ваш телефон не відповідає. Розбудіть його екран або перепідʼєднайте кабель.",
+  "@adb.readiness.offline": {
+    "sourceHash": "6061885"
+  },
+  "adb.readiness.noPermissions": "Цей Mac не може звʼязатися з вашим телефоном через USB. Спробуйте інший кабель або порт.",
+  "@adb.readiness.noPermissions": {
+    "sourceHash": "265d7ed"
+  },
+  "adb.hint.text": "Потрібна вся файлова система? Увімкніть «Налагодження USB».",
+  "@adb.hint.text": {
+    "sourceHash": "51bd05a"
+  },
+  "adb.hint.how": "Як?",
+  "@adb.hint.how": {
+    "sourceHash": "7470bd3"
+  },
+  "adb.hint.dismiss": "Закрити",
+  "@adb.hint.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "adb.disconnectDeviceAriaLabel": "Відʼєднати «{name}»",
+  "@adb.disconnectDeviceAriaLabel": {
+    "sourceHash": "8f755cb"
+  },
+  "adb.disconnectBusyTooltip": "Cmdr ще працює з файлами на цьому пристрої. Його можна буде відʼєднати, коли все буде готово.",
+  "@adb.disconnectBusyTooltip": {
+    "sourceHash": "73c355e"
+  },
+  "adb.disconnectingDeviceAriaLabel": "Відʼєднання «{name}»…",
+  "@adb.disconnectingDeviceAriaLabel": {
+    "sourceHash": "50be3d4"
+  },
+  "adb.volumeLabelWithSuffix": "{deviceName} (ADB)",
+  "@adb.volumeLabelWithSuffix": {
+    "sourceHash": "98d6c20",
+    "sameAsSourceJustification": "Placeholder plus the ADB tool name, which the @key says to keep verbatim; nothing to translate."
+  }
+}

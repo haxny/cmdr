@@ -96,7 +96,14 @@ Three pieces of state are QueryDialog's alone; the consumer's callbacks MUST NOT
    `runQuery` resolves. Writing it from a consumer callback breaks `deriveEnterAction` and the `⏎` ownership swap.
 2. **`state.lastAiPrompt` / `state.lastAiCaveat`** are QueryDialog's. The orchestrator sets the prompt to the trimmed
    user input BEFORE invoking `translateAi`, and sets the caveat to whatever the consumer's callback returns. The
-   consumer's `translateAi` returns `{ caveat, highlightedFields }` only.
+   consumer's `translateAi` returns `{ caveat, apply }` and writes nothing itself: `apply()` makes the answer's filter
+   writes and returns the chips to flash, and the runner calls it only while the run is still the newest (the `aiRunSeq`
+   check below), so a stale answer never touches a filter. Deferring the writes is what single-sources the guard: a
+   consumer can't forget a check it never runs. `state.aiTrailReady` rides along: false from the run's start until its
+   answer lands (and after a failed one), and the strip shows the prompt alone meanwhile. Why: the "what the agent did"
+   summary is built from the live chips, which still hold the PREVIOUS query until the answer applies, so a plain
+   "invoice" search's glob read as this query's step (#762). The runner's `aiRunSeq` drops a translation that answers
+   after a newer run started, so it can't write a filter, caveat, flash, or vouch for the newer strip.
 3. **`state.results` / `state.totalCount` / `state.cursorIndex`** are QueryDialog's after `runQuery` resolves. The
    consumer's `runQuery` returns `{ entries, totalCount }` and never touches the state.
 
@@ -474,7 +481,7 @@ Fields:
 - `typeFilter: 'both' | 'file' | 'folder'` (default `'both'`), mapped onto the existing IPC
   `SearchQuery.isDirectory: Option<bool>` — no new IPC field or schema change
 - `caseSensitive`
-- `lastAiPrompt`, `lastAiCaveat` (the AI transparency strip's content)
+- `lastAiPrompt`, `lastAiCaveat`, `aiTrailReady` (the AI transparency strip's content)
 - per-mode `handTyped` buffers (`ai` / `filename` / `regex`)
 - `results`, `totalCount`, `cursorIndex`, `isSearching`
 - `lastDialogEvent` (drives ⏎ ownership via `deriveEnterAction`)
@@ -552,8 +559,10 @@ Chip-side behaviors live in `filter-chips/CLAUDE.md`; search-specific ones in `l
 
 The fitting algorithm lives in `path-pills-layout.ts::computePathPillsLayout` (pure, deterministic, unit-tested with
 mocked widths). The chrome budget per pill is 4 px (matching the real CSS padding) so the strip doesn't collapse when
-there's free space. The container width comes from a `ResizeObserver` on the strip element, and `createPretextMeasure`
-provides pixel-accurate text widths.
+there's free space, and a pill is never counted narrower than `PILL_MIN_WIDTH_PX` (24, the `.pill` floor for WCAG 2.5.8,
+which one-letter folders hit). An unpainted `::before` makes each pill as tall as its row (about 24 px at 100%) while
+its hover fill stays the text's height. The container width comes from a `ResizeObserver` on the strip element, and
+`createPretextMeasure` provides pixel-accurate text widths.
 
 ## Keyboard shortcuts (in-dialog, hard-coded)
 
@@ -676,18 +685,17 @@ clears the flag first.
 
 **Path pills with overflow collapse**: Each result row's path column renders as a strip of clickable ancestor pills
 produced by `PathPills.svelte`. Clicking a pill calls the dialog's `onNavigate(ancestorPath)` callback, which closes the
-dialog and navigates the active pane to that ancestor. Pills are **not** in the keyboard Tab order (`tabindex="-1"`):
-tabbing through them would break the row's arrow-down keyboard flow inside the virtualized list. They're mouse-only,
-with no keyboard equivalent (`⌥←` / `⌥→` stay native move-by-word in the query input). Paths are split strictly on `/`;
-macOS and Linux only, no `\` handling.
+dialog and navigates the active pane to that ancestor. The strip is the mouse's alone: `aria-hidden` plain spans with no
+Tab stop, and the row reads the path from an `sr-only` copy. The keyboard route to a result's folder is Enter on the
+row, then going up. Paths are split strictly on `/`; macOS and Linux only, no `\` handling.
 
 When the path doesn't fit its column, the middle pills collapse into a single `…` pill. Width is measured with
 `@chenglou/pretext` (the same canvas-based measurer the rest of the app uses); the first and last segments stay visible.
 Hovering the `…` pill shows a tooltip listing the hidden segments as clickable buttons.
 
-The pill's `onclick` calls `e.stopPropagation()` so it doesn't double-fire the row's `onResultClick`. Svelte 5 delegates
-events at the document root, so unit tests assert against the `stopPropagation` spy rather than racing a wrapper DOM
-listener.
+The strip's one `onclick` calls `e.stopPropagation()` when it lands on a pill, so it doesn't double-fire the row's
+`onResultClick`. Svelte 5 delegates events at the document root, so unit tests assert against the `stopPropagation` spy
+rather than racing a wrapper DOM listener.
 
 **Per-row menu**: a right-click on a row calls `onRowMenu(entry)` on the parent, which routes to the existing native
 `showFileContextMenu` factory (Open, Reveal in Finder, Copy path, Copy name, …). There is no `…` button and no Actions
@@ -717,15 +725,14 @@ it's a sub-overlay-of-an-overlay with the same auto-flip, focus-trap, and "Esc c
 filter chips. Reimplementing those risks drift; reusing the primitive guarantees the contract covers both popover kinds
 via the single `.ui-popover` DOM selector (the same selector the filter popovers render through `FilterPopover`).
 
-**Decision**: Path pills inside result rows are mouse-only and not in the keyboard Tab order, with no keyboard
-equivalent. **Why**: Making the pills tabbable inside virtualized rows would break the row's arrow-down keyboard flow:
-pressing Down at the end of a row would land on the next row's first pill instead of the next row's primary cell.
-Keyboard users navigate the list with arrow keys (cursor row is the keyboard target). The pills carried `⌥←` / `⌥→` as a
-keyboard equivalent, but those steal macOS's universal move-by-word from the focused query input (where focus almost
-always sits), so the binding was dropped: `⌥←` / `⌥→` now stay native move-by-word and the pill nav is mouse-only. Don't
-re-add an `⌥`+arrow folder-nav here; if a keyboard affordance is wanted later, pick a combo with no text-editing meaning
-(for example `⌘↑` / `⌘↓`, Finder's enclosing/open keys). Axe's `nested-interactive` rule still flags the structural
-nesting on the populated-results audit; we disable that one rule explicitly with a comment pointing here.
+**Decision**: Path pills inside result rows are non-interactive for assistive technology: `aria-hidden` spans, ❌ never
+buttons. The keyboard reaches a result's folder by Enter on the row, then going up. **Why**: A row is a `role="option"`,
+whose children are presentational, so a button in it may lose its role (axe `nested-interactive`). Tab stops would also
+break the row's arrow-down flow: Down would land on the next row's first pill. Hoisting the buttons out of each virtual
+row costs a second positioned layer for a shortcut the keyboard already has a route to. The pills once carried `⌥←` /
+`⌥→`, but those steal macOS's universal move-by-word from the focused query input (where focus almost always sits).
+Don't re-add an `⌥`+arrow folder-nav here; if a keyboard shortcut is wanted later, pick a combo with no text-editing
+meaning (for example `⌘↑` / `⌘↓`, Finder's enclosing/open keys).
 
 **Decision**: AI mode never auto-applies; only Enter / `⌘Enter` / the ⏎ button / example-chip clicks fire it (a
 recent-items pick loads without running). **Why**: AI calls cost money (cloud) or RAM + latency (local). Even a fast
@@ -797,12 +804,6 @@ combinations with `preventDefault` so the bare-Enter handler never sees a modifi
 the natural-language prompt. The original prompt is preserved separately in `lastAiPrompt` (set by `executeAiSearch`
 before the IPC call) so the `AiPromptStrip` can render it. Anyone building on top of this should not assume `query`
 still contains the user's natural-language input after an AI run; use `getLastAiPrompt()` instead.
-
-**Gotcha**: `nested-interactive` axe rule is explicitly disabled on the populated-results a11y test. **Why**: The row
-gains interactive children (the path-pill buttons) inside the `role="option"` row. Tab order is suppressed via
-`tabindex="-1"` per spec, but axe still flags the structural nesting. Cleanly fixing it means either dropping the row's
-`role="option"` (and surfacing the cursor via a custom mechanism) or hoisting the buttons out of the row's grid cell —
-both are out of redesign scope.
 
 ## Dependencies
 

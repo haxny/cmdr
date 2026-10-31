@@ -72,6 +72,12 @@
     "screenshot": "viewer-search.png",
     "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   },
+  "viewer.error.linkTargetUnreachable": "This file sits behind a link to another server, and Cmdr can’t reach that server right now. Check that the server is running, then try again.",
+  "@viewer.error.linkTargetUnreachable": {
+    "description": "Shown in place of the file's content when the file is behind a DFS link: a folder in a Windows-style network share that really lives on a different server, and that server is out of reach. The share itself is fine, and nothing was deleted. A Retry button sits below this message. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
+  },
   "viewer.error.retry": "Retry",
   "@viewer.error.retry": {
     "description": "Button that tries opening the file again after a load timeout. Keep it short (a button).",
@@ -751,6 +757,12 @@
   "viewer.selection.toEndOfFileNoLine": "Selected to the end of the file",
   "@viewer.selection.toEndOfFileNoLine": {
     "description": "Screen-reader announcement for a very large selection that reaches the end of the file when the viewer can’t work out which line it starts on, so no line number is named. Sibling of viewer.selection.toEndOfFile, which does name one.",
+    "screenshot": "viewer-search.png",
+    "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
+  },
+  "viewer.error.linkNeedsConsent": "This file sits behind a link to another server, and Cmdr hasn’t been allowed to sign in there. Open its folder in a pane to decide.",
+  "@viewer.error.linkNeedsConsent": {
+    "description": "Shown in the file viewer when a file is behind a link (a DFS link in an SMB share) to another server the person hasn’t allowed Cmdr to sign in to. \"pane\" is one of the main window’s two file lists.",
     "screenshot": "viewer-search.png",
     "screenshotNote": "The file viewer window, pictured here with its find bar open. Your string is part of its chrome (title, toolbar, status bar), one of the file-kind or media labels it shows there, or one of the messages it shows in place of content when a file can’t be loaded."
   }

@@ -12,8 +12,8 @@ use std::path::Path;
 
 use super::errno::listing_error_from_errno;
 use super::{ErrorCategory, ListingError, ListingErrorReason, kinds};
-use crate::volume::VolumeError;
 use crate::volume::git_error::FriendlyGitErrorKind;
+use crate::volume::{RemoteRefuser, VolumeError};
 
 /// Maps each git kind to the closest `ErrorCategory` so `ErrorPane` picks the
 /// right icon and severity color.
@@ -83,6 +83,28 @@ pub fn archive_needs_password_listing_error(wrong_attempt: bool) -> ListingError
     }
 }
 
+/// One errno, several unrelated fixes, so the branches have to be narrow.
+///
+/// A path whose own scheme names its backend (`refuser_of_path`) never touches TCC or
+/// a mount: a phone, a connected server, or an S3 account said no, and macOS has no
+/// part in it. For the rest, TCC gates a whole volume or folder tree rather than
+/// individual subfolders, so it only explains the denial when the gate itself is shut
+/// (`tcc_denial_is_plausible` probes that); then the dedicated reason points at both
+/// Full Disk Access and the per-folder Files & Folders pane. With TCC ruled out, a
+/// denial on a mounted share came from the file server, and sending the user to System
+/// Settings would have them hunt for a permission they already hold. Everything else
+/// is ordinary filesystem permissions.
+fn permission_denied_listing_error(path: &Path, path_display: &str, raw: String) -> ListingError {
+    match crate::volume::refuser_of_path(path_display) {
+        Some(RemoteRefuser::Phone) => kinds::phone_refused(raw),
+        Some(RemoteRefuser::Server) => kinds::server_refused(raw),
+        Some(RemoteRefuser::ObjectStore) => kinds::object_store_refused(path_display, raw),
+        None if crate::tcc_paths::tcc_denial_is_plausible(path) => kinds::tcc_restricted(path_display, raw),
+        None if crate::tcc_paths::is_network_volume_path(path) => kinds::remote_permission_denied(path_display, raw),
+        None => kinds::permission_denied(path_display, raw),
+    }
+}
+
 /// The entry point: classifies any [`VolumeError`] into a typed
 /// [`ListingError`], dispatching to the errno table when the variant is a raw
 /// `IoError` carrying one.
@@ -107,33 +129,15 @@ pub fn listing_error_from_volume_error(err: &VolumeError, path: &Path) -> Listin
             }
         }
         VolumeError::NotFound(_) => kinds::not_found(&path_display, raw),
-        VolumeError::PermissionDenied { .. } => {
-            // Three different fixes hide behind one errno, so the branch has to be
-            // narrow. TCC gates a whole volume or folder tree rather than individual
-            // subfolders, so it only explains the denial when the gate itself is shut
-            // (`tcc_denial_is_plausible` probes that); then the dedicated reason points
-            // at both Full Disk Access and the per-folder Files & Folders pane. With TCC
-            // ruled out, a denial on a mounted share came from the file server, and
-            // sending the user to System Settings would have them hunt for a permission
-            // they already hold. Everything else is ordinary filesystem permissions.
-            // An S3 path (its own scheme, `server_of_path`) never touches TCC or a
-            // mount: the refusal is the account's, keys or a paused account alike.
-            if crate::volume::server_of_path(&path_display)
-                .is_some_and(|server| server.kind == crate::volume::BackendKind::S3)
-            {
-                kinds::object_store_refused(&path_display, raw)
-            } else if crate::tcc_paths::tcc_denial_is_plausible(path) {
-                kinds::tcc_restricted(&path_display, raw)
-            } else if crate::tcc_paths::is_network_volume_path(path) {
-                kinds::remote_permission_denied(&path_display, raw)
-            } else {
-                kinds::permission_denied(&path_display, raw)
-            }
-        }
+        VolumeError::PermissionDenied { .. } => permission_denied_listing_error(path, &path_display, raw),
         VolumeError::AlreadyExists(_) => kinds::already_exists(&path_display, raw),
         VolumeError::NotSupported => kinds::not_supported(raw),
         VolumeError::DeviceDisconnected(_) => kinds::device_disconnected(&path_display, raw),
         VolumeError::NotConnected(_) => kinds::not_connected(&path_display, raw),
+        VolumeError::LinkTargetUnreachable(_) => kinds::link_target_unreachable(&path_display, raw),
+        VolumeError::LinkNeedsConsent(sign_in) => {
+            kinds::link_needs_consent(&path_display, &sign_in.server, &sign_in.target, raw)
+        }
         VolumeError::DeviceSessionReset(_) => kinds::device_reconnecting(&path_display, raw),
         VolumeError::ReadOnly(_) => kinds::read_only(raw),
         VolumeError::StorageFull { .. } => kinds::storage_full(raw),

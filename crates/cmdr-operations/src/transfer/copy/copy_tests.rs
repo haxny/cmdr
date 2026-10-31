@@ -1079,3 +1079,99 @@ fn a_write_the_destination_refuses_marks_the_row_it_was_writing() {
         vec!["photos/ failed", "  a.jpg failed"]
     );
 }
+
+// ── A name the destination refuses (cmdr-reports#83) ───────────────────────
+
+/// Copies `source` to `dest` (a leaf the destination can't hold) through
+/// `copy_single_item`, answering the prompt with `resolution`.
+fn copy_onto_a_refused_name(
+    source: &Path,
+    dest: PathBuf,
+    resolution: ConflictResolution,
+) -> (Result<FileVerdict, WriteOperationError>, CopyTransaction, usize) {
+    use crate::transfer::conflict_responder_test_support::ConflictResponderSink;
+    let engine = TestOperations::new();
+    let state = make_state(&engine, 200);
+    let events = ConflictResponderSink::new(&state, resolution, false);
+    let mut transaction = CopyTransaction::new();
+    let mut files_done = 0usize;
+    let mut bytes_done = 0u64;
+    let dest_root = dest.parent().unwrap().to_path_buf();
+    let result = copy_single_item(
+        source,
+        dest,
+        &dest_root,
+        None,
+        false,
+        4,
+        &mut files_done,
+        &mut bytes_done,
+        1,
+        4,
+        &state,
+        &events,
+        "op-refused-local",
+        WriteOperationType::Copy,
+        &Duration::from_millis(200),
+        &WriteOperationConfig::default(),
+        &mut transaction,
+        &mut ApplyToAll::default(),
+        &mut HashSet::new(),
+        &mut HashMap::new(),
+        &mut HashSet::new(),
+        &mut HashSet::new(),
+        None,
+        &TreeLeaf::detached(),
+    );
+    let prompts = events.inner.conflicts.lock().unwrap();
+    assert!(
+        prompts
+            .iter()
+            .all(|p| p.refused_name == Some(crate::types::RefusedNameReason::TooLong)),
+        "{prompts:?}"
+    );
+    let asked = prompts.len();
+    drop(prompts);
+    (result, transaction, asked)
+}
+
+/// A name over the local limit asks, and a Skip leaves the file out of the
+/// destination AND the ledger (which a cross-FS move's sweep deletes from).
+#[test]
+fn a_local_copy_skips_a_name_the_destination_refuses() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("short.txt");
+    fs::write(&source, b"data").unwrap();
+    let dest_dir = tmp.path().join("dst");
+    fs::create_dir_all(&dest_dir).unwrap();
+    let dest = dest_dir.join("a".repeat(300));
+
+    let (result, transaction, asked) = copy_onto_a_refused_name(&source, dest, ConflictResolution::Skip);
+
+    assert!(matches!(result, Ok(FileVerdict::Skipped)), "{result:?}");
+    assert_eq!(asked, 1);
+    assert!(transaction.created_files().is_empty(), "a skipped file is in no ledger");
+    assert_eq!(fs::read_dir(&dest_dir).unwrap().count(), 0, "nothing landed");
+    assert!(source.exists());
+    transaction.commit();
+}
+
+/// Any other answer stops the copy with the name being too long.
+#[test]
+fn a_local_copy_stops_on_any_other_answer() {
+    let tmp = tempfile::tempdir().unwrap();
+    let source = tmp.path().join("short.txt");
+    fs::write(&source, b"data").unwrap();
+    let dest_dir = tmp.path().join("dst");
+    fs::create_dir_all(&dest_dir).unwrap();
+
+    let (result, transaction, asked) =
+        copy_onto_a_refused_name(&source, dest_dir.join("a".repeat(300)), ConflictResolution::Rename);
+
+    assert!(
+        matches!(result, Err(WriteOperationError::NameTooLong { .. })),
+        "{result:?}"
+    );
+    assert_eq!(asked, 1);
+    transaction.commit();
+}

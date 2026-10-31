@@ -291,6 +291,7 @@ describe("an adopted view's outcomes touch no pane", () => {
       metadataLeftBehind: null,
       lockedKept: null,
       durabilityUnconfirmed: null,
+      alreadyGone: null,
     })
 
     expect(rightPane.spies.clearSelection).not.toHaveBeenCalled()
@@ -320,6 +321,7 @@ describe("an adopted view's outcomes touch no pane", () => {
       metadataLeftBehind: null,
       lockedKept: null,
       durabilityUnconfirmed: null,
+      alreadyGone: null,
     })
 
     dialogs.startTransferProgress(moveProps())
@@ -333,6 +335,7 @@ describe("an adopted view's outcomes touch no pane", () => {
       metadataLeftBehind: null,
       lockedKept: null,
       durabilityUnconfirmed: null,
+      alreadyGone: null,
     })
 
     expect(removeEntryFromAllSnapshots).not.toHaveBeenCalled()
@@ -398,6 +401,7 @@ describe('a view whose pane has moved on since the operation was born', () => {
       metadataLeftBehind: null,
       lockedKept: null,
       durabilityUnconfirmed: null,
+      alreadyGone: null,
     })
 
     expect(refreshListing).toHaveBeenCalled()
@@ -420,6 +424,7 @@ describe('a view whose pane has moved on since the operation was born', () => {
       metadataLeftBehind: null,
       lockedKept: null,
       durabilityUnconfirmed: null,
+      alreadyGone: null,
     })
 
     expect(rightPane.spies.clearSelection).toHaveBeenCalled()

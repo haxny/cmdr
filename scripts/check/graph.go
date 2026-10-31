@@ -261,6 +261,9 @@ func annotate(d *checks.CheckDefinition, verboseWeight, useColor bool, durs map[
 	if d.CIOnly {
 		parts = append(parts, "ci-only")
 	}
+	if d.IsPreRelease {
+		parts = append(parts, "pre-release")
+	}
 	return "(" + strings.Join(parts, ", ") + ")"
 }
 
@@ -364,6 +367,9 @@ func renderGraphMermaid(defs []checks.CheckDefinition, durs map[string]float64) 
 		tags := sizeTag(d)
 		if d.CIOnly {
 			tags += " ci"
+		}
+		if d.IsPreRelease {
+			tags += " pre-release"
 		}
 		if t := fmtWallTime(durs[d.CLIName()]); t != "" {
 			tags += " · " + t

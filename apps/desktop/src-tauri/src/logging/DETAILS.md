@@ -44,7 +44,8 @@ third-party, which fails closed.
 
 ## Startup sequence
 
-`startup::init`, called once from `lib.rs`'s `setup` before anything can log, does five things in order: resolve the log
+`startup::init`, called once from `lib.rs`'s `setup` right AFTER the instance lock claims the data dir, does five things
+in order: resolve the log
 directory, read the storage cap and the verbose toggle, install the fern tree via `dispatch::init`, sweep the legacy
 `Cmdr_<timestamp>.log` files an older build left, and log the resolved state.
 
@@ -52,12 +53,20 @@ The order is forced. `dispatch::init` reads `RUST_LOG` and resets the stdout thr
 known BEFORE it runs or the first records go out at the wrong level; and this all happens before the full settings load,
 which is why `settings::loader` carries `early_load_max_log_storage_mb` / `early_load_verbose_logging` at all.
 
-Directory priority: `CMDR_LOG_DIR`, then `<CMDR_DATA_DIR>/logs`, then the per-OS app log dir
-(`~/Library/Logs/com.veszelovszki.cmdr` on macOS, `dirs::data_local_dir()/com.veszelovszki.cmdr/logs` elsewhere).
+**The logger starts after the instance lock, on purpose.** A second instance refused the data dir exits before it
+installs the logger, so it never appends to the running app's `cmdr.log` or rotates it near 50 MB (#812). The claim logs
+nothing itself: the refusal goes to stderr plus the native alert, and every other outcome comes back as an
+`instance_lock::Claim` that `lib.rs` logs right after `init`. Records before `init` are no-ops (no logger yet), which is
+how the few host installs above the claim have always run. The panic hook is installed first thing in `run()`, so a
+panic before `init` still reaches stderr; its crash file waits for `crash_reporter::init`, as before.
 
-**Gotcha**: the early-load helpers MIRROR that resolution rather than calling into it. They run before an `AppHandle`
-exists, so they call `config::standalone_app_data_dir()` (the OS data dir plus `config::BUNDLE_ID`) where
-`startup::init` can use Tauri's `app_data_dir`. The two agree today; a bundle-id change has to touch both.
+Directory priority (`config::app_log_dir`): `CMDR_LOG_DIR`, then `<CMDR_DATA_DIR>/logs`, then the per-OS log dir for
+the build's own identifier (`config::app_identifier`, recorded from `tauri::generate_context!()` first thing in `run()`):
+`~/Library/Logs/<identifier>` on macOS, `dirs::data_local_dir()/<identifier>/logs` elsewhere, the folder Tauri's
+`app_log_dir()` names. The release identifier keeps the release app at `~/Library/Logs/com.veszelovszki.cmdr`; a dev or
+capture build gets its own folder. It used to hardcode the release identifier, so any other build sharing the Mac logged
+into the release app's folder and rotated its files (#812, #820). The early-load helpers read settings from
+`config::standalone_app_data_dir()`, which hangs off the same identifier, so they agree with Tauri's `app_data_dir`.
 
 ## What lives in `mod.rs`
 
@@ -151,6 +160,13 @@ flush, so a record is never split across files. It removes `cmdr.log.N`, shifts 
   asserted they hadn't changed; when another process had rotated meanwhile, the assertion panicked the thread that was
   logging, which was the drive index writer (CRASH-EC4QS, 0.51.0; that bundle shows two processes' heartbeats
   interleaved in one `cmdr.log`). Pinned by `a_sibling_created_behind_its_back_is_rotated_over_instead_of_panicking`.
+- **It only rotates the file it holds.** Each process keeps its own byte counter, so when two share the directory, the
+  first to reach 50 MB rotates, and the other's open fd now points at `cmdr.log.1`. Before rotating, the writer compares
+  its fd's device and inode (`fstat`) with what's at `cmdr.log` (`stat`); when they differ, or `cmdr.log` is gone, it
+  drops its handle and the next write opens `cmdr.log` fresh, with no rename. Without this, the late process renamed the
+  other's live file to `.1` and each then sat in its own file, `.1` often the newer (#812, ERR-YCZXP). One `stat` per
+  50 MB; off unix there's no std file identity, so it rotates as before. Pinned by
+  `a_writer_rotated_away_by_another_reopens_the_live_file_instead_of_renaming_it` and its no-live-file sibling.
 - **Failure is an `io::Error`, never a panic.** fern reports it on stderr and the record is lost, nothing else. A
   rotation that fails (a read-only directory, say) is retried only after another 50 MB, so a broken directory doesn't
   cost a rename attempt per line.
@@ -185,8 +201,8 @@ startup stays. Restart-to-apply is documented in the settings UI for `0 ↔ non-
 above the baked-in value.
 
 `eager_prune(dir, 0)` (storage turned off) deletes the live `cmdr.log` too. The open handle keeps taking writes into
-the now-unlinked file, so nothing visible stays on disk, and the next rotation finds no `cmdr.log` to move and starts a
-fresh one (pinned by `a_live_file_deleted_underneath_rotates_without_an_error`).
+the now-unlinked file, so nothing visible stays on disk, and at the next 50 MB the writer finds no `cmdr.log`, renames
+nothing, and starts a fresh one (pinned by `a_live_file_deleted_underneath_rotates_without_an_error`).
 
 ## Timestamp formats
 

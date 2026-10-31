@@ -10,14 +10,13 @@ context menu, or click-to-rename. Operates on the cursor item only; selection is
 - **rename-state.svelte.ts**: reactive state, and the session ids.
 - **rename-operations.ts**: pure save flow, returns the `RenameResult` union.
 - **rename-activation.ts**: click-to-rename timer. **rename-step.ts**: the pure halves of a chained rename.
-  **sibling-names.ts**: the directory's names, read once per chain.
+  **sibling-names.ts**: the directory's names, read once per chain. **rename-selection.ts**: F2 cycle, dot stops.
 
 Full details (save flow, validation tiers, cursor tracking, decisions): `DETAILS.md`.
 
 ## Must-knows
 
-- **Same-name edit (`trimmedName === originalName`) is a cancel/no-op.** Don't emit a watcher event or refresh the pane;
-  a whitespace-only edit would refresh for nothing.
+- **Same-name edit (`trimmedName === originalName`) is a no-op**: no watcher event, no refresh.
 - **Case-only (`.JPG` → `.jpg`) and known-equivalent (`.jpeg` → `.jpg`, `.md` → `.txt`) extension changes count as no
   change under every extension policy**, as do non-package folders: no dialog, no red border. Details: `DETAILS.md`.
 - **Conflict detection on local FS compares `dev+ino` via `symlink_metadata()`, never `exists()`**: on case-insensitive
@@ -43,8 +42,9 @@ Full details (save flow, validation tiers, cursor tracking, decisions): `DETAILS
   `DETAILS.md` § Ending a rename session.
 - **The field sits beside the listbox, ❌ never in the row** (`nested-interactive`), over the row's empty slot.
   `FilePane.handlePaneClick` and `isFileListBackgroundClick` skip `.rename-input`, or a click kills the rename.
-- **The editor mounts BY PATH** (`shouldMountRenameEditor`), so a watcher diff that shifts OTHER rows makes it follow
-  its file; only a diff removing the renamed file itself cancels (`listing-diff-sync`). Other watcher events don't (the
-  backend catches issues on save).
+- **The editor mounts BY PATH** (`shouldMountRenameEditor`), so it follows its file through a watcher diff; only a diff
+  removing that file cancels (`listing-diff-sync`).
 - **Double-click opens, never renames**: the click-to-rename timer cancels on it.
+- **The ⌥ arrow dot stop fires only where the native word move would cross the dot**: ❌ never reimplement word
+  movement. `DETAILS.md` § Selection.
 - **While rename is active, Cmd+C/A/Z/X/V edit text** (same flag as dialogs); every other shortcut is suppressed.

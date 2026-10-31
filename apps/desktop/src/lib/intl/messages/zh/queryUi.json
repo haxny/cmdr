@@ -301,10 +301,6 @@
   "@queryUi.results.countOnly.soFar": {
     "sourceHash": "dbdb208"
   },
-  "queryUi.pathPills.hiddenAria": "隐藏的路径片段：{segments}",
-  "@queryUi.pathPills.hiddenAria": {
-    "sourceHash": "f62e273"
-  },
   "queryUi.recent.trailingTooltip": "显示所有最近的搜索",
   "@queryUi.recent.trailingTooltip": {
     "sourceHash": "e0de323"

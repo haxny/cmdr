@@ -34,8 +34,22 @@ func assertNoTypeAwareFix(t *testing.T, name string, passes []eslintPass) {
 func TestESLintPassesNeverFixWithTypeAwareRules(t *testing.T) {
 	for _, ci := range []bool{false, true} {
 		assertNoTypeAwareFix(t, "appESLintPasses", appESLintPasses(ci))
-		assertNoTypeAwareFix(t, "nonTypeAwareESLintPasses", nonTypeAwareESLintPasses(ci))
 		assertNoTypeAwareFix(t, "typeAwareESLintPasses", typeAwareESLintPasses([]string{"."}))
+		assertNoTypeAwareFix(t, "typeAwareFixPasses", typeAwareFixPasses([]string{"."}, ci))
+	}
+}
+
+// The desktop's two type-aware lanes own its whole ESLint coverage, so the local fix pass lives
+// in them, scoped to the lane's own file set: the Svelte and TypeScript lanes run in parallel, and
+// two fix passes over the same files would rewrite each other's work.
+func TestTypeAwareFixPassesStayInTheirScope(t *testing.T) {
+	scope := []string{".", "--ignore-pattern", "**/*.svelte"}
+	fix := typeAwareFixPasses(scope, false)
+	if len(fix) != 1 {
+		t.Fatalf("want one local fix pass, got %+v", fix)
+	}
+	if !slices.Equal(fix[0].args[:len(scope)], scope) {
+		t.Errorf("the fix pass must lint exactly the lane's scope %v, got %v", scope, fix[0].args)
 	}
 }
 
@@ -58,8 +72,8 @@ func TestESLintPassesStillRunTypeAwareRules(t *testing.T) {
 // Local runs keep auto-fixing what's safe (the non-type-aware rules); CI never fixes.
 func TestESLintPassesAutoFixLocallyOnly(t *testing.T) {
 	for name, plan := range map[string]func(ci bool) []eslintPass{
-		"appESLintPasses":          appESLintPasses,
-		"nonTypeAwareESLintPasses": nonTypeAwareESLintPasses,
+		"appESLintPasses":    appESLintPasses,
+		"typeAwareFixPasses": func(ci bool) []eslintPass { return typeAwareFixPasses([]string{"."}, ci) },
 	} {
 		if got := plan(false); !slices.Contains(got[0].args, "--fix") {
 			t.Errorf("%s: a local run should start with a fix pass, got %+v", name, got)

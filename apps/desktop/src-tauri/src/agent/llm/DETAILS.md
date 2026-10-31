@@ -83,23 +83,56 @@ arguments stream in several fragments started several times, the rail keyed two 
 
 ## Prompt caching
 
-A caching provider bills a repeated prompt prefix at about a tenth of the price, so `build_request` places the
-breakpoints and `chat/` keeps the bytes stable (`chat/DETAILS.md` § Budget enforcement, § The memory block):
+A caching provider bills a repeated prompt prefix at a fraction of the price, so every request asks for caching and
+`chat/` keeps the bytes stable (`chat/DETAILS.md` § Budget enforcement, § The memory block). Providers want the ask in
+different shapes, and the wrong one isn't a no-op, so `genai_impl/cache.rs` picks ONE `CachePlan` per request:
 
-- **Every adapter: the last message carries `CacheControl::Ephemeral`** (5-minute TTL). That's the rolling breakpoint:
-  each call caches the whole prompt, and the next one (the same bytes plus one round) reads it back, which Anthropic
-  finds through its block lookback. A 1-hour TTL costs twice the write, so the 5-minute default stays until a thread's
-  pauses are measured.
-- **Anthropic only: the system string goes out as a marked system-role message** (genai lifts it into the request's
-  `system` field; its own `system` slot can't take a marker). Memory never sits there, so this caches the tools plus the
-  system prompt across every thread. Two of Anthropic's four breakpoints.
-- **Where the marker is a no-op**: OpenAI before GPT-5.6 caches automatically and genai drops a message marker there;
-  Gemini (implicit caching) and DeepSeek ignore it. GPT-5.6 and later default to explicit caching in genai, where the
-  marker becomes a `prompt_cache_breakpoint`; without one those models cached nothing.
-- **Not covered**: OpenRouter routing to an Anthropic model goes through the OpenAI adapter, which drops the marker, so
-  that route still re-bills each call.
+- **`Breakpoints` (the default): the last message carries `CacheControl::Ephemeral`** (5-minute TTL). That's the
+  rolling breakpoint: each call caches the whole prompt, and the next one (the same bytes plus one round) reads it back,
+  which Anthropic finds through its block lookback. A 1-hour TTL costs twice the write, so the 5-minute default stays
+  until a thread's pauses are measured. **On Anthropic the system string also goes out as a marked system-role
+  message** (genai lifts it into the request's `system` field; its own `system` slot can't take a marker). Memory never
+  sits there, so this caches the tools plus the system prompt across every thread. Two of Anthropic's four
+  breakpoints. Everyone else on this plan ignores the marks: OpenAI before GPT-5.6 caches automatically (genai drops a
+  message mark there), Gemini caches implicitly, DeepSeek automatically.
+- **`Automatic`: OpenAI's own GPT-5.6 and later get no marks**, and the intent rides the request level
+  (`with_cache_control`), which makes genai send nothing, so OpenAI's automatic caching covers the growing prefix,
+  tool results included. ❌ Don't mark messages there: any mark switches genai 0.7.1 to explicit mode
+  (`prompt_cache_options: {mode: "explicit"}`, which turns OpenAI's own breakpoints off), and a breakpoint can sit only
+  on a text block, so once the last message is a tool result the call caches nothing. Live on `gpt-6.1-terra`
+  (2026-10-29), call 2 of a tool loop read 0 tokens and wrote 0. Which models: `gpt-N.M…` from 5.6 on without a maker
+  prefix, mirroring genai's private `OpenAIModel::requires_explicit_cache`.
+- **`TopLevel`: OpenRouter routing to Claude gets one top-level `cache_control: {type: "ephemeral"}`** (genai's
+  `extra_body`). That route goes through genai's OpenAI adapter, which drops message marks, and Claude caches nothing
+  unmarked, so every round re-billed the whole chat (#801). The top-level field is OpenRouter's automatic mode for
+  Claude: the breakpoint lands on the last cacheable block and moves forward as the thread grows (OpenRouter's
+  prompt-caching guide, "Anthropic Claude", checked 2026-10-29). Who gets it is `ai::client::routing::
+  wants_top_level_cache_marker` (host `openrouter.ai`, model `anthropic/…` or `~anthropic/…`), carried as
+  `AiBackend::wants_top_level_cache_marker`. Other OpenRouter models cache on their own (OpenAI, DeepSeek, Grok, Gemini
+  2.5 implicit) or take per-block marks only, and an unknown top-level field risks a 400 elsewhere, so it stays off.
 
-Tests: `replay_fixtures.rs` (`anthropic_marks_the_system_string_and_the_last_message_for_caching`).
+What the cache did comes back in `AgentUsage`: `map_usage` reads genai's `prompt_tokens_details` (`cached_tokens` →
+`cache_read_tokens`, `cache_creation_tokens` → `cache_write_tokens`; every adapter normalizes to those, OpenRouter's
+`cache_write_tokens` included), both shares of `prompt_tokens`, which stays the whole input. `agent::pricing` prices each
+share at its own rate and the meter stores both (`../chat/DETAILS.md` § Crash / persistence model, case (d)).
+
+Live check: `live_smoke_test.rs`'s `smoke_*_cache_reads` run the tool loop with a cacheable prefix and assert every call
+after the first reads from the cache and prices under its uncached cost (`RUST_LOG=info` and `--no-capture` print each
+call's split). Verified 2026-10-29 with the real keys:
+
+- **`claude-sonnet-5-5`** (`Breakpoints`): call 1 wrote 3,345 tokens; calls 2 and 3 read 3,345 and 3,493 back and wrote
+  only the new round (148, 162). Metered $0.0015 and $0.0014 against $0.0078 and $0.0080 uncached.
+- **`gpt-6.1-terra`** (`Automatic`): calls 2 and 3 read 2,032 and 2,116 and wrote 84 and 105 (call 1 read too: the
+  same prefix from a run minutes earlier, inside the 30-minute TTL). Metered $0.0004 and $0.0003 against $0.0023 and
+  $0.0022.
+- **OpenRouter to Claude** (`TopLevel`): not reached, the key has no credits (HTTP 402). The request body is pinned by
+  the fixture test; `smoke_openrouter_claude_cache_reads` is the live check once the account has credits.
+
+Tests: `genai_impl/cache.rs` (which plan each model gets), `genai_impl/tests.rs`
+(`the_automatic_plan_marks_no_message`), `replay_fixtures.rs`
+(`anthropic_marks_the_system_string_and_the_last_message_for_caching`, `openrouter_claude_asks_for_caching_at_the_top_level`,
+`other_chat_completions_endpoints_get_no_top_level_marker`), `ai/client_unit_test.rs`
+(`only_openrouter_claude_asks_for_caching_at_the_top_level`).
 
 ## Degenerate tool calls
 
@@ -143,7 +176,10 @@ runs below, 2026-10-27):
   thinks adaptively by default with the text omitted, so a block comes back as an empty `thinking` plus a signature,
   and goes back the same way. genai captures both kinds from the stream (`ThoughtSignature` + `ReasoningContent`
   pairs, `redacted_thinking` as a `Custom` part) and rebuilds them on replay. Anthropic
-  accepts a turn with its thinking dropped, so a model switch losing it is safe.
+  accepts a turn with its thinking dropped, so a model switch losing it is safe. Upstream 0.7 does all this unpatched,
+  so the Anthropic thinking-capture patch once planned for genai isn't needed (verified on genai 0.7.1,
+  `anthropic_replays_signed_omitted_and_redacted_thinking_in_order` plus a live `claude-sonnet-5-5` tool loop at High,
+  2026-10-29).
 - **OpenAI Responses** (`gpt-5*`, `*-codex`, `*-pro`): each `reasoning` item's `encrypted_content`, sent back as a
   top-level `{type: "reasoning", encrypted_content}` input item ahead of the `function_call`. Requests run `store:
   false`, so the encrypted copy is the only one (`include: ["reasoning.encrypted_content"]`). genai captures it as

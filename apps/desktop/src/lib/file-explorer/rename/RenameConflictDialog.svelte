@@ -1,7 +1,8 @@
 <script lang="ts">
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
     import Button from '#lib/ui/Button.svelte'
-    import { formatByteSize } from '#lib/units/index.js'
+    import { formatByteSize, formatExactBytes, formatSizePair } from '#lib/units/index.js'
+    import { tooltip } from '#lib/tooltip/tooltip.js'
     import DateLabel from '#lib/ui/DateLabel.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { ConflictFileInfo, RenameConflictResolution } from './rename-operations'
@@ -48,6 +49,12 @@
     const sizesCompare = $derived(!renamedFile.isDirectory && !existingFile.isDirectory)
     const renamedIsLarger = $derived(sizesCompare && renamedFile.size > existingFile.size)
     const existingIsLarger = $derived(sizesCompare && existingFile.size > renamedFile.size)
+    /** Worded as a pair, so two files a few bytes apart never both read "1.18 MiB"
+     *  (exact bytes then), and equal ones say so. A folder side shows no size. */
+    const sizePair = $derived(sizesCompare ? formatSizePair(renamedFile.size, existingFile.size) : null)
+    const renamedSizeText = $derived(sizePair?.first.text ?? formatByteSize(renamedFile.size))
+    const existingSizeText = $derived(sizePair?.second.text ?? formatByteSize(existingFile.size))
+    const sameSize = $derived(sizePair?.same ?? false)
 
     function handleKeydown(event: KeyboardEvent) {
         if (event.key === 'Enter') {
@@ -83,7 +90,14 @@
                 {#if !renamedFile.isDirectory}
                     <div class="file-meta">
                         <span class="meta-label">{tString('fileExplorer.renameConflict.size')}</span>
-                        <span class="meta-value" class:newer={renamedIsLarger}>{formatByteSize(renamedFile.size)}</span>
+                        <span class="meta-value">
+                            <span
+                                class="size-value"
+                                class:newer={renamedIsLarger}
+                                use:tooltip={formatExactBytes(renamedFile.size)}>{renamedSizeText}</span
+                            >{#if sameSize}
+                                <span class="same-size">{tString('common.sizeComparison.same')}</span>{/if}
+                        </span>
                     </div>
                 {/if}
                 <div class="file-meta">
@@ -100,7 +114,13 @@
                 {#if !existingFile.isDirectory}
                     <div class="file-meta">
                         <span class="meta-label">{tString('fileExplorer.renameConflict.size')}</span>
-                        <span class="meta-value" class:newer={existingIsLarger}>{formatByteSize(existingFile.size)}</span>
+                        <span class="meta-value">
+                            <span
+                                class="size-value"
+                                class:newer={existingIsLarger}
+                                use:tooltip={formatExactBytes(existingFile.size)}>{existingSizeText}</span
+                            >
+                        </span>
                     </div>
                 {/if}
                 <div class="file-meta">
@@ -219,9 +239,14 @@
         font-variant-numeric: tabular-nums;
     }
 
-    .meta-value.newer {
+    .meta-value.newer,
+    .size-value.newer {
         color: var(--color-allow);
         font-weight: 600;
+    }
+
+    .same-size {
+        color: var(--color-text-secondary);
     }
 
     .leading-buttons {

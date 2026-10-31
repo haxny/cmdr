@@ -18,17 +18,17 @@ use crate::volume_broadcast::VolumeContextActionKind;
 use crate::window_events::{QueueRowMenuAction, ViewerEditActionKind, ViewerHistoryDirection};
 
 use super::{
-    CLOSE_TAB_ID, CommandScope, EDIT_COPY_ID, EDIT_CUT_ID, EDIT_PASTE_ID, EJECT_VOLUME_ID, FAVORITES_ADD_CONTEXT_ID,
-    FUNCTION_KEY_BAR_HIDE_ID, MEDIA_INDEX_ADD_FOLDER_ID, MEDIA_INDEX_EXCLUDE_FOLDER_ID, MEDIA_INDEX_INCLUDE_FOLDER_ID,
-    MEDIA_INDEX_REMOVE_FOLDER_ID, MediaIndexFolderChoice, MediaIndexFolderExclusion, MenuSort, MenuState,
-    NETWORK_HOST_DISCONNECT_ID, NETWORK_HOST_EDIT_ID, NETWORK_HOST_FORGET_SECRET_ID, NETWORK_HOST_FORGET_SERVER_ID,
-    SELECT_ALL_ID, SHOW_HIDDEN_FILES_ID, SHOW_SEARCH_RESULT_IN_FOLDER_ID, SORT_ASCENDING_ID, SORT_BY_ADDED_ID,
-    SORT_BY_CREATED_ID, SORT_BY_EXTENSION_ID, SORT_BY_MODIFIED_ID, SORT_BY_NAME_ID, SORT_BY_SIZE_ID,
-    SORT_DESCENDING_ID, SettingsChanged, TAB_CLOSE_ID, TAB_CLOSE_OTHERS_ID, TAB_PIN_ID, VIEW_MODE_BRIEF_LEFT_ID,
-    VIEW_MODE_BRIEF_RIGHT_ID, VIEW_MODE_FULL_LEFT_ID, VIEW_MODE_FULL_RIGHT_ID, VIEW_SET_MODE_COMMAND_ID,
-    VIEW_SHOW_HIDDEN_COMMAND_ID, VIEWER_CONTEXT_COPY_ID, VIEWER_CONTEXT_SELECT_ALL_ID, VIEWER_EDIT_COPY_ID,
-    VIEWER_EDIT_CUT_ID, VIEWER_EDIT_PASTE_ID, VIEWER_GO_BACK_ID, VIEWER_GO_FORWARD_ID, VIEWER_SELECT_ALL_ID,
-    VIEWER_WORD_WRAP_ID, ViewMode, ViewModeChanged, menu_id_to_command,
+    CLOSE_TAB_ID, CommandScope, EDIT_COPY_ID, EDIT_CUT_ID, EDIT_PASTE_ID, EJECT_ALL_VOLUMES_ID, EJECT_VOLUME_ID,
+    FAVORITES_ADD_CONTEXT_ID, FUNCTION_KEY_BAR_HIDE_ID, MEDIA_INDEX_ADD_FOLDER_ID, MEDIA_INDEX_EXCLUDE_FOLDER_ID,
+    MEDIA_INDEX_INCLUDE_FOLDER_ID, MEDIA_INDEX_REMOVE_FOLDER_ID, MediaIndexFolderChoice, MediaIndexFolderExclusion,
+    MenuSort, MenuState, NETWORK_HOST_DISCONNECT_ID, NETWORK_HOST_EDIT_ID, NETWORK_HOST_FORGET_SECRET_ID,
+    NETWORK_HOST_FORGET_SERVER_ID, SELECT_ALL_ID, SHOW_HIDDEN_FILES_ID, SHOW_SEARCH_RESULT_IN_FOLDER_ID,
+    SORT_ASCENDING_ID, SORT_BY_ADDED_ID, SORT_BY_CREATED_ID, SORT_BY_EXTENSION_ID, SORT_BY_MODIFIED_ID,
+    SORT_BY_NAME_ID, SORT_BY_SIZE_ID, SORT_DESCENDING_ID, SettingsChanged, TAB_CLOSE_ID, TAB_CLOSE_OTHERS_ID,
+    TAB_PIN_ID, VIEW_MODE_BRIEF_LEFT_ID, VIEW_MODE_BRIEF_RIGHT_ID, VIEW_MODE_FULL_LEFT_ID, VIEW_MODE_FULL_RIGHT_ID,
+    VIEW_SET_MODE_COMMAND_ID, VIEW_SHOW_HIDDEN_COMMAND_ID, VIEWER_CONTEXT_COPY_ID, VIEWER_CONTEXT_SELECT_ALL_ID,
+    VIEWER_EDIT_COPY_ID, VIEWER_EDIT_CUT_ID, VIEWER_EDIT_PASTE_ID, VIEWER_GO_BACK_ID, VIEWER_GO_FORWARD_ID,
+    VIEWER_SELECT_ALL_ID, VIEWER_WORD_WRAP_ID, ViewMode, ViewModeChanged, menu_id_to_command,
 };
 
 /// Removes macOS system-injected items from the Edit menu and registers the Help menu.
@@ -782,8 +782,10 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
                         Ok(outcome) => {
                             crate::file_system::tags::report_skips(&app, &outcome.skipped);
                             if !outcome.updates.is_empty() {
-                                crate::listing_host::listings()
-                                    .apply_tags(&cmdr_listing::ListingId::new(listing_id), outcome.updates);
+                                crate::listing_host::listings().apply_row_facts(
+                                    &cmdr_listing::ListingId::new(listing_id),
+                                    cmdr_listing::RowFacts::Tags(outcome.updates),
+                                );
                             }
                         }
                         Err(e) => log::warn!(target: "tags", "context-menu tag toggle failed (color={color}): {e}"),
@@ -840,6 +842,7 @@ fn search_result_reveal_path(menu_id: &str, context: &super::MenuContext) -> Opt
 fn volume_row_action(id: &str) -> Option<VolumeContextActionKind> {
     match id {
         EJECT_VOLUME_ID => Some(VolumeContextActionKind::Eject),
+        EJECT_ALL_VOLUMES_ID => Some(VolumeContextActionKind::EjectAll),
         _ => None,
     }
 }
@@ -851,6 +854,10 @@ mod volume_row_action_tests {
     #[test]
     fn the_breadcrumb_eject_id_maps_to_eject() {
         assert_eq!(volume_row_action(EJECT_VOLUME_ID), Some(VolumeContextActionKind::Eject));
+        assert_eq!(
+            volume_row_action(EJECT_ALL_VOLUMES_ID),
+            Some(VolumeContextActionKind::EjectAll)
+        );
     }
 
     /// ❗ The SMB hub's host menu rides its OWN event with a host id, so an id

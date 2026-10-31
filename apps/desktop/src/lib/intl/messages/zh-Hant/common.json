@@ -81,5 +81,9 @@
   "@common.sizeUnit.petabyte": {
     "sourceHash": "f9085bf",
     "sameAsSourceJustification": "Traditional Chinese writes byte-multiple unit symbols in Latin, as macOS zh-TW and zh-HK Finder do (pile: `KB`, `MB`, `GB`, `TB`, `PB` beside the translated `位元組`; TC zh-TW `位元組|KB|MB|GB`). Microsoft zh-Hant does the same. There is no Han symbol to localize; only the bare byte word is translated (`common.sizeUnit.byte` = `位元組`)."
+  },
+  "common.sizeComparison.same": "（大小相同）",
+  "@common.sizeComparison.same": {
+    "sourceHash": "2d0f788"
   }
 }

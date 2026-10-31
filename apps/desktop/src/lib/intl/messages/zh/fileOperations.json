@@ -583,6 +583,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "名称对目标位置来说太长",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "目标位置不允许这个名称",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "目标位置存不下这么长的名称。跳过这一项就能继续处理其余项目，之后把它重命名再试一次。",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "目标位置存不下这个名称。可能是名称太长、属于保留名称或用了目标位置不允许的字符。跳过这一项就能继续处理其余项目，之后把它重命名再试一次。",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "文件已存在时：{policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -798,6 +814,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {没有可拷贝的了：要拷贝的 {total, plural, other {{totalText} 个项目}}在排队等待期间被移到别处或删除了。} move {没有可移动的了：要移动的 {total, plural, other {{totalText} 个项目}}在排队等待期间被移到别处或删除了。} delete {没有可删除的了：要删除的 {total, plural, other {{totalText} 个项目}}在排队等待期间被移到别处或删除了。} trash {没有可移到废纸篓的了：要移到废纸篓的 {total, plural, other {{totalText} 个项目}}在排队等待期间被移到别处或删除了。} other {没有剩下要做的了：这项操作要处理的 {total, plural, other {{totalText} 个项目}}在排队等待期间被移到别处或删除了。}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "“{name}”已经不在了。可能是其他 App 先一步移走或删掉了。",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, other {有 {countText} 个项目已经不在了。可能是其他 App 先一步移走或删掉了。}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "不再显示",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "移动已锁定的项目？",
   "@fileOperations.lockedSources.title": {

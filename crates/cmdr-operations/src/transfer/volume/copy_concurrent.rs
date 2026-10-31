@@ -50,7 +50,7 @@ use super::super::transfer_driver::{LeafProgressLedger, emit_source_outcome};
 use super::super::transfer_probe::OperationProbe;
 use super::copy::CopyCells;
 use super::copy::drain_deadline as drain_deadline_for;
-use super::copy_concurrent_task::{CopyTask, CopyTaskFailure, CopyTaskSuccess, run_copy_task};
+use super::copy_concurrent_task::{CopyTask, CopyTaskEnd, CopyTaskFailure, CopyTaskSuccess, run_copy_task};
 use super::merge_ctx::CreatedPaths;
 use super::preflight::SourceHint;
 use super::transfer_error::WriteFailure;
@@ -133,7 +133,7 @@ pub(super) async fn drive_transfer_concurrent(ctx: ConcurrentCopy<'_>) -> Concur
 }
 
 /// What one task per top-level source item hands back (`copy_concurrent_task.rs`).
-type CopyTaskOutput = Result<CopyTaskSuccess, Box<CopyTaskFailure>>;
+type CopyTaskOutput = Result<CopyTaskEnd, Box<CopyTaskFailure>>;
 
 /// One task out of the window: its result, or why it has none (a panic, or the
 /// driver's own abort).
@@ -551,9 +551,23 @@ impl Settlements {
     /// One task came back out of the window, however it ended.
     fn record_joined(&mut self, ctx: &ConcurrentCopy<'_>, joined: Joined) {
         match joined {
-            Ok((id, Ok(success))) => {
+            Ok((id, Ok(CopyTaskEnd::Landed(success)))) => {
                 self.settle(id);
                 self.record_success(ctx, success);
+            }
+            // A source left out whole (`CopyTaskEnd::Skipped`): counted like a
+            // conflict Skip, and nothing of it is in
+            // any ledger but the folders its walk made before the refusal.
+            Ok((
+                id,
+                Ok(CopyTaskEnd::Skipped {
+                    source_path,
+                    created_dirs,
+                }),
+            )) => {
+                self.settle(id);
+                ctx.cells.created_dirs.lock_ignore_poison().extend(created_dirs);
+                ctx.account_skipped_file(&source_path);
             }
             Ok((id, Err(failure))) => {
                 self.settle(id);

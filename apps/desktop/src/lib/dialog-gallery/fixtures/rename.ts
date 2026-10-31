@@ -13,6 +13,7 @@ import { daysAgo, hoursAgo } from './relative-time'
 export interface ExtensionChangeFixture {
   oldExtension: string
   newExtension: string
+  isDirectory?: boolean
 }
 
 /** Props of `RenameConflictDialog.svelte`, minus its callback. */
@@ -33,6 +34,19 @@ export const extensionChangeFixtures: Record<string, ExtensionChangeFixture | un
   'long-extension': {
     oldExtension: 'sqlite3-journal',
     newExtension: 'photoslibrary',
+  },
+  'removed-extension': {
+    oldExtension: 'txt',
+    newExtension: '',
+  },
+  'removed-package-extension': {
+    oldExtension: 'app',
+    newExtension: '',
+    isDirectory: true,
+  },
+  'added-extension': {
+    oldExtension: '',
+    newExtension: 'md',
   },
 }
 

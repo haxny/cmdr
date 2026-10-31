@@ -3319,7 +3319,7 @@
   },
   "unplug": {
     "chosen": "desconectado",
-    "accept": ["desconect"],
+    "accept": ["desconect", "conectado"],
     "forms": "was disconnected → foi desconectado (the noun disco first, so the participle agrees with it)",
     "confidence": "high",
     "sources": "shipped pt catalog",
@@ -3671,6 +3671,19 @@
     "confidence": "high",
     "sources": "macOS Finder pt-BR bulk rename (Nome e Contador, dKW-wM-eWS, macOS 27 bundle, 2026-10-09); shipped pt catalog (commands.fileMultiRename.description, the former multiRename.counterStart/Step/Digits Início do contador / Incremento / Dígitos)"
   },
+  "name-mask": {
+    "chosen": "máscara de nome",
+    "accept": ["máscara"],
+    "confidence": "high",
+    "sources": "Double Commander pt-BR (Mask → Máscara, File mask → Máscara de arquivo); shipped pt catalog (multiRename.nameMask Máscara de nome)"
+  },
+  "type-to-jump": {
+    "chosen": "Ir para",
+    "accept": ["digitar-para-pular"],
+    "forms": "the typing-mode name and badge beside Filtrar; quoted in running text (Mudar para “Ir para”); Clear jump → Limpar “Ir para”; the English compound type-to-jump → digitar-para-pular (settings.fileExplorer.typeToJump.resetDelay.*)",
+    "confidence": "high",
+    "sources": "shipped pt catalog (fileExplorer.typeToJump.prefix, settings.fileExplorer.typeToJump.mode.opt.jump, fileExplorer.quickFilter.intro.switchToJump)"
+  },
   "diacritics": {
     "chosen": "acentos",
     "confidence": "high",
@@ -3691,5 +3704,22 @@
     "chosen": "Nível de pensamento",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (Pensamento do Gemini)"
+  },
+  "shared-storage": {
+    "chosen": "armazenamento compartilhado",
+    "confidence": "tentative",
+    "sources": "English `shared storage` over AOSP values-pt-rBR storage_internal (read 2026-10-30): Divisão interna de armazenamento, which reads as a partition"
+  },
+  "this-computer": {
+    "accept": ["computador", "máquina"],
+    "chosen": "este computador",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
+  },
+  "busy": {
+    "chosen": "ocupado",
+    "confidence": "high",
+    "forms": "the greyed menu marker: the base label word for word, then (ocupado), invariable",
+    "sources": "catalog (menu.volume.ejectBusy, disconnectBusy, forgetServerBusy, forgetSavedPasswordBusy)"
   }
 }

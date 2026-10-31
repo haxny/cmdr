@@ -40,6 +40,7 @@ function openResult(overrides: Partial<ViewerOpenResult>): ViewerOpenResult {
     kind: 'text',
     mediaToken: null,
     mediaDimensions: null,
+    mediaFromVolume: false,
     ...overrides,
   }
 }

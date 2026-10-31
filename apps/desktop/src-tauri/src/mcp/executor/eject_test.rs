@@ -28,6 +28,9 @@ fn every_refusal() -> Vec<EjectError> {
             holders: HolderScan::Incomplete { named: Vec::new() },
             detail: "in use by process 1234".to_string(),
         },
+        EjectError::HeldBeforeEject {
+            holders: HolderScan::Incomplete { named: Vec::new() },
+        },
         EjectError::TimedOut,
         EjectError::NotResponding {
             step: EjectStep::IndexStop,

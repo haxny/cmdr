@@ -70,7 +70,6 @@ async function mountSheet(): Promise<HTMLElement> {
       target,
       props: {
         session: { sessionId: 'S', count: 2 },
-        nothingSelected: false,
         onApplied: vi.fn(),
         onUndoStarted: vi.fn(),
         onClose: vi.fn(),

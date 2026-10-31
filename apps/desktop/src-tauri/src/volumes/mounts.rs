@@ -109,13 +109,19 @@ pub(super) fn mount_under<'a>(mounts: &'a [MountEntry], path: &Path) -> Option<&
         .max_by_key(|m| m.mount_point.len())
 }
 
-/// Every mount point the kernel currently lists, from the same non-blocking snapshot.
+/// Every mount the kernel currently lists, as `(mount point, source, fs type)`, from
+/// the same non-blocking snapshot.
 ///
 /// What the INDEX cuts its boot-tree scan at, so it's every row, another account's
 /// mounts included: a scan has to stop at a mount it can't enter too. ❗ `None` when
 /// the table couldn't be read, ❌ never an empty list.
-pub(crate) fn mount_roots() -> Option<Vec<String>> {
-    Some(enumerate_mounts()?.into_iter().map(|mount| mount.mount_point).collect())
+pub(crate) fn mount_rows() -> Option<Vec<(String, String, String)>> {
+    Some(
+        enumerate_mounts()?
+            .into_iter()
+            .map(|mount| (mount.mount_point, mount.mount_from, mount.fs_type))
+            .collect(),
+    )
 }
 
 /// The mount points the volume REGISTRY sweeps (`file_system::volume::mount_registration`):
@@ -274,6 +280,20 @@ struct LocalVolumeMeta {
     uuid: Option<String>,
 }
 
+/// Where the mounts that earn a switcher row sit, for an eject asking whether a volume's disk
+/// keeps anything the person can see. `None` when the mount table wouldn't answer. No provider
+/// lookup: this is asked about a disk's own device-backed mounts.
+pub(crate) fn mount_points_with_rows() -> Option<Vec<std::path::PathBuf>> {
+    let mounts = enumerate_mounts()?;
+    Some(
+        mounts
+            .iter()
+            .filter(|mount| is_user_facing_mount(mount, None))
+            .map(|mount| std::path::PathBuf::from(&mount.mount_point))
+            .collect(),
+    )
+}
+
 /// The SMB mount info for a network mount, or `None` if it isn't an SMB mount we
 /// can parse. Read straight out of the `getfsstat` snapshot, no syscall.
 fn smb_info(mount: &MountEntry) -> Option<SmbMountInfo> {
@@ -365,6 +385,7 @@ fn build_attached_location(
         supports_trash,
         mount_is_read_only: mount.is_read_only,
         is_disk_image,
+        shares_disk_with_others: false,
         is_cloud_mount,
         connection_state: None,
         pinned: None,

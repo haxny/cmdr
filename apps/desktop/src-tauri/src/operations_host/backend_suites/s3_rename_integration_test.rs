@@ -22,6 +22,7 @@ use cmdr_fs::volume::{Volume, VolumeError};
 use cmdr_s3::S3Volume;
 use cmdr_s3::volume::testing::{
     GARAGE, S3Target, Seed, VERSITYGW, distant_mtime, object, self_describing_bytes, take_sent_requests,
+    wait_for_the_ledger_to_settle,
 };
 
 use super::network_transfer_test_support::{budget, read_all, run_copy, sha256};
@@ -195,6 +196,7 @@ pub(super) async fn a_paused_then_cancelled_rename_keeps_the_source_whole(target
         sha256(&bytes),
         "the source stays whole"
     );
+    wait_for_the_ledger_to_settle(&volume, &prefix).await;
     assert!(target.unfinished_uploads(target.bucket(), &prefix).await.is_empty());
     if volume.exists(&at(&volume, &format!("{prefix}gone.bin"))).await {
         // A cancel that landed after the copy published is a finished copy

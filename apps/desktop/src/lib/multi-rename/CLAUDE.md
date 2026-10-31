@@ -2,8 +2,9 @@
 
 The ⌃M sheet over `src-tauri/src/multi_rename/` (the engine and its rules: that module's `CLAUDE.md` / `DETAILS.md`).
 
-- `MultiRenameDialog.svelte` the sheet; `routes/(main)/+page.svelte` opens the backend session first and closes it with
-  the sheet. `PreviewList.svelte` its preview (a `grid` `ColumnList` over the windowed `source`, one cursor).
+- `MultiRenameDialog.svelte` the sheet; `routes/(main)/+page.svelte` opens the backend session first (selection, else
+  cursor file) and closes it with the sheet. `PreviewList.svelte` its preview (a `grid` `ColumnList` over the windowed
+  `source`, one cursor).
 - `multi-rename-state.svelte.ts` the spec, the debounced preview (a generation counter drops stale answers), the rows in
   view, the cursor, presets (`loadedId`, `edited`), the last settings (`persist`), Results' names, Rename and its queue,
   the media read's progress.

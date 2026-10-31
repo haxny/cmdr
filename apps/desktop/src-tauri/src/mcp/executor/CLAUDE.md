@@ -14,8 +14,8 @@ which calls these by path. Up: `../CLAUDE.md`.
 ## Must-knows
 
 - **Every fire-and-forget action tool waits for a backend ack before returning `OK`** (`wait_for_ack`, default 1500 ms;
-  nav 5 s): snapshot precondition, emit/run, wait; on timeout return `ToolError::internal` naming the missing signal and
-  budget. ❌ Never return `OK` without waiting. Variants and budgets: DETAILS.md § Ack contract.
+  nav 5 s). A timeout is `ToolError::outcome_unknown`: the action went out and may still run. ❌ Never `OK` without
+  waiting, ❌ never word a timeout as a failure. Variants and budgets: DETAILS.md § Ack contract.
 - **A result that carries a list gets `fit_to_result_budget`** (`mod.rs`) and reports `total`/`returned`/`truncated`. A
   row cap doesn't bound a payload (`image_facts` at 200 paths was ~100k tokens), and an oversized result pushes the rest
   of the caller's turn out of context. ❌ Never cut silently. Depth: `../../agent/tools/DETAILS.md` § The size contract.

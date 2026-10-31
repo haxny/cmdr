@@ -57,16 +57,16 @@ the toolchain at the same place as the SDK. Use it for every Rust lane.
 
 ### A second launch on one data dir looks exactly like a crash
 
-`instance_lock` refuses a launch when another process already owns the data dir (two processes on one index corrupt it),
-and the refusal is a **modal alert on the user's desktop** plus `exit 143` in the log. From a script's side that is
-indistinguishable from a build failure or a crash — so a launch loop retries, and each retry puts another dialog in
-front of whoever is at the machine. An agent that never sees the alert can do this for an hour.
+`instance_lock` refuses a launch when another process already owns the data, cache, or log dir (two processes on one
+index corrupt it), and the refusal is a **modal alert on the user's desktop** plus `exit 143` and one stderr line. From
+a script's side that is indistinguishable from a build failure or a crash — so a launch loop retries, and each retry
+puts another dialog in front of whoever is at the machine. An agent that never sees the alert can do this for an hour.
 
 So **check before you launch**, and don't trust the exit code to tell you why:
 
 ```bash
 pgrep -f 'worktree.*<slug>.*Cmdr'   # empty ⇒ safe to launch; otherwise drive the one that's up, or kill it
-grep -n 'instance_lock' <your dev log>   # the refusal says which PID owns the dir
+grep -n 'already owns the data dir' <the launch's stderr>   # names the PID; never in cmdr.log
 ```
 
 Two traps that make this worse than it sounds:
@@ -169,13 +169,14 @@ for each of the three above, through `CMDR_CACHE_DIR`. A run that sets only `CMD
 `<CMDR_DATA_DIR>/cache/drive-index/`. Resolution: `src-tauri/src/config.rs` `drive_index_dir`.
 
 - **Logging**: frontend and backend logs land together in the terminal and the log dir (dev: `<CMDR_DATA_DIR>/logs/`,
-  prod: `~/Library/Logs/com.veszelovszki.cmdr/`). Read `docs/tooling/logging.md` before using `RUST_LOG`: it has
-  per-subsystem recipes. Key gotcha: the Rust library target is `cmdr_lib`, not `cmdr`, so use
-  `RUST_LOG=cmdr_lib::module=debug`. `cmdr_lib` (lib) and `Cmdr` (bin) are both in the `cmdr` package, so
-  `Compiling cmdr` in build output covers both targets.
+  prod: `~/Library/Logs/com.veszelovszki.cmdr/`; a build with another identifier and no `CMDR_DATA_DIR` gets
+  `~/Library/Logs/<its identifier>/`). Read `docs/tooling/logging.md` before using `RUST_LOG`: it has per-subsystem
+  recipes. Key gotcha: the Rust library target is `cmdr_lib`, not `cmdr`, so use `RUST_LOG=cmdr_lib::module=debug`.
+  `cmdr_lib` (lib) and `Cmdr` (bin) are both in the `cmdr` package, so `Compiling cmdr` in build output covers both
+  targets.
 - **Dev live log path**: the running dev app's log is
   `~/Library/Application Support/com.veszelovszki.cmdr-dev/logs/cmdr.log` (the data-dir `logs/` subdir), NOT
-  `~/Library/Logs/com.veszelovszki.cmdr-dev/` (which can be stale).
+  `~/Library/Logs/com.veszelovszki.cmdr-dev/` (only a dev build run without the wrapper writes there).
 - **Hard freeze (logs stop)**: when the app wedges and the log goes silent, `sample <pid>` (macOS) the running Cmdr
   process to capture the blocked threads' stacks — that's how a deadlock gets pinpointed when the logger never flushed.
 - **Crash reports**: a crash writes `crash-report.json` to the data dir; the next launch detects it and offers to send.

@@ -43,6 +43,14 @@
   "@adb.readiness.waitingForAuthorization": {
     "sourceHash": "679558e"
   },
+  "adb.readiness.tapAllow": "Tap Allow on your phone",
+  "@adb.readiness.tapAllow": {
+    "sourceHash": "68c770f"
+  },
+  "adb.unnamedPhone": "Android phone",
+  "@adb.unnamedPhone": {
+    "sourceHash": "fae4ea5"
+  },
   "adb.readiness.offline": "Tvůj telefon neodpovídá. Probuď jeho obrazovku, nebo vytáhni kabel a zase ho zapoj.",
   "@adb.readiness.offline": {
     "sourceHash": "6061885"

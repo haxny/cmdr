@@ -683,7 +683,11 @@
         </div>
 
         {#if lastAiPrompt}
-            <AiPromptStrip aiPrompt={lastAiPrompt} caveat={lastAiCaveat ?? ''} summary={aiSummary} />
+            <AiPromptStrip
+                aiPrompt={lastAiPrompt}
+                caveat={lastAiCaveat ?? ''}
+                summary={config.state.getAiTrailReady() ? aiSummary : null}
+            />
         {/if}
 
         {#if config.noticeBanner}

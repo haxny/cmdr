@@ -104,6 +104,7 @@ export function createBackgroundOperations(deps: BackgroundOperationsDeps) {
             metadataLeftBehind: event.metadataLeftBehind ?? null,
             lockedKept: event.lockedKept ?? null,
             durabilityUnconfirmed: event.durabilityUnconfirmed ?? null,
+            alreadyGone: event.alreadyGone ?? null,
           },
           operationId,
         )

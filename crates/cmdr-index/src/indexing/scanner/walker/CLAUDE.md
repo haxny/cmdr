@@ -23,7 +23,8 @@ runs the walk (`walk`, the workers, the watchdog, `SubtreeBudget`, `WALK_THREADS
   successful sibling. Throttle, not exclude: ❌ no path denylist.
 - **`bulk_read` degrades, it doesn't drop.** It decodes through `cmdr_fs::attr_buf` (❌ no offset table here); a missing
   attribute yields `stat: None` and the caller falls back to `symlink_metadata`, and a record that can't become an entry
-  re-reads the directory with `read_dir`. ❌ Never report a value the decoder answered `None` for.
+  re-reads the directory with `read_dir`, as does an `EINTR` (❌ never resume the fd: it may skip a batch). ❌ Never
+  report a value the decoder answered `None` for.
 - **Each batch publishes through `ReadProgress` as it arrives** — that IS how the watchdog knows this read is working.
   ❌ Don't buffer a whole directory before reporting.
 - **The park point (`park.rs`) is `#[cfg(test)]`, ❌ never `feature = "testing"`**: the app turns `testing` on for every

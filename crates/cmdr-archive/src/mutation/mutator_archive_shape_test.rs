@@ -6,7 +6,7 @@
 use std::path::{Path, PathBuf};
 
 use super::*;
-use crate::test_fixtures::{build_zip, build_zipcrypto_zip, plain_entry, stored};
+use crate::test_fixtures::{build_zip, build_zipcrypto_zip, cloak_first_central_name, plain_entry, stored};
 
 fn write_zip(dir: &Path, name: &str, bytes: &[u8]) -> PathBuf {
     let path = dir.join(name);
@@ -297,4 +297,28 @@ fn an_edit_that_writes_no_entry_under_a_file_applies() {
     };
     apply(&path, &changeset, &NoHooks).expect("a file replaced by a folder applies");
     assert_eq!(entry_names(&path), ["notes/", "notes/a.txt"]);
+}
+
+/// Zip cloaking (GHSA-m665-v7pm-7grj): a kept entry's local header names
+/// something other than its central-directory record. The rewrite writes a fresh
+/// local header from the central name, so the edited zip no longer carries the
+/// disagreement for a local-header reader (`zip`'s streaming extractor) to act on.
+#[test]
+fn an_edit_writes_a_cloaked_entrys_local_header_under_its_listed_name() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let mut bytes = build_zip(&[stored("cron_worker.sh", "payload"), stored("other.txt", "o")]);
+    cloak_first_central_name(&mut bytes, b"doc_report.pdf");
+    let path = write_zip(tmp.path(), "cloaked.zip", &bytes);
+    let mut before = ZipArchive::new(File::open(&path).expect("open the zip")).expect("the zip parses");
+    assert!(before.validate_header_consistency().is_err(), "the fixture is cloaked");
+
+    delete(&path, "other.txt").expect("the delete applies");
+
+    assert_eq!(entry_names(&path), ["doc_report.pdf"]);
+    let mut after = ZipArchive::new(File::open(&path).expect("open the zip")).expect("the zip parses");
+    after
+        .validate_header_consistency()
+        .expect("local and central headers agree after the edit");
+    let written = std::fs::read(&path).expect("read the result");
+    assert!(!written.windows(14).any(|w| w == b"cron_worker.sh"));
 }

@@ -1,0 +1,1420 @@
+{
+  "askCmdr.title": "Ask Cmdr",
+  "@askCmdr.title": {
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Product name of the chat panel; the ask-cmdr ruling keeps it verbatim in every language."
+  },
+  "askCmdr.close": "Закрити Ask Cmdr",
+  "@askCmdr.close": {
+    "sourceHash": "d34225d"
+  },
+  "askCmdr.newChat": "Новий чат",
+  "@askCmdr.newChat": {
+    "sourceHash": "db18382"
+  },
+  "askCmdr.empty.title": "Запитайте про свої файли",
+  "@askCmdr.empty.title": {
+    "sourceHash": "b2251fc"
+  },
+  "askCmdr.empty.hint": "Щоб відповісти, Cmdr може переглядати те, що ви відкрили, ваші диски й історію файлів. Він читає назви, шляхи та розміри, а всередину файлу зазирає лише тоді, коли ви про нього запитуєте.",
+  "@askCmdr.empty.hint": {
+    "sourceHash": "487071b"
+  },
+  "askCmdr.composer.placeholder": "Запитайте про свої файли…",
+  "@askCmdr.composer.placeholder": {
+    "sourceHash": "77e2636"
+  },
+  "askCmdr.composer.send": "Надіслати повідомлення",
+  "@askCmdr.composer.send": {
+    "sourceHash": "93a26b1"
+  },
+  "askCmdr.composer.stop": "Зупинити",
+  "@askCmdr.composer.stop": {
+    "sourceHash": "cae7d57"
+  },
+  "askCmdr.thinking": "Думає…",
+  "@askCmdr.thinking": {
+    "sourceHash": "a02f1ce"
+  },
+  "askCmdr.stalled": "Це триває довше, ніж зазвичай. Можна зачекати ще або зупинити.",
+  "@askCmdr.stalled": {
+    "sourceHash": "c171aab"
+  },
+  "askCmdr.softCap.message": "Цей чат стає задовгим. У новому чаті відповіді будуть швидкими й зосередженими.",
+  "@askCmdr.softCap.message": {
+    "sourceHash": "60d2c54"
+  },
+  "askCmdr.softCap.action": "Почати новий чат",
+  "@askCmdr.softCap.action": {
+    "sourceHash": "677d4c2"
+  },
+  "askCmdr.tool.appState.doing": "Перевірка того, що у вас відкрито",
+  "@askCmdr.tool.appState.doing": {
+    "sourceHash": "832e0cc"
+  },
+  "askCmdr.tool.appState.done": "Перевірено те, що у вас відкрито",
+  "@askCmdr.tool.appState.done": {
+    "sourceHash": "155621e"
+  },
+  "askCmdr.tool.listDir.doing": "Перегляд папки",
+  "@askCmdr.tool.listDir.doing": {
+    "sourceHash": "64aa697"
+  },
+  "askCmdr.tool.listDir.done": "Переглянуто папку",
+  "@askCmdr.tool.listDir.done": {
+    "sourceHash": "5746fef"
+  },
+  "askCmdr.tool.importantFolders.doing": "Пошук ваших важливих папок",
+  "@askCmdr.tool.importantFolders.doing": {
+    "sourceHash": "866aa38"
+  },
+  "askCmdr.tool.importantFolders.done": "Знайдено ваші важливі папки",
+  "@askCmdr.tool.importantFolders.done": {
+    "sourceHash": "1fd5db6"
+  },
+  "askCmdr.tool.folderImportance.doing": "Перевірка важливості папки",
+  "@askCmdr.tool.folderImportance.doing": {
+    "sourceHash": "594deff"
+  },
+  "askCmdr.tool.folderImportance.done": "Перевірено важливість папки",
+  "@askCmdr.tool.folderImportance.done": {
+    "sourceHash": "c7f397f"
+  },
+  "askCmdr.tool.listVolumes.doing": "Перевірка ваших дисків",
+  "@askCmdr.tool.listVolumes.doing": {
+    "sourceHash": "2ed1808"
+  },
+  "askCmdr.tool.listVolumes.done": "Перевірено ваші диски",
+  "@askCmdr.tool.listVolumes.done": {
+    "sourceHash": "b13a0b3"
+  },
+  "askCmdr.tool.operationsList.doing": "Пошук в історії файлів",
+  "@askCmdr.tool.operationsList.doing": {
+    "sourceHash": "4e8c41a"
+  },
+  "askCmdr.tool.operationsList.done": "Пошук в історії файлів завершено",
+  "@askCmdr.tool.operationsList.done": {
+    "sourceHash": "03021d5"
+  },
+  "askCmdr.tool.operationsGet.doing": "Перегляд операції",
+  "@askCmdr.tool.operationsGet.doing": {
+    "sourceHash": "10be41f"
+  },
+  "askCmdr.tool.operationsGet.done": "Переглянуто операцію",
+  "@askCmdr.tool.operationsGet.done": {
+    "sourceHash": "80fe1e9"
+  },
+  "askCmdr.tool.search.doing": "Пошук серед ваших файлів",
+  "@askCmdr.tool.search.doing": {
+    "sourceHash": "892be3e"
+  },
+  "askCmdr.tool.search.done": "Пошук серед ваших файлів завершено",
+  "@askCmdr.tool.search.done": {
+    "sourceHash": "995a356"
+  },
+  "askCmdr.tool.searchPhotos.doing": "Пошук серед ваших фото",
+  "@askCmdr.tool.searchPhotos.doing": {
+    "sourceHash": "da1265d"
+  },
+  "askCmdr.tool.searchPhotos.done": "Пошук серед ваших фото завершено",
+  "@askCmdr.tool.searchPhotos.done": {
+    "sourceHash": "cb3dede"
+  },
+  "askCmdr.tool.inspectFile.doing": "Перегляд вмісту файлів",
+  "@askCmdr.tool.inspectFile.doing": {
+    "sourceHash": "e7ba22a"
+  },
+  "askCmdr.tool.inspectFile.done": "Переглянуто вміст файлів",
+  "@askCmdr.tool.inspectFile.done": {
+    "sourceHash": "9b24f57"
+  },
+  "askCmdr.tool.imageFacts.doing": "Читання того, що на ваших фото",
+  "@askCmdr.tool.imageFacts.doing": {
+    "sourceHash": "b70691b"
+  },
+  "askCmdr.tool.imageFacts.done": "Прочитано те, що на ваших фото",
+  "@askCmdr.tool.imageFacts.done": {
+    "sourceHash": "fc24aac"
+  },
+  "askCmdr.tool.proposeRenamePlan.doing": "Підготовка плану перейменування",
+  "@askCmdr.tool.proposeRenamePlan.doing": {
+    "sourceHash": "540f1d9"
+  },
+  "askCmdr.tool.proposeRenamePlan.done": "Підготовлено план перейменування",
+  "@askCmdr.tool.proposeRenamePlan.done": {
+    "sourceHash": "a271302"
+  },
+  "askCmdr.tool.listSuggestions.doing": "Перевірка пропозицій",
+  "@askCmdr.tool.listSuggestions.doing": {
+    "sourceHash": "8eddcd5"
+  },
+  "askCmdr.tool.listSuggestions.done": "Перевірено пропозиції",
+  "@askCmdr.tool.listSuggestions.done": {
+    "sourceHash": "073df6b"
+  },
+  "askCmdr.tool.getSuggestionGroup.doing": "Перегляд пропозиції",
+  "@askCmdr.tool.getSuggestionGroup.doing": {
+    "sourceHash": "791e75c"
+  },
+  "askCmdr.tool.getSuggestionGroup.done": "Переглянуто пропозицію",
+  "@askCmdr.tool.getSuggestionGroup.done": {
+    "sourceHash": "2373235"
+  },
+  "askCmdr.tool.proposeSuggestions.doing": "Підготовка пропозицій",
+  "@askCmdr.tool.proposeSuggestions.doing": {
+    "sourceHash": "aa27c17"
+  },
+  "askCmdr.tool.proposeSuggestions.done": "Підготовлено пропозиції",
+  "@askCmdr.tool.proposeSuggestions.done": {
+    "sourceHash": "42457d2"
+  },
+  "askCmdr.tool.proposeServer.doing": "Підготовка пропозиції щодо сервера",
+  "@askCmdr.tool.proposeServer.doing": {
+    "sourceHash": "cf8e5f0"
+  },
+  "askCmdr.tool.proposeServer.done": "Підготовлено пропозицію щодо сервера",
+  "@askCmdr.tool.proposeServer.done": {
+    "sourceHash": "b075032"
+  },
+  "askCmdr.tool.nothingToSuggest.doing": "Оцінка, чи це варте уваги",
+  "@askCmdr.tool.nothingToSuggest.doing": {
+    "sourceHash": "51ef519"
+  },
+  "askCmdr.tool.nothingToSuggest.done": "Нічого вартого уваги не знайдено",
+  "@askCmdr.tool.nothingToSuggest.done": {
+    "sourceHash": "2287381"
+  },
+  "askCmdr.tool.memoryWrite.doing": "Збереження нотатки про вас",
+  "@askCmdr.tool.memoryWrite.doing": {
+    "sourceHash": "9c2a59e"
+  },
+  "askCmdr.tool.memoryWrite.done": "Збережено нотатку про вас",
+  "@askCmdr.tool.memoryWrite.done": {
+    "sourceHash": "cb3d875"
+  },
+  "askCmdr.tool.memoryEdit.doing": "Оновлення нотаток про вас",
+  "@askCmdr.tool.memoryEdit.doing": {
+    "sourceHash": "9cfe004"
+  },
+  "askCmdr.tool.memoryEdit.done": "Оновлено нотатки про вас",
+  "@askCmdr.tool.memoryEdit.done": {
+    "sourceHash": "5fdfbdc"
+  },
+  "askCmdr.tool.connectVolume.doing": "Підʼєднання до вашого сервера",
+  "@askCmdr.tool.connectVolume.doing": {
+    "sourceHash": "5f24f83"
+  },
+  "askCmdr.tool.connectVolume.done": "Підʼєднано до вашого сервера",
+  "@askCmdr.tool.connectVolume.done": {
+    "sourceHash": "8f89103"
+  },
+  "askCmdr.tool.connectVolume.tried": "Спроба підʼєднатися до вашого сервера",
+  "@askCmdr.tool.connectVolume.tried": {
+    "sourceHash": "b6d7bcf"
+  },
+  "askCmdr.tool.unknown.doing": "Триває робота",
+  "@askCmdr.tool.unknown.doing": {
+    "sourceHash": "a92f044"
+  },
+  "askCmdr.tool.unknown.done": "Використано інструмент",
+  "@askCmdr.tool.unknown.done": {
+    "sourceHash": "05cc2be"
+  },
+  "askCmdr.tool.listDir.folder.doing": "Перегляд папки <place>{name}</place>",
+  "@askCmdr.tool.listDir.folder.doing": {
+    "sourceHash": "d9a6c6c"
+  },
+  "askCmdr.tool.listDir.folder.done": "Переглянуто папку <place>{name}</place>",
+  "@askCmdr.tool.listDir.folder.done": {
+    "sourceHash": "f079af1"
+  },
+  "askCmdr.tool.listPaneFiles.selection.doing": "Перегляд вибраного в папці <place>{name}</place>",
+  "@askCmdr.tool.listPaneFiles.selection.doing": {
+    "sourceHash": "7beaf97"
+  },
+  "askCmdr.tool.listPaneFiles.selection.done": "Переглянуто вибране в папці <place>{name}</place>",
+  "@askCmdr.tool.listPaneFiles.selection.done": {
+    "sourceHash": "497e22a"
+  },
+  "askCmdr.tool.folderImportance.folder.doing": "Перевірка важливості папки <place>{name}</place>",
+  "@askCmdr.tool.folderImportance.folder.doing": {
+    "sourceHash": "59d84ca"
+  },
+  "askCmdr.tool.folderImportance.folder.done": "Перевірено важливість папки <place>{name}</place>",
+  "@askCmdr.tool.folderImportance.folder.done": {
+    "sourceHash": "f167904"
+  },
+  "askCmdr.tool.inspectFile.files.doing": "{others, plural, =0 {Перегляд вмісту файлу <place>{name}</place>} one {Перегляд вмісту файлу <place>{name}</place> і ще {othersText}} few {Перегляд вмісту файлу <place>{name}</place> і ще {othersText}} many {Перегляд вмісту файлу <place>{name}</place> і ще {othersText}} other {Перегляд вмісту файлу <place>{name}</place> і ще {othersText}}}",
+  "@askCmdr.tool.inspectFile.files.doing": {
+    "sourceHash": "2038d00"
+  },
+  "askCmdr.tool.inspectFile.files.done": "{others, plural, =0 {Переглянуто вміст файлу <place>{name}</place>} one {Переглянуто вміст файлу <place>{name}</place> і ще {othersText}} few {Переглянуто вміст файлу <place>{name}</place> і ще {othersText}} many {Переглянуто вміст файлу <place>{name}</place> і ще {othersText}} other {Переглянуто вміст файлу <place>{name}</place> і ще {othersText}}}",
+  "@askCmdr.tool.inspectFile.files.done": {
+    "sourceHash": "63018e2"
+  },
+  "askCmdr.tool.imageFacts.files.doing": "{others, plural, =0 {Читання того, що на фото <place>{name}</place>} one {Читання того, що на фото <place>{name}</place> і ще {othersText}} few {Читання того, що на фото <place>{name}</place> і ще {othersText}} many {Читання того, що на фото <place>{name}</place> і ще {othersText}} other {Читання того, що на фото <place>{name}</place> і ще {othersText}}}",
+  "@askCmdr.tool.imageFacts.files.doing": {
+    "sourceHash": "5e7fbe6"
+  },
+  "askCmdr.tool.imageFacts.files.done": "{others, plural, =0 {Прочитано те, що на фото <place>{name}</place>} one {Прочитано те, що на фото <place>{name}</place> і ще {othersText}} few {Прочитано те, що на фото <place>{name}</place> і ще {othersText}} many {Прочитано те, що на фото <place>{name}</place> і ще {othersText}} other {Прочитано те, що на фото <place>{name}</place> і ще {othersText}}}",
+  "@askCmdr.tool.imageFacts.files.done": {
+    "sourceHash": "b3df6a5"
+  },
+  "askCmdr.tool.search.queryInFolders.doing": "{folders, plural, =1 {Пошук «{query}» у папці <places>{placesText}</places>} one {Пошук «{query}» у папках <places>{placesText}</places>} few {Пошук «{query}» у папках <places>{placesText}</places>} many {Пошук «{query}» у папках <places>{placesText}</places>} other {Пошук «{query}» у папках <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.queryInFolders.doing": {
+    "sourceHash": "61bd031"
+  },
+  "askCmdr.tool.search.queryInFolders.done": "{folders, plural, =1 {Пошук «{query}» у папці <places>{placesText}</places> завершено} one {Пошук «{query}» у папках <places>{placesText}</places> завершено} few {Пошук «{query}» у папках <places>{placesText}</places> завершено} many {Пошук «{query}» у папках <places>{placesText}</places> завершено} other {Пошук «{query}» у папках <places>{placesText}</places> завершено}}",
+  "@askCmdr.tool.search.queryInFolders.done": {
+    "sourceHash": "188f225"
+  },
+  "askCmdr.tool.search.query.doing": "Пошук «{query}»",
+  "@askCmdr.tool.search.query.doing": {
+    "sourceHash": "5b0939b"
+  },
+  "askCmdr.tool.search.query.done": "Пошук «{query}» завершено",
+  "@askCmdr.tool.search.query.done": {
+    "sourceHash": "04e348f"
+  },
+  "askCmdr.tool.search.inFolders.doing": "{folders, plural, =1 {Пошук у папці <places>{placesText}</places>} one {Пошук у папках <places>{placesText}</places>} few {Пошук у папках <places>{placesText}</places>} many {Пошук у папках <places>{placesText}</places>} other {Пошук у папках <places>{placesText}</places>}}",
+  "@askCmdr.tool.search.inFolders.doing": {
+    "sourceHash": "0989f2a"
+  },
+  "askCmdr.tool.search.inFolders.done": "{folders, plural, =1 {Пошук у папці <places>{placesText}</places> завершено} one {Пошук у папках <places>{placesText}</places> завершено} few {Пошук у папках <places>{placesText}</places> завершено} many {Пошук у папках <places>{placesText}</places> завершено} other {Пошук у папках <places>{placesText}</places> завершено}}",
+  "@askCmdr.tool.search.inFolders.done": {
+    "sourceHash": "017aef4"
+  },
+  "askCmdr.tool.searchPhotos.query.doing": "Пошук «{query}» серед ваших фото",
+  "@askCmdr.tool.searchPhotos.query.doing": {
+    "sourceHash": "b2e0e1f"
+  },
+  "askCmdr.tool.searchPhotos.query.done": "Пошук «{query}» серед ваших фото завершено",
+  "@askCmdr.tool.searchPhotos.query.done": {
+    "sourceHash": "5b60316"
+  },
+  "askCmdr.tool.proposeRenamePlan.count.doing": "{count, plural, one {Підготовка плану, як перейменувати {countText} файл} few {Підготовка плану, як перейменувати {countText} файли} many {Підготовка плану, як перейменувати {countText} файлів} other {Підготовка плану, як перейменувати {countText} файлу}}",
+  "@askCmdr.tool.proposeRenamePlan.count.doing": {
+    "sourceHash": "30c839d"
+  },
+  "askCmdr.tool.proposeRenamePlan.count.done": "{count, plural, one {Підготовлено план, як перейменувати {countText} файл} few {Підготовлено план, як перейменувати {countText} файли} many {Підготовлено план, як перейменувати {countText} файлів} other {Підготовлено план, як перейменувати {countText} файлу}}",
+  "@askCmdr.tool.proposeRenamePlan.count.done": {
+    "sourceHash": "2e2e790"
+  },
+  "askCmdr.tool.proposeSuggestions.count.doing": "{count, plural, one {Підготовка пропозицій: {countText}} few {Підготовка пропозицій: {countText}} many {Підготовка пропозицій: {countText}} other {Підготовка пропозицій: {countText}}}",
+  "@askCmdr.tool.proposeSuggestions.count.doing": {
+    "sourceHash": "971e695"
+  },
+  "askCmdr.tool.proposeSuggestions.count.done": "{count, plural, one {Підготовлено {countText} пропозицію} few {Підготовлено {countText} пропозиції} many {Підготовлено {countText} пропозицій} other {Підготовлено {countText} пропозиції}}",
+  "@askCmdr.tool.proposeSuggestions.count.done": {
+    "sourceHash": "cbb1273"
+  },
+  "askCmdr.tool.memoryWrite.file.doing": "Збереження нотатки у файл <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.doing": {
+    "sourceHash": "364c7ec"
+  },
+  "askCmdr.tool.memoryWrite.file.done": "Збережено нотатку у файл <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.done": {
+    "sourceHash": "8e7a923"
+  },
+  "askCmdr.tool.memoryWrite.file.tried": "Спроба зберегти нотатку у файл <place>{name}</place>",
+  "@askCmdr.tool.memoryWrite.file.tried": {
+    "sourceHash": "16921ce"
+  },
+  "askCmdr.tool.memoryWrite.tried": "Спроба зберегти нотатку",
+  "@askCmdr.tool.memoryWrite.tried": {
+    "sourceHash": "25f76fa"
+  },
+  "askCmdr.tool.memoryEdit.file.doing": "Оновлення нотатки <place>{name}</place>",
+  "@askCmdr.tool.memoryEdit.file.doing": {
+    "sourceHash": "17b6898"
+  },
+  "askCmdr.tool.memoryEdit.file.done": "Оновлено нотатку <place>{name}</place>",
+  "@askCmdr.tool.memoryEdit.file.done": {
+    "sourceHash": "9dc9f76"
+  },
+  "askCmdr.tool.memoryEdit.file.tried": "Спроба оновити нотатку <place>{name}</place>",
+  "@askCmdr.tool.memoryEdit.file.tried": {
+    "sourceHash": "aeb94cd"
+  },
+  "askCmdr.tool.memoryEdit.tried": "Спроба оновити нотатки про вас",
+  "@askCmdr.tool.memoryEdit.tried": {
+    "sourceHash": "015f12a"
+  },
+  "askCmdr.tool.unknown.named.doing": "Запит інструмента «{name}»",
+  "@askCmdr.tool.unknown.named.doing": {
+    "sourceHash": "e220c3b"
+  },
+  "askCmdr.tool.unknown.named.done": "Запитано інструмент «{name}»",
+  "@askCmdr.tool.unknown.named.done": {
+    "sourceHash": "2a9ce37"
+  },
+  "askCmdr.tool.showInPane": "Показати {path} на панелі",
+  "@askCmdr.tool.showInPane": {
+    "sourceHash": "98180ea"
+  },
+  "askCmdr.tool.repeat": "Те саме, що вище",
+  "@askCmdr.tool.repeat": {
+    "sourceHash": "87115ee"
+  },
+  "askCmdr.tool.outcomeSeparator": ", ",
+  "@askCmdr.tool.outcomeSeparator": {
+    "sourceHash": "0a07f65",
+    "sameAsSourceJustification": "Ukrainian uses the same comma plus space as English (Ukrainian macOS punctuation, docs/i18n/uk/style.md § Typography)."
+  },
+  "askCmdr.tool.outcome.items": "{count, plural, one {{countText} елемент} few {{countText} елементи} many {{countText} елементів} other {{countText} елемента}}",
+  "@askCmdr.tool.outcome.items": {
+    "sourceHash": "5fbad7e"
+  },
+  "askCmdr.tool.outcome.itemsShown": "показано {shownText} з {totalText}",
+  "@askCmdr.tool.outcome.itemsShown": {
+    "sourceHash": "87b4f4b"
+  },
+  "askCmdr.tool.outcome.itemsShownAtLeast": "показано {shownText} із щонайменше {totalText}",
+  "@askCmdr.tool.outcome.itemsShownAtLeast": {
+    "sourceHash": "e57786f"
+  },
+  "askCmdr.tool.outcome.matches": "{count, plural, one {{countText} збіг} few {{countText} збіги} many {{countText} збігів} other {{countText} збігу}}",
+  "@askCmdr.tool.outcome.matches": {
+    "sourceHash": "8804edf"
+  },
+  "askCmdr.tool.outcome.matchesSoFar": "{count, plural, one {поки що {countText} збіг} few {поки що {countText} збіги} many {поки що {countText} збігів} other {поки що {countText} збігу}}",
+  "@askCmdr.tool.outcome.matchesSoFar": {
+    "sourceHash": "712f992"
+  },
+  "askCmdr.tool.outcome.nothingFound": "нічого не знайдено",
+  "@askCmdr.tool.outcome.nothingFound": {
+    "sourceHash": "9772cc8"
+  },
+  "askCmdr.tool.outcome.nothingFoundYet": "поки нічого не знайдено",
+  "@askCmdr.tool.outcome.nothingFoundYet": {
+    "sourceHash": "0d0778e"
+  },
+  "askCmdr.tool.outcome.imageIndexingOff": "індексування зображень вимкнено",
+  "@askCmdr.tool.outcome.imageIndexingOff": {
+    "sourceHash": "5e9e5f6"
+  },
+  "askCmdr.tool.outcome.semanticModelNotInstalled": "модель семантичного пошуку не інстальовано",
+  "@askCmdr.tool.outcome.semanticModelNotInstalled": {
+    "sourceHash": "54dc9af"
+  },
+  "askCmdr.tool.outcome.staged": "{count, plural, one {готово до перевірки: {countText}} few {готово до перевірки: {countText}} many {готово до перевірки: {countText}} other {готово до перевірки: {countText}}}",
+  "@askCmdr.tool.outcome.staged": {
+    "sourceHash": "b0aba27"
+  },
+  "askCmdr.tool.outcome.notStaged": "немає чого перевіряти",
+  "@askCmdr.tool.outcome.notStaged": {
+    "sourceHash": "40a1608"
+  },
+  "askCmdr.tool.outcome.toolUnavailable": "такого інструмента немає",
+  "@askCmdr.tool.outcome.toolUnavailable": {
+    "sourceHash": "9d46d4e"
+  },
+  "askCmdr.tool.outcome.repeatedCall": "пропущено: така спроба вже була",
+  "@askCmdr.tool.outcome.repeatedCall": {
+    "sourceHash": "059d9db"
+  },
+  "askCmdr.tool.outcome.problem": "не вдалося виконати",
+  "@askCmdr.tool.outcome.problem": {
+    "sourceHash": "05a940f"
+  },
+  "askCmdr.tool.outcome.miss.unknownVolume": "немає диска з такою назвою",
+  "@askCmdr.tool.outcome.miss.unknownVolume": {
+    "sourceHash": "94aa69b"
+  },
+  "askCmdr.tool.outcome.miss.pathOutsideVolume": "не на вказаному диску",
+  "@askCmdr.tool.outcome.miss.pathOutsideVolume": {
+    "sourceHash": "5a87cd6"
+  },
+  "askCmdr.tool.outcome.miss.noVolumeAtPath": "там не підʼєднано жодного диска",
+  "@askCmdr.tool.outcome.miss.noVolumeAtPath": {
+    "sourceHash": "8ce9e0e"
+  },
+  "askCmdr.tool.outcome.miss.volumeNotConnected": "цей диск не підʼєднано",
+  "@askCmdr.tool.outcome.miss.volumeNotConnected": {
+    "sourceHash": "d7b4614"
+  },
+  "askCmdr.tool.outcome.miss.needsDiskAccess": "потрібен «Повний доступ до диска»",
+  "@askCmdr.tool.outcome.miss.needsDiskAccess": {
+    "sourceHash": "a0a6a84"
+  },
+  "askCmdr.tool.outcome.miss.unreachable": "диск не відповів",
+  "@askCmdr.tool.outcome.miss.unreachable": {
+    "sourceHash": "f39fad7"
+  },
+  "askCmdr.tool.outcome.miss.notFound": "за цим шляхом нічого немає",
+  "@askCmdr.tool.outcome.miss.notFound": {
+    "sourceHash": "56ee722"
+  },
+  "askCmdr.tool.outcome.miss.excluded": "пропущена системна папка",
+  "@askCmdr.tool.outcome.miss.excluded": {
+    "sourceHash": "8198768"
+  },
+  "askCmdr.tool.outcome.miss.permissionDenied": "немає прав доступу для перегляду",
+  "@askCmdr.tool.outcome.miss.permissionDenied": {
+    "sourceHash": "75756a9"
+  },
+  "askCmdr.tool.outcome.miss.cancelled": "зупинено під час читання",
+  "@askCmdr.tool.outcome.miss.cancelled": {
+    "sourceHash": "4389728"
+  },
+  "askCmdr.tool.outcome.connection.alreadyConnected": "вже підʼєднано",
+  "@askCmdr.tool.outcome.connection.alreadyConnected": {
+    "sourceHash": "168827a"
+  },
+  "askCmdr.tool.outcome.connection.stillReconnecting": "ще триває повторне підʼєднання",
+  "@askCmdr.tool.outcome.connection.stillReconnecting": {
+    "sourceHash": "078929e"
+  },
+  "askCmdr.tool.outcome.connection.needsCredentials": "потрібно ввійти",
+  "@askCmdr.tool.outcome.connection.needsCredentials": {
+    "sourceHash": "1833a39"
+  },
+  "askCmdr.tool.outcome.connection.needsApproval": "потрібне ваше схвалення",
+  "@askCmdr.tool.outcome.connection.needsApproval": {
+    "sourceHash": "80288d6"
+  },
+  "askCmdr.tool.outcome.connection.rejected": "сервер відмовив",
+  "@askCmdr.tool.outcome.connection.rejected": {
+    "sourceHash": "53878fc"
+  },
+  "askCmdr.tool.outcome.connection.unreachable": "сервер не відповів",
+  "@askCmdr.tool.outcome.connection.unreachable": {
+    "sourceHash": "80aae90"
+  },
+  "askCmdr.tool.outcome.connection.notSaved": "такого сервера немає серед збережених",
+  "@askCmdr.tool.outcome.connection.notSaved": {
+    "sourceHash": "1ac6950"
+  },
+  "askCmdr.tool.outcome.connection.cancelled": "зупинено під час підʼєднання",
+  "@askCmdr.tool.outcome.connection.cancelled": {
+    "sourceHash": "2934c58"
+  },
+  "askCmdr.tool.outcome.memory.outsideMemory": "це поза папкою нотаток",
+  "@askCmdr.tool.outcome.memory.outsideMemory": {
+    "sourceHash": "c320cc4"
+  },
+  "askCmdr.tool.outcome.memory.notMarkdown": "нотатки мають бути файлами Markdown",
+  "@askCmdr.tool.outcome.memory.notMarkdown": {
+    "sourceHash": "a75dc2f"
+  },
+  "askCmdr.tool.outcome.memory.noPath": "не вказано, яку нотатку",
+  "@askCmdr.tool.outcome.memory.noPath": {
+    "sourceHash": "6392377"
+  },
+  "askCmdr.tool.outcome.memory.directoryFull": "папка нотаток заповнена",
+  "@askCmdr.tool.outcome.memory.directoryFull": {
+    "sourceHash": "330a5d9"
+  },
+  "askCmdr.tool.outcome.memory.noSuchFile": "такої нотатки немає",
+  "@askCmdr.tool.outcome.memory.noSuchFile": {
+    "sourceHash": "e11b4e5"
+  },
+  "askCmdr.tool.outcome.memory.noMatch": "у нотатці немає тексту, який треба змінити",
+  "@askCmdr.tool.outcome.memory.noMatch": {
+    "sourceHash": "ed063fe"
+  },
+  "askCmdr.tool.outcome.memory.notUnique": "текст, який треба змінити, трапляється в нотатці не один раз",
+  "@askCmdr.tool.outcome.memory.notUnique": {
+    "sourceHash": "1527ba7"
+  },
+  "askCmdr.tool.outcome.memory.unwritable": "не вдалося записати нотатку",
+  "@askCmdr.tool.outcome.memory.unwritable": {
+    "sourceHash": "4edf07b"
+  },
+  "askCmdr.tool.outcome.memory.unavailable": "папка нотаток недоступна",
+  "@askCmdr.tool.outcome.memory.unavailable": {
+    "sourceHash": "bcf32e3"
+  },
+  "askCmdr.tool.outcome.memory.other": "нотатку не змінено",
+  "@askCmdr.tool.outcome.memory.other": {
+    "sourceHash": "00d5f3c"
+  },
+  "askCmdr.tool.outcome.noAnswer": "відповідь не записано",
+  "@askCmdr.tool.outcome.noAnswer": {
+    "sourceHash": "43eb550"
+  },
+  "askCmdr.tool.details": "Що повернулося",
+  "@askCmdr.tool.details": {
+    "sourceHash": "79665b6"
+  },
+  "askCmdr.tool.preview.loading": "Отримання того, що повернулося",
+  "@askCmdr.tool.preview.loading": {
+    "sourceHash": "99e2019"
+  },
+  "askCmdr.tool.preview.given": "Моделі показано {givenText} з {totalText}",
+  "@askCmdr.tool.preview.given": {
+    "sourceHash": "8384012"
+  },
+  "askCmdr.tool.preview.givenSoFar": "Моделі показано {givenText} з {totalText}, знайдених досі",
+  "@askCmdr.tool.preview.givenSoFar": {
+    "sourceHash": "2235a21"
+  },
+  "askCmdr.tool.preview.firstRows": "{count, plural, =1 {Ось перший запис. Увесь результат копіює кнопка «Скопіювати».} one {Ось перші {countText}. Увесь результат копіює кнопка «Скопіювати».} few {Ось перші {countText}. Увесь результат копіює кнопка «Скопіювати».} many {Ось перші {countText}. Увесь результат копіює кнопка «Скопіювати».} other {Ось перші {countText}. Увесь результат копіює кнопка «Скопіювати».}}",
+  "@askCmdr.tool.preview.firstRows": {
+    "sourceHash": "1b695fc"
+  },
+  "askCmdr.tool.preview.noRows": "Для цього запиту немає списку, який можна показати. Увесь результат копіює кнопка «Скопіювати».",
+  "@askCmdr.tool.preview.noRows": {
+    "sourceHash": "d80bc30"
+  },
+  "askCmdr.tool.preview.problemLabel": "Що повідомили моделі:",
+  "@askCmdr.tool.preview.problemLabel": {
+    "sourceHash": "edf1200"
+  },
+  "askCmdr.tool.preview.setAside": "Цей результат відкладено, щоб звільнити місце, тож показати з нього вже нічого.",
+  "@askCmdr.tool.preview.setAside": {
+    "sourceHash": "2b7a0ee"
+  },
+  "askCmdr.tool.preview.notFound": "Цього результату тут уже немає.",
+  "@askCmdr.tool.preview.notFound": {
+    "sourceHash": "eaa5a2c"
+  },
+  "askCmdr.tool.preview.unavailable": "Cmdr зараз не вдається прочитати цей результат.",
+  "@askCmdr.tool.preview.unavailable": {
+    "sourceHash": "5649f24"
+  },
+  "askCmdr.tool.preview.line": "рядок {lineText}",
+  "@askCmdr.tool.preview.line": {
+    "sourceHash": "7d8370c"
+  },
+  "askCmdr.tool.preview.status.missing": "за цим шляхом нічого немає",
+  "@askCmdr.tool.preview.status.missing": {
+    "sourceHash": "56ee722"
+  },
+  "askCmdr.tool.preview.status.unreadable": "не вдалося прочитати",
+  "@askCmdr.tool.preview.status.unreadable": {
+    "sourceHash": "1e9c923"
+  },
+  "askCmdr.tool.preview.status.unreachable": "поза досяжністю",
+  "@askCmdr.tool.preview.status.unreachable": {
+    "sourceHash": "86f57c8"
+  },
+  "askCmdr.tool.preview.status.unsupportedVolume": "на диску, куди Cmdr не може зазирнути",
+  "@askCmdr.tool.preview.status.unsupportedVolume": {
+    "sourceHash": "945bf7c"
+  },
+  "askCmdr.tool.preview.status.noVolumeAtPath": "на диску, який не підʼєднано",
+  "@askCmdr.tool.preview.status.noVolumeAtPath": {
+    "sourceHash": "3b32abe"
+  },
+  "askCmdr.tool.preview.status.notIndexed": "ще не проіндексовано",
+  "@askCmdr.tool.preview.status.notIndexed": {
+    "sourceHash": "c0da718"
+  },
+  "askCmdr.tool.preview.copy": "Скопіювати",
+  "@askCmdr.tool.preview.copy": {
+    "sourceHash": "e21f935"
+  },
+  "askCmdr.tool.preview.copyLabel": "Скопіювати весь результат як JSON",
+  "@askCmdr.tool.preview.copyLabel": {
+    "sourceHash": "91a0434"
+  },
+  "askCmdr.tool.preview.copied": "Скопійовано",
+  "@askCmdr.tool.preview.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "askCmdr.tool.preview.copyRefused": "Буфер обміну не прийняв текст. Спробувати ще раз?",
+  "@askCmdr.tool.preview.copyRefused": {
+    "sourceHash": "5b856ff"
+  },
+  "askCmdr.toolGroup.summary": "Переглянуто: {parts}",
+  "@askCmdr.toolGroup.summary": {
+    "sourceHash": "2808d11"
+  },
+  "askCmdr.toolGroup.summaryRunning": "Перегляд: {parts}",
+  "@askCmdr.toolGroup.summaryRunning": {
+    "sourceHash": "db287ea"
+  },
+  "askCmdr.toolGroup.folders": "{count, plural, one {{countText} папка} few {{countText} папки} many {{countText} папок} other {{countText} папки}}",
+  "@askCmdr.toolGroup.folders": {
+    "sourceHash": "3c46f04"
+  },
+  "askCmdr.toolGroup.files": "{count, plural, one {{countText} файл} few {{countText} файли} many {{countText} файлів} other {{countText} файлу}}",
+  "@askCmdr.toolGroup.files": {
+    "sourceHash": "3c08428"
+  },
+  "askCmdr.toolGroup.searches": "{count, plural, one {{countText} пошук} few {{countText} пошуки} many {{countText} пошуків} other {{countText} пошуку}}",
+  "@askCmdr.toolGroup.searches": {
+    "sourceHash": "f280511"
+  },
+  "askCmdr.toolGroup.checks": "{count, plural, one {{countText} перевірка} few {{countText} перевірки} many {{countText} перевірок} other {{countText} перевірки}}",
+  "@askCmdr.toolGroup.checks": {
+    "sourceHash": "a09f7fb"
+  },
+  "askCmdr.toolGroup.plans": "{count, plural, one {{countText} план} few {{countText} плани} many {{countText} планів} other {{countText} плану}}",
+  "@askCmdr.toolGroup.plans": {
+    "sourceHash": "bd332c0"
+  },
+  "askCmdr.toolGroup.notes": "{count, plural, one {{countText} нотатка} few {{countText} нотатки} many {{countText} нотаток} other {{countText} нотатки}}",
+  "@askCmdr.toolGroup.notes": {
+    "sourceHash": "2623802"
+  },
+  "askCmdr.toolGroup.other": "{count, plural, one {{countText} інший крок} few {{countText} інші кроки} many {{countText} інших кроків} other {{countText} іншого кроку}}",
+  "@askCmdr.toolGroup.other": {
+    "sourceHash": "6108287"
+  },
+  "askCmdr.turnStats.summary": "{calls, plural, one {{callsText} виклик інструмента} few {{callsText} виклики інструментів} many {{callsText} викликів інструментів} other {{callsText} виклику інструментів}} · {duration} · {tokens, plural, one {{tokensText} токен} few {{tokensText} токени} many {{tokensText} токенів} other {{tokensText} токена}}",
+  "@askCmdr.turnStats.summary": {
+    "sourceHash": "a7d484d"
+  },
+  "askCmdr.turnStats.summaryNoDuration": "{calls, plural, one {{callsText} виклик інструмента} few {{callsText} виклики інструментів} many {{callsText} викликів інструментів} other {{callsText} виклику інструментів}} · {tokens, plural, one {{tokensText} токен} few {{tokensText} токени} many {{tokensText} токенів} other {{tokensText} токена}}",
+  "@askCmdr.turnStats.summaryNoDuration": {
+    "sourceHash": "d768ba2"
+  },
+  "askCmdr.turnStats.stopped": "Зупинено · {summary}",
+  "@askCmdr.turnStats.stopped": {
+    "sourceHash": "0f6ea99"
+  },
+  "askCmdr.error.noKey": "Додайте свій ключ API в Параметрах, щоб почати чат.",
+  "@askCmdr.error.noKey": {
+    "sourceHash": "0a78f37"
+  },
+  "askCmdr.error.notConfigured": "Для чату потрібен постачальник ШІ. Увімкніть його в Параметрах.",
+  "@askCmdr.error.notConfigured": {
+    "sourceHash": "2d55d2c"
+  },
+  "askCmdr.error.askCmdrOff": "Ask Cmdr вимкнено.",
+  "@askCmdr.error.askCmdrOff": {
+    "sourceHash": "6599ee1"
+  },
+  "askCmdr.error.noCloudConsent": "Хмарний ШІ вимкнено. Дозвольте його в Параметрах > ШІ.",
+  "@askCmdr.error.noCloudConsent": {
+    "sourceHash": "cd2af1d"
+  },
+  "askCmdr.error.managedByOrganization": "Ваша установа не дозволяє цей сервіс ШІ. Ваш ІТ-відділ підкаже, якими сервісами можна користуватися.",
+  "@askCmdr.error.managedByOrganization": {
+    "sourceHash": "845a19f"
+  },
+  "askCmdr.error.localWindowTooSmall": "Cmdr потрібне більше контекстне вікно, ніж має ваша локальна модель. Виберіть 32 768 токенів або більше в Параметрах, у розділі «ШІ».",
+  "@askCmdr.error.localWindowTooSmall": {
+    "sourceHash": "8ac7452"
+  },
+  "askCmdr.error.unavailable": "Не вдалося звʼязатися з постачальником ШІ. Перевірте підʼєднання до мережі й спробуйте ще раз.",
+  "@askCmdr.error.unavailable": {
+    "sourceHash": "eb59e2b"
+  },
+  "askCmdr.error.timeout": "Це тривало надто довго. Спробувати ще раз?",
+  "@askCmdr.error.timeout": {
+    "sourceHash": "22cd775"
+  },
+  "askCmdr.error.authFailed": "Постачальник не прийняв ваш ключ API. Перевірте його в Параметрах.",
+  "@askCmdr.error.authFailed": {
+    "sourceHash": "a2302ca"
+  },
+  "askCmdr.error.rateLimited": "Постачальник зайнятий або у вас вичерпано квоту. Спробуйте ще раз трохи згодом.",
+  "@askCmdr.error.rateLimited": {
+    "sourceHash": "7b441e9"
+  },
+  "askCmdr.error.budgetExhausted": "Ця відповідь досягла ліміту, перш ніж встигла завершитися. Спробуйте запитати конкретніше.",
+  "@askCmdr.error.budgetExhausted": {
+    "sourceHash": "ea2beb2"
+  },
+  "askCmdr.limit.toolRounds.answered": "Ця відповідь досягла ліміту Cmdr у {maxText} {max, plural, one {раунд} few {раунди} many {раундів} other {раунду}} пошуків, тож пошук зупинено, а відповідь складено з того, що вдалося знайти.",
+  "@askCmdr.limit.toolRounds.answered": {
+    "sourceHash": "3e45f64"
+  },
+  "askCmdr.limit.toolRounds.unfinished": "Ця відповідь досягла ліміту Cmdr у {maxText} {max, plural, one {раунд} few {раунди} many {раундів} other {раунду}} пошуків, перш ніж встигла завершитися.",
+  "@askCmdr.limit.toolRounds.unfinished": {
+    "sourceHash": "ee13e2d"
+  },
+  "askCmdr.limit.wallTime": "Ця відповідь досягла ліміту Cmdr у {minutesText} {minutes, plural, one {хвилину} few {хвилини} many {хвилин} other {хвилини}} на відповідь, перш ніж встигла завершитися.",
+  "@askCmdr.limit.wallTime": {
+    "sourceHash": "fc47e07"
+  },
+  "askCmdr.limit.repeatedCall.answered": "Ця відповідь раз у раз повторювала той самий пошук, тож Cmdr зупинив пошук, а відповідь складено з того, що вдалося знайти.",
+  "@askCmdr.limit.repeatedCall.answered": {
+    "sourceHash": "884a9ae"
+  },
+  "askCmdr.limit.repeatedCall.unfinished": "Ця відповідь раз у раз повторювала той самий пошук, тож Cmdr зупинив її, перш ніж вона встигла завершитися.",
+  "@askCmdr.limit.repeatedCall.unfinished": {
+    "sourceHash": "c21dbe9"
+  },
+  "askCmdr.limit.noProgress.answered": "За останні {maxText} {max, plural, one {раунд} few {раунди} many {раундів} other {раунду}} пошуків ця відповідь не знайшла нічого нового, тож Cmdr зупинив пошук, а відповідь складено з того, що вдалося знайти.",
+  "@askCmdr.limit.noProgress.answered": {
+    "sourceHash": "6dc1bc0"
+  },
+  "askCmdr.limit.noProgress.unfinished": "За останні {maxText} {max, plural, one {раунд} few {раунди} many {раундів} other {раунду}} пошуків ця відповідь не знайшла нічого нового, тож Cmdr зупинив її, перш ніж вона встигла завершитися.",
+  "@askCmdr.limit.noProgress.unfinished": {
+    "sourceHash": "30c3354"
+  },
+  "askCmdr.limit.stalled": "Постачальник ШІ нічого не надсилав {maxText} {max, plural, one {секунду} few {секунди} many {секунд} other {секунди}}, тож Cmdr завершив цю відповідь.",
+  "@askCmdr.limit.stalled": {
+    "sourceHash": "6b72ac1"
+  },
+  "askCmdr.spendPause.question": "На цю відповідь уже витрачено близько {cost}. Продовжити?",
+  "@askCmdr.spendPause.question": {
+    "sourceHash": "a59f9e2"
+  },
+  "askCmdr.spendPause.estimateNote": "Це орієнтовна вартість за публічними цінами. Завдяки кешуванню у вашого постачальника реальна вартість зазвичай нижча.",
+  "@askCmdr.spendPause.estimateNote": {
+    "sourceHash": "0ca2362"
+  },
+  "askCmdr.spendPause.keepGoing": "Продовжити",
+  "@askCmdr.spendPause.keepGoing": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.spendPause.stop": "Зупинити",
+  "@askCmdr.spendPause.stop": {
+    "sourceHash": "cae7d57"
+  },
+  "askCmdr.limit.fixed": "Це фіксований ліміт, і жоден параметр його не змінює. Якщо він вам заважає, <feedback>розкажіть нам про це</feedback>.",
+  "@askCmdr.limit.fixed": {
+    "sourceHash": "d0c4bc7"
+  },
+  "askCmdr.limit.continue": "Продовжити",
+  "@askCmdr.limit.continue": {
+    "sourceHash": "9d7fd0e"
+  },
+  "askCmdr.limit.continueMessage": "Будь ласка, продовжуйте з того місця, де ви зупинилися.",
+  "@askCmdr.limit.continueMessage": {
+    "sourceHash": "8c7a012"
+  },
+  "askCmdr.error.repeatedToolCall": "Ця відповідь раз у раз повторювала той самий пошук і ні до чого не дійшла. Спробуйте запитати інакше.",
+  "@askCmdr.error.repeatedToolCall": {
+    "sourceHash": "ea46ed7"
+  },
+  "askCmdr.error.unfinishedReply": "Відповідь не завершилася. Спробувати ще раз?",
+  "@askCmdr.error.unfinishedReply": {
+    "sourceHash": "7cc85f5"
+  },
+  "askCmdr.error.provider": "На боці постачальника щось пішло не так. Спробувати ще раз?",
+  "@askCmdr.error.provider": {
+    "sourceHash": "d536cce"
+  },
+  "askCmdr.event.chatMemoryChanged": "Памʼять чату тепер вміщує {tokens, plural, one {# токен} few {# токени} many {# токенів} other {# токена}}",
+  "@askCmdr.event.chatMemoryChanged": {
+    "sourceHash": "6ba7124"
+  },
+  "askCmdr.event.contextTrimmed": "Прибрано {count, plural, one {# попередній пошук} few {# попередні пошуки} many {# попередніх пошуків} other {# попереднього пошуку}}, щоб вміститися в контекст моделі.",
+  "@askCmdr.event.contextTrimmed": {
+    "sourceHash": "baf10e5"
+  },
+  "askCmdr.event.modelChanged": "Перемкнено на модель {model}",
+  "@askCmdr.event.modelChanged": {
+    "sourceHash": "dd0a934"
+  },
+  "askCmdr.loadEarlier": "Завантажити попередні повідомлення",
+  "@askCmdr.loadEarlier": {
+    "sourceHash": "33fd46b"
+  },
+  "askCmdr.threads.open": "Чати",
+  "@askCmdr.threads.open": {
+    "sourceHash": "ef5b404"
+  },
+  "askCmdr.sessions.title": "Чати",
+  "@askCmdr.sessions.title": {
+    "sourceHash": "ef5b404"
+  },
+  "askCmdr.sessions.back": "Назад до чату",
+  "@askCmdr.sessions.back": {
+    "sourceHash": "5978844"
+  },
+  "askCmdr.sessions.searchPlaceholder": "Пошук у ваших чатах…",
+  "@askCmdr.sessions.searchPlaceholder": {
+    "sourceHash": "2de9074"
+  },
+  "askCmdr.sessions.searchLabel": "Пошук у чатах",
+  "@askCmdr.sessions.searchLabel": {
+    "sourceHash": "02a39c4"
+  },
+  "askCmdr.sessions.empty": "Ще немає чатів",
+  "@askCmdr.sessions.empty": {
+    "sourceHash": "269208e"
+  },
+  "askCmdr.sessions.emptyArchived": "Немає архівованих чатів",
+  "@askCmdr.sessions.emptyArchived": {
+    "sourceHash": "272c9ab"
+  },
+  "askCmdr.sessions.noResults": "Жоден чат не відповідає пошуку",
+  "@askCmdr.sessions.noResults": {
+    "sourceHash": "c53c411"
+  },
+  "askCmdr.sessions.showArchived": "Показати архівовані",
+  "@askCmdr.sessions.showArchived": {
+    "sourceHash": "e9de9f2"
+  },
+  "askCmdr.sessions.hideArchived": "Сховати архівовані",
+  "@askCmdr.sessions.hideArchived": {
+    "sourceHash": "dd1c793"
+  },
+  "askCmdr.sessions.loadMore": "Завантажити ще",
+  "@askCmdr.sessions.loadMore": {
+    "sourceHash": "ac8991e"
+  },
+  "askCmdr.sessions.searching": "Пошук…",
+  "@askCmdr.sessions.searching": {
+    "sourceHash": "c31723a"
+  },
+  "askCmdr.sessions.rename": "Перейменувати",
+  "@askCmdr.sessions.rename": {
+    "sourceHash": "3064d79"
+  },
+  "askCmdr.sessions.renameLabel": "Назва чату",
+  "@askCmdr.sessions.renameLabel": {
+    "sourceHash": "17a3048"
+  },
+  "askCmdr.sessions.archive": "Архівувати",
+  "@askCmdr.sessions.archive": {
+    "sourceHash": "66f4804"
+  },
+  "askCmdr.sessions.unarchive": "Повернути з архіву",
+  "@askCmdr.sessions.unarchive": {
+    "sourceHash": "f565318"
+  },
+  "askCmdr.sessions.archivedBadge": "Заархівовано",
+  "@askCmdr.sessions.archivedBadge": {
+    "sourceHash": "bdb8650"
+  },
+  "askCmdr.composer.attach": "Запитати про вибране",
+  "@askCmdr.composer.attach": {
+    "sourceHash": "3e812c7"
+  },
+  "askCmdr.composer.selectionCapped": "Вкладено перші {attachedText} з {totalText} {total, plural, one {вибраного елемента} few {вибраних елементів} many {вибраних елементів} other {вибраного елемента}}.",
+  "@askCmdr.composer.selectionCapped": {
+    "sourceHash": "8abeced"
+  },
+  "askCmdr.composer.dropHint": "Відпустіть, щоб вкласти",
+  "@askCmdr.composer.dropHint": {
+    "sourceHash": "34a7a63"
+  },
+  "askCmdr.composer.sendNeedsProvider": "Налаштуйте постачальника ШІ, щоб надсилати",
+  "@askCmdr.composer.sendNeedsProvider": {
+    "sourceHash": "9e6aba3"
+  },
+  "askCmdr.providerNotice.off": "Для чату Ask Cmdr потрібен постачальник ШІ. Виберіть його в Параметрах.",
+  "@askCmdr.providerNotice.off": {
+    "sourceHash": "8696c99"
+  },
+  "askCmdr.providerNotice.cloudNeedsKey": "Для чату Ask Cmdr вашому постачальнику хмарного ШІ потрібен ключ API. Додайте його в Параметрах.",
+  "@askCmdr.providerNotice.cloudNeedsKey": {
+    "sourceHash": "dccf257"
+  },
+  "askCmdr.providerNotice.cloudNeedsEndpoint": "Для чату Ask Cmdr вашому постачальнику хмарного ШІ потрібна адреса сервера. Додайте її в Параметрах.",
+  "@askCmdr.providerNotice.cloudNeedsEndpoint": {
+    "sourceHash": "1b1682b"
+  },
+  "askCmdr.providerNotice.localNotSetUp": "Локальний ШІ ще не викачано, тож чат Ask Cmdr не працює. Налаштуйте його в Параметрах.",
+  "@askCmdr.providerNotice.localNotSetUp": {
+    "sourceHash": "efaeacd"
+  },
+  "askCmdr.providerNotice.localNotRunning": "Локальний ШІ не запущено, тож чат Ask Cmdr не працює. Запустіть його в Параметрах.",
+  "@askCmdr.providerNotice.localNotRunning": {
+    "sourceHash": "786d469"
+  },
+  "askCmdr.providerNotice.openSettings": "Перейти до параметрів ШІ",
+  "@askCmdr.providerNotice.openSettings": {
+    "sourceHash": "973a020"
+  },
+  "askCmdr.attachment.remove": "Вилучити вкладення",
+  "@askCmdr.attachment.remove": {
+    "sourceHash": "595b066"
+  },
+  "askCmdr.gate.off.title": "Ask Cmdr вимкнено",
+  "@askCmdr.gate.off.title": {
+    "sourceHash": "0420c9a"
+  },
+  "askCmdr.gate.off.body": "Увімкніть його, щоб у чаті розпитувати Cmdr про свої файли.",
+  "@askCmdr.gate.off.body": {
+    "sourceHash": "48b16af"
+  },
+  "askCmdr.gate.off.turnOn": "Увімкнути Ask Cmdr",
+  "@askCmdr.gate.off.turnOn": {
+    "sourceHash": "0d656c4"
+  },
+  "askCmdr.gate.cloudOff.title": "Хмарний ШІ вимкнено",
+  "@askCmdr.gate.cloudOff.title": {
+    "sourceHash": "2e56781"
+  },
+  "askCmdr.gate.cloudOff.body": "Ask Cmdr спілкується із сервісом хмарного ШІ, який ви налаштували. Спершу ввімкніть «Дозволити хмарний ШІ» в Параметрах, і можна починати чат.",
+  "@askCmdr.gate.cloudOff.body": {
+    "sourceHash": "d3d3252"
+  },
+  "askCmdr.gate.cloudOff.openSettings": "Перейти до параметрів ШІ",
+  "@askCmdr.gate.cloudOff.openSettings": {
+    "sourceHash": "973a020"
+  },
+  "askCmdr.forget.title": "Забути все, що Cmdr памʼятає про вас?",
+  "@askCmdr.forget.title": {
+    "sourceHash": "e83c997"
+  },
+  "askCmdr.forget.message": "Cmdr викине свої нотатки про вас і почне з чистого аркуша. Ваші чати й файли залишаться точнісінько такими, як є.",
+  "@askCmdr.forget.message": {
+    "sourceHash": "5a390a8"
+  },
+  "askCmdr.forget.confirm": "Забути все",
+  "@askCmdr.forget.confirm": {
+    "sourceHash": "11d164a"
+  },
+  "askCmdr.forget.cancel": "Скасувати",
+  "@askCmdr.forget.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "askCmdr.cost.tokens": "{countText} {count, plural, one {токен} few {токени} many {токенів} other {токена}}",
+  "@askCmdr.cost.tokens": {
+    "sourceHash": "6718764"
+  },
+  "askCmdr.cost.free": "безкоштовно, на пристрої",
+  "@askCmdr.cost.free": {
+    "sourceHash": "f04f869"
+  },
+  "askCmdr.cost.estimate": "близько {amount}",
+  "@askCmdr.cost.estimate": {
+    "sourceHash": "e448a4a"
+  },
+  "askCmdr.cost.underAmount": "менше ніж {amount}",
+  "@askCmdr.cost.underAmount": {
+    "sourceHash": "4d8de57"
+  },
+  "askCmdr.cost.estimateTooltip": "Сума вказана в USD і не враховує кешування на боці вашого постачальника. Ваш реальний рахунок, імовірно, становить лише частку цієї суми, бо спільний для наших викликів контекст кешується.",
+  "@askCmdr.cost.estimateTooltip": {
+    "sourceHash": "200cd80"
+  },
+  "askCmdr.cost.unknown": "вартість невідома",
+  "@askCmdr.cost.unknown": {
+    "sourceHash": "d05144e"
+  },
+  "askCmdr.cost.label": "Використання в цьому чаті",
+  "@askCmdr.cost.label": {
+    "sourceHash": "3b0dd81"
+  },
+  "askCmdr.renameReview.title": "Перевірте перейменування файлів",
+  "@askCmdr.renameReview.title": {
+    "sourceHash": "f923506"
+  },
+  "askCmdr.renameReview.description": "Cmdr перейменує лише ті файли, які ви дозволите.",
+  "@askCmdr.renameReview.description": {
+    "sourceHash": "de95869"
+  },
+  "askCmdr.renameReview.originalName": "Поточна назва",
+  "@askCmdr.renameReview.originalName": {
+    "sourceHash": "0619bd6"
+  },
+  "askCmdr.renameReview.newName": "Нова назва",
+  "@askCmdr.renameReview.newName": {
+    "sourceHash": "04eea2a"
+  },
+  "askCmdr.renameReview.whyThisName": "Чому така назва",
+  "@askCmdr.renameReview.whyThisName": {
+    "sourceHash": "23f0b4f"
+  },
+  "askCmdr.renameReview.preview": "Попередній перегляд",
+  "@askCmdr.renameReview.preview": {
+    "sourceHash": "324b134"
+  },
+  "askCmdr.renameReview.openPreview": "Відкрити «{name}»",
+  "@askCmdr.renameReview.openPreview": {
+    "sourceHash": "f687d18"
+  },
+  "askCmdr.renameReview.openPreviewTooltip": "Відкрити файл, щоб перевірити назву (Пробіл)",
+  "@askCmdr.renameReview.openPreviewTooltip": {
+    "sourceHash": "17163aa"
+  },
+  "askCmdr.renameReview.editName": "Нова назва для «{name}»",
+  "@askCmdr.renameReview.editName": {
+    "sourceHash": "862a5b7"
+  },
+  "askCmdr.renameReview.nameRejected": "Cmdr не може використати цю назву. Спробуйте іншу.",
+  "@askCmdr.renameReview.nameRejected": {
+    "sourceHash": "028029d"
+  },
+  "askCmdr.renameReview.evidence.imageText": "Текст на зображенні",
+  "@askCmdr.renameReview.evidence.imageText": {
+    "sourceHash": "520b47b"
+  },
+  "askCmdr.renameReview.evidence.imageTags": "Що Cmdr бачить на зображенні",
+  "@askCmdr.renameReview.evidence.imageTags": {
+    "sourceHash": "9adc5f7"
+  },
+  "askCmdr.renameReview.evidence.filename": "Стара назва",
+  "@askCmdr.renameReview.evidence.filename": {
+    "sourceHash": "3930e00"
+  },
+  "askCmdr.renameReview.evidence.metadata": "Деталі файлу, а не його вміст",
+  "@askCmdr.renameReview.evidence.metadata": {
+    "sourceHash": "8c7b303"
+  },
+  "askCmdr.renameReview.evidence.userInstruction": "Що ви просили",
+  "@askCmdr.renameReview.evidence.userInstruction": {
+    "sourceHash": "c8e3674"
+  },
+  "askCmdr.renameReview.evidence.userEdited": "Цю назву ввели ви",
+  "@askCmdr.renameReview.evidence.userEdited": {
+    "sourceHash": "3f3a179"
+  },
+  "askCmdr.renameReview.coverage": "{matched, plural, one {Збігається} few {Збігаються} many {Збігається} other {Збігається}} {matchedText} з {totalText} {total, plural, one {символу} few {символів} many {символів} other {символу}}",
+  "@askCmdr.renameReview.coverage": {
+    "sourceHash": "9fd2bde"
+  },
+  "askCmdr.renameReview.coverageThin": "Це лише невелика частина тексту, який Cmdr тут прочитав. Відкрийте файл, щоб перевірити назву.",
+  "@askCmdr.renameReview.coverageThin": {
+    "sourceHash": "2b8bec1"
+  },
+  "askCmdr.renameReview.allow": "Дозволити",
+  "@askCmdr.renameReview.allow": {
+    "sourceHash": "e213c16"
+  },
+  "askCmdr.renameReview.deny": "Заборонити",
+  "@askCmdr.renameReview.deny": {
+    "sourceHash": "05a2d73"
+  },
+  "askCmdr.renameReview.allowAll": "Дозволити всі",
+  "@askCmdr.renameReview.allowAll": {
+    "sourceHash": "56ac845"
+  },
+  "askCmdr.renameReview.denyAll": "Заборонити всі",
+  "@askCmdr.renameReview.denyAll": {
+    "sourceHash": "5a41803"
+  },
+  "askCmdr.renameReview.cancel": "Скасувати",
+  "@askCmdr.renameReview.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "askCmdr.renameReview.rename": "Перейменувати {count, plural, one {# файл} few {# файли} many {# файлів} other {# файлу}}",
+  "@askCmdr.renameReview.rename": {
+    "sourceHash": "d4b5c18"
+  },
+  "askCmdr.renameReview.blocked": "Це перейменування потребує уваги, перш ніж продовжити.",
+  "@askCmdr.renameReview.blocked": {
+    "sourceHash": "868541c"
+  },
+  "askCmdr.renameReview.overwriteBadge": "(перезапис!)",
+  "@askCmdr.renameReview.overwriteBadge": {
+    "sourceHash": "762fd52"
+  },
+  "askCmdr.renameReview.overwriteTooltip": "Цю назву вже має інший файл, який не входить у цей план перейменування. Перейменування заблоковано, щоб захистити той файл.",
+  "@askCmdr.renameReview.overwriteTooltip": {
+    "sourceHash": "4b7136e"
+  },
+  "askCmdr.renameReview.sourceMissingBadge": "(не існує)",
+  "@askCmdr.renameReview.sourceMissingBadge": {
+    "sourceHash": "7d1c550"
+  },
+  "askCmdr.renameReview.sourceMissingTooltip": "Цього вихідного файлу більше немає. Можливо, його видалили або перейменували поза Cmdr.",
+  "@askCmdr.renameReview.sourceMissingTooltip": {
+    "sourceHash": "acd6306"
+  },
+  "askCmdr.renameReview.extensionBadge": "(розширення)",
+  "@askCmdr.renameReview.extensionBadge": {
+    "sourceHash": "bcc0b2c"
+  },
+  "askCmdr.renameReview.extensionTooltip": "Розширення змінено. Вміст файлу не буде конвертовано.",
+  "@askCmdr.renameReview.extensionTooltip": {
+    "sourceHash": "7da4864"
+  },
+  "askCmdr.renameReview.cycleBadge": "(цикл)",
+  "@askCmdr.renameReview.cycleBadge": {
+    "sourceHash": "5a2772b"
+  },
+  "askCmdr.renameReview.cycleTooltip": "Цикл перейменувань. Cmdr використає одну тимчасову назву, поки переставлятиме назви цих файлів по колу.",
+  "@askCmdr.renameReview.cycleTooltip": {
+    "sourceHash": "d76a0af"
+  },
+  "askCmdr.renameReview.nothingReadBadge": "(нічого не прочитано)",
+  "@askCmdr.renameReview.nothingReadBadge": {
+    "sourceHash": "6308780"
+  },
+  "askCmdr.renameReview.nothingReadTooltip": "Cmdr нічого не прочитав усередині цього файлу. Ця назва походить зі старої назви, деталей файлу або з того, що ви просили.",
+  "@askCmdr.renameReview.nothingReadTooltip": {
+    "sourceHash": "850f6ce"
+  },
+  "askCmdr.renameReview.nameKeptBadge": "(назву збережено)",
+  "@askCmdr.renameReview.nameKeptBadge": {
+    "sourceHash": "08f1bc7"
+  },
+  "askCmdr.renameReview.nameKeptTooltip": "Cmdr залишив поточну назву й нічого не прочитав усередині цього файлу.",
+  "@askCmdr.renameReview.nameKeptTooltip": {
+    "sourceHash": "d27a078"
+  },
+  "askCmdr.renameReview.expired": "Термін дії цієї перевірки сплив. Попросіть Cmdr підготувати її ще раз.",
+  "@askCmdr.renameReview.expired": {
+    "sourceHash": "4e6482a"
+  },
+  "askCmdr.renameReview.checking": "Перевірено {checkedText} з {totalText} {total, plural, one {файлу} few {файлів} many {файлів} other {файлу}}",
+  "@askCmdr.renameReview.checking": {
+    "sourceHash": "92a4d6f"
+  },
+  "askCmdr.renameReview.checkingLabel": "Перевірка файлів",
+  "@askCmdr.renameReview.checkingLabel": {
+    "sourceHash": "03f0bc5"
+  },
+  "askCmdr.renameReview.stopChecking": "Зупинити перевірку",
+  "@askCmdr.renameReview.stopChecking": {
+    "sourceHash": "4373037"
+  },
+  "askCmdr.renameReview.checkUnfinished": "Cmdr ще не перевірив {count, plural, one {# файл} few {# файли} many {# файлів} other {# файлу}}, тож поки що не може перейменовувати.",
+  "@askCmdr.renameReview.checkUnfinished": {
+    "sourceHash": "c3c05ce"
+  },
+  "askCmdr.renameReview.checkAgain": "Перевірити ще раз",
+  "@askCmdr.renameReview.checkAgain": {
+    "sourceHash": "fb7099a"
+  },
+  "askCmdr.renameReview.needsAnotherLook": "Щось змінилося після того, як Cmdr перевірив ці назви, тож нічого не перейменовано. Перегляньте їх знову й спробуйте ще раз.",
+  "@askCmdr.renameReview.needsAnotherLook": {
+    "sourceHash": "36c6050"
+  },
+  "askCmdr.renameReview.couldntStart": "Cmdr не вдалося запустити це перейменування, і нічого не змінилося. Спробуйте ще раз за мить.",
+  "@askCmdr.renameReview.couldntStart": {
+    "sourceHash": "3ca2b21"
+  },
+  "askCmdr.renameReview.nothingToApply": "Тут більше немає чого перейменовувати.",
+  "@askCmdr.renameReview.nothingToApply": {
+    "sourceHash": "9c63cc7"
+  },
+  "askCmdr.renameReview.nameNotSaved": "Cmdr не вдалося зберегти цю назву. З назвою все гаразд, тож спробуйте ще раз.",
+  "@askCmdr.renameReview.nameNotSaved": {
+    "sourceHash": "daff211"
+  },
+  "askCmdr.renameReview.status": "{allowed, plural, one {Дозволено # перейменування} few {Дозволено # перейменування} many {Дозволено # перейменувань} other {Дозволено # перейменування}}; {blocked, plural, one {заблоковано #} few {заблоковано #} many {заблоковано #} other {заблоковано #}}",
+  "@askCmdr.renameReview.status": {
+    "sourceHash": "9f70789"
+  },
+  "askCmdr.renameUndo.applied": "Перейменовано {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}.",
+  "@askCmdr.renameUndo.applied": {
+    "sourceHash": "b06c599"
+  },
+  "askCmdr.renameUndo.swapsSkipped": "Пропущено {countText} {count, plural, one {перейменування} few {перейменування} many {перейменувань} other {перейменування}}, у яких файли обмінюються назвами. Перейменуйте ці файли по одному.",
+  "@askCmdr.renameUndo.swapsSkipped": {
+    "sourceHash": "90e8dfc"
+  },
+  "askCmdr.renameUndo.notRecorded": "Журнал операцій вимкнено, тож це не можна відмінити.",
+  "@askCmdr.renameUndo.notRecorded": {
+    "sourceHash": "eb01aff"
+  },
+  "askCmdr.renameUndo.undo": "Відмінити",
+  "@askCmdr.renameUndo.undo": {
+    "sourceHash": "a8283ad"
+  },
+  "askCmdr.renameUndo.undoLabel": "Відмінити перейменування {countText} {count, plural, one {файлу} few {файлів} many {файлів} other {файлу}}",
+  "@askCmdr.renameUndo.undoLabel": {
+    "sourceHash": "fc1c08a"
+  },
+  "askCmdr.renameUndo.undoJob": "Відмінити всі {countText} {count, plural, one {пакет} few {пакети} many {пакетів} other {пакета}}",
+  "@askCmdr.renameUndo.undoJob": {
+    "sourceHash": "f84acd2"
+  },
+  "askCmdr.renameUndo.undoJobLabel": "Відмінити всі {batches, plural, one {# пакет} few {# пакети} many {# пакетів} other {# пакета}}, у яких за цей запуск перейменовано {filesText} {files, plural, one {файл} few {файли} many {файлів} other {файлу}}",
+  "@askCmdr.renameUndo.undoJobLabel": {
+    "sourceHash": "544447d"
+  },
+  "askCmdr.renameUndo.undoing": "Повернення старих назв…",
+  "@askCmdr.renameUndo.undoing": {
+    "sourceHash": "756c0fc"
+  },
+  "askCmdr.renameUndo.undone": "Повернуто {count, plural, one {стару назву} few {старі назви} many {старі назви} other {старі назви}} для {countText} {count, plural, one {файлу} few {файлів} many {файлів} other {файлу}}.",
+  "@askCmdr.renameUndo.undone": {
+    "sourceHash": "d38b563"
+  },
+  "askCmdr.renameUndo.partial": "Повернуто {count, plural, one {стару назву} few {старі назви} many {старі назви} other {старі назви}} для {countText} {count, plural, one {файлу} few {файлів} many {файлів} other {файлу}}.",
+  "@askCmdr.renameUndo.partial": {
+    "sourceHash": "d38b563"
+  },
+  "askCmdr.renameUndo.skipped": "Залишено як є {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}: {count, plural, =1 {він змінився після перейменування або його стару назву знову зайнято} one {вони змінилися після перейменування або їхні старі назви знову зайняті} few {вони змінилися після перейменування або їхні старі назви знову зайняті} many {вони змінилися після перейменування або їхні старі назви знову зайняті} other {вони змінилися після перейменування або їхні старі назви знову зайняті}}.",
+  "@askCmdr.renameUndo.skipped": {
+    "sourceHash": "9a04738"
+  },
+  "askCmdr.renameUndo.skipReason.drift.named": "Залишено як є: {name}. Цей файл змінився після перейменування.",
+  "@askCmdr.renameUndo.skipReason.drift.named": {
+    "sourceHash": "70f663f"
+  },
+  "askCmdr.renameUndo.skipReason.drift.counted": "Залишено як є {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}: вони змінилися після перейменування.",
+  "@askCmdr.renameUndo.skipReason.drift.counted": {
+    "sourceHash": "217d1e8"
+  },
+  "askCmdr.renameUndo.skipReason.vanished.named": "Не вдалося знайти: {name}. Після перейменування цей елемент перемістили або видалили.",
+  "@askCmdr.renameUndo.skipReason.vanished.named": {
+    "sourceHash": "4daa75c"
+  },
+  "askCmdr.renameUndo.skipReason.vanished.counted": "Не вдалося знайти {countText} {count, plural, one {елемент} few {елементи} many {елементів} other {елемента}}: після перейменування їх перемістили або видалили.",
+  "@askCmdr.renameUndo.skipReason.vanished.counted": {
+    "sourceHash": "c8d1788"
+  },
+  "askCmdr.renameUndo.skipReason.nameTaken.named": "Залишено як є: {name}. Стару назву цього файлу знову зайнято.",
+  "@askCmdr.renameUndo.skipReason.nameTaken.named": {
+    "sourceHash": "ed5bd8e"
+  },
+  "askCmdr.renameUndo.skipReason.nameTaken.counted": "Залишено як є {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}: їхні старі назви знову зайняті.",
+  "@askCmdr.renameUndo.skipReason.nameTaken.counted": {
+    "sourceHash": "2fd2e7a"
+  },
+  "askCmdr.renameUndo.skipReason.unverifiable.named": "Залишено як є: {name}. Cmdr не вдалося перевірити, чи цей елемент змінювали.",
+  "@askCmdr.renameUndo.skipReason.unverifiable.named": {
+    "sourceHash": "3e553b2"
+  },
+  "askCmdr.renameUndo.skipReason.unverifiable.counted": "Залишено як є {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}: Cmdr не вдалося перевірити, чи їх змінювали.",
+  "@askCmdr.renameUndo.skipReason.unverifiable.counted": {
+    "sourceHash": "5964166"
+  },
+  "askCmdr.renameUndo.skipReason.folderNotEmpty.named": "Залишено як є папку {name}: у ній тепер щось є.",
+  "@askCmdr.renameUndo.skipReason.folderNotEmpty.named": {
+    "sourceHash": "b487d24"
+  },
+  "askCmdr.renameUndo.skipReason.folderNotEmpty.counted": "Залишено як є {countText} {count, plural, one {папку} few {папки} many {папок} other {папки}}: у них тепер щось є.",
+  "@askCmdr.renameUndo.skipReason.folderNotEmpty.counted": {
+    "sourceHash": "d2c9f56"
+  },
+  "askCmdr.renameUndo.skipReason.failed.named": "Залишено як є: {name}. Cmdr не вдалося повернути стару назву цього файлу.",
+  "@askCmdr.renameUndo.skipReason.failed.named": {
+    "sourceHash": "35bb622"
+  },
+  "askCmdr.renameUndo.skipReason.failed.counted": "Залишено як є {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}: Cmdr не вдалося повернути їхні старі назви.",
+  "@askCmdr.renameUndo.skipReason.failed.counted": {
+    "sourceHash": "f13c021"
+  },
+  "askCmdr.renameUndo.refusedBatches": "Cmdr не вдалося відмінити {countText} {count, plural, one {пакет} few {пакети} many {пакетів} other {пакета}}. Деталі є в журналі операцій.",
+  "@askCmdr.renameUndo.refusedBatches": {
+    "sourceHash": "16fde72"
+  },
+  "askCmdr.renameUndo.unavailable": "Нічого повертати. Можливо, цей пакет уже відмінено або його диск не підʼєднано.",
+  "@askCmdr.renameUndo.unavailable": {
+    "sourceHash": "8a95b9e"
+  },
+  "askCmdr.context.label": "Наскільки заповнений цей чат",
+  "@askCmdr.context.label": {
+    "sourceHash": "8451f61"
+  },
+  "askCmdr.context.tooltip": "Використано {usedText} з {budgetText} {budget, plural, one {токена} few {токенів} many {токенів} other {токена}} (орієнтовно)",
+  "@askCmdr.context.tooltip": {
+    "sourceHash": "81cc75a"
+  },
+  "askCmdr.context.baselineTooltip": "Інструкції та інструменти Cmdr займають у кожному повідомленні {usedText} з {budgetText} {budget, plural, one {токена} few {токенів} many {токенів} other {токена}} (орієнтовно)",
+  "@askCmdr.context.baselineTooltip": {
+    "sourceHash": "2bffb9b"
+  },
+  "askCmdr.wake.thinking": "Cmdr переглядає, що змінилося. Відкрийте чат.",
+  "@askCmdr.wake.thinking": {
+    "sourceHash": "772ca6e"
+  },
+  "askCmdr.wake.stop": "Зупинити те, що робить Cmdr",
+  "@askCmdr.wake.stop": {
+    "sourceHash": "1eae5cb"
+  },
+  "askCmdr.wake.needsFullDiskAccess": "Функції ШІ поки не бачать ваших папок. Клацніть, щоб налаштувати «Повний доступ до диска».",
+  "@askCmdr.wake.needsFullDiskAccess": {
+    "sourceHash": "ae245b9"
+  },
+  "askCmdr.wake.needsApiKey": "Функції ШІ увімкнено, але для роботи їм потрібен постачальник. Клацніть, щоб налаштувати його в Параметрах.",
+  "@askCmdr.wake.needsApiKey": {
+    "sourceHash": "0f71f75"
+  },
+  "askCmdr.wakeDigest.summary": "Що змінилося в {foldersText} {folders, plural, one {папці} few {папках} many {папках} other {папки}}",
+  "@askCmdr.wakeDigest.summary": {
+    "sourceHash": "07a2ce7"
+  },
+  "askCmdr.wakeDigest.created": "{countText} {count, plural, one {новий елемент} few {нові елементи} many {нових елементів} other {нового елемента}}",
+  "@askCmdr.wakeDigest.created": {
+    "sourceHash": "2d0353f"
+  },
+  "askCmdr.wakeDigest.modified": "{countText} {count, plural, one {змінений елемент} few {змінені елементи} many {змінених елементів} other {зміненого елемента}}",
+  "@askCmdr.wakeDigest.modified": {
+    "sourceHash": "6aa21c5"
+  },
+  "askCmdr.wakeDigest.removed": "{countText} {count, plural, one {вилучений елемент} few {вилучені елементи} many {вилучених елементів} other {вилученого елемента}}",
+  "@askCmdr.wakeDigest.removed": {
+    "sourceHash": "9711102"
+  },
+  "askCmdr.wakeDigest.renamed": "{countText} {count, plural, one {перейменований елемент} few {перейменовані елементи} many {перейменованих елементів} other {перейменованого елемента}}",
+  "@askCmdr.wakeDigest.renamed": {
+    "sourceHash": "2cf9f0f"
+  },
+  "askCmdr.wakeDigest.noChanges": "Нічого не змінилося",
+  "@askCmdr.wakeDigest.noChanges": {
+    "sourceHash": "0ba2a57"
+  },
+  "askCmdr.wakeDigest.rollup": "Ще {foldersText} {folders, plural, one {папка} few {папки} many {папок} other {папки}} у папці {ancestor}: {changesText} {changes, plural, one {зміна} few {зміни} many {змін} other {зміни}}",
+  "@askCmdr.wakeDigest.rollup": {
+    "sourceHash": "3b8f0dd"
+  },
+  "askCmdr.sessions.wakeThread": "Цей чат почав Cmdr",
+  "@askCmdr.sessions.wakeThread": {
+    "sourceHash": "5a27703"
+  },
+  "askCmdr.wakeToast.title": "У Cmdr є {countText} {count, plural, one {пропозиція} few {пропозиції} many {пропозицій} other {пропозиції}} для вас",
+  "@askCmdr.wakeToast.title": {
+    "sourceHash": "881baf8"
+  },
+  "askCmdr.wakeToast.action": "Перевірити",
+  "@askCmdr.wakeToast.action": {
+    "sourceHash": "aff0766"
+  },
+  "askCmdr.wakeToast.openThread": "Дізнатися чому",
+  "@askCmdr.wakeToast.openThread": {
+    "sourceHash": "0a641f8"
+  },
+  "askCmdr.decision.rejected": "Ви відхилили {verbName} {countText} {count, plural, one {елемента} few {елементів} many {елементів} other {елемента}}",
+  "@askCmdr.decision.rejected": {
+    "sourceHash": "19d12c1"
+  },
+  "askCmdr.decision.approved": "Ви схвалили {verbName} {countText} {count, plural, one {елемента} few {елементів} many {елементів} other {елемента}}",
+  "@askCmdr.decision.approved": {
+    "sourceHash": "aa911e6"
+  },
+  "askCmdr.decision.result": "виконано: {doneText}, пропущено: {skippedText}, не вдалося: {failedText}",
+  "@askCmdr.decision.result": {
+    "sourceHash": "13d97c7"
+  },
+  "askCmdr.decision.running": "Виконується…",
+  "@askCmdr.decision.running": {
+    "sourceHash": "46c5413"
+  },
+  "askCmdr.decision.interrupted": "Cmdr завершив роботу до того, як операцію було виконано",
+  "@askCmdr.decision.interrupted": {
+    "sourceHash": "ece92cc"
+  },
+  "askCmdr.decision.verbMove": "переміщення",
+  "@askCmdr.decision.verbMove": {
+    "sourceHash": "6e86294"
+  },
+  "askCmdr.decision.verbCopy": "копіювання",
+  "@askCmdr.decision.verbCopy": {
+    "sourceHash": "20a184a"
+  },
+  "askCmdr.decision.verbTrash": "переміщення в Смітник",
+  "@askCmdr.decision.verbTrash": {
+    "sourceHash": "ea05c85"
+  },
+  "askCmdr.decision.verbDelete": "видалення",
+  "@askCmdr.decision.verbDelete": {
+    "sourceHash": "8901f3f"
+  },
+  "askCmdr.decision.verbRename": "перейменування",
+  "@askCmdr.decision.verbRename": {
+    "sourceHash": "c4b4eea"
+  },
+  "askCmdr.decision.verbCompress": "архівування",
+  "@askCmdr.decision.verbCompress": {
+    "sourceHash": "45391ae"
+  },
+  "askCmdr.decision.verbExtract": "розпакування",
+  "@askCmdr.decision.verbExtract": {
+    "sourceHash": "c924f71"
+  },
+  "askCmdr.decision.serverRejected": "Ви відхилили {verbName}",
+  "@askCmdr.decision.serverRejected": {
+    "sourceHash": "b9797ee"
+  },
+  "askCmdr.decision.serverApproved": "Ви схвалили {verbName}",
+  "@askCmdr.decision.serverApproved": {
+    "sourceHash": "5ed18c2"
+  },
+  "askCmdr.decision.verbAddServer": "додавання сервера",
+  "@askCmdr.decision.verbAddServer": {
+    "sourceHash": "0304bc5"
+  },
+  "askCmdr.decision.verbEditServer": "зміну параметрів сервера",
+  "@askCmdr.decision.verbEditServer": {
+    "sourceHash": "155d3fd"
+  },
+  "askCmdr.decision.saved": "Збережено",
+  "@askCmdr.decision.saved": {
+    "sourceHash": "b5c120b"
+  },
+  "askCmdr.decision.savedNotShare": "Збережено сервер, але не його спільну папку",
+  "@askCmdr.decision.savedNotShare": {
+    "sourceHash": "e93a7bc"
+  },
+  "askCmdr.railBoundary.closedToast": "У чаті Ask Cmdr виникла проблема, і його закрито. Відкрийте його знову, щоб продовжити.",
+  "@askCmdr.railBoundary.closedToast": {
+    "sourceHash": "18caa70"
+  }
+}

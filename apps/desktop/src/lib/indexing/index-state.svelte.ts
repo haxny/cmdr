@@ -343,7 +343,6 @@ export function getEntriesScanned(): number {
 // key (resolved via `tString` at toast time). Branching on the typed `reason`
 // enum, not on message wording — copy lives in `messages/en/indexing.json`.
 const rescanReasonToMessageKey: Record<string, MessageKey> = {
-  stale_index: 'indexing.rescan.staleIndex',
   journal_gap: 'indexing.rescan.journalGap',
   replay_overflow: 'indexing.rescan.replayOverflow',
   watcher_start_failed: 'indexing.rescan.watcherStartFailed',

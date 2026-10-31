@@ -261,7 +261,8 @@ parent). A grant of "one item" for such a type is `RootPromises` moving by one a
   disagree.
 
 - **`is_active` + `force_scan` ⇒ `Index::rescan_volume`.** "Rescan now" on a drive that isn't indexing yet means "start
-  it", and the caller shouldn't have to know that.
+  it, then walk it", and the caller shouldn't have to know that. ❗ The walk is its own step: a trait-scanned volume
+  with a finished index resumes into Stale on a start and walks nothing.
 - **`registered_mtp_volume_ids_for_device` + `buffer_mtp_handle_if_scanning` + `apply_mtp_added_or_changed` +
   `MtpUpsert` + `apply_mtp_removed` ⇒ `Index::on_device_object_changed` / `on_device_object_removed`.** The app carried
   50 lines implementing the index's gate-before-resolve rule (during a walk the device is contended, so buffer the raw

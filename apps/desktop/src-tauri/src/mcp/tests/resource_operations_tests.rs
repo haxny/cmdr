@@ -23,6 +23,7 @@ fn clash(conflict_id: u64, destination_size: Option<KnownSize>) -> WriteConflict
         source_is_directory: false,
         destination_is_directory: false,
         destination_is_look_alike: false,
+        refused_name: None,
     }
 }
 
@@ -276,6 +277,26 @@ fn a_look_alike_clash_says_the_names_only_look_the_same() {
     }];
     let yaml = build_operations_yaml(&rows, 12_000);
     assert!(yaml.contains("destinationIsLookAlike: true"), "yaml: {yaml}");
+}
+
+#[test]
+fn a_refused_name_says_so_and_how_to_answer_it() {
+    // Not a clash: the destination can't store the name, so only a skip helps
+    // and an agent must not read the usual answer list as offering more.
+    let mut conflict = clash(5, None);
+    conflict.refused_name = serde_json::from_str("\"tooLong\"").expect("the wire name");
+    let rows = vec![OperationRow {
+        snapshot: snapshot("op-1", LifecycleStatus::Running),
+        progress: None,
+        pending_conflict: Some(conflict),
+        tree: None,
+        pending_sources_gone: None,
+        pending_locked_sources: None,
+    }];
+    let yaml = build_operations_yaml(&rows, 12_000);
+    assert!(yaml.contains("refusedName: tooLong"), "yaml: {yaml}");
+    assert!(yaml.contains("resolution skip, optional applyToAll"), "yaml: {yaml}");
+    assert!(!yaml.contains("overwrite_smaller"), "yaml: {yaml}");
 }
 
 #[test]

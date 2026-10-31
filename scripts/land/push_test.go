@@ -162,9 +162,39 @@ func TestPushBranchAfterOriginDeletedIt(t *testing.T) {
 	}
 }
 
-// A GitHub rebase merge lands the branch's patches on `main` under fresh SHAs; a re-run of land
-// must still see the branch as landed.
-func TestAllUpstreamAfterAGitHubRebaseMerge(t *testing.T) {
+// A GitHub merge commit puts the branch's own commits on `main`'s history (signatures intact), so a
+// re-run of land sees the branch as landed, and `readState`'s ancestor check needs no `git cherry`.
+func TestLandedAfterAGitHubMergeCommit(t *testing.T) {
+	origin := testOrigin(t)
+	a := testClone(t, origin, "feat")
+	mustGit(t, a, "commit", "--quiet", "--allow-empty", "-m", "feat: new")
+	mustGit(t, a, "push", "--quiet", "origin", "feat")
+
+	other := testClone(t, origin, "main")
+	mustGit(t, other, "commit", "--quiet", "--allow-empty", "-m", "feat: other")
+	mustGit(t, other, "push", "--quiet", "origin", "main")
+	mustGit(t, a, "fetch", "--quiet", "origin", "main")
+	if a.isAncestor("HEAD", "origin/main") || a.isAncestor("origin/main", "HEAD") {
+		t.Fatal("main should have moved under the branch")
+	}
+
+	// What GitHub's merge commit does.
+	mustGit(t, other, "fetch", "--quiet", "origin", "feat")
+	mustGit(t, other, "merge", "--quiet", "--no-ff", "-m", "Merge pull request #1", "origin/feat")
+	mustGit(t, other, "push", "--quiet", "origin", "main")
+	mustGit(t, a, "fetch", "--quiet", "origin", "main")
+	if !a.isAncestor("HEAD", "origin/main") {
+		t.Error("after the merge commit, the branch's head is on main's history")
+	}
+	state := branchState{branch: "feat", landed: a.isAncestor("HEAD", "origin/main")}
+	if got := nextStartStep(state, false); got != stepFinish {
+		t.Errorf("a re-run after the merge: got %d, want stepFinish", got)
+	}
+}
+
+// Patches can reach `main` under other SHAs (a cherry-pick, an older land through GitHub's rebase
+// merge); a re-run of land must still see the branch as landed.
+func TestAllUpstreamAfterACherryPick(t *testing.T) {
 	origin := testOrigin(t)
 	a := testClone(t, origin, "feat")
 	commitFile := func(r runner, name string) {
@@ -186,7 +216,6 @@ func TestAllUpstreamAfterAGitHubRebaseMerge(t *testing.T) {
 		t.Error("before the merge: the branch's commit isn't on main yet")
 	}
 
-	// What GitHub's rebase merge does.
 	mustGit(t, other, "fetch", "--quiet", "origin", "main")
 	mustGit(t, other, "fetch", "--quiet", a.dir, feat)
 	mustGit(t, other, "cherry-pick", feat)

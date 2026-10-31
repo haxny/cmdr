@@ -816,7 +816,7 @@
     "en": "copy",
     "match": ["copy", "copies", "copying", "copied"],
     "note": "\"A copy\" as a noun (the duplicate object) may take a different word than the verb.",
-    "notMatch": ["released copy", "another copy of cmdr", "fresh copy"],
+    "notMatch": ["released copy", "another copy of cmdr", "fresh copy", "this copy will close"],
     "sense": "Duplicating files to another location (F5), or copying text or a path to the clipboard."
   },
   "cost": {
@@ -3203,6 +3203,13 @@
     "match": ["=share", "share options"],
     "sense": "The Share submenu that hands files to other apps (AirDrop, Mail)."
   },
+  "shared-storage": {
+    "distinct": ["storage"],
+    "en": "shared storage",
+    "match": ["shared storage"],
+    "note": "Use the wording Android uses in the locale (AOSP frameworks/base storage_internal).",
+    "sense": "The part of an Android phone that holds a person's own files (photos, downloads, music)."
+  },
   "sharing-and-permissions": {
     "distinct": ["get-info", "permission"],
     "en": "Sharing & Permissions",
@@ -4085,5 +4092,11 @@
     "match": ["=thinking level"],
     "sense": "The reasoning picker’s label for Google Gemini (thinking_level) and the fallback name for services with none of their own; also the setting’s name in Settings search.",
     "distinct": ["reasoning-effort", "reasoning-effort-anthropic", "thinking"]
+  },
+  "type-to-jump": {
+    "en": "Jump (typing mode)",
+    "match": ["type-to-jump", "switch to jump", "=jump"],
+    "sense": "Cmdr’s Jump typing mode: typing in a pane moves the cursor to the best-matching name without hiding anything. The other mode is the quick filter. Not navigating to a typed path, and not the plain verb “jump to”.",
+    "distinct": ["quick-filter", "go-to-path"]
   }
 }

@@ -1,0 +1,239 @@
+{
+  "errorReporter.dialog.title": "Надіслати звіт про помилку",
+  "@errorReporter.dialog.title": {
+    "sourceHash": "c327e68"
+  },
+  "errorReporter.dialog.description": "Буде надіслано журнали Cmdr за останні пʼять годин, щоб команда могла виправити те, що пішло не так. Особисті дані приховуються ще на вашому Mac: шляхи до файлів, назви хостів, IP-адреси та е‑адреси вилучаються перед надсиланням.",
+  "@errorReporter.dialog.description": {
+    "sourceHash": "6b02a3f"
+  },
+  "errorReporter.dialog.referenceIdLabel": "ID звіту:",
+  "@errorReporter.dialog.referenceIdLabel": {
+    "sourceHash": "ef8c421"
+  },
+  "errorReporter.dialog.copy": "Скопіювати",
+  "@errorReporter.dialog.copy": {
+    "sourceHash": "e21f935"
+  },
+  "errorReporter.dialog.copied": "Скопійовано",
+  "@errorReporter.dialog.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "errorReporter.dialog.noteLabel": "Додати нотатку (необовʼязково)",
+  "@errorReporter.dialog.noteLabel": {
+    "sourceHash": "6bb0c6b"
+  },
+  "errorReporter.dialog.counter": "{currentText} / {maxText}",
+  "@errorReporter.dialog.counter": {
+    "sourceHash": "36ca789",
+    "sameAsSourceJustification": "Placeholder-only character counter; Ukrainian writes the typed-over-maximum fraction with the same slash, and both numbers come pre-formatted for uk."
+  },
+  "errorReporter.dialog.notePlaceholder": "Що ви намагалися зробити? Що, на вашу думку, мало статися?",
+  "@errorReporter.dialog.notePlaceholder": {
+    "sourceHash": "003300b"
+  },
+  "errorReporter.dialog.noteTooLong": "Нотатка задовга. Максимальна довжина: {maxText} {max, plural, one {символ} few {символи} many {символів} other {символу}}.",
+  "@errorReporter.dialog.noteTooLong": {
+    "sourceHash": "afcefac"
+  },
+  "errorReporter.dialog.detailsToggle": "Що буде надіслано",
+  "@errorReporter.dialog.detailsToggle": {
+    "sourceHash": "f57398b"
+  },
+  "errorReporter.dialog.manifestHeading": "Маніфест",
+  "@errorReporter.dialog.manifestHeading": {
+    "sourceHash": "3c99f1f"
+  },
+  "errorReporter.dialog.sampleFirstHeading": "Зразок: {count, plural, =1 {перший рядок} one {перші # рядок} few {перші # рядки} many {перші # рядків} other {перші # рядка}}",
+  "@errorReporter.dialog.sampleFirstHeading": {
+    "sourceHash": "7a2e538"
+  },
+  "errorReporter.dialog.sampleLastHeading": "Зразок: {count, plural, =1 {останній рядок} one {останні # рядок} few {останні # рядки} many {останні # рядків} other {останні # рядка}}",
+  "@errorReporter.dialog.sampleLastHeading": {
+    "sourceHash": "a36f420"
+  },
+  "errorReporter.dialog.noLogLines": "(рядків журналу немає)",
+  "@errorReporter.dialog.noLogLines": {
+    "sourceHash": "a2d54fd"
+  },
+  "errorReporter.dialog.totalLines": "Усього рядків журналу (після приховування особистих даних): {countText}",
+  "@errorReporter.dialog.totalLines": {
+    "sourceHash": "9c5cab7"
+  },
+  "errorReporter.dialog.preparing": "Підготовка попереднього перегляду…",
+  "@errorReporter.dialog.preparing": {
+    "sourceHash": "11e66e1"
+  },
+  "errorReporter.dialog.prepareFailed": "Не вдалося підготувати попередній перегляд.",
+  "@errorReporter.dialog.prepareFailed": {
+    "sourceHash": "24cd5ba"
+  },
+  "errorReporter.dialog.tryAgain": "Спробувати ще раз",
+  "@errorReporter.dialog.tryAgain": {
+    "sourceHash": "d8b8392"
+  },
+  "errorReporter.dialog.bundleUnavailable": "Cmdr не вдалося зібрати журнали для звіту. Спробуйте ще раз за мить.",
+  "@errorReporter.dialog.bundleUnavailable": {
+    "sourceHash": "15bc5b8"
+  },
+  "errorReporter.dialog.saveToDisk": "Зберегти пакет на диск (налагодження)",
+  "@errorReporter.dialog.saveToDisk": {
+    "sourceHash": "36d6589"
+  },
+  "errorReporter.dialog.managedOff": "Ваша установа вимкнула надсилання звітів. Але звіт можна зберегти на диск і поділитися ним самостійно.",
+  "@errorReporter.dialog.managedOff": {
+    "sourceHash": "9309a39"
+  },
+  "errorReporter.dialog.saveToDiskManaged": "Зберегти на диск",
+  "@errorReporter.dialog.saveToDiskManaged": {
+    "sourceHash": "5a5d775"
+  },
+  "errorReporter.dialog.cancel": "Скасувати",
+  "@errorReporter.dialog.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "errorReporter.dialog.send": "Надіслати звіт",
+  "@errorReporter.dialog.send": {
+    "sourceHash": "a44d353"
+  },
+  "errorReporter.dialog.sending": "Надсилання…",
+  "@errorReporter.dialog.sending": {
+    "sourceHash": "b8ed527"
+  },
+  "errorReporter.dialog.sendFailedToast": "Не вдалося надіслати звіт про помилку. {reason}",
+  "@errorReporter.dialog.sendFailedToast": {
+    "sourceHash": "1eedf49"
+  },
+  "errorReporter.dialog.saveFailedToast": "Не вдалося зберегти пакет: {error}",
+  "@errorReporter.dialog.saveFailedToast": {
+    "sourceHash": "6405cca"
+  },
+  "errorReporter.amend.title": "Додати до звіту про помилку",
+  "@errorReporter.amend.title": {
+    "sourceHash": "b19796b"
+  },
+  "errorReporter.amend.description": "Cmdr уже надіслав цей звіт. Напишіть нотатку або додайте свою е‑адресу, і все це потрапить до звіту, який уже є в команди.",
+  "@errorReporter.amend.description": {
+    "sourceHash": "9e1a80f"
+  },
+  "errorReporter.amend.noteLabel": "Ваша нотатка",
+  "@errorReporter.amend.noteLabel": {
+    "sourceHash": "5331e47"
+  },
+  "errorReporter.amend.detailsToggle": "Що було надіслано",
+  "@errorReporter.amend.detailsToggle": {
+    "sourceHash": "cb2415e"
+  },
+  "errorReporter.amend.submit": "Додати до звіту",
+  "@errorReporter.amend.submit": {
+    "sourceHash": "e05fdbe"
+  },
+  "errorReporter.amend.submitting": "Додавання…",
+  "@errorReporter.amend.submitting": {
+    "sourceHash": "c6de6f4"
+  },
+  "errorReporter.amend.unavailable": "До цього звіту вже не можна додати нотатку. Щоб передати свої нотатки команді, надішліть новий звіт через меню «Довідка».",
+  "@errorReporter.amend.unavailable": {
+    "sourceHash": "08ab034"
+  },
+  "errorReporter.amend.close": "Закрити",
+  "@errorReporter.amend.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "errorReporter.amend.addFailedToast": "Не вдалося додати вашу нотатку. {reason}",
+  "@errorReporter.amend.addFailedToast": {
+    "sourceHash": "02f82ce"
+  },
+  "errorReporter.sentToast.message": "Звіт про помилку надіслано. ID вашого звіту:",
+  "@errorReporter.sentToast.message": {
+    "sourceHash": "75be6ba"
+  },
+  "errorReporter.sentToast.dismiss": "Закрити",
+  "@errorReporter.sentToast.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "errorReporter.sentToast.copyId": "Скопіювати ID",
+  "@errorReporter.sentToast.copyId": {
+    "sourceHash": "72ac0d5"
+  },
+  "errorReporter.sentToast.copied": "Скопійовано",
+  "@errorReporter.sentToast.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "errorReporter.amendedToast.message": "Нотатку додано до звіту. ID вашого звіту:",
+  "@errorReporter.amendedToast.message": {
+    "sourceHash": "5471d7f"
+  },
+  "errorReporter.bundleSavedToast.message": "Пакет збережено на диск",
+  "@errorReporter.bundleSavedToast.message": {
+    "sourceHash": "7c1604d"
+  },
+  "errorReporter.bundleSavedToast.dismiss": "Закрити",
+  "@errorReporter.bundleSavedToast.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "errorReporter.bundleSavedToast.reveal": "Показати у Finder",
+  "@errorReporter.bundleSavedToast.reveal": {
+    "sourceHash": "cc84938"
+  },
+  "errorReporter.autoSentToast.title": "Звіт про помилку надіслано",
+  "@errorReporter.autoSentToast.title": {
+    "sourceHash": "b69ee37"
+  },
+  "errorReporter.autoSentToast.referenceIdLabel": "ID звіту:",
+  "@errorReporter.autoSentToast.referenceIdLabel": {
+    "sourceHash": "ef8c421"
+  },
+  "errorReporter.autoSentToast.changeSettings": "Змінити параметри",
+  "@errorReporter.autoSentToast.changeSettings": {
+    "sourceHash": "873512a"
+  },
+  "errorReporter.autoSentToast.viewOrAddNotes": "Переглянути звіт або додати нотатки",
+  "@errorReporter.autoSentToast.viewOrAddNotes": {
+    "sourceHash": "81a00a0"
+  },
+  "errorReporter.offer.send": "Надіслати звіт про помилку…",
+  "@errorReporter.offer.send": {
+    "sourceHash": "063c94e"
+  },
+  "errorReporter.offer.slow": "Довго триває? Надішліть звіт",
+  "@errorReporter.offer.slow": {
+    "sourceHash": "ceaf3b7"
+  },
+  "errorReporter.prefill.slow": "{operation}: триває довго, прогресу немає вже {duration}.",
+  "@errorReporter.prefill.slow": {
+    "sourceHash": "42c0ee2"
+  },
+  "errorReporter.prefill.updateNotGenuine": "Оновлення, яке видавало себе за версію {version}, не було підписане Cmdr, тож Cmdr не інсталював його.",
+  "@errorReporter.prefill.updateNotGenuine": {
+    "sourceHash": "0e007a7"
+  },
+  "errorReporter.prefill.pageCrash": "Це вікно Cmdr перестало працювати.",
+  "@errorReporter.prefill.pageCrash": {
+    "sourceHash": "6337998"
+  },
+  "errorReporter.pageCrash.title": "У цьому вікні щось пішло не так",
+  "@errorReporter.pageCrash.title": {
+    "sourceHash": "c77d29c"
+  },
+  "errorReporter.pageCrash.body": "У Cmdr виникла неочікувана проблема. Зазвичай допомагає перезавантаження. Якщо це повторюється, надішліть звіт, щоб проблему виправили.",
+  "@errorReporter.pageCrash.body": {
+    "sourceHash": "5cfe782"
+  },
+  "errorReporter.pageCrash.detailsLabel": "Технічні деталі",
+  "@errorReporter.pageCrash.detailsLabel": {
+    "sourceHash": "890ab35"
+  },
+  "errorReporter.pageCrash.reload": "Перезавантажити",
+  "@errorReporter.pageCrash.reload": {
+    "sourceHash": "bdc090e"
+  },
+  "errorReporter.preview.unavailableToast": "Не вдалося відкрити попередній перегляд. Спробуйте ще раз за мить.",
+  "@errorReporter.preview.unavailableToast": {
+    "sourceHash": "64eba04"
+  },
+  "errorReporter.prefill.reference": "Код проблеми: {code}",
+  "@errorReporter.prefill.reference": {
+    "sourceHash": "c0b8ba2"
+  }
+}

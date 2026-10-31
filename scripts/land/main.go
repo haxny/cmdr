@@ -13,18 +13,19 @@
 //     red names the failed jobs and the re-run command;
 //  5. lands the green head: with `git push origin <sha>:main` while it still descends from
 //     `origin/main` (the SHAs stay the same, and GitHub marks the PR merged), else with
-//     `gh pr merge --admin --rebase`, which rebases it onto the `main` that moved under it and
-//     leaves the clash check to CI on `main`. Either way the CI ruleset demands `CI OK` green on
-//     the head; the admin only bypasses the approval ruleset;
+//     `gh pr merge --admin --merge`, a merge commit GitHub makes (and signs) onto the `main` that
+//     moved under it, leaving the clash check to CI on `main`. Either way every commit on `main`
+//     is signed, the CI ruleset demands `CI OK` green on the head, and the admin only bypasses the
+//     approval ruleset;
 //  6. fast-forwards local `main` (wherever it's checked out), deletes the remote branch, and
 //     prints the command that removes the worktree.
 //
-// When GitHub can't rebase the green PR (a conflict, or a merge commit a rebase would flatten),
-// it catches up here and waits for CI again, up to `maxCIRuns` runs in all.
+// When GitHub can't merge the green PR cleanly, it rebases here and waits for CI again, up to
+// `maxCIRuns` runs in all.
 //
 // With `-merge` (a release commit, whose tag must stay on `main`'s history), it never rebases: the
-// green head lands by fast-forward, or by a merge commit GitHub makes onto the `main` that moved
-// (`gh pr merge --merge`). A plain land refuses to rebase a tagged commit.
+// start skips the catch-up rebase, and a conflict stops for a merge by hand. A plain land refuses
+// to rebase a tagged commit.
 //
 // With `-record N`, a second land follows once the branch is on `main`: a record branch, the
 // current `main` plus an `ours` merge of contributor PR N's head, through CI and fast-forwarded
@@ -64,16 +65,16 @@ const (
 	// How many CI runs one land waits through when each green head needs a rebase here before it
 	// can land. A `main` that clashes with it this often needs a person, not a ninth run.
 	maxCIRuns = 8
-	// How long GitHub gets to work out whether it can rebase a PR after `main` moved.
-	rebaseableWithin = 15 * time.Second
+	// How long GitHub gets to work out whether it can merge a PR after `main` moved.
+	mergeableWithin = 15 * time.Second
 )
 
 // errMainMoved: `origin/main` moved while CI ran, and GitHub can't land the green head on it, so
 // the branch catches up here and CI runs again.
 var errMainMoved = errors.New("origin/main moved while CI ran")
 
-// errRebaseConflict: GitHub can't rebase the green PR onto the `main` that moved under it.
-var errRebaseConflict = fmt.Errorf("GitHub can't rebase the PR onto main cleanly: %w", errMainMoved)
+// errGitHubConflict: GitHub can't merge the green PR into the `main` that moved under it cleanly.
+var errGitHubConflict = fmt.Errorf("GitHub can't merge the PR into main cleanly: %w", errMainMoved)
 
 // errOriginAhead: origin's feature branch has commits this branch never had, so pushing would
 // overwrite them.
@@ -180,10 +181,10 @@ func land(r runner, cfg config) error {
 			return err
 		}
 		if run >= maxCIRuns {
-			return fmt.Errorf("origin/main moved during each of %d CI runs in a way GitHub couldn't rebase onto, so I stopped. Land again when it's quieter: pnpm land", maxCIRuns)
+			return fmt.Errorf("origin/main moved during each of %d CI runs in a way GitHub couldn't merge cleanly, so I stopped. Land again when it's quieter: pnpm land", maxCIRuns)
 		}
-		if errors.Is(err, errRebaseConflict) {
-			say("GitHub can't rebase the green PR onto the new main cleanly, so rebasing here and running CI again (run %d of %d).", run+1, maxCIRuns)
+		if errors.Is(err, errGitHubConflict) {
+			say("GitHub can't merge the green PR into the new main cleanly, so rebasing here and running CI again (run %d of %d).", run+1, maxCIRuns)
 		} else {
 			say("origin/main moved while CI ran, so catching up here (run %d of %d).", run+1, maxCIRuns)
 		}
@@ -483,14 +484,14 @@ func ciFailure(run workflowRun, jobs []runJob, early bool, again string) error {
 }
 
 // landGreen takes the green head onto `main` (`nextLandPath`): a fast-forward push while it still
-// descends from `origin/main`, else a GitHub rebase merge (with `-merge`, a GitHub merge commit).
-// It returns errMainMoved when only a rebase here and a fresh CI run can land it.
+// descends from `origin/main`, else a merge commit GitHub makes. It returns errMainMoved when only
+// a rebase here and a fresh CI run can land it.
 func landGreen(r runner, pr pullRequest, head string, hasMerges, merge bool) error {
 	for {
 		if _, err := r.git("fetch", "--quiet", "origin", "main"); err != nil {
 			return err
 		}
-		path, err := choosePath(r, pr, head, hasMerges, merge)
+		path, err := choosePath(r, pr, head, merge)
 		if err != nil {
 			return err
 		}
@@ -506,37 +507,42 @@ func landGreen(r runner, pr pullRequest, head string, hasMerges, merge bool) err
 				continue
 			}
 			return fmt.Errorf("origin refused the land:\n%w", err)
-		case landGitHubRebase:
-			return mergeOnGitHub(r, pr, head)
-		case landRebaseAndRerun:
-			if hasMerges {
-				return errMainMoved
-			}
-			return errRebaseConflict
 		case landGitHubMerge:
-			return mergeCommitOnGitHub(r, pr, head)
+			return mergeOnGitHub(r, pr, head, hasMerges, merge)
+		case landRebaseAndRerun:
+			return conflictError(head, hasMerges, merge)
 		case landMergeConflict:
 			return errMergeConflict(head)
 		}
 	}
 }
 
-// choosePath reads where the head stands against `origin/main` (and, when `main` moved, what GitHub
-// can do with the PR) and picks the land path.
-func choosePath(r runner, pr pullRequest, head string, hasMerges, merge bool) (landPath, error) {
+// conflictError is what a land GitHub can't merge cleanly returns: `-merge` stops for a merge by
+// hand; a branch carrying a merge commit goes back to the start, which says how to catch up by
+// hand (a plain rebase would flatten it); any other branch rebases here and runs CI again.
+func conflictError(head string, hasMerges, merge bool) error {
+	switch {
+	case merge:
+		return errMergeConflict(head)
+	case hasMerges:
+		return errMainMoved
+	default:
+		return errGitHubConflict
+	}
+}
+
+// choosePath reads where the head stands against `origin/main` (and, when `main` moved, whether
+// GitHub can merge the PR) and picks the land path.
+func choosePath(r runner, pr pullRequest, head string, merge bool) (landPath, error) {
 	based := r.isAncestor("origin/main", head)
-	var rebaseable, mergeable *bool
-	// A merge commit on a plain land can't go through GitHub at all, so there's nothing to ask.
-	if !based && (merge || !hasMerges) {
+	var mergeable *bool
+	if !based {
 		var err error
-		if rebaseable, mergeable, err = prMergeability(r, pr.Number); err != nil {
+		if mergeable, err = prMergeable(r, pr.Number); err != nil {
 			return 0, err
 		}
 	}
-	if merge {
-		return nextMergePath(based, mergeable), nil
-	}
-	return nextLandPath(based, hasMerges, rebaseable), nil
+	return nextLandPath(based, merge, mergeable), nil
 }
 
 // pushToMain fast-forwards origin's `main` to the green SHA. `--no-verify`: CI already passed on
@@ -546,62 +552,43 @@ func pushToMain(r runner, head string) error {
 	return err
 }
 
-// prMergeability asks GitHub whether it can rebase the PR onto `main`, and merge it into `main`.
-// GitHub works that out in the background after `main` moves, so this gives it
-// `rebaseableWithin`, then reports nil for what it still doesn't know.
-func prMergeability(r runner, number int) (rebaseable, mergeable *bool, err error) {
-	deadline := time.Now().Add(rebaseableWithin)
+// prMergeable asks GitHub whether it can merge the PR into `main`. GitHub works that out in the
+// background after `main` moves, so this gives it `mergeableWithin`, then reports nil if it still
+// doesn't know.
+func prMergeable(r runner, number int) (*bool, error) {
+	deadline := time.Now().Add(mergeableWithin)
 	for {
 		var pull pullDetails
 		if err := r.ghAPI(&pull, fmt.Sprintf("repos/%s/pulls/%d", repo, number)); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		if (pull.Rebaseable != nil && pull.Mergeable != nil) || time.Now().After(deadline) {
-			return pull.Rebaseable, pull.Mergeable, nil
+		if pull.Mergeable != nil || time.Now().After(deadline) {
+			return pull.Mergeable, nil
 		}
 		time.Sleep(3 * time.Second)
 	}
 }
 
-// mergeOnGitHub has GitHub rebase the green PR onto the `main` that moved under it, and CI on
-// `main` checks the result. `--admin` passes the approval ruleset; the CI one has no bypass, so
-// GitHub still demands `CI OK` green on the head, and `--match-head-commit` pins that head.
-func mergeOnGitHub(r runner, pr pullRequest, head string) error {
-	_, err := r.gh("pr", "merge", fmt.Sprint(pr.Number), "-R", repo, "--admin", "--rebase", "--match-head-commit", head)
-	if err != nil {
-		// The call may have gone through before it failed, or GitHub found the rebase conflicts.
-		var pull pullDetails
-		if readErr := r.ghAPI(&pull, fmt.Sprintf("repos/%s/pulls/%d", repo, pr.Number)); readErr != nil {
-			return fmt.Errorf("GitHub refused the merge, so nothing landed. Fix what it says, then land again: pnpm land\n%w", err)
-		}
-		switch {
-		case pull.Merged:
-		case pull.Rebaseable != nil && !*pull.Rebaseable:
-			return errRebaseConflict
-		default:
-			return fmt.Errorf("GitHub refused the merge, so nothing landed. Fix what it says, then land again: pnpm land\n%w", err)
-		}
-	}
-	say("main moved while CI ran, so GitHub rebased the green PR onto it: %s\nCI on main checks the result: https://github.com/%s/actions/workflows/%s?query=branch%%3Amain", pr.URL, repo, ciWorkflow)
-	return nil
-}
-
-// mergeCommitOnGitHub (`-merge`) has GitHub merge the green PR into the `main` that moved under it
-// with a merge commit, so the head keeps its SHA (and a release its tag) on `main`'s history.
-// `--admin` passes the approval ruleset; the CI one still demands `CI OK` green on the head.
-func mergeCommitOnGitHub(r runner, pr pullRequest, head string) error {
+// mergeOnGitHub has GitHub merge the green PR into the `main` that moved under it with a merge
+// commit, and CI on `main` checks the result. The branch's commits keep their SHAs and signatures
+// (and a release its tag on `main`'s history); GitHub signs the merge commit itself. `--admin`
+// passes the approval ruleset; the CI one has no bypass, so GitHub still demands `CI OK` green on
+// the head, and `--match-head-commit` pins that head.
+func mergeOnGitHub(r runner, pr pullRequest, head string, hasMerges, merge bool) error {
+	again := config{merge: merge}.command()
 	_, err := r.gh("pr", "merge", fmt.Sprint(pr.Number), "-R", repo, "--admin", "--merge", "--match-head-commit", head)
 	if err != nil {
+		// The call may have gone through before it failed, or GitHub found the merge conflicts.
 		var pull pullDetails
 		if readErr := r.ghAPI(&pull, fmt.Sprintf("repos/%s/pulls/%d", repo, pr.Number)); readErr != nil {
-			return fmt.Errorf("GitHub refused the merge, so nothing landed. Fix what it says, then land again: pnpm land -merge\n%w", err)
+			return fmt.Errorf("GitHub refused the merge, so nothing landed. Fix what it says, then land again: %s\n%w", again, err)
 		}
 		switch {
 		case pull.Merged:
 		case pull.Mergeable != nil && !*pull.Mergeable:
-			return errMergeConflict(head)
+			return conflictError(head, hasMerges, merge)
 		default:
-			return fmt.Errorf("GitHub refused the merge, so nothing landed. It takes merge commits on main (the repo setting and the ruleset's allowed merge methods, docs/guides/releasing.md). Fix what it says, then land again: pnpm land -merge\n%w", err)
+			return fmt.Errorf("GitHub refused the merge, so nothing landed. It takes merge commits on main (the repo setting and the ruleset's allowed merge methods, scripts/land/DETAILS.md). Fix what it says, then land again: %s\n%w", again, err)
 		}
 	}
 	say("main moved while CI ran, so GitHub merged the green PR into it with a merge commit: %s\nCI on main checks the result: https://github.com/%s/actions/workflows/%s?query=branch%%3Amain", pr.URL, repo, ciWorkflow)

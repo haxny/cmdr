@@ -343,12 +343,27 @@ lock".
 check (positionally or via `--check`) implicitly includes slow checks (`includeSlow = len(checkNames) > 0`); group/app
 selectors don't.
 
-**Fast lane (`--fast`):** `IsFast: true` marks the curated pre-commit check set: 78 checks, about 6 s wall even with
+**Fast lane (`--fast`):** `IsFast: true` marks the curated pre-commit check set: 72 checks, about 6 s wall even with
 `--fresh` (verified on the M1 Max agent box, `pnpm check --fast --ci --fresh`, 2026-10-13), intended to run before every
 commit. Its budget is 5–10 s, so formatters, test suites, typecheckers, `knip`, and the i18n generator-freshness lanes
 stay in the default lane. It's an editorial pick, not a timing-derived list (see Key decisions below). Named check
 invocations bypass the filter so `pnpm check --fast svelte-check` still runs svelte-check. Mutually exclusive with
 `--include-slow` / `--only-slow` — combining them errors out, since the lanes are intentionally separate.
+
+**Pre-release lane:** `IsPreRelease: true` marks the gates that guard what a release ships but move too slowly to earn a
+seat on every run: today `clippy-mimalloc` and `desktop-bundle-size`. `pnpm check --pre-release` runs exactly these;
+every other run (default, `--fast`, `--include-slow`, `--only-slow`, `--ci`) leaves them out (`FilterPreReleaseChecks`,
+second in `applyLaneFilters`). Naming one still runs it. `--pre-release` doesn't combine with `--fast` /
+`--include-slow` / `--only-slow`. Two places run it: `scripts/release.sh` (`--pre-release --ci`, before any version
+bump, so a red gate stops the release untagged) and `slow-checks.yml`'s macOS `pre-release` job every six days (macOS
+because `clippy-mimalloc` lints macOS-only code and skips elsewhere). `ci-coverage` counts a workflow line running
+`scripts/check ... --pre-release` as a reference to every pre-release check, so they carry no `NotInCI` reason.
+
+**Decision**: a pre-release lane that FAILS. **Why**: `clippy-mimalloc` (~120 s, weight 8) never failed in the check log
+from 2026-07-19 to 2026-10-29, and `desktop-bundle-size` did a full frontend build to print a warning nobody read,
+because a warning logs as a pass. Gating the release (plus a six-day CI run, so a break surfaces before release morning)
+keeps both meaningful at a fraction of the cost. `module-cycles` stays where it is: it already fails, and `ci.yml`'s
+macOS lane (`macos-lane.yml`) runs it on every push, which a six-day cadence would weaken.
 
 **CI-only checks:** `CIOnly: true` marks checks that run only in `--ci` mode (currently `cargo-udeps`, `jscpd-rust`, and
 the four real-API `<provider>-smoke` lanes). They're silently dropped from local runs (no SKIPPED line) and are not
@@ -357,16 +372,17 @@ can verify locally before pushing.
 
 **Self-contained E2E checks:** `desktop-e2e-playwright` manages the full lifecycle (build the binary, create per-shard
 fixtures, start N Tauri instances, run N Playwright processes in parallel, cleanup). The build is fingerprinted and
-skipped when the binary on disk already matches the tree it would be built from, which is worth 172 s per run because
-the build isn't incremental (`checks/DETAILS.md` § "The Playwright lane's binary is fingerprinted"). Each shard runs in
-its own isolated `CMDR_DATA_DIR` with its own Unix socket and MCP port (asked of the OS per run, never a fixed base:
-`checks/DETAILS.md` § "Nothing a shard owns is shared between runs"), plus a per-shard `CMDR_INSTANCE_ID` of the form
-`e2e-<short>-<pid>` (for example, `e2e-mtp-12345`, `e2e-nonmtp1-12345`). The instance ID drives the macOS Keychain
-`SERVICE_NAME` suffix (`Cmdr-e2e-<short>-<pid>`) so two parallel shards can never collide on credentials, and reshapes
-the Dock label into `Cmdr (E2E <short>)` so cleanup scripts can target with `pgrep -f 'Cmdr (E2E '`. One shard is
-dedicated to MTP specs (serialized; the run's virtual MTP backing dir at `/tmp/cmdr-mtp-e2e-fixtures-<pid>` is shared by
-every Tauri instance in that run). Per-shard logs go to `/tmp/cmdr-e2e-playwright-<shard>-<timestamp>-<pid>.log`, and a
-week-old leftover is swept at lane start. See `docs/tooling/instance-isolation.md` § "How E2E gets isolated per shard".
+skipped when the binary on disk already matches the tree it would be built from, which is worth ~130 s per run because
+the build recompiles `cmdr` every time (`checks/DETAILS.md` § "The Playwright lane's binary is fingerprinted"). Each
+shard runs in its own isolated `CMDR_DATA_DIR` with its own Unix socket and MCP port (asked of the OS per run, never a
+fixed base: `checks/DETAILS.md` § "Nothing a shard owns is shared between runs"), plus a per-shard `CMDR_INSTANCE_ID` of
+the form `e2e-<short>-<pid>` (for example, `e2e-mtp-12345`, `e2e-nonmtp1-12345`). The instance ID drives the macOS
+Keychain `SERVICE_NAME` suffix (`Cmdr-e2e-<short>-<pid>`) so two parallel shards can never collide on credentials, and
+reshapes the Dock label into `Cmdr (E2E <short>)` so cleanup scripts can target with `pgrep -f 'Cmdr (E2E '`. One shard
+is dedicated to MTP specs (serialized; the run's virtual MTP backing dir at `/tmp/cmdr-mtp-e2e-fixtures-<pid>` is shared
+by every Tauri instance in that run). Per-shard logs go to `/tmp/cmdr-e2e-playwright-<shard>-<timestamp>-<pid>.log`, and
+a week-old leftover is swept at lane start. See `docs/tooling/instance-isolation.md` § "How E2E gets isolated per
+shard".
 
 `RUST_LOG` is forwarded to the app (via inherited `os.Environ()`), so trace-level output is one shell-prefix away:
 
@@ -466,6 +482,11 @@ sqlite3 -column -header :memory: '.import --csv ~/.local/share/check-runner/cmdr
 
 Narrow either to a window with `and timestamp >= '2026-08-01'`, or to one lane with `and "check" = 'rust-tests'`.
 Remember what "absent" means here: fast, or never ran. Never "passed".
+
+**One batch, one write.** Every runner on the machine appends to the same four CSVs, so `appendCSVRows` renders a batch
+whole and writes it once under an exclusive `flock`, deciding the header by the file's size under that lock. Before,
+csv.Writer's 4 KiB chunks from two processes interleaved mid-row (13 torn rows by 2026-10-29). Rows older than that fix
+can still be torn; `sqlite3 .import` warns and skips the extras.
 
 **Disabled by `--no-log` and `--ci`**, like the check-level log, so CI runners don't write a log nobody reads.
 
@@ -1050,12 +1071,23 @@ cost. **Why**: with `--fresh` the lane took 54 s, almost all of it a long tail o
 runner, or a whole-tree generator: `message-keys-fresh` (33 s), `message-keys-unused` (24 s), `go-tests`,
 `i18n-termbase`, `staticcheck`, `api-server-tests`, `knip`, `go-vet`, `macos-symbol-floor`, the dashboard's
 svelte-check, tests, and knip, `e2e-linux-typecheck`, `api-server-typecheck`, and `go-version-single-source`. Moving
-them to the default lane cut it to ~6 s (2026-10-13). The formatters (`oxfmt`, `rustfmt`) left too: the git hooks format
-staged files at commit and the whole repo at push (`docs/tooling/git-hooks.md`), so a formatter in `--fast` caught
-nothing the next commit wouldn't. `FilterFastChecks` keeps only `IsFast` entries and a `DependsOn` edge to a check
-outside the run counts as satisfied, so a setup step (`api-server-worker-types`, `dashboard-svelte-kit-sync`) is fast
-exactly when one of its dependents is; both left with theirs. The scanners that catch real failures stay
+them to the default lane cut it to ~6 s (2026-10-13). The two message-key lanes came back once they stopped scanning per
+key: the codegen dropped its dead-key scan (`message-keys-unused` owns that question) and the Go check matches every key
+in one Aho-Corasick pass per file, taking them from 27–35 s and 22–27 s to ~0.5 s and ~0.7 s wall (5,189 keys, 3,967
+files, load ~90, `pnpm check <id> --fresh`, 2026-10-29). The formatters (`oxfmt`, `rustfmt`) left too: the git hooks
+format staged files at commit and the whole repo at push (`docs/tooling/git-hooks.md`), so a formatter in `--fast`
+caught nothing the next commit wouldn't. `FilterFastChecks` keeps only `IsFast` entries and a `DependsOn` edge to a
+check outside the run counts as satisfied, so a setup step (`api-server-worker-types`, `dashboard-svelte-kit-sync`) is
+fast exactly when one of its dependents is; both left with theirs. The scanners that catch real failures stay
 (`macos-availability`, `discarded-outcome`).
+
+**Decision**: cheap checks that never fail go to the default lane too. **Why**: a fast-lane slot is a promise of
+pre-commit signal, and these gave none: `dashboard-stylelint`, `dashboard-import-cycles`, `btn-restyle`,
+`native-strings-fresh`, `shipped-locales-fresh`, `gofmt`, `rustup-add`, and `vendor-patch-applied` never failed in the
+check log from 2026-07-19 to 2026-10-29 (#423). The pre-push hook runs `--fast`, so they no longer run before a push;
+the default lane and CI still gate them. `html-validate` and `workflows` stay: both failed after the 2026-10-13 analysis
+(eight and one times). `resident-budget` stays because it joins every scoped run, which requires `IsFast`
+(`TestScopedRunLanesAreCheapWholeRepoScanners`).
 
 **Decision**: `CIOnly` field on `CheckDefinition` (mirrors `IsSlow`). **Why**: Keeps "this check runs only in CI"
 colocated with the check definition rather than as a hardcoded list elsewhere. `FilterCIOnlyChecks` in `registry.go`

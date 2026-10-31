@@ -258,7 +258,13 @@ impl<'a> DetachedManager<'a> {
     fn take(volume_id: &'a str) -> Result<Self, String> {
         let mut reg = INDEX_REGISTRY.lock_ignore_poison();
         let instance = reg.get_mut(volume_id).ok_or("Indexing not initialized")?;
-        match std::mem::replace(&mut instance.phase, IndexPhase::ShuttingDown { restart: None }) {
+        match std::mem::replace(
+            &mut instance.phase,
+            IndexPhase::ShuttingDown {
+                restart: None,
+                then_clear: None,
+            },
+        ) {
             IndexPhase::Running(mgr) => {
                 instance.phase = IndexPhase::Detached {
                     writer: mgr.writer.clone(),
@@ -352,6 +358,7 @@ fn hand_the_manager_back(volume_id: &str, mgr: Box<IndexManager>, start_phases: 
                         // side carries it out like any other.
                         instance.phase = IndexPhase::ShuttingDown {
                             restart: claimed.restart,
+                            then_clear: None,
                         };
                         Next::Claimed(
                             claimed.claim,
@@ -417,6 +424,11 @@ fn hand_the_manager_back(volume_id: &str, mgr: Box<IndexManager>, start_phases: 
 ///
 /// ⚠️ **The window can't strand the volume**, and ❌ that isn't up to `work`: the
 /// [`DetachedManager`] guard ends it on every path out, panic included.
+///
+/// ❌ **Never call this from a thread holding a share of the volume's hold** (a
+/// `VolumeWork`): a clear claimed in the window runs on this thread at the
+/// handback, and waits for the volume to be let go before deleting (#620,
+/// `teardown.rs::remove_once_let_go`), so it would wait on its own caller.
 ///
 /// `why` names the caller in the two INFO lines that bracket the window. They're
 /// what makes a `work` that never returns readable from an INFO log: an "out"
@@ -489,13 +501,19 @@ mod tests {
         let sources = crate::indexing::source_guard::indexing_sources();
 
         // Assembled rather than written out, so a marker can't match its own mention.
-        let takes_the_manager_out = concat!("mem::replace(&mut ", "instance.phase,");
+        // Matched against the source with all whitespace removed, so rustfmt wrapping a
+        // call over several lines (a new `ShuttingDown` field does) can't hide a site.
+        let takes_the_manager_out = concat!("mem::replace(&mut", "instance.phase,");
         let records_the_request = concat!("claim_the_", "teardown(");
-        let publishes_the_window = concat!("IndexPhase::Detached ", "{\n");
+        let publishes_the_window = concat!("IndexPhase::Detached", "{");
 
         let mut extractors: Vec<String> = Vec::new();
         for (name, path) in sources {
-            let src = std::fs::read_to_string(&path).expect("read source");
+            let src: String = std::fs::read_to_string(&path)
+                .expect("read source")
+                .chars()
+                .filter(|c| !c.is_whitespace())
+                .collect();
             if !src.contains(takes_the_manager_out) {
                 continue;
             }
@@ -512,6 +530,7 @@ mod tests {
         assert_eq!(
             extractors,
             vec![
+                "lifecycle/state/relocation.rs".to_string(),
                 "lifecycle/state/scan_control.rs".to_string(),
                 "lifecycle/state/supervisor.rs".to_string(),
                 "lifecycle/state/teardown.rs".to_string(),

@@ -321,6 +321,7 @@ pub(super) async fn resolve_volume_conflict(
                 source_is_directory,
                 destination_is_directory,
                 destination_is_look_alike: is_look_alike_clash(source_path, dest_path),
+                refused_name: None,
             });
 
             // Say that the operation has parked on a person, before the prompt

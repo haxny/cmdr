@@ -23,7 +23,8 @@
 //! decoder can't trust at all (and every record after it in the batch, since
 //! nothing past it can be located), is counted in [`BulkDirRead::unusable`], and
 //! both callers then re-read the whole directory with `read_dir` rather than use a
-//! short listing. The `bulk_matches_symlink_metadata` differential test asserts the
+//! short listing. An `EINTR` does the same: the stream is never resumed on its fd
+//! (`walker/DETAILS.md` § "The bulk reader"). The `bulk_matches_symlink_metadata` differential test asserts the
 //! decoded values equal `std::fs::symlink_metadata` field-for-field across a rich
 //! tree (files with known sizes, an empty dir, a symlink, a hardlink, a unicode
 //! name), so a decoding bug is a failing test, not a silent corruption.
@@ -61,6 +62,33 @@ pub(in crate::indexing) struct BulkDirRead {
     /// DELETES index rows the live listing lacks — re-reads the directory with
     /// `read_dir` when this isn't zero.
     pub unusable: usize,
+    /// A `getattrlistbulk` call failed with `EINTR`, so the stream is in doubt and
+    /// `entries` is empty. Nothing says a call resumed on the same fd can't skip a
+    /// batch, so neither caller resumes: both re-read the directory whole.
+    pub interrupted: bool,
+}
+
+impl BulkDirRead {
+    /// Why this read can't be used as the directory's listing, if it can't: the
+    /// caller re-reads the directory whole through `read_dir` instead.
+    pub(in crate::indexing) fn doubt(&self) -> Option<ReadDoubt> {
+        if self.interrupted {
+            Some(ReadDoubt::Interrupted)
+        } else if self.unusable > 0 {
+            Some(ReadDoubt::Unusable(self.unusable))
+        } else {
+            None
+        }
+    }
+}
+
+/// Why a [`BulkDirRead`] isn't a whole listing. Logged, never shown.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::indexing) enum ReadDoubt {
+    /// This many records didn't become an entry.
+    Unusable(usize),
+    /// The stream was interrupted (`EINTR`) partway through.
+    Interrupted,
 }
 
 /// Bulk directory reader: the production macOS [`super::ReadDirFn`]. Reads
@@ -75,19 +103,32 @@ pub(super) fn bulk_read_dir(path: &Path, progress: &ReadProgress) -> std::io::Re
     complete_or_reread(path, progress, read)
 }
 
-/// `read`'s entries when every record became one; otherwise the directory read
-/// again whole through [`super::std_read_dir`]. A short listing would leave a real
-/// child out of the scan: no row, while its parent is stamped listed.
+/// `read`'s entries when it's a whole listing; otherwise the directory read again
+/// whole through [`super::std_read_dir`]. A short listing would leave a real child
+/// out of the scan: no row, while its parent is stamped listed.
 fn complete_or_reread(path: &Path, progress: &ReadProgress, read: BulkDirRead) -> std::io::Result<Vec<RawDirEntry>> {
-    if read.unusable == 0 {
+    let Some(doubt) = read.doubt() else {
         return Ok(read.entries);
-    }
-    log::warn!(
-        "scan: bulk read of {} couldn't decode {}, re-reading it with read_dir",
-        LogPrivate::dir_path(&path),
-        cmdr_fs::pluralize::pluralize_with(read.unusable as u64, "entry", "entries"),
-    );
+    };
+    log_reread("scan", path, doubt);
     super::std_read_dir(path, progress)
+}
+
+/// The one log line both callers write when a bulk read is re-read whole.
+pub(in crate::indexing) fn log_reread(caller: &str, path: &Path, doubt: ReadDoubt) {
+    match doubt {
+        ReadDoubt::Unusable(n) => log::warn!(
+            "{caller}: bulk read of {} couldn't decode {}, re-reading it with read_dir",
+            LogPrivate::dir_path(&path),
+            cmdr_fs::pluralize::pluralize_with(n as u64, "entry", "entries"),
+        ),
+        // Debug: an interrupted call is a signal landing on the thread, not a
+        // diagnosis, and the re-read makes it harmless.
+        ReadDoubt::Interrupted => log::debug!(
+            "{caller}: bulk read of {} was interrupted (EINTR), re-reading it with read_dir",
+            LogPrivate::dir_path(&path),
+        ),
+    }
 }
 
 /// [`bulk_read_dir`] for a caller with no watchdog reading a [`ReadProgress`] (the
@@ -98,6 +139,16 @@ pub(in crate::indexing) fn bulk_read_dir_unwatched(path: &Path) -> std::io::Resu
 }
 
 fn bulk_read_dir_inner(path: &Path, progress: &ReadProgress) -> std::io::Result<BulkDirRead> {
+    bulk_read_dir_with(path, progress, &mut kernel_batch)
+}
+
+/// [`bulk_read_dir_inner`] with the batch source as a parameter, so a test can
+/// interrupt the stream partway through.
+fn bulk_read_dir_with(
+    path: &Path,
+    progress: &ReadProgress,
+    batches: &mut dyn FnMut(libc::c_int, &mut [u8]) -> std::io::Result<usize>,
+) -> std::io::Result<BulkDirRead> {
     let c_path = CString::new(path.as_os_str().as_bytes())
         .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidInput, "path contains a NUL byte"))?;
 
@@ -111,50 +162,61 @@ fn bulk_read_dir_inner(path: &Path, progress: &ReadProgress) -> std::io::Result<
     }
     let dir = DirFd(fd);
 
-    let mut attrlist = REQUEST.attrlist();
     let mut buf = vec![0u8; ATTR_BUF_SIZE];
     let mut out = Vec::new();
     let mut unusable = 0usize;
 
     loop {
-        let count = loop {
-            // SAFETY: `dir.0` is a valid open directory fd; `&mut attrlist` points to a
-            // well-formed `struct attrlist` of the size its `bitmapcount` implies; `buf`
-            // is a writable allocation of `ATTR_BUF_SIZE` bytes. The kernel writes at
-            // most `ATTR_BUF_SIZE` bytes into `buf` and returns the entry count (>=0) or
-            // -1. Retried on EINTR.
-            let n = unsafe {
-                libc::getattrlistbulk(
-                    dir.0,
-                    (&raw mut attrlist).cast(),
-                    buf.as_mut_ptr().cast(),
-                    ATTR_BUF_SIZE,
-                    u64::from(libc::FSOPT_NOFOLLOW | libc::FSOPT_PACK_INVAL_ATTRS),
-                )
-            };
-            if n < 0 {
-                let err = std::io::Error::last_os_error();
-                if err.raw_os_error() == Some(libc::EINTR) {
-                    continue;
-                }
-                return Err(err);
+        let count = match batches(dir.0, &mut buf) {
+            Ok(0) => break, // no more entries
+            Ok(count) => count,
+            // The stream is in doubt: nothing says a call resumed on this fd can't
+            // skip a batch, and the reconcile diff DELETES rows a listing lacks. Drop
+            // what we have, and let the caller re-read the directory whole (#708).
+            Err(err) if err.raw_os_error() == Some(libc::EINTR) => {
+                return Ok(BulkDirRead {
+                    entries: Vec::new(),
+                    unusable: 0,
+                    interrupted: true,
+                });
             }
-            break n;
+            Err(err) => return Err(err),
         };
-
-        if count == 0 {
-            break; // no more entries
-        }
 
         // Publish the batch before decoding it: a directory of any size keeps this
         // climbing every syscall, which is how the watchdog tells this read apart
         // from one blocked forever in `getattrlistbulk` on a dead mount.
-        progress.record_entries(count.unsigned_abs().into());
+        progress.record_entries(count as u64);
 
-        unusable += decode_batch(&buf, count.unsigned_abs() as usize, path, &mut out);
+        unusable += decode_batch(&buf, count, path, &mut out);
     }
 
-    Ok(BulkDirRead { entries: out, unusable })
+    Ok(BulkDirRead {
+        entries: out,
+        unusable,
+        interrupted: false,
+    })
+}
+
+/// One `getattrlistbulk` call on `dir` into `buf`: how many records it wrote, 0
+/// at the end of the directory.
+fn kernel_batch(dir: libc::c_int, buf: &mut [u8]) -> std::io::Result<usize> {
+    let mut attrlist = REQUEST.attrlist();
+    // SAFETY: `dir` is a valid open directory fd, owned by the caller's `DirFd` for
+    // the call's duration; `&mut attrlist` points to a well-formed `struct attrlist`
+    // of the size its `bitmapcount` implies; `buf` is writable for exactly the byte
+    // length passed, and the kernel writes no more. It returns the entry count
+    // (>=0) or -1.
+    let n = unsafe {
+        libc::getattrlistbulk(
+            dir,
+            (&raw mut attrlist).cast(),
+            buf.as_mut_ptr().cast(),
+            buf.len(),
+            u64::from(libc::FSOPT_NOFOLLOW | libc::FSOPT_PACK_INVAL_ATTRS),
+        )
+    };
+    usize::try_from(n).map_err(|_| std::io::Error::last_os_error())
 }
 
 /// Decodes one `getattrlistbulk` batch of `count` records into `out`, and returns
@@ -483,6 +545,7 @@ mod tests {
         let short = BulkDirRead {
             entries: Vec::new(),
             unusable: 1,
+            interrupted: false,
         };
         let mut entries = complete_or_reread(dir.path(), &ReadProgress::default(), short).expect("re-read");
         entries.sort_by(|a, b| a.path.cmp(&b.path));
@@ -492,6 +555,49 @@ mod tests {
             entries.iter().all(|e| e.stat.is_none()),
             "read_dir entries are stated by the visitor"
         );
+    }
+
+    /// The kernel's batches, except the second call fails with `EINTR`: the stream
+    /// breaks after entries were already read. Calls after it go back to the kernel,
+    /// so a reader that resumed would finish (and look whole).
+    fn interrupt_after_first_batch() -> impl FnMut(libc::c_int, &mut [u8]) -> std::io::Result<usize> {
+        let mut calls = 0;
+        move |fd, buf| {
+            calls += 1;
+            if calls == 2 {
+                Err(std::io::Error::from_raw_os_error(libc::EINTR))
+            } else {
+                kernel_batch(fd, buf)
+            }
+        }
+    }
+
+    /// #708: an `EINTR` mid-stream is never resumed on the same fd, since a resumed
+    /// call may have skipped a batch. The read comes back interrupted and EMPTY, so
+    /// no caller can mistake what it got before the interrupt for the whole listing.
+    #[test]
+    fn an_interrupted_bulk_read_is_marked_in_doubt_and_keeps_no_entries() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        std::fs::write(dir.path().join("a.txt"), b"a").unwrap();
+        std::fs::write(dir.path().join("b.txt"), b"b").unwrap();
+        let read = bulk_read_dir_with(dir.path(), &ReadProgress::default(), &mut interrupt_after_first_batch())
+            .expect("an interrupt isn't an unreadable directory");
+        assert_eq!(read.doubt(), Some(ReadDoubt::Interrupted));
+        assert!(read.entries.is_empty(), "a stream in doubt hands back no entries");
+    }
+
+    /// The walk re-reads an interrupted directory whole through `read_dir`.
+    #[test]
+    fn the_walk_rereads_an_interrupted_directory() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        std::fs::write(dir.path().join("a.txt"), b"a").unwrap();
+        std::fs::create_dir(dir.path().join("sub")).unwrap();
+        let progress = ReadProgress::default();
+        let read = bulk_read_dir_with(dir.path(), &progress, &mut interrupt_after_first_batch()).expect("read");
+        let mut entries = complete_or_reread(dir.path(), &progress, read).expect("re-read");
+        entries.sort_by(|a, b| a.path.cmp(&b.path));
+        let names: Vec<_> = entries.iter().map(|e| e.path.file_name().unwrap().to_owned()).collect();
+        assert_eq!(names, ["a.txt", "sub"], "every child is back");
     }
 
     /// A healthy directory parses every record, so the fallback re-read never

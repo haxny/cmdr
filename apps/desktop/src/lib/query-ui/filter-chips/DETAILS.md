@@ -45,9 +45,8 @@ Companion tests (colocated):
   column gating
 - **`filter-chips.a11y.test.ts`**: one directory-level tier-3 audit, because `svelte-tests` charges per test FILE
   (`docs/testing.md` § "What a test actually costs"). Four blocks: the chip strip across populated states, the size
-  popover (closed + `between` with all columns), the date popover (closed, preset mode, custom bounds, with
-  `nested-interactive` disabled there — input inside Custom cell), and the scope popover (closed + open with scope text
-  and toggles)
+  popover (closed, custom bounds, `between` with all columns), the date popover (closed, preset mode, custom bounds),
+  and the scope popover (closed + open with scope text and toggles)
 - **`filter-chip-state.test.ts`**: Default → configured → cleared rules for each chip's display summary
 - **`filter-popover-helpers.test.ts`**: Size + date preset rules, comparator gating, dynamic Modified preset labels
 
@@ -134,7 +133,9 @@ lives in `query-shortcuts.ts::matchKey`, which the mode-chip ⌥A / ⌥F / ⌥R 
   presets can resolve to the same ISO date (on a Sunday with a Sunday-first locale, "today" and "this Sunday" both land
   on today; on the 1st of a month, "today" and "1st of <month>" collide), so the bare compare would light up every
   colliding cell at once. The first-match key keeps exactly one cell selected.
-- Size > Custom input lives INSIDE the Custom cell (one click selects + focuses).
+- The Custom cell is a button until picked, then a `<label>` holding the field (one press selects + focuses, a press on
+  its padding focuses too). ❌ Never an input inside a button: its children are presentational, so VoiceOver may hide
+  the field's role (axe `nested-interactive`, on in `filter-chips.a11y.test.ts`).
 - Modified presets are dynamic ("today 0:00", "1st of May 0:00", …) — see `filter-popover-helpers.ts::buildDatePresets`.
 - `buildDatePresets` reads TWO locales on purpose. The weekday and month NAMES follow the UI language (`getUiLocale()`),
   because they're words inside translated sentences; the first-day-of-week beside them follows the formatting locale

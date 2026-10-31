@@ -150,6 +150,14 @@ pub(crate) enum IndexPhase {
         /// What a start asked for while the drain runs, if anything. Whoever ends
         /// the drain frees the slot and carries it out.
         restart: Option<StartRequest>,
+        /// A clear that met the drain, if one did: whoever ends the drain deletes
+        /// the files it takes, once the volume is let go, before carrying out any
+        /// `restart`. ⚠️ Recorded, ❌ never bounced: a stop's drain keeps the
+        /// database, so a forget that bailed here left the index on disk. Only a
+        /// clear sets it and nothing but the drain's end takes it, so a later
+        /// teardown that publishes a fresh marker over the drain carries it over
+        /// (it drops the recorded START, the user's last word being off).
+        then_clear: Option<crate::volume_files::Removal>,
     },
     /// The index DB died with a FATAL storage error (`SQLITE_IOERR`, corruption, a
     /// full or read-only disk, …), so indexing STOPPED for this volume. Unlike
@@ -276,7 +284,7 @@ impl IndexPhase {
             // The drain frees the slot on its way out, and starts the volume again
             // while it's there. Overwriting is the collapse: however many toggles
             // land in one window, the last one is what happens.
-            IndexPhase::ShuttingDown { restart } => {
+            IndexPhase::ShuttingDown { restart, .. } => {
                 *restart = Some(request);
                 true
             }

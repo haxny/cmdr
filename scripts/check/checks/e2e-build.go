@@ -170,11 +170,11 @@ func recordE2EBuild(binaryPath, fingerprint string) error {
 // e2eBuildStampFor is the stamp's content: the tree fingerprint plus the binary's
 // own size and modification time.
 //
-// The fingerprint alone would vouch for whatever file happens to sit at that path,
-// and it isn't ours exclusively: a plain `pnpm tauri build` in the same worktree
-// writes the same `target/<triple>/release/Cmdr` without the `playwright-e2e`
-// feature. Binding the stamp to the file's identity means anything that replaces
-// the binary invalidates the stamp, so the swap costs a rebuild rather than a run
+// The fingerprint alone would vouch for whatever file happens to sit at that path.
+// `target/<triple>/e2e/Cmdr` is the E2E profile's own dir, but a hand-run
+// `cargo build --profile e2e` without the `playwright-e2e` feature still lands
+// there. Binding the stamp to the file's identity means anything that replaces the
+// binary invalidates the stamp, so the swap costs a rebuild rather than a run
 // against a binary the E2E harness can't drive.
 func e2eBuildStampFor(binaryPath, fingerprint string) (string, error) {
 	info, err := os.Stat(binaryPath)
@@ -271,6 +271,17 @@ func buildTauriBinary(ctx *CheckContext, desktopDir string, timestamp int64) (st
 	return findTauriBinary(ctx.RootDir)
 }
 
+// e2eCargoProfile is the cargo profile `pnpm test:e2e:playwright:build` passes
+// (`-- --profile e2e`, in `apps/desktop/package.json`): release without thin LTO,
+// built incrementally. The root `Cargo.toml` says why. Cargo names the output dir
+// after it.
+const e2eCargoProfile = "e2e"
+
+// e2eBinaryPath is where the Playwright build leaves the binary for a target triple.
+func e2eBinaryPath(rootDir, triple string) string {
+	return filepath.Join(rootDir, "target", triple, e2eCargoProfile, "Cmdr")
+}
+
 // findTauriBinary locates the built Cmdr binary by querying rustc for the host triple.
 func findTauriBinary(rootDir string) (string, error) {
 	rustcCmd := exec.Command("rustc", "-vV")
@@ -290,7 +301,7 @@ func findTauriBinary(rootDir string) (string, error) {
 		return "", fmt.Errorf("could not parse host triple from `rustc -vV` output")
 	}
 
-	binaryPath := filepath.Join(rootDir, "target", triple, "release", "Cmdr")
+	binaryPath := e2eBinaryPath(rootDir, triple)
 	if _, err := os.Stat(binaryPath); err != nil {
 		return "", fmt.Errorf("built binary not found at %s", binaryPath)
 	}

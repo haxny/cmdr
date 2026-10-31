@@ -120,8 +120,9 @@ all four facts (trash downloads, whole-selection delete only, the service keeps 
   `errors.mutation.unexpected`.
 - Never `verwijderbaar` (reads as deletable): `Deze schijf kun je niet uitwerpen`.
   `Sluit open bestanden, stop geopende apps` (Finder); `wilde … niet`; `koppel het los`.
-- Holders: `X heeft daar nog bestanden open.` + `… en probeer het daarna opnieuw.`; `daar`, since it may be a share or a
-  phone. `Sluit ze` points at `bestanden`; `Cmdr heeft geen appnaam`, never `We`.
+- Holders: `X gebruikt daar nog iets.` + `… en probeer het daarna opnieuw.`; `daar`, since it may be a share or a phone.
+  `Sluit de app` / `die apps`, no pronoun for an insert; Eject all → `Werp alle uit`, since Finder's `Verwijder alle`
+  (`N199.1`) reads as delete; `Cmdr heeft geen appnaam`, never `We`.
 - `andere apps`, `nog andere` (`andere processen` reads as a name), `schijfkopie` (repeated), `staat nog open`
   (tentative); `Wacht een minuutje` (macOS) vs `Wacht even` (Cmdr).
 

@@ -15,6 +15,7 @@
 //! every other call on this backend means the exact bytes it's handed.
 
 use super::SmbVolume;
+use super::dfs_links::link_bare_stat;
 use super::session::SessionLease;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::log_private::LogPrivate;
@@ -282,7 +283,9 @@ impl SmbVolume {
         while len > floor {
             check_cancel(cancel)?;
             let prefix = comps[..len].join("/");
-            let result = tree.stat(&mut conn, &prefix).await;
+            let result = self
+                .or_through_link(generation, &prefix, tree.stat(&mut conn, &prefix), link_bare_stat)
+                .await;
             let status = result.as_ref().err().and_then(smb2::Error::status);
             if status == Some(NtStatus::OBJECT_NAME_NOT_FOUND) {
                 return Ok(Probe::MissingAt(len - 1));
@@ -322,7 +325,14 @@ impl SmbVolume {
             mut conn,
             generation,
         } = self.clone_session().await?;
-        let result = tree.list_directory(&mut conn, parent).await;
+        let result = self
+            .or_through_link(
+                generation,
+                parent,
+                tree.list_directory(&mut conn, parent),
+                |client, tree, path| Box::pin(client.list_directory(tree, path)),
+            )
+            .await;
         let entries = self.handle_smb_result("find_stored_spelling", parent, generation, result)?;
         Ok(entries
             .into_iter()

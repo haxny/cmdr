@@ -299,9 +299,9 @@
   "@onboarding.stepAi.local.note": {
     "sourceHash": "af89d60"
   },
-  "onboarding.stepAi.localTooltip": "本地 LLM 需要 Apple 芯片。云端在 Intel 上也能用。",
+  "onboarding.stepAi.localTooltip": "本地 LLM 需要 Apple 芯片和 macOS 14 或更高版本。云端在任何 Mac 上都能用。",
   "@onboarding.stepAi.localTooltip": {
-    "sourceHash": "75c6d48"
+    "sourceHash": "f95b4a9"
   },
   "onboarding.stepAi.missingKeyWarning": "你开启了 AI，但还没填写 API 密钥。AI 用不了，而且你会看到一条警告。请在上面补上。\n\n<strong>再点按一次“{nextLabel}”就会忽略这个提示，继续往下。</strong>",
   "@onboarding.stepAi.missingKeyWarning": {

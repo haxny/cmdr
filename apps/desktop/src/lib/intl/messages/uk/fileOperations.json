@@ -1,0 +1,1355 @@
+{
+  "fileOperations.button.cancel": "Скасувати",
+  "@fileOperations.button.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "fileOperations.button.close": "Закрити",
+  "@fileOperations.button.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "fileOperations.button.ok": "OK",
+  "@fileOperations.button.ok": {
+    "sourceHash": "565339b",
+    "sameAsSourceJustification": "Ukrainian macOS AppKit writes the confirm button as Latin OK (pile AppKit/Common.json:OK → OK)."
+  },
+  "fileOperations.delete.fromPath": "Звідки: {path}",
+  "@fileOperations.delete.fromPath": {
+    "sourceHash": "12851d4"
+  },
+  "fileOperations.delete.noTrashWarningStrong": "Цей том не підтримує Смітник.",
+  "@fileOperations.delete.noTrashWarningStrong": {
+    "sourceHash": "911688a"
+  },
+  "fileOperations.delete.noTrashWarningRest": "Файли буде видалено остаточно.",
+  "@fileOperations.delete.noTrashWarningRest": {
+    "sourceHash": "0d73f99"
+  },
+  "fileOperations.delete.cloudOnlineOnlyMixedWarning": "Частина вибраного доступна лише онлайн. Щоб перемістити ці елементи в Смітник, їх довелося б <strong>спершу викачати</strong>. Тому Cmdr пропонує лише <strong>видалити</strong> всі вибрані елементи. Копій у Смітнику не буде, але в хмарних сервісах зазвичай є власний смітник, де файли зберігаються близько 30 днів. Натисніть «Видалити», якщо вас це влаштовує. Якщо ні, закрийте це діалогове вікно кнопкою «Скасувати». Далі можна спершу зробити всі файли доступними офлайн або зняти виділення з усіх файлів, доступних лише онлайн.",
+  "@fileOperations.delete.cloudOnlineOnlyMixedWarning": {
+    "sourceHash": "2468db5"
+  },
+  "fileOperations.delete.cloudOnlineOnlyAllWarning": "Усе вибране доступне лише онлайн. Щоб перемістити це в Смітник, його довелося б <strong>спершу викачати</strong>. Тому Cmdr пропонує лише <strong>видалити</strong> всі вибрані елементи. Копій у Смітнику не буде, але в хмарних сервісах зазвичай є власний смітник, де файли зберігаються близько 30 днів. Натисніть «Видалити», якщо вас це влаштовує. Якщо ні, закрийте це діалогове вікно кнопкою «Скасувати». Далі можна спершу зробити ці файли доступними офлайн.",
+  "@fileOperations.delete.cloudOnlineOnlyAllWarning": {
+    "sourceHash": "dd04d39"
+  },
+  "fileOperations.delete.cloudOnlineOnlyHandedBack": "Виявилося, що серед вибраного є вміст, доступний лише онлайн, тож кнопка нижче тепер пропонує «Видалити». Прочитайте примітку вище й натисніть кнопку ще раз, якщо вас це влаштовує.",
+  "@fileOperations.delete.cloudOnlineOnlyHandedBack": {
+    "sourceHash": "d3f4a7a"
+  },
+  "fileOperations.delete.archiveWarningStrong": "В архіві немає Смітника.",
+  "@fileOperations.delete.archiveWarningStrong": {
+    "sourceHash": "d25cd46"
+  },
+  "fileOperations.delete.archiveWarningRest": "Ці елементи буде остаточно видалено із zip-архіву.",
+  "@fileOperations.delete.archiveWarningRest": {
+    "sourceHash": "5fa93f5"
+  },
+  "fileOperations.trash.undoAction": "Відмінити",
+  "@fileOperations.trash.undoAction": {
+    "sourceHash": "a8283ad"
+  },
+  "fileOperations.trash.goToTrashAction": "Перейти до Смітника",
+  "@fileOperations.trash.goToTrashAction": {
+    "sourceHash": "5332858"
+  },
+  "fileOperations.trash.undoing": "Повернення назад…",
+  "@fileOperations.trash.undoing": {
+    "sourceHash": "3272a7a"
+  },
+  "fileOperations.trash.undone": "Повернуто назад {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}.",
+  "@fileOperations.trash.undone": {
+    "sourceHash": "a76ffee"
+  },
+  "fileOperations.trash.undonePartial": "Повернуто назад {restoredText} {restored, plural, one {файл} few {файли} many {файлів} other {файлу}}; {skippedText} {skipped, plural, one {елемент} few {елементи} many {елементів} other {елемента}} залишено у Смітнику.",
+  "@fileOperations.trash.undonePartial": {
+    "sourceHash": "371413d"
+  },
+  "fileOperations.trash.undoUnavailable": "Немає чого повернути назад. Можливо, ці елементи вже повернуто або їхній диск не підʼєднано.",
+  "@fileOperations.trash.undoUnavailable": {
+    "sourceHash": "ee17b5f"
+  },
+  "fileOperations.trash.undoGone": "Немає чого повернути назад: {count, plural, =1 {елемент уже зник зі Смітника} one {елементи вже зникли зі Смітника} few {елементи вже зникли зі Смітника} many {елементи вже зникли зі Смітника} other {елементи вже зникли зі Смітника}}.",
+  "@fileOperations.trash.undoGone": {
+    "sourceHash": "69a90c2"
+  },
+  "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {елемент уже зник зі Смітника} few {елементи вже зникли зі Смітника} many {елементів уже зникло зі Смітника} other {елемента вже зникло зі Смітника}}.",
+  "@fileOperations.trash.undoPartlyGone": {
+    "sourceHash": "2e23577"
+  },
+  "fileOperations.trash.noTrashHere": "На цьому диску немає Смітника.",
+  "@fileOperations.trash.noTrashHere": {
+    "sourceHash": "f58bdab"
+  },
+  "fileOperations.delete.trashSwitch": "Перемістити в Смітник",
+  "@fileOperations.delete.trashSwitch": {
+    "sourceHash": "b250a45"
+  },
+  "fileOperations.delete.overflowMore": "… і ще {countText} {count, plural, one {елемент} few {елементи} many {елементів} other {елемента}}",
+  "@fileOperations.delete.overflowMore": {
+    "sourceHash": "3b9968a"
+  },
+  "fileOperations.delete.scanFile": "{count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
+  "@fileOperations.delete.scanFile": {
+    "sourceHash": "46012b1"
+  },
+  "fileOperations.delete.scanDir": "{count, plural, one {папка} few {папки} many {папок} other {папки}}",
+  "@fileOperations.delete.scanDir": {
+    "sourceHash": "46b23b5"
+  },
+  "fileOperations.delete.confirmDelete": "Видалити",
+  "@fileOperations.delete.confirmDelete": {
+    "sourceHash": "e2d0a54"
+  },
+  "fileOperations.delete.confirmMoveToTrash": "Перемістити в Смітник",
+  "@fileOperations.delete.confirmMoveToTrash": {
+    "sourceHash": "b250a45"
+  },
+  "fileOperations.delete.titleCursorFile": "Видалити 1 файл під курсором",
+  "@fileOperations.delete.titleCursorFile": {
+    "sourceHash": "ab3d591"
+  },
+  "fileOperations.delete.titleCursorFolder": "Видалити 1 папку під курсором",
+  "@fileOperations.delete.titleCursorFolder": {
+    "sourceHash": "91acb54"
+  },
+  "fileOperations.delete.titleFallback": "Видалити",
+  "@fileOperations.delete.titleFallback": {
+    "sourceHash": "e2d0a54"
+  },
+  "fileOperations.delete.titleSelected": "Видалити {phrase}",
+  "@fileOperations.delete.titleSelected": {
+    "sourceHash": "66cbe54"
+  },
+  "fileOperations.delete.selectedFilesPart": "{countText} {count, plural, one {вибраний файл} few {вибрані файли} many {вибраних файлів} other {вибраного файлу}}",
+  "@fileOperations.delete.selectedFilesPart": {
+    "sourceHash": "c444d06"
+  },
+  "fileOperations.delete.foldersPart": "{countText} {count, plural, one {папку} few {папки} many {папок} other {папки}}",
+  "@fileOperations.delete.foldersPart": {
+    "sourceHash": "9bd56b2"
+  },
+  "fileOperations.delete.symlinkNoticeSingle": "Цей елемент — символічне посилання. Буде видалено лише посилання, а не цільовий обʼєкт.",
+  "@fileOperations.delete.symlinkNoticeSingle": {
+    "sourceHash": "c5a4259"
+  },
+  "fileOperations.delete.symlinkNoticeMany": "Серед вибраного є {countText} {count, plural, one {символічне посилання} few {символічні посилання} many {символічних посилань} other {символічного посилання}}. Буде видалено лише самі посилання, а не цільові обʼєкти.",
+  "@fileOperations.delete.symlinkNoticeMany": {
+    "sourceHash": "56b3f52"
+  },
+  "fileOperations.mkfile.notCreatedToast": "Cmdr не вдалося створити файл «{name}». {reason}",
+  "@fileOperations.mkfile.notCreatedToast": {
+    "sourceHash": "4f30e62"
+  },
+  "fileOperations.newEntry.stillCreating": "Досі створюється «{name}». Том повільно відповідає. Можна закрити це діалогове вікно: створення триватиме далі, а скасувати його вже не можна.",
+  "@fileOperations.newEntry.stillCreating": {
+    "sourceHash": "74e376f"
+  },
+  "fileOperations.mkfile.title": "Новий файл",
+  "@fileOperations.mkfile.title": {
+    "sourceHash": "44dedd0"
+  },
+  "fileOperations.mkfile.createIn": "Створити файл у папці <dir>{name}</dir>",
+  "@fileOperations.mkfile.createIn": {
+    "sourceHash": "20f4a68"
+  },
+  "fileOperations.mkfile.nameAria": "Назва файлу",
+  "@fileOperations.mkfile.nameAria": {
+    "sourceHash": "3efed3d"
+  },
+  "fileOperations.mkfile.placeholder": "Приклад: нотатки.txt",
+  "@fileOperations.mkfile.placeholder": {
+    "sourceHash": "f6b4613"
+  },
+  "fileOperations.mkdir.title": "Нова папка",
+  "@fileOperations.mkdir.title": {
+    "sourceHash": "cf28f49"
+  },
+  "fileOperations.mkdir.createIn": "Створити папку в папці <dir>{name}</dir>",
+  "@fileOperations.mkdir.createIn": {
+    "sourceHash": "392aa18"
+  },
+  "fileOperations.mkdir.nameAria": "Назва папки",
+  "@fileOperations.mkdir.nameAria": {
+    "sourceHash": "14d34ed"
+  },
+  "fileOperations.mkdir.placeholder": "Приклад: мій-проєкт",
+  "@fileOperations.mkdir.placeholder": {
+    "sourceHash": "7612b56"
+  },
+  "fileOperations.mkdir.notCreatedToast": "Cmdr не вдалося створити папку «{name}». {reason}",
+  "@fileOperations.mkdir.notCreatedToast": {
+    "sourceHash": "517ef4b"
+  },
+  "fileOperations.mkdir.aiSuggestionsAria": "Пропозиції ШІ",
+  "@fileOperations.mkdir.aiSuggestionsAria": {
+    "sourceHash": "1a1f5b9"
+  },
+  "fileOperations.mkdir.aiSuggestionsHeader": "Пропозиції ШІ:",
+  "@fileOperations.mkdir.aiSuggestionsHeader": {
+    "sourceHash": "5232616"
+  },
+  "fileOperations.shared.conflictExistsFolder": "У цій папці вже є папка з такою назвою.",
+  "@fileOperations.shared.conflictExistsFolder": {
+    "sourceHash": "32999f3"
+  },
+  "fileOperations.shared.conflictExistsFile": "У цій папці вже є файл із такою назвою.",
+  "@fileOperations.shared.conflictExistsFile": {
+    "sourceHash": "3046c16"
+  },
+  "fileOperations.shared.byteRate": "<size></size>/с",
+  "@fileOperations.shared.byteRate": {
+    "sourceHash": "4a55710"
+  },
+  "fileOperations.shared.fileRate": "{count, plural, one {{rateText} файл/с} few {{rateText} файли/с} many {{rateText} файлів/с} other {{rateText} файлу/с}}",
+  "@fileOperations.shared.fileRate": {
+    "sourceHash": "ca7c75b"
+  },
+  "fileOperations.shared.andJoin": "{a} і {b}",
+  "@fileOperations.shared.andJoin": {
+    "sourceHash": "04f767b"
+  },
+  "fileOperations.shared.scanningTooltip": "Сканування…",
+  "@fileOperations.shared.scanningTooltip": {
+    "sourceHash": "38d96da"
+  },
+  "fileOperations.transferDialog.toggleCopy": "Скопіювати",
+  "@fileOperations.transferDialog.toggleCopy": {
+    "sourceHash": "e21f935"
+  },
+  "fileOperations.transferDialog.toggleMove": "Перемістити",
+  "@fileOperations.transferDialog.toggleMove": {
+    "sourceHash": "6ecc3df"
+  },
+  "fileOperations.transferDialog.toggleCompress": "Створити архів",
+  "@fileOperations.transferDialog.toggleCompress": {
+    "sourceHash": "033fc04"
+  },
+  "fileOperations.transferDialog.sourceGroupTitle": "Звідки",
+  "@fileOperations.transferDialog.sourceGroupTitle": {
+    "sourceHash": "2181976"
+  },
+  "fileOperations.transferDialog.targetGroupTitle": "Куди",
+  "@fileOperations.transferDialog.targetGroupTitle": {
+    "sourceHash": "f4b06ef"
+  },
+  "fileOperations.transferDialog.operationAria": "Дія",
+  "@fileOperations.transferDialog.operationAria": {
+    "sourceHash": "64cff13"
+  },
+  "fileOperations.transferDialog.destVolumeAria": "Том призначення",
+  "@fileOperations.transferDialog.destVolumeAria": {
+    "sourceHash": "e13cc1d"
+  },
+  "fileOperations.transferDialog.destPathAria": "Шлях призначення",
+  "@fileOperations.transferDialog.destPathAria": {
+    "sourceHash": "b7c2fd2"
+  },
+  "fileOperations.transferDialog.spaceInfo": "Вільно {free} з {total}",
+  "@fileOperations.transferDialog.spaceInfo": {
+    "sourceHash": "a46cd4e"
+  },
+  "fileOperations.transferDialog.spaceInfoUnbounded": "Зайнято {used}, без обмеження розміру",
+  "@fileOperations.transferDialog.spaceInfoUnbounded": {
+    "sourceHash": "5d74d4d"
+  },
+  "fileOperations.transferDialog.smbNativeNote": "Ця спільна папка використовує системне підʼєднання, тож скасування може спрацьовувати із затримкою. Виберіть «Підʼєднатися напряму зараз» у списку томів, і передача буде швидкою, а скасування надійним.",
+  "@fileOperations.transferDialog.smbNativeNote": {
+    "sourceHash": "60af535"
+  },
+  "fileOperations.transferDialog.targetWillBeCreatedCopy": "Цієї папки ще не існує. Cmdr створить її під час копіювання.",
+  "@fileOperations.transferDialog.targetWillBeCreatedCopy": {
+    "sourceHash": "4e8d166"
+  },
+  "fileOperations.transferDialog.renameByMoveHint": "Перейменування копіює весь вміст на сервері, тож воно виконується як переміщення, яке можна призупинити або скасувати.",
+  "@fileOperations.transferDialog.renameByMoveHint": {
+    "sourceHash": "31987cc"
+  },
+  "fileOperations.transferDialog.targetWillBeCreatedMove": "Цієї папки ще не існує. Cmdr створить її під час переміщення.",
+  "@fileOperations.transferDialog.targetWillBeCreatedMove": {
+    "sourceHash": "1246331"
+  },
+  "fileOperations.transferDialog.rootEchoWarning": "Шляхи тут уже починаються в папці {rootFolder}, тож цей шлях веде сюди: {resolvedPath}. Можливо, ви мали на увазі {strippedPath}?",
+  "@fileOperations.transferDialog.rootEchoWarning": {
+    "sourceHash": "43aace3"
+  },
+  "fileOperations.transferDialog.rootEchoUseStripped": "Використати коротший шлях",
+  "@fileOperations.transferDialog.rootEchoUseStripped": {
+    "sourceHash": "66972e3"
+  },
+  "fileOperations.transferDialog.destinationReadOnly": "Ця папка доступна лише для читання, тож сюди нічого не можна додати.",
+  "@fileOperations.transferDialog.destinationReadOnly": {
+    "sourceHash": "f30522f"
+  },
+  "fileOperations.transferDialog.destinationNoPermission": "У вас немає привілеїв, щоб додавати файли в цю папку.",
+  "@fileOperations.transferDialog.destinationNoPermission": {
+    "sourceHash": "a7e0efa"
+  },
+  "fileOperations.transferDialog.destinationNotWritable": "Ця папка не приймає нових файлів.",
+  "@fileOperations.transferDialog.destinationNotWritable": {
+    "sourceHash": "07094f6"
+  },
+  "fileOperations.transferDialog.targetWillBeOverwritten": "Тут уже є файл із такою назвою. Cmdr замінить його.",
+  "@fileOperations.transferDialog.targetWillBeOverwritten": {
+    "sourceHash": "32c9a21"
+  },
+  "fileOperations.transferDialog.scanFile": "{count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
+  "@fileOperations.transferDialog.scanFile": {
+    "sourceHash": "46012b1"
+  },
+  "fileOperations.transferDialog.scanDir": "{count, plural, one {папка} few {папки} many {папок} other {папки}}",
+  "@fileOperations.transferDialog.scanDir": {
+    "sourceHash": "46b23b5"
+  },
+  "fileOperations.transferDialog.hardlinkNote": "Буде записано <written></written>. Джерело займає <ondisk></ondisk> на диску. Різниця — це файли з жорсткими посиланнями: між різними дисками вони не можуть лишатися повʼязаними.",
+  "@fileOperations.transferDialog.hardlinkNote": {
+    "sourceHash": "acac507"
+  },
+  "fileOperations.transferDialog.compressLevelCaption": "Що вищий рівень, то менший zip-архів, але пакування триває довше.",
+  "@fileOperations.transferDialog.compressLevelCaption": {
+    "sourceHash": "58924a1"
+  },
+  "fileOperations.transferDialog.estimatedSize": "Орієнтовний розмір",
+  "@fileOperations.transferDialog.estimatedSize": {
+    "sourceHash": "d5f39d7"
+  },
+  "fileOperations.transferDialog.estimatedSizeTooltip": "Приблизна оцінка розміру zip-архіву. Справжній розмір може відрізнятися.",
+  "@fileOperations.transferDialog.estimatedSizeTooltip": {
+    "sourceHash": "2e8ba70"
+  },
+  "fileOperations.s3Cost.line": "{provider}: близько {amount} за публічними цінами",
+  "@fileOperations.s3Cost.line": {
+    "sourceHash": "e8db02b"
+  },
+  "fileOperations.s3Cost.infoLabel": "Про орієнтовну вартість",
+  "@fileOperations.s3Cost.infoLabel": {
+    "sourceHash": "19637c5"
+  },
+  "fileOperations.s3Cost.infoText": "Тут використано публічні ціни постачальника. Безкоштовні тарифи, знижки, включені обсяги та мінімальні платежі можуть зробити ваш рахунок меншим або більшим.",
+  "@fileOperations.s3Cost.infoText": {
+    "sourceHash": "379665c"
+  },
+  "fileOperations.transferDialog.scanUnresponsive": "Джерело не відповідає, тож пораховано лише частину розміру.",
+  "@fileOperations.transferDialog.scanUnresponsive": {
+    "sourceHash": "ec3beb2"
+  },
+  "fileOperations.transferDialog.scanStopped": "Не вдалося виміряти джерело до кінця, тож пораховано лише частину розміру.",
+  "@fileOperations.transferDialog.scanStopped": {
+    "sourceHash": "f7d3029"
+  },
+  "fileOperations.transferDialog.scanRetry": "Спробувати ще раз",
+  "@fileOperations.transferDialog.scanRetry": {
+    "sourceHash": "d8b8392"
+  },
+  "fileOperations.transferDialog.sourceNoLongerConnected": "Телефон або сервер із цими файлами більше не підʼєднано, тож Cmdr не може з нього копіювати.",
+  "@fileOperations.transferDialog.sourceNoLongerConnected": {
+    "sourceHash": "4741405"
+  },
+  "fileOperations.transferDialog.conflictsUnknown": "Не вдалося перевірити, що вже є в місці призначення. Cmdr спитає вас про кожен конфлікт назв.",
+  "@fileOperations.transferDialog.conflictsUnknown": {
+    "sourceHash": "d42db28"
+  },
+  "fileOperations.transferDialog.checkingConflicts": "Перевірка конфліктів…",
+  "@fileOperations.transferDialog.checkingConflicts": {
+    "sourceHash": "11be123"
+  },
+  "fileOperations.transferDialog.mergeInfoSingle": "1 папка вже існує в місці призначення, тож її вміст буде обʼєднано.",
+  "@fileOperations.transferDialog.mergeInfoSingle": {
+    "sourceHash": "8331da7"
+  },
+  "fileOperations.transferDialog.namedFolderHint": "«{target}» — це наявна папка, тож «{name}» отримає її назву. Щоб покласти «{name}» усередину цієї папки, допишіть у кінці шляху «/».",
+  "@fileOperations.transferDialog.namedFolderHint": {
+    "sourceHash": "41dc88c"
+  },
+  "fileOperations.transferDialog.mergeInfoMany": "{countText} {count, plural, one {папка вже існує в місці призначення, тож її вміст} few {папки вже існують у місці призначення, тож їхній вміст} many {папок уже існує в місці призначення, тож їхній вміст} other {папки вже існує в місці призначення, тож їхній вміст}} буде обʼєднано.",
+  "@fileOperations.transferDialog.mergeInfoMany": {
+    "sourceHash": "e3c130c"
+  },
+  "fileOperations.transferDialog.mergeQuestion": "{count, plural, =1 {Якщо файл усередині неї вже існує:} one {Якщо файл усередині них уже існує:} few {Якщо файл усередині них уже існує:} many {Якщо файл усередині них уже існує:} other {Якщо файл усередині них уже існує:}}",
+  "@fileOperations.transferDialog.mergeQuestion": {
+    "sourceHash": "98b10eb"
+  },
+  "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, =1 {файл уже існує. Що з ним зробити?} one {файл уже існує. Що з ними зробити?} few {файли вже існують. Що з ними зробити?} many {файлів уже існує. Що з ними зробити?} other {файлу вже існує. Що з ними зробити?}}",
+  "@fileOperations.transferDialog.conflictsSummary": {
+    "sourceHash": "f93d158"
+  },
+  "fileOperations.transferDialog.policySkip": "{count, plural, =1 {Пропустити} one {Пропустити всі} few {Пропустити всі} many {Пропустити всі} other {Пропустити всі}}",
+  "@fileOperations.transferDialog.policySkip": {
+    "sourceHash": "af89aba"
+  },
+  "fileOperations.transferDialog.policyOverwrite": "{count, plural, =1 {Перезаписати} one {Перезаписати всі} few {Перезаписати всі} many {Перезаписати всі} other {Перезаписати всі}}",
+  "@fileOperations.transferDialog.policyOverwrite": {
+    "sourceHash": "e81a8ec"
+  },
+  "fileOperations.transferDialog.policyOverwriteSmaller": "{count, plural, =1 {Перезаписати, якщо менший} one {Перезаписати всі менші} few {Перезаписати всі менші} many {Перезаписати всі менші} other {Перезаписати всі менші}}",
+  "@fileOperations.transferDialog.policyOverwriteSmaller": {
+    "sourceHash": "6b53558"
+  },
+  "fileOperations.transferDialog.policyOverwriteOlder": "{count, plural, =1 {Перезаписати, якщо старіший} one {Перезаписати всі старіші} few {Перезаписати всі старіші} many {Перезаписати всі старіші} other {Перезаписати всі старіші}}",
+  "@fileOperations.transferDialog.policyOverwriteOlder": {
+    "sourceHash": "97128f3"
+  },
+  "fileOperations.transferDialog.policyStop": "{count, plural, =1 {Спитати пізніше} one {Питати щодо кожного} few {Питати щодо кожного} many {Питати щодо кожного} other {Питати щодо кожного}}",
+  "@fileOperations.transferDialog.policyStop": {
+    "sourceHash": "61a6295"
+  },
+  "fileOperations.transferDialog.policyAskEach": "Питати щодо кожного",
+  "@fileOperations.transferDialog.policyAskEach": {
+    "sourceHash": "4302843"
+  },
+  "fileOperations.transferDialog.rememberedOverwriteNote": "{reach, select, smaller {Ваш збережений вибір перезаписує менші файли, які вже є в місці призначення.} older {Ваш збережений вибір перезаписує старіші файли, які вже є в місці призначення.} other {Ваш збережений вибір перезаписує файли, які вже є в місці призначення.}}",
+  "@fileOperations.transferDialog.rememberedOverwriteNote": {
+    "sourceHash": "7456023"
+  },
+  "fileOperations.transferDialog.rememberChoice": "Запамʼятати цей вибір",
+  "@fileOperations.transferDialog.rememberChoice": {
+    "sourceHash": "4208548"
+  },
+  "fileOperations.transferDialog.rememberChoiceInfoLabel": "Докладніше про «Запамʼятати цей вибір»",
+  "@fileOperations.transferDialog.rememberChoiceInfoLabel": {
+    "sourceHash": "30496d1"
+  },
+  "fileOperations.transferDialog.rememberChoiceHelp": "Наступного разу Cmdr почне з цього вибору, а змінити його можна в Параметрах. Якщо він перезаписує файли, ви спершу побачите застереження.",
+  "@fileOperations.transferDialog.rememberChoiceHelp": {
+    "sourceHash": "c26d762"
+  },
+  "fileOperations.transferDialog.typeMismatchWarning": "У деяких конфліктах збігаються назви файлу й папки. Перезапис замінить елементи іншого типу, зокрема весь вміст папки.",
+  "@fileOperations.transferDialog.typeMismatchWarning": {
+    "sourceHash": "76f1ab1"
+  },
+  "fileOperations.transferDialog.titleVerbOnly": "{verb, select, copy {Скопіювати} move {Перемістити} compress {Створити архів} delete {Видалити} other {Перемістити в Смітник}}",
+  "@fileOperations.transferDialog.titleVerbOnly": {
+    "sourceHash": "b18b6e3"
+  },
+  "fileOperations.transferDialog.titleWithCounts": "{verb, select, copy {Скопіювати {phrase}} move {Перемістити {phrase}} compress {Стиснути {phrase}} delete {Видалити {phrase}} other {Перемістити {phrase} у Смітник}}",
+  "@fileOperations.transferDialog.titleWithCounts": {
+    "sourceHash": "d21c910"
+  },
+  "fileOperations.transferDialog.filesPart": "{countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
+  "@fileOperations.transferDialog.filesPart": {
+    "sourceHash": "76ef0a6"
+  },
+  "fileOperations.transferDialog.foldersPart": "{countText} {count, plural, one {папку} few {папки} many {папок} other {папки}}",
+  "@fileOperations.transferDialog.foldersPart": {
+    "sourceHash": "9bd56b2"
+  },
+  "fileOperations.transferDialog.pathErrorSubfolder": "Неможливо {verb, select, copy {скопіювати} other {перемістити}} «{name}» у власну підпапку",
+  "@fileOperations.transferDialog.pathErrorSubfolder": {
+    "sourceHash": "96c81d6"
+  },
+  "fileOperations.transferDialog.pathErrorAlreadyThere": "Елемент «{name}» уже в цьому розташуванні",
+  "@fileOperations.transferDialog.pathErrorAlreadyThere": {
+    "sourceHash": "1bf762e"
+  },
+  "fileOperations.transferDialog.pathErrorNotZip": "Назва архіву має закінчуватися на «.zip».",
+  "@fileOperations.transferDialog.pathErrorNotZip": {
+    "sourceHash": "7700864"
+  },
+  "fileOperations.transferDialog.confirmCopy": "Скопіювати",
+  "@fileOperations.transferDialog.confirmCopy": {
+    "sourceHash": "e21f935"
+  },
+  "fileOperations.transferDialog.confirmMove": "Перемістити",
+  "@fileOperations.transferDialog.confirmMove": {
+    "sourceHash": "6ecc3df"
+  },
+  "fileOperations.transferDialog.confirmCompress": "Створити архів",
+  "@fileOperations.transferDialog.confirmCompress": {
+    "sourceHash": "033fc04"
+  },
+  "fileOperations.scanPhase.fromLabel": "Звідки:",
+  "@fileOperations.scanPhase.fromLabel": {
+    "sourceHash": "dc45d36"
+  },
+  "fileOperations.scanPhase.scanFile": "{count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
+  "@fileOperations.scanPhase.scanFile": {
+    "sourceHash": "46012b1"
+  },
+  "fileOperations.scanPhase.scanDir": "{count, plural, one {папка} few {папки} many {папок} other {папки}}",
+  "@fileOperations.scanPhase.scanDir": {
+    "sourceHash": "46b23b5"
+  },
+  "fileOperations.transferProgress.scanTitleCopy": "Перевірка перед копіюванням…",
+  "@fileOperations.transferProgress.scanTitleCopy": {
+    "sourceHash": "f641ae3"
+  },
+  "fileOperations.transferProgress.scanTitleMove": "Перевірка перед переміщенням…",
+  "@fileOperations.transferProgress.scanTitleMove": {
+    "sourceHash": "2d904be"
+  },
+  "fileOperations.transferProgress.scanTitleCompress": "Перевірка перед архівуванням…",
+  "@fileOperations.transferProgress.scanTitleCompress": {
+    "sourceHash": "c610c90"
+  },
+  "fileOperations.transferProgress.scanTitleDelete": "Підрахунок елементів для видалення…",
+  "@fileOperations.transferProgress.scanTitleDelete": {
+    "sourceHash": "d64adf2"
+  },
+  "fileOperations.transferProgress.scanTitleTrash": "Підрахунок елементів для переміщення в Смітник…",
+  "@fileOperations.transferProgress.scanTitleTrash": {
+    "sourceHash": "6df6c7f"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": "Під час переміщення між томами відкат недоступний. Cmdr видаляє кожен оригінал, щойно його копія безпечно опиняється на місці, тож оригіналу, до якого можна повернутися, вже немає. Кнопка «Скасувати» зупиняє переміщення, і кожен файл лишається цілим: або на старому місці, або на новому.",
+  "@fileOperations.transferProgress.rollbackUnavailableCrossVolumeTooltip": {
+    "sourceHash": "901b77a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": "Під час переміщення в межах одного тому відкат недоступний. Том сам переміщує кожен елемент, і Cmdr не може повернути їх назад посеред процесу. Кнопка «Скасувати» зупиняє переміщення: переміщене лишається на новому місці, а решта там, де й була.",
+  "@fileOperations.transferProgress.rollbackUnavailableSameVolumeTooltip": {
+    "sourceHash": "a182b8a"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": "Тут немає чого відкочувати. Cmdr перезаписує архів одним махом у самому кінці, тож кнопка «Скасувати» залишає його точнісінько таким, яким він був.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveRewriteTooltip": {
+    "sourceHash": "1705cab"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": "Тут немає чого відкочувати. Cmdr видаляє ці елементи з архіву лише тоді, коли всі вони вже розпаковані, тож кнопка «Скасувати» залишає архів таким, яким він був. Усе, що вже розпаковано, лишається в місці призначення як копія.",
+  "@fileOperations.transferProgress.rollbackUnavailableArchiveMoveOutTooltip": {
+    "sourceHash": "ad17dc7"
+  },
+  "fileOperations.transferProgress.rollbackUnavailableOtherTooltip": "Для цієї операції відкат недоступний.",
+  "@fileOperations.transferProgress.rollbackUnavailableOtherTooltip": {
+    "sourceHash": "e9f64aa"
+  },
+  "fileOperations.transferProgress.titleRollingBack": "Відкочування…",
+  "@fileOperations.transferProgress.titleRollingBack": {
+    "sourceHash": "f89ef2e"
+  },
+  "fileOperations.transferProgress.titleReversalMovingBack": "{count, plural, =0 {Повернення файлів на місце} =1 {Повернення файлу на місце} one {Повернення {countText} файлу на місце} few {Повернення {countText} файлів на місце} many {Повернення {countText} файлів на місце} other {Повернення {countText} файлу на місце}}…",
+  "@fileOperations.transferProgress.titleReversalMovingBack": {
+    "sourceHash": "4de9c69"
+  },
+  "fileOperations.transferProgress.titleReversalDeleting": "{count, plural, =0 {Видалення того, що створила операція} =1 {Видалення файлу, який створила операція} one {Видалення {countText} файлу, створеного операцією} few {Видалення {countText} файлів, створених операцією} many {Видалення {countText} файлів, створених операцією} other {Видалення {countText} файлу, створеного операцією}}…",
+  "@fileOperations.transferProgress.titleReversalDeleting": {
+    "sourceHash": "587f4a3"
+  },
+  "fileOperations.transferProgress.titleReversalRenamingBack": "{count, plural, =0 {Повернення старих назв} =1 {Повернення старої назви} one {Повернення старих назв {countText} файлу} few {Повернення старих назв {countText} файлів} many {Повернення старих назв {countText} файлів} other {Повернення старих назв {countText} файлу}}…",
+  "@fileOperations.transferProgress.titleReversalRenamingBack": {
+    "sourceHash": "2ad8510"
+  },
+  "fileOperations.transferProgress.titleCancelling": "Скасування…",
+  "@fileOperations.transferProgress.titleCancelling": {
+    "sourceHash": "7d0901a"
+  },
+  "fileOperations.transferProgress.canceledAlertTitle": "{type, select, copy {Копіювання скасовано} move {Переміщення скасовано} compress {Архівування скасовано} delete {Видалення скасовано} trash {Переміщення в Смітник скасовано} other {Скасовано}}",
+  "@fileOperations.transferProgress.canceledAlertTitle": {
+    "sourceHash": "3cba939"
+  },
+  "fileOperations.transferProgress.canceledAlertMessage": "{type, select, copy {Ви скасували це копіювання. Файли, які вже скопійовано, лишаються там, де є.} move {Ви скасували це переміщення. Файли, які вже переміщено, лишаються там, куди потрапили.} compress {Ви скасували це архівування.} delete {Ви скасували це видалення. Файли, які вже видалено, зникли, а решта на місці.} trash {Ви скасували це переміщення в Смітник. Файли, які вже переміщено, лишаються в Смітнику, а решта там, де й були.} other {Ви скасували цю операцію.}}",
+  "@fileOperations.transferProgress.canceledAlertMessage": {
+    "sourceHash": "1d1de76"
+  },
+  "fileOperations.transferProgress.titleCancellingSlow": "Скасування… (очищення)",
+  "@fileOperations.transferProgress.titleCancellingSlow": {
+    "sourceHash": "afeb3a3"
+  },
+  "fileOperations.transferProgress.close": "Закрити",
+  "@fileOperations.transferProgress.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "fileOperations.transferProgress.openingSource": "Очікування даних від джерела ({duration})",
+  "@fileOperations.transferProgress.openingSource": {
+    "sourceHash": "d0ad98c"
+  },
+  "fileOperations.transferProgress.sourceReceiving": "Отримання від джерела: <size></size>/с",
+  "@fileOperations.transferProgress.sourceReceiving": {
+    "sourceHash": "0552601"
+  },
+  "fileOperations.transferProgress.waitingForVolume": "Очікування, поки том «{volume}» знову стане доступним…",
+  "@fileOperations.transferProgress.waitingForVolume": {
+    "sourceHash": "41d20d0"
+  },
+  "fileOperations.transferProgress.stallNotice": "Немає прогресу вже {duration}",
+  "@fileOperations.transferProgress.stallNotice": {
+    "sourceHash": "4b3c8e6"
+  },
+  "fileOperations.transferProgress.stallWaitingDestination": "Очікування відповіді від місця призначення.",
+  "@fileOperations.transferProgress.stallWaitingDestination": {
+    "sourceHash": "1cb8f39"
+  },
+  "fileOperations.transferProgress.stallWaitingSource": "Очікування відповіді від джерела.",
+  "@fileOperations.transferProgress.stallWaitingSource": {
+    "sourceHash": "efb8d93"
+  },
+  "fileOperations.transferProgress.stallUnknown": "Передача завмерла. Її можна скасувати або залишити виконуватися у фоновому режимі.",
+  "@fileOperations.transferProgress.stallUnknown": {
+    "sourceHash": "37e23a5"
+  },
+  "fileOperations.transferProgress.stallInFlight": "{count, plural, one {# файл досі відкритий і, можливо, вже частково записаний.} few {# файли досі відкриті й, можливо, вже частково записані.} many {# файлів досі відкриті й, можливо, вже частково записані.} other {# файлу досі відкриті й, можливо, вже частково записані.}}",
+  "@fileOperations.transferProgress.stallInFlight": {
+    "sourceHash": "c4bf553"
+  },
+  "fileOperations.transferProgress.stallLogHint": "Деталі є в журналі.",
+  "@fileOperations.transferProgress.stallLogHint": {
+    "sourceHash": "a766f0d"
+  },
+  "fileOperations.transferProgress.titleConflict": "Файл уже існує",
+  "@fileOperations.transferProgress.titleConflict": {
+    "sourceHash": "ae71a9a"
+  },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Назва задовга для місця призначення",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Назва не дозволена в місці призначення",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "Місце призначення не може зберегти таку довгу назву. Пропустіть цей елемент, щоб продовжити з рештою, а потім перейменуйте його й спробуйте ще раз.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "Місце призначення не може зберегти цю назву. Можливо, вона задовга, зарезервована або містить символ, який місце призначення не дозволяє. Пропустіть цей елемент, щоб продовжити з рештою, а потім перейменуйте його й спробуйте ще раз.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
+  "fileOperations.transferProgress.conflictPolicyCaption": "Якщо файл уже існує: {policy}",
+  "@fileOperations.transferProgress.conflictPolicyCaption": {
+    "sourceHash": "cec5c27"
+  },
+  "fileOperations.transferProgress.titleDone": "{type, select, copy {{count, plural, =0 {Нічого не скопійовано} one {Скопійовано {countText} файл} few {Скопійовано {countText} файли} many {Скопійовано {countText} файлів} other {Скопійовано {countText} файлу}}} move {{count, plural, =0 {Нічого не переміщено} one {Переміщено {countText} файл} few {Переміщено {countText} файли} many {Переміщено {countText} файлів} other {Переміщено {countText} файлу}}} delete {{count, plural, =0 {Нічого не видалено} one {Видалено {countText} файл} few {Видалено {countText} файли} many {Видалено {countText} файлів} other {Видалено {countText} файлу}}} trash {{count, plural, =0 {Нічого не переміщено в Смітник} one {Переміщено в Смітник {countText} файл} few {Переміщено в Смітник {countText} файли} many {Переміщено в Смітник {countText} файлів} other {Переміщено в Смітник {countText} файлу}}} compress {{count, plural, =0 {Нічого не заархівовано} one {Заархівовано {countText} файл} few {Заархівовано {countText} файли} many {Заархівовано {countText} файлів} other {Заархівовано {countText} файлу}}} other {Готово}}",
+  "@fileOperations.transferProgress.titleDone": {
+    "sourceHash": "3db0154"
+  },
+  "fileOperations.transferProgress.doneSummaryRate": "<size></size> за {duration}, у середньому <rate></rate>/с",
+  "@fileOperations.transferProgress.doneSummaryRate": {
+    "sourceHash": "4f6d910"
+  },
+  "fileOperations.transferProgress.doneSummarySize": "Усього <size></size>",
+  "@fileOperations.transferProgress.doneSummarySize": {
+    "sourceHash": "01f3008"
+  },
+  "fileOperations.transferProgress.doneSummaryTime": "Тривалість: {duration}",
+  "@fileOperations.transferProgress.doneSummaryTime": {
+    "sourceHash": "ddbfd5f"
+  },
+  "fileOperations.transferProgress.doneSkipped": "{count, plural, one {Пропущено {countText} файл, що вже існував} few {Пропущено {countText} файли, що вже існували} many {Пропущено {countText} файлів, що вже існували} other {Пропущено {countText} файлу, що вже існували}}",
+  "@fileOperations.transferProgress.doneSkipped": {
+    "sourceHash": "a6d800b"
+  },
+  "fileOperations.transferProgress.undo": "Відмінити",
+  "@fileOperations.transferProgress.undo": {
+    "sourceHash": "a8283ad"
+  },
+  "fileOperations.transferProgress.undoWaitingTooltip": "Кнопка «Відмінити» буде готова за мить, щойно Cmdr запише, що зробила ця операція.",
+  "@fileOperations.transferProgress.undoWaitingTooltip": {
+    "sourceHash": "54fe565"
+  },
+  "fileOperations.transferProgress.undoUnavailableTooltip": "Цю операцію не можна відмінити.",
+  "@fileOperations.transferProgress.undoUnavailableTooltip": {
+    "sourceHash": "9b61717"
+  },
+  "fileOperations.transferProgress.titleFlushing": "Запис останньої частини…",
+  "@fileOperations.transferProgress.titleFlushing": {
+    "sourceHash": "3aa5686"
+  },
+  "fileOperations.transferProgress.titleRemovingOriginals": "Видалення оригіналів…",
+  "@fileOperations.transferProgress.titleRemovingOriginals": {
+    "sourceHash": "15a457d"
+  },
+  "fileOperations.transferProgress.titleActive": "{gerund, select, copy {Копіювання} move {Переміщення} compress {Архівування} delete {Видалення} other {Переміщення в Смітник}}…",
+  "@fileOperations.transferProgress.titleActive": {
+    "sourceHash": "0c636e5"
+  },
+  "fileOperations.transferProgress.stageScanning": "Сканування",
+  "@fileOperations.transferProgress.stageScanning": {
+    "sourceHash": "474ad81"
+  },
+  "fileOperations.transferProgress.stageCompressing": "Архівування",
+  "@fileOperations.transferProgress.stageCompressing": {
+    "sourceHash": "c4c202f"
+  },
+  "fileOperations.transferProgress.stageFinishingCompression": "Завершення архівування…",
+  "@fileOperations.transferProgress.stageFinishingCompression": {
+    "sourceHash": "6cd500b"
+  },
+  "fileOperations.transferProgress.stageTransferringArchive": "Передача архіву",
+  "@fileOperations.transferProgress.stageTransferringArchive": {
+    "sourceHash": "28ed9e3"
+  },
+  "fileOperations.transferProgress.stageFinishingTransfer": "Завершення передачі…",
+  "@fileOperations.transferProgress.stageFinishingTransfer": {
+    "sourceHash": "6c39b41"
+  },
+  "fileOperations.transferProgress.stageCompressingStep": "Крок {step, number} з {total, number}: архівування",
+  "@fileOperations.transferProgress.stageCompressingStep": {
+    "sourceHash": "7451fa9"
+  },
+  "fileOperations.transferProgress.stageFinishingCompressionStep": "Крок {step, number} з {total, number}: завершення архівування…",
+  "@fileOperations.transferProgress.stageFinishingCompressionStep": {
+    "sourceHash": "6f40fb0"
+  },
+  "fileOperations.transferProgress.stageTransferringArchiveStep": "Крок {step, number} з {total, number}: передача архіву",
+  "@fileOperations.transferProgress.stageTransferringArchiveStep": {
+    "sourceHash": "0d9a25c"
+  },
+  "fileOperations.transferProgress.stageFinishingTransferStep": "Крок {step, number} з {total, number}: завершення передачі…",
+  "@fileOperations.transferProgress.stageFinishingTransferStep": {
+    "sourceHash": "1f28724"
+  },
+  "fileOperations.transferProgress.warningFileOverFolder": "У місці призначення вже є <strong>папка</strong> з такою назвою. Ви збираєтеся замінити її <strong>файлом</strong>. Усе, що є в папці, буде втрачено. Що зробити?",
+  "@fileOperations.transferProgress.warningFileOverFolder": {
+    "sourceHash": "bacab9d"
+  },
+  "fileOperations.transferProgress.warningFolderOverFile": "У місці призначення вже є <strong>файл</strong> з такою назвою. Ви збираєтеся замінити його <strong>папкою</strong>. Щойно папка займе його місце, файлу не стане. Що зробити?",
+  "@fileOperations.transferProgress.warningFolderOverFile": {
+    "sourceHash": "b681083"
+  },
+  "fileOperations.transferProgress.lookAlikeHint": "Ці назви на вигляд однакові, але сервер записує їх по-різному. «Перезаписати» замінить той елемент, що вже там є.",
+  "@fileOperations.transferProgress.lookAlikeHint": {
+    "sourceHash": "01ed9ad"
+  },
+  "fileOperations.transferProgress.existingFolderLabel": "Наявна папка:",
+  "@fileOperations.transferProgress.existingFolderLabel": {
+    "sourceHash": "4d8ade6"
+  },
+  "fileOperations.transferProgress.existingFileLabel": "Наявний файл:",
+  "@fileOperations.transferProgress.existingFileLabel": {
+    "sourceHash": "38ee239"
+  },
+  "fileOperations.transferProgress.existingLabel": "Наявний елемент:",
+  "@fileOperations.transferProgress.existingLabel": {
+    "sourceHash": "4dda67f"
+  },
+  "fileOperations.transferProgress.newFolderLabel": "Вхідна папка:",
+  "@fileOperations.transferProgress.newFolderLabel": {
+    "sourceHash": "5239894"
+  },
+  "fileOperations.transferProgress.newFileLabel": "Вхідний файл:",
+  "@fileOperations.transferProgress.newFileLabel": {
+    "sourceHash": "4a8d0b3"
+  },
+  "fileOperations.transferProgress.newLabel": "Вхідний елемент:",
+  "@fileOperations.transferProgress.newLabel": {
+    "sourceHash": "161dcd3"
+  },
+  "fileOperations.transferProgress.sizeUnknown": "(невідомо)",
+  "@fileOperations.transferProgress.sizeUnknown": {
+    "sourceHash": "8fe7794"
+  },
+  "fileOperations.transferProgress.annotationLarger": "(більший)",
+  "@fileOperations.transferProgress.annotationLarger": {
+    "sourceHash": "71a1ffa"
+  },
+  "fileOperations.transferProgress.annotationNewer": "(новіша)",
+  "@fileOperations.transferProgress.annotationNewer": {
+    "sourceHash": "92afdbd"
+  },
+  "fileOperations.transferProgress.smallerDisabledTooltip": "Неможливо порівняти: розмір цільової папки невідомий.",
+  "@fileOperations.transferProgress.smallerDisabledTooltip": {
+    "sourceHash": "ad5025c"
+  },
+  "fileOperations.transferProgress.conflictSkip": "Пропустити",
+  "@fileOperations.transferProgress.conflictSkip": {
+    "sourceHash": "28d0359"
+  },
+  "fileOperations.transferProgress.conflictSkipAll": "Пропустити всі",
+  "@fileOperations.transferProgress.conflictSkipAll": {
+    "sourceHash": "5fc4280"
+  },
+  "fileOperations.transferProgress.conflictRename": "Перейменувати",
+  "@fileOperations.transferProgress.conflictRename": {
+    "sourceHash": "3064d79"
+  },
+  "fileOperations.transferProgress.conflictRenameAll": "Перейменувати всі",
+  "@fileOperations.transferProgress.conflictRenameAll": {
+    "sourceHash": "c58387b"
+  },
+  "fileOperations.transferProgress.conflictOverwrite": "Перезаписати",
+  "@fileOperations.transferProgress.conflictOverwrite": {
+    "sourceHash": "b24963e"
+  },
+  "fileOperations.transferProgress.conflictOverwriteAll": "Перезаписати всі",
+  "@fileOperations.transferProgress.conflictOverwriteAll": {
+    "sourceHash": "4662d17"
+  },
+  "fileOperations.transferProgress.conflictOverwriteFolderWithFile": "Перезаписати папку файлом",
+  "@fileOperations.transferProgress.conflictOverwriteFolderWithFile": {
+    "sourceHash": "0589e60"
+  },
+  "fileOperations.transferProgress.conflictOverwriteFoldersWithFiles": "Перезаписати папки файлами",
+  "@fileOperations.transferProgress.conflictOverwriteFoldersWithFiles": {
+    "sourceHash": "9f4661a"
+  },
+  "fileOperations.transferProgress.conflictOverwriteAllSmaller": "Перезаписати всі менші",
+  "@fileOperations.transferProgress.conflictOverwriteAllSmaller": {
+    "sourceHash": "2c9bbed"
+  },
+  "fileOperations.transferProgress.conflictOverwriteAllOlder": "Перезаписати всі старіші",
+  "@fileOperations.transferProgress.conflictOverwriteAllOlder": {
+    "sourceHash": "b07b06a"
+  },
+  "fileOperations.transferProgress.conflictCancel": "Скасувати",
+  "@fileOperations.transferProgress.conflictCancel": {
+    "sourceHash": "19766ed"
+  },
+  "fileOperations.transferProgress.conflictRollback": "Відкотити",
+  "@fileOperations.transferProgress.conflictRollback": {
+    "sourceHash": "c591f55"
+  },
+  "fileOperations.operationConflict.context": "{hasDestination, select, yes {{type, select, copy {Копіювання в папку «{destination}»} move {Переміщення в папку «{destination}»} archive_edit {Редагування «{destination}»} other {Операція в папці «{destination}»}}} other {{type, select, copy {Копіювання} move {Переміщення} archive_edit {Редагування архіву} other {Виконання операції}}}}",
+  "@fileOperations.operationConflict.context": {
+    "sourceHash": "ff68b4d"
+  },
+  "fileOperations.operationConflict.pausedNote": "Усе інше призупинено, доки ви не відповісте.",
+  "@fileOperations.operationConflict.pausedNote": {
+    "sourceHash": "1f6444b"
+  },
+  "fileOperations.sourcesGone.title": "Деяких елементів уже немає",
+  "@fileOperations.sourcesGone.title": {
+    "sourceHash": "9f8e2cb"
+  },
+  "fileOperations.sourcesGone.message": "{type, select, copy {Відколи ви поставили це копіювання в чергу, {goneText} {gone, plural, one {елемент} few {елементи} many {елементів} other {елемента}} із {totalText}, на які воно чекало, перемістили або видалили.} move {Відколи ви поставили це переміщення в чергу, {goneText} {gone, plural, one {елемент} few {елементи} many {елементів} other {елемента}} із {totalText}, на які воно чекало, перемістили або видалили.} delete {Відколи ви поставили це видалення в чергу, {goneText} {gone, plural, one {елемент} few {елементи} many {елементів} other {елемента}} із {totalText}, на які воно чекало, перемістили або видалили.} trash {Відколи ви поставили це переміщення в Смітник у чергу, {goneText} {gone, plural, one {елемент} few {елементи} many {елементів} other {елемента}} із {totalText}, на які воно чекало, перемістили або видалили.} other {Відколи ви поставили цю операцію в чергу, {goneText} {gone, plural, one {елемент} few {елементи} many {елементів} other {елемента}} із {totalText}, на які вона чекала, перемістили або видалили.}}",
+  "@fileOperations.sourcesGone.message": {
+    "sourceHash": "0512078"
+  },
+  "fileOperations.sourcesGone.moreItems": "{count, plural, one {і ще {countText} елемент} few {і ще {countText} елементи} many {і ще {countText} елементів} other {і ще {countText} елемента}}",
+  "@fileOperations.sourcesGone.moreItems": {
+    "sourceHash": "c39507d"
+  },
+  "fileOperations.sourcesGone.continue": "{type, select, copy {Скопіювати решту} move {Перемістити решту} delete {Видалити решту} trash {Перемістити решту в Смітник} other {Виконати решту}}",
+  "@fileOperations.sourcesGone.continue": {
+    "sourceHash": "2790bfb"
+  },
+  "fileOperations.sourcesGone.heldToast": "{type, select, copy {Копіювання, що чекає в черзі, потребує вашої відповіді. Запитання зʼявиться, щойно закриється відкрите діалогове вікно.} move {Переміщення, що чекає в черзі, потребує вашої відповіді. Запитання зʼявиться, щойно закриється відкрите діалогове вікно.} delete {Видалення, що чекає в черзі, потребує вашої відповіді. Запитання зʼявиться, щойно закриється відкрите діалогове вікно.} trash {Переміщення в Смітник, що чекає в черзі, потребує вашої відповіді. Запитання зʼявиться, щойно закриється відкрите діалогове вікно.} other {Операція, що чекає в черзі, потребує вашої відповіді. Запитання зʼявиться, щойно закриється відкрите діалогове вікно.}}",
+  "@fileOperations.sourcesGone.heldToast": {
+    "sourceHash": "75f645d"
+  },
+  "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Копіювати вже нічого: відколи ви поставили це копіювання в чергу, {total, plural, =1 {елемент, на який воно чекало,} one {усі {totalText} елемент, на які воно чекало,} few {усі {totalText} елементи, на які воно чекало,} many {усі {totalText} елементів, на які воно чекало,} other {усі {totalText} елемента, на які воно чекало,}} перемістили або видалили.} move {Переміщувати вже нічого: відколи ви поставили це переміщення в чергу, {total, plural, =1 {елемент, на який воно чекало,} one {усі {totalText} елемент, на які воно чекало,} few {усі {totalText} елементи, на які воно чекало,} many {усі {totalText} елементів, на які воно чекало,} other {усі {totalText} елемента, на які воно чекало,}} перемістили або видалили.} delete {Видаляти вже нічого: відколи ви поставили це видалення в чергу, {total, plural, =1 {елемент, на який воно чекало,} one {усі {totalText} елемент, на які воно чекало,} few {усі {totalText} елементи, на які воно чекало,} many {усі {totalText} елементів, на які воно чекало,} other {усі {totalText} елемента, на які воно чекало,}} перемістили або видалили.} trash {Переміщувати в Смітник уже нічого: відколи ви поставили це переміщення в Смітник у чергу, {total, plural, =1 {елемент, на який воно чекало,} one {усі {totalText} елемент, на які воно чекало,} few {усі {totalText} елементи, на які воно чекало,} many {усі {totalText} елементів, на які воно чекало,} other {усі {totalText} елемента, на які воно чекало,}} перемістили або видалили.} other {Робити вже нічого: відколи ви поставили цю операцію в чергу, {total, plural, =1 {елемент, на який вона чекала,} one {усі {totalText} елемент, на які вона чекала,} few {усі {totalText} елементи, на які вона чекала,} many {усі {totalText} елементів, на які вона чекала,} other {усі {totalText} елемента, на які вона чекала,}} перемістили або видалили.}}",
+  "@fileOperations.sourcesGone.nothingLeftToast": {
+    "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "Елемента «{name}» уже немає. Мабуть, його перемістила або видалила інша програма.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, =1 {Уже немає {countText} елемента. Мабуть, його перемістила або видалила інша програма.} one {Уже немає {countText} елемента. Мабуть, їх перемістила або видалила інша програма.} few {Уже немає {countText} елементів. Мабуть, їх перемістила або видалила інша програма.} many {Уже немає {countText} елементів. Мабуть, їх перемістила або видалила інша програма.} other {Уже немає {countText} елемента. Мабуть, їх перемістила або видалила інша програма.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Більше не показувати",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
+  },
+  "fileOperations.lockedSources.title": "Перемістити замкнені елементи?",
+  "@fileOperations.lockedSources.title": {
+    "sourceHash": "69c0785"
+  },
+  "fileOperations.lockedSources.message": "{count, plural, one {{countText} елемент, який ви переміщуєте, замкнений. Cmdr може відімкнути його лише на час переміщення й знову замкнути на новому місці.} few {{countText} елементи, які ви переміщуєте, замкнені. Cmdr може відімкнути їх лише на час переміщення й знову замкнути на новому місці.} many {{countText} елементів, які ви переміщуєте, замкнені. Cmdr може відімкнути їх лише на час переміщення й знову замкнути на новому місці.} other {{countText} елемента, які ви переміщуєте, замкнені. Cmdr може відімкнути їх лише на час переміщення й знову замкнути на новому місці.}}",
+  "@fileOperations.lockedSources.message": {
+    "sourceHash": "a82868b"
+  },
+  "fileOperations.lockedSources.moreItems": "{count, plural, one {і ще {countText} елемент} few {і ще {countText} елементи} many {і ще {countText} елементів} other {і ще {countText} елемента}}",
+  "@fileOperations.lockedSources.moreItems": {
+    "sourceHash": "ef18403"
+  },
+  "fileOperations.lockedSources.moveAnyway": "Усе одно перемістити",
+  "@fileOperations.lockedSources.moveAnyway": {
+    "sourceHash": "c3d9351"
+  },
+  "fileOperations.lockedSources.skip": "Пропустити замкнені елементи",
+  "@fileOperations.lockedSources.skip": {
+    "sourceHash": "e70b85a"
+  },
+  "fileOperations.lockedSources.heldToast": "Переміщення потребує вашої відповіді щодо замкнених елементів. Запитання зʼявиться, щойно закриється відкрите діалогове вікно.",
+  "@fileOperations.lockedSources.heldToast": {
+    "sourceHash": "c76d27a"
+  },
+  "fileOperations.transferProgress.progressBytes": "Байти",
+  "@fileOperations.transferProgress.progressBytes": {
+    "sourceHash": "4d80003"
+  },
+  "fileOperations.transferProgress.progressItems": "Елементи",
+  "@fileOperations.transferProgress.progressItems": {
+    "sourceHash": "fb8e7a1"
+  },
+  "fileOperations.transferProgress.progressFiles": "Файли",
+  "@fileOperations.transferProgress.progressFiles": {
+    "sourceHash": "abc7e98"
+  },
+  "fileOperations.transferProgress.sizeProgressAria": "Перебіг за розміром",
+  "@fileOperations.transferProgress.sizeProgressAria": {
+    "sourceHash": "60ec57d"
+  },
+  "fileOperations.transferProgress.fileProgressAria": "Перебіг за кількістю файлів",
+  "@fileOperations.transferProgress.fileProgressAria": {
+    "sourceHash": "07db117"
+  },
+  "fileOperations.transferProgress.sizeProgressValueText": "{doneText} з {totalText}",
+  "@fileOperations.transferProgress.sizeProgressValueText": {
+    "sourceHash": "edce3be"
+  },
+  "fileOperations.transferProgress.fileProgressValueText": "{count, plural, one {{doneText} з {totalText} файлу} few {{doneText} з {totalText} файлів} many {{doneText} з {totalText} файлів} other {{doneText} з {totalText} файлу}}",
+  "@fileOperations.transferProgress.fileProgressValueText": {
+    "sourceHash": "56bd593"
+  },
+  "fileOperations.transferProgress.itemProgressValueText": "{count, plural, one {{doneText} з {totalText} елемента} few {{doneText} з {totalText} елементів} many {{doneText} з {totalText} елементів} other {{doneText} з {totalText} елемента}}",
+  "@fileOperations.transferProgress.itemProgressValueText": {
+    "sourceHash": "e5c35e6"
+  },
+  "fileOperations.transferProgress.etaRemaining": "Залишилося {duration}",
+  "@fileOperations.transferProgress.etaRemaining": {
+    "sourceHash": "a6b154c"
+  },
+  "fileOperations.transferProgress.filesLeft": "{count, plural, one {Залишився {countText} файл} few {Залишилося {countText} файли} many {Залишилося {countText} файлів} other {Залишилося {countText} файлу}}",
+  "@fileOperations.transferProgress.filesLeft": {
+    "sourceHash": "0e5ad5f"
+  },
+  "fileOperations.transferProgress.itemsLeft": "{count, plural, one {Залишився {countText} елемент} few {Залишилося {countText} елементи} many {Залишилося {countText} елементів} other {Залишилося {countText} елемента}}",
+  "@fileOperations.transferProgress.itemsLeft": {
+    "sourceHash": "679ebc1"
+  },
+  "fileOperations.transferProgress.smbNativeNote": "Ця спільна папка використовує системне підʼєднання, тож скасування й відкат можуть спрацьовувати із затримкою.",
+  "@fileOperations.transferProgress.smbNativeNote": {
+    "sourceHash": "5344d07"
+  },
+  "fileOperations.transferProgress.rollbackTooltip": "Зупинити й видалити всі вже записані файли",
+  "@fileOperations.transferProgress.rollbackTooltip": {
+    "sourceHash": "fa64117"
+  },
+  "fileOperations.transferProgress.rollbackTooltipStopAndMoveBack": "Зупинити й повернути назад усі вже переміщені файли",
+  "@fileOperations.transferProgress.rollbackTooltipStopAndMoveBack": {
+    "sourceHash": "193c682"
+  },
+  "fileOperations.transferProgress.rollbackAlreadyLandedTooltip": "Усі файли вже в місці призначення, тож Cmdr більше не може відкотити переміщення. Кнопка «Скасувати» досі зупиняє видалення решти оригіналів.",
+  "@fileOperations.transferProgress.rollbackAlreadyLandedTooltip": {
+    "sourceHash": "da51356"
+  },
+  "fileOperations.transferProgress.titlePaused": "Призупинено",
+  "@fileOperations.transferProgress.titlePaused": {
+    "sourceHash": "e159b06"
+  },
+  "fileOperations.transferProgress.pause": "Призупинити",
+  "@fileOperations.transferProgress.pause": {
+    "sourceHash": "858e4ba"
+  },
+  "fileOperations.transferProgress.resume": "Поновити",
+  "@fileOperations.transferProgress.resume": {
+    "sourceHash": "d640c74"
+  },
+  "fileOperations.transferProgress.pauseAria": "Призупинити цю передачу",
+  "@fileOperations.transferProgress.pauseAria": {
+    "sourceHash": "16504ec"
+  },
+  "fileOperations.transferProgress.resumeAria": "Поновити цю передачу",
+  "@fileOperations.transferProgress.resumeAria": {
+    "sourceHash": "bbf3253"
+  },
+  "fileOperations.transferProgress.background": "У фоні",
+  "@fileOperations.transferProgress.background": {
+    "sourceHash": "ea2b8a8"
+  },
+  "fileOperations.transferProgress.queue": "У чергу",
+  "@fileOperations.transferProgress.queue": {
+    "sourceHash": "3b2fe03"
+  },
+  "fileOperations.transferProgress.queueTooltip": "Передача триватиме у фоновому режимі, а керувати нею можна у вікні «Черга операцій» (F2)",
+  "@fileOperations.transferProgress.queueTooltip": {
+    "sourceHash": "89ce770"
+  },
+  "fileOperations.transferProgress.queuedToast": "Попереду ще {countText}, тож ця операція чекає своєї черги.",
+  "@fileOperations.transferProgress.queuedToast": {
+    "sourceHash": "e35148a"
+  },
+  "fileOperations.transferProgress.queuedToastCount": "{count, plural, one {# операція} few {# операції} many {# операцій} other {# операції}}",
+  "@fileOperations.transferProgress.queuedToastCount": {
+    "sourceHash": "85023e6"
+  },
+  "fileOperations.transferProgress.backgroundedToast": "Досі виконується у фоновому режимі.",
+  "@fileOperations.transferProgress.backgroundedToast": {
+    "sourceHash": "b898845"
+  },
+  "fileOperations.backgroundStart.background": "У фоні",
+  "@fileOperations.backgroundStart.background": {
+    "sourceHash": "ea2b8a8"
+  },
+  "fileOperations.backgroundStart.queue": "У чергу",
+  "@fileOperations.backgroundStart.queue": {
+    "sourceHash": "3b2fe03"
+  },
+  "fileOperations.backgroundStart.tooltip": "Запустити операцію без вікна перебігу й стежити за нею у вікні «Черга операцій» (F2)",
+  "@fileOperations.backgroundStart.tooltip": {
+    "sourceHash": "06543f5"
+  },
+  "fileOperations.backgroundStart.startedToast": "Відправлено у фоновий режим.",
+  "@fileOperations.backgroundStart.startedToast": {
+    "sourceHash": "6d85cb1"
+  },
+  "fileOperations.backgroundStart.needsPasswordToast": "«{archiveName}» потребує пароля. Запит зʼявиться, щойно закриється відкрите діалогове вікно.",
+  "@fileOperations.backgroundStart.needsPasswordToast": {
+    "sourceHash": "d802c26"
+  },
+  "fileOperations.transferProgress.foregroundBusyToast": "Тут уже відкрито інше діалогове вікно. Закрийте його, а тоді відкрийте цю операцію ще раз.",
+  "@fileOperations.transferProgress.foregroundBusyToast": {
+    "sourceHash": "80d4d61"
+  },
+  "fileOperations.transferProgress.operationBlockedToast": "Тут уже відкрито інше діалогове вікно. Закрийте його й спробуйте ще раз.",
+  "@fileOperations.transferProgress.operationBlockedToast": {
+    "sourceHash": "bc6efa8"
+  },
+  "fileOperations.transferProgress.rowsStillSettlingToast": "Список тут ще оновлюється, тож нічого не розпочато. Спробуйте ще раз за мить.",
+  "@fileOperations.transferProgress.rowsStillSettlingToast": {
+    "sourceHash": "b91f199"
+  },
+  "fileOperations.rollbackConfirm.title": "Відкотити цю операцію?",
+  "@fileOperations.rollbackConfirm.title": {
+    "sourceHash": "13ff3ea"
+  },
+  "fileOperations.rollbackConfirm.body": "Буде видалено всі файли, які операція вже записала, а замінені нею файли вже не відновити. Cmdr пропускає все, у чому не впевнений, тож дещо може залишитися.",
+  "@fileOperations.rollbackConfirm.body": {
+    "sourceHash": "1d3328f"
+  },
+  "fileOperations.rollbackConfirm.bodyStopAndMoveBack": "Усе, що операція вже перемістила, буде повернуто назад, а замінені нею файли вже не відновити. Cmdr пропускає все, у чому не впевнений, тож дещо може залишитися там, де є.",
+  "@fileOperations.rollbackConfirm.bodyStopAndMoveBack": {
+    "sourceHash": "a058f98"
+  },
+  "fileOperations.rollbackConfirm.titleFinish": "Завершити відкочування?",
+  "@fileOperations.rollbackConfirm.titleFinish": {
+    "sourceHash": "cfc998a"
+  },
+  "fileOperations.rollbackConfirm.bodyUndoByDeleting": "Буде видалено файли й папки, які створила операція. Cmdr пропускає все, у чому не впевнений, тож дещо може залишитися.",
+  "@fileOperations.rollbackConfirm.bodyUndoByDeleting": {
+    "sourceHash": "9afb3e2"
+  },
+  "fileOperations.rollbackConfirm.bodyUndoByMovingBack": "Файли буде повернуто туди, звідки їх перемістили. Cmdr пропускає все, у чому не впевнений, тож дещо може залишитися там, де є.",
+  "@fileOperations.rollbackConfirm.bodyUndoByMovingBack": {
+    "sourceHash": "5c3f276"
+  },
+  "fileOperations.rollbackConfirm.bodyUndoByRenamingBack": "Файлам буде повернуто старі назви. Cmdr пропускає все, у чому не впевнений, тож деякі файли можуть залишитися з теперішніми назвами.",
+  "@fileOperations.rollbackConfirm.bodyUndoByRenamingBack": {
+    "sourceHash": "37932e7"
+  },
+  "fileOperations.rollbackConfirm.leaveAsIs": "Залишити як є",
+  "@fileOperations.rollbackConfirm.leaveAsIs": {
+    "sourceHash": "2352119"
+  },
+  "fileOperations.rollbackConfirm.keep": "Залишити їх",
+  "@fileOperations.rollbackConfirm.keep": {
+    "sourceHash": "0d472b0"
+  },
+  "fileOperations.rollbackConfirm.rollBack": "Відкотити",
+  "@fileOperations.rollbackConfirm.rollBack": {
+    "sourceHash": "931f703"
+  },
+  "fileOperations.rollbackConfirm.finishRollBack": "Завершити відкочування",
+  "@fileOperations.rollbackConfirm.finishRollBack": {
+    "sourceHash": "dbe3771"
+  },
+  "fileOperations.cancelRollback.doneDeleting": "{count, plural, =1 {Видалено елемент, який записав Cmdr.} one {Видалено все, що записав Cmdr: {countText} елемент.} few {Видалено все, що записав Cmdr: {countText} елементи.} many {Видалено все, що записав Cmdr: {countText} елементів.} other {Видалено все, що записав Cmdr: {countText} елемента.}}",
+  "@fileOperations.cancelRollback.doneDeleting": {
+    "sourceHash": "e9aa918"
+  },
+  "fileOperations.cancelRollback.doneMovingBack": "{count, plural, =1 {Елемент повернуто назад.} one {Повернуто назад усе: {countText} елемент.} few {Повернуто назад усе: {countText} елементи.} many {Повернуто назад усе: {countText} елементів.} other {Повернуто назад усе: {countText} елемента.}}",
+  "@fileOperations.cancelRollback.doneMovingBack": {
+    "sourceHash": "5c4f4f3"
+  },
+  "fileOperations.cancelRollback.someDeleted": "Видалено {countText} {count, plural, one {елемент} few {елементи} many {елементів} other {елемента}}.",
+  "@fileOperations.cancelRollback.someDeleted": {
+    "sourceHash": "58cda63"
+  },
+  "fileOperations.cancelRollback.someMovedBack": "Повернуто назад {countText} {count, plural, one {елемент} few {елементи} many {елементів} other {елемента}}.",
+  "@fileOperations.cancelRollback.someMovedBack": {
+    "sourceHash": "0099d44"
+  },
+  "fileOperations.cancelRollback.stoppedDeleting": "Зупинено після видалення {countText} {count, plural, one {елемента} few {елементів} many {елементів} other {елемента}}. Решта залишилася там, куди їх записав Cmdr.",
+  "@fileOperations.cancelRollback.stoppedDeleting": {
+    "sourceHash": "f9767ae"
+  },
+  "fileOperations.cancelRollback.stoppedMovingBack": "Зупинено після повернення назад {countText} {count, plural, one {елемента} few {елементів} many {елементів} other {елемента}}. Решта залишилася там, куди їх перемістили.",
+  "@fileOperations.cancelRollback.stoppedMovingBack": {
+    "sourceHash": "f536342"
+  },
+  "fileOperations.cancelRollback.moveAlreadyLanded": "Cmdr зупинився посеред видалення оригіналів, але все переміщене вже в місці призначення й там і залишиться. {count, plural, =1 {Один оригінал досі на старому місці.} one {{countText} оригінал досі на старому місці.} few {{countText} оригінали досі на старому місці.} many {{countText} оригіналів досі на старому місці.} other {{countText} оригіналу досі на старому місці.}}",
+  "@fileOperations.cancelRollback.moveAlreadyLanded": {
+    "sourceHash": "88dcf83"
+  },
+  "fileOperations.cancelRollback.leftBehind": "Cmdr пропускає все, у чому не впевнений, тож ці елементи залишилися там, де були:",
+  "@fileOperations.cancelRollback.leftBehind": {
+    "sourceHash": "bab6eb4"
+  },
+  "fileOperations.cancelRollback.recoveredOriginal": "Cmdr зберіг оригінал {path} під іншою назвою: {keptAt}.",
+  "@fileOperations.cancelRollback.recoveredOriginal": {
+    "sourceHash": "f0df327"
+  },
+  "fileOperations.cancelRollback.reason.drift.named": "Залишено як є: {name}. Цей елемент змінили вже після того, як Cmdr його туди помістив.",
+  "@fileOperations.cancelRollback.reason.drift.named": {
+    "sourceHash": "e227f3b"
+  },
+  "fileOperations.cancelRollback.reason.drift.counted": "Залишено як є {countText} {count, plural, one {елемент} few {елементи} many {елементів} other {елемента}}: їх змінили вже після того, як Cmdr їх туди помістив.",
+  "@fileOperations.cancelRollback.reason.drift.counted": {
+    "sourceHash": "233b2f5"
+  },
+  "fileOperations.cancelRollback.reason.unverifiable.named": "Залишено як є: {name}. Cmdr не вдалося перевірити, чи цей елемент змінювали.",
+  "@fileOperations.cancelRollback.reason.unverifiable.named": {
+    "sourceHash": "3e553b2"
+  },
+  "fileOperations.cancelRollback.reason.unverifiable.counted": "Залишено як є {countText} {count, plural, one {елемент} few {елементи} many {елементів} other {елемента}}: Cmdr не вдалося перевірити, чи їх змінювали.",
+  "@fileOperations.cancelRollback.reason.unverifiable.counted": {
+    "sourceHash": "25fe620"
+  },
+  "fileOperations.cancelRollback.reason.spotTaken.named": "Залишено на місці: {name}. На старому місці цього елемента тепер є щось інше.",
+  "@fileOperations.cancelRollback.reason.spotTaken.named": {
+    "sourceHash": "5e38d8d"
+  },
+  "fileOperations.cancelRollback.reason.spotTaken.counted": "Залишено на місці {countText} {count, plural, one {елемент} few {елементи} many {елементів} other {елемента}}: на їхньому старому місці тепер є щось інше.",
+  "@fileOperations.cancelRollback.reason.spotTaken.counted": {
+    "sourceHash": "a55ac9a"
+  },
+  "fileOperations.cancelRollback.reason.folderNotEmpty.named": "Залишено як є папку {name}: у ній тепер щось є.",
+  "@fileOperations.cancelRollback.reason.folderNotEmpty.named": {
+    "sourceHash": "b487d24"
+  },
+  "fileOperations.cancelRollback.reason.folderNotEmpty.counted": "Залишено як є {countText} {count, plural, one {папку} few {папки} many {папок} other {папки}}: у них тепер щось є.",
+  "@fileOperations.cancelRollback.reason.folderNotEmpty.counted": {
+    "sourceHash": "d2c9f56"
+  },
+  "fileOperations.cancelRollback.reason.failed.named": "Не вдалося відмінити зміни: {name}. Можливо, диск цього елемента відʼєднано або він доступний лише для читання.",
+  "@fileOperations.cancelRollback.reason.failed.named": {
+    "sourceHash": "d22eda5"
+  },
+  "fileOperations.cancelRollback.reason.failed.counted": "Не вдалося відмінити зміни для {countText} {count, plural, one {елемента} few {елементів} many {елементів} other {елемента}}. Можливо, їхній диск відʼєднано або він доступний лише для читання.",
+  "@fileOperations.cancelRollback.reason.failed.counted": {
+    "sourceHash": "fa172fb"
+  },
+  "fileOperations.cancelRollback.reason.locked.named": "Залишено на місці: {name}. Цей елемент замкнений, і Cmdr не може його відімкнути.",
+  "@fileOperations.cancelRollback.reason.locked.named": {
+    "sourceHash": "5d36672"
+  },
+  "fileOperations.cancelRollback.reason.locked.counted": "Залишено на місці {countText} {count, plural, one {елемент} few {елементи} many {елементів} other {елемента}}: їх замкнено, і Cmdr не може їх відімкнути.",
+  "@fileOperations.cancelRollback.reason.locked.counted": {
+    "sourceHash": "4830a5e"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.named": "Не вдалося видалити незавершену копію в місці призначення: {name}. Її можна видалити без ризику, а Cmdr спробує ще раз, коли наступного разу підʼєднається туди.",
+  "@fileOperations.cancelRollback.stagedLeftover.named": {
+    "sourceHash": "dbf80b7"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.counted": "Не вдалося видалити {countText} {count, plural, one {незавершену копію} few {незавершені копії} many {незавершених копій} other {незавершеної копії}} в місці призначення. Їх можна видалити без ризику, а Cmdr спробує ще раз, коли наступного разу підʼєднається туди.",
+  "@fileOperations.cancelRollback.stagedLeftover.counted": {
+    "sourceHash": "1f4dec3"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.named": "Незавершена копія {name} поки що залишається на «{volumeName}». Cmdr видалить її, щойно знову зʼявиться звʼязок із «{volumeName}».",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.named": {
+    "sourceHash": "661c42a"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.waiting.counted": "{count, plural, one {{countText} незавершена копія поки що залишається} few {{countText} незавершені копії поки що залишаються} many {{countText} незавершених копій поки що залишаються} other {{countText} незавершеної копії поки що залишаються}} на «{volumeName}». Cmdr видалить їх, щойно знову зʼявиться звʼязок із «{volumeName}».",
+  "@fileOperations.cancelRollback.stagedLeftover.waiting.counted": {
+    "sourceHash": "d360188"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.named": "Файл {name} уже повністю записано на «{volumeName}» під тимчасовою назвою. Він отримає свою назву, коли Cmdr наступного разу підʼєднається до «{volumeName}».",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.named": {
+    "sourceHash": "ae7aea2"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.landing.counted": "{count, plural, one {{countText} повністю записаний файл чекає} few {{countText} повністю записані файли чекають} many {{countText} повністю записаних файлів чекають} other {{countText} повністю записаного файлу чекають}} на «{volumeName}» під тимчасовими назвами. Кожен отримає свою назву, коли Cmdr наступного разу підʼєднається до «{volumeName}».",
+  "@fileOperations.cancelRollback.stagedLeftover.landing.counted": {
+    "sourceHash": "eb3d194"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.rescued.named": "Cmdr зберіг повністю записаний новий файл на «{volumeName}» під назвою {name}, бо файл не зміг отримати свою назву. Перевірте його, а тоді дайте йому потрібну назву.",
+  "@fileOperations.cancelRollback.stagedLeftover.rescued.named": {
+    "sourceHash": "4c10d90"
+  },
+  "fileOperations.cancelRollback.stagedLeftover.rescued.counted": "Cmdr зберіг {countText} {count, plural, one {повністю записаний новий файл} few {повністю записані нові файли} many {повністю записаних нових файлів} other {повністю записаного нового файлу}} на «{volumeName}» під назвами з «(recovered)», бо вони не змогли отримати свої назви. Перевірте їх, а тоді дайте їм потрібні назви.",
+  "@fileOperations.cancelRollback.stagedLeftover.rescued.counted": {
+    "sourceHash": "a1ebb20"
+  },
+  "fileOperations.leftovers.unfinishedLandingKept": "Cmdr знайшов на «{volumeName}» незавершену копію файлу {fileName}, розмір якої не такий, як має бути, тож залишив її під назвою {keptName}, а не завершив.",
+  "@fileOperations.leftovers.unfinishedLandingKept": {
+    "sourceHash": "92ebd0a"
+  },
+  "fileOperations.leftovers.stagingFolderKept": "Cmdr знайшов на «{volumeName}» файли незавершеного переміщення й залишив їх на місці, у прихованій папці {folderName}.",
+  "@fileOperations.leftovers.stagingFolderKept": {
+    "sourceHash": "fd848b8"
+  },
+  "fileOperations.errorDialog.technicalDetails": "Технічні деталі",
+  "@fileOperations.errorDialog.technicalDetails": {
+    "sourceHash": "890ab35"
+  },
+  "fileOperations.errorDialog.technicalDetailsAria": "Технічні деталі проблеми",
+  "@fileOperations.errorDialog.technicalDetailsAria": {
+    "sourceHash": "708186c"
+  },
+  "fileOperations.errorDialog.retry": "Спробувати ще раз",
+  "@fileOperations.errorDialog.retry": {
+    "sourceHash": "942087c"
+  },
+  "fileOperations.errorDialog.copyAnyway": "Усе одно скопіювати",
+  "@fileOperations.errorDialog.copyAnyway": {
+    "sourceHash": "f794181"
+  },
+  "fileOperations.errorDialog.close": "Закрити",
+  "@fileOperations.errorDialog.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "fileOperations.errorDialog.tooLargeAndMore": "і ще {countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
+  "@fileOperations.errorDialog.tooLargeAndMore": {
+    "sourceHash": "ff109f8"
+  },
+  "fileOperations.archivePassword.title": "Потрібен пароль",
+  "@fileOperations.archivePassword.title": {
+    "sourceHash": "54fd670"
+  },
+  "fileOperations.archivePassword.retryTitle": "Не вийшло",
+  "@fileOperations.archivePassword.retryTitle": {
+    "sourceHash": "a12d349"
+  },
+  "fileOperations.archivePassword.message": "Архів <archive>{name}</archive> захищено паролем. Введіть пароль, щоб відімкнути архів.",
+  "@fileOperations.archivePassword.message": {
+    "sourceHash": "ba28841"
+  },
+  "fileOperations.archivePassword.retryMessage": "Цей пароль не відімкнув архів <archive>{name}</archive>. Спробуйте ще раз.",
+  "@fileOperations.archivePassword.retryMessage": {
+    "sourceHash": "3d62c0c"
+  },
+  "fileOperations.archivePassword.inputAria": "Пароль архіву",
+  "@fileOperations.archivePassword.inputAria": {
+    "sourceHash": "3c652b7"
+  },
+  "fileOperations.archivePassword.placeholder": "Пароль",
+  "@fileOperations.archivePassword.placeholder": {
+    "sourceHash": "e7cf3ef"
+  },
+  "fileOperations.archivePassword.unlock": "Відімкнути",
+  "@fileOperations.archivePassword.unlock": {
+    "sourceHash": "4ac709a"
+  },
+  "fileOperations.resticPassword.title": "Відімкнути цю резервну копію",
+  "@fileOperations.resticPassword.title": {
+    "sourceHash": "53b2b18"
+  },
+  "fileOperations.resticPassword.retryTitle": "Не вийшло",
+  "@fileOperations.resticPassword.retryTitle": {
+    "sourceHash": "a12d349"
+  },
+  "fileOperations.resticPassword.message": "Папка <repo>{name}</repo> містить резервну копію restic. Введіть її пароль, щоб переглянути знімки.",
+  "@fileOperations.resticPassword.message": {
+    "sourceHash": "c4dd0c2"
+  },
+  "fileOperations.resticPassword.retryMessage": "Цей пароль не відімкнув резервну копію <repo>{name}</repo>. Спробуйте ще раз.",
+  "@fileOperations.resticPassword.retryMessage": {
+    "sourceHash": "7440c4a"
+  },
+  "fileOperations.resticPassword.inputAria": "Пароль резервної копії",
+  "@fileOperations.resticPassword.inputAria": {
+    "sourceHash": "3e39703"
+  },
+  "fileOperations.resticPassword.remember": "Зберегти пароль у Вʼязці ключів",
+  "@fileOperations.resticPassword.remember": {
+    "sourceHash": "3fd7384"
+  },
+  "fileOperations.resticPassword.checking": "Перевірка пароля…",
+  "@fileOperations.resticPassword.checking": {
+    "sourceHash": "adfc852"
+  },
+  "fileOperations.resticPassword.unreachable": "Cmdr зараз не вдалося перевірити пароль. Переконайтеся, що диск або сервер із резервною копією доступний, і спробуйте ще раз.",
+  "@fileOperations.resticPassword.unreachable": {
+    "sourceHash": "cc4542d"
+  },
+  "fileOperations.validation.disallowedChars": "{kind, select, folder {Назва папки не може містити «/» або нульові символи} other {Назва файлу не може містити «/» або нульові символи}}",
+  "@fileOperations.validation.disallowedChars": {
+    "sourceHash": "1a3c594"
+  },
+  "fileOperations.validation.empty": "{kind, select, folder {Назва папки не може бути порожньою} other {Назва файлу не може бути порожньою}}",
+  "@fileOperations.validation.empty": {
+    "sourceHash": "2a25343"
+  },
+  "fileOperations.validation.nameTooLong": "{kind, select, folder {Назва папки задовга (байтів: {byteCount}/{maxBytes})} other {Назва файлу задовга (байтів: {byteCount}/{maxBytes})}}",
+  "@fileOperations.validation.nameTooLong": {
+    "sourceHash": "76a85fd"
+  },
+  "fileOperations.validation.pathTooLong": "Повний шлях задовгий (байтів: {byteCount}/{maxBytes})",
+  "@fileOperations.validation.pathTooLong": {
+    "sourceHash": "1658c7a"
+  },
+  "fileOperations.validation.extensionChangeBlocked": "Змінювати розширення файлу не дозволено (було «{oldExt}»)",
+  "@fileOperations.validation.extensionChangeBlocked": {
+    "sourceHash": "e81362d"
+  },
+  "fileOperations.validation.conflict": "«{name}» уже існує в цій папці",
+  "@fileOperations.validation.conflict": {
+    "sourceHash": "842d02d"
+  },
+  "fileOperations.validation.nameNotUsable": "{kind, select, folder {Цю назву папки не можна використати} other {Цю назву файлу не можна використати}}",
+  "@fileOperations.validation.nameNotUsable": {
+    "sourceHash": "6c50bb6"
+  },
+  "fileOperations.validation.pathEmpty": "Шлях не може бути порожнім",
+  "@fileOperations.validation.pathEmpty": {
+    "sourceHash": "c7afbbc"
+  },
+  "fileOperations.validation.pathNotAbsolute": "Шлях має бути абсолютним (починатися з /)",
+  "@fileOperations.validation.pathNotAbsolute": {
+    "sourceHash": "3c08374"
+  },
+  "fileOperations.validation.pathNullChar": "Шлях містить нульовий символ",
+  "@fileOperations.validation.pathNullChar": {
+    "sourceHash": "271149f"
+  },
+  "fileOperations.validation.pathTotalTooLong": "Шлях задовгий (байтів: {byteCount}/{maxBytes})",
+  "@fileOperations.validation.pathTotalTooLong": {
+    "sourceHash": "30aca7d"
+  },
+  "fileOperations.validation.pathSegmentTooLong": "Назва однієї з папок у шляху задовга (байтів: {byteCount}/{maxBytes})",
+  "@fileOperations.validation.pathSegmentTooLong": {
+    "sourceHash": "75b2602"
+  },
+  "fileOperations.transferTree.treeLabel": "Файли в цій операції",
+  "@fileOperations.transferTree.treeLabel": {
+    "sourceHash": "29a637d"
+  },
+  "fileOperations.transferTree.preparing": "Складання списку файлів…",
+  "@fileOperations.transferTree.preparing": {
+    "sourceHash": "e6dc842"
+  },
+  "fileOperations.transferTree.empty": "Немає файлів для показу",
+  "@fileOperations.transferTree.empty": {
+    "sourceHash": "cd0bf08"
+  },
+  "fileOperations.transferTree.follow": "Стежити",
+  "@fileOperations.transferTree.follow": {
+    "sourceHash": "641d1ef"
+  },
+  "fileOperations.transferTree.followTooltip": "Прокрутити назад до файлів, що обробляються, і далі стежити за ними",
+  "@fileOperations.transferTree.followTooltip": {
+    "sourceHash": "0ff230b"
+  },
+  "fileOperations.transferTree.filesTotal": "{countText} {count, plural, one {файл} few {файли} many {файлів} other {файлу}}",
+  "@fileOperations.transferTree.filesTotal": {
+    "sourceHash": "76ef0a6"
+  },
+  "fileOperations.transferTree.filesProgress": "{doneText} / {totalText} {total, plural, one {файл} few {файли} many {файлів} other {файлу}}",
+  "@fileOperations.transferTree.filesProgress": {
+    "sourceHash": "48675a6"
+  },
+  "fileOperations.transferTree.skippedCount": "{count, plural, one {пропущено {countText}} few {пропущено {countText}} many {пропущено {countText}} other {пропущено {countText}}}",
+  "@fileOperations.transferTree.skippedCount": {
+    "sourceHash": "3cb9b95"
+  },
+  "fileOperations.transferTree.failedCount": "{count, plural, one {не завершено {countText}} few {не завершено {countText}} many {не завершено {countText}} other {не завершено {countText}}}",
+  "@fileOperations.transferTree.failedCount": {
+    "sourceHash": "367fc30"
+  },
+  "fileOperations.transferTree.state.waiting": "Очікування",
+  "@fileOperations.transferTree.state.waiting": {
+    "sourceHash": "6e293a8"
+  },
+  "fileOperations.transferTree.state.copying": "Копіювання",
+  "@fileOperations.transferTree.state.copying": {
+    "sourceHash": "82bc68a"
+  },
+  "fileOperations.transferTree.state.moving": "Переміщення",
+  "@fileOperations.transferTree.state.moving": {
+    "sourceHash": "8dac743"
+  },
+  "fileOperations.transferTree.state.compressing": "Архівування",
+  "@fileOperations.transferTree.state.compressing": {
+    "sourceHash": "c4c202f"
+  },
+  "fileOperations.transferTree.state.done": "Готово",
+  "@fileOperations.transferTree.state.done": {
+    "sourceHash": "11a6767"
+  },
+  "fileOperations.transferTree.state.skipped": "Пропущено",
+  "@fileOperations.transferTree.state.skipped": {
+    "sourceHash": "12698ce"
+  },
+  "fileOperations.transferTree.state.failed": "Не завершено",
+  "@fileOperations.transferTree.state.failed": {
+    "sourceHash": "a59364b"
+  }
+}

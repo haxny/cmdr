@@ -26,7 +26,7 @@ use crate::indexing::reconcile::local_reconcile;
 use crate::indexing::scanner::{self, ScanConfig};
 use crate::indexing::store::{IndexStore, StepDurations};
 use crate::indexing::watch::branches::{self, AfterWalk};
-use crate::indexing::watch::event_loop::{ReplayConfig, run_replay_event_loop};
+use crate::indexing::watch::event_loop::{ReplayBudget, ReplayConfig, run_replay_event_loop};
 use crate::indexing::watch::watcher::{self, DriveWatcher};
 use crate::indexing::writer::{AggSource, IndexWriter, WriteMessage};
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -78,7 +78,15 @@ impl IndexManager {
     /// Starts the watcher with `sinceWhen = since_event_id`. The watcher replays
     /// journal events which are processed as live events. If the journal is
     /// unavailable (gap detected), falls back to a full scan.
-    pub(super) fn start_replay(&mut self, since_event_id: u64, heal_after_replay: bool) -> Result<(), String> {
+    /// `budget` is what the replay may spend before a full reconcile is the
+    /// cheaper way to catch up (`watch/DETAILS.md` § "Replay cost, not event
+    /// count").
+    pub(super) fn start_replay(
+        &mut self,
+        since_event_id: u64,
+        heal_after_replay: bool,
+        budget: ReplayBudget,
+    ) -> Result<(), String> {
         // Unbounded: a slow replay drain must never backpressure the FSEvents
         // forward task into dropping events (Fix 2). Memory is bounded by the
         // ingestion hard cap in `run_replay_event_loop`, not by the channel.
@@ -170,7 +178,7 @@ impl IndexManager {
 
         // A way for the replay loop to signal "can't roll forward from the journal,
         // need a full scan", carrying WHY. Several distinct causes trip this (journal
-        // purged, >10M events, watcher channel overflowed); the reason rides the
+        // purged, the path budget spent, the RAM guard, watcher channel overflowed); the reason rides the
         // channel so the fallback logs the real cause instead of guessing "gap".
         let (fallback_tx, fallback_rx) = tokio::sync::oneshot::channel::<RescanReason>();
 
@@ -197,6 +205,7 @@ impl IndexManager {
                     heal_after_replay,
                     work: replay_work,
                     ground,
+                    budget,
                 },
                 fallback_tx,
                 watcher_overflow,

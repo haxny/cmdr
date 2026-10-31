@@ -268,9 +268,6 @@ name = "arbitrary"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
-dependencies = [
- "derive_arbitrary",
-]
 
 [[package]]
 name = "arboard"
@@ -1490,7 +1487,7 @@ dependencies = [
 
 [[package]]
 name = "cmdr"
-version = "0.57.0"
+version = "0.58.0"
 dependencies = [
  "ammonia",
  "arc-swap",
@@ -1505,6 +1502,7 @@ dependencies = [
  "cmdr-archive",
  "cmdr-collation",
  "cmdr-fs",
+ "cmdr-fsevent-stream",
  "cmdr-git",
  "cmdr-http",
  "cmdr-index",
@@ -1606,7 +1604,7 @@ dependencies = [
  "xattr",
  "zbus",
  "zbus-secret-service-keyring-store",
- "zip 9.0.5",
+ "zip",
 ]
 
 [[package]]
@@ -1616,10 +1614,12 @@ dependencies = [
  "cmdr-adb",
  "cmdr-fs",
  "log",
+ "lz4_flex",
  "serde",
  "specta",
  "tokio",
  "tokio-util",
+ "twox-hash",
  "unicase",
  "unicode-normalization",
 ]
@@ -1648,7 +1648,7 @@ dependencies = [
  "uuid",
  "xattr",
  "zeroize",
- "zip 9.0.5",
+ "zip",
  "zstd",
 ]
 
@@ -1768,7 +1768,7 @@ dependencies = [
  "tokio-util",
  "unicode-normalization",
  "usearch",
- "zip 9.0.5",
+ "zip",
 ]
 
 [[package]]
@@ -1908,7 +1908,7 @@ dependencies = [
  "uuid",
  "walkdir",
  "xattr",
- "zip 9.0.5",
+ "zip",
 ]
 
 [[package]]
@@ -2838,17 +2838,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cd812cc2bc1d69d4764bd80df88b4317eaef9e773c75226407d9bc0876b211c"
 dependencies = [
  "serde_core",
-]
-
-[[package]]
-name = "derive_arbitrary"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e567bd82dcff979e4b03460c307b3cdc9e96fde3d73bed1496d2bc75d9dd62a"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.118",
 ]
 
 [[package]]
@@ -6597,9 +6586,9 @@ dependencies = [
 
 [[package]]
 name = "mtp-rs"
-version = "0.36.0"
+version = "0.37.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ceb043b578cd5d129de7479694f0b385b483f3ed5dcb3c96b0af4a4aadcf896e"
+checksum = "3afb842b28a09ebb7f459a49e94a907b67a22e68b28099b185273aea4fdc991c"
 dependencies = [
  "async-trait",
  "bytes",
@@ -7842,9 +7831,9 @@ dependencies = [
 
 [[package]]
 name = "pageant"
-version = "0.2.3"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d8eab09a361a4afe0b1668be978cd97e4f052e927a92b0b608cf902965d49ce"
+checksum = "e0bc922d9aa8cfcf598de27b3c6122cb2eeda9d6fe71527a22ebcb7f633540ff"
 dependencies = [
  "base16ct",
  "byteorder",
@@ -9153,9 +9142,9 @@ dependencies = [
 
 [[package]]
 name = "russh"
-version = "0.64.1"
+version = "0.65.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba61e87b9ec9a39a59a6bbed4c0b8ff7fb07073405b24a767a1f2c8560ac8f58"
+checksum = "3bb77a4b259312b2abbc541bca1c13cb4e9b61c560a7fd894068c3b92e0c9dc3"
 dependencies = [
  "aes 0.9.3",
  "aws-lc-rs",
@@ -10029,9 +10018,9 @@ checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
 
 [[package]]
 name = "smb2"
-version = "0.36.0"
+version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8b71a22b45c9d42e0a91395a4c18d813e8768f8998fe8beebf1b1f66a700aaa"
+checksum = "9b2f914e00b2e36b4f686df97b259c8d5a7c4df5be2f7d4bf59be5616834c7e3"
 dependencies = [
  "aes 0.9.3",
  "aes-gcm 0.11.0",
@@ -10913,11 +10902,11 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-updater"
-version = "2.14.0"
+version = "2.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7259989d4fe11b2bf51f7d671642249b1837c4ae2da1430dc713ae38f98ceeec"
+checksum = "d957abbcb3f9f6c76d22a3a0f012f30880640d0bccb5634d2b12a9937e4c872b"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "dirs 7.0.0",
  "flate2",
  "futures-util",
@@ -10942,7 +10931,7 @@ dependencies = [
  "tokio",
  "url",
  "windows-sys 0.61.2",
- "zip 4.6.1",
+ "zip",
 ]
 
 [[package]]
@@ -13203,18 +13192,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.3",
-]
-
-[[package]]
-name = "zip"
-version = "4.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "caa8cd6af31c3b31c6631b8f483848b91589021b28fffe50adada48d4f4d2ed1"
-dependencies = [
- "arbitrary",
- "crc32fast",
- "indexmap 2.14.0",
- "memchr",
 ]
 
 [[package]]

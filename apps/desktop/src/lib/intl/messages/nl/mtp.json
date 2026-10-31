@@ -76,6 +76,14 @@
   "@mtp.ptpcameradDialog.retry": {
     "sourceHash": "eccee4e"
   },
+  "mtp.readiness.connecting": "Nog bezig met verbinden. Ontgrendel je telefoon en tik op ‘Toestaan’ als hij erom vraagt.",
+  "@mtp.readiness.connecting": {
+    "sourceHash": "389b779"
+  },
+  "mtp.readiness.connectingTooltip": "Cmdr blijft het proberen zolang je telefoon aangesloten is, en je kunt hem openen zodra hij verbonden is.",
+  "@mtp.readiness.connectingTooltip": {
+    "sourceHash": "4f4066b"
+  },
   "mtp.deviceFallbackName": "MTP-apparaat",
   "@mtp.deviceFallbackName": {
     "sourceHash": "8ba7a69"

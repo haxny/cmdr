@@ -88,34 +88,13 @@ restrictions.
 
 ### Commercial use
 
-For work projects, you'll need a license:
-**$59, paid once**, per person, on as many of your own machines as you like.
-It includes one year of updates. After that year the version you have keeps working forever, and $39/year
-keeps new versions coming if you want them.
+For work projects, you'll need a license: **$59, paid once**, per person, on as many of your own machines as you like.
+It includes one year of updates. After that year the version you have keeps working forever, and $39/year keeps new
+versions coming if you want them.
 
 Buying for an organization? Email [sales@getcmdr.com](mailto:sales@getcmdr.com) and you'll get a quote back.
 
 Purchase at [getcmdr.com/pricing](https://getcmdr.com/pricing).
-
-### OpenAI Build Week submission
-
-For OpenAI Build Week, I worked with Codex to build a natural-language bulk-rename feature incl. renaming images based
-on their content, and a UI for humans to review and apply the rename suggestions. I worked in one long, continuous
-session, mainly using Terra (high) and some Sol (medium), from feature planning through
-[PR #39](https://github.com/vdavid/cmdr/pull/39). I brought my existing codebase and guardrails, picked the scope, the
-plan review process, the UX direction, and what to accept during manual QA. Codex turned those decisions into the
-spec/pland then the impl. It delegated plan reviews, translations, and pieces of the implementation to subagents,
-diagnosed failures from logs, wrote tests, then prepared the PR and docs. The bulk of the submission-window work is the
-natural-language bulk rename feature, but it also needed an MCP extension, a tweak to add an OpenAI-compatible provider,
-streaming-state, copyability, localization, and operation-safety changes in the PR, so it came out pretty complex. Mind
-that Codex did not build the rest of Cmdr itself: the file manager, the built-in chat, image index, MCP infra, and ops
-engine all existed before Build Week. The evidence and collaboration record are in
-[docs/hackathon-submission.md](docs/hackathon-submission.md).
-
-To run the submission without building from source, download Cmdr v0.35.0 from [getcmdr.com](https://getcmdr.com),
-configure an AI provider, open a folder or select files, and ask Cmdr to rename them. Review the proposed rows, change
-the Allow/Deny choices, and apply the accepted subset; use disposable files for evaluation. The exact submitted code,
-scope, and validation record are in [PR #39](https://github.com/vdavid/cmdr/pull/39).
 
 ### Source code
 

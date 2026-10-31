@@ -248,6 +248,7 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
       { id: 'file_locked', label: 'File locked' },
       { id: 'trash_not_supported', label: 'Trash not supported' },
       { id: 'connection_interrupted', label: 'Connection interrupted' },
+      { id: 'link_needs_consent', label: 'Link to a server nobody allowed' },
       { id: 'server_connection_lost', label: 'Lost the connection to a server' },
       { id: 'server_connection_lost-delete', label: 'Lost the connection to a server (delete)' },
       { id: 'changed_while_disconnected', label: 'Delete left a file that changed while disconnected' },
@@ -332,6 +333,9 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
     states: [
       { id: 'typical', label: '.txt → .zip' },
       { id: 'long-extension', label: 'Long extensions' },
+      { id: 'removed-extension', label: '.txt → none' },
+      { id: 'removed-package-extension', label: 'Cmdr.app → Cmdr (folder)' },
+      { id: 'added-extension', label: 'none → .md' },
     ],
   },
   {
@@ -405,7 +409,7 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
     hostWindow: 'main',
     status: 'ready',
     openedBy: 'store-seeded',
-    note: 'Apply WILL fail, and that’s expected: it keys on a proposal id the backend staged, which a fixture has no counterpart for, so the attempt logs a warning and the review stays up. Cancel and Escape work normally. Nothing here renames anything.',
+    note: 'Apply WILL fail, and that’s expected: it keys on a proposal id the backend staged, which a fixture has no counterpart for, so the attempt logs a warning, a notice says nothing was renamed, and the review stays up. Cancel and Escape work normally. Nothing here renames anything.',
     states: [
       { id: 'all-allowed', label: 'Six rows, all allowed' },
       {
@@ -430,6 +434,10 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
         note: 'One review over the batches of one job. A rename group binds one parent folder, so a job across folders is several batches, several operations, and one decision.',
       },
       { id: 'expired', label: 'Proposal expired' },
+      { id: 'checking', label: 'A slow check running' },
+      { id: 'check-unfinished', label: 'A check that didn’t finish' },
+      { id: 'couldnt-start', label: 'Rename wouldn’t start' },
+      { id: 'needs-another-look', label: 'Plan moved under Rename' },
     ],
   },
   {
@@ -483,6 +491,14 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
         note: 'Title, body, and both buttons all change; Escape and Enter are dead here.',
       },
     ],
+  },
+  {
+    dialogId: 'smb-link-consent',
+    label: 'Sign in through an SMB link',
+    hostWindow: 'main',
+    status: 'ready',
+    note: 'Allowing nothing: the gallery passes the two names and closes on either button. In the app this opens from the error screen of a pane standing on a folder behind a link to another server.',
+    states: [{ id: 'default', label: 'Ask' }],
   },
   {
     dialogId: 'forget-memory',

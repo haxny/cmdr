@@ -592,10 +592,11 @@ Apple's `Dock.app` `DockMenus.strings` supplies almost every phrase (`KEEP_IN_DO
 
 ## Wer das Laufwerk festhält: die sechs benannten Absagen (`errors.eject.unmountRefusedBy*`, `errors.eject.otherApps`)
 
-- Same frame as `errors.eject.*`: `X hat dort noch Dateien geöffnet.` + `…, dann versuche es erneut.`; generic
-  `unmountRefused` → `Dort sind noch Dateien geöffnet.`
+- Same frame as `errors.eject.*`: `X verwendet dort noch etwas.` + `…, dann versuche es erneut.`; generic
+  `unmountRefused` → `Dort wird noch etwas verwendet.`
 - `{app}` / `{apps}` lead as nominative subject (`Intl.ListFormat('de')` ends on nominative `andere Apps`). Never
-  `belegt`, `blockiert`, `greift zu`. `Schließe sie` points at `Dateien`.
+  `belegt`, `blockiert`, `greift zu`. `Schließe die App` / `diese Apps`: no pronoun for an insert. Eject all →
+  `Alle auswerfen` (Finder `N199.1`).
 - `Dort liegt ein Image, das noch geöffnet ist.` (Finder `PE24`); `Wirf erst das Image aus, dann versuche es erneut.`
 - `Warte eine Minute` (macOS) vs `einen Moment` (Cmdr) follows English. `sende einen Fehlerbericht` (only mention, full
   name).

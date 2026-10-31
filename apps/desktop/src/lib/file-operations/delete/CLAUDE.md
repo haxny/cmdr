@@ -11,6 +11,7 @@ Backend counterpart: `crates/cmdr-operations/src/delete/CLAUDE.md`.
 - **delete-dialog-utils.ts** (+ test): pure title, path-abbreviation, and symlink-notice helpers.
 - **TrashCompleteToastContent.svelte** + **trash-undo.ts** (journal rollback, worded; `edit.undoTrash`) +
   **go-to-trash.ts** (toast button + `file.goToTrash`).
+- **already-gone-toast.ts** + **AlreadyGoneToastContent.svelte**: the note for items already gone. DETAILS § Edge cases.
 
 ## Must-knows
 
@@ -22,7 +23,6 @@ Backend counterpart: `crates/cmdr-operations/src/delete/CLAUDE.md`.
   listener never sees the hold. DETAILS § Shift-hold upgrade.
 - **F2 / Background only TRASH, ❌ never delete**: shown only while the FINAL `isPermanent` is false;
   `onConfirmInBackground` takes no mode. `../transfer/DETAILS.md` § "Starting in the background".
-- **`data-scan-state` on `.scan-stats`** (`counting` | `done`) is the only "counting done" signal.
 - **`DeleteDialog` must forward `sourceVolumeId` into `startScanPreview`**, or a non-local volume (MTP, SMB) runs the
   local-FS walker, hits path-not-found, and leaves the dialog stuck at "0 files".
 - **`supportsTrash` drives the mode** (per volume, from `fsType`; DETAILS § "Which volumes have a trash"). When false,

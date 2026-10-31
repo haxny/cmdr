@@ -329,15 +329,12 @@ pub async fn forget_drive_index(volume_id: String) -> Result<(), String> {
 ///
 /// - An ALREADY-active drive: kicks off a fresh full scan (Stale ⇒ Scanning ⇒
 ///   Fresh on clean completion), truncating and rebuilding its index.
-/// - An SMB drive that's NOT active (e.g. a persisted Stale index loaded on
-///   launch but never re-enabled this session): enable it, which scans. Returns
-///   the typed refusal if the direct-smb2 gate blocks it.
-/// - `root` that's not active: starts the local indexer.
+/// - A drive that's NOT active (e.g. a persisted Stale index loaded on launch but
+///   never re-enabled this session): start it, then the same scan
+///   (`Index::rescan_volume`). Returns the typed refusal if a start's gate blocks it.
 #[tauri::command]
 #[specta::specta]
 pub async fn rescan_drive_index(volume_id: String) -> Result<EnableIndexingOutcome, String> {
-    // Not active: enabling is what triggers the (first) scan, so this is the same
-    // call either way.
     let gated = drive_release::gate()
         .start(&volume_id, StartKind::UserRescan, || index().rescan_volume(&volume_id))
         .await;

@@ -188,6 +188,18 @@ export const fileListCommands: CommandSource[] = [
     whileDialogOpen: BLOCKED_BY_DIALOGS,
   },
   {
+    // Total Commander's Ctrl+S. It stays out of plain typing's way: the Settings mode decides
+    // what typing does, and this works on one pane for one folder (`quick-filter-session.svelte.ts`).
+    id: 'pane.quickFilter',
+    nameKey: 'commands.paneQuickFilter.label',
+    scope: 'Main window/File list',
+    showInPalette: true,
+    shortcuts: ['⌃S'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    descriptionKey: 'commands.paneQuickFilter.description',
+    keywords: ['narrow', 'type to jump', 'search names'],
+  },
+  {
     // Total Commander's Ctrl+M. ⌘M is macOS's Minimize, so it's ⌃M here.
     id: 'file.multiRename',
     nameKey: 'commands.fileMultiRename.label',

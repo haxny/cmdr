@@ -47,6 +47,10 @@
   "@viewer.error.coldStorage": {
     "sourceHash": "236cd1b"
   },
+  "viewer.error.linkTargetUnreachable": "Ez a fájl egy másik szerverre mutató link mögött van, és a Cmdr most nem éri el azt a szervert. Ellenőrizd, hogy a szerver fut, aztán próbáld újra.",
+  "@viewer.error.linkTargetUnreachable": {
+    "sourceHash": "8dcb736"
+  },
   "viewer.error.retry": "Újra",
   "@viewer.error.retry": {
     "sourceHash": "942087c"
@@ -475,5 +479,9 @@
   "viewer.selection.toEndOfFileNoLine": "Kijelölve a fájl végéig",
   "@viewer.selection.toEndOfFileNoLine": {
     "sourceHash": "e7e0442"
+  },
+  "viewer.error.linkNeedsConsent": "Ez a fájl egy másik szerverre mutató link mögött van, ahová a Cmdr még nem jelentkezhet be. A döntéshez nyisd meg a mappáját egy panelen.",
+  "@viewer.error.linkNeedsConsent": {
+    "sourceHash": "b9b3e1f"
   }
 }

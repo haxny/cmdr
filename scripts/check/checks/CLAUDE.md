@@ -44,8 +44,8 @@ One Go file per check, registered in `registry.go`'s `AllChecks`. Runner: `../CL
 - **Vitest lanes:** coverage needs a per-invocation `reportsDirectory` (`VITEST_COVERAGE_DIR`), or concurrent runs
   clobber each other's v8 files; ❌ a timeout's real message is never in the json report. DETAILS § "Vitest failure
   output".
-- **The Playwright lane's release build is NOT incremental** (172 s for a no-op), so `e2e-build.go` stamps the binary
-  with what built it and skips on a match; any uncertainty rebuilds.
+- **The Playwright build recompiles `cmdr` every run** (~130 s), so `e2e-build.go` stamps the binary and skips on a
+  match; any uncertainty rebuilds.
 - **A red test lane re-runs its failures ALONE before believing them**; the verdicts are shared
   (`contention-verdict.go`). Rust: `resolveRustFailure`, the Docker lane execing into its live container, ❌ never a
   `docker run`. Playwright: `resolveE2EFailure`, by spec FILE. Host Rust re-runs reuse the build (`runNextestLane`).

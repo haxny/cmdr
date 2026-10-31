@@ -433,17 +433,93 @@ function assistantRow(id: number, seq: number, text: string) {
 }
 
 describe('a reload mid-turn', () => {
-  /** A thread page whose turn has been running since row `since`. */
-  function runningThread(rows: MessageView[], since: number) {
+  /** A thread page whose turn (run `run`) has been running since row `since`. */
+  function runningThread(rows: MessageView[], since: number, run = 7) {
     return {
       conversation: conversationRow(9),
       totalMessages: rows.length,
       messages: rows,
       lastContextUsage: null,
       turnInFlightSinceSeq: since,
+      turnInFlightRun: run,
       spendPausedMicros: null,
     }
   }
+
+  /** Reloaded onto thread 9 mid-turn (run 7), which then says nothing: a long tool call, or a
+   *  model thinking before its next chunk. */
+  async function reloadOntoQuietTurn(): Promise<void> {
+    getMock.mockResolvedValue(
+      runningThread(
+        [
+          { ...userMessage(1, 1), turnId: 1 },
+          { ...assistantRow(2, 2, 'Looking.'), turnId: 1 },
+        ],
+        0,
+      ),
+    )
+    await switchToThread(9)
+    expect(askCmdrState.streaming).toBe(true)
+  }
+
+  /** Regression anchor #802: Stop on a turn picked up after a reload that has gone quiet. The
+   *  backend turn is told to stop, the rail settles at once, and the turn's terminal settles its
+   *  bubble without ending anything else. */
+  describe('Stop on a quiet turn picked up after a reload', () => {
+    it('cancels the backend turn and settles the rail, then its terminal settles the bubble', async () => {
+      await reloadOntoQuietTurn()
+
+      stopStreaming()
+      await flushMicrotasks()
+
+      expect(cancelMock).toHaveBeenCalledWith(9)
+      expect(askCmdrState.streaming).toBe(false)
+      expect(assistantAt(1).streaming).toBe(false)
+
+      fire({ type: 'stopped', turn: STATS }, 9, 7)
+      expect(assistantAt(1)).toMatchObject({ id: 2, streaming: false, stats: STATS })
+      expect(askCmdrState.streaming).toBe(false)
+    })
+
+    /** The turn ended just as the user pressed Stop: the cancel answers `live: 0` and settles the
+     *  stop, but the turn's terminal is still on its way. The rail knows the turn's run from the
+     *  load, so that terminal can't end the turn the user sends next. It used to: the adopted
+     *  turn's run was unknown until its next event, which a quiet turn never sent. */
+    it("doesn't let the stopped turn's late terminal end the next send", async () => {
+      cancelMock.mockResolvedValue({ tripped: 0, live: 0 })
+      await reloadOntoQuietTurn()
+      stopStreaming()
+      await flushMicrotasks()
+
+      sendMock.mockResolvedValueOnce({ accepted: true, conversationId: 9, run: 8 })
+      sendMessage('next')
+      fire({ type: 'stopped', turn: null }, 9, 7)
+
+      expect(askCmdrState.streaming).toBe(true)
+      await flushMicrotasks()
+      fire({ type: 'assistantStarted' }, 9, 8)
+      fire({ type: 'textDelta', text: 'the new turn' }, 9, 8)
+      expect(textOf(assistantAt(askCmdrState.messages.length - 1))).toBe('the new turn')
+    })
+
+    /** A send queued behind the stopped turn: its own Stop's terminal must not be taken for the
+     *  reloaded turn's, or the reloaded turn's later terminal would end nothing it should. */
+    it("settles each stop with its own turn's terminal", async () => {
+      await reloadOntoQuietTurn()
+      stopStreaming()
+      await flushMicrotasks()
+      sendMock.mockResolvedValueOnce({ accepted: true, conversationId: 9, run: 8 })
+      sendMessage('next')
+      await flushMicrotasks()
+      stopStreaming()
+      await flushMicrotasks()
+
+      fire({ type: 'stopped', turn: null }, 9, 8)
+      expect(assistantAt(1).stats).toBeNull()
+      fire({ type: 'stopped', turn: STATS }, 9, 7)
+      expect(assistantAt(1)).toMatchObject({ id: 2, stats: STATS })
+    })
+  })
 
   /** The backend says a turn runs here, so the rail is in it at once, before any live event:
    *  Stop shows, and the line still waiting for its result keeps waiting. */

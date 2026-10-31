@@ -79,8 +79,8 @@ func (r runner) tagged(rangeSpec string) bool {
 	return false
 }
 
-// allUpstream reports whether every commit on HEAD is already on `origin/main` patch for patch, as
-// after GitHub rebased the branch onto it under fresh SHAs.
+// allUpstream reports whether every commit on HEAD is already on `origin/main` patch for patch,
+// under other SHAs (a cherry-pick, or an older land through GitHub's rebase merge).
 func (r runner) allUpstream() bool {
 	out, err := r.git("cherry", "origin/main", "HEAD")
 	return err == nil && patchesUpstream(out)

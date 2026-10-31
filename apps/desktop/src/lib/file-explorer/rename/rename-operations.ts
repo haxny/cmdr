@@ -4,7 +4,8 @@
  * except for the actual backend calls which are awaited.
  */
 
-import { extensionChangeNeedsConfirmation, getExtension } from '#lib/utils/filename-validation.js'
+import { extensionChangeNeedsConfirmation } from '#lib/utils/filename-validation.js'
+import { fileExtension, kindOfRenamedName } from '#lib/utils/file-extension.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 
 export interface ConflictFileInfo {
@@ -97,12 +98,12 @@ export async function executeRenameSave(
   if (
     !skipExtensionCheck &&
     extensionPolicy === 'ask' &&
-    extensionChangeNeedsConfirmation(target.originalName, trimmedName, target.isDirectory)
+    extensionChangeNeedsConfirmation(target.originalName, trimmedName, target.nameKind)
   ) {
     return {
       type: 'extension-ask',
-      oldExtension: getExtension(target.originalName).replace(/^\./, ''),
-      newExtension: getExtension(trimmedName).replace(/^\./, ''),
+      oldExtension: fileExtension(target.originalName, target.nameKind),
+      newExtension: fileExtension(trimmedName, kindOfRenamedName(target.nameKind, trimmedName)),
     }
   }
 

@@ -171,6 +171,22 @@ nothing, or that nests past the depth cap (see Resource caps above). Quarantined
 Note `..` matches only a whole component — `..foo` and `foo..bar` are legitimate filenames. (rc-zip's own
 `Entry::sanitized_name` uses a coarser `contains("..")` substring test and doesn't normalize `\`; we don't use it.)
 
+## Zip cloaking: one name per entry, the central directory's
+
+A zip names each entry twice, in its local file header and in its central-directory record, and nothing forces the two
+to agree. "Zip cloaking" (GHSA-m665-v7pm-7grj) exploits a reader pair that disagrees: the `zip` crate's
+`ZipStreamReader` extracts by local-header names, while `ZipArchive` lists central-directory ones, so a scanner and an
+extractor see different files. Cmdr has no such pair: rc-zip's `ArchiveFsm` lists from the central directory, and both
+entry readers (rc-zip's `EntryFsm` and the `zip` crate's `by_index_decrypt`) start from that central record. The local
+header supplies where the data begins (and, for rc-zip, the compression method), never the name (verified by reading
+`vendor/rc-zip/src/fsm/entry/mod.rs` and `vendor/zip/src/read/zip_archive.rs`, rc-zip 5.4.1 and zip 9.0.5, 2026-10-29).
+The sanitizer and every extract destination see the central name, so a cloaked zip extracts exactly what it lists. ❌
+Never read entries through `ZipStreamReader` or rc-zip's streaming reader (`ReadZipStreaming`): they trust local
+headers. A mutation rewrites each kept entry's local header from the central name, so an edit also removes the cloak
+(`mutator_archive_shape_test.rs`). We don't opt into the `zip` crate's strict `enforce_header_consistency`: it would
+refuse real zips over harmless drift (timestamps, zip64 sizes) to defend a differential we don't have. Tests: the
+`cloaked_*` cases in `archive_test.rs`, built with `test_fixtures::cloak_first_central_name`.
+
 ## Streaming reads, off the executor (`ArchiveEntryReader`)
 
 Mirrors the SMB backend's channel-backed read (see `apps/desktop/src-tauri/src/file_system/volume/DETAILS.md` § "Pattern
@@ -364,9 +380,10 @@ benefits from `TailCachedSource`. The plain-tar random-access path issues one `r
 
 `test_fixtures.rs` (lives at the archive root, shared with the volume/mutation/watch tests) builds clean zips with the
 `zip` crate (no checked-in blobs; `large_file(true)` for a real zip64 fixture) and byte-patches hostile variants
-(traversal name via equal-length patch, encrypted GP flag, overstated EOCD record count).
+(traversal name via equal-length patch, encrypted GP flag, overstated EOCD record count, a central name cloaked from its
+local header).
 
-`archive_test.rs` covers parse + listing, synthetic dirs, Zip Slip quarantine, the depth-bomb quarantine,
+`archive_test.rs` covers parse + listing, synthetic dirs, Zip Slip quarantine, zip cloaking, the depth-bomb quarantine,
 first-writer-wins file/dir collisions (both orders), the empty archive, a zip64 round-trip, encrypted/corrupt/not-an-
 archive typed errors, streaming (bounded chunks + decompression correctness + truncated-entry error), stored reads, a
 zstd (method 93) entry, concurrent reads, best-effort encoding, and cache hit/invalidation. `name.rs` and `index.rs`

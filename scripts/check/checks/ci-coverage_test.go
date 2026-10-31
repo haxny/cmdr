@@ -7,6 +7,22 @@ import (
 	"testing"
 )
 
+// A workflow step running `--pre-release` covers every pre-release check without naming them;
+// a comment mentioning the flag doesn't.
+func TestWorkflowRunsPreReleaseLane(t *testing.T) {
+	cases := map[string]bool{
+		"        run: ./scripts/check/check --pre-release --ci": true,
+		"        run: pnpm check --pre-release":                 false, // not the check tool's path
+		"      # `scripts/check/check --pre-release` runs here": false, // a comment
+		"        run: ./scripts/check/check --check x --ci":     false,
+	}
+	for line, want := range cases {
+		if got := workflowRunsPreReleaseLane(line); got != want {
+			t.Errorf("workflowRunsPreReleaseLane(%q) = %v, want %v", line, got, want)
+		}
+	}
+}
+
 func TestExtractWorkflowCheckNames(t *testing.T) {
 	cases := []struct {
 		name    string

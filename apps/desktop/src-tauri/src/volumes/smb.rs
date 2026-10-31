@@ -328,6 +328,7 @@ mod enrichment_tests {
             supports_trash: true,
             mount_is_read_only: false,
             is_disk_image: false,
+            shares_disk_with_others: false,
             is_cloud_mount: false,
             connection_state: None,
             pinned: None,

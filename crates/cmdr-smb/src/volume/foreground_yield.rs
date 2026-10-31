@@ -1,11 +1,16 @@
 //! When a background SMB transfer should stand aside for the user's navigation.
 //!
-//! A copy and the pane's directory listings go over the SAME SMB session (every
-//! `SmbVolume` clone multiplexes frames over one connection), so a running transfer
-//! competes with every navigation on that share. `CheckpointStream`'s foreground
-//! auto-yield already knows how to park between chunks; these two functions are the
-//! probe it parks on, and they're what `SmbVolume`'s `Volume` foreground-yield
-//! methods delegate to.
+//! A copy rides the share's transfer session and the pane's listings its main one
+//! (`transfer_session.rs`), so they no longer queue behind each other inside one
+//! SMB connection. They still share the LINK and the server's DISKS: on a slow
+//! link a listing on its own session waited 1.44 s behind the copy's bytes in the
+//! link's queue, exactly as long as on a shared session
+//! (`docs/notes/smb-transfer-session-2026-10-29.md`), and only a transfer that
+//! stops feeding the queue takes that away. A disk-bound NAS serving both sessions
+//! is the same shape one layer down. So a running transfer still stands aside for
+//! navigation on the same share. `CheckpointStream`'s foreground auto-yield knows
+//! how to park between chunks; these two functions are the probe it parks on, and
+//! they're what `SmbVolume`'s `Volume` foreground-yield methods delegate to.
 //!
 //! The share is busy while a foreground operation HOLDS A LEASE on it (a directory
 //! listing takes one for its real duration), and for
@@ -15,8 +20,8 @@
 //! event to sleep on, and the leftover quiet window is one sleep to a computed
 //! deadline. Neither is a tick.
 //!
-//! ❗ **The lease is what makes this exact, and it is not the connection.** The SMB
-//! connection has no holder — every `SmbVolume` clone multiplexes frames over one
+//! ❗ **The lease is what makes this exact, and it is not the connection.** An SMB
+//! connection has no holder — every clone multiplexes frames over its one
 //! session, so there is nothing there to count, which is why this was time-based
 //! alone and why a slow listing used to stop counting halfway through the user's
 //! wait. A LISTING, though, is a scoped operation with a beginning and an end, so

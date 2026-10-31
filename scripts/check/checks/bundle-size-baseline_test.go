@@ -48,6 +48,44 @@ func TestScanBundleDir(t *testing.T) {
 	}
 }
 
+// A gating lane (the desktop's, run before every release) fails on growth past the budget, so
+// shipping a bigger bundle is a conscious baseline refresh; a gauge lane only warns.
+func TestRunBundleSizeCheckGrowthFailsOnlyAGatingLane(t *testing.T) {
+	for _, failOnGrowth := range []bool{false, true} {
+		rootDir, distDir := makeBundleRoot(t)
+		writeDistFile(t, distDir, "index.html", 1200)
+		writeTestBundleBaseline(t, rootDir, bundleBaseline{TotalBytes: 1000})
+		spec := bundleSizeSpec{
+			label:        "dist/",
+			distDir:      distDir,
+			baselineRel:  websiteBundleBaselineRel,
+			refreshCmd:   "pnpm check x",
+			failOnGrowth: failOnGrowth,
+		}
+
+		result, err := runBundleSizeCheck(&CheckContext{RootDir: rootDir, CI: true}, spec)
+		if failOnGrowth {
+			if err == nil {
+				t.Errorf("failOnGrowth: 20%% growth should fail, got %+v", result)
+			}
+			continue
+		}
+		if err != nil || result.Code != ResultWarning {
+			t.Errorf("gauge lane: 20%% growth should warn, got %+v, %v", result, err)
+		}
+	}
+}
+
+// A gating lane can't pass without a baseline to gate against.
+func TestRunBundleSizeCheckGatingLaneFailsWithoutBaselineInCI(t *testing.T) {
+	rootDir, distDir := makeBundleRoot(t)
+	writeDistFile(t, distDir, "index.html", 1200)
+	spec := bundleSizeSpec{label: "dist/", distDir: distDir, baselineRel: websiteBundleBaselineRel, failOnGrowth: true}
+	if result, err := runBundleSizeCheck(&CheckContext{RootDir: rootDir, CI: true}, spec); err == nil {
+		t.Errorf("want a failure without a committed baseline, got %+v", result)
+	}
+}
+
 func TestTopBundleAssets(t *testing.T) {
 	assets := map[string]int64{"a": 10, "b": 30, "c": 20, "d": 5}
 	top := topBundleAssets(assets, 2)

@@ -10,12 +10,17 @@
 //! The app's change watch is the first observer it registers; that the watch
 //! arms and disarms on that order is `listing_host/tests/lifecycle_order_test.rs`.
 
+use std::future::Future;
+use std::path::Path;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::sorting::{DirectorySortMode, SortColumn, SortOrder};
 use super::testing::{Heard, RecordingObserver, TestEngine, TestListing, TestListingGuard, request};
+use cmdr_fs::entry::FileEntry;
 use cmdr_fs::testing::unique_test_id;
-use cmdr_fs::volume::InMemoryVolume;
+use cmdr_fs::volume::{InMemoryVolume, ListingProgress, ListingWatch, Volume, VolumeError};
 
 /// An engine whose observer records every open and close, serving an empty
 /// in-memory volume under `volume_id`.
@@ -77,7 +82,7 @@ async fn a_synchronously_started_listing_tells_its_observers_it_opened() {
         .inner
         .list_directory_start_with_volume(
             "lifecycle-sync-vol",
-            std::path::Path::new("/"),
+            Path::new("/"),
             true,
             SortColumn::Name,
             SortOrder::Ascending,
@@ -94,4 +99,80 @@ async fn a_synchronously_started_listing_tells_its_observers_it_opened() {
             cached: true
         }]
     );
+}
+
+/// An in-memory volume that hands out a [`ListingWatch`] per shown directory
+/// and counts how many are alive, the way the SMB backend keeps a DFS link's
+/// watch for as long as a listing behind it is open.
+struct HoldingVolume {
+    inner: InMemoryVolume,
+    alive: Arc<AtomicUsize>,
+}
+
+struct CountedHold(Arc<AtomicUsize>);
+
+impl Drop for CountedHold {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+impl Volume for HoldingVolume {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+
+    fn root(&self) -> &Path {
+        self.inner.root()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn list_directory<'a>(
+        &'a self,
+        path: &'a Path,
+        on_progress: Option<&'a (dyn Fn(ListingProgress) + Sync)>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        self.inner.list_directory(path, on_progress)
+    }
+
+    fn get_metadata<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
+        self.inner.get_metadata(path)
+    }
+
+    fn watch_listing(&self, _path: &Path) -> Option<ListingWatch> {
+        self.alive.fetch_add(1, Ordering::SeqCst);
+        Some(ListingWatch::new(CountedHold(Arc::clone(&self.alive))))
+    }
+}
+
+/// What a volume keeps alive for a shown directory lives exactly as long as
+/// the listing: taken on open, released on close.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_volume_keeps_its_listing_watch_until_the_listing_closes() {
+    let alive = Arc::new(AtomicUsize::new(0));
+    let engine = TestEngine::builder()
+        .volume(
+            "holding-vol",
+            Arc::new(HoldingVolume {
+                inner: InMemoryVolume::new("Holding"),
+                alive: Arc::clone(&alive),
+            }),
+        )
+        .build();
+    let listing = TestListingGuard::adopt(&engine, unique_test_id("holding"));
+
+    engine
+        .read_with(&engine.streaming_state(), &request(listing.id(), "holding-vol", "/"))
+        .await
+        .expect("the volume lists");
+    assert_eq!(alive.load(Ordering::SeqCst), 1, "the open takes the volume's hold");
+
+    engine.inner.list_directory_end(listing.id());
+    assert_eq!(alive.load(Ordering::SeqCst), 0, "the close releases it");
 }

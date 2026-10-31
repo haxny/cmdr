@@ -47,6 +47,7 @@ use tauri_specta::{Builder, collect_events};
 
 use crate::agent::chat::stream::AskCmdrTurn;
 use crate::agent::suggested_ops::SuggestionsChanged;
+use crate::agent::tools::propose::rename::BulkRenameCheckProgress;
 use crate::agent::wake::{AgentWakeStaged, AgentWakeStatus};
 use crate::clipboard::ClipboardPasteSettled;
 use crate::commands::search::SearchIndexReadyEvent;
@@ -59,8 +60,8 @@ use crate::events::index_mapping::{
 };
 use crate::file_system::git::wiring::GitStateChangedPayload;
 use crate::file_system::volume::eject::VolumesEjectingChanged;
-use crate::file_viewer::ViewerPullProgress;
 use crate::file_viewer::open_with_extract::{OpenWithCopyLaunched, OpenWithCopyRefused};
+use crate::file_viewer::{ViewerMediaLoad, ViewerPullProgress};
 use crate::listing_host::events::{
     DirectoryDiff, ListingCancelledEvent, ListingCompleteEvent, ListingErrorEvent, ListingOpeningEvent,
     ListingProgressEvent, ListingReadCompleteEvent, ListingRespelledEvent, ListingStalledEvent,
@@ -154,6 +155,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::file_system::resort_listing,
                     crate::commands::file_system::get_path_limits,
                     crate::commands::file_system::enrich_tags,
+                    crate::commands::file_system::enrich_packages,
                     crate::commands::file_system::toggle_tags,
                     crate::commands::file_system::path_exists,
                     crate::commands::file_system::destination_exists,
@@ -523,6 +525,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::agent::apply_bulk_rename,
                     crate::commands::agent::revise_bulk_rename_row,
                     crate::commands::agent::cancel_bulk_rename_proposal,
+                    crate::commands::agent::cancel_bulk_rename_check,
                     crate::commands::agent::suggested_ops_list,
                     crate::commands::agent::suggested_ops_page,
                     crate::commands::agent::suggested_ops_live_facts,
@@ -682,6 +685,9 @@ macro_rules! ipc_command_manifest {
                     crate::commands::network::get_known_share_by_name,
                     crate::commands::network::update_known_share,
                     crate::commands::network::get_username_hint,
+                    crate::commands::network::allow_smb_link_target,
+                    crate::commands::network::forget_smb_link_target,
+                    crate::commands::network::list_smb_link_consents,
                     crate::commands::network::save_smb_credentials,
                     crate::commands::network::get_smb_credentials,
                     crate::commands::network::has_cached_smb_credentials,
@@ -701,6 +707,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::volume_sign_in::get_volume_sign_in_state,
                     crate::commands::network::disconnect_smb_volume,
                     crate::commands::eject::eject_volume,
+                    crate::commands::eject::eject_all_on_disk,
                     crate::commands::eject::get_ejecting_volume_ids,
                     crate::commands::network::set_smb_account_preference,
                     crate::commands::network::disconnect_network_host,
@@ -1160,6 +1167,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             // Operation manager registry snapshot (crates/cmdr-operations/src/manager.rs).
             wire::OperationsChanged,
             SuggestionsChanged,
+            // How far a rename review's check has got (agent/tools/propose/rename/check.rs).
+            BulkRenameCheckProgress,
             // Every Ask Cmdr turn's progress, keyed by conversation: rail sends and wakes
             // alike (agent/chat/stream.rs).
             AskCmdrTurn,
@@ -1355,6 +1364,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             QueueRowContextAction,
             // emit_to(viewer label): how far a viewer's pull into its preview temp got.
             ViewerPullProgress,
+            // emit_to(viewer label): how a volume-served picture's or PDF's request is going.
+            ViewerMediaLoad,
             TabContextAction,
             // emit_to("main"): a date picked from a file list header's Sort by popup, for its pane.
             DateSortMenuPick,

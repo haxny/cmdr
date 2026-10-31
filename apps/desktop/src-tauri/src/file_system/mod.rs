@@ -15,6 +15,8 @@ pub mod google_drive;
 pub(crate) mod index_provider;
 #[cfg(target_os = "macos")]
 pub mod open_with;
+/// Asking macOS which visible dotted folders are packages.
+pub(crate) mod packages;
 pub mod restic;
 #[cfg(target_os = "macos")]
 pub mod share;
@@ -384,7 +386,11 @@ async fn wait_for_mdns_ready() {
     log::debug!("mDNS discovery didn't reach Active within 15s, proceeding anyway");
 }
 
+#[cfg(all(test, target_os = "macos"))]
+mod watcher_fsevents_test;
 #[cfg(test)]
 mod watcher_incremental_test;
+#[cfg(all(test, not(target_os = "macos")))]
+mod watcher_notify_test;
 #[cfg(test)]
 mod watcher_test;

@@ -2,9 +2,7 @@
 
 The depth behind `CLAUDE.md`: the shape of the crate, the wire contract it implements, what the `Volume` impl answers
 and why, the error policy, where a test lives, and what is deliberately not done yet. The app-side half (the tracker
-task, the device provider, eject, the IPC commands) is `apps/desktop/src-tauri/src/adb/DETAILS.md`; what the backend
-still owes is in GitHub issues [#190](https://github.com/vdavid/cmdr/issues/190) (the real-device pass) and
-[#191](https://github.com/vdavid/cmdr/issues/191) (`sendrecv_v2` compression).
+task, the device provider, eject, the IPC commands) is `apps/desktop/src-tauri/src/adb/DETAILS.md`.
 
 ## Why a second Android backend
 
@@ -92,11 +90,35 @@ only the low nine bits anyway.
   len + message. `SND2` (feature `sendrecv_v2`) sends `SND2` + len + path then `SND2` + mode(u32) + flags(u32), then the
   same data stream. `SEND` truncates on open, which is why every write here stages (§ "The `Volume` answers").
 
+**Compression** (`lz4.rs`, on when the device advertises `sendrecv_v2_lz4`). `sendrecv_v2` alone doesn't promise it:
+each algorithm is its own feature, and a device that doesn't know a flag answers `FAIL` + `unknown flags`, so the flag
+goes out only on that word and everything else stays plain `SND2`/`RCV2` or `SEND`/`RECV`, with no retry. Flag bits:
+brotli 1, lz4 2, zstd 4, dry run `0x80000000`; one compression bit at most. Under the flag, the file is ONE LZ4 frame
+across the transfer's `DATA` payloads, cut at arbitrary bytes; the packet framing and the `DONE` are otherwise the same.
+adbd writes linked 64 KiB blocks with no checksums (`LZ4F_compressBegin` with null preferences). The reader takes any
+valid frame (block mode, up to the format's 4 MiB blocks, the optional checksums and content size) and refuses a
+dictionary or a second frame. (All verified against `client/file_sync_client.cpp`, `daemon/file_sync_service.cpp`,
+`compression_utils.h`, and `file_sync_protocol.h` in AOSP `packages/modules/adb` main, 2026-10-30.) Why LZ4 and not the
+other two: `docs/notes/adb-sendrecv-compression-2026-10-30.md`.
+
+- ❗ **A `DONE` before the frame's end mark is `AdbError::Protocol`**, never a clean end: that's a truncated file, and
+  on a stream of unknown length nothing downstream would catch it. `lz4_flex`'s `FrameDecoder` takes a frame cut at a
+  block boundary as finished, one of the two reasons the reader is ours (the other: it's a blocking `Read` that can't
+  resume a partial block over an async socket).
+- ❗ **A push owes a whole frame even for an empty file.** adbd's decoder reports `Done` only after the end mark, so a
+  `DONE` without one spins its decode loop forever. `Lz4Writer::finish` always emits a header and an end mark.
+- **A compression bomb** (255:1 at best, so one 64 KiB packet decodes to 16 MiB) stays bounded three ways: the size word
+  is refused past the frame's declared maximum before a byte of the block is buffered, a block that decodes past that
+  maximum fails inside the codec at the end of its buffer, and decoded bytes leave at most `MAX_DATA_CHUNK` per
+  `recv_chunk`, so the next block decodes only when the consumer has room. Peak per stream: one block in, one block out,
+  a 64 KiB window, and the read stream's channel. The total a device sends is unbounded, exactly as on an uncompressed
+  pull.
+
 **Every length word is the device's to choose, so each is bounded before its buffer exists.** A sync payload (name,
 `DATA`, `FAIL` message) past `MAX_DATA_CHUNK` (64 KiB) and a shell frame past `shell::MAX_FRAME_PAYLOAD` (1 MiB, adbd's
-own buffer) are `AdbError::Protocol`. Before the caps, one hostile `DNT2` or stderr frame allocated 4 GiB; the
-`adb_sync` and `adb_shell` fuzz targets (`fuzz/DETAILS.md`) found both within a few hundred runs, and `sync_test.rs` /
-`shell_test.rs` pin them.
+own buffer) are `AdbError::Protocol`, and so is an LZ4 block past its frame's maximum. Before the caps, one hostile
+`DNT2` or stderr frame allocated 4 GiB; the `adb_sync` and `adb_shell` fuzz targets (`fuzz/DETAILS.md`) found both
+within a few hundred runs, and `sync_test.rs` / `shell_test.rs` pin them. `adb_lz4` holds the frame reader to the same.
 
 **Shell** (`shell.rs`): `shell,v2,raw:<cmd>` (feature `shell_v2`) frames stdout, stderr, and the exit code as packets
 `[id: u8][len: u32 LE][payload]` with ids `0` stdin, `1` stdout, `2` stderr, `3` exit (payload one byte). A device
@@ -210,7 +232,8 @@ The volume is device-anchored, the same shape MTP has, and every answer below fo
   `DeviceGone` into `VolumeError::DeviceDisconnected` and emits the transition once (`state.rs`). `track-devices`
   additionally retires the volume when its serial leaves the list, which is the push channel MTP never had.
 - **Space**: two answers, both `df -k`. `get_space_info` is the phone's figure, asked of the shared storage (`/sdcard`),
-  and is what the pane's indicator and the poller show, polled at `space_poll_interval` = 30 s.
+  and is what the pane's indicator and the poller show, polled at `space_poll_interval` = 30 s. Before a volume exists,
+  `shell::shared_storage_space` asks the same thing for the app's switcher row, dialing nothing.
   `get_space_info_at(path)` asks about `path` itself, so an SD card answers for what's on it; the transfer pre-flight
   asks this of the destination folder. ❌ Never ask about the device root: `/` is a read-only system image reporting 0
   free, which put "0 bytes" in the pane and refused every copy onto a phone (observed on a Pixel 9 Pro XL, the dev log's
@@ -240,8 +263,8 @@ The volume is device-anchored, the same shape MTP has, and every answer below fo
   `FakeTree::new` and `FakeTree::android_layout` mount `/` read-only (`FakeMount::read_only`), so a write under it
   answers `EROFS` and `test -w` exits 1 there, as the kernel does under a read-only mount. The mount is matched after
   following links (`FakeTree::writes_refused_at`), so a write through the layout's `/sdcard` link lands on shared
-  storage rather than under `/`. `test -w /` exiting 1 on a real phone is not yet verified on a device (the Pixel was
-  unplugged); `classify_failed_verb` already relies on the same verb.
+  storage rather than under `/`. `classify_failed_verb` relies on the same verb, whose exit 1 on `/` is verified (§
+  "Verified on a real phone").
 
 ## The error policy
 
@@ -280,6 +303,20 @@ v1 `STAT` zeroes the mode on any failure, so a device without `stat_v2` can't te
 that gap stays. The fake models the denial with `FakeTree::deny_sync_stat`, and `conformance_test.rs` holds the three
 guards to it.
 
+**An empty listing asks whether the folder could be opened at all.** `adbd`'s `LIST`/`LIS2` answers `DONE` straight away
+when `opendir` fails, so a folder it can't read, an empty folder, and a missing path all list as nothing, and it never
+sends `.`/`..` (verified on Pixel 9 Pro XL, Android 17 `CP3A.261005.005`, adb 37.0.0, raw sync `LIST` of `/data`, an
+empty folder, and `/sdcard/nope-xyz`, 2026-10-30, #836). `list_directory_impl`'s stat before the `LIST` separates
+"missing", but `STAT` succeeds on `/data` (`drwxrwx--x system`), which then read as an empty folder. So a listing that
+comes back EMPTY runs one `test -r '<p>' && test -x '<p>'` (`shell::run_chain`, one round trip, only for empty
+listings): exit 1 re-stats the folder and answers `PermissionDenied { path, raw_os_error: None }`, or `NotFound` if it
+went away meanwhile; any other exit can't tell and leaves the listing empty. `-x` counts too: a folder with `r` but no
+`x` opens, but `adbd` can't stat what's inside and drops every entry. A copy scan (`scan_list`) asks too, or a copy
+would quietly make an empty folder. **❌ The drive-index walk (`list_directory_for_scan`, `EmptyListing::Believe`)
+doesn't:** a phone holds hundreds of empty folders, and one shell round trip each took a walk of 2,213 folders from 4 s
+to about 22 s (Pixel 9 Pro XL, dev build, 2026-10-30). The price is a refused folder indexed as empty, with size 0,
+which misleads nobody the way a pane would. The fake models refusal with `FakeTree::deny_read`.
+
 **`create_directory_all` names a file in the way** as `NotADirectory(device_path)`, the contract every backend keeps
 (`conformance::assert_create_directory_all_refuses_a_file_in_the_way`). `mkdir -p` says "File exists" or "Not a
 directory" only on stderr, so both halves are the probe's: the leaf stat that already decides `AlreadyExisted` refuses a
@@ -303,15 +340,18 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
   shell verbs in `shell.rs`, a real phone's `df -k` output in `pixel_captures.rs`): a loopback `TcpListener` speaking
   the host framing, `host:transport`, `host-serial:<serial>:features`, `sync:` (both v1 and v2 verbs; `SEND` creates its
   file at open, as a device's does, so an upload that stops short leaves a torn file for the writer's cleanup to remove,
-  and a cell can watch that cleanup fail), and `shell,v2,raw:` over an in-memory `FakeTree`. The tree resolves links as
-  the kernel does: a read follows every link along the path (`canonical`, up to `MAX_LINK_HOPS`, then `ELOOP`), `STAT`
-  leaves the last one unfollowed, `LIST` of a link lists its target, and a write stays literal;
-  `FakeTree::android_layout` builds the `/sdcard` → `/storage/self/primary` → `/storage/emulated/0` chain the index
-  cells walk (a phone's own, verified on Pixel 9 Pro XL, Android 17, `adb shell readlink /sdcard /storage/self/primary`,
-  2026-09-11), plus `host:track-devices` with `push_devices` for scripted hotplug, `drop_connections` / `stop` for
-  faults, `hold_answers` / `release_answers` to hold a dial provably in flight, and `requests` (every service request,
-  in order) for counting dials or proving none happened. `volume/testing.rs` holds the volume-level fixtures on top of
-  it. No `adb` binary, no device, no Docker: every cell runs in the unit lane.
+  and a cell can watch that cleanup fail; `RCV2`/`SND2` honor the LZ4 flag, refuse it where `set_features` doesn't list
+  `sendrecv_v2_lz4`, and record each flags word for `transfer_flags`, so every volume-level cell runs compressed and a
+  fallback cell means something), and `shell,v2,raw:` over an in-memory `FakeTree`. The tree resolves links as the
+  kernel does: a read follows every link along the path (`canonical`, up to `MAX_LINK_HOPS`, then `ELOOP`), `STAT`
+  leaves the last one unfollowed, `LIST` of a link lists its target (with no `.`/`..`, and nothing at all for a
+  `deny_read` folder, as a phone answers), and a write stays literal; `FakeTree::android_layout` builds the `/sdcard` →
+  `/storage/self/primary` → `/storage/emulated/0` chain the index cells walk (a phone's own, verified on Pixel 9 Pro XL,
+  Android 17, `adb shell readlink /sdcard /storage/self/primary`, 2026-09-11), plus `host:track-devices` with
+  `push_devices` for scripted hotplug, `drop_connections` / `stop` for faults, `hold_answers` / `release_answers` to
+  hold a dial provably in flight, and `requests` (every service request, in order) for counting dials or proving none
+  happened. `volume/testing.rs` holds the volume-level fixtures on top of it. No `adb` binary, no device, no Docker:
+  every cell runs in the unit lane.
 - **App-side** (`apps/desktop/src-tauri/src/adb/`): anything driving `cmdr-operations`, the volume registry,
   `volume_listing::complete`, or the listing cache. The transfer engine's cells sit beside the SFTP suite, in
   `apps/desktop/src-tauri/src/operations_host/backend_suites/adb_transfer_test.rs`; the list of what exists is
@@ -324,16 +364,18 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
 - **Codec cells that need exact bytes, not a conversation**, script the peer: `AdbConnection::scripted` plays a fixed
   byte string and discards what we write (`AdbConnection` holds any `AsyncRead + AsyncWrite` stream for this). The
   `fuzzing` feature's `fuzzing` module drives the sync and shell readers the same way for the fuzz targets.
-- **A real-device pass is pending** (§ "Known gaps"). The fake server implements what the AOSP docs say; the documented
-  differences between the docs and a phone's `adbd` are what that pass is for.
+- **The fake implements what the AOSP docs say**, so a phone can still surprise it. What a real one did: § "Verified on
+  a real phone".
 
 ## Known gaps and follow-ups
 
 - **No ranged read in the sync service.** `RECV` has no offset; `open_read_stream_at_offset` reads and discards up to
   it. A resumed pane read on a phone is rare, and a resume from the middle of a 2 GB file re-reads the first half. If it
   matters, route resumable streams through the bounded `read_range` primitive instead.
-- **`sendrecv_v2` compression flags** (brotli, lz4, zstd) are off on purpose; measure before enabling, since the device
-  does the compressing.
+- **`sendrecv_v2` compression is LZ4 only.** brotli and zstd stay off: both cost real speed pulling photos for little or
+  no gain elsewhere (`docs/notes/adb-sendrecv-compression-2026-10-30.md`). LZ4 has no opt-out and no per-file choice;
+  the numbers show it neutral on already-compressed data, from one idle phone on AC power, so a phone on battery is the
+  open question.
 - **Bulk writes run at `adb push` speed; small files pay about 260 ms EACH.** `SEND` frames at the protocol's 64 KiB
   maximum with no per-chunk round trip, so one large file lands as fast as the CLI does (about 28 MB/s through Cmdr
   against 31 to 35 MB/s for `adb push`, same cable, same minute). A copy of many small files is another story: 200 files
@@ -348,8 +390,22 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
   write mode, or a capability the engine reads), which touches the `Volume` trait.
 - **Wireless debugging** (`adb pair`) is out of scope: the server owns pairing, and a paired device appears in
   `track-devices` like any other.
-- **Real-device pass pending**: the authorize prompt, an `unauthorized` → `device` transition mid-session, a 2 GB `RECV`
-  / `SEND`, and a `/data` listing on a non-rooted phone (expect `PermissionDenied` carrying the path).
+
+## Verified on a real phone
+
+Pixel 9 Pro XL, Android 17 (`CP3A.261005.005`), adb 37.0.0, macOS 27.0.1, dev build, 2026-10-30:
+
+- **Authorizing**: revoking USB debugging drops the phone's whole USB session. The row waits while unauthorized, and
+  tapping Allow brings ADB back with nothing else pressed. Android falls back to "No data transfer", so MTP stays away
+  until something sets File transfer.
+- **2 GB each way**: `RECV` and `SEND` both byte-identical by SHA-256, with the modified date kept.
+- **Compressed transfers** against a real `adbd`: round trips from 0 bytes to 20 MiB, including the empty file. Numbers:
+  `docs/notes/adb-sendrecv-compression-2026-10-30.md`.
+- **Refusals**: `/data` answers `PermissionDenied` carrying the path, and `test -w /` exits 1 where a readable folder
+  exits 0.
+- **Drive-index walk of `/sdcard`**: 23,553 entries and 2,205 folders in 5.1 s, 4 s on a rescan. Pane listings stay
+  responsive under the eight-listing ceiling: a median of 50 ms during a walk against 36 ms idle. Unplugging mid-walk
+  ends it with a typed disconnect, and the in-flight listings aren't held against their folders.
 
 ## The public surface
 

@@ -18,6 +18,16 @@ func stampFixture(t *testing.T) string {
 	return binaryPath
 }
 
+// The Playwright build compiles with `--profile e2e` (release minus thin LTO, incremental), so
+// cargo writes the binary under the profile's own dir, never `release/`, where a plain
+// `pnpm tauri build` would overwrite it.
+func TestE2EBinaryPathUsesTheE2EProfileDir(t *testing.T) {
+	got := e2eBinaryPath("/repo", "aarch64-apple-darwin")
+	if want := filepath.Join("/repo", "target", "aarch64-apple-darwin", "e2e", "Cmdr"); got != want {
+		t.Errorf("e2eBinaryPath = %q, want %q", got, want)
+	}
+}
+
 func TestE2EBinaryIsCurrent(t *testing.T) {
 	t.Run("no stamp means the binary's provenance is unknown", func(t *testing.T) {
 		if e2eBinaryIsCurrent(stampFixture(t), "abc123") {

@@ -40,10 +40,6 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
 }))
 vi.mock('#lib/utils/filename-validation.js', () => ({
   validateFilename: validateFilenameSpy,
-  getExtension: (name: string) => {
-    const i = name.lastIndexOf('.')
-    return i > 0 ? name.slice(i) : ''
-  },
 }))
 vi.mock('../rename/rename-activation', () => ({ cancelClickToRename: vi.fn() }))
 vi.mock('../rename/rename-operations', () => ({

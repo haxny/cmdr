@@ -57,7 +57,10 @@ handed ONE typed `ReportIncident` (`report-incident.ts`). The incident decides e
   is `helpMenu`).
 - **The pre-filled note** (`reportNoteFor`): the headline the person saw, then `Reference: <operation>/<kind>` built
   from the typed tags (`WriteOperationError['type']`, `ListingErrorReason['reason']`, `MutationError['type']`,
-  `UpgradeFailure`). The reference stays the same whatever language the note is in, so triage can search for it. ❌
+  `UpgradeFailure`). A failure that wraps another (`source_not_removed`) adds the wrapped kind as a third segment
+  (`move/source_not_removed/file_locked`, via `operationFailureKinds`): its title reads the same whatever refused, so
+  the cause is what triage needs (cmdr-reports#84). Nothing machine-parses the code (no api-server or board parser), so
+  a new segment is safe. The reference stays the same whatever language the note is in, so triage can search for it. ❌
   Nothing reads a message to find the kind (`cmdr/no-error-string-match`).
 - **The look**: a failure is the "Send error report…" button (or `look="link"` in a sentence, the Settings update row);
   a slow incident is always the lighter "Taking long? Send a report" link, since nothing has gone wrong yet.

@@ -267,6 +267,20 @@ fn pending_conflict_yaml(conflict: &WriteConflictEvent) -> String {
         "      destinationIsLookAlike: {}\n",
         conflict.destination_is_look_alike
     ));
+    // Not a clash: the destination refused to store the name, so a skip is the
+    // only answer that helps (`cmdr_operations` `refused_name.rs`).
+    // Rendered as its wire name, the one the frontend reads too.
+    if let Some(reason) = conflict.refused_name {
+        let reason = serde_json::to_value(reason)
+            .ok()
+            .and_then(|wire| wire.as_str().map(str::to_owned))
+            .unwrap_or_default();
+        yaml.push_str(&format!("      refusedName: {reason}\n"));
+        yaml.push_str(
+            "      answerWith: resolve_conflict (operationId + conflictId + resolution skip, optional applyToAll; any other resolution stops the operation)\n",
+        );
+        return yaml;
+    }
     yaml.push_str(
         "      answerWith: resolve_conflict (operationId + conflictId + resolution skip|overwrite|rename|overwrite_smaller|overwrite_older, optional applyToAll)\n",
     );

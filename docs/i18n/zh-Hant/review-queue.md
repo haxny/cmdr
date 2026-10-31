@@ -78,3 +78,9 @@ worth keeping).
 - **AI 建議 batch headings and pills** (`suggestedOps.sweepWhen.*`, `.reversible.*`, `.irreversible.*`): headings end in
   `建議的` (`今天 {time} 建議的`), pills open `可以還原：` / `無法還原：`, and the reason label is `理由：`. Confirm
   they read naturally in the dialog, and that `{date} 建議的` reads right after an ISO date.
+- **`篩選標記` for the pane's typed-text badge** (`commands.paneQuickFilter.description`): follows the `badge` ruling,
+  but the thing is a small box holding typed text; confirm it reads right.
+- **`清除「跳至」的輸入內容`** (`fileExplorer.typeToJump.clear`): bare `清除跳至` parses as a broken verb chain, so it
+  leaves the `清除篩選` frame and names what goes. Screen readers only.
+- **`要透過連結連到另一個伺服器`** (`*.linkTargetUnreachable*`): the plain rendering of "sits behind a link"; `連結`
+  alone may read as a web link to someone who doesn't know DFS.

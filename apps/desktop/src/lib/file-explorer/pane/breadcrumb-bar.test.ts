@@ -220,13 +220,23 @@ describe('createBreadcrumbHandlers', () => {
     const event = { preventDefault: vi.fn() } as unknown as MouseEvent
     createBreadcrumbHandlers(deps).handleContextMenu(event)
     expect(calls.onRequestFocus).toHaveBeenCalledTimes(1)
-    expect(ipc.showBreadcrumbContextMenu).toHaveBeenCalledWith(boundCombos, undefined, undefined)
+    expect(ipc.showBreadcrumbContextMenu).toHaveBeenCalledWith(boundCombos, undefined, undefined, false)
   })
 
   it('passes the volume id and name for an ejectable volume', () => {
     eject.isVolumeEjectable.mockReturnValue(true)
     createBreadcrumbHandlers(deps).handleContextMenu({ preventDefault: vi.fn() } as unknown as MouseEvent)
-    expect(ipc.showBreadcrumbContextMenu).toHaveBeenCalledWith(boundCombos, 'ext', 'External')
+    expect(ipc.showBreadcrumbContextMenu).toHaveBeenCalledWith(boundCombos, 'ext', 'External', false)
+  })
+
+  it('offers Eject all when the row says its disk has other volumes', () => {
+    eject.isVolumeEjectable.mockReturnValue(true)
+    const shared = {
+      ...deps,
+      getCurrentVolumeInfo: () => ({ ...deps.getCurrentVolumeInfo(), sharesDiskWithOthers: true }),
+    } as typeof deps
+    createBreadcrumbHandlers(shared).handleContextMenu({ preventDefault: vi.fn() } as unknown as MouseEvent)
+    expect(ipc.showBreadcrumbContextMenu).toHaveBeenCalledWith(boundCombos, 'ext', 'External', true)
   })
 
   describe('switching volume', () => {

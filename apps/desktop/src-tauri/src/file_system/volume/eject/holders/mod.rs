@@ -20,6 +20,13 @@
 //! reasons: rule 5 needs the device of every mount of the teardown, not just the one
 //! being walked, and a budget that runs out mid-facts then leaves every holder named and
 //! [`HolderKind::Unclassified`] rather than dropping the ones it never reached.
+//!
+//! **Then one more question, inside the same budget**: the walk sees same-uid processes
+//! only, and an image Finder opened is served by a `diskimagesiod` under its own uid. So
+//! the attached images stored on the drive that the walk didn't name join the answer as
+//! holders of their own ([`facts::images_the_walk_missed`]). Their kind comes from the
+//! image list rather than from the walk, which is what lets "eject that image first" beat
+//! "wait a minute" for a holder this scan could otherwise never see.
 
 #[cfg(all(test, target_os = "macos"))]
 mod detached_holder;
@@ -79,8 +86,8 @@ pub enum HolderKind {
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum HolderScan {
     /// Every still-listed mount of the teardown was scanned, so `named` is the whole
-    /// story. Empty means no same-uid process held the drive (a root-owned holder is
-    /// invisible to this scan).
+    /// story. Empty means no same-uid process held the drive and no disk image is stored
+    /// on it (any other holder under another uid is invisible to this scan).
     Complete {
         /// The holders, deduped by pid.
         named: Vec<VolumeHolder>,
@@ -179,7 +186,8 @@ pub(super) async fn scan(paths: Vec<PathBuf>, budget: Duration) -> HolderScan {
     }
     let found = Arc::new(Mutex::new(Vec::with_capacity(expected)));
     let kinds = Arc::new(Mutex::new(HashMap::new()));
-    let (filled, named) = (Arc::clone(&found), Arc::clone(&kinds));
+    let missed = Arc::new(Mutex::new(Vec::new()));
+    let (filled, named, added) = (Arc::clone(&found), Arc::clone(&kinds), Arc::clone(&missed));
     // ❗ A plain `Instant`, ❌ not tokio's: this deadline is read on a std thread, which a
     // paused test clock races straight past.
     let deadline = Instant::now() + budget;
@@ -198,9 +206,13 @@ pub(super) async fn scan(paths: Vec<PathBuf>, budget: Duration) -> HolderScan {
                 holders.push(holder.pid);
             }
         }
-        facts::name_the_kinds(&holders, &paths, deadline, |pid, what| {
+        let about = facts::Surroundings::new(facts::target_devices(&paths));
+        facts::name_the_kinds(&holders, &about, deadline, |pid, what| {
             named.lock_ignore_poison().insert(pid, what);
         });
+        added
+            .lock_ignore_poison()
+            .extend(facts::images_the_walk_missed(&holders, &about, deadline));
     })
     .await;
     if !ran {
@@ -213,6 +225,7 @@ pub(super) async fn scan(paths: Vec<PathBuf>, budget: Duration) -> HolderScan {
     let found = found.lock_ignore_poison();
     let mut scanned = merge(&found, expected);
     apply_kinds(&mut scanned, &kinds.lock_ignore_poison());
+    add_holders(&mut scanned, &missed.lock_ignore_poison());
     scanned
 }
 
@@ -224,7 +237,8 @@ pub(super) async fn scan(paths: Vec<PathBuf>, budget: Duration) -> HolderScan {
 #[cfg(all(test, target_os = "macos"))]
 pub(super) fn kind_of(pid: u32, paths: &[PathBuf]) -> HolderKind {
     let mut kind = HolderKind::Unclassified;
-    facts::name_the_kinds(&[pid], paths, Instant::now() + Duration::from_secs(20), |_, what| {
+    let about = facts::Surroundings::new(facts::target_devices(paths));
+    facts::name_the_kinds(&[pid], &about, Instant::now() + Duration::from_secs(20), |_, what| {
         kind = what.kind
     });
     kind
@@ -243,6 +257,17 @@ fn apply_kinds(scanned: &mut HolderScan, kinds: &HashMap<u32, facts::Classified>
             facts::rename(holder, what);
         }
     }
+}
+
+/// Adds holders the walk couldn't see to what it did, after everything it named.
+///
+/// Pure, and it doesn't touch which arm the answer is: adding a name says nothing about
+/// whether the walk covered every mount.
+fn add_holders(scanned: &mut HolderScan, unseen: &[VolumeHolder]) {
+    let named = match scanned {
+        HolderScan::Complete { named } | HolderScan::Incomplete { named } => named,
+    };
+    named.extend_from_slice(unseen);
 }
 
 /// Runs `work` on ONE std thread the budget can walk away from, answering whether it

@@ -1,0 +1,138 @@
+{
+  "stateRecovery.settings.title": "Cmdr не вдалося прочитати ваші параметри, тож застосовано типові",
+  "@stateRecovery.settings.title": {
+    "sourceHash": "b5b4b8e"
+  },
+  "stateRecovery.settings.body": "Статистика використання та звіти про аварії залишаться вимкненими, доки ви знову не ввімкнете їх у розділі Параметри › Оновлення та приватність.",
+  "@stateRecovery.settings.body": {
+    "sourceHash": "20439e1"
+  },
+  "stateRecovery.settings.openSettings": "Відкрити параметри",
+  "@stateRecovery.settings.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.shortcuts.title": "Cmdr не вдалося прочитати ваші клавіатурні скорочення, тож відновлено типові",
+  "@stateRecovery.shortcuts.title": {
+    "sourceHash": "35093bd"
+  },
+  "stateRecovery.license.title": "Cmdr не вдалося прочитати файл ліцензії",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "Якщо Cmdr тепер показується без ліцензії, введіть ліцензійний ключ знову в розділі Параметри › Ліцензія.",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.license.openSettings": "Відкрити параметри",
+  "@stateRecovery.license.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.appStatus.title": "Cmdr не вдалося прочитати, які папки були відкриті на ваших панелях, тож панелі відкриються в домашній папці",
+  "@stateRecovery.appStatus.title": {
+    "sourceHash": "521f5eb"
+  },
+  "stateRecovery.operationLog.title": "Cmdr не вдалося прочитати ваш журнал операцій, тож журнал почнеться з нуля",
+  "@stateRecovery.operationLog.title": {
+    "sourceHash": "0bfa904"
+  },
+  "stateRecovery.chatHistory.title": "Cmdr не вдалося прочитати ваші чати Ask Cmdr, тож список чатів порожній",
+  "@stateRecovery.chatHistory.title": {
+    "sourceHash": "14d6612"
+  },
+  "stateRecovery.favorites.title": "Cmdr не вдалося прочитати ваші улюблені, тож список порожній",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  },
+  "stateRecovery.goToPathHistory.title": "Cmdr не вдалося прочитати ваші недавні записи «Перейти до папки», тож список починається спочатку",
+  "@stateRecovery.goToPathHistory.title": {
+    "sourceHash": "c1c95a1"
+  },
+  "stateRecovery.searchHistory.title": "Cmdr не вдалося прочитати ваші недавні пошуки, тож список починається спочатку",
+  "@stateRecovery.searchHistory.title": {
+    "sourceHash": "75fe9db"
+  },
+  "stateRecovery.selectionHistory.title": "Cmdr не вдалося прочитати ваші недавні шаблони вибору, тож список починається спочатку",
+  "@stateRecovery.selectionHistory.title": {
+    "sourceHash": "a93f574"
+  },
+  "stateRecovery.tagReplacePresets.title": "Cmdr couldn’t read your saved tag replace lists, so the list starts with the built-in one",
+  "@stateRecovery.tagReplacePresets.title": {
+    "sourceHash": "8079259"
+  },
+  "stateRecovery.multiRenamePresets.title": "Cmdr не вдалося прочитати ваші збережені набори параметрів групового перейменування, тож список порожній",
+  "@stateRecovery.multiRenamePresets.title": {
+    "sourceHash": "b6f2a3b"
+  },
+  "stateRecovery.multiRenameLastSettings.title": "Cmdr не вдалося прочитати ваші останні параметри групового перейменування, тож інструмент відкриється з типовими параметрами",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "sourceHash": "b830e12"
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "Cmdr не вдалося прочитати історію полів групового перейменування, тож історія почнеться з нуля",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "sourceHash": "7b31c57"
+  },
+  "stateRecovery.launchDays.title": "Cmdr не вдалося прочитати свій список днів, коли ви його відкривали, тож підрахунок почнеться спочатку",
+  "@stateRecovery.launchDays.title": {
+    "sourceHash": "00f947b"
+  },
+  "stateRecovery.s3Places.title": "Cmdr не вдалося прочитати всі ваші збережені місця S3, тож деяких може бракувати",
+  "@stateRecovery.s3Places.title": {
+    "sourceHash": "6957175"
+  },
+  "stateRecovery.nfsPlaces.title": "Cmdr не вдалося прочитати всі ваші збережені місця NFS, тож деяких може бракувати",
+  "@stateRecovery.nfsPlaces.title": {
+    "sourceHash": "f045d38"
+  },
+  "stateRecovery.sftpServers.title": "Cmdr не вдалося прочитати всі ваші збережені сервери SFTP, тож деяких може бракувати",
+  "@stateRecovery.sftpServers.title": {
+    "sourceHash": "f4426dd"
+  },
+  "stateRecovery.webdavServers.title": "Cmdr не вдалося прочитати всі ваші збережені сервери WebDAV, тож деяких може бракувати",
+  "@stateRecovery.webdavServers.title": {
+    "sourceHash": "c37ebaf"
+  },
+  "stateRecovery.smbShares.title": "Cmdr не вдалося прочитати всі ваші збережені спільні папки SMB, тож деяких може бракувати",
+  "@stateRecovery.smbShares.title": {
+    "sourceHash": "90fa873"
+  },
+  "stateRecovery.smbServers.title": "Cmdr не вдалося прочитати всі сервери, які ви додали за адресою, тож деяких може бракувати",
+  "@stateRecovery.smbServers.title": {
+    "sourceHash": "2d6f960"
+  },
+  "stateRecovery.sftpHostKeys.title": "Cmdr не вдалося прочитати всі сервери SFTP, яким ви довіряєте, тож Cmdr може знову запитати про деякі з них",
+  "@stateRecovery.sftpHostKeys.title": {
+    "sourceHash": "5f3d270"
+  },
+  "stateRecovery.webdavCertificates.title": "Cmdr не вдалося прочитати всі сертифікати серверів, яким ви довіряєте, тож Cmdr може знову запитати про деякі з них",
+  "@stateRecovery.webdavCertificates.title": {
+    "sourceHash": "ca138aa"
+  },
+  "stateRecovery.localAi.title": "Cmdr не вдалося прочитати налаштування локального ШІ, тож Cmdr може знову запропонувати його налаштувати",
+  "@stateRecovery.localAi.title": {
+    "sourceHash": "7d4a0cb"
+  },
+  "stateRecovery.credentials.title": "Cmdr не вдалося прочитати ваші збережені паролі й ключі, тож Cmdr починає з нуля",
+  "@stateRecovery.credentials.title": {
+    "sourceHash": "e4821b8"
+  },
+  "stateRecovery.credentials.body": "Так буває після перенесення на новий компʼютер. Cmdr знову запитає кожен пароль, коли він знадобиться наступного разу.",
+  "@stateRecovery.credentials.body": {
+    "sourceHash": "afac266"
+  },
+  "stateRecovery.keptCopy": "Cmdr зберіг старий файл тут: {path}.",
+  "@stateRecovery.keptCopy": {
+    "sourceHash": "634e87d"
+  },
+  "stateRecovery.showInFinder": "Показати у Finder",
+  "@stateRecovery.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "stateRecovery.dismiss": "Закрити",
+  "@stateRecovery.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "stateRecovery.smbLinkConsents.title": "Cmdr не вдалося прочитати всі сервери, на які ви дозволили входити за посиланнями SMB, тому він може знову запитати про деякі з них",
+  "@stateRecovery.smbLinkConsents.title": {
+    "sourceHash": "2e0f9fd"
+  }
+}

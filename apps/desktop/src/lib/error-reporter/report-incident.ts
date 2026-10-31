@@ -37,8 +37,19 @@ export interface OperationFailedIncident {
   from: Extract<ErrorReportEntry, 'transferError' | 'queueFailure'>
   operation: WriteOperationType
   error: WriteOperationError['type']
+  /**
+   * The kind of the refusal `error` wraps (`source_not_removed`'s `cause`), else `null`.
+   * Fill both from `operationFailureKinds`. The wrapper's title reads the same whatever
+   * refused, so without this a report can't say why the original stayed (cmdr-reports#84).
+   */
+  cause: WriteOperationError['type'] | null
   /** The pipeline's plain-text title for it, the headline the person saw. */
   title: string
+}
+
+/** The typed kinds a failure's reference names: its own, and the one it wraps. Never a path. */
+export function operationFailureKinds(error: WriteOperationError): Pick<OperationFailedIncident, 'error' | 'cause'> {
+  return { error: error.type, cause: error.type === 'source_not_removed' ? error.cause.type : null }
 }
 
 /** Something has made no visible progress for a while. */
@@ -151,7 +162,10 @@ export function reportNoteFor(incident: ReportIncident, now: number = Date.now()
       case 'message':
         return [incident.text]
       case 'operationFailed':
-        return [incident.title, reference(`${incident.operation}/${incident.error}`)]
+        return [
+          incident.title,
+          reference([incident.operation, incident.error, incident.cause].filter((part) => part !== null).join('/')),
+        ]
       case 'operationsFailed':
         return [
           tString('queue.failureToast.summary', {

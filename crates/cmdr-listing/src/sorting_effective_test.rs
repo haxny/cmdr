@@ -157,6 +157,20 @@ fn a_fallback_sorts_by_modified() {
     assert_eq!(names, ["added_last.txt", "added_middle.txt", "added_first.txt"]);
 }
 
+/// A folder macOS calls a package gains an extension under the same name, so
+/// it moves under the Ext sort and nowhere else.
+#[test]
+fn sort_key_changed_sees_a_folder_become_a_package_under_ext_only() {
+    let folder = make_entry("Sketch.mybundle", true, None, None);
+    let mut package = folder.clone();
+    package.set_package(true);
+    let by = |column| every_date(column, SortOrder::Ascending, DirectorySortMode::LikeFiles);
+
+    assert!(sort_key_changed(&folder, &package, &by(SortColumn::Extension)));
+    assert!(!sort_key_changed(&folder, &package, &by(SortColumn::Name)));
+    assert!(!sort_key_changed(&folder, &package, &by(SortColumn::Size)));
+}
+
 /// Each date column's key is its own date: a change to it re-places the row,
 /// a change to another date doesn't.
 #[test]

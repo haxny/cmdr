@@ -36,7 +36,8 @@ Tauri-free; Cmdr hosts it from `apps/desktop/src-tauri/src/listing_host/`.
 - **Only a pane open, a Finder drop/paste, or Ask Cmdr's live `list_dir` resolves a foreign spelling**, ❌ never a
   walker, scan, or refresh.
 - **The orphan reaper keys on `last_accessed_ms`**, which index-size writes never bump.
-- **Finder tags are deferred**: every modify path calls `carry_forward_tags` BEFORE storing.
+- **Finder tags and macOS-reported packages are deferred**: every modify path calls `carry_forward_deferred` BEFORE
+  storing.
 
 Data flow, decisions, the capped surface, and every rule's why: `DETAILS.md`. Read it before any non-trivial work here:
 editing, planning, reorganizing, or advising.

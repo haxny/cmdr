@@ -302,5 +302,13 @@
   "fileOperations.transferDialog.rememberChoiceHelp": "La próxima vez, Cmdr empieza con esta opción, y puedes cambiarla en Configuración. Si sobrescribe archivos, verás un aviso antes.",
   "@fileOperations.transferDialog.rememberChoiceHelp": {
     "sourceHash": "f743019"
+  },
+  "fileOperations.alreadyGone.one": "“{name}” ya no estaba. Seguramente se movió o se eliminó desde otra app.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "838c24f"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} elemento ya no estaba. Seguramente se movió o se eliminó desde otra app.} many {{countText} elementos ya no estaban. Seguramente se movieron o se eliminaron desde otra app.} other {{countText} elementos ya no estaban. Seguramente se movieron o se eliminaron desde otra app.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "e3c9537"
   }
 }

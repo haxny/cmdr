@@ -56,11 +56,14 @@ that wrote into `/insecure` last run leaves nothing for this one):
 - `link-inside` → `photos/2024 summer/beach.txt` (relative, stays in the export) and `link-outside` → `/etc/hostname`
   (absolute, leaves it).
 - `oddnames/caf\xE9.txt` (latin-1, not valid UTF-8) beside `oddnames/fine.txt`.
+- `group-only/secret.txt` (owned by 2000:2001, mode 0640) in a folder owned by 1000:2001: uid 1000 reads it only with
+  2001 in the credential's groups.
 - `large.bin`, 200 MiB (`LARGE_MB`), the same self-describing format as the SFTP and WebDAV fixtures: every 16-byte line
   holds its own zero-padded line number, so a cell checks byte-exactness without shipping a copy.
 
-Every entry belongs to uid/gid 1000 except `hello.txt`; the export root is root's with mode 0777. That's a QNAP share's
-shape, and it's what `guess_identity` must answer 1000 for (the most common non-zero owner), ❌ not 0 from the root.
+Every entry belongs to uid/gid 1000 except `hello.txt` and `group-only/`; the export root is root's with mode 0777.
+That's a QNAP share's shape, and it's what `guess_identity` must answer 1000 for (the most common non-zero owner), ❌
+not 0 from the root.
 
 `/etc/exports`: both `rw,sync,no_subtree_check,root_squash`, `/secure` with `secure` (knfsd's default) and `fsid=1`,
 `/insecure` with `insecure` and `fsid=2`. `sync` makes knfsd honour the client's `stable_how`, so an UNSTABLE WRITE

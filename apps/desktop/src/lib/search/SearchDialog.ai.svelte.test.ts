@@ -174,6 +174,83 @@ describe('SearchDialog AI transparency strip', () => {
     cleanup()
   })
 
+  // Regression (#762): while a new AI query translated, the strip already showed its prompt
+  // but built "what the agent did" from the chips as they stood, so a plain "invoice"
+  // search's hand-typed glob read as "Glob: invoice", an earlier query's step.
+  it('shows no agent steps for a query still translating, then the ones its answer set', async () => {
+    const { overlay, cleanup } = await mountDialog()
+    setMode('filename')
+    setQuery('invoice')
+    dispatchKey(overlay, 'Enter')
+    await flushAi()
+
+    let answer: (result: TranslateResult) => void = () => {}
+    translateSearchQueryMock.mockReturnValueOnce(
+      new Promise<TranslateResult>((resolve) => {
+        answer = resolve
+      }),
+    )
+    setMode('ai')
+    setQuery('tax report from last year')
+    dispatchKey(overlay, 'Enter')
+    await flushAi()
+
+    const strip = (): Element | null => document.body.querySelector('.ai-transparency-strip')
+    expect(strip()?.querySelector('.ai-prompt')?.textContent).toBe('tax report from last year')
+    expect(strip()?.querySelector('.ai-summary')).toBeNull()
+    expect(strip()?.textContent).not.toContain('invoice')
+
+    answer({
+      display: { namePattern: '*tax*', patternType: 'glob' },
+      query: {},
+      caveat: null,
+    } as unknown as TranslateResult)
+    await flushAi()
+    expect(strip()?.querySelector('.ai-summary-pattern')?.textContent).toBe('*tax*')
+    expect(strip()?.textContent).not.toContain('invoice')
+
+    cleanup()
+  })
+
+  it('ignores an AI answer that arrives after a newer search started, filters included', async () => {
+    const answers: ((result: TranslateResult) => void)[] = []
+    translateSearchQueryMock.mockImplementation(
+      () =>
+        new Promise<TranslateResult>((resolve) => {
+          answers.push(resolve)
+        }),
+    )
+    const { overlay, cleanup } = await mountDialog()
+    setMode('ai')
+    setQuery('huge videos')
+    dispatchKey(overlay, 'Enter')
+    await flushAi()
+    setQuery('tax report from last year')
+    dispatchKey(overlay, 'Enter')
+    await flushAi()
+    expect(answers).toHaveLength(2)
+
+    answers[1]({
+      display: { namePattern: '*tax*', patternType: 'glob' },
+      query: {},
+      caveat: null,
+    } as unknown as TranslateResult)
+    await flushAi()
+    answers[0]({
+      display: { namePattern: '*.mov', patternType: 'glob', minSize: 1024 * 1024 * 1024, maxSize: null },
+      query: {},
+      caveat: 'old caveat',
+    } as unknown as TranslateResult)
+    await flushAi()
+
+    expect(getLastAiPrompt()).toBe('tax report from last year')
+    expect(getLastAiPattern()).toBe('*tax*')
+    expect(getSizeFilter()).toBe('any')
+    expect(getLastAiCaveat()).toBeNull()
+
+    cleanup()
+  })
+
   it('hides when a non-AI search runs successfully', async () => {
     translateSearchQueryMock.mockResolvedValueOnce({
       display: { namePattern: '*.pdf', patternType: 'glob' },

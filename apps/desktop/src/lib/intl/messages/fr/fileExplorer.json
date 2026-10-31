@@ -196,6 +196,18 @@
   "@fileExplorer.paneBoundary.reload": {
     "sourceHash": "a53cfeb"
   },
+  "fileExplorer.pane.ejectedDriveStaysToast": "Le volume {volumeName} est éjecté, mais laissez le disque branché : d’autres volumes y sont encore montés.",
+  "@fileExplorer.pane.ejectedDriveStaysToast": {
+    "sourceHash": "12eac5d"
+  },
+  "fileExplorer.pane.ejectAllFailedToast": "Impossible d’éjecter tout le contenu de ce disque : {message}",
+  "@fileExplorer.pane.ejectAllFailedToast": {
+    "sourceHash": "d824a11"
+  },
+  "fileExplorer.pane.ejectAllHeldToast": "Rien n’a été éjecté sur ce disque : {message}",
+  "@fileExplorer.pane.ejectAllHeldToast": {
+    "sourceHash": "9ef094c"
+  },
   "fileExplorer.pane.ejectFailedToast": "Impossible d’éjecter {volumeName} : {message}",
   "@fileExplorer.pane.ejectFailedToast": {
     "sourceHash": "f4072a7"
@@ -1552,6 +1564,22 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Voulez-vous vraiment retirer l’extension « .{oldExt} » ? macOS affichera alors cet élément comme un dossier ordinaire, et non plus comme un seul élément.} other {Voulez-vous vraiment retirer l’extension « .{oldExt} » ? Sans elle, votre Mac risque de ne pas savoir quelle app doit ouvrir le fichier.}}",
+  "@fileExplorer.extensionChange.descriptionRemove": {
+    "sourceHash": "8c87a3d"
+  },
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Voulez-vous vraiment ajouter l’extension « .{newExt} » ? macOS pourrait alors afficher ce dossier comme un seul élément.} other {Voulez-vous vraiment ajouter l’extension « .{newExt} » ? Votre fichier pourrait s’ouvrir dans une autre app la prochaine fois.}}",
+  "@fileExplorer.extensionChange.descriptionAdd": {
+    "sourceHash": "c18c736"
+  },
+  "fileExplorer.extensionChange.keepNone": "Conserver sans extension",
+  "@fileExplorer.extensionChange.keepNone": {
+    "sourceHash": "4ad7a49"
+  },
+  "fileExplorer.extensionChange.removeExtension": "Retirer .{oldExt}",
+  "@fileExplorer.extensionChange.removeExtension": {
+    "sourceHash": "3913e62"
+  },
   "fileExplorer.extensionChange.alwaysAllow": "Toujours autoriser les changements d’extension",
   "@fileExplorer.extensionChange.alwaysAllow": {
     "sourceHash": "52a5c5e"
@@ -1872,6 +1900,14 @@
   "@fileExplorer.navigation.forgetSecretNoneToast": {
     "sourceHash": "3d40a09"
   },
+  "fileExplorer.navigation.ejectOneVolumeTooltip": "Éjecte uniquement ce volume. Le disque reste connecté jusqu’à l’éjection des autres volumes.",
+  "@fileExplorer.navigation.ejectOneVolumeTooltip": {
+    "sourceHash": "e1dd1cc"
+  },
+  "fileExplorer.navigation.ejectAllTooltip": "Éjecte tous les volumes de ce disque pour que vous puissiez le débrancher.",
+  "@fileExplorer.navigation.ejectAllTooltip": {
+    "sourceHash": "9e86249"
+  },
   "fileExplorer.navigation.ejectVolumeAriaLabel": "Éjecter {name}",
   "@fileExplorer.navigation.ejectVolumeAriaLabel": {
     "sourceHash": "61db18b"
@@ -2074,6 +2110,18 @@
   "@fileExplorer.folderSizes.unreadable": {
     "sourceHash": "ad31a56"
   },
+  "fileExplorer.quickFilter.modeFilter": "Filtrer : seuls les noms correspondants s’affichent",
+  "@fileExplorer.quickFilter.modeFilter": {
+    "sourceHash": "3febd29"
+  },
+  "fileExplorer.typeToJump.modeJump": "Aller à : tous les noms s’affichent, et le curseur se place sur le nom correspondant",
+  "@fileExplorer.typeToJump.modeJump": {
+    "sourceHash": "292fdf5"
+  },
+  "fileExplorer.typeToJump.clear": "Effacer « Aller à »",
+  "@fileExplorer.typeToJump.clear": {
+    "sourceHash": "42ec82f"
+  },
   "fileExplorer.quickFilter.clear": "Effacer le filtre",
   "@fileExplorer.quickFilter.clear": {
     "sourceHash": "ba59e2d"
@@ -2109,5 +2157,41 @@
   "fileExplorer.tags.skipped": "{count, plural, one {Cmdr n’a pas pu lire les tags déjà présents sur un élément et les a donc laissés tels quels. Vérifiez que vous pouvez ouvrir cet élément, ou ajoutez le tag dans le Finder.} many {Cmdr n’a pas pu lire les tags déjà présents sur {countText} éléments et les a donc laissés tels quels. Vérifiez que vous pouvez ouvrir ces éléments, ou ajoutez le tag dans le Finder.} other {Cmdr n’a pas pu lire les tags déjà présents sur {countText} éléments et les a donc laissés tels quels. Vérifiez que vous pouvez ouvrir ces éléments, ou ajoutez le tag dans le Finder.}}",
   "@fileExplorer.tags.skipped": {
     "sourceHash": "31363ee"
+  },
+  "fileExplorer.errorPane.reviewLinkSignIn": "Examiner l’identification",
+  "@fileExplorer.errorPane.reviewLinkSignIn": {
+    "sourceHash": "25a3cfe"
+  },
+  "fileExplorer.pane.directConnectionOtherServerNotAllowedToast": "{server} indique que les fichiers de ce partage se trouvent sur un autre serveur. Cmdr ne s’y identifie pas de lui-même, donc le partage reste sur la connexion système.",
+  "@fileExplorer.pane.directConnectionOtherServerNotAllowedToast": {
+    "sourceHash": "c350d80"
+  },
+  "fileExplorer.network.osMountFallback.otherServerNotAllowed": "Impossible de se connecter directement à <shareName>{share}</shareName>, car ses fichiers se trouvent sur un autre serveur et Cmdr ne s’y identifie pas de lui-même. Vous restez connecté via la connexion réseau SMB native de macOS, qui est bien plus lente.",
+  "@fileExplorer.network.osMountFallback.otherServerNotAllowed": {
+    "sourceHash": "9c9c5a5"
+  },
+  "fileExplorer.smbLinkConsent.title": "S’identifier sur un autre serveur ?",
+  "@fileExplorer.smbLinkConsent.title": {
+    "sourceHash": "91458ea"
+  },
+  "fileExplorer.smbLinkConsent.message": "Un lien sur {server} mène à un dossier sur {target}. Pour l’ouvrir, Cmdr s’identifie sur {target} avec le compte que vous utilisez pour {server}.",
+  "@fileExplorer.smbLinkConsent.message": {
+    "sourceHash": "848be1b"
+  },
+  "fileExplorer.smbLinkConsent.warning": "Autorisez cela seulement si vous faites confiance à {target}. Un serveur que vous ne connaissez pas pourrait utiliser un tel lien pour récupérer votre mot de passe.",
+  "@fileExplorer.smbLinkConsent.warning": {
+    "sourceHash": "295e81e"
+  },
+  "fileExplorer.smbLinkConsent.note": "Cmdr mémorise votre réponse pour ces deux serveurs. Vous pouvez l’oublier dans les Réglages, sous Serveurs.",
+  "@fileExplorer.smbLinkConsent.note": {
+    "sourceHash": "3f9615a"
+  },
+  "fileExplorer.smbLinkConsent.allow": "Autoriser et s’identifier",
+  "@fileExplorer.smbLinkConsent.allow": {
+    "sourceHash": "d8192ad"
+  },
+  "fileExplorer.smbLinkConsent.notNow": "Pas maintenant",
+  "@fileExplorer.smbLinkConsent.notNow": {
+    "sourceHash": "a0e63d7"
   }
 }

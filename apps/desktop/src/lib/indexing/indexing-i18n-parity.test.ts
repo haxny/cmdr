@@ -75,9 +75,6 @@ describe('indexing catalog parity (en)', () => {
   })
 
   it('resolves every rescan-reason message with apostrophes intact', () => {
-    expect(tString('indexing.rescan.staleIndex')).toBe(
-      'Your drive index is outdated. It looks like the app hasn’t run for a while. Running a fresh scan to catch up.',
-    )
     expect(tString('indexing.rescan.journalGap')).toBe(
       'The system’s file change log doesn’t go back far enough. Running a fresh scan to rebuild the index.',
     )

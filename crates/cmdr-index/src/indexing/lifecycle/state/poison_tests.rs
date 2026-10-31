@@ -37,7 +37,10 @@ fn registry_of(volumes: &[(&str, IndexVolumeKind, Option<Freshness>)]) -> Regist
         map.insert(
             (*volume_id).to_string(),
             IndexInstance {
-                phase: IndexPhase::ShuttingDown { restart: None },
+                phase: IndexPhase::ShuttingDown {
+                    restart: None,
+                    then_clear: None,
+                },
                 started_as: StartRequest::for_test(*kind),
                 signals: VolumeSignals::new(Arc::new(Mutex::new(*freshness)), crate::NoopEventSink::shared()),
                 work: crate::indexing::hold::VolumeWork::for_test(volume_id),

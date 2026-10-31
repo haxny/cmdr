@@ -64,6 +64,10 @@ pub struct ViewerOpenResult {
     /// `Image` files (raster formats the `image` crate can parse; `None` for HEIC,
     /// SVG, PDFs, text, or on any read error).
     pub media_dimensions: Option<MediaDimensions>,
+    /// The `cmdr-media://` request reads from a volume, so it can take a while and fail
+    /// for reasons the file has nothing to do with: the window follows it through
+    /// `viewer-media-load`. `false` for anything served from a local path.
+    pub media_from_volume: bool,
 }
 
 /// Image pixel dimensions, read header-only at open time.

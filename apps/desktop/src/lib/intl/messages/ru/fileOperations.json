@@ -584,6 +584,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Слишком длинное имя для места назначения",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Имя не разрешено в месте назначения",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "Место назначения не может хранить такое длинное имя. Пропустите этот объект, чтобы продолжить с остальными, а затем переименуйте его и попробуйте еще раз.",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "Место назначения не может хранить такое имя. Возможно, оно слишком длинное, зарезервировано или содержит символ, который в месте назначения не разрешен. Пропустите этот объект, чтобы продолжить с остальными, а затем переименуйте его и попробуйте еще раз.",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "Если файл уже существует: «{policy}»",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -799,6 +815,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {Копировать больше нечего: пока копирование ожидало своей очереди, {total, plural, =1 {единственный объект был перемещен или удален} one {все {totalText} объект были перемещены или удалены} few {все {totalText} объекта были перемещены или удалены} many {все {totalText} объектов были перемещены или удалены} other {все {totalText} объекта были перемещены или удалены}}.} move {Перемещать больше нечего: пока перемещение ожидало своей очереди, {total, plural, =1 {единственный объект был перемещен или удален} one {все {totalText} объект были перемещены или удалены} few {все {totalText} объекта были перемещены или удалены} many {все {totalText} объектов были перемещены или удалены} other {все {totalText} объекта были перемещены или удалены}}.} delete {Удалять больше нечего: пока удаление ожидало своей очереди, {total, plural, =1 {единственный объект был перемещен или удален} one {все {totalText} объект были перемещены или удалены} few {все {totalText} объекта были перемещены или удалены} many {все {totalText} объектов были перемещены или удалены} other {все {totalText} объекта были перемещены или удалены}}.} trash {Перемещать в Корзину больше нечего: пока перемещение в Корзину ожидало своей очереди, {total, plural, =1 {единственный объект был перемещен или удален} one {все {totalText} объект были перемещены или удалены} few {все {totalText} объекта были перемещены или удалены} many {все {totalText} объектов были перемещены или удалены} other {все {totalText} объекта были перемещены или удалены}}.} other {Выполнять больше нечего: пока операция ожидала своей очереди, {total, plural, =1 {единственный объект был перемещен или удален} one {все {totalText} объект были перемещены или удалены} few {все {totalText} объекта были перемещены или удалены} many {все {totalText} объектов были перемещены или удалены} other {все {totalText} объекта были перемещены или удалены}}.}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "Объекта «{name}» уже не было. Скорее всего, его переместило или удалило другое приложение.",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, =1 {{countText} объекта уже не было. Скорее всего, его переместило или удалило другое приложение.} one {{countText} объекта уже не было. Скорее всего, их переместило или удалило другое приложение.} few {{countText} объектов уже не было. Скорее всего, их переместило или удалило другое приложение.} many {{countText} объектов уже не было. Скорее всего, их переместило или удалило другое приложение.} other {{countText} объекта уже не было. Скорее всего, их переместило или удалило другое приложение.}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "Больше не показывать",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "Переместить защищенные объекты?",
   "@fileOperations.lockedSources.title": {

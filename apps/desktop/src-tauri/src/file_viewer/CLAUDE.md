@@ -1,7 +1,5 @@
 # File viewer module (Rust backend)
 
-Backends serve instant open, virtual scrolling, and background search.
-
 Frontend counterparts: [route shell](../../../src/routes/viewer/CLAUDE.md) and
 [FE primitives](../../../src/lib/file-viewer/CLAUDE.md).
 
@@ -51,8 +49,9 @@ Frontend counterparts: [route shell](../../../src/routes/viewer/CLAUDE.md) and
 - **Never `std::fs`-open a path the OS can't open**: a ROUTED one (`/…/foo.zip/inner`) or one whose volume's
   `paths_are_os_visible()` is false (`adb://…`); `open_session` sends both through `materialize_for_viewer`, after
   `volume_source` (SMB: smb2, no temp). ❌ Never an archive-only check, nor `supports_local_fs_access`.
+- **Media classifies through the session's `OpenedFile`, ❌ never a backend check** (§ "Media on a volume").
 - **Pulls stop between chunks, ❌ never by dropping an in-flight `next_chunk`** (that wedges MTP). Viewer pulls use a
   45 s stall rule; `inspect_file` uses its five-second path budget. `DETAILS.md` § "Watching a pull".
 
-Architecture, flows, and decision detail: `DETAILS.md`. Read it before any non-trivial work here: editing, planning,
+Architecture, flows, and decisions: `DETAILS.md`. Read it before any non-trivial work here: editing, planning,
 reorganizing, or advising.

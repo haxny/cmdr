@@ -13,6 +13,7 @@
     import { systemStrings } from '#lib/system-strings.svelte.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { getAppLogger } from '#lib/logging/logger.js'
+    import { offersErrorReport } from '#lib/error-messages/listing-error.js'
     import ReportOffer from '#lib/error-reporter/ReportOffer.svelte'
 
     const log = getAppLogger('errorPane')
@@ -40,6 +41,8 @@
         canGoBack?: boolean
         onGoBack?: () => void
         onGoHome?: () => void
+        /** Asks the person about the sign-in `friendly.linkConsent` names. */
+        onReviewLinkConsent?: () => void
         /** Whether this pane is the focused one, gating the ⌘D key handler. */
         isFocused?: boolean
     }
@@ -51,6 +54,7 @@
         canGoBack = false,
         onGoBack,
         onGoHome,
+        onReviewLinkConsent,
         isFocused = false,
     }: Props = $props()
 
@@ -173,6 +177,12 @@
                 <Button variant="primary" onclick={handleRetry}>{tString('fileExplorer.errorPane.tryAgain')}</Button>
             {/if}
 
+            {#if friendly.linkConsent}
+                <Button variant="primary" onclick={() => onReviewLinkConsent?.()}
+                    >{tString('fileExplorer.errorPane.reviewLinkSignIn')}</Button
+                >
+            {/if}
+
             {#if isPermissionDenied && isMacOS()}
                 <Button variant="primary" onclick={() => void openFullDiskAccessPane()}
                     >{tString('fileExplorer.errorPane.openSystemSettings', {
@@ -191,7 +201,9 @@
                 {tString('fileExplorer.errorPane.goHome')}
             </Button>
 
-            <ReportOffer incident={reportIncident} />
+            {#if offersErrorReport(friendly.listingReason)}
+                <ReportOffer incident={reportIncident} />
+            {/if}
         </div>
 
         <details class="technical-details" bind:open={detailsOpen}>

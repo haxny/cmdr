@@ -583,6 +583,22 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "名稱對目標位置來說太長",
+  "@fileOperations.transferProgress.titleRefusedNameTooLong": {
+    "sourceHash": "3c19ce6"
+  },
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "目標位置不允許這個名稱",
+  "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
+    "sourceHash": "df8d74a"
+  },
+  "fileOperations.transferProgress.refusedNameTooLongBody": "目標位置存不下這麼長的名稱。略過這個項目就能繼續處理其餘項目，之後再把它改名，然後再試一次。",
+  "@fileOperations.transferProgress.refusedNameTooLongBody": {
+    "sourceHash": "7577475"
+  },
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "目標位置存不下這個名稱。可能是名稱太長、屬於保留名稱或用了目標位置不允許的字元。略過這個項目就能繼續處理其餘項目，之後再把它改名，然後再試一次。",
+  "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
+    "sourceHash": "9fe85ec"
+  },
   "fileOperations.transferProgress.conflictPolicyCaption": "檔案已經存在時：{policy}",
   "@fileOperations.transferProgress.conflictPolicyCaption": {
     "sourceHash": "cec5c27"
@@ -798,6 +814,18 @@
   "fileOperations.sourcesGone.nothingLeftToast": "{type, select, copy {沒有東西可以複製了：要複製的 {total, plural, other {{totalText} 個項目}}在排隊等待期間被移到別處或刪除了。} move {沒有東西可以移動了：要移動的 {total, plural, other {{totalText} 個項目}}在排隊等待期間被移到別處或刪除了。} delete {沒有東西可以刪除了：要刪除的 {total, plural, other {{totalText} 個項目}}在排隊等待期間被移到別處或刪除了。} trash {沒有東西可以移到垃圾桶了：要移到垃圾桶的 {total, plural, other {{totalText} 個項目}}在排隊等待期間被移到別處或刪除了。} other {沒有剩下要做的了：這項操作要處理的 {total, plural, other {{totalText} 個項目}}在排隊等待期間被移到別處或刪除了。}}",
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
+  },
+  "fileOperations.alreadyGone.one": "「{name}」已經不在了。可能是其他 App 先一步移走或刪掉了。",
+  "@fileOperations.alreadyGone.one": {
+    "sourceHash": "3bdd241"
+  },
+  "fileOperations.alreadyGone.many": "{count, plural, other {有 {countText} 個項目已經不在了。可能是其他 App 先一步移走或刪掉了。}}",
+  "@fileOperations.alreadyGone.many": {
+    "sourceHash": "564fc09"
+  },
+  "fileOperations.alreadyGone.neverShowAgain": "不要再顯示",
+  "@fileOperations.alreadyGone.neverShowAgain": {
+    "sourceHash": "c9e19cb"
   },
   "fileOperations.lockedSources.title": "移動已鎖定的項目？",
   "@fileOperations.lockedSources.title": {

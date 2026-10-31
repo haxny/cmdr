@@ -75,6 +75,14 @@
   "@mtp.ptpcameradDialog.retry": {
     "sourceHash": "eccee4e"
   },
+  "mtp.readiness.connecting": "還在連線。請把手機解鎖，如果有提示，就輕觸「允許」。",
+  "@mtp.readiness.connecting": {
+    "sourceHash": "389b779"
+  },
+  "mtp.readiness.connectingTooltip": "只要手機還插著，Cmdr 就會繼續嘗試，連上之後你就可以開啟它。",
+  "@mtp.readiness.connectingTooltip": {
+    "sourceHash": "4f4066b"
+  },
   "mtp.deviceFallbackName": "MTP 裝置",
   "@mtp.deviceFallbackName": {
     "sourceHash": "8ba7a69"

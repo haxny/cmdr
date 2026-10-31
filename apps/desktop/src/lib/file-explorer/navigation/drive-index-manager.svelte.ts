@@ -20,6 +20,7 @@ import {
   onIndexScanComplete,
   onIndexScanAborted,
 } from '#lib/tauri-commands/indexing.js'
+import { isStillConnecting } from '#lib/adb/device-readiness.js'
 import type { VolumeInfo } from '../types'
 import { capabilitiesForInfo } from '../pane/volume-capabilities'
 
@@ -30,9 +31,11 @@ import { capabilitiesForInfo } from '../pane/volume-capabilities'
  * gets no index badge (neither the active-volume spot nor its dropdown row), no
  * first-connect "index this drive?" prompt, and no per-volume index-status fetch.
  *
- * Four reasons to drop a row, each a different kind of answer:
+ * Five reasons to drop a row, each a different kind of answer:
  *
  * - **A favorite** is a shortcut into a drive, not a drive.
+ * - **An MTP phone still connecting** has no storage to walk yet; its storages
+ *   get rows of their own, which do carry a badge.
  * - **A mounted disk image** could be indexed, and we deliberately don't: a
  *   `.dmg` mount is transient.
  * - **A cloud provider's own mount** (`isCloudMount`: pCloud's `pcloudfs`,
@@ -52,6 +55,7 @@ import { capabilitiesForInfo } from '../pane/volume-capabilities'
  */
 export function isDriveRow(volume: VolumeInfo): boolean {
   if (volume.category === 'favorite') return false
+  if (isStillConnecting(volume)) return false
   if (volume.isDiskImage) return false
   if (volume.isCloudMount) return false
   return capabilitiesForInfo(volume).canBeIndexed

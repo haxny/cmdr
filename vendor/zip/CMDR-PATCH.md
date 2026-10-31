@@ -9,8 +9,11 @@ and the files left out:
 - `.cargo-ok`, `.devcontainer/`, `.pre-commit-config.yaml`, `.whitesource`: registry and upstream dev tooling, nothing
   the build reads.
 
-The `zip` 4.6.1 that `tauri-plugin-updater` pulls in stays on crates.io: a `[patch]` only replaces the line it vendors,
-and that copy only reads update bundles.
+9.0.5 carries upstream's fix for zip cloaking (GHSA-m665-v7pm-7grj, commit `8068ab48`: opt-in
+`ZipReadOptions::enforce_header_consistency` and `ZipArchive::validate_header_consistency`). Cmdr doesn't opt in, because
+it never reads by local-header name: `crates/cmdr-archive/src/read/DETAILS.md` § "Zip cloaking".
+
+`tauri-plugin-updater` 2.14.1 depends on `zip` ^9 too, so this vendored copy is the only `zip` in the graph.
 
 ## The change
 

@@ -2,7 +2,8 @@
 //!
 //! Two pipelines live here:
 //! - [`build_bundle_streaming`] (Flow A): tail-walks each log file, streams in-window lines
-//!   straight into the zip, stops as soon as the compressed cap or the timestamp cutoff fires.
+//!   into the zip, keeping each file's newest tail that fits the compressed cap, and stops at
+//!   the timestamp cutoff.
 //! - [`build_bundle_legacy_window`] (Flow B): reads each file in full, line-filters by timestamp,
 //!   packs into a `BTreeMap`, then calls [`build_zip`].
 //!
@@ -10,6 +11,7 @@
 //! the sibling [`super::bundle_capper`] module. Flow A enforces the cap inline; Flow B
 //! relies on a post-build trim from the auto-dispatcher.
 
+use super::bundle_capper::{CountingCursor, ENTRY_OVERHEAD_BYTES, MIN_TAIL_LINES_OF_NEWEST_FILE, NewestFirstFit};
 use super::tail_walker;
 use super::{
     AttachedEmail, BuildMode, BuiltBundle, BundleKind, BundleManifest, BundleScope, FLOW_A_BUNDLE_CAP_MB, breadcrumbs,
@@ -20,11 +22,14 @@ use crate::redact;
 use chrono::{DateTime, Datelike, Timelike, Utc};
 use cmdr_fs::log_private::LogPrivate;
 use std::collections::BTreeMap;
-use std::io::{BufRead, BufReader, Seek, SeekFrom, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use zip::DateTime as ZipDateTime;
 use zip::write::{SimpleFileOptions, ZipWriter};
+
+/// Flow A's deflate level: triage logs don't need a 5 % size win at twice the CPU.
+const STREAMING_COMPRESSION_LEVEL: i64 = 1;
 
 /// Max lines in the first-lines preview sample shown in the dialog.
 const SAMPLE_FIRST_LINES: usize = 5;
@@ -213,16 +218,13 @@ pub fn resolve_bundle_id(requested: Option<String>) -> String {
 }
 
 /// Streaming Flow A pipeline. Walks log files newest-first via the tail walker, redacts
-/// each in-window line, and streams it into the zip writer. Stops the moment the
-/// compressed output crosses [`FLOW_A_BUNDLE_CAP_MB`] OR the tail walker hits the
-/// timestamp cutoff in every file we visit.
+/// each in-window line, and streams it into the zip writer. Each file ships the newest
+/// tail that fits what's left of 90% of [`FLOW_A_BUNDLE_CAP_MB`] (measured compressed, by
+/// [`NewestFirstFit`]); it stops at the first file that doesn't fit whole, or when the
+/// tail walker hits the timestamp cutoff.
 ///
-/// Compressed-size tracking: the `ZipWriter` is constructed over a [`CountingCursor`]
-/// (a `Cursor<Vec<u8>>` wrapper holding an `Arc<AtomicU64>` counting bytes written
-/// through it). The counter increments on every `Write::write` to the inner cursor,
-/// which is what the `zip` crate's deflater calls after compressing each chunk. We poll
-/// the counter after each line to decide whether to stop. Reading is lock-free
-/// (`Ordering::Relaxed`) and adds zero latency to the hot path.
+/// Compressed-size tracking: the `ZipWriter` is constructed over a [`CountingCursor`],
+/// flushed before each file so the count covers everything written so far.
 pub(super) fn build_bundle_streaming(
     id: String,
     manifest: BundleManifest,
@@ -268,7 +270,7 @@ pub(super) fn build_bundle_streaming_to_cap(
     // deflate-stored over `Stored` here so the `zip` crate writes a consistent layout.
     let manifest_opts = SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated)
-        .compression_level(Some(1))
+        .compression_level(Some(STREAMING_COMPRESSION_LEVEL))
         .last_modified_time(zip_dt(now_system));
     let manifest_json = serde_json::to_string_pretty(&manifest).map_err(|e| format!("manifest: {e}"))?;
     writer
@@ -280,6 +282,9 @@ pub(super) fn build_bundle_streaming_to_cap(
 
     let mut is_first_file = true;
     let mut budget_exhausted = false;
+    // Headroom for the central directory and the measurement's step, so the bundle lands
+    // under the cap and the defensive post-pass never has to trim it.
+    let target_bytes = cap_bytes * 9 / 10;
 
     for path in files {
         if budget_exhausted {
@@ -330,16 +335,53 @@ pub(super) fn build_bundle_streaming_to_cap(
             continue;
         }
 
+        // Pick the newest tail of this file that fits what's left of the budget, BEFORE
+        // writing anything: a zip entry is written oldest-first, so stopping at the cap
+        // mid-write drops the newest lines, which are the ones the report is about
+        // (cmdr-reports#84). Lines are redacted newest-first as they're measured, so a big
+        // file costs redaction only for what can ship.
+        if writer.flush().is_err() {
+            break;
+        }
+        let used = counter.load(std::sync::atomic::Ordering::Relaxed) as usize;
+        let remaining = target_bytes.saturating_sub(used + ENTRY_OVERHEAD_BYTES);
+        let mut fit = NewestFirstFit::new(remaining, Some(STREAMING_COMPRESSION_LEVEL));
+        let mut newest_first: Vec<String> = Vec::new();
+        for line in lines.iter().rev() {
+            let redacted = redaction.redact_line(line).into_owned();
+            let more = fit.offer(redacted.as_bytes());
+            newest_first.push(redacted);
+            if !more {
+                break;
+            }
+        }
+        let mut keep = fit.fitting();
+        if is_first_file {
+            // The live file always ships its last lines, even marginally past the cap.
+            keep = keep.max(MIN_TAIL_LINES_OF_NEWEST_FILE.min(lines.len()));
+            while newest_first.len() < keep {
+                let next_older = &lines[lines.len() - 1 - newest_first.len()];
+                newest_first.push(redaction.redact_line(next_older).into_owned());
+            }
+        }
+        if keep == 0 {
+            break;
+        }
+        if keep < lines.len() {
+            // This file's older lines don't fit, so neither do older files.
+            budget_exhausted = true;
+        }
+        newest_first.truncate(keep);
+
         let entry_opts = SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Deflated)
-            .compression_level(Some(1))
+            .compression_level(Some(STREAMING_COMPRESSION_LEVEL))
             .last_modified_time(zip_dt(mtime));
         if writer.start_file(format!("logs/{file_name}"), entry_opts).is_err() {
             continue;
         }
 
-        for line in lines {
-            let redacted = redaction.redact_line(&line).into_owned();
+        for redacted in newest_first.into_iter().rev() {
             if writer.write_all(redacted.as_bytes()).is_err() || writer.write_all(b"\n").is_err() {
                 budget_exhausted = true;
                 break;
@@ -359,17 +401,8 @@ pub(super) fn build_bundle_streaming_to_cap(
                     sample_last.push(redacted);
                 }
             }
-
-            // Mid-file cap check. The deflater holds an internal buffer of up to ~64 KB
-            // that hasn't been flushed to the cursor yet, so the counter is a lower
-            // bound on the eventual on-disk size. There's a small overshoot risk on
-            // the order of one chunk + the central directory tail (~few hundred bytes
-            // per entry). Both are well inside the cap's headroom.
-            let bytes_so_far = counter.load(std::sync::atomic::Ordering::Relaxed) as usize;
-            if bytes_so_far >= cap_bytes {
-                budget_exhausted = true;
-                break;
-            }
+            // ❌ No mid-file cap check here: stopping now would drop this file's NEWEST lines.
+            // The tail picked above already fits.
         }
 
         is_first_file = false;
@@ -394,50 +427,6 @@ pub(super) fn build_bundle_streaming_to_cap(
         sample_first,
         sample_last,
     })
-}
-
-/// `Cursor<Vec<u8>>` adapter that increments an `AtomicU64` by `buf.len()` on every
-/// `Write::write` call. Lets the streaming zip pipeline poll the running compressed
-/// byte count without taking an unsafe `get_mut()` borrow on the `ZipWriter`.
-///
-/// The counter measures bytes the `zip` crate emitted to the cursor, i.e. compressed
-/// payload + per-entry headers up to the last deflate flush. The crate's internal
-/// deflate buffer (up to ~64 KB) lags behind, so callers should treat the counter as a
-/// lower bound on the final size and budget conservatively.
-struct CountingCursor {
-    inner: std::io::Cursor<Vec<u8>>,
-    counter: std::sync::Arc<std::sync::atomic::AtomicU64>,
-}
-
-impl CountingCursor {
-    fn new(counter: std::sync::Arc<std::sync::atomic::AtomicU64>) -> Self {
-        Self {
-            inner: std::io::Cursor::new(Vec::new()),
-            counter,
-        }
-    }
-
-    fn into_inner(self) -> Vec<u8> {
-        self.inner.into_inner()
-    }
-}
-
-impl Write for CountingCursor {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let n = self.inner.write(buf)?;
-        self.counter.fetch_add(n as u64, std::sync::atomic::Ordering::Relaxed);
-        Ok(n)
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.inner.flush()
-    }
-}
-
-impl Seek for CountingCursor {
-    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        self.inner.seek(pos)
-    }
 }
 
 /// Legacy "read full file, line-filter, redact, BTreeMap, build_zip" pipeline used by

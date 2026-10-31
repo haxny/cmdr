@@ -636,6 +636,7 @@
     "exceptions": {
       "settings.mediaIndex.reclaim.alreadyCleared": "Index entries cleared are deleted from the index; supprimer, as in the sibling reclaim.couldNotDelete."
     },
+    "forms": "Clear jump → Effacer « Aller à » (the badge's own label; no French noun for a jump reads naturally)",
     "sources": "macOS; catalog"
   },
   "click": {
@@ -817,7 +818,7 @@
   "link": {
     "chosen": "lien",
     "confidence": "high",
-    "forms": "web link → lien web",
+    "forms": "web link → lien web; a DFS link: sits behind a link → se trouve derrière un lien vers un autre serveur; errors.volume.linkTargetUnreachable's This → Cet emplacement (a new folder or file doesn't exist yet)",
     "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
   },
   "mcp-server": {
@@ -3184,6 +3185,9 @@
     "accept": ["ignoré", "laisse de côté", "ignore"],
     "chosen": "Ignorer",
     "confidence": "high",
+    "exceptions": {
+      "settings.fileOperations.showAlreadyGoneToast.description": "English-sense: “skip the note” means not seeing a toast again, not leaving an item out of an operation (pour ne plus voir cette note)"
+    },
     "forms": "skip all → Tout ignorer; outcome Ignoré",
     "sources": "macOS Finder/AppKit (Ignorer); Nautilus"
   },
@@ -3963,5 +3967,16 @@
     "chosen": "Niveau de réflexion",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings (Gemini avec réflexion)"
+  },
+  "shared-storage": {
+    "chosen": "stockage partagé",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-fr storage_internal (read 2026-10-30): Espace de stockage interne partagé"
+  },
+  "this-computer": {
+    "accept": ["ordinateur", "machine"],
+    "chosen": "cet ordinateur",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
   }
 }

@@ -25,7 +25,9 @@ use std::sync::atomic::{AtomicBool, AtomicUsize};
 
 mod attributes;
 mod copy;
+mod dfs_links;
 mod foreground_yield;
+mod link_watch;
 mod links;
 mod liveness;
 mod mapping;
@@ -38,10 +40,12 @@ mod reconnect;
 mod scan;
 mod scan_pool;
 mod session;
+mod session_build;
 mod slow_calls;
 mod spelling;
 mod stamping;
 mod state;
+mod transfer_session;
 mod volume_impl;
 mod watcher;
 mod write_stream;
@@ -55,7 +59,7 @@ pub use state::ConnectionState;
 use state::{SessionCell, SessionGeneration};
 
 use reconnect::spawn_watcher_death_reconnect;
-use session::build_session;
+use session_build::build_session;
 
 /// The request size `max_concurrent_ops` asks the credit window about.
 ///
@@ -253,7 +257,7 @@ struct SmbVolumeInner {
     watcher_cancel: std::sync::Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
     /// The id of the watcher session that died, set on its way out and taken by
     /// the next `spawn_watcher`, whose session names it to the server
-    /// (`session::retired_session_id`). The watcher's own predecessor only.
+    /// (`session_build::retired_session_id`). The watcher's own predecessor only.
     retired_watcher_session: std::sync::Mutex<Option<smb2::types::SessionId>>,
     /// Single-flight guard for `attempt_reconnect`. Concurrent callers (FE
     /// backoff cycle + lazy nav-time retry) wait on the same in-flight attempt
@@ -321,11 +325,22 @@ struct SmbVolumeInner {
     /// bytes, keyed by directory. Per share because the names are; forgotten per
     /// directory as the watcher reports changes there. See `spelling.rs`.
     spellings: spelling::SpellingCache,
+    /// The share paths a call followed a DFS link from, so a listing behind one
+    /// claims no watch (`dfs_links.rs`).
+    link_paths: dfs_links::LinkPaths,
+    /// The watches on DFS links a pane shows a folder behind, each held by the
+    /// listings open there (`link_watch.rs`).
+    link_watches: Arc<link_watch::LinkWatches>,
     /// The connection the current `client` owns, readable without the client
     /// mutex, so the transfer watchdog can ask whether the server is still talking
     /// (`Volume::connection_liveness`) and how many bytes it has sent. Swapped in
     /// lockstep with `client`; see [`liveness::LiveConnection`].
     live_connection: liveness::LiveConnection,
+    /// The share's transfer session: one extra smb2 session the byte-moving
+    /// calls ride, so browsing stays responsive while a copy runs. Opened lazily
+    /// by the first transfer, closed when the share goes idle. See
+    /// `transfer_session.rs`.
+    transfer: Arc<transfer_session::TransferSession>,
     /// Everything this backend asks the application around it: the pane listings,
     /// the secret store, the file index, the frontend event channel, the live
     /// concurrency knob, and the runtime background work spawns onto. A value the
@@ -362,6 +377,8 @@ impl SmbVolume {
         let MountAnchor { mount_path, share_root } = anchor;
         let volume_id = volume_id.into();
         let live_connection = liveness::LiveConnection::new(Some(client.connection().clone()));
+        let params = Arc::new(tokio::sync::RwLock::new(params));
+        let transfer = transfer_session::TransferSession::new(Arc::clone(&params), volume_id.clone(), host.runtime());
         Self {
             name: name.into(),
             mount_path: mount_path.clone(),
@@ -374,7 +391,7 @@ impl SmbVolume {
                     mount_path.clone(),
                     share_root,
                 )])),
-                params: Arc::new(tokio::sync::RwLock::new(params)),
+                params,
                 session: Arc::new(tokio::sync::Mutex::new(Some(session::MainSession::new(
                     client,
                     tree,
@@ -391,7 +408,10 @@ impl SmbVolume {
                 scan_session_refs: AtomicUsize::new(0),
                 credit_copy_capacity: AtomicUsize::new(0),
                 spellings: spelling::SpellingCache::default(),
+                link_paths: dfs_links::LinkPaths::default(),
+                link_watches: Arc::default(),
                 live_connection,
+                transfer,
                 active_mount_path: Arc::new(StdRwLock::new(mount_path)),
                 host,
             }),
@@ -670,6 +690,8 @@ mod black_hole_proxy;
 mod conformance_test;
 #[cfg(test)]
 mod credit_cap_proxy;
+#[cfg(test)]
+mod dfs_links_integration_test;
 #[cfg(test)]
 mod forbidden_chars_integration_test;
 #[cfg(test)]

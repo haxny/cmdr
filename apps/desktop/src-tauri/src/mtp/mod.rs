@@ -8,6 +8,7 @@
 //! - `watcher`: the USB hotplug task, the enabled-setting push, auto-connect, and
 //!   the ptpcamerad calls. ADB's tracker twin, and app-side for the same reason:
 //!   it owns a policy, not a protocol.
+//! - `auto_connect`: the watcher's retry loop and the arrival ledger it keys on.
 //! - `events`: the `tauri_specta` payloads the frontend subscribes to, and the
 //!   adapter that maps the crate's typed device events onto them.
 //! - `volume_wiring`: the registrar that turns an attached storage into a
@@ -16,6 +17,7 @@
 //!
 //! MTP works on macOS and Linux; `stubs::mtp` serves the commands elsewhere.
 
+mod auto_connect;
 pub mod events;
 #[cfg(target_os = "macos")]
 pub mod macos_workaround;
@@ -33,7 +35,7 @@ pub mod watcher;
 #[cfg(feature = "virtual-mtp")]
 pub use cmdr_mtp::virtual_device;
 pub use cmdr_mtp::{
-    ConnectedDeviceInfo, DeviceWatch, MtpConnectionError, MtpConnectionManager, MtpDisconnectReason,
+    ConnectedDeviceInfo, DeviceWatch, MtpConnectionError, MtpConnectionManager, MtpDeviceInfo, MtpDisconnectReason,
     MtpVolumeRegistrar, list_mtp_devices,
 };
 pub use events::{

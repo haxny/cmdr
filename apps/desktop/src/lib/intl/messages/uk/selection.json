@@ -1,0 +1,62 @@
+{
+  "selection.dialog.title.add": "Вибрати файли",
+  "@selection.dialog.title.add": {
+    "sourceHash": "e04221c"
+  },
+  "selection.dialog.title.remove": "Скасувати вибір файлів",
+  "@selection.dialog.title.remove": {
+    "sourceHash": "537ddbe"
+  },
+  "selection.runHint": "Натисніть Enter, щоб фільтрувати",
+  "@selection.runHint": {
+    "sourceHash": "c8d00d2"
+  },
+  "selection.action.select.label": "Вибрати ці файли",
+  "@selection.action.select.label": {
+    "sourceHash": "9f385e8"
+  },
+  "selection.action.select.tooltip": "Вибрати ці файли на панелі у фокусі",
+  "@selection.action.select.tooltip": {
+    "sourceHash": "d427136"
+  },
+  "selection.action.deselect.label": "Скасувати вибір цих файлів",
+  "@selection.action.deselect.label": {
+    "sourceHash": "c0d3db4"
+  },
+  "selection.action.deselect.tooltip": "Скасувати вибір цих файлів на панелі у фокусі",
+  "@selection.action.deselect.tooltip": {
+    "sourceHash": "bf77e53"
+  },
+  "selection.notice.snapshotPane": "Шаблон порівнюється з тим, що показано в списку (з повним шляхом).",
+  "@selection.notice.snapshotPane": {
+    "sourceHash": "aa4306e"
+  },
+  "selection.recent.trailingTooltip": "Показати всі недавні шаблони вибору",
+  "@selection.recent.trailingTooltip": {
+    "sourceHash": "c694665"
+  },
+  "selection.recent.allButtonAria": "Усі недавні шаблони вибору",
+  "@selection.recent.allButtonAria": {
+    "sourceHash": "b6ea4d8"
+  },
+  "selection.recent.filterPlaceholder": "Фільтрувати недавні шаблони вибору",
+  "@selection.recent.filterPlaceholder": {
+    "sourceHash": "1f8347f"
+  },
+  "selection.recent.emptyMessage": "Жоден недавній шаблон вибору не відповідає цьому фільтру",
+  "@selection.recent.emptyMessage": {
+    "sourceHash": "f404527"
+  },
+  "selection.recent.popoverAria": "Недавні шаблони вибору",
+  "@selection.recent.popoverAria": {
+    "sourceHash": "94c77ad"
+  },
+  "selection.recent.listboxAria": "Недавні шаблони вибору",
+  "@selection.recent.listboxAria": {
+    "sourceHash": "94c77ad"
+  },
+  "selection.recent.applyAria": "Застосувати недавній шаблон вибору в режимі «{mode}»: {query}",
+  "@selection.recent.applyAria": {
+    "sourceHash": "717317a"
+  }
+}

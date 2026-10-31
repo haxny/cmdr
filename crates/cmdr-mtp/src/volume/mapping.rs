@@ -29,11 +29,18 @@ pub(super) fn map_mtp_error(e: MtpConnectionError) -> VolumeError {
         // its own variant so the person reads the device's cause and fix (#523).
         MtpConnectionError::AmbiguousName { path, .. } => VolumeError::DuplicateName(path),
         MtpConnectionError::StaleParentHandle { dest_folder, .. } => VolumeError::StaleDestinationHandle(dest_folder),
+        // The phone said no, so the path's scheme answers who refused (`mtp://` →
+        // `RemoteRefuser::Phone`), and the pane and a copy get the Android advice.
+        MtpConnectionError::ReadRefused { path, .. } => VolumeError::PermissionDenied {
+            path,
+            raw_os_error: None,
+        },
+        // ❗ USB-level: this Mac or PC can't reach the phone (another app holds it,
+        // Linux udev rules). ❌ Never `VolumeError::PermissionDenied`: on an `mtp://`
+        // path that reads "this phone keeps this folder private" (#841), about a
+        // folder the phone never got asked for.
         MtpConnectionError::ExclusiveAccess { .. } | MtpConnectionError::PermissionDenied { .. } => {
-            VolumeError::PermissionDenied {
-                path: e.to_string(),
-                raw_os_error: None,
-            }
+            VolumeError::NotConnected(e.to_string())
         }
         MtpConnectionError::Cancelled { .. } => VolumeError::Cancelled(ErrorDetail::of(e)),
         MtpConnectionError::Disconnected { .. } => VolumeError::DeviceDisconnected(ErrorDetail::of(e)),

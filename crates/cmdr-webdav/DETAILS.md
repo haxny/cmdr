@@ -327,8 +327,13 @@ backend uses it for every file bigger than one chunk:
   (same server, by `curl` and the cell).
 - **The target sees nothing until the `MOVE`.** Any failure before it (a refused chunk, a cancel, a source of the wrong
   length) DELETEs the collection, which also cancels a v2 backend write, and leaves the target alone; a failed `MOVE`
-  removes the target too. The server expires an abandoned collection after a day anyway. A source that runs dry is
-  reported as the whole file's short count; one with bytes left after the last chunk is refused before the `MOVE`.
+  removes the target too. The server expires an abandoned collection after a day anyway. ❗ A cancel's DELETE can land
+  while the server still reads the cut-off chunk, and Nextcloud refuses it (403) for as long as that chunk holds the
+  collection's lock (2 in 25 cancels on `nextcloud:35.0.0-apache` under load, read from its access log, 2026-10-29). So
+  one DELETE goes inline and a refused one is retried in the background after 0.25, 0.5, 1, and 2 s
+  (`chunked_upload.rs`'s `retry_abandon`): the cancel answers at once, and the chunks don't sit on the user's server for
+  a day. A source that runs dry is reported as the whole file's short count; one with bytes left after the last chunk is
+  refused before the `MOVE`.
 - **The `MOVE` budget grows with the file**: assembly copies every chunk, so past `MUTATION_BUDGET` it allows 10 MiB/s.
 - **Pause** parks in the source stream as it does for a single `PUT` (mid-chunk); each window forwards the source's
   `stop_signal`, so a chunk the server cuts off during a pause takes the same way out (§ "Pause"), the whole upload

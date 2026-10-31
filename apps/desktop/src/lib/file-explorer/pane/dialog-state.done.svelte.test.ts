@@ -95,6 +95,7 @@ const ONE_FILE: TransferCompletePayload = {
   metadataLeftBehind: null,
   lockedKept: null,
   durabilityUnconfirmed: null,
+  alreadyGone: null,
 }
 
 const ADOPTED: AdoptedOperationData = {

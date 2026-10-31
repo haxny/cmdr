@@ -3,9 +3,8 @@
 //! start/stop, and the backend-autonomous watcher-death reconnect loop.
 
 use super::mapping::map_smb_error;
-use super::session::{
-    MainSession, build_session, refresh_credentials_from_store, refresh_remembered_credentials, retired_session_id,
-};
+use super::session::{MainSession, refresh_credentials_from_store, refresh_remembered_credentials};
+use super::session_build::{build_session, retired_session_id};
 use super::state::{ConnectionState, SessionGeneration};
 use super::{SmbConnectionParams, SmbVolumeInner};
 use cmdr_fs::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
@@ -272,6 +271,9 @@ impl SmbVolumeInner {
         // Flip state and emit. Doing this last means an observer that wakes
         // up on the event will see a fully-installed session.
         self.transition_to_direct(generation);
+        // A transfer session the outage took down tries again now, so the
+        // transfers resuming on the share leave the main session promptly.
+        self.transfer.share_is_back();
 
         // The session is back. Resume the drive index if the user had it enabled
         // (a persisted index DB with a completed scan). Fire-and-forget: the hook
@@ -348,7 +350,7 @@ impl SmbVolumeInner {
 /// share runs its own while it waits; this is the no-pane / background /
 /// restart safety net, coalesced with both through `do_attempt_reconnect`'s
 /// single-flight.
-const WATCHER_DEATH_RECONNECT_BACKOFF: [Duration; 6] = [
+pub(super) const WATCHER_DEATH_RECONNECT_BACKOFF: [Duration; 6] = [
     Duration::from_secs(2),
     Duration::from_secs(5),
     Duration::from_secs(15),

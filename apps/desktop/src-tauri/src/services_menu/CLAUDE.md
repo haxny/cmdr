@@ -27,6 +27,9 @@ the loan of AppKit's menu to it).
 - **❌ The responder goes BELOW the window, never after it.** `NSWindow` doesn't forward
   `validRequestorForSendType:returnType:` to its own `nextResponder`, so a responder spliced there is never asked. It
   sits between the content view and the window, where the walk from the first responder reaches it.
+- **A context menu's walk starts at its own `NSPopupMenuWindow`, not the first responder** (verified on macOS 27.0.1 with
+  lldb, 2026-10-31), so `answer_from_menu_windows` adds the answer to that class. Without it, the right-click submenu
+  lists only the services that take no files, while `Cmdr > Services` looks fine. `DETAILS.md`.
 - **The selection arrives as listing INDICES, not paths**, resolved from the listing cache only when asked, and only
   against the revision the pane applied them in (`sequence`). AppKit asks synchronously on the main thread and can't
   await IPC. The search-results snapshot has no cached listing and is the one shape that travels as paths.

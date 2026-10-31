@@ -2015,15 +2015,31 @@
   },
   "settings.suggestedOps.suppressApprovalNotice.label": "Suppress the approval note in AI suggestions",
   "@settings.suggestedOps.suppressApprovalNotice.label": {
-    "description": "Advanced-section label for the toggle that hides the note at the top of the AI suggestions dialog (suggestedOps.description). \"AI suggestions\" is that dialog's title (suggestedOps.title); keep the two matching."
+    "description": "Advanced-section label for the toggle that hides the note at the top of the AI suggestions dialog (suggestedOps.description). \"AI suggestions\" is that dialog's title (suggestedOps.title); keep the two matching.",
+    "screenshot": "settings-advanced.png"
   },
   "settings.suggestedOps.suppressApprovalNotice.description": "The AI suggestions dialog opens with a note saying the AI suggested what’s in it and that nothing runs until you approve it. Turn this on (or close the note with its ×) to stop showing it.",
   "@settings.suggestedOps.suppressApprovalNotice.description": {
-    "description": "Help text for the toggle that hides the note at the top of the AI suggestions dialog. \"AI suggestions\" is the dialog's title (suggestedOps.title); the × is the note's close button."
+    "description": "Help text for the toggle that hides the note at the top of the AI suggestions dialog. \"AI suggestions\" is the dialog's title (suggestedOps.title); the × is the note's close button.",
+    "screenshot": "settings-advanced.png"
   },
   "settings.suggestedOps.suppressApprovalNotice.keywords": "suggestion, approve, note, warning, ai, banner",
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "description": "Search keywords for the “Suppress the approval note in AI suggestions” setting (settings.suggestedOps.suppressApprovalNotice.label) in Settings > Advanced. What it does: hides the note at the top of the AI suggestions dialog saying nothing runs until you approve it. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.fileOperations.showAlreadyGoneToast.label": "Say when a deleted item was already gone",
+  "@settings.fileOperations.showAlreadyGoneToast.label": {
+    "description": "Advanced-section label for the switch that turns on or off a short toast. The toast appears when the user deletes or moves to trash something that another app had already moved or deleted (fileOperations.alreadyGone.one / .many). On by default; its “Never show this again” button (fileOperations.alreadyGone.neverShowAgain) turns it off.",
+    "screenshot": "settings-advanced.png"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.description": "When you delete something another app already moved or deleted, Cmdr treats it as done and shows a short note saying so. Turn this off (or click “Never show this again” in the note) to skip the note.",
+  "@settings.fileOperations.showAlreadyGoneToast.description": {
+    "description": "Help text for the already-gone note switch. The quoted “Never show this again” must match the toast button (fileOperations.alreadyGone.neverShowAgain); translate it the same way. “Note” is the small toast that appears for a few seconds.",
+    "screenshot": "settings-advanced.png"
+  },
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "missing, vanished, moved, deleted, gone, toast, notification",
+  "@settings.fileOperations.showAlreadyGoneToast.keywords": {
+    "description": "Search keywords for the “Say when a deleted item was already gone” setting (settings.fileOperations.showAlreadyGoneToast.label) in Settings > Advanced. What it does: turns on or off the note shown when something the user deleted had already been moved or deleted by another app. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
   },
   "settings.fileExplorer.tabs.closedTabHistorySize.label": "Number of closed tabs to remember per pane",
   "@settings.fileExplorer.tabs.closedTabHistorySize.label": {
@@ -2774,20 +2790,17 @@
   "settings.askCmdr.spendPause.label": "Check in when an answer costs over",
   "@settings.askCmdr.spendPause.label": {
     "description": "Label for the picker in Settings > AI > Ask Cmdr that sets an amount of money: once one answer's estimated cost passes it, the assistant pauses and asks whether to keep going. The options are money amounts (like $2.00) plus Never. Sentence case.",
-    "screenshot": "settings-ai-ask-cmdr.png",
-    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+    "screenshot": "settings-ai-ask-cmdr.png"
   },
   "settings.askCmdr.spendPause.description": "One answer can run many lookups. Past this estimated cost, Cmdr pauses it and asks before it spends more. Estimates use list prices, so caching usually makes the real cost lower.",
   "@settings.askCmdr.spendPause.description": {
     "description": "Help text under the picker that sets when a running Ask Cmdr answer pauses over its cost. Explains that a single answer may look things up many times, that once its estimated cost passes the chosen amount the assistant stops and asks the user whether to continue, and that the estimate uses the AI provider's published prices, while the provider's prompt caching (reusing parts of the chat it already read) usually makes the actual bill smaller. \"Lookup\" is the word the chat already uses for a tool call.",
-    "screenshot": "settings-ai-ask-cmdr.png",
-    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+    "screenshot": "settings-ai-ask-cmdr.png"
   },
   "settings.askCmdr.spendPause.opt.never": "Never",
   "@settings.askCmdr.spendPause.opt.never": {
     "description": "Last option in the picker that sets when a running Ask Cmdr answer pauses over its cost: never pause, however much one answer costs. The other options are money amounts. Sentence case.",
-    "screenshot": "settings-ai-ask-cmdr.png",
-    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+    "screenshot": "settings-ai-ask-cmdr.png"
   },
   "settings.askCmdr.spendPause.keywords": "cost, spend, money, price, budget, limit, pause, dollars, expensive",
   "@settings.askCmdr.spendPause.keywords": {
@@ -3409,7 +3422,7 @@
   "@settings.ai.tooltipCloud": {
     "description": "Tooltip for the AI \"Cloud AI\" provider option. \"API\" = application programming interface (keep it). All the bracketed and listed names (OpenAI, Anthropic, Claude, Google, Gemini, xAI, Grok, Groq, DeepSeek, OpenRouter, Ollama, LM Studio) are brand/product names; do NOT translate them. \"Cmdr\" is the product name; keep it. \"Bring your own ...\" means the user supplies their own key."
   },
-  "settings.ai.tooltipLocal": "Runs a small language model entirely on your device. Maximum privacy: nothing leaves your computer. Works offline. Uses ~2 GB disk space and ~400 MB memory (varies with context size). Requires Apple silicon (M1+).",
+  "settings.ai.tooltipLocal": "Runs a small language model entirely on your device. Maximum privacy: nothing leaves your computer. Works offline. Uses ~2 GB disk space and ~400 MB memory (varies with context size). Requires Apple silicon (M1+) and macOS 14 or later.",
   "@settings.ai.tooltipLocal": {
     "description": "Tooltip for the AI \"Local LLM\" provider option. \"~2 GB\" and \"~400 MB\" are rough decimal sizes: keep the tilde and write the units as your common.sizeUnit.gigabyte and common.sizeUnit.megabyte. \"M1\" is an Apple chip name; keep it. \"Apple silicon\" is Apple’s name for its own M-series Mac chips: use the form your language’s termbase settles, since Apple frames it in its own words in some languages. \"M1+\" means M1 or later. \"context size\" ties to the local context-window setting."
   },
@@ -3547,26 +3560,22 @@
   "settings.askCmdr.toolGroupsOnAnswer.label": "Tool groups when the answer arrives",
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "description": "Label for a choice in Settings > Advanced > Ask Cmdr. In the Ask Cmdr chat, the assistant’s requests to look at files show as a group of short lines that opens while it works; this picks what that group does once the answer is in.",
-    "screenshot": "settings-ai-ask-cmdr.png",
-    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+    "screenshot": "settings-advanced.png"
   },
   "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr shows what the AI looks at while it works. Pick whether those lines fold away once the answer arrives.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
     "description": "Help text under the tool-groups choice in Settings > Advanced > Ask Cmdr. “Ask Cmdr” is the product name of the chat panel; keep it untranslated. It names only the panel: the AI is the one that looks at files and answers. “Those lines” are the short lines in the chat naming each folder, file, or search the AI checked.",
-    "screenshot": "settings-ai-ask-cmdr.png",
-    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+    "screenshot": "settings-advanced.png"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
     "description": "Radio-button option for the tool-groups choice in Settings > Advanced > Ask Cmdr: when the answer arrives, every group of tool lines closes to a one-line summary.",
-    "screenshot": "settings-ai-ask-cmdr.png",
-    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+    "screenshot": "settings-advanced.png"
   },
   "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Leave them as I had them",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
     "description": "Radio-button option for the tool-groups choice in Settings > Advanced > Ask Cmdr: when the answer arrives, each group of tool lines stays open or closed, whichever the person left it.",
-    "screenshot": "settings-ai-ask-cmdr.png",
-    "screenshotNote": "Settings > AI > Ask Cmdr, pictured here. Your string belongs to a state this screenshot doesn’t show (off, or asking you to review changed wording), a confirmation or empty state in one of its panels, or a note under one of its controls."
+    "screenshot": "settings-advanced.png"
   },
   "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistant, chat, collapse, expand, fold, tools, steps, answer",
   "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
@@ -4221,5 +4230,41 @@
   "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
   "@settings.multiRename.tagEditor.absSideFiles.keywords": {
     "description": "Search keywords for the “Write reader.txt and desc.txt for Audiobookshelf” setting (settings.multiRename.tagEditor.absSideFiles.label) in Settings > Advanced. What it does: writing audiobook tags also writes the narrator and the description into two small text files beside the book, for the Audiobookshelf server app. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.servers.card.smbLinkConsents": "SMB link sign-ins",
+  "@settings.servers.card.smbLinkConsents": {
+    "description": "Title of a settings card listing the other servers the person let links in SMB shares sign in to. \"SMB\" is a protocol name."
+  },
+  "settings.network.smbLinkConsents.keywords": "SMB, DFS, link, sign in, other server, allow, trust, forget",
+  "@settings.network.smbLinkConsents.keywords": {
+    "description": "Comma-separated search keywords for that settings card. Not shown to the person. Keep SMB and DFS."
+  },
+  "settings.servers.smbLinkConsents.description": "A link in an SMB share can lead to a folder on another server. Cmdr asks before it signs in there, and remembers your answer here.",
+  "@settings.servers.smbLinkConsents.description": {
+    "description": "Help text under that card’s title."
+  },
+  "settings.servers.smbLinkConsents.empty": "Nothing allowed yet. When a link in a share leads to another server, Cmdr asks first.",
+  "@settings.servers.smbLinkConsents.empty": {
+    "description": "Shown in that card when the list is empty."
+  },
+  "settings.servers.smbLinkConsents.pair": "Links on {server} can sign in to {target}",
+  "@settings.servers.smbLinkConsents.pair": {
+    "description": "One row of that card.",
+    "placeholders": {
+      "server": "the server the share is on",
+      "target": "the other server the links lead to"
+    }
+  },
+  "settings.servers.smbLinkConsents.confirmTitle": "Forget this sign-in?",
+  "@settings.servers.smbLinkConsents.confirmTitle": {
+    "description": "Title of the confirmation before removing one row of that card."
+  },
+  "settings.servers.smbLinkConsents.confirm": "The next time a link on {server} leads to {target}, Cmdr will ask again.",
+  "@settings.servers.smbLinkConsents.confirm": {
+    "description": "Body of that confirmation: what changes if they go ahead. States a consequence; nothing is lost.",
+    "placeholders": {
+      "server": "the server the share is on",
+      "target": "the other server the link leads to"
+    }
   }
 }

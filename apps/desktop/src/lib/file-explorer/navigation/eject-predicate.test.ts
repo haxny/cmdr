@@ -94,6 +94,16 @@ describe('isVolumeEjectable', () => {
     expect(isVolumeEjectable(phone({ kind: 'unavailable', reason: 'offline' }))).toBe(false)
   })
 
+  it('offers a phone whose MTP session is still connecting nothing to detach', () => {
+    const connecting = makeVolume({
+      id: 'mtp-pixel:waiting',
+      category: 'mobile_device',
+      isEjectable: true,
+      deviceReadiness: { kind: 'connecting' },
+    })
+    expect(isVolumeEjectable(connecting)).toBe(false)
+  })
+
   it('leaves an MTP device alone, which earns its Eject by closing the session', () => {
     // MTP rows carry no `deviceReadiness` and a real `isEjectable`, so nothing
     // about the device gate applies to them.

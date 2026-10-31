@@ -10,6 +10,10 @@ export const paneHandlers = {
     explorerRef?.switchPane()
   },
 
+  'pane.quickFilter': ({ explorerRef }) => {
+    explorerRef?.cycleQuickFilter()
+  },
+
   'pane.focusControls': ({ explorerRef }) => {
     explorerRef?.focusPaneControls()
   },

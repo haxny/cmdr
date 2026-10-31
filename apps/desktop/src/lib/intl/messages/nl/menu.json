@@ -658,6 +658,14 @@
   "@menu.volume.ejectBusy": {
     "sourceHash": "e2145a6"
   },
+  "menu.volume.ejectAll": "Werp alle uit",
+  "@menu.volume.ejectAll": {
+    "sourceHash": "7adbe9a"
+  },
+  "menu.volume.ejectAllBusy": "Werp alle uit (bezet)",
+  "@menu.volume.ejectAllBusy": {
+    "sourceHash": "8b91f8f"
+  },
   "menu.volume.renameFavorite": "Wijzig naam",
   "@menu.volume.renameFavorite": {
     "sourceHash": "3064d79"

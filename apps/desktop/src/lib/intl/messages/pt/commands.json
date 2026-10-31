@@ -488,13 +488,21 @@
   "@commands.fileRename.label": {
     "sourceHash": "3064d79"
   },
+  "commands.paneQuickFilter.label": "Filtro rápido",
+  "@commands.paneQuickFilter.label": {
+    "sourceHash": "e731882"
+  },
+  "commands.paneQuickFilter.description": "Abre o selo de filtro com o padrão atual. Pressione de novo para alternar entre “Filtrar” e “Ir para”",
+  "@commands.paneQuickFilter.description": {
+    "sourceHash": "2778526"
+  },
   "commands.fileMultiRename.label": "Renomear em lote",
   "@commands.fileMultiRename.label": {
     "sourceHash": "5ceb1a2"
   },
-  "commands.fileMultiRename.description": "Renomeia os arquivos selecionados (ou a pasta inteira) com máscara de nome, contador e busca e substituição",
+  "commands.fileMultiRename.description": "Renomeia os arquivos selecionados (ou o arquivo sob o cursor) com máscara de nome, contador e busca e substituição",
   "@commands.fileMultiRename.description": {
-    "sourceHash": "d294fb1"
+    "sourceHash": "d3a52f1"
   },
   "commands.fileEditTags.label": "Edit tags",
   "@commands.fileEditTags.label": {

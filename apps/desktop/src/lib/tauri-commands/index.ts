@@ -95,6 +95,7 @@ export {
   viewerReload,
   viewerGetEncodingOptions,
   onViewerPullProgress,
+  onViewerMediaLoad,
 } from './file-viewer'
 export type {
   ViewerPullProgress,
@@ -182,6 +183,7 @@ export {
   clearExtensionIconCache,
   clearDirectoryIconCache,
 } from './icons'
+export type { CustomFolderIconId } from './icons'
 
 // App state (MCP pane state, dialog tracking, menu context, window lifecycle)
 export {
@@ -230,6 +232,7 @@ export {
   resolvePathVolume,
   resolveLocation,
   getVolumeSpace,
+  ejectAllOnDisk,
   ejectVolume,
   getBusyVolumeIds,
   getEjectingVolumeIds,
@@ -271,6 +274,9 @@ export {
   getKnownShareByName,
   updateKnownShare,
   getUsernameHint,
+  allowSmbLinkTarget,
+  forgetSmbLinkTarget,
+  listSmbLinkConsents,
   saveSmbCredentials,
   getSmbCredentials,
   hasCachedSmbCredentials,
@@ -484,8 +490,11 @@ export {
   cancelAskCmdr,
   keepGoingAskCmdr,
   applyBulkRename,
+  BulkRenameFailure,
   preflightBulkRename,
+  cancelBulkRenameCheck,
   cancelBulkRenameProposal,
+  onBulkRenameCheckProgress,
   reviseBulkRenameRow,
   recordAskCmdrSlotChange,
   getAskCmdrConversation,
@@ -511,6 +520,9 @@ export {
 export { onSecurityNoticeRaised } from './security-notices'
 export { onStateRecoveryQueued, takeStateRecoveries } from './state-recovery'
 export type {
+  BulkRenameCheckProgress,
+  BulkRenameError,
+  RenameStartError,
   WakeReadinessView,
   AskCmdrStreamEvent,
   AskCmdrTurn,
@@ -1016,8 +1028,8 @@ export type {
 // "Go to path" (⌘G): resolving typed input, and the persisted recents list
 export { resolveGoToPath, getRecentPaths, addRecentPath, removeRecentPath } from './go-to-path'
 
-// macOS Finder color tags
-export { toggleTags, enrichTags, onTagsSkipped } from './tags'
+// macOS Finder color tags, and packages macOS reports
+export { toggleTags, enrichTags, enrichPackages, onTagsSkipped } from './tags'
 
 // macOS custom updater (check / download / install)
 export {

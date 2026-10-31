@@ -1,0 +1,222 @@
+{
+  "main.instanceLock.alertTitle": "Cmdr уже працює",
+  "@main.instanceLock.alertTitle": {
+    "sourceHash": "7c8f09d"
+  },
+  "main.instanceLock.alertBody": "Одночасно може працювати лише один Cmdr, щоб ваші параметри, журнали та індекси залишалися неушкодженими. Ця копія зараз закриється. Перейдіть до Cmdr, що вже відкритий.",
+  "@main.instanceLock.alertBody": {
+    "sourceHash": "84f0191"
+  },
+  "main.upgradeNudge.mac": "Ми додали нові параметри до початкового налаштування. Відкрийте «Cmdr > Початкове налаштування…», щоб переглянути їх.",
+  "@main.upgradeNudge.mac": {
+    "sourceHash": "439adfd"
+  },
+  "main.upgradeNudge.other": "Ми додали нові параметри до початкового налаштування. Відкрийте палітру команд і виконайте «Початкове налаштування…», щоб переглянути їх.",
+  "@main.upgradeNudge.other": {
+    "sourceHash": "5afe1d2"
+  },
+  "main.dockPinNudge.title": "Закріпити Cmdr у Dock?",
+  "@main.dockPinNudge.title": {
+    "sourceHash": "3a6ce9f"
+  },
+  "main.dockPinNudge.body": "Ви користуєтеся Cmdr уже кілька днів, тож, схоже, він вам підходить. Закріпити його в Dock поруч із Finder, отам унизу?",
+  "@main.dockPinNudge.body": {
+    "sourceHash": "7f4265e"
+  },
+  "main.dockPinNudge.unpinNote": "Якщо передумаєте, Cmdr можна будь-коли відкріпити.",
+  "@main.dockPinNudge.unpinNote": {
+    "sourceHash": "28748d3"
+  },
+  "main.dockPinNudge.decline": "Ні, дякую",
+  "@main.dockPinNudge.decline": {
+    "sourceHash": "e1a0936"
+  },
+  "main.dockPinNudge.accept": "Так, додати в Dock",
+  "@main.dockPinNudge.accept": {
+    "sourceHash": "8fbdc76"
+  },
+  "main.dockPinNudge.added": "Cmdr тепер у Dock.",
+  "@main.dockPinNudge.added": {
+    "sourceHash": "61bec58"
+  },
+  "main.dockPinNudge.addedButDockDidNotRestart": "Іконку Cmdr додано, але Dock не перезавантажився. Іконка зʼявиться під час наступного входу в систему.",
+  "@main.dockPinNudge.addedButDockDidNotRestart": {
+    "sourceHash": "7a4e3bb"
+  },
+  "main.dockPinNudge.managedDock": "Вашим Dock керує профіль конфігурації, тож Cmdr не може сам себе додати. Це може змінити той, хто керує цим Mac.",
+  "@main.dockPinNudge.managedDock": {
+    "sourceHash": "4781787"
+  },
+  "main.dockPinNudge.notAdded": "Цього разу Cmdr не вдалося потрапити в Dock. Його можна будь-коли перетягнути в Dock із папки «Програми».",
+  "@main.dockPinNudge.notAdded": {
+    "sourceHash": "0b863ad"
+  },
+  "main.revealNudge.title": "Відкривати «Показати у Finder» у Cmdr?",
+  "@main.revealNudge.title": {
+    "sourceHash": "45a5b47"
+  },
+  "main.revealNudge.body": "Ви вже деякий час користуєтеся Cmdr. Коли інша програма виконує «Показати у Finder», Cmdr може відкрити цю папку замість Finder, і потрібний файл уже буде під курсором.",
+  "@main.revealNudge.body": {
+    "sourceHash": "1934a04"
+  },
+  "main.revealNudge.switchBackNote": "Повернути все як було можна будь-коли в Параметрах.",
+  "@main.revealNudge.switchBackNote": {
+    "sourceHash": "48c2bca"
+  },
+  "main.revealNudge.decline": "Ні, дякую",
+  "@main.revealNudge.decline": {
+    "sourceHash": "e1a0936"
+  },
+  "main.revealNudge.accept": "Так, відкривати в Cmdr",
+  "@main.revealNudge.accept": {
+    "sourceHash": "3291bb4"
+  },
+  "main.revealNudge.turnedOn": "Тепер Cmdr відкриває «Показати у Finder» з інших програм.",
+  "@main.revealNudge.turnedOn": {
+    "sourceHash": "27c0ea2"
+  },
+  "main.revealNudge.heldByOtherApp": "Зараз «Показати у Finder» обробляє програма {app}. Передати це Cmdr можна будь-коли в Параметрах.",
+  "@main.revealNudge.heldByOtherApp": {
+    "sourceHash": "0893821"
+  },
+  "main.revealNudge.notTurnedOn": "Цього разу Cmdr не вдалося перехопити «Показати у Finder». Перемикач є в Параметрах, коли захочете спробувати ще раз.",
+  "@main.revealNudge.notTurnedOn": {
+    "sourceHash": "0f572c0"
+  },
+  "main.revealActivation.title": "Команда «Показати у Finder» відкрила папку тут",
+  "@main.revealActivation.title": {
+    "sourceHash": "6bb18bb"
+  },
+  "main.revealActivation.body": "Cmdr налаштовано перехоплювати такі команди, тож файл зʼявився в панелі Cmdr, а не у Finder. Усе інше відкривається так само, як і раніше.",
+  "@main.revealActivation.body": {
+    "sourceHash": "19ea7d6"
+  },
+  "main.revealActivation.openSettings": "Змінити в Параметрах",
+  "@main.revealActivation.openSettings": {
+    "sourceHash": "673f711"
+  },
+  "main.quit.title": "{count, plural, =1 {Завершити, поки виконується операція?} one {Завершити, поки виконується {countText} операція?} few {Завершити, поки виконуються {countText} операції?} many {Завершити, поки виконується {countText} операцій?} other {Завершити, поки виконується {countText} операції?}}",
+  "@main.quit.title": {
+    "sourceHash": "2671a89"
+  },
+  "main.quit.body": "Усе, що вже завершено, так і залишиться. Те, що ще записується, зупиниться там, де є, а все недописане Cmdr прибере.",
+  "@main.quit.body": {
+    "sourceHash": "79a69f9"
+  },
+  "main.quit.countdown": "{seconds, plural, one {Завершення через {secondsText} секунду, щоб перезапуск або вихід із системи ніколи не чекали на Cmdr.} few {Завершення через {secondsText} секунди, щоб перезапуск або вихід із системи ніколи не чекали на Cmdr.} many {Завершення через {secondsText} секунд, щоб перезапуск або вихід із системи ніколи не чекали на Cmdr.} other {Завершення через {secondsText} секунди, щоб перезапуск або вихід із системи ніколи не чекали на Cmdr.}}",
+  "@main.quit.countdown": {
+    "sourceHash": "a389e0c"
+  },
+  "main.quit.countdownAria": "Час до автоматичного завершення Cmdr",
+  "@main.quit.countdownAria": {
+    "sourceHash": "6b0b5c2"
+  },
+  "main.quit.keepWorking": "Продовжити роботу",
+  "@main.quit.keepWorking": {
+    "sourceHash": "5ed03f2"
+  },
+  "main.quit.quitNow": "Завершити зараз",
+  "@main.quit.quitNow": {
+    "sourceHash": "c96bcc8"
+  },
+  "main.quit.operationsHeading": "Ще виконуються",
+  "@main.quit.operationsHeading": {
+    "sourceHash": "89acce5"
+  },
+  "main.oldWebkit.title": "Cmdr потрібна новіша версія Safari",
+  "@main.oldWebkit.title": {
+    "sourceHash": "03e502b"
+  },
+  "main.oldWebkit.body": "Інтерфейсу Cmdr потрібен Safari 15.4 або новіший, а на цьому Mac стоїть старіша версія. Відкрийте «Оновлення ПЗ» й інсталюйте всі доступні оновлення. Це має допомогти.",
+  "@main.oldWebkit.body": {
+    "sourceHash": "a7112ec"
+  },
+  "main.oldMacos.title": "Cmdr на macOS {version}",
+  "@main.oldMacos.title": {
+    "sourceHash": "e75f925"
+  },
+  "main.oldMacos.body": "Cmdr офіційно підтримує macOS 12 і новіші, тож тут усе працює без гарантій. Більшість речей працює, але деякі кольори й дрібні деталі макета можуть виглядати не так, а виправлення для старіших систем робляться в останню чергу. Якщо натрапите на щось зламане, напишіть мені: я все одно радо про це дізнаюся.",
+  "@main.oldMacos.body": {
+    "sourceHash": "f9b4185"
+  },
+  "main.oldMacos.gotIt": "Зрозуміло",
+  "@main.oldMacos.gotIt": {
+    "sourceHash": "5ad3dbd"
+  },
+  "main.oldWebkit.quit": "Завершити",
+  "@main.oldWebkit.quit": {
+    "sourceHash": "b3eb37a"
+  },
+  "main.escapeFullScreenHint.message": "Клавіша Escape вивела Cmdr з повноекранного режиму.",
+  "@main.escapeFullScreenHint.message": {
+    "sourceHash": "f7b4c55"
+  },
+  "main.escapeFullScreenHint.switchLabel": "Виходити з повноекранного режиму клавішею Escape",
+  "@main.escapeFullScreenHint.switchLabel": {
+    "sourceHash": "f98be5e"
+  },
+  "main.escapeFullScreenHint.settingsLine": "Змінити це можна й тут: <settingsLink>Параметри > Експертні</settingsLink>.",
+  "@main.escapeFullScreenHint.settingsLine": {
+    "sourceHash": "a7fc48a"
+  },
+  "main.escapeFullScreenHint.onceNote": "Це повідомлення зʼявиться лише раз.",
+  "@main.escapeFullScreenHint.onceNote": {
+    "sourceHash": "210b892"
+  },
+  "main.cliCommand.installed": "Команда «cmdr» готова. Щоб відкрити поточну папку, введіть у терміналі «cmdr .».",
+  "@main.cliCommand.installed": {
+    "sourceHash": "5b72efe"
+  },
+  "main.cliCommand.uninstalled": "Команду «cmdr» видалено.",
+  "@main.cliCommand.uninstalled": {
+    "sourceHash": "edac691"
+  },
+  "main.cliCommand.alreadyInstalled": "Команду «cmdr» уже інстальовано.",
+  "@main.cliCommand.alreadyInstalled": {
+    "sourceHash": "4a67949"
+  },
+  "main.cliCommand.alreadyUninstalled": "Команди «cmdr» уже немає.",
+  "@main.cliCommand.alreadyUninstalled": {
+    "sourceHash": "7d49c8f"
+  },
+  "main.cliCommand.canceled": "Нічого не змінено. Щоб інсталювати чи видалити команду «cmdr», потрібен пароль адміністратора.",
+  "@main.cliCommand.canceled": {
+    "sourceHash": "31fd0a0"
+  },
+  "main.cliCommand.installFailed": "Не вдалося інсталювати команду «cmdr». Перевірте, чи можна записувати в /usr/local/bin, і спробуйте ще раз.",
+  "@main.cliCommand.installFailed": {
+    "sourceHash": "de500b0"
+  },
+  "main.cliCommand.uninstallFailed": "Не вдалося видалити команду «cmdr». Перевірте, чи можна записувати в /usr/local/bin, і спробуйте ще раз.",
+  "@main.cliCommand.uninstallFailed": {
+    "sourceHash": "fe4f2fe"
+  },
+  "main.cliCommand.homebrew": "Команду «cmdr» інстальовано через Homebrew разом із Cmdr, тож вона вже є у вашому терміналі. Вона зникне, коли ви видалите Cmdr через Homebrew.",
+  "@main.cliCommand.homebrew": {
+    "sourceHash": "1525744"
+  },
+  "main.cliCommand.takenByOther": "У /usr/local/bin уже є інший «cmdr», тож Cmdr його не чіпає. Видаліть або перейменуйте його, а тоді спробуйте ще раз.",
+  "@main.cliCommand.takenByOther": {
+    "sourceHash": "bd4877c"
+  },
+  "main.cliCommand.notInApplications": "Спершу перемістіть Cmdr у папку «Програми». Якщо інсталювати команду «cmdr» з іншого місця, вона перестане працювати, щойно Cmdr переміститься.",
+  "@main.cliCommand.notInApplications": {
+    "sourceHash": "e011785"
+  },
+  "main.cliCommand.notProductionBuild": "Це збірка Cmdr для розробки, тому вона не чіпає команду «cmdr». Для цього скористайтеся Cmdr із папки «Програми».",
+  "@main.cliCommand.notProductionBuild": {
+    "sourceHash": "f3187b3"
+  },
+  "main.cliCommand.unavailable": "Зараз не вдалося перевірити команду «cmdr». Спробуйте ще раз за мить.",
+  "@main.cliCommand.unavailable": {
+    "sourceHash": "58814f2"
+  },
+  "main.cliCommand.adminPromptInstall": "Cmdr хоче додати команду «cmdr» до /usr/local/bin.",
+  "@main.cliCommand.adminPromptInstall": {
+    "sourceHash": "3c16e21"
+  },
+  "main.cliCommand.adminPromptUninstall": "Cmdr хоче видалити команду «cmdr» з /usr/local/bin.",
+  "@main.cliCommand.adminPromptUninstall": {
+    "sourceHash": "df420ea"
+  }
+}

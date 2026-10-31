@@ -211,11 +211,18 @@ pub trait Volume: Send + Sync {
     /// which is just `list_directory_with_cancel`. The scanner
     /// (`indexing::network_scanner`) calls THIS, not `list_directory`, for every
     /// directory it walks.
+    ///
+    /// `clock` times the listing for the walk's wedge timeout. A backend that
+    /// parks the listing by its own choice (a yield point, a lock its own scan
+    /// holds) pauses it around that wait, so pacing never reads as a dead
+    /// device; ❌ never around a device round trip (`ScanListingClock`).
     fn list_directory_for_scan<'a>(
         &'a self,
         path: &'a Path,
         cancel: Option<&'a CancellationToken>,
+        clock: &'a ScanListingClock,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
+        let _ = clock;
         self.list_directory_with_cancel(path, None, cancel)
     }
 
@@ -348,6 +355,46 @@ pub trait Volume: Send + Sync {
         path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = Result<EntryKind, VolumeError>> + Send + 'a>> {
         Box::pin(async move { self.get_metadata(path).await.map(|entry| EntryKind::of(&entry)) })
+    }
+
+    /// The target of the symlink at `path`, exactly as stored and ❌ never
+    /// resolved or followed, or `Ok(None)` when something other than a link sits
+    /// there.
+    ///
+    /// The source half of carrying a link across volumes. Default: `NotSupported`,
+    /// which the copy engine reads as "this backend can't say", so the link takes
+    /// the older route: streaming what it points at, or a counted skip where
+    /// the source has no bytes for it.
+    fn read_link_target<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<PathBuf>, VolumeError>> + Send + 'a>> {
+        let _ = path;
+        Box::pin(async { Err(VolumeError::NotSupported) })
+    }
+
+    /// Whether this backend knows how to make a symlink at all. A cheap gate, so a
+    /// copy onto a share with no links pays no round trip to find out; the
+    /// filesystem under `path` still has the last word (a local exFAT drive refuses),
+    /// which is why the engine proves it once per operation before relying on it.
+    fn can_hold_links(&self) -> bool {
+        false
+    }
+
+    /// Makes `path` a symlink holding `target` VERBATIM: never resolved, rebased,
+    /// or checked, whether it points at nothing, or out of the volume.
+    ///
+    /// Refuses an occupied `path` with `AlreadyExists`, like
+    /// [`create_file`](Self::create_file). `NotSupported` means this destination
+    /// can't hold the link, which the engine counts as a skip. Default:
+    /// `NotSupported`.
+    fn create_symlink<'a>(
+        &'a self,
+        path: &'a Path,
+        target: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        let _ = (path, target);
+        Box::pin(async { Err(VolumeError::NotSupported) })
     }
 
     /// Which filesystem node sits at `path`, the link itself when it's a link, or
@@ -1057,6 +1104,23 @@ pub trait Volume: Send + Sync {
     /// Default `None`: a new backend claims coverage explicitly or gets none.
     fn listing_watch_coverage(&self, _path: &Path) -> WatchCoverage {
         WatchCoverage::None
+    }
+
+    /// Keeps whatever this backend arms on demand alive while a pane shows the
+    /// directory at `path`; the listing engine drops the answer when the
+    /// listing closes.
+    ///
+    /// For a watch that can't cover the whole volume up front: an SMB share's
+    /// `CHANGE_NOTIFY` never hears a DFS link's target, so the SMB backend
+    /// watches the link here for as long as a listing behind it is open. Report
+    /// what it covers through
+    /// [`listing_watch_coverage`](Self::listing_watch_coverage), which stays
+    /// `None` until the watch is live.
+    ///
+    /// Called on the listing open path, after the read: cheap and non-blocking,
+    /// detach any I/O. Default `None`: nothing to keep.
+    fn watch_listing(&self, _path: &Path) -> Option<ListingWatch> {
+        None
     }
 
     /// The one spelling a cached pane listing of `path` is keyed under.
@@ -2199,6 +2263,7 @@ mod retirement;
 mod root_echo;
 mod routed;
 mod scan_boundary;
+mod scan_listing_clock;
 mod scan_outages;
 mod scan_recorder;
 pub mod scan_stop;
@@ -2240,7 +2305,7 @@ pub use connection::{BackendKind, ConnectionState, DeviceReadiness, DeviceUnavai
 pub use connection_cell::{CellState, ConnectionCell};
 pub use connection_reporter::{ConnectionReporter, ReportedState};
 pub use entry_kind::EntryKind;
-pub use error::{ErrnoField, VolumeError};
+pub use error::{ErrnoField, LinkSignIn, VolumeError};
 pub use ids::*;
 pub use server_side::{RenameWork, ServerCopyProgress, SubtreeTally};
 pub use share_link::{ShareLink, ShareLinkExpiry};
@@ -2254,13 +2319,14 @@ pub use password_locked::{PasswordForgotten, PasswordLocked, UnlockOutcome};
 pub use patching::{PatchSource, patch_created, patch_deleted, patch_mutation, patch_renamed};
 pub use read_stream::{SequentialExtract, VolumeRandomReader, VolumeReadStream};
 pub use remote_paths::{
-    ServerPath, adb_app_root, adb_serial_of_path, nfs_app_root, s3_app_root, server_of_path, sftp_app_root,
-    webdav_app_root, without_s3_key_ids,
+    RemoteRefuser, ServerPath, adb_app_root, adb_serial_of_path, nfs_app_root, refuser_of_path, s3_app_root,
+    server_of_path, sftp_app_root, webdav_app_root, without_s3_key_ids,
 };
 pub use retirement::{Retirement, Retires, SelfHandle};
 pub use root_echo::{RootEcho, root_echo};
 pub use routed::{ResolvedVolume, RoutedKind};
 pub use scan_boundary::{ScanBoundary, stopped as scan_stopped};
+pub use scan_listing_clock::{ScanListingClock, ScanListingClockPause};
 pub use scan_outages::{ScanOutages, ScanReadJudge, ScanReadNext};
 pub use scan_recorder::ScanRecorder;
 pub use scan_stop::{ScanStop, ScanStopSignal};

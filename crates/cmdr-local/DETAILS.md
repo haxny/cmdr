@@ -216,8 +216,10 @@ emitted, because the blocking pool may not have picked the task up yet and "Load
 
 Putting the throttle in the sampler rather than the stat loop means one place decides how often the number changes, and
 it's the place that knows it's driving a UI. `PROGRESS_SAMPLE_INTERVAL` is 200 ms in production and 1 ms in a test
-build, so `listing_a_local_directory_reports_progress_while_it_reads` can pin the wiring against a 5,000-entry scratch
-dir instead of needing one big enough to outlast a real interval.
+build. Even 1 ms guarantees no tick: under load the async side can wake only after a fast read is done (#755, 2 in 40
+red under 32 CPU hogs). So `listing_a_local_directory_reports_progress_while_it_reads` pins the wiring by holding the
+read after its first entry until a tick lands, through `LocalPosixVolume::with_listing_hook` (a `testing`-gated hook the
+tally runs after each entry it counts). ❌ Don't pin it with a bigger folder: no size outlasts a starved sampler.
 
 SMB and MTP wire `on_progress` through their own listing loops directly, having no `spawn_blocking` hop to cross.
 
@@ -232,10 +234,17 @@ are deferred, and `list_directory_core` never reads them: `crates/cmdr-listing/D
 ## Local volume space
 
 `get_volume_space(path)` uses `NSURLVolumeTotalCapacityKey` and `NSURLVolumeAvailableCapacityForImportantUsageKey`
-(falls back to `NSURLVolumeAvailableCapacityKey`). Returns `None` for non-existent paths.
+(falls back to `NSURLVolumeAvailableCapacityKey`) on macOS, and `statvfs` on Linux. Returns `None` for non-existent
+paths.
 
 `space.rs` holds it, beside `get_space_info_for_path` (what `Volume::get_space_info` returns) and the `statvfs` reading
 Linux uses and macOS falls back to.
+
+**Decision**: on Linux, `get_volume_space` is THE `statvfs` call: the app's `volumes_linux` re-exports it for the IPC
+command, and the space poller's unregistered-path fallback calls it, so ❌ never write a second `statvfs` in the app.
+**Why**: the app once kept its own copy, which derived `used` as `total - available` (counting root-reserved blocks as
+used) while a `Volume`'s answer read `f_bfree`, so the switcher and a transfer's pre-flight could disagree on one disk
+(#465). The non-macOS, non-Linux `stubs/volumes.rs` keeps its own copy on purpose: stubs import nothing.
 
 **Decision**: a test build answers from `statvfs` (`space::get_space_info_statvfs`), and only the NSURL tests in
 `space.rs` call the real `nsurl_volume_space`. **Why**: the first NSURL call in a process runs `CFBundleGetMainBundle`,
@@ -312,6 +321,16 @@ FAT image, so `rename_exclusive_with` takes the attempt as a parameter and `loca
 `Unknown` arm needs no seam at all: a stat and the rename beside it resolve the same path through the same permissions,
 so nothing a test can set up fails one without failing the other, and only a transient failure separates them.
 `local_posix_test.rs` hands `rename_if_free` the verdict directly instead.
+
+## Landing a link
+
+`read_link_target` and `create_symlink` are the local half of `Volume`'s link seam, and they store and read a target
+verbatim, ❌ never resolved (the transfer side: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A copy
+carries a link as the link"). `readlink`'s `EINVAL` means "no link here" (`None`). `can_hold_links` answers for the
+backend, but exFAT under a local volume refuses with `EPERM`, `ENOTSUP`, or `EOPNOTSUPP`, so `create_symlink` turns
+those into `NotSupported`. ❗ `ENOTSUP` and `EOPNOTSUPP` are one number on Linux and two on macOS, so that test compares
+values: a `matches!` pattern naming both doesn't compile on Linux. The copy scan counts a nested link, so totals agree
+with the preview and `scan_walk`.
 
 ## Testing
 

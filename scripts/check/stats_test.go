@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/csv"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"cmdr/scripts/check/checks"
@@ -162,5 +164,64 @@ func TestLogTestStatsWritesNothingForANonTestCheck(t *testing.T) {
 
 	if rows := readTestLog(t, home); len(rows) != 0 {
 		t.Fatalf("expected no file at all, got %v", rows)
+	}
+}
+
+// Separate runners (one per worktree, or a check run beside a land) append to the
+// same log at once, each behind its own process-local mutex, so each writer here
+// gets a mutex of its own to play one such process. Regression anchor: the rows
+// used to leave through csv.Writer's 4 KiB buffer, one write per buffer-full, so
+// two processes' chunks interleaved mid-row and left rows of four or eight fields
+// (13 in the real log by 2026-10-29).
+func TestAppendCSVRowsKeepsConcurrentProcessesRowsWhole(t *testing.T) {
+	home := redirectHome(t)
+	const writers, batches, rowsPerBatch = 8, 20, 40
+
+	var wg sync.WaitGroup
+	for w := range writers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var ownProcessMu sync.Mutex
+			for b := range batches {
+				rows := make([][]string, 0, rowsPerBatch)
+				for r := range rowsPerBatch {
+					rows = append(rows, []string{
+						"2026-10-29 01:00:00", "rust-tests",
+						fmt.Sprintf("crate::writer_%d::batch_%d::a_test_with_a_long_enough_name_%d, with a comma", w, b, r),
+						"fail", "1.234", "1",
+					})
+				}
+				appendCSVRows(&ownProcessMu, testCSVFileName, testCSVHeader, rows)
+			}
+		}()
+	}
+	wg.Wait()
+
+	f, err := os.Open(wantLogPath(home, testCSVFileName))
+	if err != nil {
+		t.Fatalf("open log: %v", err)
+	}
+	defer f.Close()
+	reader := csv.NewReader(f)
+	reader.FieldsPerRecord = -1
+	rows, err := reader.ReadAll()
+	if err != nil {
+		t.Fatalf("the log must parse as CSV: %v", err)
+	}
+	headers := 0
+	for i, row := range rows {
+		if len(row) != len(testCSVHeader) {
+			t.Fatalf("row %d has %d fields, want %d: %q", i, len(row), len(testCSVHeader), row)
+		}
+		if row[0] == testCSVHeader[0] {
+			headers++
+		}
+	}
+	if headers != 1 {
+		t.Errorf("want exactly one header, got %d", headers)
+	}
+	if want := 1 + writers*batches*rowsPerBatch; len(rows) != want {
+		t.Errorf("want %d rows (header included), got %d", want, len(rows))
 	}
 }

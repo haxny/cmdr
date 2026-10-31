@@ -488,13 +488,21 @@
   "@commands.fileRename.label": {
     "sourceHash": "3064d79"
   },
+  "commands.paneQuickFilter.label": "Gyorsszűrő",
+  "@commands.paneQuickFilter.label": {
+    "sourceHash": "e731882"
+  },
+  "commands.paneQuickFilter.description": "Megnyitja a szűrőjelvényt a jelenlegi mintával. Nyomd meg újra a Szűrés és az Ugrás mód közötti váltáshoz",
+  "@commands.paneQuickFilter.description": {
+    "sourceHash": "2778526"
+  },
   "commands.fileMultiRename.label": "Csoportos átnevezés",
   "@commands.fileMultiRename.label": {
     "sourceHash": "5ceb1a2"
   },
-  "commands.fileMultiRename.description": "Átnevezi a kijelölt fájlokat (vagy az egész mappát) névmaszkkal, számlálóval, valamint kereséssel és cserével",
+  "commands.fileMultiRename.description": "Átnevezi a kijelölt fájlokat (vagy a kurzor alatti fájlt) névmaszkkal, számlálóval, valamint kereséssel és cserével",
   "@commands.fileMultiRename.description": {
-    "sourceHash": "d294fb1"
+    "sourceHash": "d3a52f1"
   },
   "commands.fileEditTags.label": "Edit tags",
   "@commands.fileEditTags.label": {

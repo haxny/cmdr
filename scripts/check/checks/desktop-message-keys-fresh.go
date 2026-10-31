@@ -14,15 +14,16 @@ import (
 // `MessageKey` union (or hand-edited the generated file).
 //
 // Mirrors `desktop-bindings-fresh.go`'s regenerate-and-diff strategy, minus the
-// hash-marker short-circuit: the codegen is a ~50 ms node script over a dozen
-// small JSON files (no cargo compile), so there's nothing to amortize. In
-// `--ci` mode the original is restored and any drift fails; outside `--ci` the
-// regenerated file is kept so the dev gets the same auto-fix UX as oxfmt/clippy
-// `--fix` and commits the diff alongside the catalog change that caused it.
+// hash-marker short-circuit: the codegen is a ~0.2 CPU-second node script (one
+// regex pass per source file, no cargo compile), so there's nothing to
+// amortize. In `--ci` mode the original is restored and any drift fails;
+// outside `--ci` the regenerated file is kept so the dev gets the same auto-fix
+// UX as oxfmt/clippy `--fix` and commits the diff alongside the catalog change
+// that caused it.
 //
-// The codegen ALSO reports keys used-in-code-but-missing (it exits non-zero in
-// that case, surfaced here as a failure) and catalog-keys-never-used (a warning
-// printed to stderr, non-fatal); this check inherits both.
+// The codegen ALSO fails on keys used in code but missing from the catalog,
+// surfaced here as a failure. Catalog keys nobody uses are
+// `desktop-message-keys-unused`'s question, not this check's.
 func RunDesktopMessageKeysFresh(ctx *CheckContext) (CheckResult, error) {
 	desktopDir := filepath.Join(ctx.RootDir, "apps", "desktop")
 	keysPath := filepath.Join(desktopDir, "src", "lib", "intl", "keys.gen.ts")

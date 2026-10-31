@@ -110,7 +110,12 @@
     "sources": "ms (client: an entity that connects to another over a network → kliens)"
   },
   "ai-context": {
-    "avoid": [{ "form": "környezet", "why": "reads as environment, the MS execution-context sense" }],
+    "avoid": [
+      {
+        "form": "környezet",
+        "why": "reads as environment, the MS execution-context sense"
+      }
+    ],
     "chosen": "kontextus",
     "confidence": "tentative",
     "sources": "MS terminology has only környezet (the execution-environment sense); kontextus is the AI-context word; askCmdr.cost.estimateTooltip"
@@ -1261,7 +1266,7 @@
   },
   "eject": {
     "chosen": "kiadás",
-    "accept": ["kiad", "add ki", "adható ki"],
+    "accept": ["kiad", "add ki", "adható ki", "adja ki", "ki nem adod", "adott ki"],
     "forms": "Eject → Kiadás; imperative add ki; can't be ejected → nem adható ki; aria {name} kiadása",
     "confidence": "high",
     "sources": "macOS Finder (Kiadás, Egy kiadása, Összes kiadása, NE66)"
@@ -3060,6 +3065,13 @@
     "confidence": "high",
     "sources": "Double Commander"
   },
+  "name-mask": {
+    "chosen": "névmaszk",
+    "accept": ["maszk"],
+    "forms": "Name mask → Névmaszk; with a name mask → névmaszkkal",
+    "confidence": "high",
+    "sources": "Total Commander (Átnevezésmaszk: fájlnév); Double Commander's Multi-Rename tool (Maszk); the shipped catalog (multiRename.nameMask: Névmaszk)"
+  },
   "rename-counter": {
     "chosen": "számláló",
     "accept": ["számlál", "számol"],
@@ -3518,8 +3530,8 @@
   },
   "skip": {
     "chosen": "Átugrás",
-    "accept": ["átugr", "kihagy", "hagyott ki"],
-    "forms": "the conflict-policy button → Átugrás; Skip all → Összes átugrása; a past outcome → kihagyva",
+    "accept": ["átugr", "kihagy", "hagyott ki", "ugord át"],
+    "forms": "the conflict-policy button → Átugrás; Skip all → Összes átugrása; a past outcome → kihagyva; telling the user to skip one item → Ugord át ezt az elemet (the imperative splits the prefix off)",
     "confidence": "high",
     "sources": "macOS Finder (PE112/AL6 Átugrás; Kihagyás/Kihagyva)",
     "note": "kihagy is taken by skipped; a folder the user took out of image indexing is kizárva."
@@ -4245,5 +4257,16 @@
     "chosen": "Gondolkodási szint",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
+  },
+  "shared-storage": {
+    "chosen": "közös tárhely",
+    "confidence": "high",
+    "sources": "AOSP frameworks/base core/res values-hu storage_internal (read 2026-10-30): Belső közös tárhely"
+  },
+  "this-computer": {
+    "accept": ["számítógép", "gép"],
+    "chosen": "ez a számítógép",
+    "confidence": "high",
+    "sources": "catalog (errors.mount.hostUnreachable, errors.mount.unsupportedProtocol)"
   }
 }

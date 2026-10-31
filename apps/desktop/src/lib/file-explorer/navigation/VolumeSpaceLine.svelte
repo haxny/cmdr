@@ -20,6 +20,9 @@
     const { volume, spaceManager }: Props = $props()
 
     const space = $derived(spaceManager.volumeSpaceMap.get(volume.id))
+    // A phone with no figure says nothing: it may be waiting on its Allow tap, where a dashed
+    // bar and "Unavailable" read as broken, and there's nothing a click could fix.
+    const isDeviceRow = $derived(volume.category === 'mobile_device')
 </script>
 
 {#if space}
@@ -38,6 +41,8 @@
         {/if}
         <span class="volume-space-text">{formatDiskSpaceShort(space, getFileSizeFormat())}</span>
     </div>
+{:else if isDeviceRow}
+    <!-- Nothing to show. -->
 {:else if spaceManager.spaceRetryingSet.has(volume.id)}
     <div
         class="volume-space-info volume-space-timeout"

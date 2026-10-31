@@ -2,24 +2,26 @@
 //!
 //! Paths and destination names never cross this IPC boundary: the frontend submits only
 //! opaque row ids, and this layer looks the real work up in the proposal spine.
+//!
+//! Checking has no time limit: a 500-row job on a busy NAS can take minutes while working fine.
+//! It reports progress and stops on `cancel_bulk_rename_check` (`propose/rename/check.rs`).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Duration;
 
 use tauri::{AppHandle, Manager};
 
 use crate::agent::AgentDb;
 use crate::agent::store::proposals::ClaimOutcome;
 use crate::agent::tools::propose::rename::{
-    AcceptedRenamePreflights, BulkRenamePreflight, BulkRenamePreflightStatus, RenameSourceFingerprint,
+    AcceptedRenamePreflights, BulkRenamePreflight, BulkRenamePreflightStatus, PreflightStopped, RenameChecks,
+    RenameSourceFingerprint, ReviseRefusal,
 };
 /// Why a rename review couldn't be checked or applied.
 ///
-/// ❌ Not prose: the review dialog words its own states (its per-row
-/// `askCmdr.renameReview.nameRejected` notice, and re-reading the plan when it
-/// has moved on); the variant is what the log records.
+/// ❌ Not prose: the review dialog words each variant from the catalog
+/// (`rename-review-status.ts`); a `detail` here is for the log.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum BulkRenameError {
@@ -45,9 +47,10 @@ pub enum BulkRenameError {
         /// dialogs already word.
         reason: cmdr_operations::RenameStartError,
     },
-    /// The preflight didn't finish inside the command's wait.
-    TimedOut,
-    /// Nothing above classifies it (a panicked task).
+    /// The check was stopped before it answered: the user pressed Stop checking, the review
+    /// closed, or a newer check for this plan replaced it. Nothing ran.
+    Cancelled,
+    /// Nothing above classifies it (a panicked task, Cmdr's own database not answering).
     Unexpected {
         /// What the runtime reported, for the log.
         detail: String,
@@ -64,13 +67,32 @@ impl std::fmt::Display for BulkRenameError {
             Self::NothingToApply => f.write_str("no rows to apply"),
             Self::RowRefused { detail } => write!(f, "row refused: {detail}"),
             Self::CouldntStart { reason } => write!(f, "couldn't start: {reason}"),
-            Self::TimedOut => f.write_str("timed out"),
+            Self::Cancelled => f.write_str("the check was stopped"),
             Self::Unexpected { detail } => write!(f, "unexpected: {detail}"),
         }
     }
 }
 
 impl std::error::Error for BulkRenameError {}
+
+impl From<PreflightStopped> for BulkRenameError {
+    fn from(stopped: PreflightStopped) -> Self {
+        match stopped {
+            PreflightStopped::Cancelled => Self::Cancelled,
+            PreflightStopped::StoreUnavailable { detail } => Self::Unexpected { detail },
+        }
+    }
+}
+
+impl From<ReviseRefusal> for BulkRenameError {
+    fn from(refusal: ReviseRefusal) -> Self {
+        match refusal {
+            ReviseRefusal::NameRefused { detail } => Self::RowRefused { detail },
+            ReviseRefusal::ReviewOver => Self::ReviewExpired,
+            ReviseRefusal::StoreUnavailable { detail } => Self::Unexpected { detail },
+        }
+    }
+}
 
 /// An applied rename plan: the operation it started, and the renames it left
 /// out for the thread's result line to mention.
@@ -85,9 +107,6 @@ pub struct BulkRenameStarted {
 }
 use cmdr_operations::{LocalContent, RemoteContent, SourceFingerprint};
 
-const BULK_RENAME_PREFLIGHT_TIMEOUT: Duration = Duration::from_secs(5);
-const BULK_RENAME_APPLY_TIMEOUT: Duration = Duration::from_secs(5);
-
 /// Revalidates the user-selected subset of a server-owned rename proposal. The
 /// frontend supplies opaque ids only, never source paths or destination names.
 #[tauri::command]
@@ -98,12 +117,18 @@ pub async fn preflight_bulk_rename(
     revision: i64,
     allowed_row_ids: Vec<String>,
 ) -> Result<BulkRenamePreflight, BulkRenameError> {
-    tokio::time::timeout(
-        BULK_RENAME_PREFLIGHT_TIMEOUT,
-        crate::agent::tools::propose::rename::preflight(&app, proposal_id, revision, allowed_row_ids),
-    )
-    .await
-    .map_err(|_| BulkRenameError::TimedOut)
+    crate::agent::tools::propose::rename::preflight(&app, proposal_id, revision, allowed_row_ids)
+        .await
+        .map_err(BulkRenameError::from)
+}
+
+/// Stops a running check for this proposal, leaving the review open. Answers whether one was
+/// running. The stopped `preflight_bulk_rename` or `apply_bulk_rename` answers `Cancelled`.
+#[tauri::command]
+#[specta::specta]
+pub async fn cancel_bulk_rename_check(app: AppHandle, proposal_id: String) -> bool {
+    app.try_state::<RenameChecks>()
+        .is_some_and(|checks| checks.cancel(&proposal_id))
 }
 
 /// Starts the user-approved subset of a server-owned rename plan. Paths and
@@ -122,21 +147,17 @@ pub async fn apply_bulk_rename(
         return Err(review_is_over());
     };
 
-    // The normal dialog path always arrives with this exact preflight. A stale
-    // client retries the bounded authoritative preflight instead of trusting old
-    // rows or accepting a different subset.
+    // A review that checked every row arrives here with a subset whenever the user denied one,
+    // and a stale client with anything: both rerun the authoritative check for exactly these
+    // rows rather than trust old ones. It reports progress and stops like any other check.
     if accepted_preflights.matching(&proposal_id, &allowed_row_ids).is_none() {
-        let preflight = tokio::time::timeout(
-            BULK_RENAME_APPLY_TIMEOUT,
-            crate::agent::tools::propose::rename::preflight(
-                &app,
-                proposal_id.clone(),
-                revision,
-                allowed_row_ids.clone(),
-            ),
+        let preflight = crate::agent::tools::propose::rename::preflight(
+            &app,
+            proposal_id.clone(),
+            revision,
+            allowed_row_ids.clone(),
         )
-        .await
-        .map_err(|_| BulkRenameError::TimedOut)?;
+        .await?;
         match preflight.status {
             BulkRenamePreflightStatus::Ready => {}
             BulkRenamePreflightStatus::ListChanged => return Err(BulkRenameError::ListChanged),
@@ -147,11 +168,8 @@ pub async fn apply_bulk_rename(
     let Some(accepted) = accepted_preflights.take_matching(&proposal_id, &allowed_row_ids) else {
         return Err(review_is_over());
     };
-    let conn = db.open_write_connection().map_err(|_| review_is_over())?;
-    let Some(proposal) = crate::agent::tools::propose::rename::load(&conn, &proposal_id)
-        .ok()
-        .flatten()
-    else {
+    let conn = db.open_write_connection().map_err(store_hiccup)?;
+    let Some(proposal) = crate::agent::tools::propose::rename::load(&conn, &proposal_id).map_err(store_hiccup)? else {
         return Err(review_is_over());
     };
     // The plan the user read, or nothing: an amend since the review (even one that landed after
@@ -198,14 +216,14 @@ pub async fn apply_bulk_rename(
     // accepted (a revised name) or when somebody already answered. Last, so a refusal leaves
     // the group reviewable rather than approved-but-unstarted.
     let group_id = group_id_of(&proposal_id)?;
-    let claimed = crate::agent::suggested_ops::approve(&conn, group_id, now_secs()).map_err(|_| review_is_over())?;
+    let claimed = crate::agent::suggested_ops::approve(&conn, group_id, now_secs()).map_err(store_hiccup)?;
     let ClaimOutcome::Claimed(claimed) = claimed else {
         return Err(review_again());
     };
 
     let initiator = bulk_rename_initiator(&applied_rows);
     // A second connection, MOVED into the sink decorator: the operation outlives this call.
-    let reporting = db.open_write_connection().map_err(|_| review_is_over())?;
+    let reporting = db.open_write_connection().map_err(store_hiccup)?;
     let memory = crate::agent::memory::store_for(&app);
     // Routed: where a rename copies (an S3 folder), the batch runs as one move.
     let started = crate::agent::suggested_ops::bridge::start_reviewed_renames(
@@ -239,6 +257,14 @@ fn review_again() -> BulkRenameError {
     BulkRenameError::NeedsAnotherLook
 }
 
+/// Cmdr's own database didn't answer. The plan may be fine, so this mustn't read as an expired
+/// review: that tells the user to throw it away.
+fn store_hiccup(error: impl std::fmt::Display) -> BulkRenameError {
+    BulkRenameError::Unexpected {
+        detail: error.to_string(),
+    }
+}
+
 fn now_secs() -> i64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     SystemTime::now()
@@ -263,7 +289,7 @@ pub async fn revise_bulk_rename_row(
     // must not block the handler.
     tauri::async_runtime::spawn_blocking(move || {
         crate::agent::tools::propose::rename::revise_row(&app, &proposal_id, &row_id, &destination_name)
-            .map_err(|error| BulkRenameError::RowRefused { detail: error.message })
+            .map_err(BulkRenameError::from)
     })
     .await
     .map_err(|e| BulkRenameError::Unexpected { detail: e.to_string() })?
@@ -334,6 +360,10 @@ fn map_bulk_rename_fingerprint(fingerprint: &RenameSourceFingerprint) -> SourceF
 pub async fn cancel_bulk_rename_proposal(app: AppHandle, proposal_id: String) {
     if let Some(accepted) = app.try_state::<AcceptedRenamePreflights>() {
         accepted.forget(&proposal_id);
+    }
+    if let Some(checks) = app.try_state::<RenameChecks>() {
+        // The review is closing whether or not a check was running.
+        let _ = checks.cancel(&proposal_id);
     }
     let (Some(db_path), Some(group_id)) = (
         app.try_state::<AgentDb>().map(|db| db.db_path().to_path_buf()),
@@ -550,6 +580,43 @@ mod wire_tests {
             })
             .unwrap(),
             serde_json::json!({ "type": "rowRefused", "detail": "that name is taken" })
+        );
+    }
+
+    /// Stopping a check is the user's own choice, and a refused name, a gone review, and a store
+    /// hiccup ask for three different things from them. Flattened, they all read as the first.
+    #[test]
+    fn each_way_a_check_or_an_edit_can_end_keeps_its_own_variant() {
+        use super::{PreflightStopped, ReviseRefusal};
+
+        assert_eq!(
+            serde_json::to_value(BulkRenameError::from(PreflightStopped::Cancelled)).unwrap(),
+            serde_json::json!({ "type": "cancelled" })
+        );
+        assert_eq!(
+            serde_json::to_value(BulkRenameError::from(PreflightStopped::StoreUnavailable {
+                detail: "locked".to_string()
+            }))
+            .unwrap(),
+            serde_json::json!({ "type": "unexpected", "detail": "locked" })
+        );
+        assert_eq!(
+            serde_json::to_value(BulkRenameError::from(ReviseRefusal::NameRefused {
+                detail: "bad".to_string()
+            }))
+            .unwrap(),
+            serde_json::json!({ "type": "rowRefused", "detail": "bad" })
+        );
+        assert_eq!(
+            serde_json::to_value(BulkRenameError::from(ReviseRefusal::ReviewOver)).unwrap(),
+            serde_json::json!({ "type": "reviewExpired" })
+        );
+        assert_eq!(
+            serde_json::to_value(BulkRenameError::from(ReviseRefusal::StoreUnavailable {
+                detail: "locked".to_string()
+            }))
+            .unwrap(),
+            serde_json::json!({ "type": "unexpected", "detail": "locked" })
         );
     }
 

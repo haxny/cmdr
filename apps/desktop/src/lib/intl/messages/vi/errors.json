@@ -515,6 +515,30 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
+  "errors.listing.phoneRefused.title": "Điện thoại này giữ thư mục này ở chế độ riêng tư",
+  "@errors.listing.phoneRefused.title": {
+    "sourceHash": "f41a6b7"
+  },
+  "errors.listing.phoneRefused.explanation": "Android dành riêng thư mục này cho hệ thống và các ứng dụng của hệ thống, nên Cmdr không mở được. Điện thoại và kết nối của bạn không có vấn đề gì.",
+  "@errors.listing.phoneRefused.explanation": {
+    "sourceHash": "d3da350"
+  },
+  "errors.listing.phoneRefused.suggestion": "Ảnh, bản tải về và các tệp khác của bạn nằm trong bộ nhớ dùng chung của điện thoại, nên hãy thử một thư mục ở đó.",
+  "@errors.listing.phoneRefused.suggestion": {
+    "sourceHash": "a2a9025"
+  },
+  "errors.listing.serverRefused.title": "Máy chủ không mở thư mục này",
+  "@errors.listing.serverRefused.title": {
+    "sourceHash": "f9cb7bd"
+  },
+  "errors.listing.serverRefused.explanation": "Thư mục này nằm trên máy chủ, và tài khoản bạn dùng để kết nối không có quyền mở nó. Máy chủ quyết định việc này, nên không có cài đặt nào trên máy tính này thay đổi được.",
+  "@errors.listing.serverRefused.explanation": {
+    "sourceHash": "bba853c"
+  },
+  "errors.listing.serverRefused.suggestion": "Bạn có thể thử:\n- Kiểm tra quyền của thư mục trên máy chủ\n- Một số thư mục thuộc về tài khoản hệ thống của chính máy chủ và luôn đóng với mọi người khác\n- Kết nối bằng một tài khoản có quyền truy cập",
+  "@errors.listing.serverRefused.suggestion": {
+    "sourceHash": "e750b94"
+  },
   "errors.listing.alreadyExists.title": "Đã tồn tại",
   "@errors.listing.alreadyExists.title": {
     "sourceHash": "2dbc546"
@@ -562,6 +586,18 @@
   "errors.listing.notConnected.suggestion": "Bạn có thể thử:\n- Mở điện thoại hoặc máy chủ từ bộ chọn ổ đĩa để kết nối\n- Nếu là điện thoại, hãy mở khóa và chấp nhận mọi lời nhắc hiện ra\n- Mở lại nơi này khi đã kết nối",
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
+  },
+  "errors.listing.linkTargetUnreachable.title": "Không kết nối được tới máy chủ của thư mục này",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` nằm sau một liên kết tới máy chủ khác, và hiện Cmdr không kết nối được tới máy chủ đó. Phần còn lại của mục chia sẻ này vẫn ổn và không có gì bị xóa.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Bạn có thể thử:\n- Kiểm tra xem máy chủ kia có đang chạy không và mạng của bạn có kết nối được tới máy chủ đó không\n- Mở lại nơi này để thử lại",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
   },
   "errors.listing.deviceReconnecting.title": "Đang kết nối lại với thiết bị",
   "@errors.listing.deviceReconnecting.title": {
@@ -1729,6 +1765,14 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
+  "errors.write.permissionDenied.suggestion.phone": "Android dành riêng vị trí này cho hệ thống và các ứng dụng của hệ thống. Ảnh, bản tải về và các tệp khác của bạn nằm trong bộ nhớ dùng chung của điện thoại, nên hãy thử một thư mục ở đó.",
+  "@errors.write.permissionDenied.suggestion.phone": {
+    "sourceHash": "e19fb67"
+  },
+  "errors.write.permissionDenied.suggestion.server": "Máy chủ đã từ chối việc này với tài khoản bạn dùng để kết nối. Hãy kiểm tra quyền của thư mục trên máy chủ, hoặc kết nối bằng một tài khoản có quyền truy cập.",
+  "@errors.write.permissionDenied.suggestion.server": {
+    "sourceHash": "0ca6fc7"
+  },
   "errors.write.permissionDenied.suggestion.objectStoreAccount": "Nhà cung cấp đã từ chối, và điều đó có thể có hai nghĩa. Hãy kiểm tra quyền của khóa truy cập, hoặc xem trong bảng điều khiển của nhà cung cấp có giới hạn sử dụng hay thông báo thanh toán nào không.",
   "@errors.write.permissionDenied.suggestion.objectStoreAccount": {
     "sourceHash": "31deca5"
@@ -2125,6 +2169,10 @@
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
   },
+  "errors.volume.linkTargetUnreachable": "Vị trí này nằm sau một liên kết tới máy chủ khác, và hiện Cmdr không kết nối được tới máy chủ đó.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
+  },
   "errors.volume.deviceSessionReset": "Thiết bị đã khởi động lại kết nối. Hãy đợi vài giây rồi thử lại.",
   "@errors.volume.deviceSessionReset": {
     "sourceHash": "e5ad77d"
@@ -2261,29 +2309,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "Vẫn còn thứ gì đó đang mở tệp ở đó. Hãy đóng các tệp và ứng dụng đang mở, rồi thử lại.",
+  "errors.eject.unmountRefused": "Vẫn còn thứ gì đó đang được dùng ở đó. Hãy đóng các tệp và ứng dụng đang mở, rồi thử lại.",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} vẫn đang mở tệp ở đó. Hãy đóng các tệp đó, rồi thử lại.",
+  "errors.eject.unmountRefusedByApp": "{app} vẫn đang dùng thứ gì đó ở đó. Hãy đóng ứng dụng này, rồi thử lại.",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} vẫn đang mở tệp ở đó. Hãy đóng các tệp đó, rồi thử lại.",
+  "errors.eject.unmountRefusedByApps": "{apps} vẫn đang dùng thứ gì đó ở đó. Hãy đóng các ứng dụng này, rồi thử lại.",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "các ứng dụng khác",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "Một tiến trình có tên {process} vẫn đang mở tệp ở đó. (Cmdr không có tên ứng dụng, chỉ có tên tiến trình.)",
+  "errors.eject.unmountRefusedByProcess": "Một tiến trình có tên {process} vẫn đang dùng thứ gì đó ở đó. (Cmdr không có tên ứng dụng, chỉ có tên tiến trình.)",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "{countText} tiến trình có tên {processes} vẫn đang mở tệp ở đó. (Cmdr không có tên ứng dụng, chỉ có tên tiến trình.)",
+  "errors.eject.unmountRefusedByProcesses": "{countText} tiến trình có tên {processes} vẫn đang dùng thứ gì đó ở đó. (Cmdr không có tên ứng dụng, chỉ có tên tiến trình.)",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "các tiến trình khác",
   "@errors.eject.otherProcesses": {
@@ -2293,13 +2341,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "macOS vẫn đang mở tệp ở đó. Hãy đợi một phút rồi thử lại.",
+  "errors.eject.unmountRefusedBySystem": "macOS vẫn đang dùng thứ gì đó ở đó. Hãy đợi một phút rồi thử lại.",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "Chính Cmdr vẫn đang mở tệp ở đó. Hãy đợi một chút rồi thử lại, hoặc gửi báo cáo nếu vẫn tiếp diễn.",
+  "errors.eject.unmountRefusedByCmdr": "Chính Cmdr vẫn đang dùng thứ gì đó ở đó. Hãy đợi một chút rồi thử lại, hoặc gửi báo cáo nếu vẫn tiếp diễn.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "Ổ đĩa vẫn chưa phản hồi, nên việc tháo vẫn có thể tự hoàn tất.",
   "@errors.eject.timedOut": {
@@ -2488,5 +2536,33 @@
   "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Hãy di chuyển hoặc sao chép các mục với tên hiện tại, rồi đổi tên chúng ở nơi mới.",
   "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
     "sourceHash": "b1e881c"
+  },
+  "errors.listing.linkNeedsConsent.title": "Thư mục này nằm trên máy chủ khác",
+  "@errors.listing.linkNeedsConsent.title": {
+    "sourceHash": "c37d453"
+  },
+  "errors.listing.linkNeedsConsent.explanation": "`{path}` là một liên kết trên **{server}** dẫn tới **{target}**. Cmdr chưa đăng nhập vào đó, nên {target} chưa nhận được gì từ bạn.",
+  "@errors.listing.linkNeedsConsent.explanation": {
+    "sourceHash": "91b0171"
+  },
+  "errors.listing.linkNeedsConsent.suggestion": "Để mở thư mục này, Cmdr phải đăng nhập vào {target} bằng tài khoản bạn dùng cho {server}. Hãy xem lại nếu bạn tin cậy {target}. Phần còn lại của mục chia sẻ này vẫn hoạt động bình thường.",
+  "@errors.listing.linkNeedsConsent.suggestion": {
+    "sourceHash": "991cb6c"
+  },
+  "errors.volume.linkNeedsConsent": "Mục này nằm sau một liên kết tới máy chủ khác mà Cmdr chưa được phép đăng nhập. Hãy mở thư mục trong một khung để quyết định.",
+  "@errors.volume.linkNeedsConsent": {
+    "sourceHash": "79ff9fe"
+  },
+  "errors.write.linkNeedsConsent.title": "Tệp này nằm trên máy chủ khác",
+  "@errors.write.linkNeedsConsent.title": {
+    "sourceHash": "ff31c7f"
+  },
+  "errors.write.linkNeedsConsent.message": "Một liên kết trên {server} dẫn tới {target}, và Cmdr chưa được phép đăng nhập vào đó, nên không có gì được gửi tới máy chủ đó.",
+  "@errors.write.linkNeedsConsent.message": {
+    "sourceHash": "7893ce9"
+  },
+  "errors.write.linkNeedsConsent.suggestion": "Hãy mở thư mục trong một khung và cho phép đăng nhập nếu bạn tin cậy máy chủ đó, rồi thử lại.",
+  "@errors.write.linkNeedsConsent.suggestion": {
+    "sourceHash": "cc25854"
   }
 }

@@ -12,7 +12,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { mount, tick, type ComponentProps } from 'svelte'
 import { SvelteSet } from 'svelte/reactivity'
-import axe from 'axe-core'
 import DateFilterPopover from './DateFilterPopover.svelte'
 import SearchFilterChips from './FilterChips.svelte'
 import ScopeFilterPopover from './ScopeFilterPopover.svelte'
@@ -217,12 +216,7 @@ describe('DateFilterPopover a11y', () => {
     })
   })
 
-  // The Custom… cell renders its `<input type="date">` INSIDE the cell button (one click
-  // selects + focuses — see `filter-chips/CLAUDE.md` § "Chip-side behavior"). Axe's
-  // `nested-interactive` rule flags that structural nesting; we disable that one rule for
-  // this state and let every other rule run, mirroring the `SearchResults` block of
-  // `../dialog.a11y.test.ts`.
-  it('open in between mode with custom bounds has no a11y violations (nested-interactive intentionally disabled)', async () => {
+  it('open in between mode with custom bounds has no a11y violations', async () => {
     const target = document.createElement('div')
     document.body.appendChild(target)
     // 2020-01-02 / 2021-03-04 match no dynamic preset, so both Custom cells render their inline inputs.
@@ -235,20 +229,8 @@ describe('DateFilterPopover a11y', () => {
     target.appendChild(props.anchor)
     mount(DateFilterPopover, { target, props })
     await tick()
-    const out = await axe.run(document.body, {
-      runOnly: {
-        type: 'tag',
-        values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'],
-      },
-      rules: {
-        'color-contrast': { enabled: false },
-        region: { enabled: false },
-        // Intentional: the custom date input lives inside the Custom cell button.
-        // See block comment above.
-        'nested-interactive': { enabled: false },
-      },
-    })
-    expect(out.violations).toEqual([])
+    expect(document.querySelectorAll('input[type="date"]')).toHaveLength(2)
+    await expectNoA11yViolations(document.body)
     target.remove()
     document.querySelectorAll('.ui-popover').forEach((el) => {
       el.remove()
@@ -356,6 +338,27 @@ describe('SizeFilterPopover a11y', () => {
     await tick()
     await expectNoA11yViolations(target)
     target.remove()
+  })
+
+  it('open in between mode with custom bounds has no a11y violations', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    // 7 and 13 match no preset, so both Custom cells render their fields.
+    const props = makeProps({
+      open: true,
+      sizeFilter: 'between' as const,
+      sizeValue: '7',
+      sizeValueMax: '13',
+    })
+    target.appendChild(props.anchor)
+    mount(SizeFilterPopover, { target, props })
+    await tick()
+    expect(document.querySelectorAll('input[type="number"]')).toHaveLength(2)
+    await expectNoA11yViolations(document.body)
+    target.remove()
+    document.querySelectorAll('.ui-popover').forEach((el) => {
+      el.remove()
+    })
   })
 
   it('open in between mode (all columns) has no a11y violations', async () => {

@@ -43,6 +43,14 @@
   "@adb.readiness.waitingForAuthorization": {
     "sourceHash": "679558e"
   },
+  "adb.readiness.tapAllow": "Hãy nhấn vào Cho phép trên điện thoại",
+  "@adb.readiness.tapAllow": {
+    "sourceHash": "68c770f"
+  },
+  "adb.unnamedPhone": "Điện thoại Android",
+  "@adb.unnamedPhone": {
+    "sourceHash": "fae4ea5"
+  },
   "adb.readiness.offline": "Điện thoại của bạn không phản hồi. Hãy đánh thức màn hình, hoặc rút và cắm lại cáp.",
   "@adb.readiness.offline": {
     "sourceHash": "6061885"

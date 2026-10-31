@@ -619,8 +619,17 @@ pub enum AgentStopReason {
 /// Normalized per-call token usage.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct AgentUsage {
+    /// The whole input, the cached share included.
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
+    /// Of `prompt_tokens`, read back from the provider's prompt cache (billed at a fraction of
+    /// input, `agent::pricing`).
+    #[serde(default)]
+    pub cache_read_tokens: u32,
+    /// Of `prompt_tokens`, written to the provider's prompt cache for the next call (billed
+    /// above input on Claude and GPT-5.6+).
+    #[serde(default)]
+    pub cache_write_tokens: u32,
 }
 
 /// A streamed increment of an assistant turn. The UI renders text as it arrives,

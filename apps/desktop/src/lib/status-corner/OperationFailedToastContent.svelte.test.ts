@@ -94,6 +94,7 @@ describe('OperationFailedToastContent', () => {
       from: 'queueFailure',
       operation: 'copy',
       error: 'read_only_device',
+      cause: null,
       title: 'Backup is read-only',
     }
     render({}, incident)

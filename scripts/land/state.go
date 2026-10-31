@@ -73,7 +73,8 @@ func nextStartStep(s branchState, merge bool) startStep {
 }
 
 // patchesUpstream reports whether `git cherry <upstream> <branch>` found every commit already
-// upstream ("-" lines only), as after GitHub rebased the branch onto `main` under fresh SHAs.
+// upstream ("-" lines only): the branch's patches reached `main` under other SHAs (a cherry-pick,
+// or an older land through GitHub's rebase merge).
 func patchesUpstream(cherry string) bool {
 	for line := range strings.SplitSeq(cherry, "\n") {
 		if line != "" && !strings.HasPrefix(line, "- ") {
@@ -89,41 +90,29 @@ type landPath int
 const (
 	// landFastForward: the head still descends from `origin/main`, so push it there as is.
 	landFastForward landPath = iota
-	// landGitHubRebase: `origin/main` moved, so GitHub rebases the green PR onto it, and CI on
-	// `main` checks the result.
-	landGitHubRebase
-	// landRebaseAndRerun: GitHub can't rebase it (a conflict, or a merge commit a rebase would
-	// flatten), so the branch catches up here and CI runs again.
-	landRebaseAndRerun
-	// landGitHubMerge (`-merge`): `origin/main` moved, so GitHub merges the green PR into it with a
-	// merge commit, keeping the head's SHA (and its tag) on `main`'s history.
+	// landGitHubMerge: `origin/main` moved, so GitHub merges the green PR into it with a merge
+	// commit. The branch's commits keep their SHAs and David's signatures, GitHub signs the merge
+	// commit with its own key, and CI on `main` checks the result. Never a GitHub rebase merge: it
+	// rewrites every commit unsigned, which a required-signatures rule refuses.
 	landGitHubMerge
-	// landMergeConflict (`-merge`): GitHub can't merge it cleanly; a person merges by hand.
+	// landRebaseAndRerun: GitHub can't merge it cleanly, so the branch catches up here (a local,
+	// signed rebase) and CI runs again.
+	landRebaseAndRerun
+	// landMergeConflict (`-merge`): GitHub can't merge it cleanly, and the branch must not be
+	// rebased (a release commit and its tag); a person merges by hand.
 	landMergeConflict
 )
 
-// nextLandPath picks the land path. rebaseable is GitHub's view of the PR, nil while it's still
-// computing it.
-func nextLandPath(based, hasMerges bool, rebaseable *bool) landPath {
+// nextLandPath picks the land path. merge: `-merge`, which never rebases. mergeable is GitHub's
+// view of the PR, nil while it's still computing it.
+func nextLandPath(based, merge bool, mergeable *bool) landPath {
 	switch {
 	case based:
 		return landFastForward
-	case hasMerges, rebaseable != nil && !*rebaseable:
-		return landRebaseAndRerun
-	default:
-		// Still computing: try, and GitHub refuses the merge if it can't rebase.
-		return landGitHubRebase
-	}
-}
-
-// nextMergePath picks the land path of `-merge`. mergeable is GitHub's view of the PR, nil while
-// it's still computing it.
-func nextMergePath(based bool, mergeable *bool) landPath {
-	switch {
-	case based:
-		return landFastForward
-	case mergeable != nil && !*mergeable:
+	case mergeable != nil && !*mergeable && merge:
 		return landMergeConflict
+	case mergeable != nil && !*mergeable:
+		return landRebaseAndRerun
 	default:
 		// Still computing: try, and GitHub refuses the merge if it can't make it.
 		return landGitHubMerge
@@ -457,12 +446,11 @@ type pullRequest struct {
 	URL    string `json:"url"`
 }
 
-// pullDetails is the part of `repos/{repo}/pulls/{n}` a GitHub merge decides on. Rebaseable and
-// Mergeable are null while GitHub is still working them out.
+// pullDetails is the part of `repos/{repo}/pulls/{n}` a GitHub merge decides on. Mergeable is
+// null while GitHub is still working it out.
 type pullDetails struct {
-	Merged     bool  `json:"merged"`
-	Rebaseable *bool `json:"rebaseable"`
-	Mergeable  *bool `json:"mergeable"`
+	Merged    bool  `json:"merged"`
+	Mergeable *bool `json:"mergeable"`
 }
 
 // openPR finds the branch's open PR; a closed one is never revived.

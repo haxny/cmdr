@@ -88,6 +88,7 @@ describe('the context gauge state', () => {
       totalMessages: 0,
       lastContextUsage: { estimatedTokens: 44_000, budgetTokens: 60_000 },
       turnInFlightSinceSeq: null,
+      turnInFlightRun: null,
       spendPausedMicros: null,
     })
 
@@ -118,6 +119,7 @@ describe('the context gauge state', () => {
       totalMessages: 0,
       lastContextUsage: null,
       turnInFlightSinceSeq: null,
+      turnInFlightRun: null,
       spendPausedMicros: null,
     })
 

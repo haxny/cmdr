@@ -50,9 +50,9 @@ recipe for adding one is § "Adding a new check". Only the layout rules live her
 
 ```go
 CheckDefinition{
-    ID:          "desktop-svelte-eslint", // unique, always accepted as a CLI selector
-    Nickname:    "",                      // short alias, also accepted as a selector (optional)
-    DisplayName: "eslint",                // shown in output
+    ID:          "desktop-svelte-stylelint", // unique, always accepted as a CLI selector
+    Nickname:    "stylelint",                // short alias, also accepted as a selector (optional)
+    DisplayName: "stylelint",                // shown in output
     App:         AppDesktop,
     Tech:        "🎨 Svelte",
     IsSlow:      false,
@@ -943,7 +943,9 @@ compares the built website's `dist/` total against `website-bundle-size-baseline
 it downward when `dist/` shrinks past the 10% band; raising it is a deliberate act but needs no approval — delete the
 baseline file and run `pnpm check bundle-size` against a fresh build. A missing baseline is created on the spot locally
 and reported as a warning in CI. The same exemption covers `desktop-bundle-size`; the reasoning is in § "Allowlist
-consent".
+consent". The desktop lane differs in one way (`failOnGrowth`): it's a pre-release gate, so growth past the band and a
+missing baseline in CI FAIL rather than warn, and a release that ships a bigger bundle has refreshed the baseline on
+purpose.
 
 ## Website CSP connect-src
 
@@ -1011,8 +1013,8 @@ Policy by staleness class:
 
 External tools enforce the same principle natively: knip (`treatConfigHintsAsErrors` in `knip.json`), stylelint
 (`reportNeedlessDisables` in `.stylelintrc.mjs`), cargo-deny (`unused-allowed-license = "deny"` in `deny.toml`), and the
-slow eslint lane (`reportUnusedDisableDirectives`). The lists nothing verifies automatically are the `osv-scanner.toml`
-ignores, one beside each lockfile: a quarterly task in `docs/maintenance.md`.
+type-aware eslint lanes (`reportUnusedDisableDirectives`). The lists nothing verifies automatically are the
+`osv-scanner.toml` ignores, one beside each lockfile: a quarterly task in `docs/maintenance.md`.
 
 ## Allowlist consent
 
@@ -1045,6 +1047,12 @@ files, crashing it with `ENOENT` and phantom test failures. Isolation (not seria
 depends on the canonical path persisting — no CI artifact upload, and thresholds live in this Go check, not in vitest
 config — so isolation applies everywhere, with no CI split. Manual `pnpm test:coverage` (no env var set) still writes
 `./coverage`.
+
+**Decision**: coverage stays on in the standard lane. **Why**: it costs ~10% CPU and no measurable wall time. Measured
+2026-10-13 with six alternating `vitest run` runs with and without `--coverage` at load 20–70, 1,124 files and 15,617
+tests: CPU (user + sys) was ~1,017 s without coverage and ~1,117 s with it (~100 CPU-s per run); wall was 85–106 s
+without and 95–98 s with, inside the noise. The lane's real cost is per-file setup, so dropping coverage would buy
+little. Don't re-measure unless the suite's shape changes a lot.
 
 ## Nothing a shard owns is shared between runs
 
@@ -1105,6 +1113,17 @@ spent **2 m 42 s** recompiling `cmdr` alone. The `beforeBuildCommand` runs `vite
 rewrites `apps/desktop/build/`, which the app crate embeds, so cargo's fingerprint for `cmdr` invalidates on every
 invocation no matter what changed. "Cargo is incremental, so a no-op build is free" is simply false here. An
 instrumented session paid this three times.
+
+**Decision**: the Playwright build uses `--profile e2e` (release minus thin LTO; root `Cargo.toml`) with
+`CARGO_INCREMENTAL=1`, writing `target/<triple>/e2e/Cmdr` (`e2eBinaryPath`). **Why**: the forced `cmdr` recompile above
+was a full thin-LTO one. Measured on this M1 Max at load 65–135 (other agents' runs, so wall times are noisy; CPU-s is
+the steadier number), `pnpm test:e2e:playwright:build`, 2026-10-29: the release profile's no-op rebuild took 406 s wall
+and 1,348 CPU-s (a one-line change can't cost less: `cmdr` rebuilds from scratch either way); the e2e profile's no-op
+took 132 s and 297 CPU-s, a one-line change in `cmdr` 80 s and 292 CPU-s, and its cold build 480 s. The binary behaves
+like a release one (`debug-assertions` and `overflow-checks` stay off). Incremental comes from the script's env, never
+the profile, because the Linux Docker build shares the profile and its `target/` is a CI cache entry. The fingerprint
+covers both (`apps/desktop/package.json` and `Cargo.toml` are `e2eBinaryInputs`), so the switch itself forces one
+rebuild.
 
 The stamped set is narrower than the lane's `Inputs` on purpose: it drops `apps/desktop/test/**`. Playwright reads its
 specs, its config, and the shared fixture helpers from disk when the suite runs, so editing one changes what the suite
@@ -2037,8 +2056,8 @@ notices file.
 
 Checks by app and tech:
 
-- **Desktop / Rust**: rustfmt, clippy, clippy-mimalloc (slow, macOS only, not in CI; clippy with `cmdr/mimalloc` in a
-  private target dir, so the global-allocator path macOS doesn't ship can't rot), rustdoc
+- **Desktop / Rust**: rustfmt, clippy, clippy-mimalloc (pre-release lane, macOS only, CI every six days; clippy with
+  `cmdr/mimalloc` in a private target dir, so the global-allocator path macOS doesn't ship can't rot), rustdoc
   (`cargo doc --all-features --document-private-items` over every first-party member, with every doc lint in
   `rustdocDeniedLints` denied and any leftover warning failing the check too; the vendored fork is skipped because
   `--all-features` turns on two mutually exclusive arms there), cargo-deny, cargo-machete, cargo-udeps (CI-only), fuzz
@@ -2118,8 +2137,8 @@ doubles as production code.
   names, so the lane that does compile the test still catches a rename. Atoms are read from `filter =` declarations
   only, never from comments quoting one). The crates' code is also covered by the desktop Rust lanes above, which all
   run workspace-wide; this scope is for checks about the crate boundary itself.
-- **Desktop / Svelte**: eslint, svelte-kit-sync, eslint-typecheck-svelte, eslint-typecheck-typescript, stylelint,
-  css-unused, a11y-contrast, a11y-coverage (every component has a tier-3 a11y test, colocated or in a directory-level
+- **Desktop / Svelte**: svelte-kit-sync, eslint-typecheck-svelte, eslint-typecheck-typescript, stylelint, css-unused,
+  a11y-contrast, a11y-coverage (every component has a tier-3 a11y test, colocated or in a directory-level
   `*.a11y.test.ts` that imports it), ui-primitive-coverage (every top-level `lib/ui/*.svelte` primitive has a Debug >
   Components catalog section), dialog-gallery-coverage (every `SOFT_DIALOG_REGISTRY` id has a row in the Debug > Soft
   dialogs gallery, and every row names a registered id), btn-restyle, bare-poll, ipc-unused (every `tauri-commands`
@@ -2129,41 +2148,41 @@ doubles as production code.
   `origin/main`, committed or not, for an agent to run beside `--fast`; the full `svelte-tests` stays the gate),
   import-cycles, jscpd (the frontend clone list, TypeScript and Svelte), message-keys-fresh (regenerate-and-diff
   `keys.gen.ts` from the message catalogs), message-key-naming (the `area.feature.leaf` shape + known-area first
-  segment), message-keys-unused (catalog keys never referenced in `src/`; error-level, with a closed dynamic-prefix
-  allowlist for runtime-built keys), message-screenshots-fresh (ERROR on a structural break: a representative rule
-  reaching no catalog key, or a rule or `@key.screenshot` naming an image the committed capture report lacks; warns on
-  stale couplings and on a rule every key of which has its own capture; runs the coupler's `--check` and maps its exit
-  code, reads no PNGs; a warn prints the coupler's one-line summary, which also counts report keys the catalogs dropped,
-  and saves the lists as `Details`. Not an auto-fixer on purpose: `pnpm i18n:couple` is deterministic, but after a key
-  rename it would clear the renamed key's still-truthful screenshot, which the warn exists to spare until the next
-  capture), i18n-stale (warn-only; a non-`en` translation whose `@key.sourceHash` no longer matches the value it was
-  translated from), i18n-parity (ERROR; each locale key's `{placeholder}`+`<tag>` set, or raw `{token}` set for
-  `errors.*`, must equal that of the value it renders instead of, since a mismatch crashes at runtime), i18n-icu (ERROR;
-  every message is written in its own family's grammar: an ICU message must compile via `intl-messageformat`, and a RAW
-  value (`errors.*` plus the native `menu.*`) must carry no ICU escaping, since a doubled `''` renders verbatim there;
-  the one locale check that inspects `en` too, the rule being about a catalog's own syntax), i18n-tag-param-collision
-  (ERROR; a message naming a `<tag>` and a `{param}` alike renders the param as a stringified handler, because `Trans`
-  lets the tag win the merged lookup), i18n-trans-snippets (ERROR; a message `<tag>` with no matching `snippets={{ … }}`
-  key at the call site renders as nothing, so its inner text silently vanishes; catches a rename finished on only one
-  side), i18n-plural (ERROR; each plural covers its locale's required CLDR categories, gated on the English source's
-  plural shape), i18n-coverage (ERROR; for a full translation, keys missing from the locale or still showing English
-  without a `@key.sameAsSourceJustification`, either of which ships a half-translated locale. "Still English" is
-  byte-identical OR English text under a plural/select branch set the locale legitimately changed, which byte comparison
-  alone reads as translated; for an OVERLAY the rules invert, and a key identical to what it overrides, or unknown to
-  it, is the finding), i18n-dont-translate (warn-only; a curated brand/system token English carries but the locale
-  dropped), i18n-terms (warn-only, nickname of desktop-i18n-term-consistency; the only CROSS-key check: two keys sharing
-  one English value must render one way in a locale, judged on the EFFECTIVE value so a half-forked overlay term is
-  caught, with a reasoned allowlist and a ratchet-down `notYetReviewed` baseline for locales that predate it),
-  i18n-aria-label (ERROR, desktop-i18n-aria-label; a translated `fooAria` must still CONTAIN its visible `foo` label
-  (WCAG 2.5.3), gated on English getting it right, so it needs no allowlist and grandfathers nothing), i18n-termbase
-  (desktop-i18n-termbase; ERROR on a schema problem in `docs/i18n/concepts.json` / `<tag>/terms.json`, WARN on coverage
-  drift past a per-locale ratchet-down count in `apps/desktop/scripts/i18n-termbase-baseline.json`: a shipped key whose
-  English uses a ruled concept while its translation carries none of the ruling's forms; the same file's
-  `decisionsBytes` warns when a locale's `decisions.md` grows past its byte budget, which local runs ratchet down and
-  record for a first-seen file. Script exit 3 is the ERROR, 1 the WARN; a locale with no `terms.json` is skipped. Its CI
-  step sits in `hygiene` beside i18n-citations, since `docs/i18n/` is outside the `svelte` filter;
-  `docs/i18n/termbase.md`), i18n-mechanics (desktop-i18n-mechanics; ERROR on a malformed
-  `docs/i18n/<tag>/mechanics.json`, WARN past a ratchet-down count in
+  segment), message-keys-unused (catalog keys never referenced in `src/` or `src-tauri/src/`; error-level, with a closed
+  dynamic-prefix allowlist for runtime-built keys; one Aho-Corasick pass per file, so both message-key lanes are fast),
+  message-screenshots-fresh (ERROR on a structural break: a representative rule reaching no catalog key, or a rule or
+  `@key.screenshot` naming an image the committed capture report lacks; warns on stale couplings and on a rule every key
+  of which has its own capture; runs the coupler's `--check` and maps its exit code, reads no PNGs; a warn prints the
+  coupler's one-line summary, which also counts report keys the catalogs dropped, and saves the lists as `Details`. Not
+  an auto-fixer on purpose: `pnpm i18n:couple` is deterministic, but after a key rename it would clear the renamed key's
+  still-truthful screenshot, which the warn exists to spare until the next capture), i18n-stale (warn-only; a non-`en`
+  translation whose `@key.sourceHash` no longer matches the value it was translated from), i18n-parity (ERROR; each
+  locale key's `{placeholder}`+`<tag>` set, or raw `{token}` set for `errors.*`, must equal that of the value it renders
+  instead of, since a mismatch crashes at runtime), i18n-icu (ERROR; every message is written in its own family's
+  grammar: an ICU message must compile via `intl-messageformat`, and a RAW value (`errors.*` plus the native `menu.*`)
+  must carry no ICU escaping, since a doubled `''` renders verbatim there; the one locale check that inspects `en` too,
+  the rule being about a catalog's own syntax), i18n-tag-param-collision (ERROR; a message naming a `<tag>` and a
+  `{param}` alike renders the param as a stringified handler, because `Trans` lets the tag win the merged lookup),
+  i18n-trans-snippets (ERROR; a message `<tag>` with no matching `snippets={{ … }}` key at the call site renders as
+  nothing, so its inner text silently vanishes; catches a rename finished on only one side), i18n-plural (ERROR; each
+  plural covers its locale's required CLDR categories, gated on the English source's plural shape), i18n-coverage
+  (ERROR; for a full translation, keys missing from the locale or still showing English without a
+  `@key.sameAsSourceJustification`, either of which ships a half-translated locale. "Still English" is byte-identical OR
+  English text under a plural/select branch set the locale legitimately changed, which byte comparison alone reads as
+  translated; for an OVERLAY the rules invert, and a key identical to what it overrides, or unknown to it, is the
+  finding), i18n-dont-translate (warn-only; a curated brand/system token English carries but the locale dropped),
+  i18n-terms (warn-only, nickname of desktop-i18n-term-consistency; the only CROSS-key check: two keys sharing one
+  English value must render one way in a locale, judged on the EFFECTIVE value so a half-forked overlay term is caught,
+  with a reasoned allowlist and a ratchet-down `notYetReviewed` baseline for locales that predate it), i18n-aria-label
+  (ERROR, desktop-i18n-aria-label; a translated `fooAria` must still CONTAIN its visible `foo` label (WCAG 2.5.3), gated
+  on English getting it right, so it needs no allowlist and grandfathers nothing), i18n-termbase (desktop-i18n-termbase;
+  ERROR on a schema problem in `docs/i18n/concepts.json` / `<tag>/terms.json`, WARN on coverage drift past a per-locale
+  ratchet-down count in `apps/desktop/scripts/i18n-termbase-baseline.json`: a shipped key whose English uses a ruled
+  concept while its translation carries none of the ruling's forms; the same file's `decisionsBytes` warns when a
+  locale's `decisions.md` grows past its byte budget, which local runs ratchet down and record for a first-seen file.
+  Script exit 3 is the ERROR, 1 the WARN; a locale with no `terms.json` is skipped. Its CI step sits in `hygiene` beside
+  i18n-citations, since `docs/i18n/` is outside the `svelte` filter; `docs/i18n/termbase.md`), i18n-mechanics
+  (desktop-i18n-mechanics; ERROR on a malformed `docs/i18n/<tag>/mechanics.json`, WARN past a ratchet-down count in
   `apps/desktop/scripts/i18n-mechanics-baseline.json` on catalog values breaking the locale's declared typography: a
   straight `"`, an undeclared quote mark, `...`, or a hit of its spacing or hedge patterns. A locale with no file is
   skipped, an overlay inherits its base's, and `--adopt <tag>` records a newly declared locale once. Same exit contract
@@ -2178,16 +2197,16 @@ doubles as production code.
   catalogs: the per-locale guides and termbase files justify a term by citing a message key as evidence, and a citation
   orphaned by a rename hands the next translator false authority, so every backticked dotted token whose first segment
   is a real catalog namespace must name part of a real English key. § "The doc-citation check" for the namespace gate,
-  the matcher, and the two allowlist sections), bundle-size (warn-only; builds a production-shaped frontend into a
-  private dir and compares its total against a committed baseline, since the app embeds this output so every byte ships
-  in each silent update and is parsed before first paint), vite-build-target (ERROR; `apps/desktop/vite.config.js` must
-  pin `build.target` to a `safari<major>`, because Vite's default is a MOVING "widely available" baseline: leave it
-  unset and a routine Vite major bump raises the browser floor above the `minimumSystemVersion` the bundle claims,
-  silently, with a green build. It parses the config structurally (comments blanked, string literals masked, then
-  brace-matched) so the comment explaining the pin can neither fake one nor hide one, and so a `target` under `server`
-  or `optimizeDeps` doesn't answer for `build`. It deliberately enforces no UPPER bound against the plist: mapping a
-  macOS version to "the WebKit we must assume" is a product call, not a fact), knip, type-drift, tests,
-  e2e-linux-typecheck, e2e-linux (slow), e2e-playwright (slow)
+  the matcher, and the two allowlist sections), bundle-size (pre-release lane, fails on growth past 10%; builds a
+  production-shaped frontend into a private dir and compares its total against a committed baseline, since the app
+  embeds this output so every byte ships in each silent update and is parsed before first paint), vite-build-target
+  (ERROR; `apps/desktop/vite.config.js` must pin `build.target` to a `safari<major>`, because Vite's default is a MOVING
+  "widely available" baseline: leave it unset and a routine Vite major bump raises the browser floor above the
+  `minimumSystemVersion` the bundle claims, silently, with a green build. It parses the config structurally (comments
+  blanked, string literals masked, then brace-matched) so the comment explaining the pin can neither fake one nor hide
+  one, and so a `target` under `server` or `optimizeDeps` doesn't answer for `build`. It deliberately enforces no UPPER
+  bound against the plist: mapping a macOS version to "the WebKit we must assume" is a product call, not a fact), knip,
+  type-drift, tests, e2e-linux-typecheck, e2e-linux (slow), e2e-playwright (slow)
 - **Desktop / Docs**: pluralize-noun, prompt-lint (every agent prompt in `apps/desktop/src-tauri/src/agent/prompts/` has
   complete frontmatter and a template that compiles, and its `render` call in `mod.rs` passes exactly the variables its
   `variables:` declares and its body uses; a call in any other shape fails closed), third-party-notices
@@ -2197,10 +2216,11 @@ doubles as production code.
   runner's input fingerprint is what keeps it off unrelated runs)
 - **Website / Astro**: astro-sync, eslint, typecheck, build, html-validate, dead-links (every internal `href`/`src` in
   the built `dist/` resolves to a file, and every `#fragment` to an `id` on its page; external URLs skipped),
-  bundle-size (warn-only), e2e. `astro-sync` generates Astro's gitignored `types.d.ts` and `website-eslint` depends on
-  it: the type-aware rules read `astro:content` through it, and on an unsynced tree every blog-post field is `any`, so
-  the `no-unsafe-*` rules bury the run in ~90 false positives. `website-eslint` refuses to run when the file is missing
-  rather than report those.
+  bundle-size (warn-only), e2e, trust-sources (runs `scripts/trust-review` `validate`: every trust-page `<h2 id>` has an
+  entry in `trust-sources.json` and every pattern matches a tracked file; `docs/guides/trust-page-review.md`).
+  `astro-sync` generates Astro's gitignored `types.d.ts` and `website-eslint` depends on it: the type-aware rules read
+  `astro:content` through it, and on an unsynced tree every blog-post field is `any`, so the `no-unsafe-*` rules bury
+  the run in ~90 false positives. `website-eslint` refuses to run when the file is missing rather than report those.
 - **Website / Docker**: docker-build
 - **API server / TS**: oxfmt, worker-types, eslint, typecheck, tests. `api-server-worker-types` runs `wrangler types`,
   which writes the gitignored `worker-configuration.d.ts` (Worker runtime globals at the Worker's `compatibility_date`,
@@ -2236,7 +2256,12 @@ doubles as production code.
 - **Other / Security**: workflows-hardening (SHA-pinning, no `pull_request_target`, job-scoped `id-token: write`,
   read-only workflow-level `permissions:`, CodeQL also on `pull_request`), osv-scanner (every tracked lockfile against
   OSV, the sweep Scorecard's Vulnerabilities check makes; fix-age grace like govulncheck and cargo-deny),
-  scorecard-local (Scorecard's file-based checks on the tracked tree, against `scorecard-local-baseline.json`)
+  scorecard-local (Scorecard's file-based checks on the tracked tree, against `scorecard-local-baseline.json`),
+  changelog-security (every `### Security` line from 0.57.0 on, plus `[Unreleased]`, names an upstream advisory ID with
+  its severity or our own `CVSS v4.0 <score> (<rating>)` with the rating matching the score's band, plus the affected
+  `Cmdr X.Y.Z–X.Y.Z` versions, en-dashed, not reaching the fixing release. The contract is `SECURITY.md` § How fixed
+  vulnerabilities are published, the forms are in `docs/guides/releasing.md` § Writing the CHANGELOG, and `release.sh`
+  runs it before tagging. Older releases stay as shipped)
 - **Desktop / Security**: security-advisories (the committed `apps/desktop/src-tauri/resources/security-advisories.json`
   against the app's own contract: the exact schema, semver `fixedIn` no newer than the `tauri.conf.json` version, a
   known severity, an allowlisted `https` link, and a unique `id`. The app reads the list leniently, so a typo there
@@ -2585,14 +2610,16 @@ narrowed by a shared `mtpTrees`), the same shape `derive-default-justified` uses
 `AppTreeOnly` they would have kept passing while guarding nothing, which is why each carries a Go cell that plants a
 violation inside the crate.
 
-**Decision**: Split `desktop-svelte-eslint` into fast (non-type-aware) and slow (full) checks. **Why**: Type-aware rules
-(`no-floating-promises`, `no-unsafe-*`, etc.) take ~45% of lint time due to TypeScript project service startup. The fast
-check sets `ESLINT_NO_TYPECHECK=1`, which `eslint.config.js` reads to use `tseslint.configs.strict` (no type info) and
-suppress `reportUnusedDisableDirectives` (since disable comments for type-aware rules would look unused). The full
-checks (`eslint-typecheck-svelte`, `eslint-typecheck-ts`) run the whole config with `reportUnusedDisableDirectives` on,
-so stale disable comments are still caught. In CI they get their own per-push job (`desktop-svelte-eslint-typecheck`)
-beside `desktop-svelte`, so their 2–4 min don't lengthen it. They used to run only in the every-six-days slow workflow,
-where 25 errors (one a real toast-timeout bug) sat on a green `main` (2026-10-21).
+**Decision**: the desktop's ESLint is just the two type-aware lanes (`eslint-typecheck-svelte`, `eslint-typecheck-ts`),
+with no separate no-type-info lane. **Why**: the full config is a strict superset of the `ESLINT_NO_TYPECHECK=1` one
+(`eslint.config.js` only swaps `tseslint.configs.strict` for `strictTypeChecked`, adds the type-aware rules, and turns
+`reportUnusedDisableDirectives` back on), and the two scopes partition `eslint .`, so a plain `desktop-svelte-eslint`
+lane (23 s median, ~600 local runs a month, plus a CI step) found nothing they didn't. Its one unique job was the local
+safe `--fix`, which moved into the type-aware lanes and runs only when their verdict is red (most runs are green, so the
+green path stays one ESLint invocation). Each fix pass is scoped to its lane's files, so the two parallel lanes never
+rewrite the same file. In CI they have their own per-push job (`desktop-svelte-eslint-typecheck`) beside
+`desktop-svelte`, so their 2–4 min don't lengthen it. They used to run only in the every-six-days slow workflow, where
+25 errors (one a real toast-timeout bug) sat on a green `main` (2026-10-21).
 
 **Decision**: ESLint never auto-fixes with type information. **Why**: a type-aware rule judges code against the
 TypeScript program, so while the tree doesn't typecheck (another agent's half-written change in a shared worktree, a
@@ -2603,10 +2630,11 @@ cause it, so the invariant is structural instead, planned in `eslint-passes.go` 
 `TestESLintPassesNeverFixWithTypeAwareRules`: any pass with `--fix` sets `ESLINT_NO_TYPECHECK=1` (every app's
 `eslint.config.js` then turns the type-aware rules and unused-directive reporting off) and passes
 `--fix-type problem,suggestion,layout`, so even a misconfigured rule set can't delete an `eslint-disable`. Per lane: the
-desktop's fast `eslint` lane is that fix pass; the two `eslint-typecheck-*` lanes are check-only in every mode; the
-single-lane apps (`api-server`, `website`, `dashboard`) run the fix pass and then the full config check-only, the final
-pass being the verdict. The cost: type-aware findings (`no-unnecessary-type-assertion`, `no-unnecessary-condition`,
-unused directives) are reported, never fixed, so an agent fixes them by hand.
+desktop's two `eslint-typecheck-*` lanes run the full config check-only first and, only on a red local run, the fix pass
+over their own file set followed by the verdict again (`typeAwareFixPasses`); the single-lane apps (`api-server`,
+`website`, `dashboard`) run the fix pass and then the full config check-only, the final pass being the verdict. The
+cost: type-aware findings (`no-unnecessary-type-assertion`, `no-unnecessary-condition`, unused directives) are reported,
+never fixed, so an agent fixes them by hand.
 
 **Decision**: `desktop-svelte-kit-sync` runs before every check that needs the TypeScript program. **Why**:
 `apps/desktop/tsconfig.json` extends `$app/tsconfig`, the gitignored `node_modules/$app/tsconfig.json` sync generates,

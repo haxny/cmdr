@@ -5057,7 +5057,7 @@
   },
   "storage": {
     "chosen": "хранилище",
-    "accept": ["хранилищ", "хранени", "памят"],
+    "accept": ["хранилищ", "хранени", "памят", "накопител"],
     "forms": "«Управление хранилищем», «облачное хранилище», «квота хранилища»; a phone's storage: «память телефона»",
     "avoid": [
       {
@@ -5628,6 +5628,13 @@
     "confidence": "high",
     "sources": "Finder MenuBar and LocalizableMerged: Kind → Тип / по типу; DC, Nautilus, Dolphin, Thunar: Type → Тип; MS: type → тип",
     "note": "Finder already spends «Тип» on Kind; in a column that shows both, the protocol column is still «Тип»."
+  },
+  "type-to-jump": {
+    "chosen": "Переход",
+    "accept": ["переход"],
+    "forms": "the mode and badge word «Переход» (Переход: …), beside «Фильтр»; clear the typed text → Очистить поле «Переход» (a bare Очистить переход doesn't parse)",
+    "confidence": "high",
+    "sources": "catalog (fileExplorer.typeToJump.prefix, settings.fileExplorer.typeToJump.mode.opt.jump, fileExplorer.quickFilter.intro.switchToJump)"
   },
   "typo": {
     "chosen": "опечатка",
@@ -6220,5 +6227,12 @@
     "chosen": "Уровень размышлений",
     "confidence": "tentative",
     "sources": "Gemini docs (ai.google.dev thinking, machine-translated) keep thinking_level as code; built from this locale’s thinking + level rulings"
+  },
+  "shared-storage": {
+    "accept": ["общем накопителе"],
+    "chosen": "общий накопитель",
+    "confidence": "high",
+    "note": "Android's own word, over the storage ruling's «память телефона»; накопитель stays avoided for a drive.",
+    "sources": "AOSP frameworks/base core/res values-ru storage_internal (read 2026-10-30): Внутренний общий накопитель"
   }
 }

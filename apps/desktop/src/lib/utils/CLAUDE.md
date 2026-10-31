@@ -4,16 +4,16 @@ Small stateless helpers. Pure, no Svelte state, safe to import from plain `.ts` 
 
 ## Files
 
-`filename-validation.ts` (client-side name and path validation), `timing.ts` (`withTimeout`, `createDebounce`,
-`createThrottle`, `createCoalesced`, `waitForNextPaint`), `shorten-middle.ts` + `shorten-middle-action.ts`
-(mid-truncation and its Svelte action), `srgb-mix.ts` + `webkit-compat.ts` (sRGB color math, `color-mix()` detection),
-`confirm-dialog.ts`, `pluralize.ts`, `text-input-focus.ts`, `reactivity.ts` (`dependOn`), `mount-scope.ts` (an async
-`onMount`'s teardowns, safe against unmount mid-startup), `version.ts` (semver `major.minor.patch` ordering),
-`inline-size-action.ts` (the container-query stand-in), `scroll-box-size-action.ts` (a scroller's client box, scrollbars
-included), `boot-guard-keys.ts` (the three catalog keys the `app.html` boot guard shows), `unicode-fuzzy.ts` (the shared
-fuzzy matcher: any script, accent folding, exact CJK), `display-path.ts` (`displayPath`: a twin's pick and an S3 access
-key id taken out of text a person reads; `withoutPicks` for text a person copies). Per-file export catalogs:
-`DETAILS.md`.
+`filename-validation.ts` (client-side name and path validation), `file-extension.ts` (what counts as an extension),
+`timing.ts` (`withTimeout`, `createDebounce`, `createThrottle`, `createCoalesced`, `waitForNextPaint`),
+`shorten-middle.ts` + `shorten-middle-action.ts` (mid-truncation and its Svelte action), `srgb-mix.ts` +
+`webkit-compat.ts` (sRGB color math, `color-mix()` detection), `confirm-dialog.ts`, `pluralize.ts`,
+`text-input-focus.ts`, `reactivity.ts` (`dependOn`), `mount-scope.ts` (an async `onMount`'s teardowns, safe against
+unmount mid-startup), `version.ts` (semver `major.minor.patch` ordering), `inline-size-action.ts` (the container-query
+stand-in), `scroll-box-size-action.ts` (a scroller's client box, scrollbars included), `boot-guard-keys.ts` (the three
+catalog keys the `app.html` boot guard shows), `unicode-fuzzy.ts` (the shared fuzzy matcher: any script, accent folding,
+exact CJK), `display-path.ts` (`displayPath`: a twin's pick and an S3 access key id taken out of text a person reads;
+`withoutPicks` for text a person copies). Per-file export catalogs: `DETAILS.md`.
 
 ## Must-knows
 
@@ -23,7 +23,9 @@ key id taken out of text a person reads; `withoutPicks` for text a person copies
   `.length` (multi-byte characters).
 - **`validateConflict` is case-insensitive (APFS)**: pass `originalName` correctly, or a case-only rename false-flags.
 - **`validateFilename` returns the FIRST error or warning**, never a list: inline rename UI has room for one message.
-- **`getExtension` includes the dot** (`.txt`) and returns `''` for dotfiles (`.gitignore`).
+- **Split a name at its extension only through `file-extension.ts`** (`fileExtension(name, nameKindOf(entry))`), ❌
+  never a local `lastIndexOf('.')` or a name-based package guess (`isPackage` knows what macOS said): column, sort, and
+  warning must agree. `crates/cmdr-fs/DETAILS.md` § "What counts as an extension".
 - **An effect that must re-run on a value it never reads calls `dependOn(a, b)`** (`reactivity.ts`), ❌ never `void a`:
   the `void` form is a lint error, and its autofix leaves a bare expression that's a second lint error. A deliberately
   unused BINDING is a `^_` name instead. DETAILS § reactivity.ts.

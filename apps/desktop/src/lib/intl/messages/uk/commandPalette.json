@@ -1,0 +1,30 @@
+{
+  "commandPalette.searchPlaceholder": "Пошук команд…",
+  "@commandPalette.searchPlaceholder": {
+    "sourceHash": "baad3d0"
+  },
+  "commandPalette.searchAriaLabel": "Пошук команд",
+  "@commandPalette.searchAriaLabel": {
+    "sourceHash": "00ff739"
+  },
+  "commandPalette.noResults": "Команд не знайдено",
+  "@commandPalette.noResults": {
+    "sourceHash": "eac0d09"
+  },
+  "commandPalette.resultCount": "{count, plural, one {{countText} команда} few {{countText} команди} many {{countText} команд} other {{countText} команди}}",
+  "@commandPalette.resultCount": {
+    "sourceHash": "d65fc7d"
+  },
+  "commandPalette.resultsAriaLabel": "Команди",
+  "@commandPalette.resultsAriaLabel": {
+    "sourceHash": "b269dc4"
+  },
+  "commandPalette.groupRecent": "Недавні",
+  "@commandPalette.groupRecent": {
+    "sourceHash": "690dbe9"
+  },
+  "commandPalette.groupAll": "Усі команди",
+  "@commandPalette.groupAll": {
+    "sourceHash": "f9c4287"
+  }
+}

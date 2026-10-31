@@ -15,7 +15,9 @@ export function resolveDropTarget(
   leftPaneEl: HTMLElement | undefined,
   rightPaneEl: HTMLElement | undefined,
 ): DropTarget | null {
-  const el = document.elementFromPoint(x, y)
+  // Past the divider's unpainted grab areas, which overhang the panes: a drop there means the
+  // row or footer under them.
+  const el = document.elementsFromPoint(x, y).find((hit) => !hit.closest('.pane-resizer'))
   if (!el) return null
 
   // Determine which pane contains the element

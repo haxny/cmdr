@@ -73,7 +73,7 @@
     import { listSavedPlaces, setServerAutoReconnect, type SavedPlaceFacts } from './server-row-actions'
     import { shouldShowCheckmark } from './volume-checkmark'
     import { groupByCategory } from './volume-grouping'
-    import { createVolumeSpaceManager } from './volume-space-manager.svelte'
+    import { createVolumeSpaceManager, spaceRefreshKey } from './volume-space-manager.svelte'
     import type { DriveBadges } from './drive-badges.svelte'
 
     interface Props {
@@ -444,16 +444,16 @@
         })
     })
 
-    // Clear cached space info when the volume list changes (mount/unmount/MTP connect) and
-    // re-fetch if the menu is open.
-    let prevVolumeIds = ''
+    // Clear cached space info when the volume list changes (mount/unmount/MTP connect, a phone
+    // turning ready) and re-fetch if the menu is open.
+    let prevSpaceKey = ''
     $effect(() => {
-        const ids = volumes.map((v) => v.id).join(',')
-        if (prevVolumeIds && ids !== prevVolumeIds) {
+        const key = spaceRefreshKey(volumes)
+        if (prevSpaceKey && key !== prevSpaceKey) {
             spaceManager.clearAll()
             if (untrack(() => menu.isOpen)) void spaceManager.fetchVolumeSpaces(volumes)
         }
-        prevVolumeIds = ids
+        prevSpaceKey = key
     })
 
     onDestroy(() => {
@@ -470,6 +470,9 @@
     {#snippet label(ctx: MenuRowContext<SwitcherRow>)}
         {@const favorite = rowFavorite(ctx.item)}
         {@const volume = rowVolume(ctx.item)}
+        <!-- The visible line is `below`, outside the row, so the row's name carries it for a
+             screen reader. -->
+        {@const deviceStatus = deviceRowState(volume?.deviceReadiness).status}
         {#if favorite}
             <!-- The ⌃D menu's own label: dimmed when a pick can't open it right away, or the
                  inline rename field. -->
@@ -484,6 +487,9 @@
                 class:is-restricted={volume ? isRestricted(volume.path) : false}
                 class:is-saved-place={volume?.connectionState === 'saved'}>{ctx.item.label}</span
             >
+            <!-- A sibling, ❌ not inside `.volume-label`: that text is the row's name, and whatever
+                 reads it (a test, a lookup) must not get the status glued on. -->
+            {#if deviceStatus}<span class="sr-only">{deviceStatus}</span>{/if}
         {/if}
     {/snippet}
 
@@ -561,7 +567,13 @@
     {#snippet below(ctx: MenuRowContext<SwitcherRow>)}
         {@const volume = rowVolume(ctx.item)}
         {#if volume}
-            <VolumeSpaceLine {volume} {spaceManager} />
+            {@const deviceStatus = deviceRowState(volume.deviceReadiness).status}
+            {#if deviceStatus}
+                <!-- Takes the space line's place: a phone in this state has no figure to show. -->
+                <div class="device-status" data-device-status="" aria-hidden="true">{deviceStatus}</div>
+            {:else}
+                <VolumeSpaceLine {volume} {spaceManager} />
+            {/if}
         {/if}
     {/snippet}
 
@@ -595,6 +607,13 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .device-status {
+        /* stylelint-disable-next-line declaration-property-value-disallowed-list -- the same computed icon+gap offset `VolumeSpaceLine` aligns to; 14px/16px are measured widths */
+        padding: 0 var(--spacing-md) var(--spacing-xs) calc(14px + var(--spacing-sm) + 16px + var(--spacing-sm));
+        font-size: var(--font-size-xs);
+        color: var(--color-text-secondary);
     }
 
     /*noinspection CssUnusedSymbol*/

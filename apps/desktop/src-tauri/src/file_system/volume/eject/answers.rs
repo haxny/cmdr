@@ -15,7 +15,8 @@ use super::holders::HolderScan;
 /// Action the eject pipeline takes for a given volume.
 #[derive(Debug, PartialEq, Eq)]
 pub enum EjectAction {
-    /// Run `diskutil eject <mount_path>`. Powers down USB devices, detaches DMGs.
+    /// A disk's volume: `diskutil eject <mount_path>`, which powers down USB devices and detaches
+    /// DMGs, or `diskutil unmount` for one volume of a disk that keeps others (`disk_reach`).
     DiskutilEject,
     /// Run `diskutil unmount <mount_path>`. SMB: FSEvents handles smb2 teardown.
     DiskutilUnmount,
@@ -45,6 +46,19 @@ pub enum EjectOutcome {
     DiskEjected,
     /// Nothing was left to do: the volume had already gone before the teardown ran.
     AlreadyGone,
+    /// One volume of a disk left the mount table, and the disk stays attached because other
+    /// volumes on it are still mounted. ❗ The drive is NOT safe to unplug, which is what the
+    /// frontend tells the person.
+    VolumeEjectedDiskStays,
+}
+
+/// How much of a physical disk an eject takes down.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EjectScope {
+    /// The volume asked about, unless it's the disk's last one, which ejects the disk too.
+    Volume,
+    /// Every volume on its disk, and then the disk.
+    Disk,
 }
 
 /// Reasons `decide_eject_action` can't pick an action. Kept as a typed enum so
@@ -178,6 +192,13 @@ pub enum EjectError {
         /// The tool's own stderr, for the log and the details line.
         detail: String,
     },
+    /// An eject taking several volumes down stopped before it unmounted anything, since someone
+    /// is holding one of them. ❗ Nothing changed, where [`Self::UnmountRefused`] from the same
+    /// eject can mean some volumes already went.
+    HeldBeforeEject {
+        /// Who's holding the disk.
+        holders: HolderScan,
+    },
     /// The `diskutil` / `umount` subprocess (or a device provider's eject) didn't
     /// finish within the timeout. ❗ The unmount was NOT cancelled; it may still land.
     TimedOut,
@@ -236,6 +257,7 @@ impl std::fmt::Display for EjectError {
                 write!(f, "{provider} disconnect refused: {detail}")
             }
             Self::UnmountRefused { holders, detail } => write!(f, "unmount refused ({holders}): {detail}"),
+            Self::HeldBeforeEject { holders } => write!(f, "nothing was unmounted, since the disk is held ({holders})"),
             Self::TimedOut => f.write_str("timed out"),
             Self::NotResponding { step } => write!(f, "{step} didn't finish in time, so nothing was unmounted"),
             Self::Unexpected { detail } => write!(f, "unexpected: {detail}"),

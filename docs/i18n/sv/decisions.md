@@ -197,8 +197,8 @@ bundle), Microsoft, file managers, the catalog.
 - Tabs `Fäst flik` / `Lossa flik` (❌ Safari's `Nåla fast`). Changelog `Ändringslogg`, apart from Help's `Nyheter`.
   `Öppna i redigeraren`.
 - Tags `Lägg till ”{color}”` / `Ta bort ”{color}”` (Finder); the submenu is the noun `Markering`.
-- Dock menu `Öppna Cmdr`, ❌ `Öppna ”Cmdr”` (opens a file). `menu.network.open` = `menu.file.open`; `menu.network.edit`
-  = `commands.serversEdit.label`.
+- Dock menu `Öppna Cmdr`, ❌ `Öppna ”Cmdr”` (opens a file). `menu.network.open` = `menu.file.open`;
+  `menu.network.edit` = `commands.serversEdit.label`.
 - The `menu.select.same*` / `.allFolders` / `.noExtension` keys and their `commands.selectionSelectSameKind.*` twins
   change together; `med filtillägget *.{extension}`. Loading `Söker efter appar…`; `delningsalternativ` (from `Dela`).
 - Justified same-as-source: `menu.view.zoom`, `menu.tag.orange`, `menu.view.askCmdr`.
@@ -231,9 +231,9 @@ bundle), Microsoft, file managers, the catalog.
 - in use → `används` (Finder; `upptagen` is the menu marker); idle → `när den inte används`. removable → `borttagbar`
   (Finder), ❌ `flyttbar`. disk image → `skivavbild` / `avbilden`, ❌ `avbildning`.
 - `timedOut` uses the noun `utmatningen`: `så den kan fortfarande matas ut` reads "you can still eject it".
-- `unmountRefused*` share `X har fortfarande filer öppna där.` + `… och försök sedan igen.`, never `den här enheten` or
-  `mata ut igen` (share or phone). Bare active `{app}`, unquoted per `@key`; `Stäng dem` → `filer`; never `Vi`;
-  `andra appar` vs bare `andra` for processes.
+- `unmountRefused*` share `X använder fortfarande något där.` + `… och försök sedan igen.`, never `den här enheten` or
+  `mata ut igen` (share or phone). Bare active `{app}`, unquoted per `@key`; `Stäng appen` / `apparna`; Eject all →
+  `Mata ut alla` (Finder `N199.1`); never `Vi`; `andra appar` vs bare `andra` for processes.
 
 ## Trash toast (`fileOperations.trash.*`, `commands.fileGoToTrash.*`, `menu.edit.undoTrash`)
 

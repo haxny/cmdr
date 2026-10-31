@@ -135,6 +135,7 @@ fn place(host: &str, export: &str) -> KnownNfsPlace {
         export: export.to_string(),
         uid: 1000,
         gid: 100,
+        other_gids: Vec::new(),
         start_folder: None,
         auto_reconnect: true,
         pinned: false,
@@ -310,6 +311,7 @@ async fn an_edit_to_a_place_nobody_has_open_saves_without_dialing() {
     let edit = KnownNfsPlace {
         uid: 1026,
         gid: 1026,
+        other_gids: Vec::new(),
         start_folder: Some("photos/".to_string()),
         auto_reconnect: false,
         pinned: false,
@@ -348,6 +350,7 @@ async fn a_changed_uid_on_an_open_place_redials_over_a_new_connection() {
     let edit = KnownNfsPlace {
         uid: 1026,
         gid: 1026,
+        other_gids: vec![2001],
         ..place("redial.test", "/Public")
     };
     assert_eq!(
@@ -356,7 +359,14 @@ async fn a_changed_uid_on_an_open_place_redials_over_a_new_connection() {
     );
     assert_eq!(backend.dial_count(), 2, "the new identity dialed its own connection");
     let redial = backend.dialed.lock().expect("test lock")[1].clone();
-    assert_eq!(redial.identity, NfsIdentity { uid: 1026, gid: 1026 });
+    assert_eq!(
+        redial.identity,
+        NfsIdentity {
+            uid: 1026,
+            gid: 1026,
+            other_gids: vec![2001],
+        }
+    );
     let after = get_volume_manager().get(&id).expect("still connected, same id");
     assert!(!Arc::ptr_eq(&before, &after), "the new connection serves the place");
     let saved = nfs_known_places::find(&id).expect("saved");
@@ -528,6 +538,7 @@ async fn nfs_integration_a_typed_folder_connects_registers_the_export_and_saves_
         export: "/insecure/photos/2024 summer".to_string(),
         uid: 1000,
         gid: 1000,
+        other_gids: Vec::new(),
         start_folder: None,
         auto_reconnect: true,
         pinned: false,

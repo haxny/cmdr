@@ -6,6 +6,7 @@
 //! [`FakeAdbServer::hold_answers`] parks every request until
 //! [`FakeAdbServer::release_answers`], so a dial can be held provably in flight.
 
+use std::io::Read;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
@@ -17,11 +18,12 @@ use tokio::task::JoinHandle;
 use cmdr_fs::ignore_poison::IgnorePoison;
 
 use crate::devices::{AdbDevice, AdbDeviceState};
+use crate::lz4::Lz4Writer;
 use crate::server::AdbEndpoint;
 use crate::sync::MAX_DATA_CHUNK;
 use crate::transport::hex_message;
 
-use super::shell::{run_fake_shell_bytes, split_argv};
+use super::shell::run_fake_command_line;
 use super::tree::{DEFAULT_MTIME, FakeNode, FakeTree};
 use super::{FAKE_FEATURES, fake_device};
 
@@ -32,6 +34,7 @@ pub struct FakeAdbServer {
     devices: watch::Sender<Vec<AdbDevice>>,
     features: Arc<Mutex<String>>,
     requests: Arc<Mutex<Vec<String>>>,
+    transfer_flags: Arc<Mutex<Vec<(&'static str, u32)>>>,
     answering: watch::Sender<bool>,
     accept: JoinHandle<()>,
     connections: Arc<Mutex<Vec<JoinHandle<()>>>>,
@@ -52,6 +55,7 @@ struct Shared {
     devices: watch::Sender<Vec<AdbDevice>>,
     features: Arc<Mutex<String>>,
     requests: Arc<Mutex<Vec<String>>>,
+    transfer_flags: Arc<Mutex<Vec<(&'static str, u32)>>>,
     answering: watch::Sender<bool>,
 }
 
@@ -66,6 +70,7 @@ impl FakeAdbServer {
             devices: watch::Sender::new(vec![fake_device()]),
             features: Arc::new(Mutex::new(FAKE_FEATURES.to_string())),
             requests: Arc::new(Mutex::new(Vec::new())),
+            transfer_flags: Arc::new(Mutex::new(Vec::new())),
             answering: watch::Sender::new(true),
         };
         let connections: Arc<Mutex<Vec<JoinHandle<()>>>> = Arc::new(Mutex::new(Vec::new()));
@@ -91,6 +96,7 @@ impl FakeAdbServer {
             devices: shared.devices,
             features: shared.features,
             requests: shared.requests,
+            transfer_flags: shared.transfer_flags,
             answering: shared.answering,
             accept,
             connections,
@@ -133,6 +139,11 @@ impl FakeAdbServer {
     /// cell counts to say how many times something dialed, or that nothing did.
     pub fn requests(&self) -> Vec<String> {
         self.requests.lock_ignore_poison().clone()
+    }
+
+    /// The verb and flags word of every `RCV2` and `SND2` so far, in arrival order.
+    pub fn transfer_flags(&self) -> Vec<(&'static str, u32)> {
+        self.transfer_flags.lock_ignore_poison().clone()
     }
 
     /// Parks every request (after recording it) until [`Self::release_answers`],
@@ -329,6 +340,55 @@ fn sync_fail(msg: &str) -> Vec<u8> {
     out
 }
 
+/// Reads the flags word of `RCV2` or `SND2` as adbd's `do_recv_v2` / `do_send_v2`
+/// do, answering whether the transfer is LZ4. The refusals carry adbd's wording.
+///
+/// A device that doesn't advertise `sendrecv_v2_lz4` predates the flag, so it's an
+/// unknown one there: what makes the fallback cells mean anything.
+fn transfer_compression(flags: u32, shared: &Shared) -> Result<bool, String> {
+    const BROTLI: u32 = 1;
+    const LZ4: u32 = 2;
+    const ZSTD: u32 = 4;
+    if (flags & (BROTLI | LZ4 | ZSTD)).count_ones() > 1 {
+        return Err(format!("multiple compression flags received: {flags}"));
+    }
+    let knows_lz4 = shared
+        .features
+        .lock_ignore_poison()
+        .split(',')
+        .any(|name| name == "sendrecv_v2_lz4");
+    if flags & !LZ4 != 0 || (flags & LZ4 != 0 && !knows_lz4) {
+        return Err(format!("unknown flags: {flags}"));
+    }
+    Ok(flags & LZ4 != 0)
+}
+
+/// `data` as adbd sends it under the LZ4 flag.
+fn lz4_frame(data: &[u8]) -> Vec<u8> {
+    let compress = || -> Result<Vec<u8>, crate::errors::AdbError> {
+        let mut writer = Lz4Writer::new();
+        let mut wire = writer.write(data)?;
+        wire.extend(writer.finish()?);
+        Ok(wire)
+    };
+    compress().expect("compressing into memory has nothing to fail on")
+}
+
+/// Decodes what a compressed push sent, through `lz4_flex`'s own decoder so the
+/// writer under test doesn't grade itself. `None` is `decompress failed`.
+///
+/// ❗ A frame without its end mark is `None` here, where the real thing spins
+/// forever (`Lz4Writer::finish`), and the decoder takes one as a clean end, so the
+/// mark is checked apart. That also covers a `DONE` with no `DATA` at all.
+fn lz4_unframe(wire: &[u8]) -> Option<Vec<u8>> {
+    if wire.len() < 11 || wire[wire.len() - 4..] != [0, 0, 0, 0] {
+        return None;
+    }
+    let mut plain = Vec::new();
+    lz4_flex::frame::FrameDecoder::new(wire).read_to_end(&mut plain).ok()?;
+    Some(plain)
+}
+
 async fn serve_sync(stream: &mut TcpStream, shared: &Shared) -> std::io::Result<()> {
     loop {
         let mut id = [0u8; 4];
@@ -358,20 +418,21 @@ async fn serve_sync(stream: &mut TcpStream, shared: &Shared) -> std::io::Result<
                     let tree = shared.tree.lock_ignore_poison();
                     // `opendir` follows every link along the path, the last one
                     // included, so a listing of `/sdcard` lists the storage it points at.
+                    // Like a real `adbd`: a folder it can't open, an empty one, and a
+                    // missing path all answer `DONE` straight away, and `.`/`..` are
+                    // never sent (verified on a Pixel 9 Pro XL, Android 17, raw sync
+                    // `LIST`, 2026-10-30, #836).
                     let listed = tree.canonical(&path).unwrap_or_else(|_| path.clone());
-                    if let Some(FakeNode::Dir { .. }) = tree.get(&listed) {
-                        let mut entries = vec![
-                            (".".to_string(), tree.stat(&listed)),
-                            ("..".to_string(), tree.stat(&listed)),
-                        ];
-                        entries.extend(tree.children(&listed).into_iter().map(|(n, node)| (n, Ok(node))));
-                        for (name, node) in entries {
+                    if let Some(FakeNode::Dir { .. }) = tree.get(&listed)
+                        && tree.readable(&listed)
+                    {
+                        for (name, node) in tree.children(&listed) {
                             if v2 {
                                 out.extend_from_slice(b"DNT2");
-                                out.extend_from_slice(&stat_v2_bytes(&node));
+                                out.extend_from_slice(&stat_v2_bytes(&Ok(node)));
                             } else {
                                 out.extend_from_slice(b"DENT");
-                                out.extend_from_slice(&stat_v1_bytes(node.as_ref().ok()));
+                                out.extend_from_slice(&stat_v1_bytes(Some(&node)));
                             }
                             out.extend_from_slice(&(name.len() as u32).to_le_bytes());
                             out.extend_from_slice(name.as_bytes());
@@ -384,9 +445,16 @@ async fn serve_sync(stream: &mut TcpStream, shared: &Shared) -> std::io::Result<
             }
             b"RECV" | b"RCV2" => {
                 let path = read_sync_path(stream, arg).await?;
+                let mut lz4 = false;
                 if &id == b"RCV2" {
                     let mut setup = [0u8; 8];
                     stream.read_exact(&mut setup).await?;
+                    let flags = u32::from_le_bytes([setup[4], setup[5], setup[6], setup[7]]);
+                    shared.transfer_flags.lock_ignore_poison().push(("RCV2", flags));
+                    lz4 = match transfer_compression(flags, shared) {
+                        Ok(lz4) => lz4,
+                        Err(msg) => return stream.write_all(&sync_fail(&msg)).await,
+                    };
                 }
                 let data = {
                     let tree = shared.tree.lock_ignore_poison();
@@ -401,8 +469,9 @@ async fn serve_sync(stream: &mut TcpStream, shared: &Shared) -> std::io::Result<
                 };
                 match data {
                     Ok(data) => {
-                        let mut out = Vec::with_capacity(data.len() + 64);
-                        for chunk in data.chunks(MAX_DATA_CHUNK) {
+                        let wire = if lz4 { lz4_frame(&data) } else { data };
+                        let mut out = Vec::with_capacity(wire.len() + 64);
+                        for chunk in wire.chunks(MAX_DATA_CHUNK) {
                             out.extend_from_slice(b"DATA");
                             out.extend_from_slice(&(chunk.len() as u32).to_le_bytes());
                             out.extend_from_slice(chunk);
@@ -416,9 +485,16 @@ async fn serve_sync(stream: &mut TcpStream, shared: &Shared) -> std::io::Result<
             }
             b"SEND" | b"SND2" => {
                 let spec = read_sync_path(stream, arg).await?;
+                let mut lz4 = false;
                 let (path, mode) = if &id == b"SND2" {
                     let mut setup = [0u8; 12];
                     stream.read_exact(&mut setup).await?;
+                    let flags = u32::from_le_bytes([setup[8], setup[9], setup[10], setup[11]]);
+                    shared.transfer_flags.lock_ignore_poison().push(("SND2", flags));
+                    lz4 = match transfer_compression(flags, shared) {
+                        Ok(lz4) => lz4,
+                        Err(msg) => return stream.write_all(&sync_fail(&msg)).await,
+                    };
                     (spec, u32::from_le_bytes([setup[4], setup[5], setup[6], setup[7]]))
                 } else {
                     let (p, m) = spec.rsplit_once(',').unwrap_or((&spec, "33188"));
@@ -442,11 +518,22 @@ async fn serve_sync(stream: &mut TcpStream, shared: &Shared) -> std::io::Result<
                     let arg = u32::from_le_bytes(arg);
                     match &id {
                         b"DATA" => {
+                            // adbd itself takes any length, but no client of it
+                            // may send past this, so a writer that does is a bug.
+                            if arg as usize > MAX_DATA_CHUNK {
+                                return stream.write_all(&sync_fail("DATA packet too long")).await;
+                            }
                             let mut chunk = vec![0u8; arg as usize];
                             stream.read_exact(&mut chunk).await?;
                             data.extend_from_slice(&chunk);
                         }
                         b"DONE" => {
+                            if lz4 {
+                                data = match lz4_unframe(&data) {
+                                    Some(plain) => plain,
+                                    None => return stream.write_all(&sync_fail("decompress failed")).await,
+                                };
+                            }
                             let result =
                                 shared
                                     .tree
@@ -488,8 +575,7 @@ fn shell_frame(id: u8, payload: &[u8]) -> Vec<u8> {
 }
 
 async fn serve_shell(stream: &mut TcpStream, shared: &Shared, cmd: &str) -> std::io::Result<()> {
-    let argv = split_argv(cmd);
-    let (exit_code, stdout, stderr) = run_fake_shell_bytes(&shared.tree, &argv);
+    let (exit_code, stdout, stderr) = run_fake_command_line(&shared.tree, cmd);
     let mut out = Vec::new();
     if !stdout.is_empty() {
         out.extend_from_slice(&shell_frame(1, &stdout));

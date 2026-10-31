@@ -237,6 +237,7 @@ async fn run(app: AppHandle, slot: ResolvedSlot, turn: &BackgroundTurn) -> WakeC
                 &turn_params(conversation_id, turn.origin(), turn.opener(), &params),
                 &sink,
                 &cancel_token,
+                run_id,
             )
             .await
     };

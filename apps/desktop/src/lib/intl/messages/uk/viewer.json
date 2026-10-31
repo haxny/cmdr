@@ -1,0 +1,486 @@
+{
+  "viewer.window.fallbackTitle": "Переглядач",
+  "@viewer.window.fallbackTitle": {
+    "sourceHash": "678bfa6"
+  },
+  "viewer.window.titleSuffix": "{fileName} | Переглядач",
+  "@viewer.window.titleSuffix": {
+    "sourceHash": "5ebd7f4"
+  },
+  "viewer.srHeading": "Переглядач файлів",
+  "@viewer.srHeading": {
+    "sourceHash": "b32f632"
+  },
+  "viewer.loading": "Завантаження…",
+  "@viewer.loading": {
+    "sourceHash": "ba3bbbe"
+  },
+  "viewer.error.noPath": "Шлях до файлу не вказано",
+  "@viewer.error.noPath": {
+    "sourceHash": "2b069fc"
+  },
+  "viewer.error.readFailed": "Не вдалося прочитати цей файл. Спробувати ще раз?",
+  "@viewer.error.readFailed": {
+    "sourceHash": "8c420fd"
+  },
+  "viewer.error.notFound": "Не вдалося знайти цей файл. Можливо, його перемістили, перейменували або видалили.",
+  "@viewer.error.notFound": {
+    "sourceHash": "9257fab"
+  },
+  "viewer.error.isDirectory": "Це папка, тож тут нічого переглядати. Відкрийте її в головному вікні, щоб побачити вміст.",
+  "@viewer.error.isDirectory": {
+    "sourceHash": "5abb771"
+  },
+  "viewer.error.timeout": "Не вдалося завантажити файл. Можливо, том працює повільно або не відповідає.",
+  "@viewer.error.timeout": {
+    "sourceHash": "74b9656"
+  },
+  "viewer.error.tooLargeToPreview": "Цей файл завеликий для перегляду звідси. Спершу скопіюйте його кудись на цей Mac, а тоді відкрийте.",
+  "@viewer.error.tooLargeToPreview": {
+    "sourceHash": "8696039"
+  },
+  "viewer.error.archiveUnreadable": "Не вдалося відкрити цей файл з архіву. Можливо, його зашифровано, пошкоджено або він має формат, який Cmdr не може прочитати.",
+  "@viewer.error.archiveUnreadable": {
+    "sourceHash": "e0b8f4e"
+  },
+  "viewer.error.coldStorage": "Цей файл в архівному сховищі, тож тут нічого показати, доки його не відновлять. Відновіть його в консолі свого постачальника сховища, а тоді відкрийте знову.",
+  "@viewer.error.coldStorage": {
+    "sourceHash": "236cd1b"
+  },
+  "viewer.error.linkTargetUnreachable": "Шлях до цього файлу веде через посилання на інший сервер, і Cmdr зараз не вдається звʼязатися з цим сервером. Перевірте, чи сервер працює, а тоді спробуйте ще раз.",
+  "@viewer.error.linkTargetUnreachable": {
+    "sourceHash": "8dcb736"
+  },
+  "viewer.error.retry": "Спробувати ще раз",
+  "@viewer.error.retry": {
+    "sourceHash": "942087c"
+  },
+  "viewer.error.cancel": "Скасувати",
+  "@viewer.error.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "viewer.error.stoppedResponding": "Передача файлу завмерла. Перевірте, чи телефон або сервер досі підʼєднано, а тоді спробуйте ще раз.",
+  "@viewer.error.stoppedResponding": {
+    "sourceHash": "f88b690"
+  },
+  "viewer.pull.title": "Отримання файлу {fileName} для перегляду",
+  "@viewer.pull.title": {
+    "sourceHash": "3a02768"
+  },
+  "viewer.pull.progress": "{doneText} з {totalText}",
+  "@viewer.pull.progress": {
+    "sourceHash": "edce3be"
+  },
+  "viewer.pull.progressUnknownTotal": "Отримано: {doneText}",
+  "@viewer.pull.progressUnknownTotal": {
+    "sourceHash": "548095e"
+  },
+  "viewer.content.ariaLabel": "Вміст файлу: {fileName}",
+  "@viewer.content.ariaLabel": {
+    "sourceHash": "57b8613"
+  },
+  "viewer.binaryWarning.body": "Тут показано сирі байти файлу. Можливо, ви хотіли переглянути <kindName>{category, select, image {зображення} document {документ} other {файл {ext}}}</kindName> у звичайному вигляді. Для цього закрийте це вікно й натисніть <quickLookKey></quickLookKey>, щоб відкрити Швидкий перегляд, або натисніть <openKey></openKey> (чи двічі клацніть файл), щоб відкрити його в повʼязаній програмі.",
+  "@viewer.binaryWarning.body": {
+    "sourceHash": "fd5cfb7"
+  },
+  "viewer.binaryWarning.dismiss": "Закрити",
+  "@viewer.binaryWarning.dismiss": {
+    "sourceHash": "7d9eb7a"
+  },
+  "viewer.binaryWarning.suppressForever": "Більше не показувати це застереження",
+  "@viewer.binaryWarning.suppressForever": {
+    "sourceHash": "b85b92b"
+  },
+  "viewer.search.placeholder": "Знайти у файлі…",
+  "@viewer.search.placeholder": {
+    "sourceHash": "a3268b3"
+  },
+  "viewer.search.ariaLabel": "Пошук тексту",
+  "@viewer.search.ariaLabel": {
+    "sourceHash": "38d268a"
+  },
+  "viewer.search.caseSensitive": "З урахуванням регістру",
+  "@viewer.search.caseSensitive": {
+    "sourceHash": "e124ba4"
+  },
+  "viewer.search.regex": "Регулярний вираз",
+  "@viewer.search.regex": {
+    "sourceHash": "0f27125"
+  },
+  "viewer.search.matchPosition": "{current} з {total}{more, select, yes {+} other {}}",
+  "@viewer.search.matchPosition": {
+    "sourceHash": "ec24db4"
+  },
+  "viewer.search.searching": "Пошук…",
+  "@viewer.search.searching": {
+    "sourceHash": "c31723a"
+  },
+  "viewer.search.partial": "(частково)",
+  "@viewer.search.partial": {
+    "sourceHash": "d0ffde3"
+  },
+  "viewer.search.noMatches": "Немає збігів",
+  "@viewer.search.noMatches": {
+    "sourceHash": "2df01a0"
+  },
+  "viewer.search.stop": "Зупинити пошук",
+  "@viewer.search.stop": {
+    "sourceHash": "c48cf72"
+  },
+  "viewer.search.stopTooltip": "Зупинити сканування й залишити результати",
+  "@viewer.search.stopTooltip": {
+    "sourceHash": "b86629c"
+  },
+  "viewer.search.previous": "Попередній збіг",
+  "@viewer.search.previous": {
+    "sourceHash": "daa2f8c"
+  },
+  "viewer.search.next": "Наступний збіг",
+  "@viewer.search.next": {
+    "sourceHash": "825e5ab"
+  },
+  "viewer.search.close": "Закрити пошук",
+  "@viewer.search.close": {
+    "sourceHash": "55656b5"
+  },
+  "viewer.search.closeTooltip": "Закрити",
+  "@viewer.search.closeTooltip": {
+    "sourceHash": "7d9eb7a"
+  },
+  "viewer.toolbar.viewMode.ariaLabel": "Режим перегляду",
+  "@viewer.toolbar.viewMode.ariaLabel": {
+    "sourceHash": "18997f2"
+  },
+  "viewer.toolbar.viewMode.text": "Текст",
+  "@viewer.toolbar.viewMode.text": {
+    "sourceHash": "71988c4"
+  },
+  "viewer.toolbar.viewMode.binary": "Двійкові дані",
+  "@viewer.toolbar.viewMode.binary": {
+    "sourceHash": "ee1c827"
+  },
+  "viewer.toolbar.viewMode.hex": "Шістнадцятковий вигляд",
+  "@viewer.toolbar.viewMode.hex": {
+    "sourceHash": "69493e6"
+  },
+  "viewer.toolbar.viewMode.viewAsText": "Переглянути як текст",
+  "@viewer.toolbar.viewMode.viewAsText": {
+    "sourceHash": "a0059b8"
+  },
+  "viewer.toolbar.viewMode.viewAsImage": "Переглянути як зображення",
+  "@viewer.toolbar.viewMode.viewAsImage": {
+    "sourceHash": "ae04259"
+  },
+  "viewer.toolbar.viewMode.viewAsPdf": "Переглянути як PDF",
+  "@viewer.toolbar.viewMode.viewAsPdf": {
+    "sourceHash": "ee89800"
+  },
+  "viewer.kind.image": "Зображення",
+  "@viewer.kind.image": {
+    "sourceHash": "1aa4cb0"
+  },
+  "viewer.kind.pdf": "PDF",
+  "@viewer.kind.pdf": {
+    "sourceHash": "1d393b0",
+    "sameAsSourceJustification": "Format name; the @key says not to translate it, and the uk catalog already writes PDF in Latin (commands.viewerViewAsMedia.label)."
+  },
+  "viewer.kind.text": "Текст",
+  "@viewer.kind.text": {
+    "sourceHash": "71988c4"
+  },
+  "viewer.kind.markdown": "Markdown",
+  "@viewer.kind.markdown": {
+    "sourceHash": "0e52f6b",
+    "sameAsSourceJustification": "Name of a text format; the @key says not to translate it."
+  },
+  "viewer.toolbar.viewMode.viewFormatted": "Переглянути з форматуванням",
+  "@viewer.toolbar.viewMode.viewFormatted": {
+    "sourceHash": "475194e"
+  },
+  "viewer.markdown.loading": "Завантаження документа",
+  "@viewer.markdown.loading": {
+    "sourceHash": "990df85"
+  },
+  "viewer.markdown.error": "Вибачте, не вдалося відформатувати цей документ. Його все одно можна прочитати як текст.",
+  "@viewer.markdown.error": {
+    "sourceHash": "c06f373"
+  },
+  "viewer.markdown.remoteImages.notice": "Зображення з інтернету приховано. Якщо їх завантажити, ці сайти побачать вашу IP-адресу.",
+  "@viewer.markdown.remoteImages.notice": {
+    "sourceHash": "4cff98e"
+  },
+  "viewer.markdown.remoteImages.load": "Завантажити зображення з інтернету",
+  "@viewer.markdown.remoteImages.load": {
+    "sourceHash": "ec1b218"
+  },
+  "viewer.markdown.image.remote": "Зображення з інтернету",
+  "@viewer.markdown.image.remote": {
+    "sourceHash": "b698d98"
+  },
+  "viewer.markdown.image.blocked": "Зображення не показано",
+  "@viewer.markdown.image.blocked": {
+    "sourceHash": "22d87c7"
+  },
+  "viewer.markdown.image.missing": "Зображення не знайдено",
+  "@viewer.markdown.image.missing": {
+    "sourceHash": "c837039"
+  },
+  "viewer.markdown.link.missing": "Не вдалося знайти файл, на який вказує це посилання.",
+  "@viewer.markdown.link.missing": {
+    "sourceHash": "e89bea2"
+  },
+  "viewer.markdown.link.folder": "Це посилання вказує на папку, тож тут нічого показати.",
+  "@viewer.markdown.link.folder": {
+    "sourceHash": "a8740f1"
+  },
+  "viewer.markdown.link.blocked": "Переглядач переходить лише за вебпосиланнями та посиланнями на файли на цьому диску.",
+  "@viewer.markdown.link.blocked": {
+    "sourceHash": "f931a8d"
+  },
+  "viewer.markdown.link.unreadable": "Не вдалося відкрити те, на що вказує це посилання.",
+  "@viewer.markdown.link.unreadable": {
+    "sourceHash": "e199e8c"
+  },
+  "viewer.toolbar.encoding.placeholder": "Кодування",
+  "@viewer.toolbar.encoding.placeholder": {
+    "sourceHash": "4d25a47"
+  },
+  "viewer.toolbar.encoding.group.unicode": "Unicode",
+  "@viewer.toolbar.encoding.group.unicode": {
+    "sourceHash": "f922e0d",
+    "sameAsSourceJustification": "Standard name the @key says not to translate; Ukrainian macOS keeps it Latin in encoding lists (Freeform TSUtility: «Unicode (UTF-8)»)."
+  },
+  "viewer.toolbar.encoding.group.western": "Західні",
+  "@viewer.toolbar.encoding.group.western": {
+    "sourceHash": "d7d2f0f"
+  },
+  "viewer.toolbar.encoding.detectedSuffix": "{label} (виявлено)",
+  "@viewer.toolbar.encoding.detectedSuffix": {
+    "sourceHash": "2096536"
+  },
+  "viewer.toolbar.tail.label": "Стеження",
+  "@viewer.toolbar.tail.label": {
+    "sourceHash": "ae9c3bd"
+  },
+  "viewer.toolbar.tail.ariaLabel": "Режим стеження: стежити за змінами файлу",
+  "@viewer.toolbar.tail.ariaLabel": {
+    "sourceHash": "af0477f"
+  },
+  "viewer.toolbar.tail.tooltip": "Автоматично стежити за змінами файлу",
+  "@viewer.toolbar.tail.tooltip": {
+    "sourceHash": "733e57f"
+  },
+  "viewer.toolbar.reindexing": "Переіндексування…",
+  "@viewer.toolbar.reindexing": {
+    "sourceHash": "f668818"
+  },
+  "viewer.statusBar.ariaLabel": "Інформація про файл",
+  "@viewer.statusBar.ariaLabel": {
+    "sourceHash": "375b97d"
+  },
+  "viewer.statusBar.lineCount": "{count} {count, plural, one {рядок} few {рядки} many {рядків} other {рядка}}",
+  "@viewer.statusBar.lineCount": {
+    "sourceHash": "1af08ec"
+  },
+  "viewer.statusBar.badge.inMemory": "у памʼяті",
+  "@viewer.statusBar.badge.inMemory": {
+    "sourceHash": "d9b8483"
+  },
+  "viewer.statusBar.badge.inMemoryTooltip": "Файл повністю в памʼяті, тож можна швидко прокрутити до будь-якого рядка.",
+  "@viewer.statusBar.badge.inMemoryTooltip": {
+    "sourceHash": "4eb50b8"
+  },
+  "viewer.statusBar.badge.indexed": "проіндексовано",
+  "@viewer.statusBar.badge.indexed": {
+    "sourceHash": "658a3e8"
+  },
+  "viewer.statusBar.badge.indexedTooltip": "Файл проіндексовано, тож номери рядків точні, і можна швидко прокрутити до будь-якого місця.",
+  "@viewer.statusBar.badge.indexedTooltip": {
+    "sourceHash": "2604f1a"
+  },
+  "viewer.statusBar.badge.streamingIndexing": "потоковий режим, індексування…",
+  "@viewer.statusBar.badge.streamingIndexing": {
+    "sourceHash": "db1718e"
+  },
+  "viewer.statusBar.badge.streamingIndexingTooltip": "Це великий файл у потоковому режимі. Індекс будується у фоні (не довше {seconds} с)… Поки що номери рядків приблизні.",
+  "@viewer.statusBar.badge.streamingIndexingTooltip": {
+    "sourceHash": "60095b8"
+  },
+  "viewer.statusBar.badge.streaming": "потоковий режим",
+  "@viewer.statusBar.badge.streaming": {
+    "sourceHash": "b304adc"
+  },
+  "viewer.statusBar.badge.streamingTooltip": "Це великий файл у потоковому режимі. Індексування тривало б довше за {seconds} с, тож ми його не запускали. Номери рядків приблизні.",
+  "@viewer.statusBar.badge.streamingTooltip": {
+    "sourceHash": "b1a14ac"
+  },
+  "viewer.statusBar.badge.wrap": "перенесення",
+  "@viewer.statusBar.badge.wrap": {
+    "sourceHash": "f0a2899"
+  },
+  "viewer.statusBar.badge.wrapTooltip": "Рядки переносяться біля краю вікна",
+  "@viewer.statusBar.badge.wrapTooltip": {
+    "sourceHash": "af2ca76"
+  },
+  "viewer.statusBar.hint.image": "Клацання: 100 % / за розміром вікна · Прокручування: масштаб · Перетягування: зсув",
+  "@viewer.statusBar.hint.image": {
+    "sourceHash": "bca0205"
+  },
+  "viewer.statusBar.hint.wrap": "{key} перенесення",
+  "@viewer.statusBar.hint.wrap": {
+    "sourceHash": "b30ce00"
+  },
+  "viewer.statusBar.hint.tail": "{key} стеження",
+  "@viewer.statusBar.hint.tail": {
+    "sourceHash": "63d25d1"
+  },
+  "viewer.statusBar.hint.search": "{key} пошук",
+  "@viewer.statusBar.hint.search": {
+    "sourceHash": "1cf8c07"
+  },
+  "viewer.media.dimensions": "{width} × {height}",
+  "@viewer.media.dimensions": {
+    "sourceHash": "ece2cad",
+    "sameAsSourceJustification": "Two preformatted numbers and the multiplication sign only; Ukrainian writes pixel dimensions the same way."
+  },
+  "viewer.image.loading": "Завантаження зображення",
+  "@viewer.image.loading": {
+    "sourceHash": "65999b8"
+  },
+  "viewer.image.error": "Вибачте, не вдалося показати це зображення. Можливо, файл пошкоджено або він у форматі, який ми не можемо відобразити.",
+  "@viewer.image.error": {
+    "sourceHash": "1e8c6d9"
+  },
+  "viewer.pdf.loading": "Завантаження PDF",
+  "@viewer.pdf.loading": {
+    "sourceHash": "7f9acf3"
+  },
+  "viewer.copyDialog.confirmTitleKnown": "Скопіювати {size} у буфер обміну?",
+  "@viewer.copyDialog.confirmTitleKnown": {
+    "sourceHash": "7f97ebf"
+  },
+  "viewer.copyDialog.confirmTitleUnknown": "Скопіювати вибраний текст у буфер обміну?",
+  "@viewer.copyDialog.confirmTitleUnknown": {
+    "sourceHash": "0956c8b"
+  },
+  "viewer.copyDialog.confirmBody": "Вставлення великого обсягу тексту може сповільнити інші програми. Спробуйте пошук (⌘F), щоб звузити вибір.",
+  "@viewer.copyDialog.confirmBody": {
+    "sourceHash": "c1f2927"
+  },
+  "viewer.copyDialog.cancel": "Скасувати",
+  "@viewer.copyDialog.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "viewer.copyDialog.saveAsFile": "Зберегти як файл…",
+  "@viewer.copyDialog.saveAsFile": {
+    "sourceHash": "7b9b279"
+  },
+  "viewer.copyDialog.copy": "Скопіювати",
+  "@viewer.copyDialog.copy": {
+    "sourceHash": "e21f935"
+  },
+  "viewer.copyDialog.refuseBody": "Це більше за ліміт буфера обміну (100 МБ). Спробуйте пошук (⌘F), щоб знайти потрібне, або збережіть вибране як файл.",
+  "@viewer.copyDialog.refuseBody": {
+    "sourceHash": "3eaf921"
+  },
+  "viewer.reloadToast.grew": "Файл змінився на диску. Перезавантажити?",
+  "@viewer.reloadToast.grew": {
+    "sourceHash": "d66b013"
+  },
+  "viewer.reloadToast.rotated": "Файл на диску замінено. Перезавантажте, щоб побачити новий вміст.",
+  "@viewer.reloadToast.rotated": {
+    "sourceHash": "50804c2"
+  },
+  "viewer.reloadToast.reload": "Перезавантажити",
+  "@viewer.reloadToast.reload": {
+    "sourceHash": "bdc090e"
+  },
+  "viewer.reloadToast.dismissTooltip": "Закрити без перезавантаження",
+  "@viewer.reloadToast.dismissTooltip": {
+    "sourceHash": "7f829ed"
+  },
+  "viewer.copy.onClipboard": "У буфері обміну: {size}",
+  "@viewer.copy.onClipboard": {
+    "sourceHash": "45934ed"
+  },
+  "viewer.copy.clipboardUnreachable": "Буфер обміну недоступний. Спробувати ще раз?",
+  "@viewer.copy.clipboardUnreachable": {
+    "sourceHash": "3c8ddb8"
+  },
+  "viewer.copy.readTooLong": "Читання тривало надто довго. Спробувати вибрати менше?",
+  "@viewer.copy.readTooLong": {
+    "sourceHash": "2275e83"
+  },
+  "viewer.copy.copyFailed": "Не вдалося скопіювати вибране. Спробувати ще раз?",
+  "@viewer.copy.copyFailed": {
+    "sourceHash": "b08416d"
+  },
+  "viewer.copy.readFailed": "Не вдалося прочитати вибране. Спробувати ще раз?",
+  "@viewer.copy.readFailed": {
+    "sourceHash": "24ea14a"
+  },
+  "viewer.saveAs.title": "Зберегти вибране",
+  "@viewer.saveAs.title": {
+    "sourceHash": "dd183ea"
+  },
+  "viewer.saveAs.defaultName": "вибране",
+  "@viewer.saveAs.defaultName": {
+    "sourceHash": "6504513"
+  },
+  "viewer.saveAs.panelFailed": "Не вдалося відкрити вікно збереження. Спробувати ще раз?",
+  "@viewer.saveAs.panelFailed": {
+    "sourceHash": "ade021c"
+  },
+  "viewer.saveAs.saved": "Вибране збережено у файл {name}",
+  "@viewer.saveAs.saved": {
+    "sourceHash": "5083c12"
+  },
+  "viewer.saveAs.savedInSourceEncoding": "Вибране збережено у файл {name} в оригінальному кодуванні файлу, бо деякі символи не вдалося конвертувати.",
+  "@viewer.saveAs.savedInSourceEncoding": {
+    "sourceHash": "9ac85a1"
+  },
+  "viewer.saveAs.tooLong": "Збереження тривало надто довго. Спробувати вибрати менше?",
+  "@viewer.saveAs.tooLong": {
+    "sourceHash": "f31d7f4"
+  },
+  "viewer.saveAs.saveFailed": "Не вдалося зберегти вибране. Спробувати ще раз?",
+  "@viewer.saveAs.saveFailed": {
+    "sourceHash": "ca5709f"
+  },
+  "viewer.saveAs.destinationReadOnly": "Це розташування доступне лише для читання. Вибрати іншу папку для збереження?",
+  "@viewer.saveAs.destinationReadOnly": {
+    "sourceHash": "8d627aa"
+  },
+  "viewer.row.continuesTooltip": "Cmdr переніс цей рядок, бо він дуже довгий. У самому файлі тут немає розриву рядка.",
+  "@viewer.row.continuesTooltip": {
+    "sourceHash": "7df69ed"
+  },
+  "viewer.row.continuesLabel": "Cmdr переніс цей рядок, бо він дуже довгий. У самому файлі тут немає розриву рядка.",
+  "@viewer.row.continuesLabel": {
+    "sourceHash": "7df69ed"
+  },
+  "viewer.selection.toEndOfFile": "Вибрано від рядка {line} до кінця файлу",
+  "@viewer.selection.toEndOfFile": {
+    "sourceHash": "62d95be"
+  },
+  "viewer.selection.singleLine": "Вибрано {chars, plural, one {# символ} few {# символи} many {# символів} other {# символу}} у рядку {line}",
+  "@viewer.selection.singleLine": {
+    "sourceHash": "eb11697"
+  },
+  "viewer.selection.multiLine": "Вибрано рядки від {startLine} до {endLine}, {chars, plural, one {# символ} few {# символи} many {# символів} other {# символу}}",
+  "@viewer.selection.multiLine": {
+    "sourceHash": "5ba7791"
+  },
+  "viewer.selection.charsOnly": "Вибрано {chars, plural, one {# символ} few {# символи} many {# символів} other {# символу}}",
+  "@viewer.selection.charsOnly": {
+    "sourceHash": "3db2c4e"
+  },
+  "viewer.selection.toEndOfFileNoLine": "Вибрано до кінця файлу",
+  "@viewer.selection.toEndOfFileNoLine": {
+    "sourceHash": "e7e0442"
+  },
+  "viewer.error.linkNeedsConsent": "Цей файл розташовано за посиланням на інший сервер, куди Cmdr поки що не можна входити. Щоб вирішити, відкрийте його папку на панелі.",
+  "@viewer.error.linkNeedsConsent": {
+    "sourceHash": "b9b3e1f"
+  }
+}

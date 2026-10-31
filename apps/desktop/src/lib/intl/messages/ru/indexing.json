@@ -166,10 +166,6 @@
   "@indexing.eta.hoursLeft": {
     "sourceHash": "1d50900"
   },
-  "indexing.rescan.staleIndex": "Индекс диска устарел: похоже, приложение давно не запускалось. Cmdr заново сканирует диск, чтобы учесть все изменения.",
-  "@indexing.rescan.staleIndex": {
-    "sourceHash": "cce4c74"
-  },
   "indexing.rescan.journalGap": "Системный журнал изменений файлов не охватывает весь нужный период. Cmdr заново сканирует диск, чтобы восстановить индекс.",
   "@indexing.rescan.journalGap": {
     "sourceHash": "a697c86"

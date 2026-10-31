@@ -131,6 +131,16 @@ also sees stays among the saved ones with its "Found nearby" status.
 - **Discovery off** empties the discovery list, so there is no group and the "discovery is off" line stands where it
   would be. **Searching** shows its line under an open group or when nothing was found yet; a collapsed group shows a
   spinner on its header instead.
+- **Type-to-jump looks through a collapsed group** (`jumpToPrefix` walks the full list). Its rows come last, so a name
+  on screen wins, and a jump into the group opens it the way an agent's `move_cursor` does, without recording a choice.
+
+### Typing jumps
+
+The hub and the share list answer type-to-jump from memory: `jumpToPrefix` moves the cursor to the first row whose name
+starts with the buffer (`list-cursor.ts::nameStartsWith`, case-insensitive) and skips the group header and "Add
+server…". The buffer, timeout, and indicator are the folders' own (`../pane/type-to-jump-controller.svelte.ts`, through
+`getInMemoryJump`). A prefix rather than the folders' fuzzy match: these lists hold a handful of names you read off the
+screen. With "typing filters" on these views still jump (`typingFilters`), since they have no backend listing to narrow.
 
 ### The pure modules beside it
 
@@ -261,6 +271,10 @@ Exports for parent: `setCursorIndex(index)`, `findItemIndex(name)`, `handleKeyDo
 `getHostUnderCursor()`, `getRowUnderCursor()`, `getItemCount()`, `openCursorItem()`. The three that speak in indexes
 count the full list (§ "The nearby group"). `refresh()` is `pane.refresh`'s entry point from the command layer and is
 the same body ⌘R runs locally, which is why the local branch stops propagation (see § Gotchas).
+
+**Decision**: `.row-list` is a `role="list"` and everything directly in it is a `listitem`, the hint lines (searching,
+discovery off, NFS, empty state) too. **Why**: a list may only hold items, so a hint's bare `LinkButton` trips axe's
+`aria-required-children`. `network.a11y.test.ts` pins it.
 
 ## `PlacesBrowser.svelte`
 

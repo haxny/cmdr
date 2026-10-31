@@ -8,6 +8,7 @@ import { throwEjectError } from '#lib/file-explorer/navigation/eject-error.js'
 import {
   commands,
   events,
+  type EjectOutcome,
   type FileSizeFormat,
   type Location,
   type LowDiskSpacePayload,
@@ -150,9 +151,17 @@ export async function getVolumeSpace(path: string): Promise<TimedOut<SpaceInfo |
  * `EjectFailure` carrying the typed `EjectError`; `asEjectError` gets it back,
  * and `renderEjectError` words it.
  */
-export async function ejectVolume(volumeId: string): Promise<void> {
+export async function ejectVolume(volumeId: string): Promise<EjectOutcome> {
   const res = await commands.ejectVolume(volumeId)
   if (res.status === 'error') throwEjectError(res.error)
+  return res.data
+}
+
+/** Ejects every volume on `volumeId`'s physical disk, and the disk: the volume menu's "Eject all". */
+export async function ejectAllOnDisk(volumeId: string): Promise<EjectOutcome> {
+  const res = await commands.ejectAllOnDisk(volumeId)
+  if (res.status === 'error') throwEjectError(res.error)
+  return res.data
 }
 
 /**

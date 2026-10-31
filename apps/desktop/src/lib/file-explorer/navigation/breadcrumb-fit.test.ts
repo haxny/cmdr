@@ -58,6 +58,23 @@ describe('fitBreadcrumbSegments', () => {
     expect(fit(['', 'Users', 'a-very-long-folder-name'], 170)).toEqual(['', 'Users', 'a-ver…name'])
   })
 
+  it('reserves a short segment its floor, so a path of one-letter folders never clips', () => {
+    const texts = ['a', 'b', 'c', 'dddddddddd']
+    // Text alone is 13 chars + 3 separators = 160px, but the floors add 3 × (20 − 10).
+    expect(fitBreadcrumbSegments({ texts, availableWidth: 160, separatorWidth: 10, measure, floor: () => 20 })).toEqual(
+      ['a', 'b', 'c', 'ddd…ddd'],
+    )
+    expect(fitBreadcrumbSegments({ texts, availableWidth: 190, separatorWidth: 10, measure, floor: () => 20 })).toEqual(
+      texts,
+    )
+  })
+
+  it('gives the root marker no floor: it renders no box', () => {
+    expect(
+      fitBreadcrumbSegments({ texts: ['', 'abc'], availableWidth: 40, separatorWidth: 10, measure, floor: () => 20 }),
+    ).toEqual(['', 'abc'])
+  })
+
   it('counts no separator before the root marker or the first segment', () => {
     // "~/abcdefghij" is exactly 120px: one separator, not two.
     expect(fit(['~', 'abcdefghij'], 120)).toEqual(['~', 'abcdefghij'])
