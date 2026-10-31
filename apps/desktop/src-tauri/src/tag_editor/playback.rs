@@ -195,6 +195,48 @@ pub fn choices_of(
     choices
 }
 
+/// One launch of the "each file in its default app" plan.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DefaultLaunch {
+    /// Every one of `paths` (in the order given) in one launch of `app_path`.
+    Together { app_path: PathBuf, paths: Vec<PathBuf> },
+    /// A file whose default app is unknown: the app's own "open file".
+    Alone(PathBuf),
+}
+
+/// Groups `paths` by their default app so each app gets all its files in one launch, not one launch per file
+/// (which made a player start or queue every track on its own). Groups come in order of first appearance and
+/// keep the file order inside; `default_app` answers an app bundle path, or `None` when a file has none.
+pub fn group_by_default_app(paths: &[PathBuf], default_app: impl Fn(&Path) -> Option<PathBuf>) -> Vec<DefaultLaunch> {
+    let mut launches: Vec<DefaultLaunch> = Vec::new();
+    for path in paths {
+        let Some(app) = default_app(path) else {
+            launches.push(DefaultLaunch::Alone(path.clone()));
+            continue;
+        };
+        let existing = launches.iter_mut().find_map(|launch| match launch {
+            DefaultLaunch::Together { app_path, paths } if *app_path == app => Some(paths),
+            _ => None,
+        });
+        match existing {
+            Some(group) => group.push(path.clone()),
+            None => launches.push(DefaultLaunch::Together {
+                app_path: app,
+                paths: vec![path.clone()],
+            }),
+        }
+    }
+    launches
+}
+
+/// The app a file opens with by default. Cached per extension is not needed: LaunchServices answers per call.
+fn default_app_of(path: &Path) -> Option<PathBuf> {
+    candidates_of(vec![path.to_path_buf()])
+        .into_iter()
+        .next()
+        .map(|candidate| candidate.app_path)
+}
+
 /// Opens `paths` per the player setting. Never waits for the launch: an app launch goes to the main
 /// thread (`NSWorkspace`), as "Open with" does. A chosen app that's gone falls back to each file's
 /// default app, and the answer says so.
@@ -217,10 +259,23 @@ pub fn open_in_player<R: Runtime>(
             Ok(PlayerOpened { fell_back: false })
         }
         LaunchPlan::Default { fell_back } => {
-            for path in paths {
-                // The app's own "open file" (the E2E build records instead of launching).
-                crate::commands::file_actions::open_path(path.to_string_lossy().into_owned())
-                    .map_err(|_| TagEditorError::PlayerUnavailable)?;
+            // Files that share a default app go to it in ONE launch (one playlist, in track order); a file with
+            // no known default app, or any file in the E2E build, goes through the app's own "open file".
+            for launch in group_by_default_app(&paths, default_app_of) {
+                match launch {
+                    DefaultLaunch::Together { app_path, paths } => {
+                        app.run_on_main_thread(move || {
+                            if let Err(e) = crate::file_system::open_with::open_paths_with(&paths, &app_path) {
+                                log::warn!(target: LOG_TARGET, "the player didn't start: {e}");
+                            }
+                        })
+                        .map_err(|_| TagEditorError::PlayerUnavailable)?;
+                    }
+                    DefaultLaunch::Alone(path) => {
+                        crate::commands::file_actions::open_path(path.to_string_lossy().into_owned())
+                            .map_err(|_| TagEditorError::PlayerUnavailable)?;
+                    }
+                }
             }
             Ok(PlayerOpened { fell_back })
         }

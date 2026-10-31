@@ -6,7 +6,8 @@ use std::path::PathBuf;
 use cmdr_tags::AudioFormat;
 
 use super::playback::{
-    AppChoice, DEFAULT_PLAYER, LaunchPlan, audio_url, choices_of, defaults_agree, plan_launch, player_targets, release,
+    AppChoice, DEFAULT_PLAYER, DefaultLaunch, LaunchPlan, audio_url, choices_of, defaults_agree, group_by_default_app,
+    plan_launch, player_targets, release,
 };
 use super::session::{TagEditorError, close, open};
 use super::session_test::{album, path_of};
@@ -215,4 +216,47 @@ fn defaults_agree_only_when_every_type_has_the_same_one() {
     assert!(!defaults_agree(&[some("a"), None]));
     assert!(!defaults_agree(&[None]));
     assert!(!defaults_agree(&[]));
+}
+
+#[test]
+fn one_default_app_gets_every_file_in_one_launch_in_track_order() {
+    let paths: Vec<PathBuf> = ["/m/03.mp3", "/m/01.mp3", "/m/02.mp3"]
+        .iter()
+        .map(PathBuf::from)
+        .collect();
+    let launches = group_by_default_app(&paths, |_| Some(PathBuf::from("/Applications/foobar2000.app")));
+    assert_eq!(
+        launches,
+        vec![DefaultLaunch::Together {
+            app_path: PathBuf::from("/Applications/foobar2000.app"),
+            paths,
+        }]
+    );
+}
+
+#[test]
+fn different_default_apps_and_unknown_ones_are_grouped_apart() {
+    let paths: Vec<PathBuf> = ["/m/1.mp3", "/m/2.m4b", "/m/3.mp3", "/m/4.xyz"]
+        .iter()
+        .map(PathBuf::from)
+        .collect();
+    let launches = group_by_default_app(&paths, |p| match p.extension()?.to_str()? {
+        "mp3" => Some(PathBuf::from("/A.app")),
+        "m4b" => Some(PathBuf::from("/B.app")),
+        _ => None,
+    });
+    assert_eq!(
+        launches,
+        vec![
+            DefaultLaunch::Together {
+                app_path: PathBuf::from("/A.app"),
+                paths: vec![PathBuf::from("/m/1.mp3"), PathBuf::from("/m/3.mp3")],
+            },
+            DefaultLaunch::Together {
+                app_path: PathBuf::from("/B.app"),
+                paths: vec![PathBuf::from("/m/2.m4b")],
+            },
+            DefaultLaunch::Alone(PathBuf::from("/m/4.xyz")),
+        ]
+    );
 }
