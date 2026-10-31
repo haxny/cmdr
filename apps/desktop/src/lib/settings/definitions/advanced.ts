@@ -535,7 +535,8 @@ export const advancedSettings: SettingDefinitionSource[] = [
     descriptionKey: 'settings.multiRename.tagEditor.description',
     keywordsKey: 'settings.multiRename.tagEditor.keywords',
     type: 'boolean',
-    default: false,
+    // On in the haxny fork: the tag editor is why the fork exists.
+    default: true,
     component: 'switch',
   },
   {
