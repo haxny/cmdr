@@ -292,7 +292,7 @@ fn image_entry(local: &Path, ext: Option<&str>) -> Option<MediaEntry> {
         .take(CLASSIFY_HEAD_LEN as u64)
         .read_to_end(&mut head)
         .ok()?;
-    let kind = classify_viewer_content(&head, ext, true);
+    let kind = classify_viewer_content(&head, ext);
     if kind != ViewerContentKind::Image {
         return None;
     }

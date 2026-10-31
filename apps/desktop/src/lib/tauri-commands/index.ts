@@ -95,6 +95,7 @@ export {
   viewerReload,
   viewerGetEncodingOptions,
   onViewerPullProgress,
+  onViewerMediaLoad,
 } from './file-viewer'
 export type {
   ViewerPullProgress,

@@ -139,6 +139,15 @@ branches on `viewMode`: text uses the line pipeline; binary and hex use original
   PDF. A plain text file has no Media option, and `0` retains its ordinary key behavior there. The reverse switch from
   forced Text reopens the natural media session; Binary and Hex can return to the existing media session.
 
+**A picture or PDF on a volume takes its time after the open returns** (`mediaFromVolume`; backend:
+`src-tauri/src/file_viewer/DETAILS.md` § "Media on a volume"). The backend reads the bytes before the webview sees one,
+so the page follows `viewer-media-load` with a second `createViewerPull` (`mediaLoad`, via `followMediaLoad`): after a
+second `MediaStage.svelte` covers the still-mounted view with a `PullProgressPanel`, with progress and Cancel (closing
+the window stops the read). `arriving` holds `MediaPdfView`'s spinner past its timer, since PDFKit paints nothing until
+then. A `failed` report (the volume stopped answering or refused) shows `viewer.error.stoppedResponding` with Retry,
+which reopens through `reopenNatural` so the old session and token go. Why not the `<img>` `error` alone: it reads as a
+damaged file, and an `<embed>` has no error at all.
+
 ### Formatted Markdown
 
 A `markdown` session (backend: `src-tauri/src/file_viewer/DETAILS.md` § "Markdown rendering") is a media kind here:

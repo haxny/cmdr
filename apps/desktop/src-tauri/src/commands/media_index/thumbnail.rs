@@ -42,7 +42,7 @@ fn mint_image_thumbnail_token(path: &str) -> Option<String> {
     let p = std::path::Path::new(path);
     let head = read_head_bytes(p, CLASSIFY_HEAD_LEN);
     let ext = p.extension().and_then(|e| e.to_str());
-    let kind = classify_viewer_content(&head, ext, true);
+    let kind = classify_viewer_content(&head, ext);
     if kind != ViewerContentKind::Image {
         return None;
     }

@@ -1,5 +1,5 @@
 //! Which way a session's file opens: through `std::fs` ([`super::source`]) or through its
-//! volume's held random reader ([`super::volume_source`]). Sits above both readers, which
+//! volume's positioned reads ([`super::volume_source`]). Sits above both readers, which
 //! know nothing of each other. `DETAILS.md` § "Byte sources".
 
 use std::path::{Path, PathBuf};
@@ -10,7 +10,7 @@ use log::debug;
 use super::ViewerError;
 use super::materialize::map_volume_error;
 use super::source::{OpenedFile, open_local};
-use super::volume_source::{open_on_volume, size_on_volume};
+use super::volume_source::{PositionedRead, open_on_volume, size_on_volume};
 use crate::file_system::volume::manager::{get_volume_manager, path_routes_over_its_parent};
 use crate::file_system::volume::{Volume, VolumeError};
 
@@ -20,8 +20,12 @@ use crate::file_system::volume::{Volume, VolumeError};
 pub enum SourceOrigin {
     /// A path `std::fs` opens.
     Local(PathBuf),
-    /// A file read through its volume's held random reader (`volume_source.rs`).
-    Volume { volume: Arc<dyn Volume>, path: PathBuf },
+    /// A file read through its volume's positioned reads (`volume_source.rs`).
+    Volume {
+        volume: Arc<dyn Volume>,
+        path: PathBuf,
+        way: PositionedRead,
+    },
 }
 
 impl SourceOrigin {
@@ -37,7 +41,7 @@ impl SourceOrigin {
     pub fn open_volume(&self) -> Result<OpenedFile, VolumeError> {
         match self {
             Self::Local(_) => Err(VolumeError::NotSupported),
-            Self::Volume { volume, path } => open_on_volume(volume, path),
+            Self::Volume { volume, path, way } => open_on_volume(volume, path, *way),
         }
     }
 
@@ -45,7 +49,7 @@ impl SourceOrigin {
     pub fn current_size(&self) -> Result<u64, ViewerError> {
         match self {
             Self::Local(path) => Ok(std::fs::metadata(path)?.len()),
-            Self::Volume { volume, path } => size_on_volume(volume, path),
+            Self::Volume { volume, path, .. } => size_on_volume(volume, path),
         }
     }
 }
@@ -66,6 +70,22 @@ pub(super) struct VolumeOpen {
 /// whose smb2 session is down still opens through a live mount, and a missing file gets
 /// the same `NotFound` the old path gives.
 pub(super) fn open_for_viewer(requested: &Path, volume_id: &str) -> Option<VolumeOpen> {
+    open_through_volume(requested, volume_id, PositionedRead::Held)
+}
+
+/// Opens `requested` through `read_range`, for a volume the OS can't open and that holds
+/// no random reader: long enough to sniff it and, when it's media, to serve it with no
+/// pull (`media_session.rs`). Text keeps its temp copy, so a caller that finds no media
+/// drops this. `None` under the same rules as [`open_for_viewer`], plus any volume whose
+/// paths `std::fs` already opens.
+pub(super) fn open_ranged_for_media(requested: &Path, volume_id: &str) -> Option<VolumeOpen> {
+    if get_volume_manager().get(volume_id)?.paths_are_os_visible() {
+        return None;
+    }
+    open_through_volume(requested, volume_id, PositionedRead::Ranged)
+}
+
+fn open_through_volume(requested: &Path, volume_id: &str, way: PositionedRead) -> Option<VolumeOpen> {
     if path_routes_over_its_parent(requested) {
         return None;
     }
@@ -74,6 +94,7 @@ pub(super) fn open_for_viewer(requested: &Path, volume_id: &str) -> Option<Volum
     let origin = SourceOrigin::Volume {
         volume,
         path: requested.to_path_buf(),
+        way,
     };
     match origin.open_volume() {
         Ok(opened) => Some(VolumeOpen {

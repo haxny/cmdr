@@ -25,9 +25,11 @@ Frontend counterpart: `apps/desktop/src/routes/viewer/CLAUDE.md` for the viewer 
   `ViewerSession::new(ViewerSessionInit)` constructor, the search state it holds (`SearchState`, `SearchStatus`),
   `BackendType`, `ViewerOpenResult` + `MediaDimensions`, the `SESSIONS` cache, and `generate_session_id`. A sibling of
   `session.rs` rather than its child, so the open dispatcher can call `media_session` without a module cycle
-- `media_session.rs`: the media-open path. `try_open_media` (classify + dispatch, called by `open_session` before it
-  builds a text backend), `open_media_session` (mint token, header-only dimensions, install a `MediaBackend` via
-  `ViewerSession::new`), and `is_local_posix_path` (the local-volume gate)
+- `media_session.rs`: the media-open path. `try_open_media` (classify through the session's open file + dispatch,
+  called by `open_session` before it builds a text backend) and `open_media_session` (mint token, header-only
+  dimensions, install a `MediaBackend` via `ViewerSession::new`)
+- `media_volume.rs`: a token's bytes on a volume: `VolumeMedia`, its chunked read, and the `viewer-media-load` event.
+  See § "Media on a volume"
 - `markdown_session.rs`, `markdown_document.rs`, `markdown_render.rs`, `markdown_images.rs`, `markdown_links.rs`: the
   formatted Markdown view, its per-session state, its sanitizer, its pictures, and its links. See § "Markdown rendering"
 - `range_read.rs`: backend-agnostic stitching of a `(line, offset) -> (line, offset)` range into UTF-8 text.
@@ -53,8 +55,9 @@ Frontend counterpart: `apps/desktop/src/routes/viewer/CLAUDE.md` for the viewer 
 - `log_view.rs`: `ViewedBackend`, the backend wrapper that applies a session's `RowText`. See § "The debug log's view"
 - `source.rs`: the floor every backend imports. `ByteSource` (positioned `read_at`), `SharedSource`,
   `LocalFileSource` (`pread` on a held `File`), `OpenedFile` (source + size + name), `open_local`. See § "Byte sources"
-- `volume_source.rs`: `VolumeSource`, a `ByteSource` over a volume's held `VolumeRandomReader` (SMB) with a small
-  block cache, plus `open_on_volume` / `size_on_volume`. See § "A file read through its volume"
+- `volume_source.rs`: `VolumeSource`, a `ByteSource` over a volume's positioned reads (`PositionedRead`: a held
+  `VolumeRandomReader`, SMB today, or `read_range` through `RangeReader`) with a small block cache, plus
+  `open_on_volume` / `size_on_volume`. See § "A file read through its volume"
 - `origin.rs`: above both readers. `SourceOrigin` (how a session opens its file again, `Local` or `Volume`) and
   `open_for_viewer`, which `open_session` asks first. The two readers never import each other or this.
 - `headless.rs`: `open_text_backend(path, encoding, cancel) -> HeadlessBackend`, the backend pick with nothing around
@@ -104,8 +107,7 @@ back to it, so a live mount still opens and a missing file still answers `NotFou
 - **The sync core bridges with `tauri::async_runtime::block_on`**, like `materialize.rs`, so it must run off any
   runtime worker (every caller is a blocking worker or a plain thread). A replaced reader closes on the runtime once the
   last read holding it lets go (`HeldReader`'s `Drop`).
-- **No media, a watcher only while the mount lives, an index only under 32 MiB.** A volume-read image or PDF opens as
-  text (media renders only from a local volume anyway). The FSEvents watcher needs the OS path, so it runs only when
+- **A watcher only while the mount lives, an index only under 32 MiB.** The FSEvents watcher needs the OS path, so it runs only when
   `paths_are_os_visible()`. The background `LineIndex` scan runs only up to `VOLUME_INDEX_MAX_BYTES`: past it the scan
   can't finish inside the 5 s indexing timeout on an ordinary link and would only compete with the viewport for the link
   and the cache.
@@ -119,19 +121,17 @@ error, the reopen on growth, and the cache. The smb2 side is
 ## Raw byte reads
 
 `get_bytes(session_id, offset, count)` reads at most 64 KiB through the session's open file, regardless of text
-encoding or media kind. For routed and device files that file is the shared materialized temp. The command runs in a
+encoding or media kind. For routed files, and text on a device or server, that file is the shared materialized temp; a picture on a volume reads through the volume. The command runs in a
 blocking worker behind the viewer's two-second read deadline, so a slow mount cannot block the IPC thread. The caller
 uses the byte offset as its only coordinate; text row numbers and UTF-16 offsets never enter this path.
 
 ## Media rendering (Image / PDF)
 
-The viewer renders images and PDFs inline instead of showing the binary warning. The backend half:
+The viewer renders images and PDFs inline instead of showing the binary warning, from any volume the file can be read on (§ "Media on a volume"). The backend half:
 
-- `content_kind.rs`: pure `classify_viewer_content(head, ext, is_local) -> ViewerContentKind { Text, Image, Pdf }`.
+- `content_kind.rs`: pure `classify_viewer_content(head, ext) -> ViewerContentKind { Text, Image, Pdf }`.
   Magic bytes decide (JPEG/PNG/GIF/WebP/BMP/TIFF/HEIC/PDF); the extension is a tiebreaker only, and only for SVG (an
-  `.svg` ext AND an `<svg` root after BOM/prolog/comments/DOCTYPE). Non-local files always classify `Text` (v1 scopes
-  media to local POSIX volumes; SMB can block). A file on a volume the OS can't open (MTP, ADB, SFTP, WebDAV) reaches
-  classification as a local temp, so it renders like any local image or PDF (§ "Preview of a routed file"). `media_mime(head, kind)` re-sniffs the magic to
+  `.svg` ext AND an `<svg` root after BOM/prolog/comments/DOCTYPE). `media_mime(head, kind)` re-sniffs the magic to
   pick the served `Content-Type`. `looks_binary(head, encoding)` is the byte-level answer the classifier doesn't give
   (it calls every non-media file `Text` and leaves the binary warning to the FE's extension list): UTF-16 is text (its
   NULs are code-unit halves); otherwise a NUL, or C0 controls other than `\t` `\n` `\r` form feed and ESC above 5% of
@@ -150,14 +150,14 @@ The viewer renders images and PDFs inline instead of showing the binary warning.
   comes from the token's stored magic-byte MIME, never the extension. Registered once in the `lib.rs` builder chain via
   `register_asynchronous_uri_scheme_protocol(media_protocol::SCHEME, ...)`, before any window exists (correct: `viewer-*`
   windows are lazy and inherit the app-wide scheme).
-- `media.rs` also holds `MediaSource`: a token names either a `Ready` file chosen at mint time, or a `Deferred` source
-  (`DeferredMedia`) the handler fetches on the first request (a Markdown document's pictures, § "Markdown rendering").
+- `media.rs` also holds `MediaSource`: a token names a `Ready` file chosen at mint time, a `Deferred` source
+  (`DeferredMedia`) the handler fetches on the first request (a Markdown document's pictures, § "Markdown rendering"), or `Volume` bytes read by position per request (§ "Media on a volume").
 - `media_backend.rs`: `MediaBackend`, a no-op `FileViewerBackend` so a media session can fill the non-optional
   `backend` field without a text backend. Every text-shaped call returns empty/zero.
 - `media_session.rs`: the media-open path, kept out of `session.rs` so that file stays text-backend orchestration.
-  `try_open_media(file_path, file_size, temp_cleanup)` reads the head, classifies (`is_local_posix_path` decides
-  locality), and for a media kind calls `open_media_session`; otherwise returns `None` so `open_session` falls through to
-  text. `open_media_session` mints the token, reads dimensions best-effort, installs a `MediaBackend`, and builds the
+  `try_open_media(MediaOpen)` reads the head through the session's open file, classifies, and for a media kind calls
+  `open_media_session`; otherwise it returns `None` so `open_session` falls through to
+  text. `open_media_session` mints the token (a path for a local file, `VolumeMedia` on a volume), reads dimensions best-effort through the same file, installs a `MediaBackend`, and builds the
   `ViewerSession` via `session_store::ViewerSession::new`, passing the shared `temp` through so an image/PDF previewed from
   over a routed file keeps its temp exactly as long as a text session would (see § "Preview of a routed file"). Covered by `media_session_test.rs`
   (image / PDF / text-fallthrough / open-as-text through the public `open_session`).
@@ -183,6 +183,29 @@ by the per-open token in the handler, not by CSP, so the app-wide allowance is a
 FDA: the handler `File::open`s a real path off an IPC-minted token, inheriting the viewer's existing assumption that a
 viewer only opens after the user picked the file (so FDA is already decided). This is NOT a new pre-gate read path
 (`fda_gate.rs`); a stray TCC denial reading bytes here is a real access failure, not a scheme bug.
+
+### Media on a volume
+
+`open_session` needs one thing from a volume to render its pictures: a way to read them. Three ways, tried in this order, and none of them names a backend, so a new volume gets all of this by implementing `read_range`:
+
+1. **A held reader** (`open_for_viewer`, `PositionedRead::Held`, SMB): the session's own handle sniffs the head and, for media, serves the requests.
+2. **`read_range`** (`open_ranged_for_media`, `PositionedRead::Ranged`, on a volume whose paths the OS can't open: S3, SFTP, NFS, WebDAV, MTP, ADB): `RangeReader` stats the file, the head decides, and media stays on the volume. Anything else drops this open and carries on to the temp. A sniff the volume can't answer (no `read_range`, no size, a read refused) reads as "not media", so the pull still gets its say and its typed errors.
+3. **The temp** (`materialize_for_viewer`): a route (zip, `.git`, restic) or a volume with neither. The bytes are a local file by the time anyone classifies them, so they render through the local path, under `PREVIEW_CAP_BYTES`.
+
+`try_open_media` reads through the session's `OpenedFile` in all three, and through `LocalFileSource` for a local path too, so there is one classifier call and one place for dimensions.
+
+**Decision**: media reads by position wherever the volume can, and text keeps its temp on ranged volumes. **Why**: a picture wants one sequential read and a PDF a few windows, which suit `read_range`; the text path scrolls under a 2 s per-fetch deadline with a background index scan, which a phone or a far-away bucket can't promise. Moving text over is its own decision. Cost of the sniff: one stat and one 256 KiB read on each text open on those volumes.
+
+**A whole-file request is buffered, so there's a line.** Tauri's scheme responder takes one finished `Vec`, and every `<img>` asks for the whole file. Past `MEDIA_ON_VOLUME_MAX_BYTES` (1 GiB, the file twice over in RAM at the extreme) a file on a volume doesn't render: a held reader opens the text and hex views, and a ranged volume goes on to the pull, which answers `TooLargeToPreview`.
+
+**What a request does** (`media_protocol::serve_volume`, `VolumeMedia::read`):
+
+- Reads 1 MiB at a time through the session's `VolumeSource` on a blocking thread, so the `Range` serving, the reopen-once-on-error, and the block cache are the text path's. Not verified which requests PDFKit makes over a custom scheme; both shapes are served and tested.
+- **No total deadline, a stall rule** (`VOLUME_STALL_LIMIT`, 45 s, the pull's number and reasons): a 200 MiB scan on a slow link may take minutes, and the local handler's 15 s total would kill it. Quiet for the limit answers 504 and the blocking task stops at its next chunk.
+- **A close stops it.** `media::drop_token` calls `VolumeMedia::close`, so a closed window costs at most the chunk on the wire, and a read stopped that way answers 404 and reports nothing.
+- **The window hears how it went** (`viewer-media-load`, `emit_to(webview label)`, tagged with the token): `Reading` on each poll with news, then `Done` or `Failed`. Why an event: `<img>` reports only `error`, which reads as a damaged file, and `<embed>` reports nothing. `ViewerOpenResult.media_from_volume` tells the window to follow it; a local path neither emits nor needs it. The frontend half: `apps/desktop/src/routes/viewer/DETAILS.md` § "Media rendering".
+
+Pinned by `media_volume_test.rs` with a test volume for both ways of reading (whole file and range, no stream needed, a hung server, a refused read, a close mid-read), and `../operations_host/backend_suites/viewer_media_integration_test.rs` against each live server, the fake ADB server, and the virtual MTP device.
 
 ### Key decisions (media)
 
@@ -306,7 +329,7 @@ file on a volume whose paths aren't OS-visible (§ "A file on a volume the OS ca
 100% `std::fs::File`-based (byte-seek, line-index, encoding, and the `cmdr-media://` handler all `File::open` a real
 path), and a route mints a read-only volume with no positioned reads, so `open_session` streams the file to a bounded
 temp and opens THAT — the deliberately simple bridge. A volume that DOES hold a file open for positioned reads skips
-the temp: § "A file read through its volume".
+the temp: § "A file read through its volume". So does a picture or PDF on a volume that reads by position: § "Media on a volume".
 
 **One code path for both routes.** Both mint a read-only volume, both answer `open_read_stream`, and a second copy of
 the temp lifecycle would drift. The only thing that reads the `RoutedKind` is the error mapping: the archive family
@@ -369,7 +392,7 @@ Pinned on both sides (`materialize_test.rs`, `viewer-i18n-parity.test.ts`).
 
 ### A file on a volume the OS can't open
 
-A phone over ADB or MTP and an SFTP or WebDAV server hand out paths no `std::fs` call can open (`adb://R58M1/sdcard/notes.txt`, `mtp://…`, `sftp://…`). `materialize_for_viewer` and
+A phone over ADB or MTP and an SFTP or WebDAV server hand out paths no `std::fs` call can open (`adb://R58M1/sdcard/notes.txt`, `mtp://…`, `sftp://…`). `materialize_for_viewer` (for what `open_ranged_for_media` didn't take: § "Media on a volume") and
 `materialize_for_inspect` try the route first (so a `.zip` ON a phone still routes), then `resolve` the path and, when
 the volume's `paths_are_os_visible()` is false, pull the file through that volume with the same `pull_to_temp` a routed
 entry uses. Same cap, refused from the volume's stat before a temp exists; same `.cmdr-viewer-<uuid>/` subdir; same

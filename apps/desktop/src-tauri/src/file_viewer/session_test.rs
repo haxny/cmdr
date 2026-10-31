@@ -1493,6 +1493,37 @@ fn opens_a_file_out_of_a_git_snapshot_and_reads_its_lines() {
     cleanup(&dir);
 }
 
+/// A route has no positioned reads of its own to offer, so a picture in a snapshot renders
+/// from the bounded temp, sniffed there like any local file.
+#[test]
+fn a_picture_in_a_restic_snapshot_renders_from_its_temp() {
+    use crate::file_system::restic::test_repo::{SourceFile, backed_up_drive};
+
+    const HEIC: &[u8] = b"\0\0\0\x18ftypheic\0\0\0\0mif1heic";
+    let _secrets = crate::test_support::isolate_secrets();
+    let drive = tauri::async_runtime::block_on(async {
+        let drive = backed_up_drive(
+            "viewer-restic-media",
+            &[SourceFile {
+                path: "photo.heic",
+                bytes: HEIC,
+                mode: 0o644,
+                modified: 1_600_000_000,
+            }],
+            &[],
+        )
+        .await;
+        drive.unlock().await;
+        drive
+    });
+
+    let file = drive.backed_up.join("photo.heic");
+    let opened = session::open_session(file.to_str().unwrap(), &drive.volume_id).expect("the backed-up file opens");
+    assert_eq!(opened.kind, crate::file_viewer::ViewerContentKind::Image);
+    assert!(!opened.media_from_volume, "a temp is a local file");
+    session::close_session(&opened.session_id).expect("close");
+}
+
 /// The viewer opens a file inside a restic snapshot the same way: the view
 /// streams it (blob by blob, out of the repo's packs) to a bounded temp, and the
 /// viewer opens that.

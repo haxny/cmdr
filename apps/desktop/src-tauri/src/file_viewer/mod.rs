@@ -23,6 +23,7 @@ pub mod media;
 mod media_backend;
 pub mod media_protocol;
 mod media_session;
+mod media_volume;
 mod open_with_copies;
 pub(crate) mod open_with_extract;
 mod origin;
@@ -69,6 +70,8 @@ mod media_protocol_test;
 #[cfg(test)]
 mod media_session_test;
 #[cfg(test)]
+mod media_volume_test;
+#[cfg(test)]
 mod open_with_extract_test;
 #[cfg(test)]
 mod row_characterization_test;
@@ -94,6 +97,7 @@ pub use encoding::FileEncoding;
 pub use markdown_links::MarkdownLink;
 pub use markdown_session::{MarkdownRender, allow_remote_images, render_markdown_session, resolve_markdown_link};
 pub use materialize::init_materialize_dir;
+pub use media_volume::{MediaLoadStage, ViewerMediaLoad};
 pub use open_with_extract::init_open_with_extract_dir;
 pub use pending_open::{AbandonReason, PendingOpen, ViewerPullProgress, begin_pending_open, end_pending_open};
 pub use range_read::RangeEnd;

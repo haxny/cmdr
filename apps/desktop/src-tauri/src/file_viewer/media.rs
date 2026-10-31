@@ -17,6 +17,9 @@
 //! **A token can name bytes that don't exist locally yet** ([`DeferredMedia`]): an image
 //! in a Markdown document may sit on a phone, inside a zip, or on the web. Its token is
 //! minted at render time, and the handler fetches the file on the first request.
+//!
+//! **A token can name bytes that stay on a volume** ([`VolumeMedia`]): a picture on a share
+//! or a server, read by position per request. Dropping the token stops its reads.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -29,6 +32,8 @@ use rand::RngExt;
 use crate::ignore_poison::IgnorePoison;
 
 use super::content_kind::ViewerContentKind;
+use super::media_volume::VolumeMedia;
+use super::source::ByteSource;
 
 /// What a token resolves to. Cloneable so the scheme handler can resolve under the lock
 /// and then work with an owned copy outside it.
@@ -63,6 +68,8 @@ pub enum MediaSource {
     Ready(MediaEntry),
     /// Bytes to fetch on the first request.
     Deferred(Arc<dyn DeferredMedia>),
+    /// Bytes read by position from a volume, per request.
+    Volume(Arc<VolumeMedia>),
 }
 
 impl MediaSource {
@@ -70,7 +77,7 @@ impl MediaSource {
     pub fn ready(&self) -> Option<&MediaEntry> {
         match self {
             Self::Ready(entry) => Some(entry),
-            Self::Deferred(_) => None,
+            Self::Deferred(_) | Self::Volume(_) => None,
         }
     }
 }
@@ -85,6 +92,11 @@ static MEDIA_TOKENS: LazyLock<Mutex<HashMap<String, MediaSource>>> = LazyLock::n
 /// matching the "no new RNG crate" constraint.
 pub fn mint_token(entry: MediaEntry) -> String {
     mint(MediaSource::Ready(entry))
+}
+
+/// Mints a token over bytes a volume serves by position.
+pub fn mint_volume_token(media: Arc<VolumeMedia>) -> String {
+    mint(MediaSource::Volume(media))
 }
 
 /// Mints a token over bytes the handler fetches on the first request.
@@ -105,9 +117,13 @@ pub fn resolve_token(token: &str) -> Option<MediaSource> {
     MEDIA_TOKENS.lock_ignore_poison().get(token).cloned()
 }
 
-/// Drops the token for `token`, if present. Idempotent.
+/// Drops the token for `token`, if present, and stops any volume read still running under
+/// it (its session is gone, so nobody is waiting). Idempotent.
 pub fn drop_token(token: &str) {
-    MEDIA_TOKENS.lock_ignore_poison().remove(token);
+    let dropped = MEDIA_TOKENS.lock_ignore_poison().remove(token);
+    if let Some(MediaSource::Volume(media)) = dropped {
+        media.close();
+    }
 }
 
 fn hex_encode(bytes: &[u8]) -> String {
@@ -133,6 +149,61 @@ pub fn read_image_dimensions(path: &std::path::Path) -> Option<(u32, u32)> {
         .ok()?
         .into_dimensions()
         .ok()
+}
+
+/// How far into a file a header may sit before dimensions give up: a status bar line must
+/// not walk a hostile file over the network, and this is what a session's block cache
+/// holds, so a re-read costs nothing.
+const DIMENSIONS_READ_LIMIT: u64 = 4 * 1024 * 1024;
+
+/// [`read_image_dimensions`] through a session's open file, for a picture on any volume.
+/// The source hands out blocks, so an ordinary header costs the open no round trip beyond
+/// the one that sniffed it. HEIC and AVIF stop at the format guess.
+pub fn read_source_image_dimensions(source: &dyn ByteSource, total_bytes: u64) -> Option<(u32, u32)> {
+    let cursor = SourceCursor {
+        source,
+        len: total_bytes.min(DIMENSIONS_READ_LIMIT),
+        position: 0,
+    };
+    image::ImageReader::new(std::io::BufReader::new(cursor))
+        .with_guessed_format()
+        .ok()?
+        .into_dimensions()
+        .ok()
+}
+
+/// `Read` + `Seek` over a [`ByteSource`]'s first `len` bytes.
+struct SourceCursor<'a> {
+    source: &'a dyn ByteSource,
+    len: u64,
+    position: u64,
+}
+
+impl std::io::Read for SourceCursor<'_> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let room = self.len.saturating_sub(self.position).min(buf.len() as u64) as usize;
+        if room == 0 {
+            return Ok(0);
+        }
+        let read = self
+            .source
+            .read_at(self.position, &mut buf[..room])
+            .map_err(|e| std::io::Error::other(format!("{e:?}")))?;
+        self.position += read as u64;
+        Ok(read)
+    }
+}
+
+impl std::io::Seek for SourceCursor<'_> {
+    fn seek(&mut self, to: std::io::SeekFrom) -> std::io::Result<u64> {
+        let target = match to {
+            std::io::SeekFrom::Start(offset) => Some(offset),
+            std::io::SeekFrom::End(delta) => self.len.checked_add_signed(delta),
+            std::io::SeekFrom::Current(delta) => self.position.checked_add_signed(delta),
+        };
+        self.position = target.ok_or_else(|| std::io::Error::from(std::io::ErrorKind::InvalidInput))?;
+        Ok(self.position)
+    }
 }
 
 #[cfg(test)]

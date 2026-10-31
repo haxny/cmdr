@@ -38,12 +38,11 @@ pub fn configure(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::W
 /// over `file_viewer::media_protocol`; access is gated by an unguessable
 /// per-open token, not the path. See `file_viewer/media_protocol.rs`.
 fn register_media_protocol(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
-    builder.register_asynchronous_uri_scheme_protocol(
-        file_viewer::media_protocol::SCHEME,
-        |_ctx, request, responder| {
-            file_viewer::media_protocol::handle_request(request, responder);
-        },
-    )
+    builder.register_asynchronous_uri_scheme_protocol(file_viewer::media_protocol::SCHEME, |ctx, request, responder| {
+        let app = ctx.app_handle().clone();
+        let window = ctx.webview_label().to_string();
+        file_viewer::media_protocol::handle_request(app, window, request, responder);
+    })
 }
 
 /// The MCP bridge, debug builds only, for security.

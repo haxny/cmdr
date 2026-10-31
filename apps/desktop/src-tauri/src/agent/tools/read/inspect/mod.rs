@@ -674,7 +674,7 @@ fn status_for(path: String, failure: ReadFailure) -> FileRow {
 
 /// Read the head once, classify with the viewer's classifier, and shape the content for
 /// the kind. `ext = None` keeps SVG on the text path (its markup says more to a model
-/// than "an image"); `is_local = true` because the row is already a local file.
+/// than "an image").
 fn read_content(p: &Path, size: u64, ask: &TextAsk, cancel: &AtomicBool) -> Result<Content, ReadFailure> {
     if size == 0 {
         return Ok(Content::Empty {});
@@ -682,7 +682,7 @@ fn read_content(p: &Path, size: u64, ask: &TextAsk, cancel: &AtomicBool) -> Resu
     let mut head = Vec::with_capacity(HEAD_LEN.min(size as usize));
     std::fs::File::open(p)?.take(HEAD_LEN as u64).read_to_end(&mut head)?;
     let classify_head = &head[..head.len().min(CLASSIFY_HEAD_LEN)];
-    match classify_viewer_content(classify_head, None, true) {
+    match classify_viewer_content(classify_head, None) {
         ViewerContentKind::Image => Ok(Content::Image(image_content(p, classify_head))),
         ViewerContentKind::Pdf => Ok(Content::Pdf(pdf::read_pdf(p, size, &head, ask, cancel)?)),
         // The classifier never answers `Markdown` (that's the viewer's own call, by

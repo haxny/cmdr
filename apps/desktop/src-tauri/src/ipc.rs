@@ -59,8 +59,8 @@ use crate::events::index_mapping::{
 };
 use crate::file_system::git::wiring::GitStateChangedPayload;
 use crate::file_system::volume::eject::VolumesEjectingChanged;
-use crate::file_viewer::ViewerPullProgress;
 use crate::file_viewer::open_with_extract::{OpenWithCopyLaunched, OpenWithCopyRefused};
+use crate::file_viewer::{ViewerMediaLoad, ViewerPullProgress};
 use crate::listing_host::events::{
     DirectoryDiff, ListingCancelledEvent, ListingCompleteEvent, ListingErrorEvent, ListingOpeningEvent,
     ListingProgressEvent, ListingReadCompleteEvent, ListingRespelledEvent, ListingStalledEvent,
@@ -1315,6 +1315,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             QueueRowContextAction,
             // emit_to(viewer label): how far a viewer's pull into its preview temp got.
             ViewerPullProgress,
+            // emit_to(viewer label): how a volume-served picture's or PDF's request is going.
+            ViewerMediaLoad,
             TabContextAction,
             // emit_to("main"): a date picked from a file list header's Sort by popup, for its pane.
             DateSortMenuPick,

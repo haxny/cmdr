@@ -28,7 +28,7 @@ use super::line_index::LineIndexBackend;
 use super::markdown_session;
 use super::media;
 use super::media_session;
-use super::origin::{SourceOrigin, open_for_viewer};
+use super::origin::{SourceOrigin, open_for_viewer, open_ranged_for_media};
 use super::range_read::{
     RangeEnd, RawSource, RowForm, STREAM_CHUNK_BYTES, Walked, read_range as do_read_range,
     read_range_streamed as stream_range,
@@ -318,6 +318,26 @@ fn open_session_core(
         Some(_) => None,
         None => open_for_viewer(&requested, volume_id),
     };
+
+    // A volume with no held reader and no OS path may still read by position. Sniff
+    // through that before pulling anything: a picture or PDF then renders from the
+    // volume with no temp and no pull's size cap. Everything else drops this open and
+    // goes on to the temp below.
+    if !force_text
+        && reuse.is_none()
+        && on_volume.is_none()
+        && let Some(found) = open_ranged_for_media(&requested, volume_id)
+        && let Some(result) = media_session::try_open_media(media_session::MediaOpen {
+            requested: &requested,
+            file_path: &requested,
+            origin: &found.origin,
+            opened: &found.opened,
+            temp: None,
+        })
+    {
+        return result;
+    }
+
     let temp = match (reuse, &on_volume) {
         (Some(temp), _) => Some(temp),
         (None, Some(_)) => None,
@@ -364,17 +384,20 @@ fn open_session_core(
         ));
     }
 
-    // Classify by magic bytes (unless the caller forced text, e.g. "View as text").
-    // A media kind (Image/Pdf on a local volume) opens a no-op session that serves bytes
-    // via `cmdr-media://`; the whole media-open path lives in `media_session.rs`.
-    // An extracted image/PDF renders inline too: the media session serves the temp via
-    // `cmdr-media://` and holds the same shared `temp`, so its temp lives as long as the
-    // session. `try_open_media` returns `None` (falls through to text) for non-media kinds.
-    // A volume-read file has no local path to serve, and media renders only from a
-    // local volume anyway (`media_session::is_local_posix_path`).
+    // Classify by magic bytes (unless the caller forced text, e.g. "View as text"),
+    // through the handle just opened, wherever it reads from. A media kind (Image/Pdf)
+    // opens a no-op session that serves bytes via `cmdr-media://`; the whole media-open
+    // path lives in `media_session.rs`. An extracted image/PDF holds the same shared
+    // `temp`, so its temp lives as long as the session. `try_open_media` returns `None`
+    // (falls through to text) for non-media kinds.
     if !force_text
-        && !on_a_volume
-        && let Some(result) = media_session::try_open_media(&file_path, file_size, temp.clone())
+        && let Some(result) = media_session::try_open_media(media_session::MediaOpen {
+            requested: &requested,
+            file_path: &file_path,
+            origin: &origin,
+            opened: &opened,
+            temp: temp.clone(),
+        })
     {
         return result;
     }
@@ -446,6 +469,7 @@ fn open_session_core(
         kind: ViewerContentKind::Text,
         media_token: None,
         media_dimensions: None,
+        media_from_volume: false,
     };
 
     let session_path = session.path.clone();

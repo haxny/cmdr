@@ -14,6 +14,7 @@
         viewerSetWordWrap,
         viewerSetSearchInputFocused,
         onViewerPullProgress,
+        onViewerMediaLoad,
         onViewerWordWrapToggled,
         onViewerEditAction,
         onViewerContextMenuAction,
@@ -25,7 +26,7 @@
     import { goto } from '$app/navigation'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
     import { createViewerNavigation } from './viewer-navigation.svelte'
-    import { createViewerPull } from './viewer-pull.svelte'
+    import { createViewerPull, followMediaLoad } from './viewer-pull.svelte'
     import PullProgressPanel from './PullProgressPanel.svelte'
     import { getCurrentWindow } from '@tauri-apps/api/window'
     import { listen, type UnlistenFn } from '@tauri-apps/api/event'
@@ -71,8 +72,7 @@
     import { availableMediaKind } from './media-view'
     import ViewerCopyDialogs from './ViewerCopyDialogs.svelte'
     import DialogBoundary from '#lib/ui/boundary/DialogBoundary.svelte'
-    import MediaImageView from './MediaImageView.svelte'
-    import MediaPdfView from './MediaPdfView.svelte'
+    import MediaStage from './MediaStage.svelte'
     import MediaMarkdownView from './MediaMarkdownView.svelte'
     import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import Spinner from '#lib/ui/Spinner.svelte'
@@ -209,6 +209,9 @@
     // The "fetching this file" bar for an open that pulls first (phone, server, zip).
     const pull = createViewerPull()
     let unlistenPull: UnlistenFn | undefined
+    /** A picture or PDF on a volume, on its way to the webview after the open returned. */
+    const mediaLoad = createViewerPull()
+    let unlistenMediaLoad: UnlistenFn | undefined
 
     // `.scroll-spacer`, the box the text cursor is positioned against. Not on the scroll
     // composable: nothing else needs it, and the cursor is the only thing measured
@@ -767,6 +770,8 @@
         currentEncoding = result.encoding
         detectedEncoding = result.encoding
         media.setFromOpenResult(result)
+        if (result.mediaFromVolume) mediaLoad.start()
+        else mediaLoad.finish()
 
         const openedAsMedia = isMediaKind(result.kind)
         viewMode = openedAsMedia ? 'media' : 'text'
@@ -914,6 +919,11 @@
 
     async function retryOpen() {
         if (!filePath) return
+        // A picture that stopped arriving has a session (and token) for the fresh one to replace.
+        if (sessionId) {
+            await reopenNatural()
+            return
+        }
         loading = true
         error = ''
         errorCanRetry = false
@@ -1086,6 +1096,13 @@
             pull.report(progress)
         })
 
+        unlistenMediaLoad = await onViewerMediaLoad(getCurrentWindow(), (load) => {
+            if (followMediaLoad(mediaLoad, media.mediaToken, load) && viewMode === 'media') {
+                error = tString('viewer.error.stoppedResponding')
+                errorCanRetry = true
+            }
+        })
+
         // `tail=1`: the opener wants a live view (Help > View debug log), so the
         // viewer starts tailed and parked at the end of the file.
         const openTailed = params.get('tail') === '1'
@@ -1130,6 +1147,8 @@
         viewerTail.destroy()
         unlistenPull?.()
         pull.destroy()
+        unlistenMediaLoad?.()
+        mediaLoad.destroy()
     })
 </script>
 
@@ -1359,10 +1378,15 @@
                 onOffsetChange={(offset: number) => { rawByteOffset = offset }}
             />
         {/key}
-    {:else if media.kind === 'image'}
-        <MediaImageView bind:this={imageViewRef} src={media.mediaSrc} {fileName} />
-    {:else if media.kind === 'pdf'}
-        <MediaPdfView src={media.mediaSrc} {fileName} />
+    {:else if media.kind === 'image' || media.kind === 'pdf'}
+        <MediaStage
+            bind:this={imageViewRef}
+            kind={media.kind}
+            src={media.mediaSrc}
+            {fileName}
+            load={mediaLoad}
+            onCancel={closeWindow}
+        />
     {:else if media.kind === 'markdown' && sessionId}
         <MediaMarkdownView
             bind:this={markdownViewRef}

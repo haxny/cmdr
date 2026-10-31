@@ -5709,6 +5709,7 @@ export const events = {
   viewerContextMenuAction: makeEvent<ViewerContextMenuAction>('viewer-context-menu-action'),
   viewerEditAction: makeEvent<ViewerEditAction>('viewer-edit-action'),
   viewerHistoryAction: makeEvent<ViewerHistoryAction>('viewer-history-action'),
+  viewerMediaLoad: makeEvent<ViewerMediaLoad>('viewer-media-load'),
   viewerPullProgress: makeEvent<ViewerPullProgress>('viewer-pull-progress'),
   viewerWordWrapToggled: makeEvent<ViewerWordWrapToggled>('viewer-word-wrap-toggled'),
   volumeConnectionChanged: makeEvent<VolumeConnectionChanged>('volume-connection-changed'),
@@ -12280,6 +12281,13 @@ export type MediaIndexVolumeState = {
    */
   keptCount: number | null
 }
+
+export type MediaLoadStage =
+  | 'reading'
+  // The body is on its way to the webview.
+  | 'done'
+  // The volume stopped answering or refused the read.
+  | 'failed'
 
 // What the field picker shows: the read's progress, and each field's example.
 export type MediaOverview = {
@@ -20173,6 +20181,19 @@ export type ViewerHistoryDirection =
   // Go > Forward: undoes a Back.
   | 'forward'
 
+/**
+ *  `viewer-media-load`: how a volume-served picture's or PDF's request is going. Emitted
+ *  to the viewer window that asked, so it can show progress over an `<img>` that won't
+ *  say, and tell a dead server from a damaged file (an `<embed>` says neither).
+ */
+export type ViewerMediaLoad = {
+  // The token the request came in on, so a window ignores news of a closed session.
+  token: string
+  stage: MediaLoadStage
+  bytesDone: number
+  bytesTotal: number
+}
+
 // Result returned when opening a viewer session.
 export type ViewerOpenResult = {
   sessionId: string
@@ -20208,6 +20229,12 @@ export type ViewerOpenResult = {
    *  SVG, PDFs, text, or on any read error).
    */
   mediaDimensions: MediaDimensions | null
+  /**
+   *  The `cmdr-media://` request reads from a volume, so it can take a while and fail
+   *  for reasons the file has nothing to do with: the window follows it through
+   *  `viewer-media-load`. `false` for anything served from a local path.
+   */
+  mediaFromVolume: boolean
 }
 
 /**
