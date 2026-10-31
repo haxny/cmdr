@@ -1,6 +1,6 @@
 //! The bytes of a picture or PDF that live on a volume: no local path to open, so the
 //! `cmdr-media://` handler reads them by position through the session's
-//! [`SharedSource`](super::source::SharedSource). `DETAILS.md` § "Media on a volume".
+//! [`SharedSource`]. `DETAILS.md` § "Media on a volume".
 //!
 //! Tauri's scheme responder takes one finished body, so a whole-file request (every
 //! `<img>`) is read in full before the webview sees a byte. That's why a read here has no
