@@ -48,14 +48,17 @@ pub enum NfsIdentitySourceWire {
     ThisMac,
 }
 
-/// The uid and gid the add form fills "User ID" and "Group ID" with.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, specta::Type)]
+/// The ids the add form fills "User ID", "Group ID", and "Other group IDs" with.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct GuessedNfsIdentity {
     /// The user id.
     pub uid: u32,
     /// The group id.
     pub gid: u32,
+    /// The person's other groups: the ones the export's files use, then this
+    /// Mac's when the guess is this Mac's. Empty when nothing suggests any.
+    pub other_gids: Vec<u32>,
     /// Why these.
     pub source: NfsIdentitySourceWire,
 }
@@ -107,7 +110,7 @@ pub async fn list_nfs_exports(host: String, port: Option<u16>) -> NfsExportList 
 pub async fn guess_nfs_identity(host: String, port: Option<u16>, export_path: String) -> GuessedNfsIdentity {
     let this_mac = crate::saved_servers::nfs_places::this_mac_identity();
     let server = NfsServer::new(&host, port);
-    let guess = cmdr_nfs::guess_identity(&server, &export_path, this_mac, CancellationToken::new()).await;
+    let guess = cmdr_nfs::guess_identity(&server, &export_path, this_mac.clone(), CancellationToken::new()).await;
     let (identity, source) = match guess {
         Ok(guess) => (guess.identity, guess.source.into()),
         Err(_) => (this_mac, NfsIdentitySourceWire::ThisMac),
@@ -115,6 +118,7 @@ pub async fn guess_nfs_identity(host: String, port: Option<u16>, export_path: St
     GuessedNfsIdentity {
         uid: identity.uid,
         gid: identity.gid,
+        other_gids: identity.other_gids,
         source,
     }
 }
@@ -137,6 +141,8 @@ pub struct SavedNfsPlace {
     pub uid: u32,
     /// The group id every request acts as.
     pub gid: u32,
+    /// The other groups every request carries.
+    pub other_gids: Vec<u32>,
     /// The name a person gave its SERVER, empty when nobody did. ❗ The
     /// server's, ❌ never the place's: an export reads as its own path.
     pub display_name: String,
@@ -150,7 +156,7 @@ pub struct SavedNfsPlace {
 }
 
 /// Every NFS place the user has saved, for an edit sheet that has to show (and
-/// resend) the uid, gid, and start folder the servers listing doesn't carry.
+/// resend) the uid, groups, and start folder the servers listing doesn't carry.
 #[tauri::command]
 #[specta::specta]
 pub fn get_known_nfs_places() -> Vec<SavedNfsPlace> {
@@ -164,6 +170,7 @@ pub fn get_known_nfs_places() -> Vec<SavedNfsPlace> {
             export: entry.export,
             uid: entry.uid,
             gid: entry.gid,
+            other_gids: entry.other_gids,
             start_folder: entry.start_folder,
             auto_reconnect: entry.auto_reconnect,
             pinned: entry.pinned,

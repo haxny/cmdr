@@ -34,6 +34,7 @@ function setup(over: Partial<TypeToJumpControllerDeps> = {}) {
     getListingId: () => 'listing-1',
     getLoading: () => false,
     getHasBackendListing: () => true,
+    getInMemoryJump: () => null,
     getIncludeHidden: () => true,
     getHasParent: () => true,
     setCursorIndex,
@@ -43,6 +44,109 @@ function setup(over: Partial<TypeToJumpControllerDeps> = {}) {
   const ctl = createTypeToJumpController(deps)
   return { ctl, setCursorIndex, onSyncMcp }
 }
+
+describe('createTypeToJumpController held pattern', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    ipc.findFirstFuzzyMatch.mockResolvedValue(null)
+    ipc.getFileAt.mockResolvedValue(null)
+  })
+
+  it('lowercases a pattern from the filter, since an uppercase query would turn the fuzzy match case-sensitive', () => {
+    const { ctl } = setup()
+    ctl.hold('Re')
+    expect(ctl.buffer).toBe('re')
+  })
+
+  it('leaves the cursor where it is until the pattern changes', async () => {
+    ipc.findFirstFuzzyMatch.mockResolvedValue(2)
+    const { ctl, setCursorIndex } = setup()
+    ctl.hold('re')
+    expect(ipc.findFirstFuzzyMatch).not.toHaveBeenCalled()
+
+    ctl.handleJumpKeystroke('p')
+    expect(ipc.findFirstFuzzyMatch).toHaveBeenCalledWith('listing-1', 'rep', true)
+    await vi.waitFor(() => {
+      expect(setCursorIndex).toHaveBeenCalledWith(3)
+    })
+  })
+
+  it('keeps the pattern and the matched name through clearJumpState, which every reset trigger calls', async () => {
+    ipc.findFirstFuzzyMatch.mockResolvedValue(0)
+    ipc.getFileAt.mockResolvedValue({ name: 'report.txt' })
+    const { ctl } = setup()
+    ctl.hold('r')
+    ctl.handleJumpKeystroke('e')
+    await vi.waitFor(() => {
+      expect(ctl.lastMatchedName).toBe('report.txt')
+    })
+    ctl.clearJumpState()
+    ctl.clear()
+    expect(ctl.buffer).toBe('re')
+    expect(ctl.lastMatchedName).toBe('report.txt')
+  })
+
+  it('release drops the pattern and the matched name', async () => {
+    ipc.findFirstFuzzyMatch.mockResolvedValue(0)
+    ipc.getFileAt.mockResolvedValue({ name: 'report.txt' })
+    const { ctl } = setup()
+    ctl.hold('r')
+    ctl.handleJumpKeystroke('e')
+    await vi.waitFor(() => {
+      expect(ctl.lastMatchedName).toBe('report.txt')
+    })
+    ctl.release()
+    expect(ctl.buffer).toBe('')
+    expect(ctl.indicatorVisible).toBe(false)
+    expect(ctl.lastMatchedName).toBeNull()
+  })
+
+  it('canMatch says whether there is anything to jump within', () => {
+    expect(setup().ctl.canMatch()).toBe(true)
+    expect(setup({ getLoading: () => true }).ctl.canMatch()).toBe(false)
+    expect(setup({ getHasBackendListing: () => false }).ctl.canMatch()).toBe(false)
+    expect(setup({ getHasBackendListing: () => false, getInMemoryJump: () => () => null }).ctl.canMatch()).toBe(true)
+  })
+})
+
+describe('createTypeToJumpController over a list in memory', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const networkView = (match: (prefix: string) => string | null) => ({
+    getListingId: () => '',
+    getHasBackendListing: () => false,
+    getInMemoryJump: () => match,
+  })
+
+  it('asks the view with the whole buffer, never the backend, and shows the indicator', () => {
+    const match = vi.fn((prefix: string) => (prefix === 'n' || prefix === 'na' ? 'Naspolya' : null))
+    const { ctl } = setup(networkView(match))
+    ctl.handleJumpKeystroke('N')
+    ctl.handleJumpKeystroke('a')
+    expect(match.mock.calls).toEqual([['n'], ['na']])
+    expect(ipc.findFirstFuzzyMatch).not.toHaveBeenCalled()
+    expect(ctl.indicatorVisible).toBe(true)
+    expect(ctl.buffer).toBe('na')
+    expect(ctl.lastMatchedName).toBe('Naspolya')
+  })
+
+  it('keeps the last match when a longer buffer matches nothing', () => {
+    const { ctl } = setup(networkView((prefix) => (prefix === 'n' ? 'Naspolya' : null)))
+    ctl.handleJumpKeystroke('n')
+    ctl.handleJumpKeystroke('z')
+    expect(ctl.buffer).toBe('nz')
+    expect(ctl.lastMatchedName).toBe('Naspolya')
+  })
+
+  it('a view with no rows gets no buffer and no indicator', () => {
+    const { ctl } = setup({ getListingId: () => '', getHasBackendListing: () => false })
+    ctl.handleJumpKeystroke('n')
+    expect(ctl.indicatorVisible).toBe(false)
+    expect(ctl.buffer).toBe('')
+  })
+})
 
 describe('createTypeToJumpController', () => {
   beforeEach(() => {

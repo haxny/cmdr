@@ -90,6 +90,47 @@ async fn upload(vol: &SmbVolume, path: &str, bytes: Vec<u8>, mode: WriteMode) {
     assert_eq!(written.bytes, len);
 }
 
+/// One dead link refuses the paths behind it and nothing else (vdavid/smb2#28):
+/// the link's target name points at a closed port, the share stays `Direct`, and
+/// a path outside the link still answers.
+#[tokio::test]
+#[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
+async fn smb_dfs_a_dead_link_target_refuses_the_path_and_leaves_the_share_up() {
+    if dfs_fixture_not_requested() {
+        return;
+    }
+    TEST_DFS_TARGET_OVERRIDES
+        .lock_ignore_poison()
+        .get_or_insert_with(Default::default)
+        .insert("smb-dfs-target".to_string(), "127.0.0.1:1".to_string());
+    let params = SmbConnectionParams::new("127.0.0.1", "dfs", DFS_ROOT_PORT, None, None);
+    let vol = connect_smb_volume(
+        "dfs",
+        MountAnchor::at_share_root(TEST_MOUNT_ROOT),
+        &cmdr_fs::volume::smb_volume_id("127.0.0.1", DFS_ROOT_PORT, "dfs"),
+        params,
+        VolumeHost::detached(),
+    )
+    .await
+    .expect("the share itself connects");
+
+    let refused = vol.list_directory(Path::new("data"), None).await;
+    assert!(
+        matches!(refused, Err(VolumeError::LinkTargetUnreachable(_))),
+        "a listing behind the dead link refuses that path: {refused:?}"
+    );
+    let stat = vol.get_metadata(Path::new("data/hello.txt")).await;
+    assert!(
+        matches!(stat, Err(VolumeError::LinkTargetUnreachable(_))),
+        "so does a stat: {stat:?}"
+    );
+
+    assert_eq!(vol.inner.state.state(), ConnectionState::Direct, "the share stays up");
+    vol.list_directory(Path::new(""), None)
+        .await
+        .expect("a path outside the link still answers");
+}
+
 #[tokio::test]
 #[ignore = "Requires smb2's smb-dfs-root and smb-dfs-target containers and CMDR_SMB_DFS_FIXTURE=1 (see this file's header)"]
 async fn smb_dfs_a_file_behind_a_link_downloads_streamed_and_hinted() {

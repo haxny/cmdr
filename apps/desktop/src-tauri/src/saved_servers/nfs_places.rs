@@ -87,6 +87,7 @@ pub(super) fn nfs_place(target: ServerTarget) -> Option<(KnownNfsPlace, String)>
         export,
         uid,
         gid,
+        other_gids,
         start_folder,
         auto_reconnect,
     } = target
@@ -99,6 +100,7 @@ pub(super) fn nfs_place(target: ServerTarget) -> Option<(KnownNfsPlace, String)>
         export: export.trim().to_string(),
         uid,
         gid,
+        other_gids,
         start_folder: start_folder.filter(|folder| !folder.trim().is_empty()),
         auto_reconnect,
         pinned: true,
@@ -107,13 +109,48 @@ pub(super) fn nfs_place(target: ServerTarget) -> Option<(KnownNfsPlace, String)>
     Some((place, display_name))
 }
 
-/// This process's own uid and gid: the identity the add form falls back to when it can't read
+/// This process's own uid and groups: the identity the add form falls back to when it can't read
 /// who owns an export, and the one an NFS server saved without contact takes.
 pub(crate) fn this_mac_identity() -> cmdr_nfs::NfsIdentity {
     // SAFETY: `getuid` and `getgid` take no arguments, can't fail, and touch no
     // memory of ours.
     let (uid, gid) = unsafe { (libc::getuid(), libc::getgid()) };
-    cmdr_nfs::NfsIdentity { uid, gid }
+    cmdr_nfs::NfsIdentity {
+        uid,
+        gid,
+        other_gids: other_groups(gid, &this_process_groups()),
+    }
+}
+
+/// This process's supplementary groups, as the OS lists them; none when it won't say.
+fn this_process_groups() -> Vec<u32> {
+    // SAFETY: a zero count asks for the size and writes nothing through the null pointer.
+    let count = unsafe { libc::getgroups(0, std::ptr::null_mut()) };
+    let Ok(capacity) = usize::try_from(count) else {
+        return Vec::new();
+    };
+    let mut groups: Vec<libc::gid_t> = vec![0; capacity];
+    // SAFETY: `groups` is valid for `count` entries for the whole call, and `getgroups`
+    // writes at most that many.
+    let written = unsafe { libc::getgroups(count, groups.as_mut_ptr()) };
+    let Ok(written) = usize::try_from(written) else {
+        return Vec::new();
+    };
+    groups.truncate(written);
+    groups
+}
+
+/// The groups worth offering beside the primary `gid`: each once, in the OS's order, and
+/// ❌ never group 0, which no guess claims (`cmdr_nfs::guess_identity`'s rule for the export's
+/// files too).
+fn other_groups(gid: u32, groups: &[u32]) -> Vec<u32> {
+    let mut others = Vec::new();
+    for group in groups {
+        if *group != 0 && *group != gid && !others.contains(group) {
+            others.push(*group);
+        }
+    }
+    others
 }
 
 /// Dials an NFS target the user just typed (`connect_server`'s NFS arm).
@@ -123,3 +160,7 @@ pub(crate) async fn connect(target: ServerTarget, attempt_id: &str) -> ServerCon
     };
     outcome_from_nfs(nfs_volume_wiring::connect_and_register(&server_name, place, attempt_id).await)
 }
+
+#[cfg(test)]
+#[path = "nfs_places_test.rs"]
+mod nfs_places_test;

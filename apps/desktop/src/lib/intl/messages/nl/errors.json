@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "De server van deze map is onbereikbaar",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` ligt achter een link naar een andere server, en Cmdr kan die server nu niet bereiken. De rest van deze netwerkshare is in orde, en er is niets verwijderd.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Dit kun je proberen:\n- Controleer of de andere server draait en of je netwerk die kan bereiken\n- Navigeer hier opnieuw heen om het nog eens te proberen",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "Opnieuw verbinden met het apparaat",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2156,6 +2168,10 @@
   "errors.volume.notConnected": "Cmdr is nog niet verbonden met deze telefoon of server, dus open die eerst.",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "Dit ligt achter een link naar een andere server, en Cmdr kan die server nu niet bereiken.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "Het apparaat heeft zijn verbinding opnieuw gestart. Geef het een paar seconden en probeer het opnieuw.",
   "@errors.volume.deviceSessionReset": {

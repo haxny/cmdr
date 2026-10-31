@@ -6,8 +6,9 @@ local volume space, and the mount probes. Tauri-free; the app builds every local
 ## Module map
 
 - **local_posix.rs** (the struct, the rename primitive, the query and mutation half of `impl Volume`), with
-  **local_posix/scan.rs** (the copy-scan family) and **local_posix/streams.rs** (bytes in and out). A trait impl can't
-  span files, so a moved method stays a one-line delegation to a `pub(super)` inherent body.
+  **local_posix/scan.rs** (the copy-scan family), **local_posix/streams.rs** (bytes in and out), and
+  **local_posix/links.rs** (reading and landing a symlink, `DETAILS.md` § "Landing a link"). A trait impl can't span
+  files, so a moved method stays a one-line delegation to a `pub(super)` inherent body.
 - **reading.rs** (the local reader the watcher and `tags.rs` read through too; `read_dir` + `lstat`) with
   **reading/bulk.rs** (macOS: the `getattrlistbulk` lister APFS and HFS+ take), **mutation.rs** (the listing patch a
   local mutation sends), **space.rs** + **live_space.rs**, and the OS probes: **filesystem_kind.rs**,

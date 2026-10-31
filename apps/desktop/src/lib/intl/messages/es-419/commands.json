@@ -47,6 +47,10 @@
   "@commands.editUndoTrash.description": {
     "sourceHash": "ff1e685"
   },
+  "commands.paneQuickFilter.description": "Abre la insignia de filtro con el patrón actual. Presiona de nuevo para cambiar entre “Filtrar” y “Saltar”",
+  "@commands.paneQuickFilter.description": {
+    "sourceHash": "921c393"
+  },
   "commands.fileEdit.label": "Editar en el editor predeterminado",
   "@commands.fileEdit.label": {
     "sourceHash": "012941c"

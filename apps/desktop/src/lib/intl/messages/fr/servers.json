@@ -520,6 +520,18 @@
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
+  "servers.sheet.nfsOtherGids": "Autres ID de groupe",
+  "@servers.sheet.nfsOtherGids": {
+    "sourceHash": "f9276b8"
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "Utilisez des numéros d’ID de groupe séparés par des virgules, comme 100, 1001.",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "sourceHash": "a67ce61"
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "NFS transmet jusqu’à 16 autres groupes, et cette liste en compte {count}.",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "sourceHash": "dc277f3"
+  },
   "servers.sheet.nfsIdentityHelp": "Le serveur décide de ce que vous pouvez ouvrir selon ces numéros. NFS ne demande pas de mot de passe.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"

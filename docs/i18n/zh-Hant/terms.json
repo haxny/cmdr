@@ -416,7 +416,7 @@
     "chosen": "標記",
     "confidence": "high",
     "decision": "Onboarding checklist",
-    "forms": "the alpha status badge → 標記 (看到 <alpha></alpha> 標記的地方); the title-bar pill → 警告標記 (tentative)",
+    "forms": "the alpha status badge → 標記 (看到 <alpha></alpha> 標記的地方); the title-bar pill → 警告標記 (tentative); the pane's typed-text badge → 篩選標記 (tentative)",
     "sources": "catalog onboarding.stepBeta.openBeta"
   },
   "blocked": {
@@ -854,7 +854,7 @@
   "link": {
     "chosen": "連結",
     "confidence": "high",
-    "forms": "web link → 網頁連結",
+    "forms": "web link → 網頁連結; sits behind a DFS link → 要透過連結連到另一個伺服器",
     "sources": "catalog (share-link and Google Drive link commands, viewer.markdown.link.*); MS terminology"
   },
   "mcp-server": {

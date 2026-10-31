@@ -325,9 +325,11 @@ export interface FilePaneAPI {
   /** Type-to-jump: clear the buffer + hide the indicator immediately. */
   clearJumpState(): void
 
-  /** Quick filter: true when typing in this pane narrows the list instead of jumping (the setting). */
+  /** Quick filter: `pane.quickFilter` (⌃S), which opens the badge or switches it between Filter and Jump. */
+  cycleQuickFilter(): void
+  /** Quick filter: true when typing in this pane edits a pattern (the setting, or an open ⌃S badge). */
   isQuickFilterMode(): boolean
-  /** Quick filter: true while a pattern narrows the list. */
+  /** Quick filter: true while a pattern narrows the list or a ⌃S badge is open. */
   isQuickFilterActive(): boolean
   /** Quick filter: append one printable character to the pattern. */
   appendQuickFilter(char: string): void
@@ -416,6 +418,8 @@ export interface BrowserAPI {
   handleKeyDown(e: KeyboardEvent): void
   setCursorIndex(index: number): void
   findItemIndex(name: string): number
+  /** Type-to-jump: moves the cursor to the first row whose name starts with `prefix`; answers that name, or `null`. */
+  jumpToPrefix(prefix: string): string | null
   openCursorItem(): void
   /** How many rows the cursor can sit on, so a caller can range-check an index. */
   getItemCount(): number
@@ -471,6 +475,8 @@ export interface NetworkMountViewAPI {
   handleKeyDown(e: KeyboardEvent): void
   setCursorIndex(index: number): void
   findItemIndex(name: string): number
+  /** Type-to-jump in whichever browser is up; answers the name it landed on, or `null`. */
+  jumpToPrefix(prefix: string): string | null
   openCursorItem(): void
   /**
    * Rows the cursor can sit on in whichever browser is up, and `0` while a

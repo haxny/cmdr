@@ -37,6 +37,7 @@ const VOLUME_CASES: VolumeError[] = [
   { type: 'invalidName', data: 'STATUS_OBJECT_NAME_INVALID' },
   { type: 'deletePending', data: '/Volumes/share/doomed.txt' },
   { type: 'coldStorage', data: '/photos/2019.tar' },
+  { type: 'linkTargetUnreachable', data: '/smb/nas/data/holiday.raw' },
   { type: 'sourceChanged', data: '/docs/report.pdf' },
   { type: 'noContent', data: '/backup/Users/me/link' },
   { type: 'ambiguousName', data: '/Volumes/share/café.txt' },

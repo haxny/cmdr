@@ -3,13 +3,9 @@
   "@multiRename.title": {
     "sourceHash": "5ceb1a2"
   },
-  "multiRename.scope.selection": "{count, plural, one {{countText} kijelölt fájl} other {{countText} kijelölt fájl}}",
-  "@multiRename.scope.selection": {
-    "sourceHash": "30a7b9f"
-  },
-  "multiRename.scope.wholeFolder": "{count, plural, one {Az egyetlen fájl ebben a mappában (nincs kijelölés)} other {Az összes fájl ebben a mappában: {countText} (nincs kijelölés)}}",
-  "@multiRename.scope.wholeFolder": {
-    "sourceHash": "37dc7a2"
+  "multiRename.noFileSelected": "Nincs kijelölt fájl",
+  "@multiRename.noFileSelected": {
+    "sourceHash": "26bfbd5"
   },
   "multiRename.nameMask": "Névmaszk",
   "@multiRename.nameMask": {

@@ -1,8 +1,9 @@
 /**
  * What the viewer shows while an open pulls its file into a preview temp first (a file
- * on a phone or server, a big entry in a zip). The backend emits `viewer-pull-progress`
- * to this window while it pulls; this decides when that's worth showing, and what the
- * bar draws.
+ * on a phone or server, a big entry in a zip), or while a picture or PDF on a volume
+ * makes its way to the webview. The backend emits `viewer-pull-progress` or
+ * `viewer-media-load` to this window as it reads; this decides when that's worth showing,
+ * and what the bar draws.
  *
  * - Hidden for the first second, so a quick pull never flashes a bar.
  * - Hidden while nothing is being pulled: an ordinary open that's merely slow keeps the
@@ -11,6 +12,8 @@
  *   shimmer. Giving up is the backend's call (its stall rule answers
  *   `stoppedResponding`); this only stops claiming motion that isn't happening.
  */
+
+import type { ViewerMediaLoad } from '#lib/ipc/bindings.js'
 
 /** How long an open pulls before the bar appears. */
 export const PULL_BAR_DELAY_MS = 1000
@@ -81,6 +84,11 @@ export function createViewerPull() {
       stopTimers()
     },
 
+    /** Started and not yet finished, whether or not the bar shows. */
+    get active(): boolean {
+      return active
+    },
+
     get visible(): boolean {
       return active && delayPassed && progress !== null
     },
@@ -104,4 +112,24 @@ export function createViewerPull() {
       return active && clock - lastNewsAt >= PULL_STALLED_AFTER_MS
     },
   }
+}
+
+/**
+ * Applies one `viewer-media-load` report to the pull that follows `token`'s request.
+ * News of another token (a session this window already left) changes nothing. Answers
+ * `true` when the volume stopped delivering, so the page can say so: an `<img>` can only
+ * call that a damaged file, and an `<embed>` says nothing at all.
+ */
+export function followMediaLoad(
+  pull: ReturnType<typeof createViewerPull>,
+  token: string | null,
+  load: ViewerMediaLoad,
+): boolean {
+  if (load.token !== token) return false
+  if (load.stage === 'reading') {
+    pull.report({ bytesDone: load.bytesDone, bytesTotal: load.bytesTotal })
+    return false
+  }
+  pull.finish()
+  return load.stage === 'failed'
 }

@@ -120,7 +120,7 @@ async fn a_cancelled_dial_answers_cancelled() {
     let err = mount(
         &NfsServer::new("127.0.0.1", None),
         "/x",
-        NfsIdentity { uid: 1, gid: 1 },
+        &NfsIdentity::new(1, 1),
         &DialOptions::PRODUCTION,
         &cancel,
     )
@@ -128,4 +128,22 @@ async fn a_cancelled_dial_answers_cancelled() {
     .err()
     .unwrap();
     assert!(matches!(err, NfsConnectError::Cancelled), "{err:?}");
+}
+
+#[test]
+fn a_credential_carries_the_other_groups_on_the_wire() {
+    let Credential::Sys(body) = credential_for(&NfsIdentity {
+        uid: 1000,
+        gid: 100,
+        other_gids: vec![2001, 2002],
+    }) else {
+        panic!("expected AUTH_SYS");
+    };
+    let mut dec = crate::xdr::Decoder::new(body);
+    dec.u32().unwrap(); // stamp
+    dec.opaque(255).unwrap(); // machine name
+    assert_eq!((dec.u32().unwrap(), dec.u32().unwrap()), (1000, 100));
+    assert_eq!(dec.u32().unwrap(), 3);
+    let gids: Vec<u32> = (0..3).map(|_| dec.u32().unwrap()).collect();
+    assert_eq!(gids, vec![100, 2001, 2002]);
 }

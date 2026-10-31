@@ -179,6 +179,7 @@ fn target_of(draft: &ServerDraft) -> Option<ServerTarget> {
             export: text(&draft.export),
             uid: draft.uid?,
             gid: draft.gid?,
+            other_gids: Vec::new(),
             start_folder: draft.start_folder.clone(),
             auto_reconnect: true,
         },

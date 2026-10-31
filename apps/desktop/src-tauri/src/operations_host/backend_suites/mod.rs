@@ -10,6 +10,10 @@
 //! Docker and run in the unit lane. Which scenario runs on which backend, and why
 //! any is skipped: `../DETAILS.md` § "Backend suites".
 
+// A picture, a HEIC, and a PDF on each live server, through the viewer's media path.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+mod viewer_media_integration_test;
+
 // The sources the cancel scenarios hold still at a chunk boundary.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod network_gated_source_test_support;

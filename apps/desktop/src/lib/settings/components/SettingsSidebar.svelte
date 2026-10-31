@@ -255,7 +255,7 @@
             {#snippet trailing()}
                 {#if searchQuery}
                     <button
-                        class="search-clear"
+                        class="search-clear hit-target"
                         type="button"
                         onclick={clearSearch}
                         aria-label={tString('settings.sidebar.clearSearch')}

@@ -20,7 +20,7 @@ use cmdr_operation_log::types::{
 };
 use cmdr_operation_log::writer::{JournalItem, OpenOperation};
 
-use super::ledger::WrittenFile;
+use super::ledger::{WrittenFile, WrittenIdentity};
 use super::scope::OpScope;
 use super::types::{WriteOperationError, WriteOperationType};
 use cmdr_operation_log::types::{SearchCoverage, SearchCoverageReason};
@@ -288,7 +288,12 @@ pub(super) fn record_volume_transfer_source(
     if source_is_dir {
         for leaf in created_files {
             let rel = leaf.path.strip_prefix(dest_root).unwrap_or(&leaf.path);
-            let source_leaf = source_root.join(rel);
+            // A selected link is its own one leaf, with nothing to join.
+            let source_leaf = if rel.as_os_str().is_empty() {
+                source_root.to_path_buf()
+            } else {
+                source_root.join(rel)
+            };
             record_volume_leaf(
                 scope,
                 EntryType::File,
@@ -372,25 +377,32 @@ impl LandedTimes {
         }
         // Each folder's landed files by name. A listed name is only ever matched
         // against these, never joined onto a path.
-        let mut by_folder: BTreeMap<&Path, HashMap<&OsStr, &Path>> = BTreeMap::new();
+        let mut by_folder: BTreeMap<&Path, HashMap<&OsStr, &WrittenFile>> = BTreeMap::new();
         for file in files
             .iter()
             .filter(|file| file.landed_modified == LandedModified::Unknown)
         {
             if let (Some(folder), Some(name)) = (file.path.parent(), file.path.file_name()) {
-                by_folder.entry(folder).or_default().insert(name, &file.path);
+                by_folder.entry(folder).or_default().insert(name, file);
             }
         }
         for (folder, wanted) in by_folder {
             let Ok(entries) = dest.list_directory(folder, None).await else {
                 continue;
             };
-            for entry in entries.iter().filter(|entry| !entry.is_directory && !entry.is_symlink) {
-                let Some(path) = wanted.get(OsStr::new(&entry.name)) else {
+            for entry in &entries {
+                let Some(file) = wanted.get(OsStr::new(&entry.name)) else {
                     continue;
                 };
-                if let Some(secs) = entry.modified_at.and_then(|secs| i64::try_from(secs).ok()) {
-                    times.insert(path.to_path_buf(), secs);
+                // What landed has to be what's listed: a link for a link this
+                // transfer carried, a plain file for anything else.
+                let is_what_landed = if matches!(file.identity, WrittenIdentity::VolumeLink { .. }) {
+                    entry.is_symlink
+                } else {
+                    !entry.is_directory && !entry.is_symlink
+                };
+                if is_what_landed && let Some(secs) = entry.modified_at.and_then(|secs| i64::try_from(secs).ok()) {
+                    times.insert(file.path.clone(), secs);
                 }
             }
         }

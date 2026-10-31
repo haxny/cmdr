@@ -261,7 +261,8 @@ What each one is spent on:
     OpenSSH's own client makes it opt-in (`put -f`), and so does this one: ❗ not until somebody asks.
   - `expand_path` would resolve a `~`-relative remote root at connect. The app supplies an absolute root today, so there
     is nothing to expand; this is where that would be spent.
-  - `hardlink` has no consumer at all: the `Volume` surface has no operation that creates a link.
+  - `hardlink` has no consumer at all: the `Volume` surface creates only symlinks (`create_symlink`, plain
+    `SSH_FXP_SYMLINK`), which need no extension.
 
 ## Copying inside one server
 

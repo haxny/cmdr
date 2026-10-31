@@ -283,6 +283,12 @@ pub enum ListingErrorReason {
         /// The path the failure was about.
         path: String,
     },
+    /// `VolumeError::LinkTargetUnreachable`: the folder sits behind a link to another server, and
+    /// that server is out of reach. The share itself is fine.
+    LinkTargetUnreachable {
+        /// The path the failure was about.
+        path: String,
+    },
     /// The volume or device is read-only.
     ReadOnly,
     /// The device is out of storage.

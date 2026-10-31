@@ -60,6 +60,9 @@ impl VolumeError {
             // gets the same answer.
             Self::Cancelled(_) // the person asked us to stop; ❌ never a fault
             | Self::NotConnected(_) // nothing is dialing it; only opening it connects
+            // The volume's own connection is fine, so an outage wait would never
+            // end and a retry can't tell when the other server's back.
+            | Self::LinkTargetUnreachable(_)
             | Self::NotFound(_)
             | Self::PermissionDenied { .. }
             | Self::AlreadyExists(_)

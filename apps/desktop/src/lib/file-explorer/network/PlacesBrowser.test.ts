@@ -109,6 +109,8 @@ function must<T>(value: T | null | undefined, what: string): T {
 
 /** The exported PlacesBrowser API surface the tests drive. */
 interface PlacesBrowserApi {
+  jumpToPrefix: (prefix: string) => string | null
+  getShareUnderCursor: () => ShareInfo | null
   openCursorItem: () => void
   handleKeyDown: (e: KeyboardEvent) => void
 }
@@ -267,6 +269,30 @@ describe('PlacesBrowser credential gate', () => {
 
     expect(onShareSelect).toHaveBeenCalledWith(expect.objectContaining({ name: 'naspi' }), null)
 
+    await unmount(component)
+  })
+})
+
+describe('PlacesBrowser type-to-jump', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    document.body.innerHTML = ''
+    h.getSmbCredentials.mockRejectedValue(new Error('not found'))
+  })
+
+  it('jumps to the first share whose name starts with the typed text, in any case', async () => {
+    const shares = [naspi, { ...naspi, name: 'Backup' }, { ...naspi, name: 'backups-old' }]
+    h.fetchShares.mockResolvedValue({ shares, authMode: 'guest_allowed', fromCache: false })
+    const { target, component, api } = mountBrowser(vi.fn())
+    await waitForShareList(target)
+
+    expect(api.jumpToPrefix('BACK')).toBe('Backup')
+    expect(api.getShareUnderCursor()?.name).toBe('Backup')
+    expect(api.jumpToPrefix(naspi.name)).toBe(naspi.name)
+    expect(api.getShareUnderCursor()?.name).toBe(naspi.name)
+
+    expect(api.jumpToPrefix('zz')).toBeNull()
+    expect(api.getShareUnderCursor()?.name).toBe(naspi.name)
     await unmount(component)
   })
 })

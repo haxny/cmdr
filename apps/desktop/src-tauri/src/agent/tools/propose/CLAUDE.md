@@ -7,9 +7,10 @@ The one live touch is AFTER validation: one bounded stat per row for its display
 (`plan.rs::freeze_draft`, through `../suggestions/snapshot.rs`), which can't refuse a plan. The
 agent can propose; only the frontend can approve.
 
-Four files, one concern each: `plan.rs` is the tool boundary (schema, dispatch, scope, validation, the evidence check),
+Five files, one concern each: `plan.rs` is the tool boundary (schema, dispatch, scope, validation, the evidence check),
 `store.rs` is what a staged proposal IS and where it lives, `preflight.rs` is user-action-time revalidation (blocks,
-warnings, fingerprints), `revise.rs` replaces one row's name with the user's own. All of it is re-exported from
+warnings, fingerprints), `check.rs` keeps it honest on a slow volume (no time limit, progress, a stop; ❌ never a
+timeout), `revise.rs` replaces one row's name with the user's own. All of it is re-exported from
 `rename/mod.rs`, so callers keep saying `propose::rename::X`. Beside them, `cut_listing.rs` counts (analytics only,
 nothing refused) a staged plan whose folder the model last saw as a cut `list_pane_files` listing.
 

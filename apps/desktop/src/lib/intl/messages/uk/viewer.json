@@ -47,6 +47,10 @@
   "@viewer.error.coldStorage": {
     "sourceHash": "236cd1b"
   },
+  "viewer.error.linkTargetUnreachable": "Шлях до цього файлу веде через посилання на інший сервер, і Cmdr зараз не вдається звʼязатися з цим сервером. Перевірте, чи сервер працює, а тоді спробуйте ще раз.",
+  "@viewer.error.linkTargetUnreachable": {
+    "sourceHash": "8dcb736"
+  },
   "viewer.error.retry": "Спробувати ще раз",
   "@viewer.error.retry": {
     "sourceHash": "942087c"

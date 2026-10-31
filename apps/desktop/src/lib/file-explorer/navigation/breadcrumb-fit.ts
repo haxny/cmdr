@@ -39,6 +39,20 @@ export function middleTruncate(text: string, maxWidth: number, measure: (text: s
   return best
 }
 
+/**
+ * A clickable segment's floor (`.path-segment`'s `min-width`, WCAG 2.5.8). 24, plus 2 because each
+ * neighbor's 3px overhang can overlap ours by that much across a thin `/`.
+ */
+export const SEGMENT_MIN_HIT_WIDTH_PX = 26
+
+/**
+ * The layout width that floor leaves a segment: the box minus its 3px negative margin each side.
+ * The first segment has no left overhang, so only its right 3px comes off.
+ */
+export function segmentLayoutFloor(index: number): number {
+  return SEGMENT_MIN_HIT_WIDTH_PX - (index === 0 ? 3 : 6)
+}
+
 export interface FitBreadcrumbInput {
   /** The segments' texts, in order; `''` is the root marker. */
   texts: string[]
@@ -47,6 +61,8 @@ export interface FitBreadcrumbInput {
   /** The width of one rendered `/` separator. */
   separatorWidth: number
   measure: (text: string) => number
+  /** The least room a segment takes, whatever its text; `segmentLayoutFloor` in the app. */
+  floor?: (index: number) => number
 }
 
 /** The text to show for each segment: the segment's own, or a middle-truncated form of it. */
@@ -55,9 +71,11 @@ export function fitBreadcrumbSegments({
   availableWidth,
   separatorWidth,
   measure,
+  floor = () => 0,
 }: FitBreadcrumbInput): string[] {
   if (availableWidth <= 0) return texts
-  const widths = texts.map(measure)
+  // `''` is the root marker: no box, so no floor.
+  const widths = texts.map((text, i) => (text === '' ? 0 : Math.max(measure(text), floor(i))))
   const separators = texts.filter((text, i) => hasSeparatorBefore(i, text)).length
   let budget = availableWidth - separators * separatorWidth
   if (widths.reduce((sum, w) => sum + w, 0) <= budget) return texts

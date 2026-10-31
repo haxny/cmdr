@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "无法连接这个文件夹所在的服务器",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "访问 `{path}` 要通过一个指向另一台服务器的链接，而 Cmdr 现在连不上那台服务器。这个共享的其余部分都正常，也没有任何东西被删除。",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "可以这样试试：\n- 确认另一台服务器在运行，并且你的网络能连到它\n- 再次进入这里重试",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "正在重新连接设备",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2155,6 +2167,10 @@
   "errors.volume.notConnected": "Cmdr 还没有连接到这台手机或服务器，请先打开它。",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "访问这里要通过一个指向另一台服务器的链接，而 Cmdr 现在连不上那台服务器。",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "设备的连接已重启。请等待几秒钟，然后重试。",
   "@errors.volume.deviceSessionReset": {

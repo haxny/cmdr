@@ -415,3 +415,10 @@ async fn conflict_scan_honors_the_shared_missing_destination_contract() {
     )
     .await;
 }
+
+#[tokio::test]
+async fn a_link_lands_verbatim() {
+    let dir = TestDir::new("conformance-link-landing");
+    let volume = LocalPosixVolume::local_folder("Conformance", dir.to_path_buf(), VolumeHost::detached());
+    cmdr_fs::volume::conformance::assert_a_link_lands_verbatim(&volume, Path::new("/")).await;
+}

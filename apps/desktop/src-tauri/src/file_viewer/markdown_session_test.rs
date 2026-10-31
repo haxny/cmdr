@@ -33,6 +33,7 @@ fn fetch(token: &str) -> Option<MediaEntry> {
     match media::resolve_token(token)? {
         MediaSource::Ready(entry) => Some(entry),
         MediaSource::Deferred(deferred) => deferred.fetch(),
+        MediaSource::Volume(_) => None,
     }
 }
 

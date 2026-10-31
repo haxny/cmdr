@@ -519,6 +519,18 @@
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
+  "servers.sheet.nfsOtherGids": "其他群组 ID",
+  "@servers.sheet.nfsOtherGids": {
+    "sourceHash": "f9276b8"
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "请输入数字形式的群组 ID，用逗号分隔，比如 100, 1001。",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "sourceHash": "a67ce61"
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "NFS 最多能带 16 个其他群组，而这里列出了 {count} 个。",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "sourceHash": "dc277f3"
+  },
   "servers.sheet.nfsIdentityHelp": "服务器根据这两个数字决定你能打开什么。NFS 不会问你要密码。",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"

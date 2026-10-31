@@ -118,6 +118,7 @@ pub(super) fn open_markdown_session(open: MarkdownOpen) -> ViewerOpenResult {
         kind: ViewerContentKind::Markdown,
         media_token: None,
         media_dimensions: None,
+        media_from_volume: false,
     }
 }
 

@@ -303,10 +303,6 @@
   "@queryUi.results.countOnly.soFar": {
     "sourceHash": "dbdb208"
   },
-  "queryUi.pathPills.hiddenAria": "Ausgeblendete Pfadsegmente: {segments}",
-  "@queryUi.pathPills.hiddenAria": {
-    "sourceHash": "f62e273"
-  },
   "queryUi.recent.trailingTooltip": "Alle letzten Suchen anzeigen",
   "@queryUi.recent.trailingTooltip": {
     "sourceHash": "e0de323"

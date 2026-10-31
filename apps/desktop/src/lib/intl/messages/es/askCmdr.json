@@ -1132,6 +1132,42 @@
   "@askCmdr.renameReview.expired": {
     "sourceHash": "4e6482a"
   },
+  "askCmdr.renameReview.checking": "{total, plural, one {{checkedText} de {totalText} archivo comprobado} many {{checkedText} de {totalText} archivos comprobados} other {{checkedText} de {totalText} archivos comprobados}}",
+  "@askCmdr.renameReview.checking": {
+    "sourceHash": "92a4d6f"
+  },
+  "askCmdr.renameReview.checkingLabel": "Comprobando los archivos",
+  "@askCmdr.renameReview.checkingLabel": {
+    "sourceHash": "03f0bc5"
+  },
+  "askCmdr.renameReview.stopChecking": "Detener la comprobación",
+  "@askCmdr.renameReview.stopChecking": {
+    "sourceHash": "4373037"
+  },
+  "askCmdr.renameReview.checkUnfinished": "Cmdr no ha terminado de comprobar {count, plural, one {# archivo} many {# archivos} other {# archivos}}, así que aún no puede renombrar.",
+  "@askCmdr.renameReview.checkUnfinished": {
+    "sourceHash": "c3c05ce"
+  },
+  "askCmdr.renameReview.checkAgain": "Comprobar de nuevo",
+  "@askCmdr.renameReview.checkAgain": {
+    "sourceHash": "fb7099a"
+  },
+  "askCmdr.renameReview.needsAnotherLook": "Algo ha cambiado desde que Cmdr comprobó estos nombres, así que no ha renombrado nada. Échales otro vistazo e inténtalo de nuevo.",
+  "@askCmdr.renameReview.needsAnotherLook": {
+    "sourceHash": "36c6050"
+  },
+  "askCmdr.renameReview.couldntStart": "Cmdr no ha podido empezar a renombrar estos archivos y no ha cambiado nada. Inténtalo de nuevo en un momento.",
+  "@askCmdr.renameReview.couldntStart": {
+    "sourceHash": "3ca2b21"
+  },
+  "askCmdr.renameReview.nothingToApply": "Aquí ya no queda nada que renombrar.",
+  "@askCmdr.renameReview.nothingToApply": {
+    "sourceHash": "9c63cc7"
+  },
+  "askCmdr.renameReview.nameNotSaved": "Cmdr no ha podido guardar ese nombre. El nombre no tiene ningún problema, así que vuelve a intentarlo.",
+  "@askCmdr.renameReview.nameNotSaved": {
+    "sourceHash": "daff211"
+  },
   "askCmdr.renameReview.status": "{allowed, plural, one {# cambio de nombre permitido} many {# cambios de nombre permitidos} other {# cambios de nombre permitidos}}; {blocked, plural, one {# bloqueado} many {# bloqueados} other {# bloqueados}}",
   "@askCmdr.renameReview.status": {
     "sourceHash": "9f70789"

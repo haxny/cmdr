@@ -222,6 +222,24 @@ fn map_smb_error_timeout() {
     assert!(matches!(ve, VolumeError::ConnectionTimeout(_)));
 }
 
+/// A dead DFS link is a refusal of that path alone: the share's own connection is
+/// fine, so it carries the path and reads as nothing that ends the session
+/// (vdavid/smb2#28). As a lost connection, one dead link marked the share gone.
+#[test]
+fn map_smb_error_dead_link_target_refuses_the_path_and_leaves_the_session() {
+    let err = smb2::Error::DfsTargetUnreachable {
+        path: "data/holiday.raw".to_string(),
+        target_count: 2,
+        source: Box::new(smb2::Error::Disconnected),
+    };
+    assert!(!super::super::state::ends_the_session(&err));
+    let ve = map_smb_error(err, "/Volumes/share/data/holiday.raw");
+    match ve {
+        VolumeError::LinkTargetUnreachable(path) => assert_eq!(path, "/Volumes/share/data/holiday.raw"),
+        other => panic!("got: {other:?}"),
+    }
+}
+
 /// A tree or handle from a session that has ended reads as a lost connection:
 /// that's what sends the volume through its one reconnect path and lets the
 /// transfer layer retry the file on the rebuilt session, both of which heal it.

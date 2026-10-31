@@ -71,3 +71,6 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   mirrors the English "view" but is also the word for `la vista breve` / `la vista completa`; a reader should say
   whether `Parte de tu selección está dentro de una vista` is clear, or whether `carpeta virtual` reads better (pending
   the English rewording in `source-queue.md`).
+- **The Jump badge's × button** (`fileExplorer.typeToJump.clear`): `Borrar salto` copies the frame of `Borrar filtro`,
+  but a jump isn't something you normally clear; a reader should say whether it's clear to a screen-reader user, or
+  whether `Borrar texto` reads better.

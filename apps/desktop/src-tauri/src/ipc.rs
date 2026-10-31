@@ -47,6 +47,7 @@ use tauri_specta::{Builder, collect_events};
 
 use crate::agent::chat::stream::AskCmdrTurn;
 use crate::agent::suggested_ops::SuggestionsChanged;
+use crate::agent::tools::propose::rename::BulkRenameCheckProgress;
 use crate::agent::wake::{AgentWakeStaged, AgentWakeStatus};
 use crate::clipboard::ClipboardPasteSettled;
 use crate::commands::search::SearchIndexReadyEvent;
@@ -59,8 +60,8 @@ use crate::events::index_mapping::{
 };
 use crate::file_system::git::wiring::GitStateChangedPayload;
 use crate::file_system::volume::eject::VolumesEjectingChanged;
-use crate::file_viewer::ViewerPullProgress;
 use crate::file_viewer::open_with_extract::{OpenWithCopyLaunched, OpenWithCopyRefused};
+use crate::file_viewer::{ViewerMediaLoad, ViewerPullProgress};
 use crate::listing_host::events::{
     DirectoryDiff, ListingCancelledEvent, ListingCompleteEvent, ListingErrorEvent, ListingOpeningEvent,
     ListingProgressEvent, ListingReadCompleteEvent, ListingRespelledEvent, ListingStalledEvent,
@@ -487,6 +488,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::agent::apply_bulk_rename,
                     crate::commands::agent::revise_bulk_rename_row,
                     crate::commands::agent::cancel_bulk_rename_proposal,
+                    crate::commands::agent::cancel_bulk_rename_check,
                     crate::commands::agent::suggested_ops_list,
                     crate::commands::agent::suggested_ops_page,
                     crate::commands::agent::suggested_ops_live_facts,
@@ -1124,6 +1126,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             // Operation manager registry snapshot (crates/cmdr-operations/src/manager.rs).
             wire::OperationsChanged,
             SuggestionsChanged,
+            // How far a rename review's check has got (agent/tools/propose/rename/check.rs).
+            BulkRenameCheckProgress,
             // Every Ask Cmdr turn's progress, keyed by conversation: rail sends and wakes
             // alike (agent/chat/stream.rs).
             AskCmdrTurn,
@@ -1315,6 +1319,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             QueueRowContextAction,
             // emit_to(viewer label): how far a viewer's pull into its preview temp got.
             ViewerPullProgress,
+            // emit_to(viewer label): how a volume-served picture's or PDF's request is going.
+            ViewerMediaLoad,
             TabContextAction,
             // emit_to("main"): a date picked from a file list header's Sort by popup, for its pane.
             DateSortMenuPick,

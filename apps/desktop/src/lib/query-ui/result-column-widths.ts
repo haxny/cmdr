@@ -13,7 +13,7 @@ import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
 import type { ColumnListColumn } from '#lib/ui/column-list-types.js'
 import { sizeDisplayParts } from '#lib/ui/size-display.js'
 import { formattedDate } from '#lib/settings/reactive-settings.svelte.js'
-import { PILL_CHROME_PX, PILL_SEPARATOR_GAP_PX, splitPath, totalWidth } from './path-pills-layout'
+import { PILL_CHROME_PX, PILL_MIN_WIDTH_PX, PILL_SEPARATOR_GAP_PX, splitPath, totalWidth } from './path-pills-layout'
 
 /**
  * Floor on the Name track, in CSS pixels. A list of very short names shouldn't squeeze
@@ -77,7 +77,13 @@ export function resultColumnWidths(
     path: {
       ...path,
       demand: ({ row, measure }) =>
-        totalWidth(texts(row).pathLabels, measure.text, PILL_CHROME_PX, measure.text('/') + PILL_SEPARATOR_GAP_PX),
+        totalWidth(
+          texts(row).pathLabels,
+          measure.text,
+          PILL_CHROME_PX,
+          measure.text('/') + PILL_SEPARATOR_GAP_PX,
+          PILL_MIN_WIDTH_PX,
+        ),
       // The header label sits inset by half a pill's chrome to line up with the first pill's text.
       headerDemand: ({ label, measure }) => measure.text(label) + PILL_CHROME_PX / 2,
     },

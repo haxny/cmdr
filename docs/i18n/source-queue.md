@@ -250,3 +250,76 @@ All (uk) unless noted.
   phrases. (de, fr, hu, nl, ru, sv, uk, vi, zh, zh-Hant)
 - `settings.fileOperations.showAlreadyGoneToast.label`: "Say when a deleted item was already gone" is hard to phrase as
   a toggle; "Show a notice when a deleted item was already gone" translates more cleanly. (uk, zh)
+- `fileExplorer.typeToJump.clear`: "Clear jump" treats a mode name as something clearable, which forces a rewrite in
+  languages where the mode word is a verb (de: `Eingabe zum Springen löschen`). "Clear typed text" would translate
+  cleanly; `fileExplorer.quickFilter.clear` could follow. (de)
+- `type-to-jump` concept: the brief didn't list it for `commands.paneQuickFilter.description` or the `modeJump` keys:
+  its `match` (`type-to-jump`, `switch to jump`, `=jump`) misses "between Filter and Jump" and "Jump: …". Proposal: add
+  those phrasings. (de)
+- `errors.volume.linkTargetUnreachable`: "This sits behind a link" has no clear referent, and for a new folder or file
+  the thing doesn't exist yet. "This location sits behind a link" translates more cleanly. (fr)
+- `link` concept (`docs/i18n/concepts.json`): its sense covers hyperlinks and shareable addresses only, while
+  `*.linkTargetUnreachable*` match it for a DFS link. Widen the sense, or add a `dfs-link` concept. (fr)
+- `fileExplorer.typeToJump.clear`: "Clear jump" uses "jump" as a noun that few languages have for this mode; "Clear
+  typed text", or a description naming the mode's label as the word to quote, would help. (fr)
+- `commands.paneQuickFilter.description`: "Opens the filter badge on the current pattern" leaves "on the current
+  pattern" unexplained (seeded with it? showing it?), and the badge can open in Jump mode too, so "filter badge" isn't
+  always right. (es)
+- `fileExplorer.typeToJump.clear`: "Clear jump" names no object; the button removes the typed text, so "Clear typed
+  text" would translate more safely. (es)
+- `servers.sheet.nfsOtherGidsTooMany`: "this lists {count}" has no noun for "this", which every language has to invent
+  ("the list", "you listed"). (es)
+- Concept `link`: its sense covers only hyperlinks, yet it matches the DFS link in the `*.linkTargetUnreachable` keys;
+  add a DFS sense or a `notMatch`, since a locale could want a different word for a network link. (es)
+- `*.linkTargetUnreachable*`: "sits behind a link" is a spatial metaphor with no natural Portuguese, and `{path}` can't
+  take an agreeing verb. "Reaching this goes through a link to another server" would translate more plainly in every
+  family member. (pt)
+- `commands.paneQuickFilter.label`: the `@key` says "same words as `fileExplorer.quickFilter.prefix`", but the label is
+  the noun "Quick filter" and the prefix is the mode's verb form in languages that split them (pt: `Filtro rápido` vs
+  `Filtrar`). Name only what must match. (pt)
+- `servers.sheet.nfsOtherGidsTooMany`: "carries" reads as a metaphor for a protocol limit; "sends" (the `@key`'s own
+  word) is clearer. (pt)
+- `errors.volume.linkTargetUnreachable`, `commands.paneQuickFilter.description`, `fileExplorer.typeToJump.clear`: same
+  problems as the fr and es entries above; hu wrote `Ez a hely`, `szűrőjelvény` (also wrong when the badge opens in Jump
+  mode), and `Ugrás törlése` as best readings. (hu)
+- `askCmdr.renameReview.checkUnfinished`: "hasn't finished checking 3 files" can read as 3 files in progress; the `@key`
+  says they're still unchecked. "3 files are still unchecked" would translate more safely. (hu)
+- Concept `badge`: its sense is a marker on a file icon or title bar, while `commands.paneQuickFilter.description` means
+  the small box holding typed text, so the ruled word fits it poorly. Widen the sense, or add a typing-badge concept.
+  (nl)
+- `*.linkTargetUnreachable*`, `fileExplorer.typeToJump.clear`, `commands.paneQuickFilter.description`,
+  `servers.sheet.nfsOtherGidsTooMany`, `askCmdr.renameReview.checkUnfinished`: same problems as the fr, es, pt, and hu
+  entries above; uk's best readings are `Шлях … веде через посилання`, `Очистити «Перехід»`, `значок фільтра`,
+  `а в цьому списку їх {count}`, and `ще не перевірив # файл`. (uk)
+- `askCmdr.renameReview.needsAnotherLook`: "Take another look" doesn't say at what; the `@key` implies the names, so uk
+  wrote `Перегляньте їх знову`. Naming it ("Check the names and try again") would translate more safely. (uk)
+- `errors.volume.linkTargetUnreachable`, `commands.paneQuickFilter.description`, `fileExplorer.typeToJump.clear`: same
+  problems as the fr and es entries above; sv wrote `Den här platsen`, `filtermärket` (also wrong when the badge opens
+  in Jump mode), and `Rensa Hoppa-texten` as best readings. `nfsOtherGidsTooMany`: "carries" became `kan skicka`, "this"
+  became `den här listan`. (sv)
+- `commands.paneQuickFilter.description`, `fileExplorer.typeToJump.clear`, `errors.volume.linkTargetUnreachable`,
+  `*.linkTargetUnreachable*`, concepts `badge` and `link`: same problems as the fr, es, nl, and pt entries above; ru
+  wrote `значок фильтра с текущим шаблоном`, `Очистить поле «Переход»`, `К этому месту ведет ссылка`, as best readings.
+  (ru)
+- `servers.sheet.nfsOtherGidsTooMany`: `{count}` is a bare number with no plural param, so a noun can't agree with it;
+  ru leans on `в этом списке их {count}`. An integer plural would let every language name the groups. (ru)
+- `*.linkTargetUnreachable*`, `fileExplorer.typeToJump.clear`, `commands.paneQuickFilter.description`,
+  `commands.paneQuickFilter.label`, `servers.sheet.nfsOtherGidsTooMany`, concept `badge`, concept `link`: same problems
+  as the fr, es, pt, hu, and nl entries above; vi's best readings are `Vị trí này nằm sau một liên kết`,
+  `Xóa nội dung “Nhảy tới”`, `huy hiệu bộ lọc`, `Bộ lọc nhanh` against the prefix `Lọc`, and
+  `còn danh sách này có {count} nhóm`. (vi)
+- Concept `type-to-jump`: a locale without a ruling for it isn't told so, because its `match` misses every phrasing in
+  these keys (see the de entry above); vi had none until this batch. (vi)
+- `commands.paneQuickFilter.description`: "current pattern" is the text typed so far (`quick-filter-session.svelte.ts`),
+  and neither the English nor the `@key` says so. In zh the ruled `模式` also means "mode", so beside Filter and Jump it
+  reads as the typing mode. "Opens the badge with what you've typed so far" would translate safely. zh wrote
+  `当前输入的内容`. (zh)
+- `*.linkTargetUnreachable*`, `fileExplorer.typeToJump.clear`, `servers.sheet.nfsOtherGidsTooMany`, concepts `badge` and
+  `link`: same problems as the fr, es, and pt entries above; zh's best readings are
+  `访问这里要通过一个指向另一台服务器的链接`, `清除跳转`, `这里列出了 {count} 个`, and `筛选标记`. (zh)
+- Concept `group`: one ruling covers both a group of rows and a Unix file group, and zh needs different words (`分组`,
+  `群组`), so each NFS group key takes its own exception. Split out a `unix-group` concept. (zh)
+- `*.linkTargetUnreachable*`, `commands.paneQuickFilter.description`, `fileExplorer.typeToJump.clear`,
+  `servers.sheet.nfsOtherGidsTooMany`, concepts `badge` and `link`: same problems as the fr, es, nl, and pt entries
+  above; zh-Hant wrote `要透過連結連到另一個伺服器`, `開啟篩選標記，沿用目前的樣式` (also wrong when the badge opens in
+  Jump mode), `清除「跳至」的輸入內容`, and `這裡列出了 {count} 個` as best readings. (zh-Hant)

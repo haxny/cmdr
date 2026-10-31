@@ -169,10 +169,15 @@ export function clearSearch(): void {
 
 // ── Actions ──────────────────────────────────────────────────────────────────
 
-/** Switch the rail to a thread and close the panel. */
+/** Switch the rail to a thread and close the panel. A thread that won't load leaves the panel
+ * open on the list, so the user can see nothing moved and pick again. */
 export async function chooseThread(id: number): Promise<void> {
-  await switchToThread(id)
-  closeSessions()
+  try {
+    await switchToThread(id)
+    closeSessions()
+  } catch (e) {
+    log.warn('switching threads failed: {error}', { error: e })
+  }
 }
 
 /** Start a fresh chat and close the panel. */
@@ -206,11 +211,17 @@ export function noteThreadDiscarded(conversationId: number): void {
   sessionsState.hits = sessionsState.hits.filter((hit) => hit.conversationId !== conversationId)
 }
 
-/** Rename a thread and reflect the new title in the list (and any matching search hit). */
+/** Rename a thread and reflect the new title in the list (and any matching search hit). A rename
+ * that didn't land leaves the old title, which is what the list already shows. */
 export async function renameConversation(id: number, title: string): Promise<void> {
   const trimmed = title.trim()
   if (trimmed.length === 0) return
-  await renameAskCmdrConversation(id, trimmed)
+  try {
+    await renameAskCmdrConversation(id, trimmed)
+  } catch (e) {
+    log.warn('renaming the thread failed: {error}', { error: e })
+    return
+  }
   const row = sessionsState.conversations.find((c) => c.id === id)
   if (row) row.title = trimmed
   const hit = sessionsState.hits.find((h) => h.conversationId === id)
@@ -222,7 +233,12 @@ export async function renameConversation(id: number, title: string): Promise<voi
  * updates the badge in place. The active-only view excludes archived, so archiving a
  * thread there removes its row. */
 export async function setArchived(id: number, archived: boolean): Promise<void> {
-  await archiveAskCmdrConversation(id, archived)
+  try {
+    await archiveAskCmdrConversation(id, archived)
+  } catch (e) {
+    log.warn('archiving the thread failed: {error}', { error: e })
+    return
+  }
   if (!sessionsState.showArchived && archived) {
     sessionsState.conversations = sessionsState.conversations.filter((c) => c.id !== id)
   } else {

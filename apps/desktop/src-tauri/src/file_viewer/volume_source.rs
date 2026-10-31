@@ -1,14 +1,17 @@
-//! A session's file read through its volume's held random reader
+//! A session's file read through its volume by position: a held random reader
 //! (`Volume::open_random_reader`, SMB today), so a big file on a share is read by
-//! positioned smb2 READs: no OS-mount open per fetch, and no 256 MiB temp pull once the
-//! mount is gone (#303).
+//! positioned smb2 READs with no OS-mount open per fetch and no 256 MiB temp pull once
+//! the mount is gone (#303), or the volume's `read_range` ([`RangeReader`]), which is how
+//! a picture or PDF on any other server renders with no pull.
 //!
 //! The viewer core is sync and runs on blocking threads; each read bridges to the async
 //! volume with `tauri::async_runtime::block_on`, the same bridge `materialize.rs` uses.
 //! `DETAILS.md` § "Byte sources".
 
 use std::collections::VecDeque;
+use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
 use log::debug;
@@ -57,10 +60,79 @@ impl Drop for HeldReader {
     }
 }
 
-/// A [`ByteSource`] over a volume's held random reader, with a small block cache.
+/// Which of a volume's positioned reads a [`VolumeSource`] goes through.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum PositionedRead {
+    /// `Volume::open_random_reader`: one handle held for the session.
+    Held,
+    /// `Volume::read_range`: every read stands alone ([`RangeReader`]).
+    Ranged,
+}
+
+/// [`VolumeRandomReader`] over `Volume::read_range`, for a volume that holds no handle.
+/// The size comes from a stat at open, and reads clamp to it like any reader's.
+struct RangeReader {
+    volume: Arc<dyn Volume>,
+    path: PathBuf,
+    size: u64,
+}
+
+impl RangeReader {
+    /// `NotSupported` when the stat doesn't say how big the file is: a reader that can't
+    /// answer `size` can't serve a `Range` either, and the caller falls back to a pull.
+    async fn open(volume: Arc<dyn Volume>, path: PathBuf) -> Result<Self, VolumeError> {
+        let entry = volume.get_metadata(&path).await?;
+        if entry.is_directory {
+            return Err(VolumeError::IsADirectory(path.display().to_string()));
+        }
+        let size = entry.size.ok_or(VolumeError::NotSupported)?;
+        Ok(Self { volume, path, size })
+    }
+}
+
+impl VolumeRandomReader for RangeReader {
+    fn size(&self) -> u64 {
+        self.size
+    }
+
+    fn read_at(
+        &self,
+        offset: u64,
+        len: usize,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, VolumeError>> + Send + '_>> {
+        Box::pin(async move {
+            let mut bytes = self.volume.read_range(&self.path, offset, len).await?;
+            bytes.truncate(self.size.saturating_sub(offset).min(len as u64) as usize);
+            Ok(bytes)
+        })
+    }
+
+    fn close(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send>> {
+        Box::pin(async { Ok(()) })
+    }
+}
+
+fn open_reader(
+    volume: &Arc<dyn Volume>,
+    path: &Path,
+    way: PositionedRead,
+) -> Result<Box<dyn VolumeRandomReader>, VolumeError> {
+    tauri::async_runtime::block_on(async {
+        match way {
+            PositionedRead::Held => volume.open_random_reader(path).await,
+            PositionedRead::Ranged => {
+                let reader = RangeReader::open(Arc::clone(volume), path.to_path_buf()).await?;
+                Ok(Box::new(reader) as Box<dyn VolumeRandomReader>)
+            }
+        }
+    })
+}
+
+/// A [`ByteSource`] over a volume's positioned reads, with a small block cache.
 pub struct VolumeSource {
     volume: Arc<dyn Volume>,
     path: PathBuf,
+    way: PositionedRead,
     reader: Mutex<Arc<HeldReader>>,
     /// Full blocks only, keyed by block index. A short block (the file's tail) is
     /// never cached, so an append is read fresh.
@@ -69,13 +141,14 @@ pub struct VolumeSource {
 
 impl VolumeSource {
     /// Opens `path` on `volume` and returns the source with the file's size.
-    pub fn open(volume: Arc<dyn Volume>, path: &Path) -> Result<(Self, u64), VolumeError> {
-        let reader = tauri::async_runtime::block_on(volume.open_random_reader(path))?;
+    pub fn open(volume: Arc<dyn Volume>, path: &Path, way: PositionedRead) -> Result<(Self, u64), VolumeError> {
+        let reader = open_reader(&volume, path, way)?;
         let size = reader.size();
         Ok((
             Self {
                 volume,
                 path: path.to_path_buf(),
+                way,
                 reader: Mutex::new(Arc::new(HeldReader(Some(reader)))),
                 cache: Mutex::new(VecDeque::new()),
             },
@@ -90,8 +163,7 @@ impl VolumeSource {
     /// A fresh reader in place of `stale`, unless a concurrent read already swapped one
     /// in. Drops the cache: the file a fresh open sees may differ.
     fn reopen(&self, stale: &Arc<HeldReader>) -> Result<Arc<HeldReader>, ViewerError> {
-        let fresh = tauri::async_runtime::block_on(self.volume.open_random_reader(&self.path))
-            .map_err(|e| map_volume_error(e, None))?;
+        let fresh = open_reader(&self.volume, &self.path, self.way).map_err(|e| map_volume_error(e, None))?;
         // Held before the race check, so a reader that loses it still gets closed.
         let fresh = Arc::new(HeldReader(Some(fresh)));
         let mut slot = self.reader.lock_ignore_poison();
@@ -209,8 +281,12 @@ impl ByteSource for VolumeSource {
 }
 
 /// The file at `path` on `volume`, as a session's [`OpenedFile`].
-pub(super) fn open_on_volume(volume: &Arc<dyn Volume>, path: &Path) -> Result<OpenedFile, VolumeError> {
-    let (source, size) = VolumeSource::open(Arc::clone(volume), path)?;
+pub(super) fn open_on_volume(
+    volume: &Arc<dyn Volume>,
+    path: &Path,
+    way: PositionedRead,
+) -> Result<OpenedFile, VolumeError> {
+    let (source, size) = VolumeSource::open(Arc::clone(volume), path, way)?;
     Ok(OpenedFile {
         source: Arc::new(source),
         total_bytes: size,

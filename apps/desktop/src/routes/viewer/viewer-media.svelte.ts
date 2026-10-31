@@ -122,6 +122,9 @@ export function createViewerMedia(deps: ViewerMediaDeps) {
     get isMedia() {
       return isMedia
     },
+    get mediaToken() {
+      return mediaToken
+    },
     get mediaSrc() {
       return mediaSrc
     },

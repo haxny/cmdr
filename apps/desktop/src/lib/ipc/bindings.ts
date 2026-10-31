@@ -3678,6 +3678,11 @@ export const commands = {
    */
   cancelBulkRenameProposal: (proposalId: string) => __TAURI_INVOKE<void>('cancel_bulk_rename_proposal', { proposalId }),
   /**
+   *  Stops a running check for this proposal, leaving the review open. Answers whether one was
+   *  running. The stopped `preflight_bulk_rename` or `apply_bulk_rename` answers `Cancelled`.
+   */
+  cancelBulkRenameCheck: (proposalId: string) => __TAURI_INVOKE<boolean>('cancel_bulk_rename_check', { proposalId }),
+  /**
    *  Every sweep with at least one group still waiting on the user, newest first.
    *
    *  Counts only: not one op row is read here, because a group of 60 000 is legitimate and a list
@@ -4914,7 +4919,7 @@ export const commands = {
     __TAURI_INVOKE<GuessedNfsIdentity>('guess_nfs_identity', { host, port, exportPath }),
   /**
    *  Every NFS place the user has saved, for an edit sheet that has to show (and
-   *  resend) the uid, gid, and start folder the servers listing doesn't carry.
+   *  resend) the uid, groups, and start folder the servers listing doesn't carry.
    */
   getKnownNfsPlaces: () => __TAURI_INVOKE<SavedNfsPlace[]>('get_known_nfs_places'),
   /**
@@ -5589,6 +5594,7 @@ export const events = {
   aiStarting: makeEvent<AiStarting>('ai-starting'),
   aiVerifying: makeEvent<AiVerifying>('ai-verifying'),
   askCmdrTurn: makeEvent<AskCmdrTurn>('ask-cmdr-turn'),
+  bulkRenameCheckProgress: makeEvent<BulkRenameCheckProgress>('bulk-rename-check-progress'),
   clipboardPasteSettled: makeEvent<ClipboardPasteSettled>('clipboard-paste-settled'),
   closeAbout: makeEvent<CloseAbout>('close-about'),
   closeAllFileViewers: makeEvent<CloseAllFileViewers>('close-all-file-viewers'),
@@ -5709,6 +5715,7 @@ export const events = {
   viewerContextMenuAction: makeEvent<ViewerContextMenuAction>('viewer-context-menu-action'),
   viewerEditAction: makeEvent<ViewerEditAction>('viewer-edit-action'),
   viewerHistoryAction: makeEvent<ViewerHistoryAction>('viewer-history-action'),
+  viewerMediaLoad: makeEvent<ViewerMediaLoad>('viewer-media-load'),
   viewerPullProgress: makeEvent<ViewerPullProgress>('viewer-pull-progress'),
   viewerWordWrapToggled: makeEvent<ViewerWordWrapToggled>('viewer-word-wrap-toggled'),
   volumeConnectionChanged: makeEvent<VolumeConnectionChanged>('volume-connection-changed'),
@@ -6810,12 +6817,19 @@ export type BulkRenameBlockReason =
   | 'targetExists'
   | 'volumeUnavailable'
 
+// How far one proposal's running check has got.
+export type BulkRenameCheckProgress = {
+  proposalId: string
+  // Rows finished so far. 0 is a real answer: the first stat is still out.
+  checked: number
+  total: number
+}
+
 /**
  *  Why a rename review couldn't be checked or applied.
  *
- *  ❌ Not prose: the review dialog words its own states (its per-row
- *  `askCmdr.renameReview.nameRejected` notice, and re-reading the plan when it
- *  has moved on); the variant is what the log records.
+ *  ❌ Not prose: the review dialog words each variant from the catalog
+ *  (`rename-review-status.ts`); a `detail` here is for the log.
  */
 export type BulkRenameError =
   /**
@@ -6850,9 +6864,12 @@ export type BulkRenameError =
        */
       reason: RenameStartError
     }
-  // The preflight didn't finish inside the command's wait.
-  | { type: 'timedOut' }
-  // Nothing above classifies it (a panicked task).
+  /**
+   *  The check was stopped before it answered: the user pressed Stop checking, the review
+   *  closed, or a newer check for this plan replaced it. Nothing ran.
+   */
+  | { type: 'cancelled' }
+  // Nothing above classifies it (a panicked task, Cmdr's own database not answering).
   | {
       type: 'unexpected'
       // What the runtime reported, for the log.
@@ -9921,12 +9938,17 @@ export type GoToPathResolution =
   // Defensive: the input was empty or couldn't be turned into a path.
   | { kind: 'invalid'; reason: string }
 
-// The uid and gid the add form fills "User ID" and "Group ID" with.
+// The ids the add form fills "User ID", "Group ID", and "Other group IDs" with.
 export type GuessedNfsIdentity = {
   // The user id.
   uid: number
   // The group id.
   gid: number
+  /**
+   *  The person's other groups: the ones the export's files use, then this
+   *  Mac's when the guess is this Mac's. Empty when nothing suggests any.
+   */
+  otherGids: number[]
   // Why these.
   source: NfsIdentitySourceWire
 }
@@ -11368,6 +11390,15 @@ export type ListingErrorReason =
       // The path the failure was about.
       path: string
     }
+  /**
+   *  `VolumeError::LinkTargetUnreachable`: the folder sits behind a link to another server, and
+   *  that server is out of reach. The share itself is fine.
+   */
+  | {
+      reason: 'linkTargetUnreachable'
+      // The path the failure was about.
+      path: string
+    }
   // The volume or device is read-only.
   | { reason: 'readOnly' }
   // The device is out of storage.
@@ -12271,6 +12302,13 @@ export type MediaIndexVolumeState = {
    */
   keptCount: number | null
 }
+
+export type MediaLoadStage =
+  | 'reading'
+  // The body is on its way to the webview.
+  | 'done'
+  // The volume stopped answering or refused the read.
+  | 'failed'
 
 // What the field picker shows: the read's progress, and each field's example.
 export type MediaOverview = {
@@ -16045,6 +16083,8 @@ export type SavedNfsPlace = {
   uid: number
   // The group id every request acts as.
   gid: number
+  // The other groups every request carries.
+  otherGids: number[]
   /**
    *  The name a person gave its SERVER, empty when nobody did. ❗ The
    *  server's, ❌ never the place's: an export reads as its own path.
@@ -17564,7 +17604,7 @@ export type ServerTarget =
     }
   /**
    *  One NFS export: display name, host, an optional port, the export, the
-   *  uid and gid it acts as, an optional start folder, and the auto-reconnect
+   *  uid and groups it acts as, an optional start folder, and the auto-reconnect
    *  switch.
    */
   | {
@@ -17590,6 +17630,11 @@ export type ServerTarget =
       uid: number
       // The group id every request acts as. A setting, like `uid`.
       gid: number
+      /**
+       *  The person's other groups, sent with every request. A setting, like
+       *  `uid`.
+       */
+      otherGids: number[]
       /**
        *  Where a pane lands when the place is opened: an export-relative path
        *  (`/Photos`). `None` is the export's root.
@@ -20146,6 +20191,11 @@ export type ViewerError =
    *  nothing to preview yet and a Retry can't help.
    */
   | { kind: 'coldStorage' }
+  /**
+   *  The file sits behind a link to another server (a DFS link in an SMB share), and that
+   *  server is out of reach. Retry can help; nothing was deleted, so ❌ never `NotFound`.
+   */
+  | { kind: 'linkTargetUnreachable' }
   | { kind: 'notEnoughSpace'; needed: number; available: number }
 
 /**
@@ -20163,6 +20213,19 @@ export type ViewerHistoryDirection =
   | 'back'
   // Go > Forward: undoes a Back.
   | 'forward'
+
+/**
+ *  `viewer-media-load`: how a volume-served picture's or PDF's request is going. Emitted
+ *  to the viewer window that asked, so it can show progress over an `<img>` that won't
+ *  say, and tell a dead server from a damaged file (an `<embed>` says neither).
+ */
+export type ViewerMediaLoad = {
+  // The token the request came in on, so a window ignores news of a closed session.
+  token: string
+  stage: MediaLoadStage
+  bytesDone: number
+  bytesTotal: number
+}
 
 // Result returned when opening a viewer session.
 export type ViewerOpenResult = {
@@ -20199,6 +20262,12 @@ export type ViewerOpenResult = {
    *  SVG, PDFs, text, or on any read error).
    */
   mediaDimensions: MediaDimensions | null
+  /**
+   *  The `cmdr-media://` request reads from a volume, so it can take a while and fail
+   *  for reasons the file has nothing to do with: the window follows it through
+   *  `viewer-media-load`. `false` for anything served from a local path.
+   */
+  mediaFromVolume: boolean
 }
 
 /**
@@ -20524,6 +20593,17 @@ export type VolumeError =
    *  pane is what connects it.
    */
   | { type: 'notConnected'; data: string }
+  /**
+   *  The path sits behind a link to another server (a DFS link inside an SMB
+   *  share), and that server is out of reach. Carries the path.
+   *
+   *  The refusal is about this path alone: the share itself is fine, and paths
+   *  outside the link keep working. ❌ Never `DeviceDisconnected`, which sends
+   *  the whole share through a reconnect that can't help, and ❌ never
+   *  `NotFound`, which the frontend reads as "this folder was deleted". SMB-only
+   *  today.
+   */
+  | { type: 'linkTargetUnreachable'; data: string }
   /**
    *  The device's session died mid-operation but the device itself is still
    *  attached, and a reopen is already running in the background (MTP: a PTP

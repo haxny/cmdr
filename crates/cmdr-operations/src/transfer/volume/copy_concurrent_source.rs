@@ -187,6 +187,7 @@ impl ConcurrentCopy<'_> {
             dest_name_claimed,
             window: self.file_window.clone(),
             displaced: Arc::clone(&self.cells.displaced),
+            links: Arc::clone(&self.cells.links),
             created: Arc::new(super::merge_ctx::CreatedPaths::default()),
             // Every leaf of a directory source's subtree numbers itself under
             // this source's own row.

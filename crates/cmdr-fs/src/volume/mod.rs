@@ -357,6 +357,46 @@ pub trait Volume: Send + Sync {
         Box::pin(async move { self.get_metadata(path).await.map(|entry| EntryKind::of(&entry)) })
     }
 
+    /// The target of the symlink at `path`, exactly as stored and ❌ never
+    /// resolved or followed, or `Ok(None)` when something other than a link sits
+    /// there.
+    ///
+    /// The source half of carrying a link across volumes. Default: `NotSupported`,
+    /// which the copy engine reads as "this backend can't say", so the link takes
+    /// the older route: streaming what it points at, or a counted skip where
+    /// the source has no bytes for it.
+    fn read_link_target<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<PathBuf>, VolumeError>> + Send + 'a>> {
+        let _ = path;
+        Box::pin(async { Err(VolumeError::NotSupported) })
+    }
+
+    /// Whether this backend knows how to make a symlink at all. A cheap gate, so a
+    /// copy onto a share with no links pays no round trip to find out; the
+    /// filesystem under `path` still has the last word (a local exFAT drive refuses),
+    /// which is why the engine proves it once per operation before relying on it.
+    fn can_hold_links(&self) -> bool {
+        false
+    }
+
+    /// Makes `path` a symlink holding `target` VERBATIM: never resolved, rebased,
+    /// or checked, whether it points at nothing, or out of the volume.
+    ///
+    /// Refuses an occupied `path` with `AlreadyExists`, like
+    /// [`create_file`](Self::create_file). `NotSupported` means this destination
+    /// can't hold the link, which the engine counts as a skip. Default:
+    /// `NotSupported`.
+    fn create_symlink<'a>(
+        &'a self,
+        path: &'a Path,
+        target: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
+        let _ = (path, target);
+        Box::pin(async { Err(VolumeError::NotSupported) })
+    }
+
     /// Which filesystem node sits at `path`, the link itself when it's a link, or
     /// `Ok(None)` when the backend can't say.
     ///

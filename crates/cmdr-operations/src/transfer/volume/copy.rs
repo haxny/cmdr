@@ -39,6 +39,7 @@ use super::super::super::types::{
 };
 use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::{LeafProgressLedger, build_pre_skip_set};
+use super::link_carry::LinkCarry;
 use super::preflight::{scan_volume_sources, sources_in_tree_order};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::log_private::LogPrivate;
@@ -110,6 +111,8 @@ pub(super) struct CopyCells {
     /// totals to the op-wide `files_skipped` / `bytes_skipped`.
     pub(super) deep_skipped_files: Arc<AtomicUsize>,
     pub(super) deep_skipped_bytes: Arc<AtomicU64>,
+    /// Which symlinks this copy lands as symlinks (`link_carry.rs`).
+    pub(super) links: Arc<LinkCarry>,
 }
 
 /// How long a wind-down waits for its in-flight tasks, chosen by whoever asked
@@ -731,6 +734,10 @@ pub async fn copy_volumes_with_progress(
         .then(|| dest_listing.map(DestNameIndex::build))
         .flatten();
 
+    // Which links land as links here, read before the scan so it counts each
+    // selected one as the leaf it is (`link_carry.rs`).
+    let links = Arc::new(LinkCarry::for_copy(state, &source_volume, source_paths, &dest_volume, dest_path).await);
+
     // Phase 1: Preflight scan (reuses the dialog's cached preview when one is
     // available). Populates `total_files`, `total_bytes`, and per-source
     // `is_directory` / `size` hints so the copy loop doesn't have to re-probe
@@ -743,6 +750,7 @@ pub async fn copy_volumes_with_progress(
         WriteOperationType::Copy,
         state,
         &*events,
+        &links,
     )
     .await?;
     state
@@ -950,7 +958,10 @@ pub async fn copy_volumes_with_progress(
         );
     }
 
-    let cells = CopyCells::default();
+    let cells = CopyCells {
+        links,
+        ..CopyCells::default()
+    };
     let mut copy_error: Option<WriteFailure>;
 
     // Live in-flight table + stall watchdog, for BOTH paths. The concurrent
@@ -1108,6 +1119,24 @@ pub async fn copy_volumes_with_progress(
         copy_error = None;
     }
 
+    // Whatever the ending, remove the staged partials nothing else will: those of
+    // tasks the driver abandoned mid-write (their futures were dropped), and an
+    // attempt's temp whose delete the destination refused, which a copy that then
+    // finished still left listed (`StagedWrite::abandon`). A temp that may be the
+    // destination's only copy (its landing cleared the way) is already off this
+    // list, recorded as a landing, so committed data is never in scope here.
+    // Whatever the destination wouldn't let go of rides out on the cancel summary,
+    // so a Rollback that couldn't clear the destination never reads as one that
+    // did. A failure names the new files its stop kept (the ones its own error
+    // doesn't already); a rollback drops the failure, so its summary names them
+    // all. A finished copy has no summary to carry them: its background pass and
+    // the reconnect sweep still take them.
+    let reported_failure = copy_error
+        .as_ref()
+        .filter(|_| intent != OperationIntent::RollingBack)
+        .map(|f| &f.error);
+    let staged_leftovers = super::cleanup::clean_abandoned_staged_writes(&dest_volume, state, reported_failure).await;
+
     if copy_error.is_none() && !state.intent().is_cancelled() {
         // All files copied successfully
         log::info!(
@@ -1137,21 +1166,6 @@ pub async fn copy_volumes_with_progress(
 
         return Ok(());
     }
-
-    // Cancelled or errored. Before either branch, remove the staged partials of
-    // tasks the driver abandoned mid-write: their futures were dropped, so
-    // nothing else will. A temp that may be the destination's only copy (its
-    // landing cleared the way) is already off this list, recorded as a landing,
-    // so committed data is never in scope here. Whatever the destination wouldn't
-    // let go of rides out on the cancel summary, so a Rollback that couldn't
-    // clear the destination never reads as one that did. A failure names the
-    // new files its stop kept (the ones its own error doesn't already); a
-    // rollback drops the failure, so its summary names them all.
-    let reported_failure = copy_error
-        .as_ref()
-        .filter(|_| intent != OperationIntent::RollingBack)
-        .map(|f| &f.error);
-    let staged_leftovers = super::cleanup::clean_abandoned_staged_writes(&dest_volume, state, reported_failure).await;
 
     // Decide between rollback and cancel.
     if intent == OperationIntent::RollingBack {

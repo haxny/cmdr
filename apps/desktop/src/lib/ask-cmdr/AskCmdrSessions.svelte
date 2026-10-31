@@ -48,11 +48,7 @@
         const id = editingId
         if (id === null) return
         editingId = null
-        try {
-            await renameConversation(id, editTitle)
-        } catch {
-            // A failed rename leaves the old title; the list already shows it.
-        }
+        await renameConversation(id, editTitle)
     }
 
     function cancelRename(): void {

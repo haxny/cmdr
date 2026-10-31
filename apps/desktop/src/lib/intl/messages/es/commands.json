@@ -488,13 +488,21 @@
   "@commands.fileRename.label": {
     "sourceHash": "3064d79"
   },
+  "commands.paneQuickFilter.label": "Filtro rápido",
+  "@commands.paneQuickFilter.label": {
+    "sourceHash": "e731882"
+  },
+  "commands.paneQuickFilter.description": "Abre la insignia de filtro con el patrón actual. Pulsa de nuevo para cambiar entre “Filtrar” y “Saltar”",
+  "@commands.paneQuickFilter.description": {
+    "sourceHash": "2778526"
+  },
   "commands.fileMultiRename.label": "Renombrado múltiple",
   "@commands.fileMultiRename.label": {
     "sourceHash": "5ceb1a2"
   },
-  "commands.fileMultiRename.description": "Renombra los archivos seleccionados (o toda la carpeta) con una máscara de nombre, un contador y buscar y reemplazar",
+  "commands.fileMultiRename.description": "Renombra los archivos seleccionados (o el archivo bajo el cursor) con una máscara de nombre, un contador y buscar y reemplazar",
   "@commands.fileMultiRename.description": {
-    "sourceHash": "d294fb1"
+    "sourceHash": "d3a52f1"
   },
   "commands.queueCursorUp.label": "Operación anterior",
   "@commands.queueCursorUp.label": {

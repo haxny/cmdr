@@ -113,6 +113,7 @@ const LISTING_REASONS: ListingErrorReason[] = [
   { reason: 'deviceDisconnected', path: PATH },
   { reason: 'deviceReconnecting', path: PATH },
   { reason: 'notConnected', path: PATH },
+  { reason: 'linkTargetUnreachable', path: PATH },
   { reason: 'readOnly' },
   { reason: 'storageFull' },
   { reason: 'connectionTimedOut' },

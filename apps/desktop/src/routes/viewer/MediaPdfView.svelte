@@ -12,15 +12,19 @@
     src: string
     /** File name, surfaced on the embed for assistive tech. */
     fileName: string
+    /** The bytes are still on their way from a volume, however long that takes. */
+    arriving?: boolean
   }
 
-  const { src, fileName }: Props = $props()
+  const { src, fileName, arriving = false }: Props = $props()
 
   // `<embed>` doesn't reliably fire `load` (and almost never `error`) in WebKit, so the
   // spinner can't depend on its events alone or it would hang forever over a PDF that
   // already rendered. PDFKit paints fast, so clear the spinner on a short bounded
   // fallback, and sooner if `load` does fire. A genuinely broken PDF (or a 404 from the
   // scheme) surfaces PDFKit's own in-embed message rather than a separate error state.
+  // From a volume, PDFKit paints nothing until the backend has read the bytes, so the
+  // backend's own report (`arriving`) holds the spinner past the timer.
   let loaded = $state(false)
 
   $effect(() => {
@@ -36,7 +40,7 @@
 </script>
 
 <div class="media-pdf-stage">
-  {#if !loaded}
+  {#if !loaded || arriving}
     <div class="media-status" role="status">
       <Spinner size="lg" />
       <span class="sr-only">{tString('viewer.pdf.loading')}</span>

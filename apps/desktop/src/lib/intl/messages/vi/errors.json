@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "Không kết nối được tới máy chủ của thư mục này",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` nằm sau một liên kết tới máy chủ khác, và hiện Cmdr không kết nối được tới máy chủ đó. Phần còn lại của mục chia sẻ này vẫn ổn và không có gì bị xóa.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Bạn có thể thử:\n- Kiểm tra xem máy chủ kia có đang chạy không và mạng của bạn có kết nối được tới máy chủ đó không\n- Mở lại nơi này để thử lại",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "Đang kết nối lại với thiết bị",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2156,6 +2168,10 @@
   "errors.volume.notConnected": "Cmdr chưa kết nối với điện thoại hoặc máy chủ này, hãy mở nó trước.",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "Vị trí này nằm sau một liên kết tới máy chủ khác, và hiện Cmdr không kết nối được tới máy chủ đó.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "Thiết bị đã khởi động lại kết nối. Hãy đợi vài giây rồi thử lại.",
   "@errors.volume.deviceSessionReset": {

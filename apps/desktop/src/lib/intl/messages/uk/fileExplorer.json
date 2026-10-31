@@ -2099,6 +2099,18 @@
   "@fileExplorer.folderSizes.unreadable": {
     "sourceHash": "ad31a56"
   },
+  "fileExplorer.quickFilter.modeFilter": "Фільтр: показано лише відповідні назви",
+  "@fileExplorer.quickFilter.modeFilter": {
+    "sourceHash": "3febd29"
+  },
+  "fileExplorer.typeToJump.modeJump": "Перехід: показано всі назви, а курсор переходить на відповідну назву",
+  "@fileExplorer.typeToJump.modeJump": {
+    "sourceHash": "292fdf5"
+  },
+  "fileExplorer.typeToJump.clear": "Очистити «Перехід»",
+  "@fileExplorer.typeToJump.clear": {
+    "sourceHash": "42ec82f"
+  },
   "fileExplorer.quickFilter.clear": "Очистити фільтр",
   "@fileExplorer.quickFilter.clear": {
     "sourceHash": "ba59e2d"

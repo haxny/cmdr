@@ -9,7 +9,7 @@
 import type { SavedNfsPlace, SavedS3Place, SavedServer, ServerProtocol, ServerTarget } from '#lib/ipc/bindings.js'
 import type { SavedSftpServer, SavedWebdavServer } from '#lib/tauri-commands/index.js'
 import { mountSourceAsSmbUrl, parseServerAddress, uncAsSmbUrl, type ParsedAddress } from './address-parser'
-import { emptyNfsFields, nfsFieldsFromAppPath, parseNfsId, type NfsFormFields } from './nfs-form'
+import { emptyNfsFields, nfsFieldsFromAppPath, parseNfsId, readNfsOtherGids, type NfsFormFields } from './nfs-form'
 import {
   emptyS3Fields,
   s3FieldsFromAppPath,
@@ -250,7 +250,8 @@ function nfsTargetFrom(
   const exportPath = form.nfs.exportPath.trim()
   const uid = parseNfsId(form.nfs.uid)
   const gid = parseNfsId(form.nfs.gid)
-  if (exportPath === '' || uid === null || gid === null) return null
+  const otherGids = readNfsOtherGids(form.nfs.otherGids)
+  if (exportPath === '' || uid === null || gid === null || otherGids.kind !== 'ids') return null
   return {
     protocol: 'nfs',
     displayName,
@@ -259,6 +260,7 @@ function nfsTargetFrom(
     export: exportPath,
     uid,
     gid,
+    otherGids: otherGids.ids,
     startFolder: startFolderOf(form),
     autoReconnect: form.autoReconnect,
   }
@@ -453,6 +455,7 @@ export function formFromNfsPlace(place: SavedNfsPlace): ServerForm {
       exportPath: place.export,
       uid: String(place.uid),
       gid: String(place.gid),
+      otherGids: place.otherGids.join(', '),
       identityFromGuess: false,
       identitySource: null,
     },

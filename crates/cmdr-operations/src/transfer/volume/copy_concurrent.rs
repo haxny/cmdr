@@ -555,12 +555,12 @@ impl Settlements {
                 self.settle(id);
                 self.record_success(ctx, success);
             }
-            // The person skipped a source whose own name the destination
-            // refused: counted like a conflict Skip, and nothing of it is in
+            // A source left out whole (`CopyTaskEnd::Skipped`): counted like a
+            // conflict Skip, and nothing of it is in
             // any ledger but the folders its walk made before the refusal.
             Ok((
                 id,
-                Ok(CopyTaskEnd::SkippedRefusedName {
+                Ok(CopyTaskEnd::Skipped {
                     source_path,
                     created_dirs,
                 }),

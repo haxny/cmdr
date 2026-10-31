@@ -7,7 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createViewerPull, PULL_BAR_DELAY_MS, PULL_STALLED_AFTER_MS } from './viewer-pull.svelte'
+import { createViewerPull, followMediaLoad, PULL_BAR_DELAY_MS, PULL_STALLED_AFTER_MS } from './viewer-pull.svelte'
 
 describe('createViewerPull', () => {
   beforeEach(() => {
@@ -99,6 +99,56 @@ describe('createViewerPull', () => {
     expect(pull.bytesDone).toBe(0)
     vi.advanceTimersByTime(PULL_BAR_DELAY_MS)
     expect(pull.visible).toBe(false)
+    pull.destroy()
+  })
+})
+
+describe('followMediaLoad', () => {
+  const load = (stage: 'reading' | 'done' | 'failed', token = 'current') => ({
+    token,
+    stage,
+    bytesDone: 10,
+    bytesTotal: 100,
+  })
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('reports progress, then shows the bar after the delay', () => {
+    const pull = createViewerPull()
+    pull.start()
+    expect(followMediaLoad(pull, 'current', load('reading'))).toBe(false)
+    vi.advanceTimersByTime(PULL_BAR_DELAY_MS)
+    expect(pull.visible).toBe(true)
+    expect(pull.fraction).toBe(0.1)
+    pull.destroy()
+  })
+
+  it('finishes when the bytes are on their way', () => {
+    const pull = createViewerPull()
+    pull.start()
+    expect(followMediaLoad(pull, 'current', load('done'))).toBe(false)
+    expect(pull.active).toBe(false)
+    pull.destroy()
+  })
+
+  it('says so when the volume stopped delivering', () => {
+    const pull = createViewerPull()
+    pull.start()
+    expect(followMediaLoad(pull, 'current', load('failed'))).toBe(true)
+    expect(pull.active).toBe(false)
+    pull.destroy()
+  })
+
+  it('ignores news of a session the window left', () => {
+    const pull = createViewerPull()
+    pull.start()
+    expect(followMediaLoad(pull, 'current', load('failed', 'old'))).toBe(false)
+    expect(pull.active).toBe(true)
     pull.destroy()
   })
 })

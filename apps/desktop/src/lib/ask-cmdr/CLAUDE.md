@@ -10,10 +10,10 @@ Ask Cmdr's frontend: a right-side chat panel over a BYO-key LLM. Backend: `src-t
   `ask-cmdr-sessions.svelte.ts` is a SEPARATE slice for the sessions panel: it calls the trigger, never the reverse.
 - `ask-cmdr-turn-stream.svelte.ts`: the window's one turn-event subscription, fanned out to the stream reducer and the
   sessions slice.
-- `wake-indicator.svelte.ts` + `WakeIndicator.svelte`: the status corner's word on the PROACTIVE half (its own event).
+- `wake-indicator.svelte.ts` + `WakeIndicator.svelte`: the status corner's PROACTIVE word.
 - `ask-cmdr-slot-status.svelte.ts`: provider readiness and the gauge's baseline, before any send.
-- `AskCmdrRail.svelte`: the panel (mounted by `routes/(main)/+page.svelte`), overlaid by `AskCmdrSessions.svelte`, with
-  its `AskCmdr*` parts. `BulkRenameReviewDialog.svelte` is the rename review.
+- `AskCmdrRail.svelte`: the panel (mounted by `routes/(main)/+page.svelte`), overlaid by `AskCmdrSessions.svelte`.
+  `BulkRenameReviewDialog.svelte` is the rename review.
 
 ## Must-knows
 
@@ -43,6 +43,7 @@ Ask Cmdr's frontend: a right-side chat panel over a BYO-key LLM. Backend: `src-t
   locally or disable it.
 - **One review holds a job's BATCHES; the grouping is presentational.** `proposalReady` stages, the turn's end shows. ❌
   Never widen a per-proposal thing (preflight, revise, apply, cancel) to the review: every guardrail stays per row.
+- **A rename check has no time limit**: progress and Stop checking, ❌ never a timeout.
 - **A finished batch leaves an UNDO in the thread.** ❌ Never reverse the ids: `undoOperations` takes them in APPLY
   order and the backend reverses newest-batch-first. ❌ Never report success on dispatch; a partial result is `partial`.
 - **Attachments cross as path + kind ONLY.** A pane drag is a NATIVE webview drag: a DOM `ondrop` never fires.

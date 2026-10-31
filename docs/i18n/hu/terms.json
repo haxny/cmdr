@@ -3065,6 +3065,13 @@
     "confidence": "high",
     "sources": "Double Commander"
   },
+  "name-mask": {
+    "chosen": "névmaszk",
+    "accept": ["maszk"],
+    "forms": "Name mask → Névmaszk; with a name mask → névmaszkkal",
+    "confidence": "high",
+    "sources": "Total Commander (Átnevezésmaszk: fájlnév); Double Commander's Multi-Rename tool (Maszk); the shipped catalog (multiRename.nameMask: Névmaszk)"
+  },
   "rename-counter": {
     "chosen": "számláló",
     "accept": ["számlál", "számol"],

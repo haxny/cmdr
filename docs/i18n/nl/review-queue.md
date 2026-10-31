@@ -229,3 +229,5 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   `hulpmiddelaanroep` felt heavier. Confirm.
 - `zoekopdracht(en)` counts searches the AI ran (the `query` term's word); `Hulpmiddelgroepen` as the Settings label;
   `geen van zijn hulpmiddelen` for "not a tool it has". Confirm they read naturally.
+- `ligt achter een link` for a DFS link (`*.linkTargetUnreachable*`), and `filtermarkering` for the typing badge
+  (`commands.paneQuickFilter.description`) have no pile precedent. Confirm they read naturally.

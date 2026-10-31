@@ -47,7 +47,7 @@ use crate::test_support::TestDir;
 use cmdr_local::LocalPosixVolume;
 use cmdr_operations::VolumeCopyConfig;
 use cmdr_operations::testing::new_operation_state;
-use cmdr_operations::testing::{CollectorEventSink, move_volumes_with_progress};
+use cmdr_operations::testing::{CollectorEventSink, copy_volumes_with_progress, move_volumes_with_progress};
 
 // ── Merges and policies ──────────────────────────────────────────────
 
@@ -135,7 +135,7 @@ async fn sftp_integration_a_link_in_a_folder_moved_off_the_server_leaves_its_tar
         &[("outside/keep.txt", b"outside the selection"), ("tree/a.txt", b"alpha")],
     )
     .await;
-    sftp.create_symlink(&dir.join("tree/ln"), &dir.join("outside"))
+    sftp.create_symlink_to_app_path(&dir.join("tree/ln"), &dir.join("outside"))
         .await
         .expect("the fixture makes links");
     let remote: Arc<dyn Volume> = Arc::new(sftp);
@@ -168,6 +168,64 @@ async fn sftp_integration_a_link_in_a_folder_moved_off_the_server_leaves_its_tar
     clean_deep(remote.as_ref(), &dir).await;
 }
 
+/// A COPY onto a server lands a link as the link, verbatim, nested and selected
+/// alike, an escaping target included: the server ends up holding what the source
+/// holds, and nothing lands where the link points (#624).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
+async fn sftp_integration_a_copy_onto_the_server_lands_links_as_links() {
+    let sftp = connect(SftpFixture::Stock).await;
+    let dir = PathBuf::from(scratch_dir("copy-on-links"));
+    seed(&sftp, &dir, &[("marker.txt", b"m")]).await;
+    let remote: Arc<dyn Volume> = Arc::new(sftp);
+    let source_dir = TestDir::new("sftp-copy-on-links");
+    std::fs::create_dir_all(source_dir.join("tree")).unwrap();
+    std::fs::write(source_dir.join("tree/a.txt"), b"alpha").unwrap();
+    std::os::unix::fs::symlink("../../../outside", source_dir.join("tree/out")).unwrap();
+    std::os::unix::fs::symlink("tree", source_dir.join("alone")).unwrap();
+    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Local",
+        source_dir.to_path_buf(),
+        crate::volume_host::host(),
+    ));
+
+    let result = copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        "copy-on-links",
+        &Arc::new(new_operation_state(app_engine(), Duration::from_millis(200))),
+        local,
+        &[PathBuf::from("/tree"), PathBuf::from("/alone")],
+        Arc::clone(&remote),
+        &dir,
+        &VolumeCopyConfig::default(),
+    )
+    .await;
+
+    assert!(result.is_ok(), "{result:?}");
+    assert_eq!(
+        remote
+            .read_link_target(&dir.join("tree/out"))
+            .await
+            .expect("a link")
+            .as_deref(),
+        Some(Path::new("../../../outside"))
+    );
+    assert_eq!(
+        remote
+            .read_link_target(&dir.join("alone"))
+            .await
+            .expect("a link")
+            .as_deref(),
+        Some(Path::new("tree"))
+    );
+    assert_eq!(
+        try_read(remote.as_ref(), &dir.join("tree/a.txt")).await.as_deref(),
+        Some(&b"alpha"[..])
+    );
+
+    clean_deep(remote.as_ref(), &dir).await;
+}
+
 /// A SELECTED link moved off the server is FOLLOWED, as a copy follows it
 /// (#570, `transfer/DETAILS.md` § "Symlinks are opaque to a move"): the local
 /// side gets what it points at, the link leaves the server, and the folder it
@@ -178,7 +236,7 @@ async fn sftp_integration_a_selected_link_moved_off_the_server_lands_its_target_
     let sftp = connect(SftpFixture::Stock).await;
     let dir = PathBuf::from(scratch_dir("move-off-selected-link"));
     seed(&sftp, &dir, &[("outside/keep.txt", b"outside the selection")]).await;
-    sftp.create_symlink(&dir.join("ln"), &dir.join("outside"))
+    sftp.create_symlink_to_app_path(&dir.join("ln"), &dir.join("outside"))
         .await
         .expect("the fixture makes links");
     let remote: Arc<dyn Volume> = Arc::new(sftp);

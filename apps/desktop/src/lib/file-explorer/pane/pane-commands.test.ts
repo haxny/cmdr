@@ -65,6 +65,8 @@ function buildPaneRef(
     lastSequence: number
     entriesSnapshot: FileEntry[]
     entriesCursorIndex: number
+    cursorIndex: number
+    effectiveTotalCount: number
   }> = {},
 ) {
   const stub = {
@@ -83,6 +85,8 @@ function buildPaneRef(
     },
     getSelectedIndices: () => overrides.selectedIndices ?? [],
     isAllSelected: () => overrides.allSelected ?? false,
+    getCursorIndex: () => overrides.cursorIndex ?? 0,
+    getEffectiveTotalCount: () => overrides.effectiveTotalCount ?? 0,
     isRowStateReady: () => overrides.rowStateReady ?? true,
     getLastSequence: () => overrides.lastSequence ?? 0,
     getEntriesSnapshot: () => Promise.resolve(overrides.entriesSnapshot ?? []),
@@ -426,33 +430,78 @@ describe('routePanelKey type-to-jump intercept mirroring', () => {
   })
 })
 
-describe('getFocusedPaneRenameTarget', () => {
+describe('resolveMultiRenameTarget', () => {
+  const NO_FILE_TOAST = [
+    'No file selected',
+    expect.objectContaining({ level: 'error', timeoutMs: 5000, report: false }),
+  ] as const
+
+  beforeEach(() => {
+    addToastSpy.mockClear()
+  })
+
   it('hands over the selection as backend rows in row order, with the sequence they belong to', () => {
-    const ref = buildPaneRef({ hasParent: true, selectedIndices: [5, 0, 2], lastSequence: 9 })
+    const ref = buildPaneRef({ hasParent: true, selectedIndices: [5, 0, 2], effectiveTotalCount: 10, lastSequence: 9 })
     const cmds = create(buildAccess({ paneRefs: { left: ref } }))
     // Row 0 is `..`: it never renames, and the rest shift down by one.
-    expect(cmds.getFocusedPaneRenameTarget()).toEqual({
+    expect(cmds.resolveMultiRenameTarget()).toEqual({
       listingId: 'listing-1',
       selectedIndices: [1, 4],
       expectedSequence: 9,
-      nothingSelected: false,
     })
   })
 
-  it('names the whole folder when nothing or everything is selected, and says which', () => {
-    const none = create(buildAccess({ paneRefs: { left: buildPaneRef({ lastSequence: 3 }) } }))
-    expect(none.getFocusedPaneRenameTarget()).toMatchObject({ selectedIndices: null, nothingSelected: true })
-    const all = create(
-      buildAccess({ paneRefs: { left: buildPaneRef({ allSelected: true, selectedIndices: [0, 1, 2] }) } }),
-    )
-    expect(all.getFocusedPaneRenameTarget()).toMatchObject({ selectedIndices: null, nothingSelected: false })
+  // #724: like F5, F6, F8, and ⇧F6, an unselected press acts on one file. It once took the
+  // whole folder, and a press meant for one file renamed thousands.
+  it.each([
+    { hasParent: true, cursorIndex: 3, row: 2 },
+    { hasParent: false, cursorIndex: 3, row: 3 },
+    { hasParent: false, cursorIndex: 0, row: 0 },
+  ])('with nothing selected, takes the file under the cursor only: %o', ({ hasParent, cursorIndex, row }) => {
+    const ref = buildPaneRef({ hasParent, cursorIndex, effectiveTotalCount: 10, lastSequence: 3 })
+    const cmds = create(buildAccess({ paneRefs: { left: ref } }))
+    expect(cmds.resolveMultiRenameTarget()).toEqual({
+      listingId: 'listing-1',
+      selectedIndices: [row],
+      expectedSequence: 3,
+    })
+    expect(addToastSpy).not.toHaveBeenCalled()
   })
 
-  it('opens nothing while the selected rows are still settling, or on a pane with no listing', () => {
-    const settling = buildPaneRef({ selectedIndices: [1], rowStateReady: false })
-    expect(create(buildAccess({ paneRefs: { left: settling } })).getFocusedPaneRenameTarget()).toBeNull()
+  it('takes every row when everything is selected, without shipping the indices', () => {
+    const all = buildPaneRef({ allSelected: true, selectedIndices: [0, 1, 2], effectiveTotalCount: 3 })
+    const cmds = create(buildAccess({ paneRefs: { left: all } }))
+    expect(cmds.resolveMultiRenameTarget()).toMatchObject({ selectedIndices: null })
+  })
+
+  it('opens nothing and says so on the .. row, which is all an empty subfolder has', () => {
+    const ref = buildPaneRef({ hasParent: true, cursorIndex: 0, effectiveTotalCount: 1 })
+    const cmds = create(buildAccess({ paneRefs: { left: ref } }))
+    expect(cmds.resolveMultiRenameTarget()).toBeNull()
+    expect(addToastSpy).toHaveBeenCalledExactlyOnceWith(...NO_FILE_TOAST)
+  })
+
+  it('opens nothing and says so in an empty folder with no .. row', () => {
+    const ref = buildPaneRef({ hasParent: false, cursorIndex: 0, effectiveTotalCount: 0 })
+    const cmds = create(buildAccess({ paneRefs: { left: ref } }))
+    expect(cmds.resolveMultiRenameTarget()).toBeNull()
+    expect(addToastSpy).toHaveBeenCalledExactlyOnceWith(...NO_FILE_TOAST)
+  })
+
+  it.each([
+    ['a selection', { selectedIndices: [1] }],
+    ['the cursor row', { cursorIndex: 1 }],
+  ])('opens nothing while %s is still settling, and says why', (_label, rows) => {
+    const settling = buildPaneRef({ ...rows, effectiveTotalCount: 5, rowStateReady: false })
+    const cmds = create(buildAccess({ paneRefs: { left: settling } }))
+    expect(cmds.resolveMultiRenameTarget()).toBeNull()
+    expect(addToastSpy).toHaveBeenCalledExactlyOnceWith(expect.any(String), { level: 'info' })
+  })
+
+  it('opens nothing, silently, on a pane with no real listing', () => {
     const search = buildPaneRef({ volumeId: 'search-results' })
-    expect(create(buildAccess({ paneRefs: { left: search } })).getFocusedPaneRenameTarget()).toBeNull()
+    expect(create(buildAccess({ paneRefs: { left: search } })).resolveMultiRenameTarget()).toBeNull()
+    expect(addToastSpy).not.toHaveBeenCalled()
   })
 })
 

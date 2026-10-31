@@ -71,6 +71,8 @@ export interface ExplorerAPI {
   copyPathBetweenPanes: (args: CopyPathBetweenPanesArgs) => void
   toggleVolumeChooser: (pane: 'left' | 'right') => void
   openVolumeChooser: () => void
+  /** Open the focused pane's filter badge or switch it between Filter and Jump (⌃S), the `pane.quickFilter` command. */
+  cycleQuickFilter: () => void
   /** Open/toggle the focused pane's favorites menu (⌃D), the `favorites.open` command. */
   toggleFavoritesMenu: () => void
   closeHeaderMenus: () => void
@@ -368,7 +370,7 @@ export interface ExplorerAPI {
   /** Alerts and returns `true` when the focused pane can't take a Multi-Rename (an archive, the `.git` portal, a read-only volume). */
   refuseMultiRename: () => boolean
   /** The Multi-Rename Tool's target: the focused pane's listing, selected rows, and their sequence. */
-  getFocusedPaneRenameTarget: () => MultiRenameSelection | null
+  resolveMultiRenameTarget: () => MultiRenameSelection | null
   /**
    * Returns a snapshot of the focused pane's entries + cursor index for the Selection
    * dialog. Captured ONCE at dialog open; the dialog does not refresh on mid-dialog

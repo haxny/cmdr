@@ -20,7 +20,7 @@ import { createQueryFilterState, type QueryFilterState } from './query-filter-st
 import { createRecentItemsState } from './recent-items/recent-items-state.svelte'
 import type { QueryDialogConfig } from './query-dialog-config'
 import type { HistoryEntry, SearchResultEntry } from '#lib/tauri-commands/index.js'
-import { axe, expectNoA11yViolations } from '#lib/test-a11y.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
@@ -365,15 +365,9 @@ describe('SearchResults a11y', () => {
     await expectNoA11yViolations(target)
   })
 
-  // Populated rows are `role="option"` AND contain interactive children (the
-  // path-pill `<button>`s). Those are mouse-only and intentionally outside the
-  // keyboard Tab order (`tabindex="-1"`); the row itself is the keyboard target.
-  // Axe's `nested-interactive` rule flags the structural nesting anyway. We
-  // disable that one rule for this state and let every other rule run, so any
-  // regression in label, name, or contrast semantics still trips this test.
-  // See `lib/query-ui/CLAUDE.md` § "Path pills with overflow collapse" for
-  // the design rationale.
-  it('populated results has no a11y violations (nested-interactive intentionally disabled)', async () => {
+  // Populated rows are `role="option"`, whose children are presentational, so the
+  // path pills inside are `aria-hidden` spans with no focusable control (`PathPills.svelte`).
+  it('populated results has no a11y violations', async () => {
     const results: SearchResultEntry[] = [
       {
         name: 'photo1.jpg',
@@ -409,20 +403,7 @@ describe('SearchResults a11y', () => {
       },
     })
     await tick()
-    const out = await axe.run(target, {
-      runOnly: {
-        type: 'tag',
-        values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'],
-      },
-      rules: {
-        'color-contrast': { enabled: false },
-        region: { enabled: false },
-        // Intentional: mouse-only inner buttons are tabindex="-1"; the row
-        // itself is the keyboard target. See block comment above.
-        'nested-interactive': { enabled: false },
-      },
-    })
-    expect(out.violations).toEqual([])
+    await expectNoA11yViolations(target)
   })
 })
 
@@ -432,26 +413,6 @@ describe('SearchResults a11y', () => {
  * live region that had to move off `.status-bar` onto an inner span.
  */
 describe('SearchResults a11y: a live run', () => {
-  /**
-   * The populated-results audit's rule set: `nested-interactive` is off because the
-   * path pills inside a row are mouse-only `tabindex="-1"` children of the row, which
-   * is itself the keyboard target (see the block comment above).
-   */
-  async function auditWithRows(target: HTMLElement): Promise<void> {
-    const out = await axe.run(target, {
-      runOnly: {
-        type: 'tag',
-        values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'],
-      },
-      rules: {
-        'color-contrast': { enabled: false },
-        region: { enabled: false },
-        'nested-interactive': { enabled: false },
-      },
-    })
-    expect(out.violations).toEqual([])
-  }
-
   const sampleRows: SearchResultEntry[] = [
     {
       name: 'photo1.jpg',
@@ -503,7 +464,7 @@ describe('SearchResults a11y: a live run', () => {
       },
     })
     await tick()
-    await auditWithRows(target)
+    await expectNoA11yViolations(target)
   })
 
   it('a run that stopped short has no a11y violations', async () => {
@@ -521,6 +482,6 @@ describe('SearchResults a11y: a live run', () => {
       },
     })
     await tick()
-    await auditWithRows(target)
+    await expectNoA11yViolations(target)
   })
 })

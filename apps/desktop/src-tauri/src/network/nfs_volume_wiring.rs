@@ -257,7 +257,7 @@ fn server_name_for(typed: &str, place: &KnownNfsPlace) -> String {
 ///
 /// ❗ The saved entry is the durable copy and a CONNECTED place holds a live one,
 /// so an edit moves both. A changed name, start folder, or switch rides the live
-/// connection (`live_server_edit.rs`), ❌ no redial. ❗ A changed uid or gid is a
+/// connection (`live_server_edit.rs`), ❌ no redial. ❗ A changed uid or group is a
 /// NEW connection: every call's `AUTH_SYS` credential carries them, so the new
 /// identity dials its own, confirms the start folder through it, and replaces
 /// the live one through `install_retiring_incumbent` (transfers on the old one

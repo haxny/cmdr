@@ -14,7 +14,12 @@
     import { claimKey } from '#lib/shortcuts/claim-key.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { formatInteger } from '#lib/intl/number-format.js'
-    import { mediaIndexDropThumbnailTokens, mediaIndexThumbnailToken, onDirectoryDiff } from '#lib/tauri-commands/index.js'
+    import {
+        mediaIndexDropThumbnailTokens,
+        mediaIndexThumbnailToken,
+        onBulkRenameCheckProgress,
+        onDirectoryDiff,
+    } from '#lib/tauri-commands/index.js'
     import { onDestroy, onMount, untrack } from 'svelte'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { useShortenMiddle } from '#lib/utils/shorten-middle-action.js'
@@ -26,12 +31,15 @@
     import { parentOf, toCanonical } from '#lib/path/canonical.js'
     import { coverageStrength } from './rename-evidence-coverage'
     import { nameProvenance } from './rename-name-provenance'
+    import BulkRenameReviewStatus from './BulkRenameReviewStatus.svelte'
+    import { uncheckedRowCount } from './rename-review-status'
     import {
         applyRenameReview,
         allowAllRenameRows,
         askCmdrState,
         cancelRenameReview,
         denyAllRenameRows,
+        renameCheckProgressed,
         renameReviewListingChanged,
         reviseRenameRow,
         setRenameRowAllowed,
@@ -56,6 +64,8 @@
     const preflighting = $derived(proposals.some((proposal) => proposal.preflighting))
     const allExpired = $derived(proposals.length > 0 && proposals.every((proposal) => proposal.expired))
     const renameLabel = $derived(tString('askCmdr.renameReview.rename', { count: allowedCount }))
+    /** Rows a check never finished: they stay on show, and Rename waits for Check again. */
+    const uncheckedCount = $derived(uncheckedRowCount(proposals))
 
     /** The folder a batch renames inside. A rename group binds one parent, so the first row
      *  answers for the batch. */
@@ -345,15 +355,20 @@
     }
 
     onMount(() => {
-        const listener = onDirectoryDiff((diff) => {
-            for (const batch of diff.batches) void renameReviewListingChanged(batch.changes)
-        })
+        const listeners = [
+            onDirectoryDiff((diff) => {
+                for (const batch of diff.batches) void renameReviewListingChanged(batch.changes)
+            }),
+            onBulkRenameCheckProgress(renameCheckProgressed),
+        ]
         return () => {
-            void listener
-                .then((unlisten) => {
-                    unlisten()
-                })
-                .catch(() => {})
+            for (const listener of listeners) {
+                void listener
+                    .then((unlisten) => {
+                        unlisten()
+                    })
+                    .catch(() => {})
+            }
         }
     })
 </script>
@@ -622,6 +637,7 @@
                         {tString('askCmdr.renameReview.status', { allowed: allowedCount, blocked: blockedCount })}
                     </span>
                 </div>
+                <BulkRenameReviewStatus {proposals} notice={review.notice} />
                 <div class="rows" aria-busy={preflighting}>
                     <ColumnList
                         bind:this={list}
@@ -645,7 +661,7 @@
             <Button
                 variant="primary"
                 onclick={applyRenameReview}
-                disabled={preflighting || allowedCount === 0}
+                disabled={preflighting || uncheckedCount > 0 || allowedCount === 0}
                 aria-label={renameLabel}>{renameLabel}</Button
             >
         {/snippet}

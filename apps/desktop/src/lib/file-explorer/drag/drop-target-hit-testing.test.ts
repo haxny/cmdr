@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { resolveDropTarget } from './drop-target-hit-testing'
 
-// jsdom doesn't implement elementFromPoint; stub it so we can mock per-test
+// jsdom doesn't implement elementsFromPoint; stub it so we can mock per-test
 function mockElementFromPoint(el: Element | null) {
-  document.elementFromPoint = vi.fn().mockReturnValue(el)
+  document.elementsFromPoint = vi.fn().mockReturnValue(el ? [el] : [])
 }
 
 function getElement(id: string): HTMLElement {
@@ -151,7 +151,18 @@ describe('resolveDropTarget', () => {
     expect(result).toBeNull()
   })
 
-  it('returns null when elementFromPoint returns null', () => {
+  it('sees through the pane divider’s grab areas to the row beneath', () => {
+    const resizer = document.createElement('div')
+    resizer.className = 'pane-resizer'
+    document.body.appendChild(resizer)
+    document.elementsFromPoint = vi.fn().mockReturnValue([resizer, getElement('right-dir')])
+
+    const result = resolveDropTarget(0, 0, leftPane, rightPane)
+
+    expect(result).toMatchObject({ type: 'folder', paneId: 'right' })
+  })
+
+  it('returns null when nothing is under the point', () => {
     mockElementFromPoint(null)
 
     const result = resolveDropTarget(0, 0, leftPane, rightPane)

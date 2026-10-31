@@ -13,24 +13,49 @@
  * **Grouping is presentational, and every guardrail stays per row**: the evidence check, the
  * pane-scoped source validation, the fingerprinted preflight, and the fingerprint recheck at
  * write time all still run per row, inside the proposal that row belongs to.
+ *
+ * **A check has no time limit.** It reports progress and the user can stop it; a check that didn't
+ * finish marks its batch (`checkFailed`), and only Check again restarts it.
  */
 
 import { getAppLogger } from '#lib/logging/logger.js'
+import { LogOnceGate } from '#lib/logging/log-once.js'
+import { failureOf } from '#lib/ipc/typed-failure.js'
 import { SvelteSet } from 'svelte/reactivity'
 import type { RailMessage } from './ask-cmdr-messages'
-import { askCmdrState, type BulkRenameReviewProposal, type BulkRenameReviewRow } from './ask-cmdr-state.svelte'
+import {
+  askCmdrState,
+  type BulkRenameReview,
+  type BulkRenameReviewProposal,
+  type BulkRenameReviewRow,
+} from './ask-cmdr-state.svelte'
+import { isUnchecked } from './rename-review-status'
 import { undoStateFromReport } from './rename-undo'
 import { isOperationLogRecording } from '#lib/operation-log/recording.js'
 import {
   applyBulkRename,
+  BulkRenameFailure,
+  cancelBulkRenameCheck,
   cancelBulkRenameProposal,
   preflightBulkRename,
   reviseBulkRenameRow,
   undoOperations,
   type AskCmdrStreamEvent,
+  type BulkRenameCheckProgress,
+  type BulkRenameError,
 } from '#lib/tauri-commands/index.js'
 
 const log = getAppLogger('askCmdr')
+
+/** A check that can't finish fails again every time it's restarted: logged once until one works. */
+const checkFailures = new LogOnceGate()
+
+/** The review Apply is working through. Checks stay out of its way meanwhile: a recheck would
+ *  replace the one Apply is waiting on, and Apply's outcome rechecks whatever it leaves behind. */
+let applyingReview: BulkRenameReview | null = null
+/** Stop checking was pressed during this Apply. Covers the gap between two batches, when no check
+ *  is running for the backend to stop. */
+let applyStopRequested = false
 
 type ProposalSnapshot = Extract<AskCmdrStreamEvent, { type: 'proposalReady' }>['proposal']
 
@@ -72,13 +97,15 @@ export function openStagedRenameReview(): void {
     expired: false,
     revision: proposal.revision,
     changed: false,
+    checkFailed: false,
+    checkProgress: null,
     requestVersion: 0,
   }))
   const review = askCmdrState.renameReview
   // A review already on screen GROWS rather than being replaced: replacing it cancelled a plan
   // the user was reading, and asked them the same question again.
   if (review) review.proposals.push(...proposals)
-  else askCmdrState.renameReview = { proposals }
+  else askCmdrState.renameReview = { proposals, notice: null }
   for (const proposal of proposals) void refreshRenamePreflight(proposal.proposalId)
 }
 
@@ -109,7 +136,7 @@ export function setRenameRowAllowed(proposalId: string, rowId: string, allowed: 
   const row = liveRenameRow(proposalId, rowId)
   if (!row || (row.blockedReason && allowed)) return
   row.allowed = allowed
-  void refreshRenamePreflight(proposalId)
+  void recheckUnlessStopped(proposalId)
 }
 
 /**
@@ -137,11 +164,25 @@ export async function reviseRenameRow(proposalId: string, rowId: string, destina
     current.evidence = revised.evidence
     current.coverage = revised.coverage
     current.nameRejected = false
-    await refreshRenamePreflight(proposalId)
+    await recheckUnlessStopped(proposalId)
   } catch (e) {
     log.warn('revising a proposed name failed: {error}', { error: e })
-    const current = liveRenameRow(proposalId, rowId)
-    if (current) current.nameRejected = true
+    noteReviseRefusal(proposalId, rowId, bulkRenameFailureOf(e))
+  }
+}
+
+/** A refused name is the row's to say; a review that's gone or a store that didn't answer isn't
+ *  about the name, so "try a different one" would send the user the wrong way. */
+function noteReviseRefusal(proposalId: string, rowId: string, failure: BulkRenameError): void {
+  const proposal = liveProposal(proposalId)
+  if (!proposal) return
+  if (failure.type === 'rowRefused') {
+    const row = proposal.rows.find((candidate) => candidate.rowId === rowId)
+    if (row) row.nameRejected = true
+  } else if (failure.type === 'reviewExpired') {
+    proposal.expired = true
+  } else if (askCmdrState.renameReview) {
+    askCmdrState.renameReview.notice = { kind: 'nameNotSaved' }
   }
 }
 
@@ -151,7 +192,7 @@ export function allowAllRenameRows(): void {
     for (const row of proposal.rows) {
       if (!row.blockedReason) row.allowed = true
     }
-    void refreshRenamePreflight(proposal.proposalId)
+    void recheckUnlessStopped(proposal.proposalId)
   }
 }
 
@@ -159,7 +200,7 @@ export function allowAllRenameRows(): void {
 export function denyAllRenameRows(): void {
   for (const proposal of askCmdrState.renameReview?.proposals ?? []) {
     for (const row of proposal.rows) row.allowed = false
-    void refreshRenamePreflight(proposal.proposalId)
+    void recheckUnlessStopped(proposal.proposalId)
   }
 }
 
@@ -174,7 +215,33 @@ export async function renameReviewListingChanged(
   const affected = (askCmdrState.renameReview?.proposals ?? []).filter((proposal) =>
     proposal.rows.some((row) => changed.has(row.sourceName) || changed.has(row.destinationName)),
   )
-  await Promise.all(affected.map((proposal) => refreshRenamePreflight(proposal.proposalId)))
+  await Promise.all(affected.map((proposal) => recheckUnlessStopped(proposal.proposalId)))
+}
+
+/** Restart every check that didn't finish: the Check again button. */
+export function checkRenameReviewAgain(): void {
+  for (const proposal of askCmdrState.renameReview?.proposals ?? []) {
+    if (isUnchecked(proposal)) void refreshRenamePreflight(proposal.proposalId)
+  }
+}
+
+/** Stop every running check, keeping the review open: the Stop checking button. */
+export function stopRenameChecks(): void {
+  const review = askCmdrState.renameReview
+  if (!review) return
+  if (applyingReview === review) applyStopRequested = true
+  for (const proposal of review.proposals) {
+    if (!proposal.preflighting) continue
+    cancelBulkRenameCheck(proposal.proposalId).catch((e: unknown) => {
+      log.warn('stopping the rename check failed: {error}', { error: e })
+    })
+  }
+}
+
+/** The backend's word on a running check. A late one for a check that already ended is dropped. */
+export function renameCheckProgressed(progress: BulkRenameCheckProgress): void {
+  const proposal = liveProposal(progress.proposalId)
+  if (proposal?.preflighting) proposal.checkProgress = { checked: progress.checked, total: progress.total }
 }
 
 /** The destination names in this review the user did NOT take: denied rows, and (when the whole
@@ -208,7 +275,7 @@ export function cancelRenameReview(): void {
  */
 export async function applyRenameReview(): Promise<void> {
   const review = askCmdrState.renameReview
-  if (!review || review.proposals.some((proposal) => proposal.preflighting)) return
+  if (!review || review.proposals.some((proposal) => proposal.preflighting || isUnchecked(proposal))) return
   const pending = review.proposals
     .filter((proposal) => !proposal.expired && !proposal.changed)
     .map((proposal) => ({
@@ -221,9 +288,19 @@ export async function applyRenameReview(): Promise<void> {
   // Read the decisions before the first batch leaves the review, so a run that stops partway
   // still reports what the user turned down in the batches that did start.
   const decisions = allRenameRows().map((row) => ({ allowed: row.allowed, destinationName: row.destinationName }))
+  review.notice = null
   for (const proposal of review.proposals) proposal.preflighting = true
+  applyingReview = review
+  applyStopRequested = false
   let applied = 0
+  let stopped = false
   for (const batch of pending) {
+    // Closing the review or pressing Stop checking between two batches: there's no check running
+    // for the backend to stop, so this is what keeps the next batch from starting.
+    if (applyShouldStop(review)) {
+      stopped = true
+      break
+    }
     try {
       const started = await applyBulkRename(batch.proposalId, batch.revision, batch.allowedRowIds)
       applied += 1
@@ -231,13 +308,13 @@ export async function applyRenameReview(): Promise<void> {
       noteRenameApplied(started.operationId, batch.allowedRowIds.length - swapsSkipped, swapsSkipped)
       dropAppliedProposal(batch.proposalId)
     } catch (e) {
-      // The agent amended this batch since the user read it: nothing ran. Say so on the batch,
-      // keep its rows where they are, and stop, like any other refusal.
-      if (isListChanged(e)) markChanged(batch.proposalId)
-      else log.warn('starting the rename plan failed: {error}', { error: e })
+      const failure = bulkRenameFailureOf(e)
+      stopped = failure.type === 'cancelled'
+      noteApplyRefusal(batch.proposalId, failure)
       break
     }
   }
+  applyingReview = null
   // Applying a subset is a decision about the rest: carry those names into the next message.
   if (applied > 0) rememberDeniedNames(decisions)
   if (applied === pending.length) {
@@ -247,10 +324,55 @@ export async function applyRenameReview(): Promise<void> {
     return
   }
   // A batch refused to start, so the rest of the job is still the user's to answer and goes
-  // back to a checked state.
+  // back to a checked state. Unless the user stopped it: then they've asked for less checking.
   for (const proposal of askCmdrState.renameReview?.proposals ?? []) {
-    proposal.preflighting = false
-    void refreshRenamePreflight(proposal.proposalId)
+    finishCheck(proposal)
+    if (!stopped) void refreshRenamePreflight(proposal.proposalId)
+  }
+}
+
+/** Whether Apply's next batch should stay unstarted: Stop checking was pressed, or the review it
+ *  belongs to has closed. */
+function applyShouldStop(review: BulkRenameReview): boolean {
+  return applyStopRequested || askCmdrState.renameReview !== review
+}
+
+/** Mark what an Apply refusal means on the batch it hit, or above the list when no mark says it.
+ *  Exhaustive, so a new refusal is a compile error until it's decided. */
+function noteApplyRefusal(proposalId: string, failure: BulkRenameError): void {
+  const review = askCmdrState.renameReview
+  const proposal = liveProposal(proposalId)
+  if (!review || !proposal) return
+  if (failure.type !== 'listChanged' && failure.type !== 'cancelled') {
+    log.warn('starting the rename plan failed: {error}', { error: failure.type })
+  }
+  switch (failure.type) {
+    case 'listChanged':
+      // The agent amended this batch since the user read it: nothing ran, and its rows stay put.
+      proposal.changed = true
+      return
+    case 'reviewExpired':
+      proposal.expired = true
+      return
+    case 'cancelled':
+      proposal.checkFailed = true
+      return
+    case 'needsAnotherLook':
+      review.notice = { kind: 'needsAnotherLook' }
+      return
+    case 'nothingToApply':
+      review.notice = { kind: 'nothingToApply' }
+      return
+    case 'couldntStart':
+      review.notice =
+        failure.reason.type === 'nothingToRename'
+          ? { kind: 'nothingToApply' }
+          : { kind: 'couldntStart', reason: failure.reason }
+      return
+    case 'rowRefused':
+    case 'unexpected':
+      review.notice = { kind: 'couldntStart', reason: null }
+      return
   }
 }
 
@@ -368,23 +490,34 @@ export function discardRenameReview(): void {
   closeRenameReview()
 }
 
-/** An apply the backend refused because the plan's revision moved: the typed `BulkRenameError`
- *  variant, carried as a field on the thrown error (`throwIpcError`). */
-function isListChanged(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'type' in error && error.type === 'listChanged'
+/** The typed refusal behind a caught value. Anything else (the IPC call itself breaking) has no
+ *  variant of its own, and reads as what it is: unexpected. */
+function bulkRenameFailureOf(error: unknown): BulkRenameError {
+  return failureOf(BulkRenameFailure, error) ?? { type: 'unexpected', detail: String(error) }
 }
 
-function markChanged(proposalId: string): void {
-  const proposal = liveProposal(proposalId)
-  if (proposal) proposal.changed = true
+/** A batch's check is over, however it ended. The progress readout goes when the last one ends. */
+function finishCheck(proposal: BulkRenameReviewProposal): void {
+  proposal.preflighting = false
+  if (proposal.checkProgress) proposal.checkProgress.checked = proposal.checkProgress.total
+  const proposals = askCmdrState.renameReview?.proposals ?? []
+  if (proposals.some((candidate) => candidate.preflighting)) return
+  for (const candidate of proposals) candidate.checkProgress = null
+}
+
+/** Recheck after a change, unless this batch's check didn't finish. Restarting that one is the
+ *  user's call: on a slow volume, every toggle would otherwise restart the same long check. */
+async function recheckUnlessStopped(proposalId: string): Promise<void> {
+  if (!liveProposal(proposalId)?.checkFailed) await refreshRenamePreflight(proposalId)
 }
 
 async function refreshRenamePreflight(proposalId: string): Promise<void> {
   const proposal = liveProposal(proposalId)
-  if (!proposal) return
+  if (!proposal || applyingReview === askCmdrState.renameReview) return
   const version = proposal.requestVersion + 1
   proposal.requestVersion = version
   proposal.preflighting = true
+  proposal.checkFailed = false
   // Validate every displayed row, including denied and previously blocked rows.
   // Otherwise a target that disappears after blocking its row could never make
   // that row reviewable again. Apply still submits only the user's allowed ids.
@@ -393,23 +526,37 @@ async function refreshRenamePreflight(proposalId: string): Promise<void> {
     const result = await preflightBulkRename(proposalId, proposal.revision, allowedRowIds)
     const current = liveProposal(proposalId)
     if (!current || current.requestVersion !== version) return
-    current.preflighting = false
-    current.expired = result.status === 'expired'
-    if (current.expired) return
-    if (result.status === 'listChanged') {
-      current.changed = true
-      return
-    }
-    for (const row of current.rows) {
-      const backend = result.rows.find((candidate) => candidate.rowId === row.rowId)
-      row.blockedReason = backend?.status === 'blocked' ? backend.reason : null
-      if (backend) row.warnings = backend.warnings
-      if (row.blockedReason) row.allowed = false
-    }
+    checkFailures.clear()
+    finishCheck(current)
+    takeCheckAnswer(current, result)
   } catch (e) {
     const current = liveProposal(proposalId)
     if (!current || current.requestVersion !== version) return
-    current.preflighting = false
-    log.warn('checking the rename plan failed: {error}', { error: e })
+    finishCheck(current)
+    current.checkFailed = true
+    const failure = bulkRenameFailureOf(e)
+    // A stop is the user's own choice, so there's nothing to report.
+    if (failure.type !== 'cancelled' && checkFailures.shouldLog(failure.type)) {
+      log.warn('checking the rename plan failed: {error}', { error: failure.type })
+    }
+  }
+}
+
+/** Write a finished check's answer onto its batch. */
+function takeCheckAnswer(
+  proposal: BulkRenameReviewProposal,
+  result: Awaited<ReturnType<typeof preflightBulkRename>>,
+): void {
+  proposal.expired = result.status === 'expired'
+  if (proposal.expired) return
+  if (result.status === 'listChanged') {
+    proposal.changed = true
+    return
+  }
+  for (const row of proposal.rows) {
+    const backend = result.rows.find((candidate) => candidate.rowId === row.rowId)
+    row.blockedReason = backend?.status === 'blocked' ? backend.reason : null
+    if (backend) row.warnings = backend.warnings
+    if (row.blockedReason) row.allowed = false
   }
 }

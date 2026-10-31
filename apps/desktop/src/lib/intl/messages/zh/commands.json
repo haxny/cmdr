@@ -488,13 +488,21 @@
   "@commands.fileRename.label": {
     "sourceHash": "3064d79"
   },
+  "commands.paneQuickFilter.label": "快速筛选",
+  "@commands.paneQuickFilter.label": {
+    "sourceHash": "e731882"
+  },
+  "commands.paneQuickFilter.description": "打开筛选标记，沿用当前输入的内容。再按一次，在“筛选”和“跳转”之间切换",
+  "@commands.paneQuickFilter.description": {
+    "sourceHash": "2778526"
+  },
   "commands.fileMultiRename.label": "批量重命名",
   "@commands.fileMultiRename.label": {
     "sourceHash": "5ceb1a2"
   },
-  "commands.fileMultiRename.description": "用名称规则、计数器和查找替换，重命名选中的文件（或整个文件夹）",
+  "commands.fileMultiRename.description": "用名称规则、计数器和查找替换，重命名选中的文件（或光标所在的文件）",
   "@commands.fileMultiRename.description": {
-    "sourceHash": "d294fb1"
+    "sourceHash": "d3a52f1"
   },
   "commands.queueCursorUp.label": "上一项操作",
   "@commands.queueCursorUp.label": {

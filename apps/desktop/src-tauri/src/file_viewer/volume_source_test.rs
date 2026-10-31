@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 use cmdr_fs::entry::FileEntry;
 
 use super::source::ByteSource;
-use super::volume_source::{BLOCK_BYTES, VolumeSource};
+use super::volume_source::{BLOCK_BYTES, PositionedRead, VolumeSource};
 use super::{SeekTarget, ViewerError, session};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{ListingProgress, Volume, VolumeError, VolumeRandomReader};
@@ -258,7 +258,7 @@ fn a_scrollbar_drag_on_a_slow_share_answers_every_fetch_inside_the_deadline() {
 #[test]
 fn a_failed_read_reopens_the_handle_once() {
     let (_path, share, state) = a_share("viewer-vsrc-reopen", 4 * BLOCK_BYTES, false);
-    let (source, _) = VolumeSource::open(share.clone(), &share.file).unwrap();
+    let (source, _) = VolumeSource::open(share.clone(), &share.file, PositionedRead::Held).unwrap();
     state.fail_next_read.store(true, Ordering::SeqCst);
 
     let mut buf = vec![0u8; 32];
@@ -273,7 +273,7 @@ fn a_failed_read_reopens_the_handle_once() {
 #[test]
 fn an_append_is_read_through_a_fresh_handle() {
     let (_path, share, state) = a_share("viewer-vsrc-grow", 100 * ROW_BYTES, false);
-    let (source, size) = VolumeSource::open(share.clone(), &share.file).unwrap();
+    let (source, size) = VolumeSource::open(share.clone(), &share.file, PositionedRead::Held).unwrap();
     assert_eq!(size, 100 * ROW_BYTES);
     state.size.store(200 * ROW_BYTES, Ordering::SeqCst);
 
@@ -288,7 +288,7 @@ fn an_append_is_read_through_a_fresh_handle() {
 #[test]
 fn rereading_nearby_bytes_costs_no_round_trip() {
     let (_path, share, state) = a_share("viewer-vsrc-cache", 64 * BLOCK_BYTES, false);
-    let (source, _) = VolumeSource::open(share.clone(), &share.file).unwrap();
+    let (source, _) = VolumeSource::open(share.clone(), &share.file, PositionedRead::Held).unwrap();
 
     let mut buf = vec![0u8; 64 * 1024];
     source.read_at(10 * BLOCK_BYTES + 100, &mut buf).unwrap();

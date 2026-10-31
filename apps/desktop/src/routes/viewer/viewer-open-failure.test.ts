@@ -29,6 +29,7 @@ describe('handleOpenFailure log level', () => {
     { kind: 'stoppedResponding' },
     { kind: 'notFound', path: '/gone.txt' },
     { kind: 'isDirectory' },
+    { kind: 'linkTargetUnreachable' },
     { kind: 'tooLargeToPreview', size: 2_000_000_000, cap: 1_000_000_000 },
     { kind: 'archive', failure: 'unreadable', message: 'encrypted entry' },
     { kind: 'cancelled' },

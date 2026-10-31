@@ -520,6 +520,18 @@
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
+  "servers.sheet.nfsOtherGids": "IDs de outros grupos",
+  "@servers.sheet.nfsOtherGids": {
+    "sourceHash": "f9276b8"
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "Use números de ID de grupo separados por vírgula, como 100, 1001.",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "sourceHash": "a67ce61"
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "O NFS envia até 16 outros grupos, e esta lista tem {count}.",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "sourceHash": "dc277f3"
+  },
   "servers.sheet.nfsIdentityHelp": "É por esses números que o servidor decide o que você pode abrir. O NFS não pede senha.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"

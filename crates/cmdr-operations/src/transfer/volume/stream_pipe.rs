@@ -158,7 +158,7 @@ pub(super) async fn stream_pipe_file(
     // optimization, so anything short of a clean success falls through to the
     // streaming runner below rather than failing the file, and a landing the
     // transport cut off takes the runner's landing wait like a streamed one.
-    let mut fault = match try_server_side_copy(
+    let fault = match try_server_side_copy(
         source_volume,
         source_path,
         dest_volume,
@@ -193,6 +193,7 @@ pub(super) async fn stream_pipe_file(
         source_volume,
         source_path,
         source_facts,
+        link_target: None,
         dest_volume,
         dest_path,
         announced_dest,
@@ -205,19 +206,69 @@ pub(super) async fn stream_pipe_file(
         unanswered_create: None,
         landing_to_resume: None,
     };
-    loop {
-        let failed = match fault.take() {
-            Some(fault) => fault,
-            None => match run.checkpoints().await {
-                Ok(bytes) => return Ok(bytes),
-                Err(Stop::RunAgain) => continue,
-                Err(Stop::Over(error)) => return Err(error),
-                Err(Stop::Faulted(fault)) => *fault,
-            },
-        };
-        if let ControlFlow::Break(result) = run.on_fault(failed).await {
-            return result;
+    run.run_to_the_end(fault).await
+}
+
+/// Lands a symlink at `dest_path`, holding `target` verbatim: the target is
+/// never followed, resolved, or checked, wherever it points.
+/// `DETAILS.md` § "A copy carries a link as the link".
+///
+/// One file's run with its open and its write swapped for making the link: it
+/// stages, lands, retries, and waits out an outage exactly as a file does, so a
+/// link can replace nothing a file couldn't.
+///
+/// A destination that turns out not to hold this link (`NotSupported`: a target
+/// the protocol can't carry) answers `NoContent`, the typed "one skipped item"
+/// the callers already count (`refused_item.rs::has_no_content`).
+pub(super) async fn land_link(
+    source_volume: &Arc<dyn Volume>,
+    source_path: &Path,
+    target: &Path,
+    dest_volume: &Arc<dyn Volume>,
+    dest_path: &Path,
+    state: &Arc<WriteOperationState>,
+    staging: WriteStaging,
+) -> Result<(), PathedVolumeError> {
+    if state.work_stopped() {
+        return Err(volume_outage::cancelled()).at_source(source_path);
+    }
+    let no_progress = |_: u64, _: u64| ControlFlow::Continue(());
+    let mut run = FileRun {
+        source_volume,
+        source_path,
+        source_facts: SourceFileFacts::default(),
+        link_target: Some(target),
+        dest_volume,
+        dest_path,
+        announced_dest: state.scope().host().announce_on(&**dest_volume, dest_path),
+        state,
+        on_file_progress: &no_progress,
+        staging,
+        writing_at_the_final_name: false,
+        attempt: 1,
+        outages: 0,
+        unanswered_create: None,
+        landing_to_resume: None,
+    };
+    match run.run_to_the_end(None).await {
+        Ok(_) => Ok(()),
+        Err(PathedVolumeError {
+            error: VolumeError::NotSupported,
+            role: PathRole::Destination,
+            ..
+        }) => Err(VolumeError::NoContent(source_path.display().to_string())).at_source(source_path),
+        // A landing the transport cut off that did reach the server: the run
+        // came back to its own link at the name.
+        Err(PathedVolumeError {
+            error: VolumeError::AlreadyExists(_),
+            role: PathRole::Destination,
+            ..
+        }) if (run.attempt > 1 || run.outages > 0)
+            && dest_volume.read_link_target(dest_path).await.ok().flatten().as_deref() == Some(target) =>
+        {
+            Ok(())
         }
+        Err(error) => Err(error),
     }
 }
 
@@ -227,6 +278,9 @@ struct FileRun<'a> {
     source_volume: &'a Arc<dyn Volume>,
     source_path: &'a Path,
     source_facts: SourceFileFacts,
+    /// `Some` when this run lands a symlink holding this target: no source to
+    /// open, no bytes to stream.
+    link_target: Option<&'a Path>,
     dest_volume: &'a Arc<dyn Volume>,
     dest_path: &'a Path,
     announced_dest: Announced<'a>,
@@ -336,6 +390,25 @@ impl Fault {
 }
 
 impl FileRun<'_> {
+    /// Runs the checkpoints until the file is landed or over, starting from
+    /// `fault` when a step before the runner already failed.
+    async fn run_to_the_end(&mut self, mut fault: Option<Fault>) -> Result<PipedFile, PathedVolumeError> {
+        loop {
+            let failed = match fault.take() {
+                Some(fault) => fault,
+                None => match self.checkpoints().await {
+                    Ok(bytes) => return Ok(bytes),
+                    Err(Stop::RunAgain) => continue,
+                    Err(Stop::Over(error)) => return Err(error),
+                    Err(Stop::Faulted(fault)) => *fault,
+                },
+            };
+            if let ControlFlow::Break(result) = self.on_fault(failed).await {
+                return result;
+            }
+        }
+    }
+
     /// One pass over the checkpoints, in order. `Ok` is the landed file.
     async fn checkpoints(&mut self) -> Result<PipedFile, Stop> {
         if let Some(bytes) = self.settle_unanswered_create().await? {
@@ -344,8 +417,13 @@ impl FileRun<'_> {
         if let Some(piped) = self.resume_landing().await? {
             return Ok(piped);
         }
-        let opened = self.open_source().await?;
-        let written = self.write(opened).await?;
+        let written = match self.link_target {
+            Some(target) => self.write_link(target).await?,
+            None => {
+                let opened = self.open_source().await?;
+                self.write(opened).await?
+            }
+        };
         self.land(written).await
     }
 

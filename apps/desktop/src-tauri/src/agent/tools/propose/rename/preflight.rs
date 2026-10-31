@@ -10,13 +10,19 @@
 //! `excluded` rows and the spine writes a server-owned acceptance record over what's left.
 //! The fingerprints that pair with it stay in this process ([`AcceptedRenamePreflights`]), so
 //! a restart forces a fresh preflight rather than reviving an approval given before it.
+//!
+//! A check has no time limit: it reports its count and stops when told ([`super::check`]).
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
+use cmdr_fs::deadline::BlockingBudget;
 use serde::Serialize;
 use tauri::{AppHandle, Manager, Runtime};
+use tauri_specta::Event;
 
+use super::check::{BulkRenameCheckProgress, CheckTally, RenameChecks, wait_for_scan};
 use super::store::{
     AcceptedPreflight, AcceptedRenamePreflights, RenameProposal, RenameProposalRow, RenameSourceFingerprint,
 };
@@ -79,6 +85,20 @@ pub enum BulkRenameWarning {
     Cycle,
 }
 
+/// Why a check ended without an answer about the rows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PreflightStopped {
+    /// The user stopped it, the review closed, or a newer check for this plan replaced it.
+    Cancelled,
+    /// Cmdr's own database didn't answer. The plan may be fine, so this is NOT an expired review.
+    StoreUnavailable { detail: String },
+}
+
+/// Local checks waiting on a stat each hold a pool thread, and a stopped check's thread stays
+/// out until its stat returns, so a dead mount must not be able to collect them. One job's
+/// batches check side by side, so this mostly queues the tail of a very big job.
+static LOCAL_SCANS: BlockingBudget = BlockingBudget::new(4);
+
 /// Revalidates the server-owned subset a user currently allows. The caller may
 /// send opaque row ids only; paths and destination names remain in the proposal
 /// store. This performs no mutation and records fingerprints only when every
@@ -88,42 +108,61 @@ pub async fn preflight<R: Runtime>(
     proposal_id: String,
     shown_revision: i64,
     allowed_row_ids: Vec<String>,
-) -> BulkRenamePreflight {
-    let (Some(db), Some(accepted_preflights)) =
-        (app.try_state::<AgentDb>(), app.try_state::<AcceptedRenamePreflights>())
-    else {
-        return expired_preflight();
+) -> Result<BulkRenamePreflight, PreflightStopped> {
+    let (Some(db), Some(accepted_preflights), Some(checks)) = (
+        app.try_state::<AgentDb>(),
+        app.try_state::<AcceptedRenamePreflights>(),
+        app.try_state::<RenameChecks>(),
+    ) else {
+        return Ok(expired_preflight());
     };
-    let Ok(conn) = db.open_write_connection() else {
-        return expired_preflight();
-    };
-    let Ok(Some(proposal)) = super::store::load(&conn, &proposal_id) else {
-        return expired_preflight();
+    // First, so a Stop or a newer check reaches this one from its very start.
+    let running = checks.begin(&proposal_id);
+    let conn = db.open_write_connection().map_err(store_unavailable)?;
+    let Some(proposal) = super::store::load(&conn, &proposal_id).map_err(store_unavailable)? else {
+        return Ok(expired_preflight());
     };
     // Before any stat: a plan the agent amended since the review showed it is a different plan,
     // and checking its rows would only report on names nobody read.
     if proposal.revision != shown_revision {
-        return list_changed_preflight();
+        return Ok(list_changed_preflight());
     }
-    let outcome = if volume_uses_local_paths(&proposal.volume_id) {
-        let blocking_proposal = proposal.clone();
-        let blocking_allowed_row_ids = allowed_row_ids.clone();
-        match tokio::task::spawn_blocking(move || preflight_local(&blocking_proposal, &blocking_allowed_row_ids)).await
-        {
-            Ok(outcome) => outcome,
-            Err(_) => unavailable_preflight(&proposal, &allowed_row_ids),
+
+    let scan = spawn_scan(
+        Arc::new(proposal.clone()),
+        allowed_row_ids.clone(),
+        running.tally.clone(),
+    );
+    let total = u32::try_from(allowed_row_ids.len()).unwrap_or(u32::MAX);
+    let answered = wait_for_scan(scan, &running.tally, |checked| {
+        let progress = BulkRenameCheckProgress {
+            proposal_id: proposal_id.clone(),
+            checked,
+            total,
+        };
+        if let Err(e) = progress.emit(app) {
+            log::debug!(target: "agent::propose", "the rename check's progress didn't reach the review: {e}");
         }
-    } else {
-        preflight_remote(&proposal, &allowed_row_ids).await
+    })
+    .await;
+    let outcome = match answered {
+        None | Some(Ok(Ok(None))) => return Err(PreflightStopped::Cancelled),
+        Some(Ok(Ok(Some(outcome)))) => outcome,
+        Some(Ok(Err(_)) | Err(_)) => unavailable_preflight(&proposal, &allowed_row_ids),
     };
     if outcome.status != BulkRenamePreflightStatus::Ready {
-        return outcome.response;
+        return Ok(outcome.response);
     }
-    match record_user_acceptance(&conn, &proposal, &allowed_row_ids) {
-        Ok(Some(AcceptanceOutcome::Accepted { .. })) => {}
+    // A stop that landed after the last row: an acceptance recorded now could overwrite the
+    // newer check's.
+    if running.tally.is_stopped() {
+        return Err(PreflightStopped::Cancelled);
+    }
+    match record_user_acceptance(&conn, &proposal, &allowed_row_ids).map_err(store_unavailable)? {
+        Some(AcceptanceOutcome::Accepted { .. }) => {}
         // An amend that landed between the load above and this record.
-        Ok(Some(AcceptanceOutcome::RevisionChanged { .. })) => return list_changed_preflight(),
-        Ok(_) | Err(_) => return expired_preflight(),
+        Some(AcceptanceOutcome::RevisionChanged { .. }) => return Ok(list_changed_preflight()),
+        _ => return Ok(expired_preflight()),
     }
     accepted_preflights.record(
         &proposal_id,
@@ -132,7 +171,31 @@ pub async fn preflight<R: Runtime>(
             fingerprints: outcome.fingerprints,
         },
     );
-    outcome.response
+    Ok(outcome.response)
+}
+
+fn store_unavailable(error: impl std::fmt::Display) -> PreflightStopped {
+    PreflightStopped::StoreUnavailable {
+        detail: error.to_string(),
+    }
+}
+
+/// Start the row scan as its own task, so a stop can answer while a stat is still out
+/// ([`super::check`]). Answers `None` for a scan that stopped partway.
+fn spawn_scan(
+    proposal: Arc<RenameProposal>,
+    allowed_row_ids: Vec<String>,
+    tally: CheckTally,
+) -> tokio::task::JoinHandle<Result<Option<PreflightOutcome>, tokio::task::JoinError>> {
+    tokio::spawn(async move {
+        if volume_uses_local_paths(&proposal.volume_id) {
+            LOCAL_SCANS
+                .run(move || preflight_local(&proposal, &allowed_row_ids, &tally))
+                .await
+        } else {
+            Ok(preflight_remote(&proposal, &allowed_row_ids, &tally).await)
+        }
+    })
 }
 
 /// Record what the user allowed, as the spine's server-owned acceptance record: every op the
@@ -199,14 +262,42 @@ pub(super) fn volume_uses_local_paths(volume_id: &str) -> bool {
     volume_id == "root"
 }
 
-pub(super) fn preflight_local(proposal: &RenameProposal, allowed_row_ids: &[String]) -> PreflightOutcome {
+/// What a check knows before it touches a file: the rows, the ones allowed, and their sources.
+struct CheckedRows<'a> {
+    rows: HashMap<String, BulkRenamePreflightRow>,
+    allowed: Vec<&'a RenameProposalRow>,
+    allowed_sources: HashSet<&'a str>,
+}
+
+fn name_level_checks<'a>(proposal: &'a RenameProposal, allowed_row_ids: &[String]) -> CheckedRows<'a> {
     let mut rows = initial_rows(proposal, allowed_row_ids);
     let allowed = allowed_rows(proposal, allowed_row_ids, &mut rows);
     mark_duplicate_destinations(&allowed, &mut rows);
-    let allowed_sources: HashSet<&str> = allowed.iter().map(|row| row.source_path.as_str()).collect();
+    let allowed_sources = allowed.iter().map(|row| row.source_path.as_str()).collect();
+    CheckedRows {
+        rows,
+        allowed,
+        allowed_sources,
+    }
+}
+
+/// `None` when the check was stopped partway.
+pub(super) fn preflight_local(
+    proposal: &RenameProposal,
+    allowed_row_ids: &[String],
+    tally: &CheckTally,
+) -> Option<PreflightOutcome> {
+    let CheckedRows {
+        mut rows,
+        allowed,
+        allowed_sources,
+    } = name_level_checks(proposal, allowed_row_ids);
     let mut fingerprints = Vec::new();
 
-    for row in &allowed {
+    for (rows_before, row) in allowed.iter().enumerate() {
+        if !tally.begin_row(rows_before) {
+            return None;
+        }
         let Some(status) = rows.get_mut(&row.row_id) else {
             continue;
         };
@@ -234,14 +325,21 @@ pub(super) fn preflight_local(proposal: &RenameProposal, allowed_row_ids: &[Stri
         fingerprints.push(local_fingerprint(&row.row_id, &source_meta));
     }
     mark_cycle_warnings(&allowed, &mut rows);
-    finish_preflight(rows, fingerprints)
+    Some(finish_preflight(rows, fingerprints))
 }
 
-async fn preflight_remote(proposal: &RenameProposal, allowed_row_ids: &[String]) -> PreflightOutcome {
-    let mut rows = initial_rows(proposal, allowed_row_ids);
-    let allowed = allowed_rows(proposal, allowed_row_ids, &mut rows);
-    mark_duplicate_destinations(&allowed, &mut rows);
-    let allowed_sources: HashSet<&str> = allowed.iter().map(|row| row.source_path.as_str()).collect();
+/// `None` when the check was stopped partway. A stop takes effect between rows, ❌ never by
+/// dropping a `get_metadata` in flight (`super::check`).
+async fn preflight_remote(
+    proposal: &RenameProposal,
+    allowed_row_ids: &[String],
+    tally: &CheckTally,
+) -> Option<PreflightOutcome> {
+    let CheckedRows {
+        mut rows,
+        allowed,
+        allowed_sources,
+    } = name_level_checks(proposal, allowed_row_ids);
     let mut fingerprints = Vec::new();
     let Some(volume) = crate::file_system::volume::manager::get_volume_manager().get(&proposal.volume_id) else {
         for status in rows.values_mut() {
@@ -249,10 +347,13 @@ async fn preflight_remote(proposal: &RenameProposal, allowed_row_ids: &[String])
                 block(status, BulkRenameBlockReason::VolumeUnavailable);
             }
         }
-        return finish_preflight(rows, fingerprints);
+        return Some(finish_preflight(rows, fingerprints));
     };
 
-    for row in &allowed {
+    for (rows_before, row) in allowed.iter().enumerate() {
+        if !tally.begin_row(rows_before) {
+            return None;
+        }
         let Some(status) = rows.get_mut(&row.row_id) else {
             continue;
         };
@@ -282,7 +383,7 @@ async fn preflight_remote(proposal: &RenameProposal, allowed_row_ids: &[String])
         });
     }
     mark_cycle_warnings(&allowed, &mut rows);
-    finish_preflight(rows, fingerprints)
+    Some(finish_preflight(rows, fingerprints))
 }
 
 pub(super) fn initial_rows(

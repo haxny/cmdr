@@ -271,7 +271,7 @@ export function createKeyboardShortcutsController(getSearchQuery: () => string) 
     }
 
     // ⌫ and ⌦ capture like any other key: they're real bindings (`nav.parent`,
-    // `file.delete`). Removing a binding is the pill's × button.
+    // `file.delete`). Removing a binding is the × button beside the pill.
     handleKeyCapture(event)
   }
 

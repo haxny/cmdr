@@ -269,14 +269,20 @@ impl SftpVolume {
     /// Makes `link` a symlink to `target` (both app paths), for a cell that needs
     /// a link on the server. The `Volume` trait has no way to make one.
     #[cfg(any(test, feature = "testing"))]
-    pub async fn create_symlink(&self, link: &Path, target: &Path) -> Result<(), VolumeError> {
-        let remote_link = self.to_remote_path(link)?;
+    pub async fn create_symlink_to_app_path(&self, link: &Path, target: &Path) -> Result<(), VolumeError> {
         let remote_target = self.to_remote_path(target)?;
+        self.create_symlink_impl(link, Path::new(&remote_target)).await
+    }
+
+    /// Makes `link` (an app path) a symlink holding `target` verbatim: a link's
+    /// target is the link's own bytes, ❌ never a path to translate.
+    pub(super) async fn create_symlink_impl(&self, link: &Path, target: &Path) -> Result<(), VolumeError> {
+        let remote_link = self.to_remote_path(link)?;
         let session = self.clone_session().await?;
         session
             .sftp()
             .fs()
-            .symlink(&remote_target, &remote_link)
+            .symlink(target, &remote_link)
             .await
             .map_err(|e| crate::errors::map_sftp_error(&e, &remote_link))
     }

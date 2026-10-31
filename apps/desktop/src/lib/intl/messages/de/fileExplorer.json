@@ -2108,6 +2108,18 @@
   "@fileExplorer.folderSizes.unreadable": {
     "sourceHash": "ad31a56"
   },
+  "fileExplorer.quickFilter.modeFilter": "Filtern: Nur passende Namen werden angezeigt",
+  "@fileExplorer.quickFilter.modeFilter": {
+    "sourceHash": "3febd29"
+  },
+  "fileExplorer.typeToJump.modeJump": "Springen: Alle Namen werden angezeigt, und der Cursor springt zum passenden Namen",
+  "@fileExplorer.typeToJump.modeJump": {
+    "sourceHash": "292fdf5"
+  },
+  "fileExplorer.typeToJump.clear": "Eingabe zum Springen löschen",
+  "@fileExplorer.typeToJump.clear": {
+    "sourceHash": "42ec82f"
+  },
   "fileExplorer.quickFilter.clear": "Filter löschen",
   "@fileExplorer.quickFilter.clear": {
     "sourceHash": "ba59e2d"

@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "Der Server dieses Ordners ist nicht erreichbar",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` liegt hinter einem Link zu einem anderen Server, und Cmdr kann diesen Server gerade nicht erreichen. Der Rest dieser Freigabe ist in Ordnung, und es wurde nichts gelöscht.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Das kannst du versuchen:\n- Prüfe, ob der andere Server läuft und über dein Netzwerk erreichbar ist\n- Navigiere erneut hierher, um es noch einmal zu versuchen",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "Verbindung zum Gerät wird wiederhergestellt",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2156,6 +2168,10 @@
   "errors.volume.notConnected": "Cmdr ist noch nicht mit diesem Telefon oder Server verbunden, öffne es also zuerst.",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "Das liegt hinter einem Link zu einem anderen Server, und Cmdr kann diesen Server gerade nicht erreichen.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "Das Gerät hat seine Verbindung neu gestartet. Warte ein paar Sekunden und versuche es dann erneut.",
   "@errors.volume.deviceSessionReset": {

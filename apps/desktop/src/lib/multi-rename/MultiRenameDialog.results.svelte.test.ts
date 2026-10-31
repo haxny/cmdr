@@ -77,7 +77,6 @@ async function mountSheet(onApplied = vi.fn()): Promise<HTMLElement> {
       target,
       props: {
         session: { sessionId: 'S', count: 1 },
-        nothingSelected: false,
         onApplied,
         onUndoStarted: vi.fn(),
         onClose: vi.fn(),

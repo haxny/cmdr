@@ -19,6 +19,7 @@ use super::super::super::state::WriteOperationState;
 use super::super::super::types::VolumeCopyConfig;
 use super::super::transfer_probe::{OperationProbe, TaskRow};
 use super::displaced_destination::DisplacedLedger;
+use super::link_carry::LinkCarry;
 use super::preflight::SourceHint;
 use super::source_sweep::{SourceLedger, SourceStamp};
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -132,6 +133,9 @@ pub(super) struct MergeCtx<'a> {
     /// copy whole, like a conflict Skip, and the sweep keeps it. `None` on a
     /// copy, which never touches an original (`locked_sources.rs`).
     pub locked: Option<&'a LockedPlan>,
+    /// Which symlinks this operation lands as symlinks. `None` on a move, which
+    /// follows them (`link_carry.rs`).
+    pub links: Option<&'a LinkCarry>,
 }
 
 /// The in-flight table as a merge walk sees it: the operation's probe, plus the
@@ -244,6 +248,13 @@ impl CreatedPaths {
         self.files
             .lock_ignore_poison()
             .push(WrittenFile::volume(path, size).landed_at(landed));
+    }
+
+    /// Notes a symlink the copy landed at `path`, holding `target`.
+    pub(super) fn record_link(&self, path: PathBuf, target: PathBuf) {
+        self.files
+            .lock_ignore_poison()
+            .push(WrittenFile::volume_link(path, target));
     }
 
     pub(super) fn record_dir(&self, path: PathBuf) {

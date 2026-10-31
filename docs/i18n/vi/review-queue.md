@@ -95,6 +95,11 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   “shared folder” form); the pile has no NFS string and no vi NAS UI. Confirm it beats keeping `export`, which Linux
   admins may know from `/etc/exports`. The NAS switch “Allow connections from non-privileged ports” stays English in
   `servers.refusal.reservedPortRequired`; translate it if a vi NAS UI turns up.
+- **Typing badge** (`commands.paneQuickFilter.description`, `fileExplorer.typeToJump.clear`): the small box holding
+  typed text is `huy hiệu bộ lọc`, under the `badge` ruling, and `Xóa nội dung “Nhảy tới”` carries the mode name because
+  `Xóa nhảy tới` isn't a phrase. Confirm both read naturally to a screen-reader user.
+- **DFS link** (`*.linkTargetUnreachable*`): “sits behind a link” became `nằm sau một liên kết`, on the catalog's
+  `nằm sau tường lửa`; `liên kết` stands apart from `liên kết mềm` only by context. Confirm it reads as a network link.
 
 ## Layout
 

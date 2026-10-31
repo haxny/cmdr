@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "O servidor desta pasta está fora de alcance",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "O acesso a `{path}` passa por um link para outro servidor, e o Cmdr não consegue alcançar esse servidor agora. O resto deste compartilhamento continua funcionando, e nada foi apagado.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Veja o que tentar:\n- Verifique se o outro servidor está em execução e se a sua rede consegue alcançá-lo\n- Navegue até aqui de novo para tentar outra vez",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "Reconectando ao dispositivo",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2156,6 +2168,10 @@
   "errors.volume.notConnected": "O Cmdr ainda não está conectado a este celular ou servidor, então abra-o primeiro.",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "O acesso a este local passa por um link para outro servidor, e o Cmdr não consegue alcançar esse servidor agora.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "O dispositivo reiniciou a conexão. Espere alguns segundos e tente de novo.",
   "@errors.volume.deviceSessionReset": {

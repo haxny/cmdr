@@ -11,7 +11,7 @@ fn head(prefix: &[u8]) -> Vec<u8> {
 }
 
 fn classify(bytes: &[u8], ext: Option<&str>) -> ViewerContentKind {
-    classify_viewer_content(bytes, ext, true)
+    classify_viewer_content(bytes, ext)
 }
 
 #[test]
@@ -160,26 +160,6 @@ fn html_with_inline_svg_and_svg_ext_stays_text() {
 #[test]
 fn svg_ext_but_no_svg_root_stays_text() {
     assert_eq!(classify(b"just some text", Some("svg")), ViewerContentKind::Text);
-}
-
-// --- locality gate ---
-
-#[test]
-fn non_local_always_classifies_as_text() {
-    // Even a perfect PNG header is Text when the file isn't on a local volume.
-    let png = head(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
-    assert_eq!(
-        classify_viewer_content(&png, Some("png"), false),
-        ViewerContentKind::Text
-    );
-    assert_eq!(
-        classify_viewer_content(b"%PDF-1.7", Some("pdf"), false),
-        ViewerContentKind::Text
-    );
-    assert_eq!(
-        classify_viewer_content(b"<svg></svg>", Some("svg"), false),
-        ViewerContentKind::Text
-    );
 }
 
 // --- media_mime ---

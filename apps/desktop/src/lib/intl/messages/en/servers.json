@@ -673,6 +673,21 @@
   "@servers.sheet.nfsGid": {
     "description": "Label of a number field in the NFS add form: the numeric group ID (a Unix gid, like 100) Cmdr uses for every request to the server. Keep it short; it sits beside the user ID field."
   },
+  "servers.sheet.nfsOtherGids": "Other group IDs",
+  "@servers.sheet.nfsOtherGids": {
+    "description": "Label of a text field in the NFS add and edit forms, right under the user ID and group ID fields: the numeric IDs of the other Unix groups the user belongs to on the server, like 100, 1001. Cmdr sends them with every request, so files the user may read only through one of those groups open. It can stay empty."
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "Use group ID numbers separated by commas, like 100, 1001.",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "description": "Under the Other group IDs field in the NFS add and edit forms, when what the user typed isn’t a list of numbers (for example they typed a group’s name). Connect stays disabled until it reads. Keep the example numbers as they are."
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "NFS carries up to 16 other groups, and this lists {count}.",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "description": "Under the Other group IDs field in the NFS add and edit forms, when the user listed more groups than the protocol can send with a request (the limit is always 16, so count is always 17 or more). Connect stays disabled until they remove some. “NFS” is a protocol name; keep it as-is.",
+    "placeholders": {
+      "count": "how many different group IDs the user listed, 17 or more"
+    }
+  },
   "servers.sheet.nfsIdentityHelp": "The server decides what you can open by these numbers. NFS doesn’t ask for a password.",
   "@servers.sheet.nfsIdentityHelp": {
     "description": "One line under the user ID and group ID fields in the NFS add form, before Cmdr has guessed them or after the user typed their own. “NFS” is a protocol name; keep it as-is."

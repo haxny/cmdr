@@ -148,3 +148,11 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
   Dolphin/Nautilus `Künstler`; both are masculine field names, so check which a German Music.app user expects.
   `multiRename.mediaButton` is capitalized `Medien` against the English lowercase (German nouns); check it sits well
   beside `[N]`, `[YMD]`. `tagDisc` → `CD-Nummer` (iTunes) and `Song` in the tooltips are unverified in the pile.
+- Bulk rename check (`askCmdr.renameReview.stopChecking`, `.expired`): `Prüfung stoppen` means the file check, but
+  `Diese Prüfung ist abgelaufen` already calls the whole review a `Prüfung`. The progress bar beside the button should
+  keep them apart; check that it does.
+- Filter badge (`commands.paneQuickFilter.description`): `Filterhinweis` follows the `badge` ruling's pill form
+  `Hinweis`, which is tentative and reads a bit like a hint. `Filteranzeige` is the alternative if a native reader
+  stumbles.
+- `fileExplorer.typeToJump.clear`: `Eingabe zum Springen löschen` is a screen-reader name only, coined because
+  `Springen löschen` doesn't parse.

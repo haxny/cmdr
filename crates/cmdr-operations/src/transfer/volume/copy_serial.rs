@@ -35,7 +35,7 @@ use super::super::transfer_probe::{DriverPhase, OperationProbe, TaskRole, TaskRo
 use super::copy::CopyCells;
 use super::preflight::SourceFileFacts;
 use super::preflight::SourceHint;
-use super::refused_item::{RefusalSubject, skip_if_refused};
+use super::refused_item::{RefusalSubject, has_no_content, skip_if_refused};
 use super::strategy::copy_single_path;
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error};
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -116,6 +116,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                 displaced,
                 deep_skipped_files,
                 deep_skipped_bytes,
+                links,
             },
     } = ctx;
 
@@ -225,8 +226,10 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
             let serial_source_index = Arc::new(AtomicUsize::new(0));
             let file_window = file_window.clone();
             let displaced = Arc::clone(&displaced);
+            let links = Arc::clone(&links);
             move |ctx: TransferContext<'_>| -> TransferFut<'_> {
                 let displaced = Arc::clone(&displaced);
+                let links = Arc::clone(&links);
                 let op_probe_serial = op_probe_serial.clone();
                 let file_window = file_window.clone();
                 let serial_source_index = Arc::clone(&serial_source_index);
@@ -339,6 +342,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             source_row,
                         }),
                         locked: None,
+                        links: Some(&links),
                     };
 
                     let staging = super::strategy::staging_for(&replaces, landing);
@@ -415,6 +419,8 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             };
                             // The original's own name after an overwrite.
                             let landed_path = dest_item_path;
+                            // A carried link joined the ledger like a walked leaf.
+                            let by_leaves = source_is_dir || !created.files.lock_ignore_poison().is_empty();
                             // Whatever this source set aside is now fully replaced.
                             displaced.landed_under(&landed_path);
                             // For a DIRECTORY source, record the individual
@@ -423,7 +429,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             // recursively delete a merged directory and
                             // destroy dest-only files. For a FILE source,
                             // record the landed path; never a temp.
-                            if source_is_dir {
+                            if by_leaves {
                                 let files = std::mem::take(&mut *created.files.lock_ignore_poison());
                                 let dirs = std::mem::take(&mut *created.dirs.lock_ignore_poison());
                                 // Journal the per-leaf rows under the REAL volume
@@ -486,7 +492,13 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             // The destination refused this source's OWN name
                             // (a deep one is its walker's to ask about), and
                             // nothing of it landed: ask, and a Skip is the
-                            // driver's to count, like a conflict Skip.
+                            // driver's to count, like a conflict Skip. So is a file
+                            // with no bytes and no way to land as itself.
+                            if !source_is_dir && created.files.lock_ignore_poison().is_empty() && has_no_content(&e) {
+                                return Ok(TransferOutcome::Skipped {
+                                    bytes_accounted: source_size.unwrap_or(0),
+                                });
+                            }
                             let e = if created.files.lock_ignore_poison().is_empty() {
                                 let subject = RefusalSubject {
                                     source: &source_path,

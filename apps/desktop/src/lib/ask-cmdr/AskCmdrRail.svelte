@@ -270,6 +270,17 @@
         z-index: var(--z-sticky);
     }
 
+    /* A 24-by-24 grab pad at the top of the edge (WCAG 2.5.8), over the header's padding and
+       decorative glyph, the one stretch of this edge with no control or text to cover. */
+    .resize-handle::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--spacing-xl);
+        height: var(--spacing-xl);
+    }
+
     .rail-header {
         display: flex;
         align-items: center;

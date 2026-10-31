@@ -18,8 +18,8 @@ export opens from an unprivileged process with no OS mount. WebDAV's lifecycle (
 - ❌ **Never classify by message.** `nfsstat3`, `mountstat3`, and the RPC stats map by number; a variant's `String` is
   log-only.
 - ❗ **Identity is `(host, canonical port, export)`**, minted only by `cmdr_fs::volume::nfs_volume_id` / `nfs_app_root`.
-  The port is the one the address named, else 2049, ❌ never portmap's answer. The uid and gid are a SETTING, ❌ never
-  in an id or a path.
+  The port is the one the address named, else 2049, ❌ never portmap's answer. The uid and groups are a SETTING, ❌
+  never in an id or a path.
 - ❗ **The app path carries the export as ONE escaped segment** (`nfs://nas:2049/volume1%2Fdata/photos`).
   `cmdr_fs::volume::remote_paths` owns the grammar; `server-path-utils.ts` mirrors it.
 - ❗ **`connect_nfs_volume` resolves the export/folder split.** Register under the returned volume's `volume_id()` and

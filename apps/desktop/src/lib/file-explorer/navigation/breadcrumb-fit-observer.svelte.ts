@@ -1,5 +1,5 @@
 import type { ActionReturn } from 'svelte/action'
-import { fitBreadcrumbSegments } from './breadcrumb-fit'
+import { fitBreadcrumbSegments, segmentLayoutFloor } from './breadcrumb-fit'
 
 /**
  * Slack between canvas text metrics and the laid-out DOM (subpixel rounding), so a path the
@@ -34,6 +34,7 @@ export function createBreadcrumbFit(getTexts: () => string[]): BreadcrumbFit {
       availableWidth: Math.max(1, width - MEASURE_SLACK_PX),
       separatorWidth: measure('/'),
       measure,
+      floor: segmentLayoutFloor,
     })
   })
 

@@ -3671,6 +3671,19 @@
     "confidence": "high",
     "sources": "macOS Finder pt-BR bulk rename (Nome e Contador, dKW-wM-eWS, macOS 27 bundle, 2026-10-09); shipped pt catalog (commands.fileMultiRename.description, the former multiRename.counterStart/Step/Digits Início do contador / Incremento / Dígitos)"
   },
+  "name-mask": {
+    "chosen": "máscara de nome",
+    "accept": ["máscara"],
+    "confidence": "high",
+    "sources": "Double Commander pt-BR (Mask → Máscara, File mask → Máscara de arquivo); shipped pt catalog (multiRename.nameMask Máscara de nome)"
+  },
+  "type-to-jump": {
+    "chosen": "Ir para",
+    "accept": ["digitar-para-pular"],
+    "forms": "the typing-mode name and badge beside Filtrar; quoted in running text (Mudar para “Ir para”); Clear jump → Limpar “Ir para”; the English compound type-to-jump → digitar-para-pular (settings.fileExplorer.typeToJump.resetDelay.*)",
+    "confidence": "high",
+    "sources": "shipped pt catalog (fileExplorer.typeToJump.prefix, settings.fileExplorer.typeToJump.mode.opt.jump, fileExplorer.quickFilter.intro.switchToJump)"
+  },
   "diacritics": {
     "chosen": "acentos",
     "confidence": "high",

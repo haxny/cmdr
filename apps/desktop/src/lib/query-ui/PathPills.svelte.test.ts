@@ -16,7 +16,7 @@ function renderPills(path: string, onPick: (p: string) => void = () => {}) {
 }
 
 /** What hovering a pill would show. The house tooltip is a singleton, so ask for its text. */
-function pillTooltip(pill: HTMLButtonElement): string | null {
+function pillTooltip(pill: HTMLElement): string | null {
   pill.dispatchEvent(new MouseEvent('mouseenter'))
   vi.advanceTimersByTime(500)
   const text = document.querySelector('.cmdr-tooltip.visible')?.textContent ?? null
@@ -71,7 +71,7 @@ describe('PathPills', () => {
     const target = renderPills('docs/notes')
     await tick()
     vi.useFakeTimers()
-    const pills = Array.from(target.querySelectorAll<HTMLButtonElement>('.pill'))
+    const pills = Array.from(target.querySelectorAll<HTMLElement>('.pill'))
     expect(pills.map((p) => p.textContent.trim())).toEqual(['docs', 'notes'])
     // Each pill hands over the ancestor path it would navigate to, through the house
     // tooltip rather than a native `title` (which would hover unlike the rest of the app).
@@ -85,7 +85,7 @@ describe('PathPills', () => {
     const onPick = vi.fn()
     const target = renderPills('/Users/dave/code', onPick)
     await tick()
-    const pills = Array.from(target.querySelectorAll<HTMLButtonElement>('.pill'))
+    const pills = Array.from(target.querySelectorAll<HTMLElement>('.pill'))
     pills[0]?.click()
     pills[1]?.click()
     pills[2]?.click()
@@ -109,7 +109,7 @@ describe('PathPills', () => {
     const onPick = vi.fn()
     const target = renderPills('/a/b', onPick)
     await tick()
-    const pill = target.querySelector('.pill') as HTMLButtonElement
+    const pill = target.querySelector('.pill') as HTMLElement
     pill.click()
     expect(onPick).toHaveBeenCalledTimes(1)
     expect(stopSpy).toHaveBeenCalled()
@@ -135,11 +135,11 @@ describe('PathPills', () => {
     target.remove()
   })
 
-  it('sets a tooltip aria-label on the path-pills container for screen readers', async () => {
+  it('hides the strip from assistive technology and leaves it the whole path as text', async () => {
     const target = renderPills('/Users/dave/code')
     await tick()
-    const strip = target.querySelector('.path-pills') as HTMLElement
-    expect(strip.getAttribute('aria-label')).toBe('/Users/dave/code')
+    expect(target.querySelector('.path-pills')?.getAttribute('aria-hidden')).toBe('true')
+    expect(target.querySelector('.sr-only')?.textContent).toBe('/Users/dave/code')
     target.remove()
   })
 
@@ -158,13 +158,11 @@ describe('PathPills', () => {
     target.remove()
   })
 
-  it('keeps pills out of the keyboard Tab order', async () => {
+  it('renders no focusable control in the strip, so a row stays one option', async () => {
     const target = renderPills('/a/b')
     await tick()
-    const pills = Array.from(target.querySelectorAll('.pill'))
-    for (const pill of pills) {
-      expect(pill.getAttribute('tabindex')).toBe('-1')
-    }
+    expect(target.querySelectorAll('.pill')).toHaveLength(2)
+    expect(target.querySelector('button, [tabindex]')).toBeNull()
     target.remove()
   })
 })

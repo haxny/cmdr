@@ -2122,6 +2122,11 @@
     },
     "sources": "macOS Finder (N220 Name); NetAuthAgent (Name:)"
   },
+  "name-mask": {
+    "chosen": "Namensmaske",
+    "confidence": "high",
+    "sources": "catalog (multiRename.nameMask); TC 6602 (Umbenennmaske: Dateiname); DC (Dateimaske)"
+  },
   "nas": {
     "chosen": "NAS",
     "confidence": "high",
@@ -3460,6 +3465,13 @@
     "chosen": "Typ",
     "confidence": "high",
     "sources": "WorkflowKit/ActionKit (Type → Typ)"
+  },
+  "type-to-jump": {
+    "accept": ["Tippsprung"],
+    "chosen": "Springen",
+    "confidence": "high",
+    "forms": "the mode and badge word Springen (Springen: …), beside Filtern; the reset-delay setting's noun Tippsprung; clear the typed text → Eingabe zum Springen löschen (a bare Springen löschen doesn't parse)",
+    "sources": "catalog (fileExplorer.typeToJump.prefix, settings.fileExplorer.typeToJump.mode.opt.jump)"
   },
   "typo": {
     "chosen": "Tippfehler",

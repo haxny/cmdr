@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
 import type { ColumnListMeasurers } from '#lib/ui/column-list-types.js'
 import type { SearchResultEntry } from '#lib/tauri-commands/index.js'
 import { NAME_COL_MIN_PX, PATH_COL_MIN_PX, resultColumnWidths, type ResultRowTexts } from './result-column-widths'
-import { PILL_CHROME_PX, PILL_SEPARATOR_GAP_PX } from './path-pills-layout'
+import { PILL_CHROME_PX, PILL_MIN_WIDTH_PX, PILL_SEPARATOR_GAP_PX } from './path-pills-layout'
 
 const CHAR_PX = 10
 const text = (s: string): number => s.length * CHAR_PX
@@ -51,7 +51,8 @@ describe('resultColumnWidths with a Path column (Search)', () => {
   it('measures Path as the uncollapsed pill strip, header inset by half a pill', () => {
     const labels = ['Users', 'x', 'Downloads']
     const sep = text('/') + PILL_SEPARATOR_GAP_PX
-    const strip = labels.reduce((w, l) => w + text(l) + PILL_CHROME_PX, 0) + sep * (labels.length - 1)
+    const strip =
+      labels.reduce((w, l) => w + Math.max(text(l) + PILL_CHROME_PX, PILL_MIN_WIDTH_PX), 0) + sep * (labels.length - 1)
     expect(widths.path.demand?.({ row, measure })).toBe(strip)
     expect(widths.path.headerDemand?.({ label: 'Path', measure })).toBe(text('Path') + PILL_CHROME_PX / 2)
   })

@@ -38,7 +38,12 @@ import {
 const log = getAppLogger('askCmdr')
 
 export type { RailMessage, RailToolCall } from './ask-cmdr-messages'
-export type { BulkRenameReview, BulkRenameReviewProposal, BulkRenameReviewRow } from './ask-cmdr-state.svelte'
+export type {
+  BulkRenameReview,
+  BulkRenameReviewProposal,
+  BulkRenameReviewRow,
+  RenameReviewNotice,
+} from './ask-cmdr-state.svelte'
 export {
   askCmdrState,
   hasOlderMessages,
@@ -53,11 +58,14 @@ export {
   allowAllRenameRows,
   applyRenameReview,
   cancelRenameReview,
+  checkRenameReviewAgain,
   denyAllRenameRows,
   noteRenameApplied,
+  renameCheckProgressed,
   renameReviewListingChanged,
   reviseRenameRow,
   setRenameRowAllowed,
+  stopRenameChecks,
   undoRename,
 } from './ask-cmdr-rename-review.svelte'
 
@@ -186,8 +194,9 @@ export async function switchToThread(id: number): Promise<void> {
   if (askCmdrState.streaming) stopStreaming()
   leaveChat()
   askCmdrState.attachments = []
-  discardRenameReview()
-  await loadConversation(id)
+  // The old review goes only once the new thread is on screen: a load that fails leaves the old
+  // thread showing, and its review is still the user's to answer.
+  if (await loadConversation(id)) discardRenameReview()
 }
 
 async function bootstrapActiveThread(): Promise<void> {
@@ -242,18 +251,19 @@ function endThreadLoad(): void {
 }
 
 /** Load a thread's most recent page into the rail (tail-first). One probe fetch learns
- * the total; a thread longer than a page then refetches its newest page. */
-async function loadConversation(id: number): Promise<void> {
+ * the total; a thread longer than a page then refetches its newest page. Answers whether this
+ * load is what the rail now shows: `false` for a thread that's gone, or a load overtaken. */
+async function loadConversation(id: number): Promise<boolean> {
   const load = beginThreadLoad()
   try {
     const probe = await getAskCmdrConversation(id, MESSAGE_PAGE, 0)
-    if (!probe) return
+    if (!probe) return false
     let detail = probe
     if (probe.totalMessages > MESSAGE_PAGE) {
       const tailOffset = probe.totalMessages - MESSAGE_PAGE
       detail = (await getAskCmdrConversation(id, MESSAGE_PAGE, tailOffset)) ?? probe
     }
-    if (load !== latestThreadLoad) return
+    if (load !== latestThreadLoad) return false
     if (askCmdrState.conversationId !== id) forgetToolDetails()
     askCmdrState.conversationId = id
     askCmdrState.freshChat = false
@@ -271,6 +281,7 @@ async function loadConversation(id: number): Promise<void> {
           elidedResults: 0,
         }
       : null
+    return true
   } finally {
     finishThreadLoad(load)
   }

@@ -16,7 +16,12 @@
 import type { ContextUsage } from './ask-cmdr-context-usage'
 import type { AssistantItem, RailMessage } from './ask-cmdr-messages'
 import { settleRounds, softCapCount } from './ask-cmdr-rounds'
-import type { AttachmentRef, RenameEvidence, RenameEvidenceCoverage } from '#lib/tauri-commands/index.js'
+import type {
+  AttachmentRef,
+  RenameEvidence,
+  RenameEvidenceCoverage,
+  RenameStartError,
+} from '#lib/tauri-commands/index.js'
 
 /** Past this many thread messages the rail nudges "start a fresh one?" (mirrors the Rust
  * `THREAD_SOFT_CAP_MESSAGES`; no hard cut). */
@@ -63,8 +68,23 @@ export interface BulkRenameReviewProposal {
   /** The agent amended this batch since the review showed it: its rows stay put, announced, and
    *  Apply leaves it out. */
   changed: boolean
+  /** The last check ended without an answer (the user stopped it, or it broke down). The rows
+   *  stay on show, but nothing can run and nothing rechecks until the user presses Check again. */
+  checkFailed: boolean
+  /** How far the running check has got, once it has run long enough to say. Stays at its full
+   *  count after this batch finishes, until every batch has, so the job's total holds still. */
+  checkProgress: { checked: number; total: number } | null
   requestVersion: number
 }
+
+/** What the review says above its list after something refused: why nothing happened, in words
+ *  the user can act on. Per batch states (expired, changed, unchecked) have their own marks. */
+export type RenameReviewNotice =
+  | { kind: 'needsAnotherLook' }
+  /** `reason` is `null` when nothing more specific is known. */
+  | { kind: 'couldntStart'; reason: RenameStartError | null }
+  | { kind: 'nothingToApply' }
+  | { kind: 'nameNotSaved' }
 
 /**
  * One review, however many batches a job took.
@@ -75,6 +95,7 @@ export interface BulkRenameReviewProposal {
  */
 export interface BulkRenameReview {
   proposals: BulkRenameReviewProposal[]
+  notice: RenameReviewNotice | null
 }
 
 interface AskCmdrState {

@@ -22,7 +22,10 @@
         /** An unbound slot: dashed border, muted text. */
         empty?: boolean
         onclick?: () => void
-        /** Adds the hover-only × that removes this binding. Omit for slots that can't be removed. */
+        /**
+         * Adds the × that removes this binding: a sibling button of the pill, shown on hover and
+         * while the pill or the × has focus. Omit for slots that can't be removed.
+         */
         remove?: { tooltip: string; onRemove: () => void }
         /** Test hook, rendered as `data-test`. */
         dataTest?: string
@@ -31,35 +34,43 @@
 
     const { readOnly = false, editing = false, pendingConflict = false, empty = false, onclick, remove, dataTest, children }: Props =
         $props()
-
-    function handleRemove(event: Event): void {
-        // The × sits inside the pill button: stop the press from also starting a recording.
-        event.stopPropagation()
-        remove?.onRemove()
-    }
 </script>
 
 {#if readOnly}
     <span class="shortcut-pill static">{@render children()}</span>
 {:else}
-    <button class="shortcut-pill" class:editing class:pending-conflict={pendingConflict} class:empty data-test={dataTest} {onclick}>
-        {@render children()}
+    <span class="shortcut-pill-group" class:removable={remove !== undefined}>
+        <button class="shortcut-pill" class:editing class:pending-conflict={pendingConflict} class:empty data-test={dataTest} {onclick}>
+            {@render children()}
+        </button>
         {#if remove}
-            <span
+            <button
+                type="button"
                 class="remove-shortcut"
+                aria-label={remove.tooltip}
                 use:tooltip={remove.tooltip}
-                role="button"
-                tabindex="-1"
-                onclick={handleRemove}
-                onkeydown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') handleRemove(e)
-                }}>×</span
+                onclick={remove.onRemove}
             >
+                <span aria-hidden="true">×</span>
+            </button>
         {/if}
-    </button>
+    </span>
 {/if}
 
 <style>
+    /* The × is the pill's sibling (ARIA makes a button's children presentational), drawn over
+       the pill's trailing edge so it still reads as inside it. Revealing it grows the pill by
+       the room the × takes, as it did when the × was a flex child. */
+    .shortcut-pill-group {
+        position: relative;
+        display: inline-flex;
+    }
+
+    .shortcut-pill-group.removable:hover .shortcut-pill,
+    .shortcut-pill-group.removable:focus-within .shortcut-pill {
+        padding-inline-end: calc(var(--spacing-sm) + var(--spacing-md) + var(--spacing-xs));
+    }
+
     .shortcut-pill {
         display: inline-flex;
         align-items: center;
@@ -103,23 +114,40 @@
         color: var(--color-text-secondary);
     }
 
+    /* Painted 12px. Hidden with `opacity`, ❌ never `display: none`: Tab has to reach it. */
     .remove-shortcut {
-        width: 12px;
-        height: 12px;
+        position: absolute;
+        top: 50%;
+        right: calc(var(--spacing-sm) + 1px);
+        transform: translateY(-50%);
+        width: var(--spacing-md);
+        height: var(--spacing-md);
+        padding: 0;
+        border: none;
         border-radius: var(--radius-full);
         background: var(--color-text-tertiary);
         color: var(--color-bg-primary);
         font-size: var(--font-size-xs);
         font-weight: 600;
         cursor: default;
-        display: none;
+        display: flex;
         align-items: center;
         justify-content: center;
         line-height: var(--font-line-height-flat);
-        flex-shrink: 0;
+        opacity: 0;
+        pointer-events: none;
     }
 
-    .shortcut-pill:hover .remove-shortcut {
-        display: flex;
+    /* The unpainted hit box: 24 by 24 around the 12px circle (WCAG 2.5.8). */
+    .remove-shortcut::before {
+        content: '';
+        position: absolute;
+        inset: -6px;
+    }
+
+    .shortcut-pill-group:hover .remove-shortcut,
+    .shortcut-pill-group:focus-within .remove-shortcut {
+        opacity: 1;
+        pointer-events: auto;
     }
 </style>

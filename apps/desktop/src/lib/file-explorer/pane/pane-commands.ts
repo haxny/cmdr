@@ -23,7 +23,8 @@ import type { createDialogState } from './dialog-state.svelte'
 import type { ConfirmOptions } from './dialog-props'
 import type { ProgrammaticConfirmVerdict } from './programmatic-confirm'
 import type { PaneAccess } from './pane-access'
-import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
+import { announceRowsStillSettling } from './operation-start-gate'
+import { toBackendSelectionOrCursor } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
 
 type DialogState = ReturnType<typeof createDialogState>
 
@@ -34,8 +35,6 @@ export interface MultiRenameSelection {
   selectedIndices: number[] | null
   /** The pane's applied listing sequence the row numbers belong to. */
   expectedSequence: number
-  /** Nothing is selected, so the session takes every row; the sheet's title says so. */
-  nothingSelected: boolean
 }
 
 /**
@@ -82,6 +81,11 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
   function toggleFavoritesMenu() {
     access.getPaneRef(access.otherPane(access.getFocusedPane()))?.closeHeaderMenu()
     access.getPaneRef(access.getFocusedPane())?.toggleFavoritesMenu()
+  }
+
+  /** `pane.quickFilter` (⌃S), on the FOCUSED pane. */
+  function cycleQuickFilter() {
+    access.getPaneRef(access.getFocusedPane())?.cycleQuickFilter()
   }
 
   /**
@@ -362,31 +366,45 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
   }
 
   /**
-   * What the Multi-Rename Tool renames: the focused pane's listing, its selected
-   * rows as backend row numbers (in row order; `null` for every row, when all or
-   * none are selected), and the applied sequence they belong to, so the backend
-   * refuses them once the rows moved. `null` when the pane shows no real listing
-   * (servers, search results) or its rows are still settling.
+   * What ⌃M renames: the focused pane's selection, else the file under the cursor,
+   * as F5, F6, F8, and ⇧F6 do. Backend row numbers in row order (`null` when everything
+   * is selected, so a huge folder's indices stay home), with the applied sequence they
+   * belong to, so the backend refuses them once the rows moved.
+   *
+   * `null` opens nothing: silently where the pane shows no real listing (servers, search
+   * results), and with a toast while its rows settle or when there's no file to take
+   * (the cursor on `..`, an empty folder).
    */
-  function getFocusedPaneRenameTarget(): MultiRenameSelection | null {
+  function resolveMultiRenameTarget(): MultiRenameSelection | null {
     const pane = access.getPaneRef(access.getFocusedPane())
     if (!pane || !capabilitiesFor(pane.getVolumeId()).hasBackendListing) return null
     const listingId = pane.getListingId()
     if (listingId === '') return null
-    const allSelected = pane.isAllSelected()
-    const selected = allSelected
-      ? []
-      : toBackendIndices(
-          [...pane.getSelectedIndices()].sort((a, b) => a - b),
-          pane.hasParentEntry(),
-        )
-    if (selected.length > 0 && !pane.isRowStateReady()) return null
-    return {
-      listingId,
-      selectedIndices: selected.length > 0 ? selected : null,
-      expectedSequence: pane.getLastSequence(),
-      nothingSelected: !allSelected && selected.length === 0,
+    if (!pane.isRowStateReady()) {
+      announceRowsStillSettling(undefined)
+      return null
     }
+    const expectedSequence = pane.getLastSequence()
+    if (pane.isAllSelected()) return { listingId, selectedIndices: null, expectedSequence }
+    // A folder with no `..` row and no files still has cursor 0, which would name a row that isn't there.
+    const rows =
+      pane.getEffectiveTotalCount() === 0
+        ? []
+        : toBackendSelectionOrCursor(
+            [...pane.getSelectedIndices()].sort((a, b) => a - b),
+            pane.getCursorIndex(),
+            pane.hasParentEntry(),
+          )
+    if (rows.length === 0) {
+      addToast(tString('multiRename.noFileSelected'), {
+        id: 'multi-rename-no-file-selected',
+        level: 'error',
+        timeoutMs: 5000,
+        report: false,
+      })
+      return null
+    }
+    return { listingId, selectedIndices: rows, expectedSequence }
   }
 
   /** Returns true when the cursor landed on the named item, false when it wasn't found. */
@@ -600,6 +618,7 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     toggleVolumeChooser,
     openVolumeChooser,
     toggleFavoritesMenu,
+    cycleQuickFilter,
     closeHeaderMenus,
     getFileAndPathUnderCursor,
     getPathToCopyUnderCursor,
@@ -615,7 +634,7 @@ export function createPaneCommands(access: PaneAccess, dialogs: DialogState) {
     handleSelectionAction,
     applyIndicesToFocusedPane,
     getFocusedPaneEntries,
-    getFocusedPaneRenameTarget,
+    resolveMultiRenameTarget,
     moveCursorByName,
     moveCursorByNameInFileListing,
     scrollTo,

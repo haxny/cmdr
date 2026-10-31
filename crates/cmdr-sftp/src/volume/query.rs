@@ -1,5 +1,5 @@
 //! Reading what's on the server without changing it.
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{EntryKind, ListingProgress, SpaceInfo, VolumeError};
@@ -121,6 +121,24 @@ impl SftpVolume {
             Some(t) if t.is_dir() => EntryKind::Directory,
             _ => EntryKind::File,
         })
+    }
+
+    /// The target of the link at `path`, as the server stores it. `lstat` first:
+    /// `SSH_FXP_READLINK` on anything else answers a generic failure, which
+    /// reads the same as a real one.
+    pub(super) async fn read_link_target_impl(&self, path: &Path) -> Result<Option<PathBuf>, VolumeError> {
+        if self.entry_kind_impl(path).await? != EntryKind::Symlink {
+            return Ok(None);
+        }
+        let remote = self.to_remote_path(path)?;
+        let session = self.clone_session().await?;
+        let target = session
+            .sftp()
+            .fs()
+            .read_link(&remote)
+            .await
+            .map_err(|e| map_sftp_error(&e, &remote))?;
+        Ok(Some(target))
     }
 
     /// The free and total space of the filesystem holding `path`: one

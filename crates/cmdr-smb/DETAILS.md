@@ -730,10 +730,21 @@ the transfers, vdavid/cmdr#815 for the rest):
 - **The scan pool's listings follow through their member's own client** (`ScanPool::open_through_link`, resolved the
   same way), so an index walk into a link stays off the main session. An enrichment prefetch refused at a link breaks to
   the streamed read, which follows it on the transfer session.
-- **Errors funnel as the session the client belongs to** (`RanOn::Main` for the main client). Decision: a link's target
-  connection lives INSIDE that client, and with `auto_reconnect: false` nothing revives it but rebuilding the session,
-  so a target drop that ends the main session is what brings the link back. Why not a separate "link" `RanOn`: a failure
-  out of smb2's follow can also be the share's own connection (it re-sends to the share's tree first).
+- **Errors funnel as the session the client belongs to** (`RanOn::Main` for the main client), and ❗ a dead link doesn't
+  end it (vdavid/smb2#28). smb2 answers a link whose target is out of reach, or whose target connection dropped under
+  the call, with `Error::DfsTargetUnreachable` (kind `DfsTargetUnreachable`, smb2 0.37.0), which `ends_the_session`
+  doesn't count and `map_smb_error` turns into `VolumeError::LinkTargetUnreachable(path)`: a refusal of that path alone,
+  with the share `Direct` and paths outside the link still answering. smb2 lets the dead target go, so the next call
+  through the link dials it again; nothing here has to rebuild anything. Why not a separate "link" `RanOn`: a failure
+  out of smb2's follow can also be the share's own connection (it re-sends to the share's tree first), and smb2 is the
+  one that can tell them apart. A link on the share's own server, with that connection gone, stays a lost session.
+  - **`LinkTargetUnreachable` is no transport fault**: the volume's connection is fine, so an outage wait would never
+    end. A listing shows its own Transient panel with a retry hint; a transfer fails that file as
+    `ConnectionInterrupted` and moves on.
+  - **Known gap**: a handle ALREADY open through a link (a held `FileReader`, a streaming download or upload) owns the
+    target's connection and has no link to name, so a target dropping mid-stream still funnels as `ConnectionLost` on
+    the lease's session: the transfer session for a transfer (the share stays up), the MAIN session for the random
+    reader or a stream on a main lease. Only an open or a one-shot call gets the typed refusal.
 - **Cost**: under a known link, nothing extra on the share's connection
   (`smb_dfs_a_call_under_a_known_link_skips_the_refused_round_trip`: 0 requests there, 6 before the resolver). The first
   call into a link pays one refused CREATE and the referral. A streamed read or write under a known link opens through
@@ -774,7 +785,9 @@ the transfers, vdavid/cmdr#815 for the rest):
   `STATUS_PATH_NOT_COVERED`. `smb_dfs_a_move_between_folders_behind_a_link_lands` pins both the plain and the forced
   move.
 - Verified against smb2's `smb-dfs-root` fixture (Samba on Alpine 3.21, smb2 0.36.0, 2026-10-29; the link watch, the
-  resolver, and moves inside a link against smb2 0.36.2, 2026-10-30).
+  resolver, and moves inside a link against smb2 0.36.2, 2026-10-30; a dead link's refusal against smb2 0.37.0, its
+  target name pointed at a closed port, `smb_dfs_a_dead_link_target_refuses_the_path_and_leaves_the_share_up`,
+  2026-10-31).
 - Pinned by `dfs_links_integration_test.rs` against smb2's INTERNAL DFS fixtures (`smb-dfs-root` → `smb-dfs-target`),
   which Cmdr's vendored stack doesn't carry, one cell per call family. The fixture lane runs every ignored cell in this
   package, so each cell also skips (prints "skipped", passes) unless `CMDR_SMB_DFS_FIXTURE` is set; set and unreachable,

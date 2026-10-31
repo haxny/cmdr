@@ -26,6 +26,7 @@ async fn the_seeded_root_lists_byte_exact_with_owners_dates_and_links() {
         "dated.txt",
         "empty-dir",
         "five-bytes.txt",
+        "group-only",
         "hello.txt",
         "large.bin",
         "link-inside",
@@ -197,14 +198,36 @@ async fn the_server_lists_both_exports_and_guesses_the_files_owner() {
     assert!(exports.contains(&FIXTURE_INSECURE_EXPORT.to_string()), "{exports:?}");
     assert!(exports.contains(&FIXTURE_SECURE_EXPORT.to_string()), "{exports:?}");
 
-    let this_mac = crate::params::NfsIdentity { uid: 501, gid: 20 };
+    let this_mac = crate::params::NfsIdentity::new(501, 20);
     let guess = guess_identity(&fixture_server(), FIXTURE_INSECURE_EXPORT, this_mac, Default::default())
         .await
         .unwrap();
     assert_eq!(guess.source, NfsIdentitySource::MostCommonOwner);
     assert_eq!(
-        guess.identity, FIXTURE_IDENTITY,
+        (guess.identity.uid, guess.identity.gid),
+        (FIXTURE_IDENTITY.uid, FIXTURE_IDENTITY.gid),
         "the files' 1000, ❌ not the root-owned export root's 0"
+    );
+    assert_eq!(guess.identity.other_gids, vec![2001], "the group on `group-only/`");
+}
+
+#[tokio::test]
+#[ignore = "needs the NFS fixture stack: nfs-servers/start.sh (nfs-fixture)"]
+async fn a_file_readable_only_through_another_group_opens_once_the_place_lists_that_group() {
+    let path = "/group-only/secret.txt";
+    let outside = connect_insecure().await;
+    let refused = outside.read_range(&app_path(&outside, path), 0, 64).await.err();
+    assert!(
+        matches!(refused, Some(VolumeError::PermissionDenied { .. })),
+        "{refused:?}"
+    );
+
+    let mut params = fixture_params(FIXTURE_INSECURE_EXPORT);
+    params.identity.other_gids = vec![2001];
+    let member = connect(params).await.unwrap();
+    assert_eq!(
+        member.read_range(&app_path(&member, path), 0, 64).await.unwrap(),
+        b"through a group\n"
     );
 }
 

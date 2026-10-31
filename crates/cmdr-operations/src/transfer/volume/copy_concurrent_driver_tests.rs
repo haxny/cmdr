@@ -236,6 +236,7 @@ impl Harness {
             WriteOperationType::Copy,
             &self.state,
             &*self.events,
+            &crate::transfer::volume::link_carry::LinkCarry::default(),
         )
         .await
         .expect("a preflight scan of an in-memory source can't fail");

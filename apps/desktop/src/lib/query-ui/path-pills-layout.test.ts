@@ -7,7 +7,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   computePathPillsLayout,
+  PILL_MIN_WIDTH_PX,
   scheduleStableWidthMeasure,
+  totalWidth,
   type Segment,
   type ReMeasureScheduler,
 } from './path-pills-layout'
@@ -30,6 +32,24 @@ const charMeasure = (s: string) => s.length // 1 px per char
 const chrome = 4 // small chrome budget per R2 (was 16 px before the fix)
 const sep = 5 // synthetic separator width: 1 px text + 4 px gap
 
+describe('the pill floor', () => {
+  const measure = (s: string): number => s.length * 8
+
+  it('counts a one-letter pill at its 24px floor and leaves a longer one alone', () => {
+    expect(totalWidth(['a'], measure, 4, 0, PILL_MIN_WIDTH_PX)).toBe(24)
+    expect(totalWidth(['Documents'], measure, 4, 0, PILL_MIN_WIDTH_PX)).toBe(76)
+  })
+
+  it('collapses a strip of one-letter folders that only fits without the floor', () => {
+    const short = [seg('a', '/a'), seg('b', '/a/b'), seg('c', '/a/b/c'), seg('d', '/a/b/c/d')]
+    const metrics = { containerWidth: 60, measureWidth: measure, separatorWidth: 0, pillChrome: 4 }
+    expect(computePathPillsLayout(short, { ...metrics, pillMinWidth: 0 }).collapsed).toHaveLength(0)
+    expect(
+      computePathPillsLayout(short, { ...metrics, pillMinWidth: PILL_MIN_WIDTH_PX }).collapsed.length,
+    ).toBeGreaterThan(0)
+  })
+})
+
 describe('computePathPillsLayout (R2)', () => {
   it('renders everything uncollapsed when measurement is not ready', () => {
     const out = computePathPillsLayout(segs, {
@@ -37,6 +57,7 @@ describe('computePathPillsLayout (R2)', () => {
       measureWidth: null,
       separatorWidth: sep,
       pillChrome: chrome,
+      pillMinWidth: 0,
     })
     expect(out.leading).toHaveLength(segs.length)
     expect(out.collapsed).toHaveLength(0)
@@ -50,6 +71,7 @@ describe('computePathPillsLayout (R2)', () => {
       measureWidth: charMeasure,
       separatorWidth: sep,
       pillChrome: chrome,
+      pillMinWidth: 0,
     })
     expect(out.leading.map((s) => s.label)).toEqual(['Users', 'dave', 'projects', 'cmdr', 'src', 'lib'])
     expect(out.collapsed).toHaveLength(0)
@@ -65,6 +87,7 @@ describe('computePathPillsLayout (R2)', () => {
       measureWidth: charMeasure,
       separatorWidth: sep,
       pillChrome: 4,
+      pillMinWidth: 0,
     })
     expect(out.collapsed).toHaveLength(0)
     expect(out.trailing).toHaveLength(0)
@@ -79,6 +102,7 @@ describe('computePathPillsLayout (R2)', () => {
       measureWidth: charMeasure,
       separatorWidth: sep,
       pillChrome: 4,
+      pillMinWidth: 0,
     })
     expect(out.leading.map((s) => s.label)).toEqual(['Users'])
     expect(out.trailing.map((s) => s.label)).toEqual(['lib'])
@@ -93,6 +117,7 @@ describe('computePathPillsLayout (R2)', () => {
       measureWidth: charMeasure,
       separatorWidth: sep,
       pillChrome: 4,
+      pillMinWidth: 0,
     })
     expect(out.leading.map((s) => s.label)).toEqual(['Users'])
     expect(out.collapsed.map((s) => s.label)).toEqual(['dave', 'projects', 'cmdr'])
@@ -106,6 +131,7 @@ describe('computePathPillsLayout (R2)', () => {
       measureWidth: charMeasure,
       separatorWidth: sep,
       pillChrome: 4,
+      pillMinWidth: 0,
     })
     expect(out.leading).toHaveLength(0)
     expect(out.trailing.map((s) => s.label)).toEqual(['lib'])
@@ -214,6 +240,7 @@ describe('computePathPillsLayout (R2)', () => {
       measureWidth: charMeasure,
       separatorWidth: sep,
       pillChrome: 4,
+      pillMinWidth: 0,
     })
     expect(out.leading.map((s) => s.label)).toEqual(['a', 'b'])
     expect(out.collapsed).toHaveLength(0)

@@ -56,7 +56,16 @@ interface GalleryRenameRow {
  * preflight flags. The id is a fixture one, so Apply fails against the backend (see the gallery
  * row's note) — the batch itself renders exactly as a real proposal does.
  */
-function batch(rows: GalleryRenameRow[], extra: { expired?: boolean; preflighting?: boolean; id?: string } = {}) {
+function batch(
+  rows: GalleryRenameRow[],
+  extra: {
+    expired?: boolean
+    preflighting?: boolean
+    id?: string
+    checkFailed?: boolean
+    checkProgress?: { checked: number; total: number }
+  } = {},
+) {
   return {
     proposalId: extra.id ?? 'gallery-fixture-proposal',
     rows: rows.map((row, index) => ({
@@ -78,13 +87,15 @@ function batch(rows: GalleryRenameRow[], extra: { expired?: boolean; preflightin
     expired: extra.expired ?? false,
     revision: 1,
     changed: false,
+    checkFailed: extra.checkFailed ?? false,
+    checkProgress: extra.checkProgress ?? null,
     requestVersion: 0,
   }
 }
 
 /** One review over one batch: what a job small enough for a single model reply looks like. */
-function review(rows: GalleryRenameRow[], extra: { expired?: boolean; preflighting?: boolean } = {}) {
-  return { proposals: [batch(rows, extra)] }
+function review(rows: GalleryRenameRow[], extra: Parameters<typeof batch>[1] = {}) {
+  return { proposals: [batch(rows, extra)], notice: null }
 }
 
 /** A raw-file batch has no recognized text, so every row names its honest limit. */
@@ -267,6 +278,7 @@ export const bulkRenameFixtures: Record<string, Patch<typeof askCmdrState>> = {
   // review. The folder headings are what keep a row's folder from being a guess.
   'spanning-folders': {
     renameReview: {
+      notice: null,
       proposals: [
         batch(
           [
@@ -312,6 +324,23 @@ export const bulkRenameFixtures: Record<string, Patch<typeof askCmdrState>> = {
   // The proposal outlived its backend staging: the table is replaced by a notice
   // and Apply is dead. Unreachable in practice without waiting one out.
   expired: { renameReview: review(TIDY_ROWS, { expired: true }) },
+  // A slow check on a network drive: no time limit, a count, and a way to stop.
+  checking: { renameReview: review(TIDY_ROWS, { preflighting: true, checkProgress: { checked: 2, total: 6 } }) },
+  'check-unfinished': { renameReview: review(TIDY_ROWS, { checkFailed: true }) },
+  // A refusal the volume explains: the catalog's own sentence for it sits under ours.
+  'couldnt-start': {
+    renameReview: {
+      ...review(TIDY_ROWS),
+      notice: {
+        kind: 'couldntStart' as const,
+        reason: {
+          type: 'engine' as const,
+          error: { type: 'source_not_connected' as const, path: '/gallery-fixture/DSC09241.arw' },
+        },
+      },
+    },
+  },
+  'needs-another-look': { renameReview: { ...review(TIDY_ROWS), notice: { kind: 'needsAnotherLook' as const } } },
 }
 
 // ── Feedback (`feedbackFlow`) ───────────────────────────────────────────────

@@ -63,15 +63,13 @@
 
     interface Props {
         session: MultiRenameOpened
-        /** Nothing was selected, so the session took the whole folder: the title says so. */
-        nothingSelected: boolean
         onApplied: (started: MultiRenameStarted) => void
         /** Undo rename handed the last run's reversal to the queue. */
         onUndoStarted: (run: MultiRenameRun) => void
         onClose: () => void
     }
 
-    const { session, nothingSelected, onApplied, onUndoStarted, onClose }: Props = $props()
+    const { session, onApplied, onUndoStarted, onClose }: Props = $props()
 
     const log = getAppLogger('multiRename')
 
@@ -84,17 +82,6 @@
 
     // Alpha badge policy: the status comes from the repo-root feature-status.json.
     const badge = getBadgeStatus('multi-rename')
-
-    /**
-     * What the session renames, in the title: with nothing selected it takes the whole folder,
-     * which surprised a user who expected the selection only.
-     */
-    const scope = $derived(
-        tString(nothingSelected ? 'multiRename.scope.wholeFolder' : 'multiRename.scope.selection', {
-            count: session.count,
-            countText: formatInteger(session.count),
-        }),
-    )
 
     // One sheet renames one session; a new session remounts it.
     const tool = createMultiRenameState(session.sessionId)
@@ -327,9 +314,7 @@
     <!-- The title bar's `<h2>` is already the row (gap + badge alignment live there),
          so the words and the badge are its direct children. -->
     {#snippet title()}
-        <span>{tString('multiRename.title')}</span>{#if badge}<StatusBadge status={badge} />{/if}<span
-            class="scope">{scope}</span
-        >
+        <span>{tString('multiRename.title')}</span>{#if badge}<StatusBadge status={badge} />{/if}
     {/snippet}
 
     <div class="sheet">
@@ -589,12 +574,6 @@
 {/snippet}
 
 <style>
-    /* The title's second half: what the session renames, quieter than the name. */
-    .scope {
-        font-weight: normal;
-        color: var(--color-text-secondary);
-    }
-
     .sheet {
         display: flex;
         flex-direction: column;

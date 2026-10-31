@@ -14,12 +14,12 @@ Drivers: `transfer_driver/CLAUDE.md`. File map: `DETAILS.md` § Files.
   (`move_op::rename_onto_free_name`); ❌ only a name the CALLER claimed earns `land`'s clear-and-rename
   (`staged_write::LandingName`).
 - **An explicit leaf (`TransferLeaves`) applies before conflict/identity checks**, on every engine; never copy then
-  rename. Validated ONCE, at the start. DETAILS § "Named destinations".
-- **A source that would land on ITSELF is a duplicate, ❌ never a conflict**: settled by `dev+ino` per TOP-LEVEL source,
-  before the loop. DETAILS § "Self-collision".
-- **A symlink is a LEAF to a same-volume move (cross-volume follows it) and to every copy's DESTINATION**: ask
-  `validation::is_real_directory` / `Volume::entry_kind`, ❌ never `Path::is_dir` / `Volume::is_directory` (both follow
-  it). DETAILS § "Symlinks are opaque to a move".
+  rename. Validated ONCE. DETAILS § "Named destinations".
+- **A source that would land on ITSELF is a duplicate, ❌ never a conflict**: settled by `dev+ino` per TOP-LEVEL source.
+  DETAILS § "Self-collision".
+- **A symlink is a LEAF to a same-volume move (across volumes a move follows it, a copy carries it:
+  `volume/link_carry.rs`) and to every copy's DESTINATION**: ask `validation::is_real_directory` / `Volume::entry_kind`,
+  ❌ never `Path::is_dir` / `Volume::is_directory`. DETAILS § "Symlinks are opaque to a move".
 - **A ledger entry carries the identity it landed with, ❌ never an mtime** (`../ledger.rs`): local = size +
   `(dev,ino)`, volume = size. Ledgers POP as they reverse. DETAILS § "What the in-flight ledgers record".
 - **A reversal RECHECKS each entry right before acting, ❌ never a batch** (`../reversal.rs`): changed or unprovable ⇒

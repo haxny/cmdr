@@ -608,6 +608,12 @@
         return serversHubRef?.getItemCount() ?? 0
     }
 
+    /** Type-to-jump in whichever browser is up; answers the name it landed on, or `null`. */
+    export function jumpToPrefix(prefix: string): string | null {
+        if (mounting || mountError) return null
+        return (currentNetworkHost ? placesBrowserRef : serversHubRef)?.jumpToPrefix(prefix) ?? null
+    }
+
     /** Find an item by name, returns its index or -1. */
     export function findItemIndex(name: string): number {
         if (currentNetworkHost) {

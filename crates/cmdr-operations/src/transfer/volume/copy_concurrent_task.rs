@@ -26,9 +26,10 @@ use super::super::super::types::VolumeCopyConfig;
 use super::super::transfer_driver::LeafProgressLedger;
 use super::super::transfer_probe::{CURRENT_TASK_PROBE, TaskProbeHandle};
 use super::displaced_destination::DisplacedLedger;
+use super::link_carry::LinkCarry;
 use super::merge_ctx::{CreatedPaths, FileWindow, MergeCtx, MergeProbe};
 use super::preflight::{SourceFileFacts, SourceHint};
-use super::refused_item::{RefusalSubject, skip_if_refused};
+use super::refused_item::{RefusalSubject, has_no_content, skip_if_refused};
 use super::strategy::{LandingName, Replaces, copy_single_path, staging_for};
 use super::transfer_error::PathedVolumeError;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -69,11 +70,12 @@ pub(super) struct CopyTaskSuccess {
 pub(super) enum CopyTaskEnd {
     /// The source landed (all of it, or what its merge didn't skip).
     Landed(CopyTaskSuccess),
-    /// The destination refused the source's own name and the person skipped
-    /// it (`refused_item.rs`): nothing of it landed, so there's nothing to
+    /// Left out as one counted item: the destination refused its own name and
+    /// the person skipped it (`refused_item.rs`), or it has no bytes and no way
+    /// to land as itself. Nothing of it landed, so there's nothing to
     /// journal or roll back, ❌ never a `recorded_path`. `created_dirs` is any
     /// folder the walk made before the refusal, which rollback still owns.
-    SkippedRefusedName {
+    Skipped {
         source_path: PathBuf,
         created_dirs: Vec<PathBuf>,
     },
@@ -152,6 +154,8 @@ pub(super) struct CopyTask {
     /// The operation's ledger of cross-type asides, which a deep clash inside
     /// this source adds to.
     pub(super) displaced: Arc<DisplacedLedger>,
+    /// Which symlinks this operation lands as symlinks.
+    pub(super) links: Arc<LinkCarry>,
     /// This source's rollback ledger: the files it streams and the dirs it newly
     /// creates. Shared with the driver, which keeps a handle so a task it
     /// ABANDONS at the cancel-drain deadline still hands over what it landed
@@ -191,6 +195,7 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskEnd, Box<Cop
         dest_name_claimed,
         window,
         displaced,
+        links,
         created,
         merge_probe,
         // Held for the task's whole life; dropping it (completion, abort, panic)
@@ -222,6 +227,7 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskEnd, Box<Cop
         displaced: &displaced,
         probe: merge_probe,
         locked: None,
+        links: Some(&links),
     };
     // A top-level FILE source IS a leaf, so it takes its slot from the same
     // op-wide window a directory's children take theirs from. Otherwise a batch
@@ -273,7 +279,15 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskEnd, Box<Cop
     // The destination refused this source's OWN name (a deep one is its
     // walker's to ask about): ask, here on the spawned task, which may wait on
     // a person. A folder that landed anything is no longer one refused item.
+    // A carried link joined the ledger like a walked leaf.
+    let by_leaves = source_is_dir || !created_files.is_empty();
     let result = match result {
+        Err(e) if created_files.is_empty() && !source_is_dir && has_no_content(&e) => {
+            return Ok(CopyTaskEnd::Skipped {
+                source_path,
+                created_dirs,
+            });
+        }
         Err(e) if created_files.is_empty() => {
             let subject = RefusalSubject {
                 source: &source_path,
@@ -283,7 +297,7 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskEnd, Box<Cop
             };
             match skip_if_refused(&merge_ctx, &subject, e).await {
                 Ok(()) => {
-                    return Ok(CopyTaskEnd::SkippedRefusedName {
+                    return Ok(CopyTaskEnd::Skipped {
                         source_path,
                         created_dirs,
                     });
@@ -298,12 +312,12 @@ pub(super) async fn run_copy_task(task: CopyTask) -> Result<CopyTaskEnd, Box<Cop
         // overwrite (a swap's landing ran inside the write).
         Ok(bytes) => Ok(CopyTaskEnd::Landed(CopyTaskSuccess {
             landed: if state.journal_volumes.is_some() {
-                journal::LandedTimes::read_back(&*dest_volume, &dest_path, source_is_dir, &created_files).await
+                journal::LandedTimes::read_back(&*dest_volume, &dest_path, by_leaves, &created_files).await
             } else {
                 journal::LandedTimes::default()
             },
             recorded_path: dest_path,
-            source_is_dir,
+            source_is_dir: by_leaves,
             bytes,
             // Overwrote iff a top-level file→file Overwrite replaced a file (a
             // swap, or an in-place write on a whole-publishing destination), OR

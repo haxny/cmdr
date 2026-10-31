@@ -26,8 +26,9 @@ use cmdr_fs::volume::Volume;
 /// 200 ms limits below: these run on a loaded box.
 const WAIT: Duration = Duration::from_secs(5);
 
-/// The inactivity budget the fixtures use, short enough to keep the suite fast
-/// and long enough that a stalled CI thread can't fake a timeout.
+/// The inactivity budget the fixtures use, short enough to keep the suite fast.
+/// A cell that must NOT time out while feeding the clock needs a wider one: a
+/// stalled test thread fakes a timeout at this size.
 const TEST_LIMIT: Duration = Duration::from_millis(200);
 
 /// A preview registered in flight on `engine`, with its cancel flag and progress interval.
@@ -101,21 +102,25 @@ async fn a_walk_that_keeps_counting_is_left_alone() {
     let engine = TestOperations::new();
     let (preview_id, state) = in_flight_preview(&engine);
     let events = Arc::new(CollectorScanPreviewSink::new());
+    // Wider than `TEST_LIMIT`, and fed well inside it: this cell's feed is a test
+    // thread, and at 200 ms fed every 100 ms, a 100 ms stall under load let the
+    // watchdog fire between two counts.
+    let budget = Duration::from_secs(1);
     let watchdog = ScanWatchdog::start(
         &engine,
         preview_id.clone(),
         ScanTarget::of(&[PathBuf::from("/Volumes/a slow share")], "test"),
-        TEST_LIMIT,
+        budget,
         state,
         Arc::clone(&events) as Arc<dyn ScanPreviewEventSink>,
     );
 
-    // Six budgets' worth of wall clock, fed a count every half budget.
-    for tick in 1..=12u64 {
+    // Three budgets' worth of wall clock, fed a count every tenth of a budget.
+    for tick in 1..=30u64 {
         // allowed-test-sleep: the WAIT is the subject. The claim is that a walk
-        // counting something every half budget is never cut off, which can only be
-        // shown by letting several budgets of real time pass between counts.
-        tokio::time::sleep(TEST_LIMIT / 2).await;
+        // that keeps counting is never cut off, which can only be shown by letting
+        // several budgets of real time pass between counts.
+        tokio::time::sleep(budget / 10).await;
         watchdog.note_progress(tick as usize, 0, tick * 1_024);
     }
 

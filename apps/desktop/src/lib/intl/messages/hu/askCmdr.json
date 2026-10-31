@@ -1130,6 +1130,42 @@
   "@askCmdr.renameReview.expired": {
     "sourceHash": "4e6482a"
   },
+  "askCmdr.renameReview.checking": "{totalText} {total, plural, one {fájlból} other {fájlból}} {checkedText} ellenőrizve",
+  "@askCmdr.renameReview.checking": {
+    "sourceHash": "92a4d6f"
+  },
+  "askCmdr.renameReview.checkingLabel": "Fájlok ellenőrzése",
+  "@askCmdr.renameReview.checkingLabel": {
+    "sourceHash": "03f0bc5"
+  },
+  "askCmdr.renameReview.stopChecking": "Ellenőrzés leállítása",
+  "@askCmdr.renameReview.stopChecking": {
+    "sourceHash": "4373037"
+  },
+  "askCmdr.renameReview.checkUnfinished": "A Cmdr nem fejezte be {count, plural, one {# fájl} other {# fájl}} ellenőrzését, ezért még nem tud átnevezni.",
+  "@askCmdr.renameReview.checkUnfinished": {
+    "sourceHash": "c3c05ce"
+  },
+  "askCmdr.renameReview.checkAgain": "Újraellenőrzés",
+  "@askCmdr.renameReview.checkAgain": {
+    "sourceHash": "fb7099a"
+  },
+  "askCmdr.renameReview.needsAnotherLook": "Valami megváltozott, mióta a Cmdr ellenőrizte ezeket a neveket, ezért nem nevezett át semmit. Nézd át még egyszer, aztán próbáld újra.",
+  "@askCmdr.renameReview.needsAnotherLook": {
+    "sourceHash": "36c6050"
+  },
+  "askCmdr.renameReview.couldntStart": "A Cmdr nem tudta elindítani ezt az átnevezést, és semmi sem változott. Próbáld újra egy pillanat múlva.",
+  "@askCmdr.renameReview.couldntStart": {
+    "sourceHash": "3ca2b21"
+  },
+  "askCmdr.renameReview.nothingToApply": "Itt már nincs mit átnevezni.",
+  "@askCmdr.renameReview.nothingToApply": {
+    "sourceHash": "9c63cc7"
+  },
+  "askCmdr.renameReview.nameNotSaved": "A Cmdr nem tudta elmenteni ezt a nevet. A névvel nincs probléma, úgyhogy próbáld újra.",
+  "@askCmdr.renameReview.nameNotSaved": {
+    "sourceHash": "daff211"
+  },
   "askCmdr.renameReview.status": "{allowed, plural, one {# átnevezés engedélyezve} other {# átnevezés engedélyezve}}; {blocked, plural, one {# blokkolva} other {# blokkolva}}",
   "@askCmdr.renameReview.status": {
     "sourceHash": "9f70789"

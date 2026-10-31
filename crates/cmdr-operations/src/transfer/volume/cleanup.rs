@@ -16,8 +16,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::in_flight_temps;
-use super::super::super::ledger::WrittenFile;
-use super::super::super::reversal::{PresentRecheck, ReversalTally, drained, recheck_volume};
+use super::super::super::ledger::{WrittenFile, WrittenIdentity};
+use super::super::super::reversal::{PresentRecheck, ReversalTally, drained, recheck_volume, recheck_volume_link};
 use super::super::super::state::{WindDown, WriteOperationState};
 use super::super::super::types::{
     StagedLeftoverFate, StagedLeftovers, WriteOperationError, WriteOperationPhase, WriteOperationType,
@@ -165,20 +165,30 @@ pub(super) async fn volume_rollback_with_progress(
 /// Remove ONE destination file this operation wrote, if the backend still reports
 /// the file this operation wrote.
 async fn reverse_written_file(runtime: &Handle, volume: &Arc<dyn Volume>, entry: &WrittenFile) -> ItemResult {
-    let live_size = match volume.get_metadata(&entry.path).await {
-        Ok(live) => live.size,
+    let couldnt_recheck = |e: &VolumeError| match e {
         // Already gone ⇒ the end state we wanted already holds.
-        Err(VolumeError::NotFound(_)) => return ItemResult::Skipped(SkipReason::AlreadyGone),
-        Err(e) => {
+        VolumeError::NotFound(_) => ItemResult::Skipped(SkipReason::AlreadyGone),
+        e => {
             log::warn!(
                 "volume_rollback_with_progress: couldn't recheck {}: {e}",
                 LogPrivate::file_path(&entry.path),
-                e = LogError(&e)
+                e = LogError(e)
             );
-            return ItemResult::Skipped(SkipReason::UnverifiablePrecondition);
+            ItemResult::Skipped(SkipReason::UnverifiablePrecondition)
         }
     };
-    match recheck_volume(entry, live_size) {
+    let recheck = if let WrittenIdentity::VolumeLink { target } = &entry.identity {
+        match volume.read_link_target(&entry.path).await {
+            Ok(live) => recheck_volume_link(target, live.as_deref()),
+            Err(e) => return couldnt_recheck(&e),
+        }
+    } else {
+        match volume.get_metadata(&entry.path).await {
+            Ok(live) => recheck_volume(entry, live.size),
+            Err(e) => return couldnt_recheck(&e),
+        }
+    };
+    match recheck {
         PresentRecheck::Act => {}
         PresentRecheck::Skip(reason) => {
             log::info!(

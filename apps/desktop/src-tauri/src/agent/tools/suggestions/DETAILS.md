@@ -164,7 +164,8 @@ the write; any refusal writes nothing.
     `startFolder`.
   - `nfs`. Add: `host`, `export` (both required), `port` (absent asks the portmapper), `uid`, `gid`, `startFolder`,
     `name`. Edit: `name`, `startFolder`. An add without `uid` / `gid` stores none: the add form's guess
-    asks the server, which an approval mustn't, so the approval decides.
+    asks the server, which an approval mustn't, so the approval decides. Other group IDs are the form's alone: an add
+    from here saves none, and an edit keeps the stored ones.
   - `s3`. Add: a BUCKET place under a saved account, `account` (its listing id) and `bucket`, plus `name`. Edit: `name`.
     No account at all is a new account, `protocolNotProposable` (the user adds one in Servers). Why so narrow: a new
     account needs the provider-and-endpoint union in the schema, paid on every turn for a rare case, and its key id

@@ -5629,6 +5629,13 @@
     "sources": "Finder MenuBar and LocalizableMerged: Kind → Тип / по типу; DC, Nautilus, Dolphin, Thunar: Type → Тип; MS: type → тип",
     "note": "Finder already spends «Тип» on Kind; in a column that shows both, the protocol column is still «Тип»."
   },
+  "type-to-jump": {
+    "chosen": "Переход",
+    "accept": ["переход"],
+    "forms": "the mode and badge word «Переход» (Переход: …), beside «Фильтр»; clear the typed text → Очистить поле «Переход» (a bare Очистить переход doesn't parse)",
+    "confidence": "high",
+    "sources": "catalog (fileExplorer.typeToJump.prefix, settings.fileExplorer.typeToJump.mode.opt.jump, fileExplorer.quickFilter.intro.switchToJump)"
+  },
   "typo": {
     "chosen": "опечатка",
     "accept": ["опечат"],

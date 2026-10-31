@@ -109,6 +109,14 @@ impl LocalPosixVolume {
                         if entry.depth() > 0 {
                             dir_count += 1;
                         }
+                    } else if ft.is_symlink() && entry.depth() > 0 {
+                        // One entry worth no bytes, as `scan_walk` and the preview
+                        // count it. Not a SELECTED link (depth 0): `WalkDir` walks
+                        // through it, and the top-level stat below answers for it.
+                        file_count += 1;
+                        if let Some(recorder) = &recorder {
+                            recorder.file(&as_called_path(entry.path()), 0);
+                        }
                     }
                 }
 

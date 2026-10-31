@@ -3,13 +3,9 @@
   "@multiRename.title": {
     "sourceHash": "5ceb1a2"
   },
-  "multiRename.scope.selection": "{count, plural, one {{countText} geselecteerd bestand} other {{countText} geselecteerde bestanden}}",
-  "@multiRename.scope.selection": {
-    "sourceHash": "30a7b9f"
-  },
-  "multiRename.scope.wholeFolder": "{count, plural, one {Het enige bestand in deze map (niets geselecteerd)} other {Alle {countText} bestanden in deze map (niets geselecteerd)}}",
-  "@multiRename.scope.wholeFolder": {
-    "sourceHash": "37dc7a2"
+  "multiRename.noFileSelected": "Geen bestand geselecteerd",
+  "@multiRename.noFileSelected": {
+    "sourceHash": "26bfbd5"
   },
   "multiRename.nameMask": "Naammasker",
   "@multiRename.nameMask": {

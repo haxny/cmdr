@@ -140,6 +140,7 @@ export function makeExplorerSpy(): Record<string, ReturnType<typeof vi.fn>> {
     'calculateFolderSizes',
     'toggleVolumeChooser',
     'toggleFavoritesMenu',
+    'cycleQuickFilter',
     'copyPathBetweenPanes',
     'refreshPane',
     'newTab',
@@ -356,6 +357,12 @@ export const DELEGATE_ROWS: DelegateRow[] = [
     id: 'pane.copyPathRightToLeft',
     expect: (e) => {
       expect(e.copyPathBetweenPanes).toHaveBeenCalledExactlyOnceWith({ source: 'right', target: 'left' })
+    },
+  },
+  {
+    id: 'pane.quickFilter',
+    expect: (e) => {
+      expect(e.cycleQuickFilter).toHaveBeenCalledOnce()
     },
   },
   {

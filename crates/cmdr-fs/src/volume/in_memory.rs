@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+mod links;
 mod transfer_holds;
 mod volume_impl;
 
@@ -38,6 +39,9 @@ struct InMemoryEntry {
     /// What [`Volume::node_identity`] reports: fresh for every entry created, kept
     /// across a rename, like an inode.
     node: u64,
+    /// `Some` for a symlink: what [`Volume::read_link_target`] answers, stored
+    /// as given.
+    link_target: Option<PathBuf>,
 }
 
 impl InMemoryEntry {
@@ -50,6 +54,7 @@ impl InMemoryEntry {
             content,
             extra: CarriedMetadata::default(),
             node: NEXT_NODE.fetch_add(1, Ordering::Relaxed),
+            link_target: None,
         }
     }
 
@@ -162,6 +167,15 @@ pub struct InMemoryVolume {
     /// with `NotSupported`, so a caller that forgot to ask gets caught. Default
     /// `false`. Set via [`Self::with_renames_by_copy`].
     renames_by_copy: bool,
+    /// What [`Volume::can_hold_links`] reports, and whether
+    /// [`Volume::create_symlink`] makes one. Default `false`, a store with no
+    /// links. Set via [`Self::with_links`].
+    holds_links: bool,
+    /// When `true`, [`Volume::can_hold_links`] still claims links but
+    /// [`Volume::create_symlink`] refuses, modeling a filesystem under a
+    /// link-capable backend that has none (exFAT under local). Set via
+    /// [`Self::with_links_refused`].
+    refuses_links: bool,
     /// Every batch [`Volume::delete_files`] was handed, in order, so a test can
     /// see the sweep batched.
     delete_batches: std::sync::Mutex<Vec<usize>>,
@@ -243,6 +257,8 @@ impl InMemoryVolume {
             publishes_writes_whole: false,
             cut_off_writes_land_late: false,
             renames_by_copy: false,
+            holds_links: false,
+            refuses_links: false,
             delete_batches: std::sync::Mutex::new(Vec::new()),
             stat_failing: RwLock::new(HashSet::new()),
             connection_state: None,

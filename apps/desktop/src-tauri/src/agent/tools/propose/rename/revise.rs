@@ -24,7 +24,18 @@ use tauri::{AppHandle, Manager, Runtime};
 use super::plan::validate_destination_name;
 use super::store::{AcceptedRenamePreflights, RenameProposalRowSnapshot};
 use crate::agent::AgentDb;
-use crate::mcp::ToolError;
+
+/// Why an edit didn't land. Three different answers for the review: try another name, start
+/// over, or try again.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReviseRefusal {
+    /// The name isn't usable. `detail` is written for the model, so it stays in the log.
+    NameRefused { detail: String },
+    /// The review is gone: the app restarted, somebody answered the group, or the row left it.
+    ReviewOver,
+    /// Cmdr's own database didn't answer, so the review and the name may both be fine.
+    StoreUnavailable { detail: String },
+}
 
 /// Replace one row's destination name with the user's own, answering the row as the review
 /// dialog should now show it.
@@ -33,13 +44,13 @@ pub fn revise_row<R: Runtime>(
     proposal_id: &str,
     row_id: &str,
     destination_name: &str,
-) -> Result<RenameProposalRowSnapshot, ToolError> {
+) -> Result<RenameProposalRowSnapshot, ReviseRefusal> {
     let (Some(db), Some(accepted)) = (app.try_state::<AgentDb>(), app.try_state::<AcceptedRenamePreflights>()) else {
-        return Err(review_is_over());
+        return Err(ReviseRefusal::ReviewOver);
     };
     let conn = db.open_write_connection().map_err(|e| {
         log::warn!(target: "agent::propose", "revising a proposed name couldn't open main.db: {e}");
-        review_is_over()
+        ReviseRefusal::StoreUnavailable { detail: e.to_string() }
     })?;
     revise_staged_row(&conn, &accepted, proposal_id, row_id, destination_name)
 }
@@ -52,20 +63,16 @@ pub(super) fn revise_staged_row(
     proposal_id: &str,
     row_id: &str,
     destination_name: &str,
-) -> Result<RenameProposalRowSnapshot, ToolError> {
-    validate_destination_name(destination_name)?;
+) -> Result<RenameProposalRowSnapshot, ReviseRefusal> {
+    validate_destination_name(destination_name).map_err(|e| ReviseRefusal::NameRefused { detail: e.message })?;
     let revised = super::store::revise_row(conn, proposal_id, row_id, destination_name)
         .map_err(|e| {
             log::warn!(target: "agent::propose", "revising a proposed name didn't land: {e}");
-            review_is_over()
+            ReviseRefusal::StoreUnavailable { detail: e.to_string() }
         })?
-        .ok_or_else(review_is_over)?;
+        .ok_or(ReviseRefusal::ReviewOver)?;
     // The second guard, and the one that doesn't depend on the spine noticing: the fingerprints
     // this group's acceptance paired with describe a plan whose names have moved on.
     accepted.forget(proposal_id);
     Ok(revised)
-}
-
-fn review_is_over() -> ToolError {
-    ToolError::invalid_params("This rename review has expired. Ask Cmdr to prepare it again.")
 }

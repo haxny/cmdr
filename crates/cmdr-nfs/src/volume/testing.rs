@@ -24,7 +24,7 @@ pub const FIXTURE_SECURE_EXPORT: &str = "/secure";
 
 /// Who owns the seeded tree, and who a cell acts as: root-squash leaves the
 /// files to uid 1000.
-pub const FIXTURE_IDENTITY: NfsIdentity = NfsIdentity { uid: 1000, gid: 1000 };
+pub const FIXTURE_IDENTITY: NfsIdentity = NfsIdentity::new(1000, 1000);
 
 /// The file every fixture carries for the byte path to read.
 pub const FIXTURE_LARGE_FILE: &str = "large.bin";

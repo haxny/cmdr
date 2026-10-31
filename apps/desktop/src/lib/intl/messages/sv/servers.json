@@ -521,6 +521,18 @@
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
+  "servers.sheet.nfsOtherGids": "Andra grupp-ID:n",
+  "@servers.sheet.nfsOtherGids": {
+    "sourceHash": "f9276b8"
+  },
+  "servers.sheet.nfsOtherGidsNotIds": "Skriv grupp-ID:n som nummer med kommatecken emellan, till exempel 100, 1001.",
+  "@servers.sheet.nfsOtherGidsNotIds": {
+    "sourceHash": "a67ce61"
+  },
+  "servers.sheet.nfsOtherGidsTooMany": "NFS kan skicka upp till 16 andra grupper, och den här listan har {count}.",
+  "@servers.sheet.nfsOtherGidsTooMany": {
+    "sourceHash": "dc277f3"
+  },
   "servers.sheet.nfsIdentityHelp": "Servern avgör utifrån de här numren vad du får öppna. NFS frågar inte efter något lösenord.",
   "@servers.sheet.nfsIdentityHelp": {
     "sourceHash": "a1228b5"

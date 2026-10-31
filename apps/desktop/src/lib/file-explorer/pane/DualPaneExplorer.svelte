@@ -937,6 +937,11 @@
         paneCommands.closeHeaderMenus()
     }
 
+    /** Open the FOCUSED pane's filter badge or switch it (⌃S), the `pane.quickFilter` command. */
+    export function cycleQuickFilter() {
+        paneCommands.cycleQuickFilter()
+    }
+
     /** Open/toggle the FOCUSED pane's favorites menu (⌃D), the `favorites.open` command. */
     export function toggleFavoritesMenu() {
         paneCommands.toggleFavoritesMenu()
@@ -1113,8 +1118,8 @@
 
     // noinspection JSUnusedGlobalSymbols -- consumed by +page.svelte for the Multi-Rename Tool
     /** The Multi-Rename Tool's target: the focused pane's listing, selected rows, and their sequence. */
-    export function getFocusedPaneRenameTarget(): MultiRenameSelection | null {
-        return paneCommands.getFocusedPaneRenameTarget()
+    export function resolveMultiRenameTarget(): MultiRenameSelection | null {
+        return paneCommands.resolveMultiRenameTarget()
     }
 
     export async function getFocusedPaneEntries(): Promise<{

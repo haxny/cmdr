@@ -70,3 +70,13 @@ chown -R -h 1000:1000 "$root"
 chown 0:0 "$root" "$root/hello.txt"
 chmod 0777 "$root"
 chmod 0644 "$root/hello.txt"
+
+# A file only group 2001 may read, in a folder of group 2001 the guess can see:
+# the fixture's uid 1000 is outside that group unless the credential lists it
+# (`NfsIdentity::other_gids`).
+mkdir "$root/group-only"
+printf 'through a group\n' > "$root/group-only/secret.txt"
+chown 1000:2001 "$root/group-only"
+chown 2000:2001 "$root/group-only/secret.txt"
+chmod 0755 "$root/group-only"
+chmod 0640 "$root/group-only/secret.txt"

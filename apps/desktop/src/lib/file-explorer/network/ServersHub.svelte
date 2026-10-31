@@ -29,7 +29,7 @@
     import { hubPaneState, NEARBY_GROUP_MCP_NAME } from './servers-hub-mcp'
     import { createHubActions, type HubRowMenuAPI } from './servers-hub-actions'
     import { cursorAcrossRebuild } from './servers-hub-keys'
-    import { cursorAfterArrow } from './list-cursor'
+    import { cursorAfterArrow, nameStartsWith, scrollRowIntoView } from './list-cursor'
     import { hubColumnsAt } from './servers-hub-columns'
     import { useInlineSize } from '#lib/utils/inline-size-action.js'
     import ServersHubRowMenu from './ServersHubRowMenu.svelte'
@@ -219,17 +219,7 @@
     }
 
     function scrollToIndex(index: number) {
-        if (!listContainer) return
-        const targetTop = index * ROW_HEIGHT
-        const targetBottom = targetTop + ROW_HEIGHT
-        const scrollTop = listContainer.scrollTop
-        const viewportBottom = scrollTop + containerHeight
-
-        if (targetTop < scrollTop) {
-            listContainer.scrollTop = targetTop
-        } else if (targetBottom > viewportBottom) {
-            listContainer.scrollTop = targetBottom - containerHeight
-        }
+        if (listContainer) scrollRowIntoView(listContainer, index, ROW_HEIGHT, containerHeight)
     }
 
     /**
@@ -297,6 +287,22 @@
         return items.findIndex(
             (item) => (item.kind === 'row' ? item.row.name : NEARBY_GROUP_MCP_NAME).toLowerCase() === wanted,
         )
+    }
+
+    /**
+     * Type-to-jump: the cursor goes to the first row whose name starts with `prefix`, and the
+     * answer is that name, or `null` with the cursor left alone. It walks the FULL list so a
+     * server a collapsed nearby group hides stays reachable (`setCursorIndex` opens the group);
+     * those rows come last, so anything on screen wins. The header and "Add server…" aren't
+     * names to jump to.
+     */
+    // noinspection JSUnusedGlobalSymbols -- used dynamically by NetworkMountView
+    export function jumpToPrefix(prefix: string): string | null {
+        const index = items.findIndex((item) => item.kind === 'row' && nameStartsWith(item.row.name, prefix))
+        const item = items.at(index)
+        if (index < 0 || item?.kind !== 'row') return null
+        setCursorIndex(index)
+        return item.row.name
     }
 
     /**
@@ -501,7 +507,7 @@
         <span class="col-status">{tString('servers.hub.colStatus')}</span>
         <span class="col-last-used">{tString('servers.hub.colLastUsed')}</span>
     </div>
-    <div class="row-list" bind:this={listContainer} bind:clientHeight={containerHeight}>
+    <div class="row-list" role="list" bind:this={listContainer} bind:clientHeight={containerHeight}>
         {#each visibleItems as item, index (item.id)}
             {#if item.kind === 'nearby_group'}
                 <!--
@@ -602,7 +608,7 @@
 
         <!-- The search is for nearby servers, so a collapsed group says it on its own header. -->
         {#if isSearching && (!nearbyGroup || list.nearbyExpanded)}
-            <div class="searching-indicator">
+            <div class="searching-indicator" role="listitem">
                 <Spinner size="sm" />
                 {tString('fileExplorer.network.browser.searching')}
             </div>
@@ -614,7 +620,7 @@
                 never needed the macOS Local Network permission), so this line replaces
                 the nearby hosts and nothing else.
             -->
-            <div class="discovery-off">
+            <div class="discovery-off" role="listitem">
                 <span>{tString('servers.hub.discoveryOff')}</span>
                 <LinkButton onclick={openDiscoverySetting}
                     >{tString('servers.hub.discoveryOffLink')}</LinkButton
@@ -641,13 +647,13 @@
 
         <!-- NFS has no discovery, so a NAS that serves only NFS would never show up here.
              The line says so, and its link opens the sheet already on NFS. -->
-        <div class="nfs-hint">
+        <div class="nfs-hint" role="listitem">
             <span>{tString('servers.hub.nfsHint')}</span>
             <LinkButton onclick={() => onConnectToServer?.('nfs')}>{tString('servers.hub.nfsHintLink')}</LinkButton>
         </div>
 
         {#if list.isKnown && !isSearching && rows.length === 0}
-            <div class="empty-state">
+            <div class="empty-state" role="listitem">
                 <img class="empty-icon" src="/icons/network-no-hosts.svg" alt="" />
                 <div class="empty-title">{tString('servers.hub.emptyTitle')}</div>
                 <div class="empty-message">{tString('servers.hub.emptyMessage')}</div>

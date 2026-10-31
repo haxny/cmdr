@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "Le serveur de ce dossier est injoignable",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` se trouve derrière un lien vers un autre serveur, et Cmdr ne peut pas joindre ce serveur pour le moment. Le reste de ce partage fonctionne normalement, et rien n’a été supprimé.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Voici ce que vous pouvez essayer :\n- Vérifiez que l’autre serveur est en marche et que votre réseau peut le joindre\n- Revenez ici pour réessayer",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "Reconnexion à l’appareil",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2156,6 +2168,10 @@
   "errors.volume.notConnected": "Cmdr n’est pas encore connecté à ce téléphone ou à ce serveur, ouvrez-le d’abord.",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "Cet emplacement se trouve derrière un lien vers un autre serveur, et Cmdr ne peut pas joindre ce serveur pour le moment.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "L’appareil a redémarré sa connexion. Patientez quelques secondes, puis réessayez.",
   "@errors.volume.deviceSessionReset": {

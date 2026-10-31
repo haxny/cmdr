@@ -5,9 +5,7 @@
  * host), PlacesBrowser (host selected), mounting spinner, or a mount
  * error state. Mounting/error states are deterministic and inline in
  * this file; ServersHub + PlacesBrowser have their own a11y tests,
- * so we audit the shell with no host first and skip the two list
- * states that are blocked upstream by the same aria-required-parent
- * issue.
+ * so this audits the shell with no host.
  */
 
 import { describe, it, vi } from 'vitest'
@@ -17,6 +15,8 @@ import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
   mountNetworkShare: vi.fn(() => Promise.resolve({ mountPath: '/Volumes/Public' })),
+  noteNetworkAction: vi.fn(() => Promise.resolve()),
+  setServersViewShown: vi.fn(() => Promise.resolve()),
   resolvePathVolume: vi.fn(() => Promise.resolve({ volume: null })),
   updateLeftPaneState: vi.fn(() => Promise.resolve()),
   updateRightPaneState: vi.fn(() => Promise.resolve()),
@@ -55,6 +55,8 @@ vi.mock('../network/network-store.svelte', () => ({
   getDiscoveryState: () => 'idle',
   holdDiscoveryForServersView: () => () => {},
   isHostResolving: () => false,
+  getListedAccount: () => null,
+  noteCachedCredentials: vi.fn(() => Promise.resolve()),
   getShareState: () => undefined,
   getShareCount: () => null,
   isListingShares: () => false,
@@ -78,11 +80,7 @@ vi.mock('#lib/ui/toast/index.js', () => ({
 }))
 
 describe('NetworkMountView a11y', () => {
-  // TODO: ServersHub and PlacesBrowser both emit `aria-required-parent`
-  // axe violations (host/share rows are role="listitem" without a parent
-  // role="list"). Both are tracked in their own a11y test files. Once
-  // fixed upstream, enable the "no host" and "host selected" cases here.
-  it.skip('default (no host - list browser) has no a11y violations (BLOCKED: aria-required-parent)', async () => {
+  it('default (no host - list browser) has no a11y violations', async () => {
     const target = document.createElement('div')
     document.body.appendChild(target)
     mount(NetworkMountView, {

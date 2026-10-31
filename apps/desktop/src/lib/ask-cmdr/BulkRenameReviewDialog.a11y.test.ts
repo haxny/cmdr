@@ -20,6 +20,8 @@ const { actions, watcher, media, viewer } = vi.hoisted(() => ({
     denyAll: vi.fn(),
     setAllowed: vi.fn(),
     listingChanged: vi.fn(),
+    checkAgain: vi.fn(),
+    stopChecks: vi.fn(),
     revise: vi.fn<(payload: { proposalId: string; rowId: string; destinationName: string }) => Promise<void>>(),
   },
   watcher: {
@@ -60,6 +62,13 @@ vi.mock('./ask-cmdr-trigger.svelte', async () => {
     renameReviewListingChanged: (changes: unknown[]) => {
       actions.listingChanged(changes)
     },
+    renameCheckProgressed: () => {},
+    checkRenameReviewAgain: () => {
+      actions.checkAgain()
+    },
+    stopRenameChecks: () => {
+      actions.stopChecks()
+    },
     reviseRenameRow: async (proposalId: string, rowId: string, destinationName: string) => {
       await actions.revise({ proposalId, rowId, destinationName })
     },
@@ -73,6 +82,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
     watcher.handler = handler
     return Promise.resolve(vi.fn())
   }),
+  onBulkRenameCheckProgress: vi.fn(() => Promise.resolve(vi.fn())),
   mediaIndexThumbnailToken: (path: string) => media.mint(path),
   mediaIndexDropThumbnailTokens: (tokens: string[]) => media.drop(tokens),
 }))
@@ -142,6 +152,8 @@ function batch(overrides: Partial<BulkRenameReviewProposal> = {}): BulkRenameRev
     expired: false,
     revision: 1,
     changed: false,
+    checkFailed: false,
+    checkProgress: null,
     requestVersion: 0,
     ...overrides,
   }
@@ -149,7 +161,7 @@ function batch(overrides: Partial<BulkRenameReviewProposal> = {}): BulkRenameRev
 
 /** A review over one batch, which is what a job small enough for one model reply looks like. */
 function review(overrides: Partial<BulkRenameReviewProposal> = {}): BulkRenameReview {
-  return { proposals: [batch(overrides)] }
+  return { proposals: [batch(overrides)], notice: null }
 }
 
 /** Markup a model could smuggle into `detail`; the column must show it, not run it. */
@@ -588,6 +600,64 @@ describe('BulkRenameReviewDialog', () => {
   })
 
   /** A name the server won't take leaves the row on the name it had, and says so on the row. */
+  it('shows how far a slow check has got, and stops it from a button that keeps the review open', async () => {
+    reviewState.renameReview = review({ preflighting: true, checkProgress: { checked: 1_200, total: 2_500 } })
+    const target = mountDialog()
+    await tick()
+
+    const progress = requiredElement(target, '[data-rename-check="running"]')
+    expect(progress.textContent).toContain('Checked 1,200 of 2,500 files')
+    await expectNoA11yViolations(target)
+
+    const stop = Array.from(progress.querySelectorAll('button')).find((button) =>
+      button.textContent.includes('Stop checking'),
+    )
+    stop?.click()
+    expect(actions.stopChecks).toHaveBeenCalledTimes(1)
+    expect(actions.cancel).not.toHaveBeenCalled()
+  })
+
+  it('shows no progress for a check that hasn’t reported', async () => {
+    reviewState.renameReview = review({ preflighting: true })
+    const target = mountDialog()
+    await tick()
+
+    expect(target.querySelector('[data-rename-check="running"]')).toBeNull()
+  })
+
+  it('says which files a check didn’t finish, offers Check again, and holds Rename', async () => {
+    reviewState.renameReview = review({ checkFailed: true })
+    const target = mountDialog()
+    await tick()
+
+    const notice = requiredElement(target, '[data-rename-check="unfinished"]')
+    expect(notice.textContent).toContain('hasn’t finished checking')
+    notice.querySelector('button')?.click()
+    expect(actions.checkAgain).toHaveBeenCalledTimes(1)
+    const rename = Array.from(target.querySelectorAll('button')).find((button) =>
+      button.getAttribute('aria-label')?.startsWith('Rename'),
+    )
+    expect(rename?.disabled).toBe(true)
+    await expectNoA11yViolations(target)
+  })
+
+  it('says why a rename didn’t start, in plain text, naming the volume’s reason', async () => {
+    reviewState.renameReview = {
+      ...review(),
+      notice: {
+        kind: 'couldntStart',
+        reason: { type: 'engine', error: { type: 'source_not_connected', path: '/a.png' } },
+      },
+    }
+    const target = mountDialog()
+    await tick()
+
+    const notice = requiredElement(target, '[data-rename-notice="couldntStart"]')
+    expect(notice.textContent).toContain('Cmdr couldn’t start this rename')
+    expect(notice.querySelector('.notice-detail')?.textContent).not.toBe('')
+    await expectNoA11yViolations(target)
+  })
+
   it('says when a typed name can’t be used', async () => {
     reviewState.renameReview = review({ rows: [row({ nameRejected: true })] })
     const target = mountDialog()
@@ -643,6 +713,7 @@ describe('BulkRenameReviewDialog', () => {
    */
   it('names both folders when one job spans two, and answers them together', async () => {
     reviewState.renameReview = {
+      notice: null,
       proposals: [
         batch({
           proposalId: 'batch-one',
@@ -702,6 +773,7 @@ describe('BulkRenameReviewDialog', () => {
   /** An expired batch has nothing left to decide, so it says so in place of its rows. */
   it('replaces an expired batch with a notice and keeps the live one reviewable', async () => {
     reviewState.renameReview = {
+      notice: null,
       proposals: [
         batch({ proposalId: 'batch-expired', expired: true }),
         batch({
@@ -723,6 +795,7 @@ describe('BulkRenameReviewDialog', () => {
   /** A batch the agent amended since it was shown is stale: a notice replaces its rows. */
   it('replaces a batch the agent changed with a notice, and leaves it out of Rename', async () => {
     reviewState.renameReview = {
+      notice: null,
       proposals: [
         batch({ proposalId: 'batch-changed', changed: true, rows: [row({ rowId: 'changed-row' })] }),
         batch({ proposalId: 'batch-live', rows: [row({ rowId: 'live-row', sourcePath: '/Documents/live.png' })] }),
@@ -739,7 +812,7 @@ describe('BulkRenameReviewDialog', () => {
   })
 
   it('shows only the notice when every batch expired', async () => {
-    reviewState.renameReview = { proposals: [batch({ expired: true })] }
+    reviewState.renameReview = { proposals: [batch({ expired: true })], notice: null }
     const target = mountDialog()
     await tick()
 

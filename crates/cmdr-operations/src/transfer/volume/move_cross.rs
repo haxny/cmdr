@@ -35,9 +35,10 @@ use super::super::transfer_driver::{
     build_pre_skip_set, drive_transfer_serial_async, emit_source_outcome,
 };
 use super::displaced_destination::DisplacedLedger;
+use super::link_carry::LinkCarry;
 use super::preflight::SourceFileFacts;
 use super::preflight::{SourceHint, scan_volume_sources, sources_in_tree_order};
-use super::refused_item::{RefusalSubject, skip_if_refused};
+use super::refused_item::{RefusalSubject, has_no_content, skip_if_refused};
 use super::strategy::{copy_single_path, resolve_source_is_directory};
 use super::transfer_error::{PathRole, PathedVolumeError, WriteFailure, map_volume_error, source_not_removed};
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -124,6 +125,7 @@ pub async fn move_volumes_with_progress(
         WriteOperationType::Move,
         state,
         &*events,
+        &LinkCarry::default(),
     )
     .await?;
     state
@@ -445,6 +447,7 @@ pub async fn move_volumes_with_progress(
                             source_row,
                         }),
                         locked: Some(&locked),
+                        links: None,
                     };
                     // This driver streams the source ITSELF, so from here until
                     // the next iteration nothing else could be stuck: the phase
@@ -503,6 +506,13 @@ pub async fn move_volumes_with_progress(
                         .await
                     {
                         Ok(b) => b,
+                        // A file with no bytes and no way to land as itself: one
+                        // counted skip, before the sweep, so its only copy stays.
+                        Err(e) if !source_is_dir && has_no_content(&e) => {
+                            return Ok(TransferOutcome::Skipped {
+                                bytes_accounted: source_size.unwrap_or(0),
+                            });
+                        }
                         // The destination refused this source's OWN name (a
                         // deep one is its walker's to ask about) and nothing of
                         // it landed. A Skip returns BEFORE the sweep, so the

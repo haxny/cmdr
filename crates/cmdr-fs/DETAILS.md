@@ -47,8 +47,9 @@ the next section.
   spelling, and the ONE translation); `friendly_error/` (typed, word-free classification); `usb_speed.rs` (❗ its doc
   comment reaches `bindings.ts`); `in_memory.rs` (the store and its knobs; `in_memory/volume_impl.rs` is its
   `impl Volume`); `conformance.rs` (+ `conformance/directory_creation.rs`, the three `create_directory_all` promises,
-  and `conformance/modification_date.rs`, the two date ones); and `host/` (what a backend needs from the app, as named
-  traits; read `src/volume/host/CLAUDE.md` before writing a backend).
+  and `conformance/modification_date.rs`, the two date ones, and `src/volume/conformance/link_landing.rs`, what
+  `can_hold_links` promises); and `host/` (what a backend needs from the app, as named traits; read
+  `src/volume/host/CLAUDE.md` before writing a backend).
 - `entry.rs` + `icons/`: `FileEntry` and the classifiers behind `get_icon_id`.
 - `sqlite_util.rs`: the ONE process-wide page-cache slab, the connection factories every store opens through, and the
   one way a database file is deleted. `src/sqlite_util/thread_conn_cache.rs` is the per-thread read-connection cache and

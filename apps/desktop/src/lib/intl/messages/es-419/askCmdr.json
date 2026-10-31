@@ -335,6 +335,22 @@
   "@askCmdr.renameReview.expired": {
     "sourceHash": "1244be6"
   },
+  "askCmdr.renameReview.checkUnfinished": "Cmdr no terminó de comprobar {count, plural, one {# archivo} many {# archivos} other {# archivos}}, así que aún no puede renombrar.",
+  "@askCmdr.renameReview.checkUnfinished": {
+    "sourceHash": "316fdc0"
+  },
+  "askCmdr.renameReview.needsAnotherLook": "Algo cambió desde que Cmdr comprobó estos nombres, así que no renombró nada. Échales otro vistazo e inténtalo de nuevo.",
+  "@askCmdr.renameReview.needsAnotherLook": {
+    "sourceHash": "3e77a66"
+  },
+  "askCmdr.renameReview.couldntStart": "Cmdr no pudo empezar a renombrar estos archivos y no cambió nada. Inténtalo de nuevo en un momento.",
+  "@askCmdr.renameReview.couldntStart": {
+    "sourceHash": "cfcd1a9"
+  },
+  "askCmdr.renameReview.nameNotSaved": "Cmdr no pudo guardar ese nombre. El nombre no tiene ningún problema, así que vuelve a intentarlo.",
+  "@askCmdr.renameReview.nameNotSaved": {
+    "sourceHash": "0e24226"
+  },
   "askCmdr.renameUndo.applied": "Se {count, plural, one {renombró} many {renombraron} other {renombraron}} {countText} {count, plural, one {archivo} many {archivos} other {archivos}}.",
   "@askCmdr.renameUndo.applied": {
     "sourceHash": "7093b77"

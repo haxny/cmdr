@@ -587,6 +587,18 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
+  "errors.listing.linkTargetUnreachable.title": "Сервер этой папки недоступен",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "sourceHash": "8aee94c"
+  },
+  "errors.listing.linkTargetUnreachable.explanation": "К папке `{path}` ведет ссылка на другой сервер, а Cmdr сейчас не удается с ним связаться. С остальной частью этой общей папки все в порядке, и ничего не удалено.",
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "sourceHash": "394e1e8"
+  },
+  "errors.listing.linkTargetUnreachable.suggestion": "Что можно сделать:\n- Убедитесь, что другой сервер работает и доступен из вашей сети\n- Откройте это место снова",
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "sourceHash": "99d873e"
+  },
   "errors.listing.deviceReconnecting.title": "Повторное подключение к устройству",
   "@errors.listing.deviceReconnecting.title": {
     "sourceHash": "6157c60"
@@ -2156,6 +2168,10 @@
   "errors.volume.notConnected": "Cmdr еще не подключился к этому телефону или серверу, поэтому сначала откройте его.",
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
+  },
+  "errors.volume.linkTargetUnreachable": "К этому месту ведет ссылка на другой сервер, а Cmdr сейчас не удается с ним связаться.",
+  "@errors.volume.linkTargetUnreachable": {
+    "sourceHash": "5bd2fe8"
   },
   "errors.volume.deviceSessionReset": "Устройство перезапустило соединение. Подождите несколько секунд и повторите попытку.",
   "@errors.volume.deviceSessionReset": {

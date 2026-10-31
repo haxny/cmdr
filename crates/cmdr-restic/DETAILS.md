@@ -90,9 +90,10 @@ DETACHES its reads in flight, ❌ never aborts them, so a parent mid-transaction
 whole; memory stays at four windows. `read_range` is one `read_file_at`. Each window reads only the blobs it spans, and
 each blob read is a `read_range` window of the pack on the parent, never the whole pack. A chunk that comes back short
 of what it asked for is `SourceChanged`: a short file never lands silently. The stream reports the node's date and
-permission bits. Directories answer `IsADirectory`; symlinks and special files `NoContent`, which a folder copy counts
-as one skipped item (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A child with no bytes is one skipped
-item").
+permission bits. Directories answer `IsADirectory`; symlinks and special files `NoContent`, which a copy counts as one
+skipped item (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A child with no bytes is one skipped item"). A
+symlink's target comes from `read_link_target`, raw bytes included, so a restore lands it as the link where the
+destination holds one (same doc, § "A copy carries a link as the link").
 
 Copy-out's scan opts into `ScanSource::abandons_reads_on_stop`: a listing here is safe to drop mid-flight (its waiter
 leaves the index load), so a Cancel lands inside a listing that waits on the load.

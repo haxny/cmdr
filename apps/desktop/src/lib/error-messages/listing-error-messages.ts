@@ -111,6 +111,7 @@ export type ListingErrorReason =
   | { reason: 'deviceDisconnected'; path: string }
   | { reason: 'deviceReconnecting'; path: string }
   | { reason: 'notConnected'; path: string }
+  | { reason: 'linkTargetUnreachable'; path: string }
   | { reason: 'readOnly' }
   | { reason: 'storageFull' }
   | { reason: 'connectionTimedOut' }

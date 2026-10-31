@@ -297,8 +297,9 @@ sections compose).
   `unreachable` = nothing lost, retry), so a surface can say what to do next; one that only has a single failure line
   still branches on `kind` alone
 - **`ShortcutPill.svelte`**: the shortcut chip of a `KeyboardShortcutsSection` row and of
-  `lib/downloads/GlobalShortcutRow.svelte` (editable button with `editing` / `pendingConflict` / `empty` states and the
-  hover-only × via `remove`, or a `readOnly` span), so the two rows look the same
+  `lib/downloads/GlobalShortcutRow.svelte` (editable button with `editing` / `pendingConflict` / `empty` states and a
+  sibling × button via `remove`, drawn over the pill and kept focusable while hidden so Tab reaches it, or a `readOnly`
+  span), so the two rows look the same. Removing the focused × hands focus to the row's `+`, because rows re-key
 - **`keyboard-shortcuts-grouping.ts`**: Pure scope→group logic for `KeyboardShortcutsSection` (one titled group per
   `CommandScope`, fixed order). Tested by the set-equality regression guard
 - **`keyboard-shortcuts-banner.ts`**: Pure conflict-banner classification for `KeyboardShortcutsSection`

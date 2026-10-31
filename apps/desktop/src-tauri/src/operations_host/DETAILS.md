@@ -235,7 +235,7 @@ room").
   `sftp-fixture-noposixrename`, where the server can't copy for itself and a rename has no atomic replace. WebDAV points
   the zip browse at `webdav-fixture-norange`, whose whole-file answer to every ranged GET is what a zip reader's many
   small windows have to be cut out of locally. SFTP alone holds a link, so its cell for a moved folder holding a link
-  to a folder outside the selection (#140) is its own, made through the test-only `SftpVolume::create_symlink`. It pins
+  to a folder outside the selection (#140) is its own, made through the test-only `SftpVolume::create_symlink_to_app_path`. It pins
   that the target keeps its files; the move itself fails on the link today (SFTP lists a link with lstat attributes,
   so the walk streams a folder link as a file). The dialog-addressed destination cells are SFTP's and SMB's own: the
   WebDAV fixture's remote root is `/`, where a volume-relative and a server-absolute path are spelled alike, so a
