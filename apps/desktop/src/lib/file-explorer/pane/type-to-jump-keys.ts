@@ -73,6 +73,14 @@ export interface TypingKeyTarget {
 }
 
 /**
+ * Whether plain typing narrows the list, per the `fileExplorer.typeToJump.mode` setting. The
+ * network views have no backend listing to filter, so there typing always jumps.
+ */
+export function typingFilters(mode: 'filter' | 'jump', isNetworkView: boolean): boolean {
+  return mode === 'filter' && !isNetworkView
+}
+
+/**
  * THE typing intercept, shared by `key-dispatch.ts` (the DOM keydown path) and
  * `pane-commands.ts` `routePanelKey` (the Quick Look panel path), so the two
  * can't drift (landmine L9). Returns true when it consumed the key; on false the

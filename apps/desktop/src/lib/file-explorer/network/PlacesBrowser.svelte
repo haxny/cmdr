@@ -43,7 +43,7 @@
     import { handleNavigationShortcut } from '../navigation/keyboard-shortcuts'
     import { eventMatchesCommand } from '#lib/shortcuts/index.js'
     import { claimKey } from '#lib/shortcuts/claim-key.js'
-    import { cursorAfterArrow } from './list-cursor'
+    import { cursorAfterArrow, nameStartsWith, scrollRowIntoView } from './list-cursor'
     import { updateLeftPaneState, updateRightPaneState, type PaneState, type PaneFileEntry } from '#lib/tauri-commands/index.js'
 
     async function notifyIfUsingFileFallback(): Promise<void> {
@@ -453,6 +453,15 @@
         return sortedShares.findIndex((s) => s.name.toLowerCase() === name.toLowerCase())
     }
 
+    /** Type-to-jump: the cursor goes to the first share whose name starts with `prefix`; answers that name, or `null`. */
+    // noinspection JSUnusedGlobalSymbols -- used dynamically by NetworkMountView
+    export function jumpToPrefix(prefix: string): string | null {
+        const index = sortedShares.findIndex((s) => nameStartsWith(s.name, prefix))
+        if (index < 0) return null
+        setCursorIndex(index)
+        return sortedShares[index].name
+    }
+
     /** The shares on offer; `0` while the sign-in sheet is up or the host listed nothing. */
     // noinspection JSUnusedGlobalSymbols -- used dynamically by MCP move_cursor's range check
     export function getItemCount(): number {
@@ -492,17 +501,7 @@
 
     /** Scrolls to make the cursor visible */
     function scrollToIndex(index: number) {
-        if (!listContainer) return
-        const targetTop = index * SHARE_ROW_HEIGHT
-        const targetBottom = targetTop + SHARE_ROW_HEIGHT
-        const scrollTop = listContainer.scrollTop
-        const viewportBottom = scrollTop + containerHeight
-
-        if (targetTop < scrollTop) {
-            listContainer.scrollTop = targetTop
-        } else if (targetBottom > viewportBottom) {
-            listContainer.scrollTop = targetBottom - containerHeight
-        }
+        if (listContainer) scrollRowIntoView(listContainer, index, SHARE_ROW_HEIGHT, containerHeight)
     }
 
     /**

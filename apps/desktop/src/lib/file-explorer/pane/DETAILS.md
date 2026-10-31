@@ -331,14 +331,16 @@ region its first message would drop. A jump speaks through the cursor row it lan
 **Type-to-jump factory.** One `createTypeToJumpState` instance per pane, inside `FilePane`. Reset triggers (ESC, arrows,
 Page/Home/End, Enter, Tab, Backspace, rename entry, context menu, drag start, pane switch, tab switch, dir change,
 re-sort, listing replace) all call the factory's `clearJumpState()`. The generation counter discards stale async match
-responses. Backend match runs in `crates/cmdr-listing/src/fuzzy_jump.rs`.
+responses. Backend match runs in `crates/cmdr-listing/src/fuzzy_jump.rs`; the network views match in memory
+(`../network/DETAILS.md` § Typing jumps).
 
 **Quick filter (Filter typing mode, the default).** `fileExplorer.typeToJump.mode` picks what typing does: `filter`
-(Total Commander's quick filter) or `jump`. `routeTypingKey` (`type-to-jump-keys.ts`) is the one intercept for both, and
-in Filter mode `routeFilterKey` sends letters and digits (any printable once a pattern is on) to
-`quick-filter-controller.svelte.ts`; Backspace edits and Esc clears while a pattern is on; arrows and Enter fall
-through, so you navigate the filtered list. The filtering is the backend's (`crates/cmdr-listing/ DETAILS.md` § Quick
-filter), and everything the pane reads (count, rows, selection, diffs) is the filtered row space.
+(Total Commander's quick filter) or `jump`, and the network views always jump (`typingFilters`). `routeTypingKey`
+(`type-to-jump-keys.ts`) is the one intercept for both, and in Filter mode `routeFilterKey` sends letters and digits
+(any printable once a pattern is on) to `quick-filter-controller.svelte.ts`; Backspace edits and Esc clears while a
+pattern is on; arrows and Enter fall through, so you navigate the filtered list. The filtering is the backend's
+(`crates/cmdr-listing/ DETAILS.md` § Quick filter), and everything the pane reads (count, rows, selection, diffs) is the
+filtered row space.
 
 - **One call in flight, latest pattern wins**: keystrokes that land mid-call only move `pattern`, and the loop sends
   whatever stands when the call returns. Successful bursts stay batched; refused growth is replayed one character at a

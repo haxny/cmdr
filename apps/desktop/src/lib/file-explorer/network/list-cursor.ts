@@ -18,3 +18,29 @@ export function cursorAfterArrow(key: string, cursor: number, total: number): nu
       return null
   }
 }
+
+/**
+ * Whether a network list's row name starts with what the person typed: case-insensitive, and
+ * blind to Unicode form, since a server can spell its name decomposed while a keyboard types it
+ * composed. Both lists' type-to-jump asks this. Unlike a folder's fuzzy backend match, these
+ * lists are short and in memory, so a plain prefix is the whole rule.
+ */
+export function nameStartsWith(name: string, prefix: string): boolean {
+  return name.normalize('NFC').toLowerCase().startsWith(prefix.normalize('NFC').toLowerCase())
+}
+
+/** Scrolls a network list just enough to show the row at `index`. Both lists have fixed-height rows. */
+export function scrollRowIntoView(
+  container: HTMLElement,
+  index: number,
+  rowHeight: number,
+  viewportHeight: number,
+): void {
+  const targetTop = index * rowHeight
+  const targetBottom = targetTop + rowHeight
+  if (targetTop < container.scrollTop) {
+    container.scrollTop = targetTop
+  } else if (targetBottom > container.scrollTop + viewportHeight) {
+    container.scrollTop = targetBottom - viewportHeight
+  }
+}

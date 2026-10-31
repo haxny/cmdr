@@ -416,6 +416,8 @@ export interface BrowserAPI {
   handleKeyDown(e: KeyboardEvent): void
   setCursorIndex(index: number): void
   findItemIndex(name: string): number
+  /** Type-to-jump: moves the cursor to the first row whose name starts with `prefix`; answers that name, or `null`. */
+  jumpToPrefix(prefix: string): string | null
   openCursorItem(): void
   /** How many rows the cursor can sit on, so a caller can range-check an index. */
   getItemCount(): number
@@ -471,6 +473,8 @@ export interface NetworkMountViewAPI {
   handleKeyDown(e: KeyboardEvent): void
   setCursorIndex(index: number): void
   findItemIndex(name: string): number
+  /** Type-to-jump in whichever browser is up; answers the name it landed on, or `null`. */
+  jumpToPrefix(prefix: string): string | null
   openCursorItem(): void
   /**
    * Rows the cursor can sit on in whichever browser is up, and `0` while a

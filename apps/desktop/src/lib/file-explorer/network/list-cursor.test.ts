@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cursorAfterArrow } from './list-cursor'
+import { cursorAfterArrow, nameStartsWith } from './list-cursor'
 
 describe('cursorAfterArrow', () => {
   it('steps one row, clamped to the list', () => {
@@ -15,5 +15,20 @@ describe('cursorAfterArrow', () => {
 
   it('leaves every other key alone', () => {
     expect(cursorAfterArrow('Enter', 1, 5)).toBeNull()
+  })
+})
+
+describe('nameStartsWith', () => {
+  it('ignores case', () => {
+    expect(nameStartsWith('Naspolya', 'nas')).toBe(true)
+    expect(nameStartsWith('naspolya', 'NAS')).toBe(true)
+  })
+
+  it('wants the start of the name, not any part of it', () => {
+    expect(nameStartsWith('Naspolya', 'pol')).toBe(false)
+  })
+
+  it('reads a decomposed name the way a keyboard types it', () => {
+    expect(nameStartsWith('Re\u0301sume\u0301', 'R\u00e9s')).toBe(true)
   })
 })

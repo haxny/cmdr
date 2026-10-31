@@ -9,8 +9,8 @@ Signing in is `#lib/servers`' one sheet; this module only says what to ask and w
 - `ServersHub.svelte` (+ `servers-hub-{rows,items,keys,actions,mcp,columns}.ts`, `servers-hub-list.svelte.ts`,
   `host-status.ts`, `ServersHubRowMenu.svelte`, `ServersHubStatusBar.svelte`): the hub table on the `network` volume.
   `PlacesBrowser.svelte` (+ `PlacesHeader.svelte`): one account's places, the listing's sign-in, and "Sign in as…".
-  `smb-sign-in.ts`: SMB's side of the sheet. `list-cursor.ts`: both lists' arrow keys. `mount-error-messages.ts` (+
-  `mount-error.ts`): a refused mount's words.
+  `smb-sign-in.ts`: SMB's side of the sheet. `list-cursor.ts`: both lists' arrow keys, jump rule, and scrolling.
+  `mount-error-messages.ts` (+ `mount-error.ts`): a refused mount's words.
 - `direct-connect.ts` (+ `upgrade-messages.ts`, `LocalNetworkBlockedToastContent.svelte`): the "Connect directly"
   upgrade. `os-mount-notice-bridge.ts` + `SmbOsMountFallbackToastContent.svelte`: the slow-connection notice.
   `smb-reconnect-manager.svelte.ts`: the per-volume backoff cycle on `volume-connection-changed` (backend-neutral; SMB

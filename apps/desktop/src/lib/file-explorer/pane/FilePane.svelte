@@ -87,6 +87,7 @@
     import { volumeScheme } from '#lib/volume-scheme.js'
     import { getPaneTintBg, getPaneTintName } from './volume-tint.svelte'
     import { createCursorNavKeys } from './cursor-nav-keys'
+    import { typingFilters } from './type-to-jump-keys'
     import { createSearchPaneKeys } from './search-pane-keys'
     import { computeHasParent, effectiveVolumeRootFor } from './has-parent'
     import { overlayRowsToSkip } from './overlay-rows'
@@ -306,6 +307,10 @@
         getListingId: () => listingId,
         getLoading: () => loading,
         getHasBackendListing: () => caps.hasBackendListing,
+        getInMemoryJump: () =>
+            isNetworkView && getNetworkItemCount() > 0
+                ? (prefix) => networkMountViewRef?.jumpToPrefix(prefix) ?? null
+                : null,
         getIncludeHidden: () => includeHidden,
         getHasParent: () => hasParent,
         setCursorIndex: (index: number) => void setCursorIndex(index),
@@ -955,7 +960,7 @@
 
     // Quick filter delegates (`FilePaneAPI`), driven by `routeTypingKey`.
     export function isQuickFilterMode(): boolean {
-        return getTypeToJumpMode() === 'filter'
+        return typingFilters(getTypeToJumpMode(), isNetworkView)
     }
     export function isQuickFilterActive(): boolean {
         return quickFilter.isActive()

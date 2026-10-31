@@ -29,7 +29,7 @@
     import { hubPaneState, NEARBY_GROUP_MCP_NAME } from './servers-hub-mcp'
     import { createHubActions, type HubRowMenuAPI } from './servers-hub-actions'
     import { cursorAcrossRebuild } from './servers-hub-keys'
-    import { cursorAfterArrow } from './list-cursor'
+    import { cursorAfterArrow, nameStartsWith, scrollRowIntoView } from './list-cursor'
     import { hubColumnsAt } from './servers-hub-columns'
     import { useInlineSize } from '#lib/utils/inline-size-action.js'
     import ServersHubRowMenu from './ServersHubRowMenu.svelte'
@@ -219,17 +219,7 @@
     }
 
     function scrollToIndex(index: number) {
-        if (!listContainer) return
-        const targetTop = index * ROW_HEIGHT
-        const targetBottom = targetTop + ROW_HEIGHT
-        const scrollTop = listContainer.scrollTop
-        const viewportBottom = scrollTop + containerHeight
-
-        if (targetTop < scrollTop) {
-            listContainer.scrollTop = targetTop
-        } else if (targetBottom > viewportBottom) {
-            listContainer.scrollTop = targetBottom - containerHeight
-        }
+        if (listContainer) scrollRowIntoView(listContainer, index, ROW_HEIGHT, containerHeight)
     }
 
     /**
@@ -297,6 +287,22 @@
         return items.findIndex(
             (item) => (item.kind === 'row' ? item.row.name : NEARBY_GROUP_MCP_NAME).toLowerCase() === wanted,
         )
+    }
+
+    /**
+     * Type-to-jump: the cursor goes to the first row whose name starts with `prefix`, and the
+     * answer is that name, or `null` with the cursor left alone. It walks the FULL list so a
+     * server a collapsed nearby group hides stays reachable (`setCursorIndex` opens the group);
+     * those rows come last, so anything on screen wins. The header and "Add server…" aren't
+     * names to jump to.
+     */
+    // noinspection JSUnusedGlobalSymbols -- used dynamically by NetworkMountView
+    export function jumpToPrefix(prefix: string): string | null {
+        const index = items.findIndex((item) => item.kind === 'row' && nameStartsWith(item.row.name, prefix))
+        const item = items.at(index)
+        if (index < 0 || item?.kind !== 'row') return null
+        setCursorIndex(index)
+        return item.row.name
     }
 
     /**

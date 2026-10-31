@@ -9,6 +9,10 @@
  * keystroke resolving after a faster later one); it also re-checks the buffer and
  * listing id so a match arriving after a clear / listing swap is dropped. The
  * frontend cursor index adds the `..` offset when the pane has a parent row.
+ *
+ * A view with no backend listing but a list of its own (the servers hub, a server's
+ * share list) answers through `getInMemoryJump` instead, with the same buffer,
+ * timeout, and indicator.
  */
 
 import { findFirstFuzzyMatch, getFileAt } from '#lib/tauri-commands/index.js'
@@ -24,6 +28,11 @@ export interface TypeToJumpControllerDeps {
   getLoading: () => boolean
   /** Whether the pane's volume kind has a real backend listing to jump within. */
   getHasBackendListing: () => boolean
+  /**
+   * The matcher of a view that holds its own list, or `null` when the pane's rows are a backend
+   * listing (or the view has no rows). It moves the cursor and answers the name it landed on.
+   */
+  getInMemoryJump: () => ((prefix: string) => string | null) | null
   getIncludeHidden: () => boolean
   getHasParent: () => boolean
   /** Move the cursor to a frontend index (scrolls + syncs MCP). */
@@ -59,7 +68,9 @@ export function createTypeToJumpController(deps: TypeToJumpControllerDeps): Type
   const typeToJump = createTypeToJumpState({
     getResetMs: () => deps.getResetMs(),
     onMatch: (buffer, generation) => {
-      void runJumpMatch(buffer, generation)
+      const inMemoryJump = deps.getInMemoryJump()
+      if (inMemoryJump) applyInMemoryMatch(inMemoryJump(buffer))
+      else void runJumpMatch(buffer, generation)
     },
     onIndicatorHide: () => {
       // Stale match info is meaningless once the indicator is gone.
@@ -67,6 +78,13 @@ export function createTypeToJumpController(deps: TypeToJumpControllerDeps): Type
       deps.onSyncMcp()
     },
   })
+
+  /** A view's own list answers at once, having moved its cursor already. */
+  function applyInMemoryMatch(name: string | null): void {
+    if (name === null) return
+    lastMatchedName = name
+    deps.onSyncMcp()
+  }
 
   /**
    * Runs the IPC fuzzy match and applies the result if it's still fresh. The
@@ -108,9 +126,10 @@ export function createTypeToJumpController(deps: TypeToJumpControllerDeps): Type
   }
 
   function handleJumpKeystroke(char: string): void {
-    // No real listing to jump within (network / search-results) folds into
-    // `!getHasBackendListing()`.
-    if (!deps.getListingId() || deps.getLoading() || !deps.getHasBackendListing()) return
+    // Nothing to jump within (search results, a network view with no rows) folds into
+    // no in-memory matcher plus `!getHasBackendListing()`.
+    const canMatch = deps.getListingId() !== '' && !deps.getLoading() && deps.getHasBackendListing()
+    if (!canMatch && !deps.getInMemoryJump()) return
     typeToJump.appendChar(char)
     // Surface the buffer change to MCP (`runJumpMatch` syncs again on success, but
     // a no-match keystroke would otherwise leave MCP stale).
