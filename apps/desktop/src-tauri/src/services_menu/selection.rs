@@ -95,6 +95,11 @@ fn context_target() -> Option<Vec<PathBuf>> {
     CONTEXT_TARGET.read_ignore_poison().clone()
 }
 
+/// Whether a file context menu is up right now, pointing the Services menu at its rows.
+pub fn has_context_target() -> bool {
+    CONTEXT_TARGET.read_ignore_poison().is_some()
+}
+
 /// Whether there is anything at all to hand a service.
 ///
 /// Deliberately optimistic: it answers from the SHAPE of the selection without

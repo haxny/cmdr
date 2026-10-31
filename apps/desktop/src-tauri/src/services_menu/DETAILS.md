@@ -176,6 +176,27 @@ applies to a context menu (the frontend has already resolved what was right-clic
 Resolved paths, not indices, unlike the pane push: `MenuState.context.paths` is already resolved by the time the menu
 is built, and a context menu is one gesture rather than a stream of them, so the reason for indices doesn't apply.
 
+**A context menu needs its own way in to the responder.** AppKit decides which services to show in
+`-[_NSServicesPrincipalMenuUpdater updateVisibilityOfServicesItemsForMenu:isForDisplay:]`, which walks from the chain it
+hands `-[_NSMenuContext initForServicePresentationMode:withRequestorChain:]`. Measured with lldb on macOS 27.0.1,
+2026-10-31:
+
+- `Cmdr > Services`: the chain is the `WryWebView`, so the walk reaches `CmdrServicesResponder` through the content view.
+- The right-click `Services`: the chain is the menu's own `NSPopupMenuWindow`. `NSWindow` doesn't forward the question,
+  so `CmdrServicesResponder` is never asked, writes nothing, and only the services with no send types stay visible.
+
+This path worked on macOS 26.6.2 on 2026-09-09 (the measurement below), and macOS 27 is the likely change. The move to
+Tauri 2.12.1 landed in the same window and wasn't ruled out by a build of the older commit.
+
+`answer_from_menu_windows` adds `validRequestorForSendType:returnType:` to the `NSPopupMenuWindow` class at startup. It
+answers with the attached responder only for file send types, and only while `CONTEXT_TARGET` is set; anything else goes
+to `NSWindow`'s implementation, so every other menu in the app behaves as before. The class is looked up by name because
+AppKit creates the window itself and Tauri hands out no `NSMenu` to reach it from. If a future macOS renames the class,
+a warning is logged and the right-click submenu goes back to the short list, with no other effect.
+
+Rejected: `NSMenu.update()` on the borrowed menu, which never reaches the updater (zero requestor calls measured), and
+making the responder the popup window's first responder, which would put arrow-key handling in the menu at risk.
+
 **Why the loan can be cleared the moment `popup()` returns**, rather than deferred in case AppKit performs the service
 later: it doesn't. Measured on macOS 26.6.2, 2026-09-09, picking "Reveal in Nimble Commander" from the context menu's
 submenu: the pasteboard write landed at `00:39:59.141` and the hand-back at `00:39:59.243`, 102 ms later, so the whole
