@@ -45,6 +45,26 @@
         document.addEventListener('mouseup', handleMouseUp)
         document.body.style.cursor = 'col-resize'
     }
+
+    /**
+     * The strip lies over the right pane's edge, and a wheel over it would stop here. It scrolls
+     * what's under the strip instead: the wheel's default action only looks at this element's own
+     * ancestors, and the list isn't one.
+     */
+    function handleWheel(event: WheelEvent) {
+        const under = document
+            .elementsFromPoint(event.clientX, event.clientY)
+            .find((element) => !element.closest('.pane-resizer'))
+        for (let element = under ?? null; element; element = element.parentElement) {
+            const style = getComputedStyle(element)
+            const left = /auto|scroll/.test(style.overflowX) && element.scrollWidth > element.clientWidth
+            const top = /auto|scroll/.test(style.overflowY) && element.scrollHeight > element.clientHeight
+            if (left || top) {
+                element.scrollBy(left ? event.deltaX : 0, top ? event.deltaY : 0)
+                return
+            }
+        }
+    }
 </script>
 
 <!-- The keys live in commands, not here: `pane.moveDividerLeft` / `Right` (⌃⌥← / ⌃⌥→) and `pane.resetDivider`. No Tab stop, since Tab switches panes. -->
@@ -54,6 +74,7 @@
     class:dragging={isDragging}
     onmousedown={handleMouseDown}
     ondblclick={onReset}
+    onwheel={handleWheel}
     role="separator"
     aria-orientation="vertical"
     aria-label={tString('fileExplorer.pane.resizePanesAriaLabel')}

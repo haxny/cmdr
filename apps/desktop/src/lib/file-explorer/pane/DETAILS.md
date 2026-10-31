@@ -2044,7 +2044,7 @@ than its own 12px gutter.
 
 What else looks at those areas: `drag/drop-target-hit-testing.ts` hit-tests past them, or a drop on the right pane's
 gutter would land on the resizer and do nothing; the drag keeps its grab offset, so a press on the pad doesn't jump the
-line. The wheel still stops at the 8px strip (known, small).
+line; a wheel over the strip scrolls whatever's under it (`handleWheel`).
 
 - **Acceleration**: the first step is 1%, then ×1.5 per press up to 8%, while the key is held (auto-repeat) or tapped
   within 150 ms of the previous press. A slower re-press, or the other direction, starts at 1% again.

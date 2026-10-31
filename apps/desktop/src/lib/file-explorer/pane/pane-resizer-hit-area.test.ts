@@ -56,6 +56,45 @@ describe('pane divider hit areas', () => {
   })
 })
 
+describe('a wheel over the divider', () => {
+  it('scrolls the list under the strip, so the strip never eats a scroll', () => {
+    const explorer = document.createElement('div')
+    document.body.appendChild(explorer)
+    const instance = mount(PaneResizer, {
+      target: explorer,
+      props: { onResize: () => {}, onResizeEnd: () => {}, onReset: () => {} },
+    })
+    flushSync()
+    const resizer = explorer.querySelector<HTMLElement>('.pane-resizer')
+    if (!resizer) throw new Error('resizer not found')
+
+    const list = document.createElement('div')
+    list.style.overflowY = 'auto'
+    Object.defineProperty(list, 'scrollHeight', { value: 5000 })
+    Object.defineProperty(list, 'clientHeight', { value: 500 })
+    const scrollBy = vi.fn()
+    list.scrollBy = scrollBy as typeof list.scrollBy
+    const row = document.createElement('div')
+    list.appendChild(row)
+    explorer.appendChild(list)
+    const elementsFromPoint = vi.fn(() => [resizer, row, list])
+    document.elementsFromPoint = elementsFromPoint
+
+    const wheel = Object.assign(new Event('wheel', { bubbles: true }), {
+      clientX: 504,
+      clientY: 200,
+      deltaX: 0,
+      deltaY: 120,
+    })
+    resizer.dispatchEvent(wheel)
+
+    expect(elementsFromPoint).toHaveBeenCalledWith(504, 200)
+    expect(scrollBy).toHaveBeenCalledWith(0, 120)
+    void unmount(instance)
+    explorer.remove()
+  })
+})
+
 describe('path segment hit area', () => {
   it('declares the floor the fit reserves room for', () => {
     const rule = /\.path :global\(\.path-segment\)\s*\{([^}]*)\}/.exec(filePaneSource)?.[1] ?? ''
