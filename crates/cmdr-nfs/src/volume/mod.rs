@@ -114,7 +114,7 @@ impl NfsVolume {
 
     /// Another instance of this volume, named `name`, riding THIS instance's
     /// connection: what saving a name or start-folder edit to a connected place
-    /// installs, with no redial. ❗ A changed uid or gid is a new connection,
+    /// installs, with no redial. ❗ A changed uid or group is a new connection,
     /// ❌ never this.
     ///
     /// Shares everything connection-scoped (the connection, the reconnect loop,
@@ -223,7 +223,7 @@ async fn connect_with(
         client.close();
         return Err(NfsConnectError::Cancelled);
     }
-    let mut saved = NfsConnectionParams::new(params.server.clone(), &resolved.export, params.identity);
+    let mut saved = NfsConnectionParams::new(params.server.clone(), &resolved.export, params.identity.clone());
     saved.start_folder = params.start_folder.clone().or(resolved.folder);
     saved.auto_reconnect = params.auto_reconnect;
     // PII-free: an NFS export came up. ❌ No host, export, uid, or path crosses.

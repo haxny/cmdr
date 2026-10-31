@@ -19,7 +19,7 @@ export async function listNfsExports(host: string, port: number | null): Promise
 }
 
 /**
- * The uid and gid to act as on `exportPath`, with where they came from. Always
+ * The uid and groups to act as on `exportPath`, with where they came from. Always
  * answers: an export that can't be read falls back to this Mac's own ids.
  */
 export async function guessNfsIdentity(
@@ -32,7 +32,7 @@ export async function guessNfsIdentity(
 
 /**
  * The saved NFS place a volume id names, or `null` when none does. It carries the
- * uid, gid, and start folder the servers listing doesn't: what an edit form needs.
+ * uid, groups, and start folder the servers listing doesn't: what an edit form needs.
  * `displayName` is the SERVER's name, empty when nobody named it.
  *
  * ❗ By the `volumeId` the backend published, ❌ never a frontend twin of the id

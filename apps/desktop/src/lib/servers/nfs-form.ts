@@ -1,5 +1,5 @@
 /**
- * The NFS half of the add form: the export, and the uid and gid every request acts
+ * The NFS half of the add form: the export, and the uid and groups every request acts
  * as. Pure, like `server-form.ts`, which holds these under `nfs`.
  *
  * ❗ **A server is the account, an export is its place**, so the export is part of
@@ -25,9 +25,11 @@ export interface NfsFormFields {
   uid: string
   /** "Group ID", as typed. */
   gid: string
+  /** "Other group IDs", as typed: `readNfsOtherGids` reads it. */
+  otherGids: string
   /**
    * Whether the ids still hold a guess (or nothing yet), so the next guess may
-   * replace them. ❗ Typing into either makes both the person's.
+   * replace them. ❗ Typing into any of them makes them all the person's.
    */
   identityFromGuess: boolean
   /** Where the guess on screen came from, for the line under the fields; `null` once typed over. */
@@ -36,7 +38,7 @@ export interface NfsFormFields {
 
 /** A blank NFS half: no export picked, no identity guessed yet. */
 export function emptyNfsFields(): NfsFormFields {
-  return { exportPath: '', uid: '', gid: '', identityFromGuess: true, identitySource: null }
+  return { exportPath: '', uid: '', gid: '', otherGids: '', identityFromGuess: true, identitySource: null }
 }
 
 /** The largest id `AUTH_SYS` carries: an unsigned 32-bit number. */
@@ -50,20 +52,58 @@ export function parseNfsId(text: string): number | null {
   return id <= MAX_NFS_ID ? id : null
 }
 
+/**
+ * The most other groups a place lists: what `AUTH_SYS` carries in its `gids`
+ * (RFC 5531). The credential's twin of this limit is `MAX_GIDS` in `cmdr-nfs`.
+ */
+const MAX_NFS_OTHER_GIDS = 16
+
+/** What the "Other group IDs" field says. */
+export type NfsOtherGidsReading =
+  | { kind: 'ids'; ids: number[] }
+  | { kind: 'not_ids' }
+  | { kind: 'too_many'; count: number }
+
+/** The typed other groups, split on commas and spaces, each id once in the typed order. Empty reads as none. */
+export function readNfsOtherGids(text: string): NfsOtherGidsReading {
+  const ids = new Set<number>()
+  for (const part of text.split(/[\s,]+/)) {
+    if (part === '') continue
+    const id = parseNfsId(part)
+    if (id === null) return { kind: 'not_ids' }
+    ids.add(id)
+  }
+  if (ids.size > MAX_NFS_OTHER_GIDS) return { kind: 'too_many', count: ids.size }
+  return { kind: 'ids', ids: [...ids] }
+}
+
 /** The fields with a guess filled in, unless the person already typed their own. */
 export function withGuessedIdentity(fields: NfsFormFields, guess: GuessedNfsIdentity): NfsFormFields {
   if (!fields.identityFromGuess) return fields
-  return { ...fields, uid: String(guess.uid), gid: String(guess.gid), identitySource: guess.source }
+  return {
+    ...fields,
+    uid: String(guess.uid),
+    gid: String(guess.gid),
+    otherGids: guess.otherGids.join(', '),
+    identitySource: guess.source,
+  }
 }
 
-/** The fields after the person typed into one of the ids, which makes both theirs. */
-export function withTypedIdentity(fields: NfsFormFields, typed: { uid?: string; gid?: string }): NfsFormFields {
+/** The fields after the person typed into one of the ids, which makes them all theirs. */
+export function withTypedIdentity(
+  fields: NfsFormFields,
+  typed: { uid?: string; gid?: string; otherGids?: string },
+): NfsFormFields {
   return { ...fields, ...typed, identityFromGuess: false, identitySource: null }
 }
 
-/** Whether both ids read as ids, which Connect needs. */
+/** Whether every id reads as ids, which Connect needs. */
 export function nfsIdentityIsComplete(fields: NfsFormFields): boolean {
-  return parseNfsId(fields.uid) !== null && parseNfsId(fields.gid) !== null
+  return (
+    parseNfsId(fields.uid) !== null &&
+    parseNfsId(fields.gid) !== null &&
+    readNfsOtherGids(fields.otherGids).kind === 'ids'
+  )
 }
 
 /**

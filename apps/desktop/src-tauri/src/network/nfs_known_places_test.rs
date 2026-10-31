@@ -15,6 +15,7 @@ fn place(host: &str, export: &str) -> KnownNfsPlace {
         export: export.to_string(),
         uid: 1000,
         gid: 100,
+        other_gids: Vec::new(),
         start_folder: None,
         auto_reconnect: true,
         pinned: false,
@@ -41,6 +42,7 @@ fn a_changed_uid_is_the_same_place() {
     let after = KnownNfsPlace {
         uid: 1026,
         gid: 1026,
+        other_gids: Vec::new(),
         ..before.clone()
     };
     assert_eq!(before.volume_id(), after.volume_id());
@@ -146,7 +148,7 @@ fn resolved_params_save_the_split_and_the_settings() {
     let mut params = NfsConnectionParams::new(
         NfsServer::new("split.test", Some(2050)),
         "/share/Public/",
-        NfsIdentity { uid: 7, gid: 8 },
+        NfsIdentity::new(7, 8),
     );
     params.start_folder = Some("/photos".to_string());
     params.auto_reconnect = false;
@@ -161,6 +163,33 @@ fn resolved_params_save_the_split_and_the_settings() {
         params.volume_id(),
         "the entry names the place it was built from"
     );
+}
+
+#[test]
+fn a_place_saved_before_the_other_groups_keeps_working_unchanged() {
+    let json = r#"{ "knownNfsPlaces": [{ "host": "old.test", "export": "/Public", "uid": 1000, "gid": 100 }] }"#;
+    let store: KnownNfsPlacesStore = serde_json::from_str(json).expect("reads");
+    let entry = &store.known_nfs_places[0];
+    assert_eq!(entry.other_gids, Vec::<u32>::new());
+    assert_eq!(entry.identity(), NfsIdentity::new(1000, 100));
+    assert_eq!(entry.volume_id(), place("old.test", "/Public").volume_id());
+}
+
+#[test]
+fn the_other_groups_survive_the_store_and_the_params_but_not_the_id() {
+    let grouped = KnownNfsPlace {
+        other_gids: vec![2001, 2002],
+        ..place("groups.test", "/Public")
+    };
+    assert_eq!(grouped.volume_id(), place("groups.test", "/Public").volume_id());
+
+    let json = serde_json::to_string(&grouped).expect("writes");
+    let read: KnownNfsPlace = serde_json::from_str(&json).expect("reads");
+    assert_eq!(read.other_gids, vec![2001, 2002]);
+
+    assert_eq!(grouped.params().identity.other_gids, vec![2001, 2002]);
+    let back = KnownNfsPlace::from_params(&grouped.params(), false, String::new());
+    assert_eq!(back.other_gids, vec![2001, 2002]);
 }
 
 #[test]

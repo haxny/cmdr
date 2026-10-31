@@ -11,9 +11,9 @@ and one volume per export. `NfsServer` is the account half (host, the port the a
 portmap port override; MOUNT's port always comes from portmap); `NfsConnectionParams` adds the export, the identity, the
 start folder, and the auto-reconnect switch.
 
-**Decision: the uid and gid are a setting of the place, not its identity.** `AUTH_SYS` carries no secret, so they're a
-preference like SMB's username, and fixing a uid typo must not orphan the place's tabs and favorites. A changed identity
-redials over a new connection under the same volume id.
+**Decision: the uid and groups are a setting of the place, not its identity.** `AUTH_SYS` carries no secret, so they're
+a preference like SMB's username, and fixing a uid typo must not orphan the place's tabs and favorites. A changed
+identity redials over a new connection under the same volume id.
 
 **Decision: the identity port is the canonical one.** `NfsServer::identity_port` answers the port the address named,
 else 2049, ❌ never what portmap answered: that can move when the server restarts.
@@ -41,6 +41,12 @@ typed export may still mount). `guess_identity` takes this Mac's identity as its
 `NfsIdentitySource::ThisMac` when nothing at the export root has a non-zero owner; otherwise `MostCommonOwner` (the most
 common non-zero owner among the root's entries, ties to the lower uid) or `RootOwner` (the root's own, which is also the
 answer when a squashed probe is refused the listing).
+
+**Decision: the guessed other groups are the groups the export uses.** Every non-zero gid on the root's entries and the
+root itself, minus the primary, most common first, at most 16; a `ThisMac` guess appends this Mac's own other groups
+(what a macOS `mount_nfs` would send). Why someone else's files count: a group on another person's file is exactly how a
+person reads it, and `AUTH_SYS` proves nothing either way, so this claims no more than guessing the owner's uid already
+does. It's a starting value the form shows and the person can edit.
 
 ## The dependency decision
 
@@ -96,9 +102,12 @@ Our own ONC RPC client, no dependency (§ "The dependency decision").
   LOOKUP left out, `BAD_COOKIE` restarting (signalled as `ListingEvent::Restarted`) up to three times.
 - **Why 20 s**: it sits well inside the 60 s metadata budget, so a GETATTR, LOOKUP, or READDIRPLUS whose reply was
   dropped is resent and answered instead of timing out (`transport_test.rs` pins it on a paused clock).
-- **`AUTH_SYS`** carries a stamp, this Mac's host name (at most 255 bytes), the uid, the gid, and `gids = [gid]` (RFC
-  5531 caps the list at 16 and the body at 400 bytes). A person's other groups aren't sent, so a file readable only
-  through a secondary group answers `PermissionDenied`. `root_squash` and `all_squash` are the server's business: no
+- **`AUTH_SYS`** carries a stamp, this Mac's host name (at most 255 bytes), the uid, the gid, and `gids` from
+  `NfsIdentity::credential_gids`: the primary group, then the place's `other_gids`, each once (RFC 5531 caps the list at
+  16 and the body at 400 bytes). With 16 others the primary gives up its slot, since it still travels in the `gid`
+  field, so every group a person listed goes out. A place with no others sends `gids = [gid]`. A file readable only
+  through a group not listed answers `PermissionDenied`. Whether the groups count is the server's: knfsd started with
+  `--manage-gids` replaces them with its own lookup. `root_squash` and `all_squash` are the server's business: no
   detection, and a refusal reads as `PermissionDenied` with the path.
 - **Decision (revisit in review): the timeouts.** A 5 s TCP connect per address and 15 s for the whole dial; the silence
   ladder at 5 s quiet, 5 s per probe, two probes (gone after 15 s, against the 30 s the other backends allow); 60 s on

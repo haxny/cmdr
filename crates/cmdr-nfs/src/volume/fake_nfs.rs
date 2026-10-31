@@ -397,11 +397,7 @@ impl FakeNfs {
 
     /// Params for the fake's export.
     pub(super) fn params(&self) -> NfsConnectionParams {
-        NfsConnectionParams::new(
-            self.server(),
-            FAKE_EXPORT,
-            crate::params::NfsIdentity { uid: 1000, gid: 1000 },
-        )
+        NfsConnectionParams::new(self.server(), FAKE_EXPORT, crate::params::NfsIdentity::new(1000, 1000))
     }
 
     /// Stops the listener. Connections already open keep being answered.
@@ -546,7 +542,7 @@ impl FakeNfs {
         tokio::spawn(self.clone().serve(far, 900));
         let conn = RpcConnection::over_stream(
             near,
-            credential_for(params.identity),
+            credential_for(&params.identity),
             self.probe(),
             ReservedPort::Bound(900),
             options.transport,

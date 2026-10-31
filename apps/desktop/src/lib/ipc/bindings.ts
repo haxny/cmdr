@@ -4919,7 +4919,7 @@ export const commands = {
     __TAURI_INVOKE<GuessedNfsIdentity>('guess_nfs_identity', { host, port, exportPath }),
   /**
    *  Every NFS place the user has saved, for an edit sheet that has to show (and
-   *  resend) the uid, gid, and start folder the servers listing doesn't carry.
+   *  resend) the uid, groups, and start folder the servers listing doesn't carry.
    */
   getKnownNfsPlaces: () => __TAURI_INVOKE<SavedNfsPlace[]>('get_known_nfs_places'),
   /**
@@ -9938,12 +9938,17 @@ export type GoToPathResolution =
   // Defensive: the input was empty or couldn't be turned into a path.
   | { kind: 'invalid'; reason: string }
 
-// The uid and gid the add form fills "User ID" and "Group ID" with.
+// The ids the add form fills "User ID", "Group ID", and "Other group IDs" with.
 export type GuessedNfsIdentity = {
   // The user id.
   uid: number
   // The group id.
   gid: number
+  /**
+   *  The person's other groups: the ones the export's files use, then this
+   *  Mac's when the guess is this Mac's. Empty when nothing suggests any.
+   */
+  otherGids: number[]
   // Why these.
   source: NfsIdentitySourceWire
 }
@@ -16078,6 +16083,8 @@ export type SavedNfsPlace = {
   uid: number
   // The group id every request acts as.
   gid: number
+  // The other groups every request carries.
+  otherGids: number[]
   /**
    *  The name a person gave its SERVER, empty when nobody did. ❗ The
    *  server's, ❌ never the place's: an export reads as its own path.
@@ -17597,7 +17604,7 @@ export type ServerTarget =
     }
   /**
    *  One NFS export: display name, host, an optional port, the export, the
-   *  uid and gid it acts as, an optional start folder, and the auto-reconnect
+   *  uid and groups it acts as, an optional start folder, and the auto-reconnect
    *  switch.
    */
   | {
@@ -17623,6 +17630,11 @@ export type ServerTarget =
       uid: number
       // The group id every request acts as. A setting, like `uid`.
       gid: number
+      /**
+       *  The person's other groups, sent with every request. A setting, like
+       *  `uid`.
+       */
+      otherGids: number[]
       /**
        *  Where a pane lands when the place is opened: an export-relative path
        *  (`/Photos`). `None` is the export's root.

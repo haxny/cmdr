@@ -2,7 +2,7 @@
 //!
 //! ❗ **One entry per PLACE, ❌ never per server.** An NFS server has many
 //! places, one per export, and each is its own volume with its own id
-//! (`cmdr_fs::volume::nfs_volume_id`), pin, switch, uid, and gid, so each is its
+//! (`cmdr_fs::volume::nfs_volume_id`), pin, switch, uid, and groups, so each is its
 //! own entry; the servers listing groups them back under their server
 //! (`saved_servers/nfs_places.rs`).
 //!
@@ -12,7 +12,7 @@
 //! NAMED server beside the places; an unnamed server has no record and reads as
 //! its host.
 //!
-//! ❗ **The uid and gid live HERE, in plain JSON, ❌ not the Keychain.** `AUTH_SYS`
+//! ❗ **The uid and groups live HERE, in plain JSON, ❌ not the Keychain.** `AUTH_SYS`
 //! has no secret: the uid is a preference like SMB's username, and a Keychain
 //! prompt in front of a non-secret is friction. They're a SETTING of the place,
 //! ❌ not its identity, so changing one keeps the id, the tabs, and the
@@ -48,6 +48,10 @@ pub struct KnownNfsPlace {
     pub uid: u32,
     /// The group id every request acts as. A setting, like `uid`.
     pub gid: u32,
+    /// The person's other groups, sent with every request. A setting, like `uid`.
+    /// ❗ A place saved before this field reads as none, and sends what it always did.
+    #[serde(default)]
+    pub other_gids: Vec<u32>,
     /// Where a pane lands when the place is opened: an export-relative folder
     /// (`/Photos`). `None` is the export's root.
     #[serde(default)]
@@ -71,11 +75,12 @@ impl KnownNfsPlace {
         NfsServer::new(&self.host, self.port)
     }
 
-    /// The uid and gid this place acts as.
+    /// The uid and groups this place acts as.
     pub fn identity(&self) -> NfsIdentity {
         NfsIdentity {
             uid: self.uid,
             gid: self.gid,
+            other_gids: self.other_gids.clone(),
         }
     }
 
@@ -108,6 +113,7 @@ impl KnownNfsPlace {
             export: params.export().to_string(),
             uid: params.identity.uid,
             gid: params.identity.gid,
+            other_gids: params.identity.other_gids.clone(),
             start_folder: params.start_folder.clone(),
             auto_reconnect: params.auto_reconnect,
             pinned,

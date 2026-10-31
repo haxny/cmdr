@@ -24,7 +24,7 @@ const MAX_AUTH_BODY: usize = 400;
 /// `AUTH_SYS` caps the machine name at 255 bytes.
 const MAX_MACHINE_NAME: usize = 255;
 /// `AUTH_SYS` caps the supplementary group list at 16.
-const MAX_GIDS: usize = 16;
+pub(crate) const MAX_GIDS: usize = 16;
 
 /// One remote program and version: what a connection talks to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

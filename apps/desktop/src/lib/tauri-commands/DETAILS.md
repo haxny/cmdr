@@ -113,7 +113,7 @@ commands, and notable non-obvious placements.
 - **`nfs.ts`**: NFS servers minus everything the servers family already speaks: the add form's two questions before a
   place exists, `listNfsExports` (with a typed `listing_refused`, since a typed export may still mount) and
   `guessNfsIdentity` (always answers, falling back to this Mac's ids), plus `knownNfsPlaceOf`, the saved place's uid,
-  gid, and start folder an edit form prefills from (by the backend's `volumeId`). The model:
+  groups, and start folder an edit form prefills from (by the backend's `volumeId`). The model:
   `crates/cmdr-nfs/DETAILS.md`.
 - **`licensing.ts`**: license status, activation, expiry, server validation.
 - **`settings.ts`**: port checking, file watcher debounce, indexing toggle, MCP server control, AI subsystem commands.

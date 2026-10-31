@@ -137,7 +137,7 @@ impl Dialer {
             dial: Arc::new(move |params: NfsConnectionParams, cancel: CancellationToken| {
                 Box::pin(async move {
                     let mounted =
-                        dial::mount(&params.server, params.export(), params.identity, &options, &cancel).await?;
+                        dial::mount(&params.server, params.export(), &params.identity, &options, &cancel).await?;
                     let resolved = Resolved {
                         export: mounted.export.clone(),
                         folder: mounted.folder.clone(),

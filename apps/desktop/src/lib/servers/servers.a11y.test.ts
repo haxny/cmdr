@@ -40,7 +40,7 @@ vi.mock('#lib/tauri-commands/index.js', async (importOriginal) => ({
   approveSftpHostKey: vi.fn(() => Promise.resolve({ outcome: 'recorded' })),
   approveWebdavCertificate: vi.fn(() => Promise.resolve()),
   listNfsExports: vi.fn(() => Promise.resolve({ outcome: 'listed', exports: ['/Public'] })),
-  guessNfsIdentity: vi.fn(() => Promise.resolve({ uid: 1000, gid: 100, source: 'most_common_owner' })),
+  guessNfsIdentity: vi.fn(() => Promise.resolve({ uid: 1000, gid: 100, otherGids: [], source: 'most_common_owner' })),
 }))
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: vi.fn(() => Promise.resolve(null)) }))
@@ -256,7 +256,8 @@ describe('the three renderers on their own', () => {
         onChange: () => {},
         discoveryDeps: {
           listNfsExports: () => Promise.resolve({ outcome: 'listing_refused' as const }),
-          guessNfsIdentity: () => Promise.resolve({ uid: 1000, gid: 100, source: 'most_common_owner' as const }),
+          guessNfsIdentity: () =>
+            Promise.resolve({ uid: 1000, gid: 100, otherGids: [], source: 'most_common_owner' as const }),
         },
       },
     })

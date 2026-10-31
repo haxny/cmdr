@@ -34,7 +34,7 @@ async function render(
 ): Promise<Rendered> {
   const onChange = vi.fn()
   const listed: NfsExportList = { outcome: 'listed', exports: ['/Public', '/volume1/data'] }
-  const guessed: GuessedNfsIdentity = { uid: 1000, gid: 100, source: 'most_common_owner' }
+  const guessed: GuessedNfsIdentity = { uid: 1000, gid: 100, otherGids: [], source: 'most_common_owner' }
   const listNfsExports = vi.fn(() => Promise.resolve(answers.list ?? listed))
   const guessNfsIdentity = vi.fn(() => Promise.resolve(answers.guess ?? guessed))
   mount(NfsPlaceFields, {
@@ -112,6 +112,48 @@ describe('NfsPlaceFields', () => {
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ uid: '1026', identityFromGuess: false, identitySource: null }),
     )
+  })
+
+  it('fills the guessed other groups with the rest of the identity', async () => {
+    const { onChange } = await render(
+      { exportPath: '/Public' },
+      {},
+      { guess: { uid: 1000, gid: 100, otherGids: [2001, 2002], source: 'most_common_owner' } },
+    )
+    await settle()
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ otherGids: '2001, 2002' }))
+  })
+
+  it('marks typing into the other groups as the person’s own', async () => {
+    const { onChange } = await render({ uid: '1000', gid: '100', identitySource: 'this_mac' })
+    const others = document.body.querySelector<HTMLInputElement>('#server-nfs-other-gids')
+    if (!others) throw new Error('no other groups field')
+    others.value = '2001'
+    others.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ otherGids: '2001', identityFromGuess: false, identitySource: null }),
+    )
+  })
+
+  it('says nothing under an empty or readable other groups field', async () => {
+    await render({ otherGids: '2001, 2002', identityFromGuess: false })
+    expect(document.body.querySelector('#server-nfs-other-gids-problem')).toBeNull()
+    expect(document.body.querySelector('#server-nfs-other-gids')?.getAttribute('aria-invalid')).not.toBe('true')
+  })
+
+  it('says what’s wrong with other groups that don’t read', async () => {
+    await render({ otherGids: '2001, staff', identityFromGuess: false })
+    expect(text('#server-nfs-other-gids-problem')).toContain('separated by commas')
+    expect(document.body.querySelector('#server-nfs-other-gids')?.getAttribute('aria-invalid')).toBe('true')
+  })
+
+  it('says how many other groups NFS carries when there are too many', async () => {
+    await render({
+      otherGids: Array.from({ length: 17 }, (_, index) => index + 1).join(', '),
+      identityFromGuess: false,
+    })
+    expect(text('#server-nfs-other-gids-problem')).toContain('16')
+    expect(text('#server-nfs-other-gids-problem')).toContain('17')
   })
 
   it('warns about user ID 0 without blocking anything', async () => {

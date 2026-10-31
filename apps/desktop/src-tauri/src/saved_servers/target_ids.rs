@@ -35,7 +35,7 @@ pub(crate) fn place_id(server: ServerTarget) -> Option<String> {
             ..
         } => {
             let server = cmdr_nfs::NfsServer::new(&host, port);
-            Some(cmdr_nfs::NfsConnectionParams::new(server, &export, cmdr_nfs::NfsIdentity { uid, gid }).volume_id())
+            Some(cmdr_nfs::NfsConnectionParams::new(server, &export, cmdr_nfs::NfsIdentity::new(uid, gid)).volume_id())
         }
     }
 }

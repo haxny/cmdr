@@ -13,6 +13,7 @@ import {
   nfsIdentityIsComplete,
   nfsIdentityWarns,
   parseNfsId,
+  readNfsOtherGids,
   withGuessedIdentity,
   withTypedIdentity,
 } from './nfs-form'
@@ -41,8 +42,30 @@ describe('parseNfsId', () => {
   })
 })
 
+describe('readNfsOtherGids', () => {
+  it('reads an empty field as no groups', () => {
+    expect(readNfsOtherGids('')).toEqual({ kind: 'ids', ids: [] })
+    expect(readNfsOtherGids('  , ')).toEqual({ kind: 'ids', ids: [] })
+  })
+
+  it('takes commas, spaces, or both, in the typed order, each id once', () => {
+    expect(readNfsOtherGids('100, 2001 1000,2001')).toEqual({ kind: 'ids', ids: [100, 2001, 1000] })
+  })
+
+  it.each(['abc', '100, x', '-1', '1.5', '4294967296'])('refuses %s', (text) => {
+    expect(readNfsOtherGids(text)).toEqual({ kind: 'not_ids' })
+  })
+
+  it('takes the RFC 5531 limit of 16 and refuses one more, counting each id once', () => {
+    const ids = Array.from({ length: 16 }, (_, index) => 2000 + index)
+    expect(readNfsOtherGids(ids.join(','))).toEqual({ kind: 'ids', ids })
+    expect(readNfsOtherGids([...ids, 2000].join(','))).toEqual({ kind: 'ids', ids })
+    expect(readNfsOtherGids([...ids, 3000].join(','))).toEqual({ kind: 'too_many', count: 17 })
+  })
+})
+
 describe('the guessed identity', () => {
-  const guess = { uid: 1000, gid: 100, source: 'most_common_owner' as const }
+  const guess = { uid: 1000, gid: 100, otherGids: [], source: 'most_common_owner' as const }
 
   it('fills empty fields, and says where the guess came from', () => {
     expect(withGuessedIdentity(emptyNfsFields(), guess)).toMatchObject({
@@ -54,8 +77,19 @@ describe('the guessed identity', () => {
   })
 
   it('replaces an earlier guess, since nobody chose that one', () => {
-    const first = withGuessedIdentity(emptyNfsFields(), { uid: 501, gid: 20, source: 'this_mac' })
+    const first = withGuessedIdentity(emptyNfsFields(), { uid: 501, gid: 20, otherGids: [], source: 'this_mac' })
     expect(withGuessedIdentity(first, guess)).toMatchObject({ uid: '1000', identitySource: 'most_common_owner' })
+  })
+
+  it('fills the guessed other groups as a list to edit', () => {
+    const fields = withGuessedIdentity(emptyNfsFields(), { ...guess, otherGids: [2001, 2002] })
+    expect(fields.otherGids).toBe('2001, 2002')
+  })
+
+  it('makes every id the person’s once they type into the other groups', () => {
+    const typed = withTypedIdentity(withGuessedIdentity(emptyNfsFields(), guess), { otherGids: '2001' })
+    expect(typed).toMatchObject({ otherGids: '2001', identityFromGuess: false, identitySource: null })
+    expect(withGuessedIdentity(typed, { ...guess, otherGids: [3000] }).otherGids).toBe('2001')
   })
 
   it('never overwrites what the person typed', () => {
@@ -66,6 +100,9 @@ describe('the guessed identity', () => {
 
   it('is complete once both ids read as ids', () => {
     expect(nfsIdentityIsComplete(emptyNfsFields())).toBe(false)
+    expect(
+      nfsIdentityIsComplete(withTypedIdentity(withGuessedIdentity(emptyNfsFields(), guess), { otherGids: 'x' })),
+    ).toBe(false)
     expect(nfsIdentityIsComplete(withGuessedIdentity(emptyNfsFields(), guess))).toBe(true)
     expect(nfsIdentityIsComplete(withTypedIdentity(withGuessedIdentity(emptyNfsFields(), guess), { gid: 'x' }))).toBe(
       false,
@@ -104,6 +141,14 @@ describe('an NFS address in the form', () => {
 })
 
 describe('serverTargetFrom: NFS', () => {
+  it('sends the typed other groups, and nothing while they don’t read', () => {
+    const form = nfsForm('nfs://nas.local/Public')
+    const typed = (otherGids: string) => ({ ...form, nfs: withTypedIdentity(form.nfs, { otherGids }) })
+    expect(serverTargetFrom(typed('2001, 2002'))).toMatchObject({ otherGids: [2001, 2002] })
+    expect(serverTargetFrom(typed('x'))).toBeNull()
+    expect(serverTargetFrom(typed(Array.from({ length: 17 }, (_, index) => index + 1).join(',')))).toBeNull()
+  })
+
   it('sends the host, the typed port or none, the whole export path, and the identity', () => {
     expect(serverTargetFrom(nfsForm('nfs://nas.local/volume1/data/photos'))).toEqual({
       protocol: 'nfs',
@@ -113,6 +158,7 @@ describe('serverTargetFrom: NFS', () => {
       export: '/volume1/data/photos',
       uid: 1000,
       gid: 100,
+      otherGids: [],
       startFolder: null,
       autoReconnect: true,
     })
@@ -178,6 +224,7 @@ describe('formFromNfsPlace', () => {
     export: '/volume1/data',
     uid: 1026,
     gid: 100,
+    otherGids: [2001, 2002],
     displayName: 'Naspolya',
     startFolder: '/photos',
     autoReconnect: false,
@@ -191,7 +238,7 @@ describe('formFromNfsPlace', () => {
       displayName: 'Naspolya',
       startFolder: '/photos',
       autoReconnect: false,
-      nfs: { exportPath: '/volume1/data', uid: '1026', gid: '100' },
+      nfs: { exportPath: '/volume1/data', uid: '1026', gid: '100', otherGids: '2001, 2002' },
     })
     expect(formFromNfsPlace({ ...place, port: 15481 }).address).toBe('nfs://nas.local:15481')
   })
@@ -199,7 +246,7 @@ describe('formFromNfsPlace', () => {
   it('opens the ids as the person’s, so no guess lands over the saved ones', () => {
     const form = formFromNfsPlace(place)
     expect(form.nfs.identityFromGuess).toBe(false)
-    expect(withGuessedIdentity(form.nfs, { uid: 0, gid: 0, source: 'this_mac' }).uid).toBe('1026')
+    expect(withGuessedIdentity(form.nfs, { uid: 0, gid: 0, otherGids: [], source: 'this_mac' }).uid).toBe('1026')
   })
 
   it('saves back the target it opened on', () => {
@@ -211,6 +258,7 @@ describe('formFromNfsPlace', () => {
       export: '/volume1/data',
       uid: 1026,
       gid: 100,
+      otherGids: [2001, 2002],
       startFolder: '/photos',
       autoReconnect: false,
     })

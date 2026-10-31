@@ -574,7 +574,7 @@ then an optional Bucket. Its model is `s3-form.ts`, held under `ServerForm.s3`; 
 
 ### NFS in add mode
 
-❗ **No password, no Remember box, no username.** `AUTH_SYS` carries a uid and a gid and proves nothing, so the form
+❗ **No password, no Remember box, no username.** `AUTH_SYS` carries a uid and groups and proves nothing, so the form
 asks for the export and the identity to act as instead (`NfsPlaceFields.svelte`, its model in `nfs-form.ts`, held under
 `ServerForm.nfs`). An address's `user@` fills nothing.
 
@@ -594,10 +594,14 @@ asks for the export and the identity to act as instead (`NfsPlaceFields.svelte`,
   says which (`servers.sheet.nfsIdentity*`). Typing into either makes both the person's, and no later guess overwrites
   them. A typed `0` earns a warning (most servers squash root to nobody), ❌ never a block: on a `no_root_squash` export
   it's what someone means. Connect stays disabled until the export and both ids read.
+- **"Other group IDs"**: the person's other groups, so a file readable only through one opens. Commas or spaces, each id
+  once, at most 16 (`readNfsOtherGids`; RFC 5531's limit), empty is fine. The guess fills it too (the groups the
+  export's files use, `crates/cmdr-nfs/DETAILS.md` § "Connecting"), and typing into it makes every id the person's. A
+  list that doesn't read says why under the field and keeps Connect disabled.
 - **Advanced** holds the start folder (export-relative) and "Reconnect automatically".
 - **Edit mode** locks the address and the export, since host, port, and export are the place
-  (`servers.sheet.identityLockedNfs`); the uid, gid, start folder, name, and switch stay editable, and a changed uid
-  redials (`src-tauri/src/network/DETAILS.md` § "The NFS twin, a place per export, and no secret").
+  (`servers.sheet.identityLockedNfs`); the uid, groups, start folder, name, and switch stay editable, and a changed uid
+  or group redials (`src-tauri/src/network/DETAILS.md` § "The NFS twin, a place per export, and no secret").
 - ❗ **A typed `nfs://nas/volume1/data/photos` is an ADDRESS, ❌ not an app path.** Go to path and ⌘K hand it to the
   sheet as a prefill; only Cmdr's own spelling, whose export segment carries an escape (`%2F`), navigates or prefills
   the export exactly (`nfsFieldsFromAppPath`). Read as an app path, the unescaped one would name export `/volume1`.
