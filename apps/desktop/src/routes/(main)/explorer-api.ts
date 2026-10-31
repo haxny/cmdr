@@ -368,7 +368,7 @@ export interface ExplorerAPI {
   /** Alerts and returns `true` when the focused pane can't take a Multi-Rename (an archive, the `.git` portal, a read-only volume). */
   refuseMultiRename: () => boolean
   /** The Multi-Rename Tool's target: the focused pane's listing, selected rows, and their sequence. */
-  getFocusedPaneRenameTarget: () => MultiRenameSelection | null
+  resolveMultiRenameTarget: () => MultiRenameSelection | null
   /**
    * Returns a snapshot of the focused pane's entries + cursor index for the Selection
    * dialog. Captured ONCE at dialog open; the dialog does not refresh on mid-dialog

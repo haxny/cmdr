@@ -3,14 +3,6 @@
   "@multiRename.title": {
     "sourceHash": "5ceb1a2"
   },
-  "multiRename.scope.selection": "{count, plural, one {{countText} вибраний файл} few {{countText} вибрані файли} many {{countText} вибраних файлів} other {{countText} вибраного файлу}}",
-  "@multiRename.scope.selection": {
-    "sourceHash": "30a7b9f"
-  },
-  "multiRename.scope.wholeFolder": "{count, plural, =1 {Єдиний файл у цій папці (нічого не вибрано)} one {Уся папка: {countText} файл (нічого не вибрано)} few {Уся папка: {countText} файли (нічого не вибрано)} many {Уся папка: {countText} файлів (нічого не вибрано)} other {Уся папка: {countText} файлу (нічого не вибрано)}}",
-  "@multiRename.scope.wholeFolder": {
-    "sourceHash": "37dc7a2"
-  },
   "multiRename.nameMask": "Маска імені",
   "@multiRename.nameMask": {
     "sourceHash": "3dcc6e4"

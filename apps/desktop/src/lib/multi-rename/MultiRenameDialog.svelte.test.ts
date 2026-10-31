@@ -70,7 +70,7 @@ async function mountSheet(onApplied = vi.fn(), onClose = vi.fn(), onUndoStarted 
   document.body.appendChild(target)
   mount(MultiRenameDialog, {
     target,
-    props: { session: { sessionId: 'S', count: 1 }, nothingSelected: false, onApplied, onUndoStarted, onClose },
+    props: { session: { sessionId: 'S', count: 1 }, onApplied, onUndoStarted, onClose },
   })
   await settle()
   return target
@@ -136,29 +136,6 @@ describe('MultiRenameDialog', () => {
     expect(root.querySelector('[role="alert"]')?.textContent.trim()).toBeTruthy()
   })
 
-  // A user who expected "selection only" was surprised when the sheet took the whole folder.
-  it.each([
-    [false, 12, '12 selected files'],
-    [false, 1, '1 selected file'],
-    [true, 2141, 'All 2,141 files in this folder (nothing selected)'],
-    [true, 1, 'The only file in this folder (nothing selected)'],
-  ])('says in its title what it renames (nothing selected: %s, %i files)', async (nothingSelected, count, scope) => {
-    const target = document.createElement('div')
-    document.body.appendChild(target)
-    mount(MultiRenameDialog, {
-      target,
-      props: {
-        session: { sessionId: 'S', count },
-        nothingSelected,
-        onApplied: vi.fn(),
-        onUndoStarted: vi.fn(),
-        onClose: vi.fn(),
-      },
-    })
-    await settle()
-    expect(target.querySelector('#multi-rename-title')?.textContent).toContain(scope)
-  })
-
   it('remembers the fields when it closes, for the next sheet', async () => {
     const target = document.createElement('div')
     document.body.appendChild(target)
@@ -166,7 +143,6 @@ describe('MultiRenameDialog', () => {
       target,
       props: {
         session: { sessionId: 'S', count: 1 },
-        nothingSelected: false,
         onApplied: vi.fn(),
         onUndoStarted: vi.fn(),
         onClose: vi.fn(),

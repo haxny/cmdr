@@ -3,14 +3,6 @@
   "@multiRename.title": {
     "sourceHash": "5ceb1a2"
   },
-  "multiRename.scope.selection": "{count, plural, other {{countText} 個所選檔案}}",
-  "@multiRename.scope.selection": {
-    "sourceHash": "30a7b9f"
-  },
-  "multiRename.scope.wholeFolder": "{count, plural, =1 {這個資料夾裡唯一的檔案（未選取項目）} other {這個資料夾裡的全部 {countText} 個檔案（未選取項目）}}",
-  "@multiRename.scope.wholeFolder": {
-    "sourceHash": "37dc7a2"
-  },
   "multiRename.nameMask": "名稱規則",
   "@multiRename.nameMask": {
     "sourceHash": "3dcc6e4"

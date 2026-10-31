@@ -595,7 +595,7 @@
     "description": "Command name (Ctrl+M, like Total Commander) in the command palette and File menu: opens the tool that renames many files at once with a name mask.",
     "screenshot": "settings-keyboard-shortcuts.png"
   },
-  "commands.fileMultiRename.description": "Renames the selected files (or the whole folder) with a name mask, counter, and search & replace",
+  "commands.fileMultiRename.description": "Renames the selected files (or the file under the cursor) with a name mask, counter, and search & replace",
   "@commands.fileMultiRename.description": {
     "description": "Longer help text for \"Multi-rename\", shown as a secondary line in the command palette."
   },

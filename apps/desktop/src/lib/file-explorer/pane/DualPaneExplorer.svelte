@@ -1113,8 +1113,8 @@
 
     // noinspection JSUnusedGlobalSymbols -- consumed by +page.svelte for the Multi-Rename Tool
     /** The Multi-Rename Tool's target: the focused pane's listing, selected rows, and their sequence. */
-    export function getFocusedPaneRenameTarget(): MultiRenameSelection | null {
-        return paneCommands.getFocusedPaneRenameTarget()
+    export function resolveMultiRenameTarget(): MultiRenameSelection | null {
+        return paneCommands.resolveMultiRenameTarget()
     }
 
     export async function getFocusedPaneEntries(): Promise<{

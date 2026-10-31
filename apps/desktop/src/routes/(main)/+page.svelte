@@ -152,8 +152,6 @@
      */
     let showSelectionDialog = $state<'add' | 'remove' | null>(null)
     let multiRenameSession = $state.raw<MultiRenameOpened | null>(null)
-    /** The session took the whole folder because nothing was selected. */
-    let multiRenameNothingSelected = $state(false)
     let openingMultiRename = false
     const multiRenameLog = getAppLogger('multiRename')
     let selectionDialogSnapshot = $state.raw<{
@@ -577,15 +575,15 @@
 
     /**
      * Opens the Multi-Rename Tool on the focused pane (⌃M): the backend resolves the
-     * selection into its files once, here. A read-only pane (an archive, the `.git`
-     * portal) refuses with F2's alert before any session opens. A pane with no real
-     * listing has nothing to rename; a selection the listing moved past is refused,
-     * as F5 refuses it.
+     * selection, or the file under the cursor, into its files once, here. A read-only
+     * pane (an archive, the `.git` portal) refuses with F2's alert before any session
+     * opens. `resolveMultiRenameTarget` answers `null` when there's nothing to open,
+     * and says why; rows the listing moved past are refused, as F5 refuses them.
      */
     async function openMultiRename(): Promise<void> {
         if (multiRenameSession || openingMultiRename || !explorerRef) return
         if (explorerRef.refuseMultiRename()) return
-        const target = explorerRef.getFocusedPaneRenameTarget()
+        const target = explorerRef.resolveMultiRenameTarget()
         if (!target) return
         openingMultiRename = true
         try {
@@ -596,7 +594,6 @@
                 target.expectedSequence,
             )
             if (opened.ok) {
-                multiRenameNothingSelected = target.nothingSelected
                 multiRenameSession = opened.value
                 return
             }
@@ -857,7 +854,6 @@
             {#if multiRenameSession}
                 <MultiRenameDialog
                     session={multiRenameSession}
-                    nothingSelected={multiRenameNothingSelected}
                     onApplied={handleMultiRenameApplied}
                     onUndoStarted={handleMultiRenameUndoStarted}
                     onClose={closeMultiRename}
