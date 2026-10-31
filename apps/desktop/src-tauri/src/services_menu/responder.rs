@@ -6,8 +6,8 @@
 use std::cell::RefCell;
 
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, Bool, ProtocolObject};
-use objc2::{ClassType, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send};
+use objc2::runtime::{AnyClass, AnyObject, Bool, ProtocolObject, Sel};
+use objc2::{ClassType, MainThreadMarker, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSPasteboard, NSPasteboardItem, NSPasteboardType, NSPasteboardTypeFileURL, NSPasteboardWriting,
     NSResponder, NSServicesMenuRequestor, NSUpdateDynamicServices, NSWindow,
@@ -194,6 +194,74 @@ thread_local! {
     /// a `static`, because `Retained` is neither `Send` nor `Sync` and this only ever
     /// runs on the main thread.
     static ATTACHED: RefCell<Option<Retained<CmdrServicesResponder>>> = const { RefCell::new(None) };
+}
+
+/// `validRequestorForSendType:returnType:` for the window a context menu draws in.
+///
+/// Answers with the attached responder while a file context menu is up, and otherwise
+/// exactly what `NSWindow` would have answered.
+extern "C-unwind" fn menu_window_valid_requestor(
+    this: &AnyObject,
+    _cmd: Sel,
+    send_type: Option<&NSPasteboardType>,
+    return_type: Option<&NSPasteboardType>,
+) -> *mut AnyObject {
+    let wants_return = return_type.is_some_and(|t| !t.is_empty());
+    if !wants_return && send_type.is_some_and(is_file_send_type) && selection::has_context_target() {
+        let responder = ATTACHED.with(|slot| slot.borrow().as_ref().map(Retained::as_ptr));
+        if let Some(responder) = responder {
+            // Handed out unretained, which is what this selector's caller expects: `ATTACHED`
+            // holds the responder for the process lifetime.
+            return responder.cast_mut().cast();
+        }
+    }
+    // SAFETY: only ever installed on a subclass of `NSWindow`, so `this` is one, and the
+    // arguments are passed through as AppKit sent them.
+    unsafe { msg_send![super(this, NSWindow::class()), validRequestorForSendType: send_type, returnType: return_type] }
+}
+
+/// Makes the window a context menu draws in answer for file send types.
+///
+/// ⚠️ While a context menu is up, AppKit starts its walk at that menu's own
+/// `NSPopupMenuWindow`, not at the main window's first responder. `NSWindow` doesn't forward
+/// the question, so the walk ends there, nothing reaches [`CmdrServicesResponder`], and every
+/// file service is hidden (verified on macOS 27.0.1 with lldb on
+/// `-[_NSMenuContext initForServicePresentationMode:withRequestorChain:]`, 2026-10-31; the
+/// menu bar's walk starts at the `WKWebView`).
+///
+/// Adds the override to that one class by name, because AppKit creates the window itself and
+/// the context menu has no handle on it. Nothing is called on it but the public selector, so
+/// a macOS that renames the class only costs the context menu its file services.
+pub fn answer_from_menu_windows() {
+    let Some(class) = AnyClass::get(c"NSPopupMenuWindow") else {
+        log::warn!(target: "services_menu", "No NSPopupMenuWindow class, so the right-click Services menu may stay short");
+        return;
+    };
+    let imp: unsafe extern "C-unwind" fn() = {
+        let typed: extern "C-unwind" fn(
+            &AnyObject,
+            Sel,
+            Option<&NSPasteboardType>,
+            Option<&NSPasteboardType>,
+        ) -> *mut AnyObject = menu_window_valid_requestor;
+        // SAFETY: an IMP is stored type-erased, and AppKit calls it through this selector's
+        // signature, which `typed` matches and the encoding below declares.
+        unsafe { std::mem::transmute(typed) }
+    };
+    // SAFETY: `imp` matches `@@:@@`, this selector's signature. `class_addMethod` only adds
+    // to `class` itself and leaves `NSWindow` alone, and it refuses a second add, so a repeat
+    // call is safe.
+    let added = unsafe {
+        objc2::ffi::class_addMethod(
+            std::ptr::from_ref(class).cast_mut(),
+            sel!(validRequestorForSendType:returnType:),
+            imp,
+            c"@@:@@".as_ptr(),
+        )
+    };
+    if !added.as_bool() {
+        log::debug!(target: "services_menu", "NSPopupMenuWindow already answers for send types");
+    }
 }
 
 /// Splices the selection responder into the main window's responder chain, between
