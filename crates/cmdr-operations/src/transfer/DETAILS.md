@@ -1330,7 +1330,10 @@ own temp with it, through its backend's abort and `StagedWrite::abandon`, which 
 went through: a delete the destination turned down (a share that's out) leaves it listed, so it isn't forgotten on the
 share. Whatever is still listed when the driver's loop ends belongs to a task the drain's deadline DROPPED mid-write, or
 to such an abandon, so `volume::cleanup::clean_abandoned_staged_writes` takes those, deep-merge children and swaps
-included. Pinned by `staged_write_tests.rs::an_abandon_the_destination_refuses_keeps_the_temp_listed`.
+included. ❗ It runs on EVERY ending of both volume drivers, a finished one too: a retried file's first attempt can
+leave such a temp behind and the file still land, and nothing but a next launch would ask again. Pinned by
+`staged_write_tests.rs::an_abandon_the_destination_refuses_keeps_the_temp_listed` and
+`volume/copy_retry_tests.rs::a_finished_copy_removes_the_temp_a_retried_file_could_not_delete`.
 
 ❗ **The drivers keep no partial list, and nothing cleans a failed write's FINAL name**: the temp has the one owner
 above, and the name is the user's: a free name (someone may have taken it mid-upload), a swap's original, or a claimed
