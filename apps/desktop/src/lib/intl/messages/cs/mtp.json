@@ -76,11 +76,11 @@
   "@mtp.ptpcameradDialog.retry": {
     "sourceHash": "eccee4e"
   },
-  "mtp.readiness.connecting": "Still connecting. Unlock your phone and tap Allow if it asks.",
+  "mtp.readiness.connecting": "Pořád se připojuje. Odemkni telefon, a pokud se zeptá, klepni na „Povolit“.",
   "@mtp.readiness.connecting": {
     "sourceHash": "389b779"
   },
-  "mtp.readiness.connectingTooltip": "Cmdr keeps trying while your phone stays plugged in, and you can open it once it connects.",
+  "mtp.readiness.connectingTooltip": "Cmdr to zkouší, dokud je telefon zapojený, a jakmile se připojí, můžeš ho otevřít.",
   "@mtp.readiness.connectingTooltip": {
     "sourceHash": "4f4066b"
   },

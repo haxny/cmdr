@@ -515,27 +515,27 @@
   "@errors.listing.remotePermissionDenied.suggestion": {
     "sourceHash": "3e6497d"
   },
-  "errors.listing.phoneRefused.title": "This phone keeps this folder private",
+  "errors.listing.phoneRefused.title": "Tuto složku si telefon nechává pro sebe",
   "@errors.listing.phoneRefused.title": {
     "sourceHash": "f41a6b7"
   },
-  "errors.listing.phoneRefused.explanation": "Android reserves this folder for the system and its apps, so Cmdr can’t open it. Nothing’s wrong with your phone or the connection.",
+  "errors.listing.phoneRefused.explanation": "Android tuto složku vyhrazuje systému a jeho aplikacím, takže ji Cmdr nemůže otevřít. S telefonem ani s připojením není nic v nepořádku.",
   "@errors.listing.phoneRefused.explanation": {
     "sourceHash": "d3da350"
   },
-  "errors.listing.phoneRefused.suggestion": "Your photos, downloads, and other files are in the phone’s shared storage, so try a folder there.",
+  "errors.listing.phoneRefused.suggestion": "Tvoje fotky, stažené soubory a další soubory jsou ve sdíleném úložišti telefonu, takže zkus některou složku tam.",
   "@errors.listing.phoneRefused.suggestion": {
     "sourceHash": "a2a9025"
   },
-  "errors.listing.serverRefused.title": "The server won’t open this folder",
+  "errors.listing.serverRefused.title": "Server tuto složku neotevře",
   "@errors.listing.serverRefused.title": {
     "sourceHash": "f9cb7bd"
   },
-  "errors.listing.serverRefused.explanation": "This folder is on a server, and the account you connected with doesn’t have permission to open it. The server makes that call, so no setting on this computer changes it.",
+  "errors.listing.serverRefused.explanation": "Tato složka je na serveru a účet použitý pro připojení nemá oprávnění ji otevřít. Rozhoduje o tom server, takže to žádné nastavení na tomto počítači nezmění.",
   "@errors.listing.serverRefused.explanation": {
     "sourceHash": "bba853c"
   },
-  "errors.listing.serverRefused.suggestion": "Here’s what to try:\n- Check the folder’s permissions on the server\n- Some folders belong to the server’s own system account and stay closed to everyone else\n- Connect with an account that has access",
+  "errors.listing.serverRefused.suggestion": "Co můžeš zkusit:\n- Zkontroluj oprávnění složky na serveru\n- Některé složky patří vlastnímu systémovému účtu serveru a pro všechny ostatní zůstávají zavřené\n- Připoj se účtem, který má přístup",
   "@errors.listing.serverRefused.suggestion": {
     "sourceHash": "e750b94"
   },
@@ -587,15 +587,15 @@
   "@errors.listing.notConnected.suggestion": {
     "sourceHash": "652f289"
   },
-  "errors.listing.linkTargetUnreachable.title": "This folder’s server is out of reach",
+  "errors.listing.linkTargetUnreachable.title": "Server této složky je mimo dosah",
   "@errors.listing.linkTargetUnreachable.title": {
     "sourceHash": "8aee94c"
   },
-  "errors.listing.linkTargetUnreachable.explanation": "`{path}` sits behind a link to another server, and Cmdr can’t reach that server right now. The rest of this share is fine, and nothing was deleted.",
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` je za odkazem na jiný server a ten server je teď pro Cmdr nedostupný. Zbytek této sdílené složky je v pořádku a nic se nesmazalo.",
   "@errors.listing.linkTargetUnreachable.explanation": {
     "sourceHash": "394e1e8"
   },
-  "errors.listing.linkTargetUnreachable.suggestion": "Here’s what to try:\n- Check that the other server is running and that your network can reach it\n- Navigate here again to retry",
+  "errors.listing.linkTargetUnreachable.suggestion": "Co můžeš zkusit:\n- Zkontroluj, že druhý server běží a že je z tvé sítě dostupný\n- Zkus sem přejít znovu",
   "@errors.listing.linkTargetUnreachable.suggestion": {
     "sourceHash": "99d873e"
   },
@@ -1765,11 +1765,11 @@
   "@errors.write.permissionDenied.message.named": {
     "sourceHash": "0ffd79b"
   },
-  "errors.write.permissionDenied.suggestion.phone": "Android reserves this location for the system and its apps. Your photos, downloads, and other files are in the phone’s shared storage, so try a folder there.",
+  "errors.write.permissionDenied.suggestion.phone": "Android toto umístění vyhrazuje systému a jeho aplikacím. Tvoje fotky, stažené soubory a další soubory jsou ve sdíleném úložišti telefonu, takže zkus některou složku tam.",
   "@errors.write.permissionDenied.suggestion.phone": {
     "sourceHash": "e19fb67"
   },
-  "errors.write.permissionDenied.suggestion.server": "The server turned this down for the account you connected with. Check the folder’s permissions on the server, or connect with an account that has access.",
+  "errors.write.permissionDenied.suggestion.server": "Server to účtu použitému pro připojení nepovolil. Zkontroluj oprávnění složky na serveru, nebo se připoj účtem, který má přístup.",
   "@errors.write.permissionDenied.suggestion.server": {
     "sourceHash": "0ca6fc7"
   },
@@ -2169,7 +2169,7 @@
   "@errors.volume.notConnected": {
     "sourceHash": "e128225"
   },
-  "errors.volume.linkTargetUnreachable": "This sits behind a link to another server, and Cmdr can’t reach that server right now.",
+  "errors.volume.linkTargetUnreachable": "Tato položka je za odkazem na jiný server a ten server je teď pro Cmdr nedostupný.",
   "@errors.volume.linkTargetUnreachable": {
     "sourceHash": "5bd2fe8"
   },
@@ -2309,29 +2309,29 @@
   "@errors.eject.deviceDisconnectRefused": {
     "sourceHash": "5b99318"
   },
-  "errors.eject.unmountRefused": "Něco tam má pořád otevřené soubory. Zavři všechny otevřené soubory a aplikace a zkus to znovu.",
+  "errors.eject.unmountRefused": "Něco se tam pořád používá. Zavři všechny otevřené soubory a aplikace a zkus to znovu.",
   "@errors.eject.unmountRefused": {
-    "sourceHash": "709ecc5"
+    "sourceHash": "f855a33"
   },
-  "errors.eject.unmountRefusedByApp": "{app} tam má pořád otevřené soubory. Zavři je a zkus to znovu.",
+  "errors.eject.unmountRefusedByApp": "{app} tam pořád něco používá. Zavři to a zkus to znovu.",
   "@errors.eject.unmountRefusedByApp": {
-    "sourceHash": "c6e596a"
+    "sourceHash": "6ccda65"
   },
-  "errors.eject.unmountRefusedByApps": "{apps} tam mají pořád otevřené soubory. Zavři je a zkus to znovu.",
+  "errors.eject.unmountRefusedByApps": "{apps} tam pořád něco používají. Zavři je a zkus to znovu.",
   "@errors.eject.unmountRefusedByApps": {
-    "sourceHash": "93120f1"
+    "sourceHash": "f46e410"
   },
   "errors.eject.otherApps": "další aplikace",
   "@errors.eject.otherApps": {
     "sourceHash": "09fe5b1"
   },
-  "errors.eject.unmountRefusedByProcess": "Proces s názvem {process} tam má pořád otevřené soubory. (Cmdr nezná název aplikace, jen název procesu.)",
+  "errors.eject.unmountRefusedByProcess": "Proces s názvem {process} tam pořád něco používá. (Cmdr nezná název aplikace, jen název procesu.)",
   "@errors.eject.unmountRefusedByProcess": {
-    "sourceHash": "ad7c1d5"
+    "sourceHash": "a1a2c6d"
   },
-  "errors.eject.unmountRefusedByProcesses": "Procesy s názvy {processes} (počet: {countText}) tam mají pořád otevřené soubory. (Cmdr nezná názvy aplikací, jen názvy procesů.)",
+  "errors.eject.unmountRefusedByProcesses": "Procesy s názvy {processes} (počet: {countText}) tam pořád něco používají. (Cmdr nezná názvy aplikací, jen názvy procesů.)",
   "@errors.eject.unmountRefusedByProcesses": {
-    "sourceHash": "5e9dbac"
+    "sourceHash": "a40d1c0"
   },
   "errors.eject.otherProcesses": "další",
   "@errors.eject.otherProcesses": {
@@ -2341,13 +2341,13 @@
   "@errors.eject.unmountRefusedByDiskImage": {
     "sourceHash": "1fa3d53"
   },
-  "errors.eject.unmountRefusedBySystem": "macOS tam má pořád otevřené soubory. Počkej minutku a zkus to znovu.",
+  "errors.eject.unmountRefusedBySystem": "macOS tam pořád něco používá. Počkej minutku a zkus to znovu.",
   "@errors.eject.unmountRefusedBySystem": {
-    "sourceHash": "e778b5c"
+    "sourceHash": "9b066c9"
   },
-  "errors.eject.unmountRefusedByCmdr": "Soubory tam má pořád otevřené samotný Cmdr. Chvíli počkej a zkus to znovu, nebo pošli hlášení, pokud se to bude opakovat.",
+  "errors.eject.unmountRefusedByCmdr": "Samotný Cmdr tam pořád něco používá. Chvíli počkej a zkus to znovu, nebo pošli hlášení, pokud se to bude opakovat.",
   "@errors.eject.unmountRefusedByCmdr": {
-    "sourceHash": "e79c1d8"
+    "sourceHash": "1f682f4"
   },
   "errors.eject.timedOut": "Disk zatím neodpověděl, takže se může ještě vysunout sám.",
   "@errors.eject.timedOut": {
@@ -2493,75 +2493,75 @@
   "@errors.write.duplicateSourceNames.suggestion.move": {
     "sourceHash": "8af755e"
   },
-  "errors.write.namedLeavesRefused.title": "These new names can’t be used",
+  "errors.write.namedLeavesRefused.title": "Tyto nové názvy nejde použít",
   "@errors.write.namedLeavesRefused.title": {
     "sourceHash": "08c8600"
   },
-  "errors.write.namedLeavesRefused.message.notASource": "One of the new names is for {path}, which isn’t part of this suggestion, so nothing started.",
+  "errors.write.namedLeavesRefused.message.notASource": "Jeden z nových názvů je pro položku {path}, která do tohoto návrhu nepatří, takže se nic nespustilo.",
   "@errors.write.namedLeavesRefused.message.notASource": {
     "sourceHash": "12b2cb4"
   },
-  "errors.write.namedLeavesRefused.message.sameName": "Two items would end up as {path}. Many disks treat those as one name, so one would replace the other.",
+  "errors.write.namedLeavesRefused.message.sameName": "Dvě položky by skončily jako {path}. Mnoho disků to považuje za jeden název, takže by jedna nahradila druhou.",
   "@errors.write.namedLeavesRefused.message.sameName": {
     "sourceHash": "95e02b9"
   },
-  "errors.write.namedLeavesRefused.message.ontoASource": "An item would land as {path}, which is another item in this same suggestion, and replace it.",
+  "errors.write.namedLeavesRefused.message.ontoASource": "Jedna položka by skončila jako {path}, což je jiná položka z tohoto návrhu, a nahradila by ji.",
   "@errors.write.namedLeavesRefused.message.ontoASource": {
     "sourceHash": "724f9c3"
   },
-  "errors.write.namedLeavesRefused.message.alreadyInDestination": "{path} is already in the destination folder, so giving it a new name there is a rename.",
+  "errors.write.namedLeavesRefused.message.alreadyInDestination": "Položka {path} už je v cílové složce, takže dát jí tam nový název znamená ji přejmenovat.",
   "@errors.write.namedLeavesRefused.message.alreadyInDestination": {
     "sourceHash": "06a0593"
   },
-  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr can’t give each item its own name on the way into or out of a zip archive, so nothing went to {path}.",
+  "errors.write.namedLeavesRefused.message.routeCannotName": "Cmdr nedokáže při přesunu do archivu ZIP nebo z něj dát každé položce vlastní název, takže do složky {path} nic nešlo.",
   "@errors.write.namedLeavesRefused.message.routeCannotName": {
     "sourceHash": "f2e48ca"
   },
-  "errors.write.namedLeavesRefused.suggestion.notASource": "Ask Cmdr to suggest it again.",
+  "errors.write.namedLeavesRefused.suggestion.notASource": "Požádej Cmdr, ať to navrhne znovu.",
   "@errors.write.namedLeavesRefused.suggestion.notASource": {
     "sourceHash": "c1dbe85"
   },
-  "errors.write.namedLeavesRefused.suggestion.sameName": "Ask Cmdr for a different name for each item.",
+  "errors.write.namedLeavesRefused.suggestion.sameName": "Požádej Cmdr o jiný název pro každou položku.",
   "@errors.write.namedLeavesRefused.suggestion.sameName": {
     "sourceHash": "76257a9"
   },
-  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Ask Cmdr for names that don’t match the items being moved or copied.",
+  "errors.write.namedLeavesRefused.suggestion.ontoASource": "Požádej Cmdr o názvy, které se neshodují s přesouvanými nebo kopírovanými položkami.",
   "@errors.write.namedLeavesRefused.suggestion.ontoASource": {
     "sourceHash": "9ab88ec"
   },
-  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Rename the items already in that folder, then move or copy the rest.",
+  "errors.write.namedLeavesRefused.suggestion.alreadyInDestination": "Přejmenuj položky, které už v té složce jsou, a pak přesuň nebo zkopíruj zbytek.",
   "@errors.write.namedLeavesRefused.suggestion.alreadyInDestination": {
     "sourceHash": "8917a8e"
   },
-  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Move or copy them under their own names, then rename them there.",
+  "errors.write.namedLeavesRefused.suggestion.routeCannotName": "Přesuň nebo zkopíruj je pod jejich vlastními názvy a pak je tam přejmenuj.",
   "@errors.write.namedLeavesRefused.suggestion.routeCannotName": {
     "sourceHash": "b1e881c"
   },
-  "errors.listing.linkNeedsConsent.title": "This folder is on another server",
+  "errors.listing.linkNeedsConsent.title": "Tato složka je na jiném serveru",
   "@errors.listing.linkNeedsConsent.title": {
     "sourceHash": "c37d453"
   },
-  "errors.listing.linkNeedsConsent.explanation": "`{path}` is a link on **{server}** that leads to **{target}**. Cmdr hasn’t signed in there, so {target} received nothing from you.",
+  "errors.listing.linkNeedsConsent.explanation": "`{path}` je odkaz na serveru **{server}**, který vede na server **{target}**. Cmdr se tam nepřihlásil, takže server {target} od tebe nic nedostal.",
   "@errors.listing.linkNeedsConsent.explanation": {
     "sourceHash": "91b0171"
   },
-  "errors.listing.linkNeedsConsent.suggestion": "To open this folder, Cmdr has to sign in to {target} with the account you use for {server}. Review that if you trust {target}. The rest of this share works as usual.",
+  "errors.listing.linkNeedsConsent.suggestion": "Pokud chceš tuto složku otevřít, musí se Cmdr přihlásit k serveru {target} účtem, který používáš pro server {server}. Pokud serveru {target} důvěřuješ, posuď to. Zbytek této sdílené složky funguje jako obvykle.",
   "@errors.listing.linkNeedsConsent.suggestion": {
     "sourceHash": "991cb6c"
   },
-  "errors.volume.linkNeedsConsent": "This sits behind a link to another server, and Cmdr hasn’t been allowed to sign in there. Open the folder in a pane to decide.",
+  "errors.volume.linkNeedsConsent": "Tato položka je za odkazem na jiný server a Cmdr zatím nemá povoleno se tam přihlásit. Otevři složku v panelu a rozhodni.",
   "@errors.volume.linkNeedsConsent": {
     "sourceHash": "79ff9fe"
   },
-  "errors.write.linkNeedsConsent.title": "This file is on another server",
+  "errors.write.linkNeedsConsent.title": "Tento soubor je na jiném serveru",
   "@errors.write.linkNeedsConsent.title": {
     "sourceHash": "ff31c7f"
   },
-  "errors.write.linkNeedsConsent.message": "A link on {server} leads to {target}, and Cmdr hasn’t been allowed to sign in there, so nothing went to that server.",
+  "errors.write.linkNeedsConsent.message": "Odkaz na serveru {server} vede na server {target} a Cmdr zatím nemá povoleno se tam přihlásit, takže na ten server nic nešlo.",
   "@errors.write.linkNeedsConsent.message": {
     "sourceHash": "7893ce9"
   },
-  "errors.write.linkNeedsConsent.suggestion": "Open the folder in a pane and allow the sign-in if you trust that server, then try again.",
+  "errors.write.linkNeedsConsent.suggestion": "Otevři složku v panelu, a pokud tomu serveru důvěřuješ, povol přihlášení. Pak to zkus znovu.",
   "@errors.write.linkNeedsConsent.suggestion": {
     "sourceHash": "cc25854"
   }

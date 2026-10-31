@@ -299,9 +299,9 @@
   "@onboarding.stepAi.local.note": {
     "sourceHash": "af89d60"
   },
-  "onboarding.stepAi.localTooltip": "Místní LLM vyžaduje Mac s čipem Apple. Cloudová AI funguje i na Macu s procesorem Intel.",
+  "onboarding.stepAi.localTooltip": "Místní LLM vyžaduje Mac s čipem Apple a macOS 14 nebo novější. Cloudová AI funguje na každém Macu.",
   "@onboarding.stepAi.localTooltip": {
-    "sourceHash": "75c6d48"
+    "sourceHash": "f95b4a9"
   },
   "onboarding.stepAi.missingKeyWarning": "AI je zapnutá, ale chybí klíč API. AI nebude fungovat a uvidíš varování. Doplň ho prosím výše.\n\n<strong>Pokud to chceš přeskočit a pokračovat dál, klikni znovu na „{nextLabel}“.</strong>",
   "@onboarding.stepAi.missingKeyWarning": {

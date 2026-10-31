@@ -43,11 +43,11 @@
   "@adb.readiness.waitingForAuthorization": {
     "sourceHash": "679558e"
   },
-  "adb.readiness.tapAllow": "Tap Allow on your phone",
+  "adb.readiness.tapAllow": "Klepni na telefonu na „Povolit“",
   "@adb.readiness.tapAllow": {
     "sourceHash": "68c770f"
   },
-  "adb.unnamedPhone": "Android phone",
+  "adb.unnamedPhone": "Telefon s Androidem",
   "@adb.unnamedPhone": {
     "sourceHash": "fae4ea5"
   },

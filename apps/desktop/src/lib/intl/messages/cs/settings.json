@@ -1218,23 +1218,23 @@
   "@settings.ai.cloudProviderConfigs.description": {
     "sourceHash": "21132a2"
   },
-  "settings.ai.reasoningEfforts.label.reasoningEffort": "Reasoning effort",
+  "settings.ai.reasoningEfforts.label.reasoningEffort": "Míra uvažování",
   "@settings.ai.reasoningEfforts.label.reasoningEffort": {
     "sourceHash": "3236aee"
   },
-  "settings.ai.reasoningEfforts.label.effort": "Effort",
+  "settings.ai.reasoningEfforts.label.effort": "Míra úsilí",
   "@settings.ai.reasoningEfforts.label.effort": {
     "sourceHash": "4387e5d"
   },
-  "settings.ai.reasoningEfforts.label.thinkingLevel": "Thinking level",
+  "settings.ai.reasoningEfforts.label.thinkingLevel": "Úroveň přemýšlení",
   "@settings.ai.reasoningEfforts.label.thinkingLevel": {
     "sourceHash": "96f115b"
   },
-  "settings.ai.reasoningEfforts.description": "How long the model thinks before it answers. More effort helps with tricky tasks, but replies come slower and the thinking is billed as output.",
+  "settings.ai.reasoningEfforts.description": "Jak dlouho model přemýšlí, než odpoví. Víc úsilí pomáhá u složitých úloh, ale odpovědi přicházejí pomaleji a přemýšlení se účtuje jako výstup.",
   "@settings.ai.reasoningEfforts.description": {
     "sourceHash": "2c0938f"
   },
-  "settings.ai.reasoningEfforts.keywords": "reasoning effort, effort, reasoning, thinking, think, speed, cost, quality",
+  "settings.ai.reasoningEfforts.keywords": "úsilí, uvažování, přemýšlení, myšlení, rychlost, cena, kvalita, náročnost",
   "@settings.ai.reasoningEfforts.keywords": {
     "sourceHash": "3bbb127"
   },
@@ -1715,15 +1715,15 @@
   "@settings.suggestedOps.suppressApprovalNotice.keywords": {
     "sourceHash": "ad9377a"
   },
-  "settings.fileOperations.showAlreadyGoneToast.label": "Say when a deleted item was already gone",
+  "settings.fileOperations.showAlreadyGoneToast.label": "Upozornit, když smazaná položka už neexistovala",
   "@settings.fileOperations.showAlreadyGoneToast.label": {
     "sourceHash": "3fd8c41"
   },
-  "settings.fileOperations.showAlreadyGoneToast.description": "When you delete something another app already moved or deleted, Cmdr treats it as done and shows a short note saying so. Turn this off (or click “Never show this again” in the note) to skip the note.",
+  "settings.fileOperations.showAlreadyGoneToast.description": "Když smažeš něco, co už jiná aplikace přesunula nebo smazala, Cmdr to bere jako hotové a zobrazí o tom krátkou poznámku. Vypnutím této volby (nebo kliknutím na „Už nezobrazovat“ v poznámce) poznámku přeskočíš.",
   "@settings.fileOperations.showAlreadyGoneToast.description": {
     "sourceHash": "84abd5b"
   },
-  "settings.fileOperations.showAlreadyGoneToast.keywords": "missing, vanished, moved, deleted, gone, toast, notification",
+  "settings.fileOperations.showAlreadyGoneToast.keywords": "chybějící, zmizelé, přesunuté, smazané, upozornění, oznámení, hláška",
   "@settings.fileOperations.showAlreadyGoneToast.keywords": {
     "sourceHash": "e1dfc5a"
   },
@@ -2312,7 +2312,7 @@
   },
   "settings.askCmdr.openAiSettings": "Otevřít nastavení AI",
   "@settings.askCmdr.openAiSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "settings.askCmdr.provider.title": "Poskytovatel a model",
   "@settings.askCmdr.provider.title": {
@@ -2330,9 +2330,9 @@
   "@settings.askCmdr.interactiveModel.label": {
     "sourceHash": "194255a"
   },
-  "settings.askCmdr.interactiveModel.description": "Model, který chat používá. Když pole necháš prázdné, použije se stejný model jako u ostatních funkcí AI v Cmdru. Příklad: claude-sonnet-4-5",
+  "settings.askCmdr.interactiveModel.description": "Model, který chat používá. Když pole necháš prázdné, použije se stejný model jako u ostatních funkcí AI v Cmdru. Příklad: claude-sonnet-5-5",
   "@settings.askCmdr.interactiveModel.description": {
-    "sourceHash": "881f8a4"
+    "sourceHash": "e301e99"
   },
   "settings.askCmdr.interactiveModel.placeholder": "Stejný jako AI v Cmdru",
   "@settings.askCmdr.interactiveModel.placeholder": {
@@ -2346,9 +2346,9 @@
   "@settings.askCmdr.chatMemorySize.label": {
     "sourceHash": "fad1ff1"
   },
-  "settings.askCmdr.chatMemorySize.description": "Kolik z konverzace Cmdr odesílá modelu. „Automaticky“ se řídí známým limitem tvého modelu.",
+  "settings.askCmdr.chatMemorySize.description": "Kolik z konverzace Cmdr odesílá modelu. „Automaticky“ využije celé kontextové okno tvého modelu; menší velikost ho omezí, aby to stálo méně.",
   "@settings.askCmdr.chatMemorySize.description": {
-    "sourceHash": "d70d3b4"
+    "sourceHash": "b222b81"
   },
   "settings.askCmdr.chatMemorySize.opt.auto": "Automaticky (doporučeno)",
   "@settings.askCmdr.chatMemorySize.opt.auto": {
@@ -2358,19 +2358,19 @@
   "@settings.askCmdr.chatMemorySize.overWindow": {
     "sourceHash": "0dc68ac"
   },
-  "settings.askCmdr.spendPause.label": "Check in when an answer costs over",
+  "settings.askCmdr.spendPause.label": "Zeptat se, když odpověď stojí víc než",
   "@settings.askCmdr.spendPause.label": {
     "sourceHash": "0d0fa3b"
   },
-  "settings.askCmdr.spendPause.description": "One answer can run many lookups. Past this estimated cost, Cmdr pauses it and asks before it spends more. Estimates use list prices, so caching usually makes the real cost lower.",
+  "settings.askCmdr.spendPause.description": "Jedna odpověď může spustit mnoho vyhledávání. Když odhadované náklady překročí tuto částku, Cmdr ji pozastaví a zeptá se, než utratí víc. Odhady vycházejí z ceníku, takže ukládání do mezipaměti skutečné náklady obvykle sníží.",
   "@settings.askCmdr.spendPause.description": {
     "sourceHash": "089be96"
   },
-  "settings.askCmdr.spendPause.opt.never": "Never",
+  "settings.askCmdr.spendPause.opt.never": "Nikdy",
   "@settings.askCmdr.spendPause.opt.never": {
     "sourceHash": "6300ef8"
   },
-  "settings.askCmdr.spendPause.keywords": "cost, spend, money, price, budget, limit, pause, dollars, expensive",
+  "settings.askCmdr.spendPause.keywords": "náklady, útrata, peníze, cena, rozpočet, limit, pauza, dolary, drahé",
   "@settings.askCmdr.spendPause.keywords": {
     "sourceHash": "ebe4f4a"
   },
@@ -2862,9 +2862,9 @@
   "@settings.ai.tooltipCloud": {
     "sourceHash": "9cfff88"
   },
-  "settings.ai.tooltipLocal": "Spouští malý jazykový model výhradně na tvém zařízení. Maximální soukromí: nic neopustí tvůj počítač. Funguje offline. Zabere ~2 GB volného místa na disku a ~400 MB paměti (podle velikosti kontextového okna). Vyžaduje Mac s čipem Apple (M1 nebo novější).",
+  "settings.ai.tooltipLocal": "Spouští malý jazykový model výhradně na tvém zařízení. Maximální soukromí: nic neopustí tvůj počítač. Funguje offline. Zabere ~2 GB volného místa na disku a ~400 MB paměti (podle velikosti kontextového okna). Vyžaduje Mac s čipem Apple (M1 nebo novější) a macOS 14 nebo novější.",
   "@settings.ai.tooltipLocal": {
-    "sourceHash": "f7acdc8"
+    "sourceHash": "826d931"
   },
   "settings.ai.tooltipLocalDisabled": "Místní AI vyžaduje Mac s čipem Apple (M1 nebo novější). Použij místo toho možnost „Cloudová AI“.",
   "@settings.ai.tooltipLocalDisabled": {
@@ -2980,25 +2980,26 @@
   },
   "settings.advanced.card.askCmdr": "Ask Cmdr",
   "@settings.advanced.card.askCmdr": {
-    "sourceHash": "aafb1ce"
+    "sourceHash": "aafb1ce",
+    "sameAsSourceJustification": "Product name of the in-app assistant; kept verbatim in every locale (BRAND_WORDS), like settings.section.askCmdr."
   },
-  "settings.askCmdr.toolGroupsOnAnswer.label": "Tool groups when the answer arrives",
+  "settings.askCmdr.toolGroupsOnAnswer.label": "Skupiny nástrojů po příchodu odpovědi",
   "@settings.askCmdr.toolGroupsOnAnswer.label": {
     "sourceHash": "e5e922b"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr shows what the AI looks at while it works. Pick whether those lines fold away once the answer arrives.",
+  "settings.askCmdr.toolGroupsOnAnswer.description": "Ask Cmdr zobrazuje, na co se AI během práce dívá. Vyber, jestli se tyto řádky po příchodu odpovědi sbalí.",
   "@settings.askCmdr.toolGroupsOnAnswer.description": {
     "sourceHash": "785da0a"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Fold them away",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.collapse": "Sbalit je",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.collapse": {
     "sourceHash": "01052be"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Leave them as I had them",
+  "settings.askCmdr.toolGroupsOnAnswer.opt.keep": "Nechat je beze změny",
   "@settings.askCmdr.toolGroupsOnAnswer.opt.keep": {
     "sourceHash": "0aa6718"
   },
-  "settings.askCmdr.toolGroupsOnAnswer.keywords": "assistant, chat, collapse, expand, fold, tools, steps, answer",
+  "settings.askCmdr.toolGroupsOnAnswer.keywords": "asistent, chat, sbalit, rozbalit, nástroje, kroky, odpověď",
   "@settings.askCmdr.toolGroupsOnAnswer.keywords": {
     "sourceHash": "6a9f055"
   },
@@ -3511,67 +3512,67 @@
   "@settings.license.getLicense.keywords": {
     "sourceHash": "5454f6d"
   },
-  "settings.multiRename.tagEditor.player.label": "Player for Open in player",
+  "settings.multiRename.tagEditor.player.label": "Přehrávač pro Otevřít v přehrávači",
   "@settings.multiRename.tagEditor.player.label": {
     "sourceHash": "9b1caf9"
   },
-  "settings.multiRename.tagEditor.player.description": "Internal: the app that opens the tracks from the Tags window.",
+  "settings.multiRename.tagEditor.player.description": "Interní: aplikace, která otevírá stopy z okna Tagy.",
   "@settings.multiRename.tagEditor.player.description": {
     "sourceHash": "a650205"
   },
-  "settings.advanced.card.multiRename": "Multi-Rename",
+  "settings.advanced.card.multiRename": "Hromadné přejmenování",
   "@settings.advanced.card.multiRename": {
     "sourceHash": "566cd7f"
   },
-  "settings.multiRename.tagEditor.label": "Tag editor in Multi-Rename",
+  "settings.multiRename.tagEditor.label": "Editor tagů v hromadném přejmenování",
   "@settings.multiRename.tagEditor.label": {
     "sourceHash": "1afc844"
   },
-  "settings.multiRename.tagEditor.description": "Adds a Tags tab to Multi-Rename for editing music and audiobook tags before renaming.",
+  "settings.multiRename.tagEditor.description": "Přidá do hromadného přejmenování záložku Tagy, kde před přejmenováním upravíš tagy hudby a audioknih.",
   "@settings.multiRename.tagEditor.description": {
     "sourceHash": "1569f38"
   },
-  "settings.multiRename.tagEditor.keywords": "tags, id3, mp3, m4b, audiobook, music, metadata, artist, album",
+  "settings.multiRename.tagEditor.keywords": "tagy, štítky, id3, mp3, m4b, audiokniha, hudba, metadata, interpret, album",
   "@settings.multiRename.tagEditor.keywords": {
     "sourceHash": "8981b26"
   },
-  "settings.multiRename.tagEditor.absSideFiles.label": "Write reader.txt and desc.txt for Audiobookshelf",
+  "settings.multiRename.tagEditor.absSideFiles.label": "Zapisovat reader.txt a desc.txt pro Audiobookshelf",
   "@settings.multiRename.tagEditor.absSideFiles.label": {
     "sourceHash": "208b53c"
   },
-  "settings.multiRename.tagEditor.absSideFiles.description": "Audiobookshelf takes the narrator only from Composer or from reader.txt, never from Performer. With this on, writing tags also writes the narrator (Performer) into reader.txt and the description into desc.txt in the book folder. A file that says something else is replaced only after you've seen it in the list of changes.",
+  "settings.multiRename.tagEditor.absSideFiles.description": "Audiobookshelf bere vypravěče jen z pole Composer nebo ze souboru reader.txt, nikdy z pole Performer. Když je tato volba zapnutá, zápis tagů zapíše také vypravěče (Performer) do souboru reader.txt a popis do souboru desc.txt ve složce knihy. Soubor s jiným obsahem se nahradí, až když ho uvidíš v seznamu změn.",
   "@settings.multiRename.tagEditor.absSideFiles.description": {
     "sourceHash": "e48b1f3"
   },
-  "settings.multiRename.tagEditor.absSideFiles.keywords": "narrator, reader, description, sidecar, audiobook, library, server",
+  "settings.multiRename.tagEditor.absSideFiles.keywords": "vypravěč, předčítající, čtenář, popis, doprovodný soubor, audiokniha, knihovna, server",
   "@settings.multiRename.tagEditor.absSideFiles.keywords": {
     "sourceHash": "806b0cd"
   },
-  "settings.servers.card.smbLinkConsents": "SMB link sign-ins",
+  "settings.servers.card.smbLinkConsents": "Přihlášení přes odkazy SMB",
   "@settings.servers.card.smbLinkConsents": {
     "sourceHash": "831477d"
   },
-  "settings.network.smbLinkConsents.keywords": "SMB, DFS, link, sign in, other server, allow, trust, forget",
+  "settings.network.smbLinkConsents.keywords": "SMB, DFS, odkaz, přihlášení, jiný server, povolit, důvěra, zapomenout",
   "@settings.network.smbLinkConsents.keywords": {
     "sourceHash": "d88f7c7"
   },
-  "settings.servers.smbLinkConsents.description": "A link in an SMB share can lead to a folder on another server. Cmdr asks before it signs in there, and remembers your answer here.",
+  "settings.servers.smbLinkConsents.description": "Odkaz ve sdílené složce SMB může vést do složky na jiném serveru. Cmdr se zeptá, než se tam přihlásí, a tvoji odpověď si zapamatuje tady.",
   "@settings.servers.smbLinkConsents.description": {
     "sourceHash": "03ed8ee"
   },
-  "settings.servers.smbLinkConsents.empty": "Nothing allowed yet. When a link in a share leads to another server, Cmdr asks first.",
+  "settings.servers.smbLinkConsents.empty": "Zatím nic povoleného. Když odkaz ve sdílené složce vede na jiný server, Cmdr se nejdřív zeptá.",
   "@settings.servers.smbLinkConsents.empty": {
     "sourceHash": "16326ce"
   },
-  "settings.servers.smbLinkConsents.pair": "Links on {server} can sign in to {target}",
+  "settings.servers.smbLinkConsents.pair": "Odkazy na serveru {server} se smí přihlásit k serveru {target}",
   "@settings.servers.smbLinkConsents.pair": {
     "sourceHash": "093a03d"
   },
-  "settings.servers.smbLinkConsents.confirmTitle": "Forget this sign-in?",
+  "settings.servers.smbLinkConsents.confirmTitle": "Zapomenout toto přihlášení?",
   "@settings.servers.smbLinkConsents.confirmTitle": {
     "sourceHash": "edc2567"
   },
-  "settings.servers.smbLinkConsents.confirm": "The next time a link on {server} leads to {target}, Cmdr will ask again.",
+  "settings.servers.smbLinkConsents.confirm": "Až příště odkaz na serveru {server} povede na server {target}, Cmdr se zeptá znovu.",
   "@settings.servers.smbLinkConsents.confirm": {
     "sourceHash": "0218465"
   }

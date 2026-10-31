@@ -263,47 +263,47 @@
   "@ai.cloud.connectedNoModels": {
     "sourceHash": "54f2b6f"
   },
-  "ai.cloud.contextWindow": "Context window: {windowText} {window, plural, one {token} other {tokens}}",
+  "ai.cloud.contextWindow": "Kontextové okno: {windowText} {window, plural, one {token} few {tokeny} many {tokenu} other {tokenů}}",
   "@ai.cloud.contextWindow": {
     "sourceHash": "fad1fe6"
   },
-  "ai.cloud.contextWindowEstimate": "Context window: about {windowText} {window, plural, one {token} other {tokens}} (from Cmdr’s built-in list)",
+  "ai.cloud.contextWindowEstimate": "Kontextové okno: přibližně {windowText} {window, plural, one {token} few {tokeny} many {tokenu} other {tokenů}} (z vestavěného seznamu Cmdru)",
   "@ai.cloud.contextWindowEstimate": {
     "sourceHash": "999230f"
   },
-  "ai.cloud.effort.recommended": "Recommended",
+  "ai.cloud.effort.recommended": "Doporučeno",
   "@ai.cloud.effort.recommended": {
     "sourceHash": "d70604e"
   },
-  "ai.cloud.effort.recommendedWithLevel": "Recommended ({level})",
+  "ai.cloud.effort.recommendedWithLevel": "Doporučeno ({level})",
   "@ai.cloud.effort.recommendedWithLevel": {
     "sourceHash": "e9e8984"
   },
-  "ai.cloud.effort.low": "Low",
+  "ai.cloud.effort.low": "Nízká",
   "@ai.cloud.effort.low": {
     "sourceHash": "f793de2"
   },
-  "ai.cloud.effort.medium": "Medium",
+  "ai.cloud.effort.medium": "Střední",
   "@ai.cloud.effort.medium": {
     "sourceHash": "8e588cd"
   },
-  "ai.cloud.effort.high": "High",
+  "ai.cloud.effort.high": "Vysoká",
   "@ai.cloud.effort.high": {
     "sourceHash": "c4ebc6d"
   },
-  "ai.cloud.effort.max": "Max",
+  "ai.cloud.effort.max": "Maximální",
   "@ai.cloud.effort.max": {
     "sourceHash": "a1a5936"
   },
-  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr uses its own model, {model}, so this applies to that model.",
+  "ai.cloud.effort.forAskCmdrModel": "Ask Cmdr používá vlastní model, {model}, takže tohle nastavení platí pro tento model.",
   "@ai.cloud.effort.forAskCmdrModel": {
     "sourceHash": "3a36d6f"
   },
-  "ai.cloud.effort.levelsUnknown": "This service doesn’t say which levels this model takes, so it decides.",
+  "ai.cloud.effort.levelsUnknown": "Tato služba neuvádí, které úrovně tento model podporuje, takže rozhoduje sama.",
   "@ai.cloud.effort.levelsUnknown": {
     "sourceHash": "4688a12"
   },
-  "ai.cloud.maxOutput": "Longest reply: {outputText} {output, plural, one {token} other {tokens}}",
+  "ai.cloud.maxOutput": "Nejdelší odpověď: {outputText} {output, plural, one {token} few {tokeny} many {tokenu} other {tokenů}}",
   "@ai.cloud.maxOutput": {
     "sourceHash": "16bd61d"
   },

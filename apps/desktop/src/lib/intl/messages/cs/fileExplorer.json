@@ -196,15 +196,15 @@
   "@fileExplorer.paneBoundary.reload": {
     "sourceHash": "a53cfeb"
   },
-  "fileExplorer.pane.ejectedDriveStaysToast": "{volumeName} is ejected, but keep the drive plugged in: other volumes on it are still mounted.",
+  "fileExplorer.pane.ejectedDriveStaysToast": "Svazek „{volumeName}“ je vysunutý, ale disk zatím neodpojuj: jiné svazky na něm jsou pořád připojené.",
   "@fileExplorer.pane.ejectedDriveStaysToast": {
     "sourceHash": "12eac5d"
   },
-  "fileExplorer.pane.ejectAllFailedToast": "Couldn’t eject everything on this drive: {message}",
+  "fileExplorer.pane.ejectAllFailedToast": "Všechno na tomto disku se nepodařilo vysunout: {message}",
   "@fileExplorer.pane.ejectAllFailedToast": {
     "sourceHash": "d824a11"
   },
-  "fileExplorer.pane.ejectAllHeldToast": "Nothing on this drive was ejected: {message}",
+  "fileExplorer.pane.ejectAllHeldToast": "Z tohoto disku se nic nevysunulo: {message}",
   "@fileExplorer.pane.ejectAllHeldToast": {
     "sourceHash": "9ef094c"
   },
@@ -1561,19 +1561,19 @@
   "@fileExplorer.extensionChange.description": {
     "sourceHash": "ef7ac59"
   },
-  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Are you sure you want to remove the “.{oldExt}” extension? macOS will show this as an ordinary folder instead of a single item.} other {Are you sure you want to remove the “.{oldExt}” extension? Your Mac may not know which app opens the file without it.}}",
+  "fileExplorer.extensionChange.descriptionRemove": "{kind, select, folder {Opravdu chceš odstranit příponu „.{oldExt}“? macOS pak tuto položku bude zobrazovat jako obyčejnou složku, ne jako jednu položku.} other {Opravdu chceš odstranit příponu „.{oldExt}“? Tvůj Mac pak možná nebude vědět, která aplikace má soubor otevřít.}}",
   "@fileExplorer.extensionChange.descriptionRemove": {
     "sourceHash": "8c87a3d"
   },
-  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Are you sure you want to add the “.{newExt}” extension? macOS may show this folder as a single item instead.} other {Are you sure you want to add the “.{newExt}” extension? Your file may open in a different app next time you open it.}}",
+  "fileExplorer.extensionChange.descriptionAdd": "{kind, select, folder {Opravdu chceš přidat příponu „.{newExt}“? macOS pak může tuto složku zobrazovat jako jednu položku.} other {Opravdu chceš přidat příponu „.{newExt}“? Soubor se příště možná otevře v jiné aplikaci.}}",
   "@fileExplorer.extensionChange.descriptionAdd": {
     "sourceHash": "c18c736"
   },
-  "fileExplorer.extensionChange.keepNone": "Keep no extension",
+  "fileExplorer.extensionChange.keepNone": "Ponechat bez přípony",
   "@fileExplorer.extensionChange.keepNone": {
     "sourceHash": "4ad7a49"
   },
-  "fileExplorer.extensionChange.removeExtension": "Remove .{oldExt}",
+  "fileExplorer.extensionChange.removeExtension": "Odstranit .{oldExt}",
   "@fileExplorer.extensionChange.removeExtension": {
     "sourceHash": "3913e62"
   },
@@ -1894,11 +1894,11 @@
   "@fileExplorer.navigation.forgetSecretNoneToast": {
     "sourceHash": "3d40a09"
   },
-  "fileExplorer.navigation.ejectOneVolumeTooltip": "Ejects only this volume. Its drive stays connected until the other volumes are ejected too.",
+  "fileExplorer.navigation.ejectOneVolumeTooltip": "Vysune jen tento svazek. Disk zůstane připojený, dokud se nevysunou i ostatní svazky.",
   "@fileExplorer.navigation.ejectOneVolumeTooltip": {
     "sourceHash": "e1dd1cc"
   },
-  "fileExplorer.navigation.ejectAllTooltip": "Ejects every volume on this drive, so you can unplug it.",
+  "fileExplorer.navigation.ejectAllTooltip": "Vysune všechny svazky na tomto disku, takže ho pak můžeš odpojit.",
   "@fileExplorer.navigation.ejectAllTooltip": {
     "sourceHash": "9e86249"
   },
@@ -2104,15 +2104,15 @@
   "@fileExplorer.folderSizes.unreadable": {
     "sourceHash": "ad31a56"
   },
-  "fileExplorer.quickFilter.modeFilter": "Filter: only matching names show",
+  "fileExplorer.quickFilter.modeFilter": "Filtr: zobrazují se jen odpovídající názvy",
   "@fileExplorer.quickFilter.modeFilter": {
     "sourceHash": "3febd29"
   },
-  "fileExplorer.typeToJump.modeJump": "Jump: all names show, and the cursor goes to the match",
+  "fileExplorer.typeToJump.modeJump": "Skok: zobrazují se všechny názvy a kurzor přejde na shodu",
   "@fileExplorer.typeToJump.modeJump": {
     "sourceHash": "292fdf5"
   },
-  "fileExplorer.typeToJump.clear": "Clear jump",
+  "fileExplorer.typeToJump.clear": "Vymazat skok",
   "@fileExplorer.typeToJump.clear": {
     "sourceHash": "42ec82f"
   },
@@ -2152,39 +2152,39 @@
   "@fileExplorer.tags.skipped": {
     "sourceHash": "31363ee"
   },
-  "fileExplorer.errorPane.reviewLinkSignIn": "Review sign-in",
+  "fileExplorer.errorPane.reviewLinkSignIn": "Posoudit přihlášení",
   "@fileExplorer.errorPane.reviewLinkSignIn": {
     "sourceHash": "25a3cfe"
   },
-  "fileExplorer.pane.directConnectionOtherServerNotAllowedToast": "{server} says this share’s files live on another server. Cmdr won’t sign in there on its own, so it stays on the system connection.",
+  "fileExplorer.pane.directConnectionOtherServerNotAllowedToast": "Server „{server}“ hlásí, že soubory této sdílené složky jsou na jiném serveru. Cmdr se tam sám nepřihlásí, takže sdílená složka dál používá systémové připojení.",
   "@fileExplorer.pane.directConnectionOtherServerNotAllowedToast": {
     "sourceHash": "c350d80"
   },
-  "fileExplorer.network.osMountFallback.otherServerNotAllowed": "Couldn’t directly connect to <shareName>{share}</shareName>, because its files live on another server and Cmdr won’t sign in there on its own. You are still connected through macOS’s native SMB network connection, which is a lot slower.",
+  "fileExplorer.network.osMountFallback.otherServerNotAllowed": "Ke sdílené složce <shareName>{share}</shareName> se nepodařilo připojit přímo, protože její soubory jsou na jiném serveru a Cmdr se tam sám nepřihlásí. Připojení dál běží přes nativní síťové připojení SMB v macOS, které je mnohem pomalejší.",
   "@fileExplorer.network.osMountFallback.otherServerNotAllowed": {
     "sourceHash": "9c9c5a5"
   },
-  "fileExplorer.smbLinkConsent.title": "Sign in to another server?",
+  "fileExplorer.smbLinkConsent.title": "Přihlásit se k jinému serveru?",
   "@fileExplorer.smbLinkConsent.title": {
     "sourceHash": "91458ea"
   },
-  "fileExplorer.smbLinkConsent.message": "A link on {server} leads to a folder on {target}. To open it, Cmdr signs in to {target} with the account you use for {server}.",
+  "fileExplorer.smbLinkConsent.message": "Odkaz na serveru {server} vede do složky na serveru {target}. Pokud ji chceš otevřít, Cmdr se k serveru {target} přihlásí účtem, který používáš pro server {server}.",
   "@fileExplorer.smbLinkConsent.message": {
     "sourceHash": "848be1b"
   },
-  "fileExplorer.smbLinkConsent.warning": "Allow this only if you trust {target}. A server you don’t know could use a link like this to collect your password.",
+  "fileExplorer.smbLinkConsent.warning": "Povol to, jen pokud serveru {target} důvěřuješ. Neznámý server by mohl odkaz jako tento zneužít k získání tvého hesla.",
   "@fileExplorer.smbLinkConsent.warning": {
     "sourceHash": "295e81e"
   },
-  "fileExplorer.smbLinkConsent.note": "Cmdr remembers your answer for these two servers. You can forget it in Settings, under Servers.",
+  "fileExplorer.smbLinkConsent.note": "Cmdr si tvoji odpověď pro tyto dva servery zapamatuje. Zapomenout ji můžeš v Nastavení v části Servery.",
   "@fileExplorer.smbLinkConsent.note": {
     "sourceHash": "3f9615a"
   },
-  "fileExplorer.smbLinkConsent.allow": "Allow and sign in",
+  "fileExplorer.smbLinkConsent.allow": "Povolit a přihlásit se",
   "@fileExplorer.smbLinkConsent.allow": {
     "sourceHash": "d8192ad"
   },
-  "fileExplorer.smbLinkConsent.notNow": "Not now",
+  "fileExplorer.smbLinkConsent.notNow": "Teď ne",
   "@fileExplorer.smbLinkConsent.notNow": {
     "sourceHash": "a0e63d7"
   }

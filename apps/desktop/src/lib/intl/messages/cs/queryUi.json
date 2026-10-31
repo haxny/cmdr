@@ -91,7 +91,7 @@
   },
   "queryUi.ai.openSettings": "Otevřít nastavení AI",
   "@queryUi.ai.openSettings": {
-    "sourceHash": "edcc53b"
+    "sourceHash": "973a020"
   },
   "queryUi.empty.indexReady": "Index je připravený · {countText} {count, plural, one {záznam} few {záznamy} many {záznamu} other {záznamů}}",
   "@queryUi.empty.indexReady": {

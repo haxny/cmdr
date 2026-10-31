@@ -3,9 +3,9 @@
   "@main.instanceLock.alertTitle": {
     "sourceHash": "7c8f09d"
   },
-  "main.instanceLock.alertBody": "Tuto datovou složku už používá jiná kopie Cmdru. Přepni se do běžící aplikace, nebo ji ukonči a zkus to znovu.",
+  "main.instanceLock.alertBody": "Najednou může běžet jen jeden Cmdr, aby tvoje nastavení, protokoly a indexy zůstaly v pořádku. Tato kopie se teď zavře. Přepni se do Cmdru, který už je otevřený.",
   "@main.instanceLock.alertBody": {
-    "sourceHash": "140c57d"
+    "sourceHash": "84f0191"
   },
   "main.upgradeNudge.mac": "Přidali jsme do úvodního průvodce nové možnosti. Otevři Cmdr > Úvodní průvodce… a projdi si je.",
   "@main.upgradeNudge.mac": {

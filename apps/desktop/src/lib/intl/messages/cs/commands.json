@@ -128,11 +128,11 @@
   "@commands.askCmdrToggle.description": {
     "sourceHash": "c520468"
   },
-  "commands.askCmdrNewChat.label": "New Ask Cmdr chat",
+  "commands.askCmdrNewChat.label": "Nový chat v Ask Cmdr",
   "@commands.askCmdrNewChat.label": {
     "sourceHash": "54ebf70"
   },
-  "commands.askCmdrNewChat.description": "Start a fresh chat with Ask Cmdr, opening it if it’s closed",
+  "commands.askCmdrNewChat.description": "Začne nový chat v Ask Cmdr, a pokud je panel zavřený, otevře ho",
   "@commands.askCmdrNewChat.description": {
     "sourceHash": "957741b"
   },
@@ -488,11 +488,11 @@
   "@commands.fileRename.label": {
     "sourceHash": "3064d79"
   },
-  "commands.paneQuickFilter.label": "Quick filter",
+  "commands.paneQuickFilter.label": "Rychlý filtr",
   "@commands.paneQuickFilter.label": {
     "sourceHash": "e731882"
   },
-  "commands.paneQuickFilter.description": "Opens the filter badge on the current pattern. Press again to switch between Filter and Jump",
+  "commands.paneQuickFilter.description": "Otevře odznak filtru s aktuálním vzorem. Dalším stisknutím přepneš mezi režimy Filtr a Skok",
   "@commands.paneQuickFilter.description": {
     "sourceHash": "2778526"
   },
@@ -500,91 +500,91 @@
   "@commands.fileMultiRename.label": {
     "sourceHash": "5ceb1a2"
   },
-  "commands.fileMultiRename.description": "Přejmenuje vybrané soubory (nebo celou složku) pomocí masky názvu, počítadla a hledání a nahrazování",
+  "commands.fileMultiRename.description": "Přejmenuje vybrané soubory (nebo soubor pod kurzorem) pomocí masky názvu, počítadla a hledání a nahrazování",
   "@commands.fileMultiRename.description": {
-    "sourceHash": "d294fb1"
+    "sourceHash": "d3a52f1"
   },
-  "commands.fileEditTags.label": "Edit tags",
+  "commands.fileEditTags.label": "Upravit tagy",
   "@commands.fileEditTags.label": {
     "sourceHash": "4687da8"
   },
-  "commands.fileEditTags.description": "Opens the selected audio files’ tags in their own window",
+  "commands.fileEditTags.description": "Otevře tagy vybraných zvukových souborů v samostatném okně",
   "@commands.fileEditTags.description": {
     "sourceHash": "b4ba371"
   },
-  "commands.tagsClose.label": "Close the Tags window",
+  "commands.tagsClose.label": "Zavřít okno Tagy",
   "@commands.tagsClose.label": {
     "sourceHash": "cff7a3c"
   },
-  "commands.tagsSwitchPane.label": "Switch between the album and the tracks",
+  "commands.tagsSwitchPane.label": "Přepnout mezi albem a stopami",
   "@commands.tagsSwitchPane.label": {
     "sourceHash": "848a730"
   },
-  "commands.tagsEdit.label": "Edit the value under the cursor",
+  "commands.tagsEdit.label": "Upravit hodnotu pod kurzorem",
   "@commands.tagsEdit.label": {
     "sourceHash": "6feffdf"
   },
-  "commands.tagsEditNumber.label": "Edit the track number under the cursor",
+  "commands.tagsEditNumber.label": "Upravit číslo stopy pod kurzorem",
   "@commands.tagsEditNumber.label": {
     "sourceHash": "8e22423"
   },
-  "commands.tagsPlay.label": "Play or stop the track under the cursor",
+  "commands.tagsPlay.label": "Přehrát nebo zastavit stopu pod kurzorem",
   "@commands.tagsPlay.label": {
     "sourceHash": "b8e65e9"
   },
-  "commands.tagsOpenInPlayer.label": "Open the tracks in foobar2000",
+  "commands.tagsOpenInPlayer.label": "Otevřít stopy v přehrávači",
   "@commands.tagsOpenInPlayer.label": {
-    "sourceHash": "a9b3c34"
+    "sourceHash": "3fc2adc"
   },
-  "commands.tagsReplace.label": "Find and replace in the tags",
+  "commands.tagsReplace.label": "Najít a nahradit text v tagech",
   "@commands.tagsReplace.label": {
     "sourceHash": "b0469b0"
   },
-  "commands.tagsCase.label": "Change the case of a tag",
+  "commands.tagsCase.label": "Změnit velikost písmen v tagu",
   "@commands.tagsCase.label": {
     "sourceHash": "140feab"
   },
-  "commands.tagsFormat.label": "Format a tag field",
+  "commands.tagsFormat.label": "Formátovat pole tagu",
   "@commands.tagsFormat.label": {
     "sourceHash": "914b0ec"
   },
-  "commands.tagsCleanUp.label": "Clean up the tags",
+  "commands.tagsCleanUp.label": "Vyčistit tagy",
   "@commands.tagsCleanUp.label": {
     "sourceHash": "b02383d"
   },
-  "commands.tagsFromName.label": "Read the tags from the file names",
+  "commands.tagsFromName.label": "Načíst tagy z názvů souborů",
   "@commands.tagsFromName.label": {
     "sourceHash": "382ca92"
   },
-  "commands.tagsNumber.label": "Number the tracks",
+  "commands.tagsNumber.label": "Očíslovat stopy",
   "@commands.tagsNumber.label": {
     "sourceHash": "bc524cc"
   },
-  "commands.tagsClearField.label": "Clear a tag field",
+  "commands.tagsClearField.label": "Vymazat pole tagu",
   "@commands.tagsClearField.label": {
     "sourceHash": "da03dba"
   },
-  "commands.tagsRemoveExtras.label": "Remove extra tags",
+  "commands.tagsRemoveExtras.label": "Odstranit tagy navíc",
   "@commands.tagsRemoveExtras.label": {
     "sourceHash": "122f0a2"
   },
-  "commands.tagsWrite.label": "Write the tags into the files",
+  "commands.tagsWrite.label": "Zapsat tagy do souborů",
   "@commands.tagsWrite.label": {
     "sourceHash": "534bc20"
   },
-  "commands.tagsReview.label": "Review the changes, then write",
+  "commands.tagsReview.label": "Posoudit změny a pak zapsat",
   "@commands.tagsReview.label": {
     "sourceHash": "7de2e09"
   },
-  "commands.tagsUndo.label": "Undo the last tag write",
+  "commands.tagsUndo.label": "Odvolat poslední úpravu nebo zápis tagů",
   "@commands.tagsUndo.label": {
-    "sourceHash": "b26cf96"
+    "sourceHash": "b7863a0"
   },
-  "commands.tagsRedo.label": "Redo the last undone tag edit",
+  "commands.tagsRedo.label": "Opakovat poslední odvolanou úpravu tagů",
   "@commands.tagsRedo.label": {
     "sourceHash": "1b672b3"
   },
-  "commands.tagsFilter.label": "Filter the tracks",
+  "commands.tagsFilter.label": "Filtrovat stopy",
   "@commands.tagsFilter.label": {
     "sourceHash": "29f1004"
   },

@@ -585,19 +585,19 @@
   "@fileOperations.transferProgress.titleConflict": {
     "sourceHash": "ae71a9a"
   },
-  "fileOperations.transferProgress.titleRefusedNameTooLong": "Name too long for the destination",
+  "fileOperations.transferProgress.titleRefusedNameTooLong": "Název je pro cíl příliš dlouhý",
   "@fileOperations.transferProgress.titleRefusedNameTooLong": {
     "sourceHash": "3c19ce6"
   },
-  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Name not allowed at the destination",
+  "fileOperations.transferProgress.titleRefusedNameNotAllowed": "Název není v cíli povolený",
   "@fileOperations.transferProgress.titleRefusedNameNotAllowed": {
     "sourceHash": "df8d74a"
   },
-  "fileOperations.transferProgress.refusedNameTooLongBody": "The destination can’t store a name this long. Skip this item to carry on with the rest, then rename it and try it again.",
+  "fileOperations.transferProgress.refusedNameTooLongBody": "Cíl nedokáže uložit takhle dlouhý název. Přeskoč tuto položku a pokračuj se zbytkem, pak ji přejmenuj a zkus to znovu.",
   "@fileOperations.transferProgress.refusedNameTooLongBody": {
     "sourceHash": "7577475"
   },
-  "fileOperations.transferProgress.refusedNameNotAllowedBody": "The destination can’t store this name. It may be too long, be a reserved name, or use a character the destination doesn’t allow. Skip this item to carry on with the rest, then rename it and try it again.",
+  "fileOperations.transferProgress.refusedNameNotAllowedBody": "Cíl tento název nedokáže uložit. Může být příliš dlouhý, může jít o vyhrazený název, nebo obsahuje znak, který cíl nepovoluje. Přeskoč tuto položku a pokračuj se zbytkem, pak ji přejmenuj a zkus to znovu.",
   "@fileOperations.transferProgress.refusedNameNotAllowedBody": {
     "sourceHash": "9fe85ec"
   },
@@ -817,15 +817,15 @@
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
   },
-  "fileOperations.alreadyGone.one": "“{name}” was already gone. Another app probably moved or deleted it.",
+  "fileOperations.alreadyGone.one": "Položka „{name}“ už neexistovala. Nejspíš ji přesunula nebo smazala jiná aplikace.",
   "@fileOperations.alreadyGone.one": {
     "sourceHash": "3bdd241"
   },
-  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} item was already gone. Another app probably moved or deleted it.} other {{countText} items were already gone. Another app probably moved or deleted them.}}",
+  "fileOperations.alreadyGone.many": "{count, plural, one {{countText} položka už neexistovala. Nejspíš ji přesunula nebo smazala jiná aplikace.} few {{countText} položky už neexistovaly. Nejspíš je přesunula nebo smazala jiná aplikace.} many {{countText} položky už neexistovalo. Nejspíš je přesunula nebo smazala jiná aplikace.} other {{countText} položek už neexistovalo. Nejspíš je přesunula nebo smazala jiná aplikace.}}",
   "@fileOperations.alreadyGone.many": {
     "sourceHash": "564fc09"
   },
-  "fileOperations.alreadyGone.neverShowAgain": "Never show this again",
+  "fileOperations.alreadyGone.neverShowAgain": "Už nezobrazovat",
   "@fileOperations.alreadyGone.neverShowAgain": {
     "sourceHash": "c9e19cb"
   },

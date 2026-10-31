@@ -47,7 +47,7 @@
   "@viewer.error.coldStorage": {
     "sourceHash": "236cd1b"
   },
-  "viewer.error.linkTargetUnreachable": "This file sits behind a link to another server, and Cmdr can’t reach that server right now. Check that the server is running, then try again.",
+  "viewer.error.linkTargetUnreachable": "Tento soubor je za odkazem na jiný server a ten server je teď pro Cmdr nedostupný. Zkontroluj, že server běží, a zkus to znovu.",
   "@viewer.error.linkTargetUnreachable": {
     "sourceHash": "8dcb736"
   },
@@ -482,7 +482,7 @@
   "@viewer.selection.toEndOfFileNoLine": {
     "sourceHash": "e7e0442"
   },
-  "viewer.error.linkNeedsConsent": "This file sits behind a link to another server, and Cmdr hasn’t been allowed to sign in there. Open its folder in a pane to decide.",
+  "viewer.error.linkNeedsConsent": "Tento soubor je za odkazem na jiný server a Cmdr zatím nemá povoleno se tam přihlásit. Otevři jeho složku v panelu a rozhodni.",
   "@viewer.error.linkNeedsConsent": {
     "sourceHash": "b9b3e1f"
   }

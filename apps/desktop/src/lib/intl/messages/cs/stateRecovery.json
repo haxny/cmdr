@@ -55,7 +55,7 @@
   "@stateRecovery.selectionHistory.title": {
     "sourceHash": "a93f574"
   },
-  "stateRecovery.tagReplacePresets.title": "Cmdr couldn’t read your saved tag replace lists, so the list starts with the built-in one",
+  "stateRecovery.tagReplacePresets.title": "Cmdr nemohl přečíst tvoje uložené seznamy nahrazení v tagech, takže seznam začíná jen s vestavěným",
   "@stateRecovery.tagReplacePresets.title": {
     "sourceHash": "8079259"
   },
@@ -131,7 +131,7 @@
   "@stateRecovery.dismiss": {
     "sourceHash": "48845bf"
   },
-  "stateRecovery.smbLinkConsents.title": "Cmdr couldn’t read all the servers you let SMB links sign in to, so it may ask about some of them again",
+  "stateRecovery.smbLinkConsents.title": "Cmdr nemohl přečíst všechny servery, ke kterým se odkazy SMB smí přihlásit, takže se na některé může zeptat znovu",
   "@stateRecovery.smbLinkConsents.title": {
     "sourceHash": "2e0f9fd"
   }

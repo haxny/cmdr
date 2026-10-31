@@ -82,7 +82,7 @@
     "sourceHash": "f9085bf",
     "sameAsSourceJustification": "SI symbol; Czech writes PB unchanged, in step with kB/MB/GB."
   },
-  "common.sizeComparison.same": "(same size)",
+  "common.sizeComparison.same": "(stejná velikost)",
   "@common.sizeComparison.same": {
     "sourceHash": "2d0f788"
   }

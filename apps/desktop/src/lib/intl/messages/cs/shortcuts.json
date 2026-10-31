@@ -67,7 +67,7 @@
   "@shortcuts.scope.viewerWindow": {
     "sourceHash": "b32f632"
   },
-  "shortcuts.scope.tagsWindow": "Tags window",
+  "shortcuts.scope.tagsWindow": "Okno Tagy",
   "@shortcuts.scope.tagsWindow": {
     "sourceHash": "df84973"
   },

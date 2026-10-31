@@ -648,11 +648,11 @@
   "@menu.volume.ejectBusy": {
     "sourceHash": "e2145a6"
   },
-  "menu.volume.ejectAll": "Eject all",
+  "menu.volume.ejectAll": "Vysunout vše",
   "@menu.volume.ejectAll": {
     "sourceHash": "7adbe9a"
   },
-  "menu.volume.ejectAllBusy": "Eject all (busy)",
+  "menu.volume.ejectAllBusy": "Vysunout vše (probíhá operace)",
   "@menu.volume.ejectAllBusy": {
     "sourceHash": "8b91f8f"
   },
@@ -741,7 +741,7 @@
   "@menu.file.multiRename": {
     "sourceHash": "36b1dc2"
   },
-  "menu.file.editTags": "Edit tags…",
+  "menu.file.editTags": "Upravit tagy…",
   "@menu.file.editTags": {
     "sourceHash": "ca536ed"
   },

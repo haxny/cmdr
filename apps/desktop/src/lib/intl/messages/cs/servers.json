@@ -47,7 +47,7 @@
   "@servers.hub.status.saved": {
     "sourceHash": "b5c120b"
   },
-  "servers.hub.status.notConnectedYet": "Not connected yet",
+  "servers.hub.status.notConnectedYet": "Zatím nepřipojeno",
   "@servers.hub.status.notConnectedYet": {
     "sourceHash": "8985693"
   },
@@ -520,15 +520,15 @@
   "@servers.sheet.nfsGid": {
     "sourceHash": "625caf5"
   },
-  "servers.sheet.nfsOtherGids": "Other group IDs",
+  "servers.sheet.nfsOtherGids": "ID dalších skupin",
   "@servers.sheet.nfsOtherGids": {
     "sourceHash": "f9276b8"
   },
-  "servers.sheet.nfsOtherGidsNotIds": "Use group ID numbers separated by commas, like 100, 1001.",
+  "servers.sheet.nfsOtherGidsNotIds": "Zadej čísla ID skupin oddělená čárkami, například 100, 1001.",
   "@servers.sheet.nfsOtherGidsNotIds": {
     "sourceHash": "a67ce61"
   },
-  "servers.sheet.nfsOtherGidsTooMany": "NFS carries up to 16 other groups, and this lists {count}.",
+  "servers.sheet.nfsOtherGidsTooMany": "NFS přenese nejvýš 16 dalších skupin a v seznamu jich je {count}.",
   "@servers.sheet.nfsOtherGidsTooMany": {
     "sourceHash": "dc277f3"
   },
