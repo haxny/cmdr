@@ -67,6 +67,15 @@ pub enum VolumeError {
     /// folder was deleted" and walks the pane off the device. Opening it in a
     /// pane is what connects it.
     NotConnected(String),
+    /// The path sits behind a link to another server (a DFS link inside an SMB
+    /// share), and that server is out of reach. Carries the path.
+    ///
+    /// The refusal is about this path alone: the share itself is fine, and paths
+    /// outside the link keep working. ❌ Never `DeviceDisconnected`, which sends
+    /// the whole share through a reconnect that can't help, and ❌ never
+    /// `NotFound`, which the frontend reads as "this folder was deleted". SMB-only
+    /// today.
+    LinkTargetUnreachable(String),
     /// The device's session died mid-operation but the device itself is still
     /// attached, and a reopen is already running in the background (MTP: a PTP
     /// `DeviceReset`, typically after a cancelled or timed-out transfer). The
@@ -247,6 +256,7 @@ impl ErrorLogText for VolumeError {
             Self::PermissionDenied { path, .. } => ("Permission denied: ", LogPrivate::path(path)),
             Self::AlreadyExists(path) => ("Already exists: ", LogPrivate::path(path)),
             Self::NotConnected(path) => ("Not connected yet: ", LogPrivate::path(path)),
+            Self::LinkTargetUnreachable(path) => ("A link's other server is out of reach: ", LogPrivate::path(path)),
             Self::ReadOnly(path) => ("Read-only: ", LogPrivate::path(path)),
             Self::IsADirectory(path) => ("Is a directory: ", LogPrivate::dir_path(path)),
             Self::NotADirectory(path) => ("Not a directory: ", LogPrivate::path(path)),

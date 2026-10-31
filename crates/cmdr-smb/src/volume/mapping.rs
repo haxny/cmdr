@@ -136,6 +136,8 @@ pub(super) fn map_smb_error(err: smb2::Error, path: &str) -> VolumeError {
         ErrorKind::ConnectionLost | ErrorKind::SessionExpired => {
             VolumeError::DeviceDisconnected(err.to_string().into())
         }
+        // This path alone: the share's own connection is fine (vdavid/smb2#28).
+        ErrorKind::DfsTargetUnreachable => VolumeError::LinkTargetUnreachable(path.to_string()),
         ErrorKind::TimedOut => VolumeError::ConnectionTimeout(err.to_string().into()),
         ErrorKind::DiskFull => VolumeError::StorageFull {
             message: err.to_string().into(),

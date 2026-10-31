@@ -11368,6 +11368,15 @@ export type ListingErrorReason =
       // The path the failure was about.
       path: string
     }
+  /**
+   *  `VolumeError::LinkTargetUnreachable`: the folder sits behind a link to another server, and
+   *  that server is out of reach. The share itself is fine.
+   */
+  | {
+      reason: 'linkTargetUnreachable'
+      // The path the failure was about.
+      path: string
+    }
   // The volume or device is read-only.
   | { reason: 'readOnly' }
   // The device is out of storage.
@@ -20524,6 +20533,17 @@ export type VolumeError =
    *  pane is what connects it.
    */
   | { type: 'notConnected'; data: string }
+  /**
+   *  The path sits behind a link to another server (a DFS link inside an SMB
+   *  share), and that server is out of reach. Carries the path.
+   *
+   *  The refusal is about this path alone: the share itself is fine, and paths
+   *  outside the link keep working. ❌ Never `DeviceDisconnected`, which sends
+   *  the whole share through a reconnect that can't help, and ❌ never
+   *  `NotFound`, which the frontend reads as "this folder was deleted". SMB-only
+   *  today.
+   */
+  | { type: 'linkTargetUnreachable'; data: string }
   /**
    *  The device's session died mid-operation but the device itself is still
    *  attached, and a reopen is already running in the background (MTP: a PTP

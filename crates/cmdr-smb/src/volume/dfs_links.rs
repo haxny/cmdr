@@ -123,8 +123,9 @@ impl SmbVolume {
     /// connection). `generation` is the lease's: once a reconnect replaced that
     /// session, its tree means nothing on the new client, so the call stands as
     /// it came. Whatever `op` answers funnels as the main session's
-    /// (`RanOn::Main`): a link's target connection lives inside the main
-    /// client, and only rebuilding the session revives one that dropped.
+    /// (`RanOn::Main`), and a target that's gone arrives as smb2's
+    /// `DfsTargetUnreachable`, which doesn't end it: smb2 lets the dead target
+    /// go and the next call through the link dials it again.
     pub(super) async fn or_through_link<T, F>(
         &self,
         generation: SessionGeneration,
@@ -219,7 +220,8 @@ pub(super) enum LinkRoute {
 /// smb2's resolver: where `smb_path` on `tree` really lives, `Ok(None)` when
 /// it sits behind no link or the referral couldn't be had (the caller's own
 /// answer stands, as smb2's follow keeps it), and an error only for a link
-/// whose targets all failed (`DfsNoReachableTarget`).
+/// whose targets all failed (`DfsTargetUnreachable`), which refuses that path
+/// and leaves the session alone.
 pub(super) async fn resolve_link(
     client: &mut SmbClient,
     tree: &Tree,
@@ -227,7 +229,7 @@ pub(super) async fn resolve_link(
 ) -> Result<Option<smb2::DfsLink>, smb2::Error> {
     match client.resolve_dfs_link(tree, smb_path).await {
         Ok(link) => Ok(link),
-        Err(e @ smb2::Error::DfsNoReachableTarget { .. }) => Err(e),
+        Err(e @ smb2::Error::DfsTargetUnreachable { .. }) => Err(e),
         Err(e) => {
             log::debug!(
                 "dfs: couldn't resolve the link, keeping the server's answer ({:?})",

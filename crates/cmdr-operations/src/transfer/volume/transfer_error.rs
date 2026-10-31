@@ -496,6 +496,11 @@ pub(crate) fn map_volume_error(context_path: &str, role: PathRole, e: VolumeErro
         VolumeError::DeviceSessionReset(_) => WriteOperationError::ConnectionInterrupted {
             path: context_path.to_string(),
         },
+        // A link's other server is out of reach, so this file's copy stopped and
+        // trying again is the fix. The share itself is fine.
+        VolumeError::LinkTargetUnreachable(_) => WriteOperationError::ConnectionInterrupted {
+            path: context_path.to_string(),
+        },
         VolumeError::Cancelled(_) => WriteOperationError::Cancelled {
             message: "Operation cancelled by user".into(),
         },

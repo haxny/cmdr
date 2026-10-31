@@ -14,6 +14,7 @@ fn errors(path: &str) -> Vec<VolumeError> {
         },
         VolumeError::AlreadyExists(p()),
         VolumeError::NotConnected(p()),
+        VolumeError::LinkTargetUnreachable(p()),
         VolumeError::ReadOnly(p()),
         VolumeError::IsADirectory(p()),
         VolumeError::NotADirectory(p()),

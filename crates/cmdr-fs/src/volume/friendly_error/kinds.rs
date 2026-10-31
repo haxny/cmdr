@@ -210,6 +210,22 @@ pub(super) fn storage_full(raw_detail: String) -> ListingError {
     }
 }
 
+/// The folder lives on another server, through a link in this share, and that
+/// server is out of reach. The share itself is fine. Retrying is the one thing
+/// that can work, once the other server's back.
+pub(super) fn link_target_unreachable(path_display: &str, raw_detail: String) -> ListingError {
+    ListingError {
+        category: ErrorCategory::Transient,
+        reason: ListingErrorReason::LinkTargetUnreachable {
+            path: path_display.to_string(),
+        },
+        provider: None,
+        action_kind: None,
+        retry_hint: true,
+        raw_detail,
+    }
+}
+
 pub(super) fn connection_timeout(raw_detail: String) -> ListingError {
     ListingError {
         category: ErrorCategory::Transient,

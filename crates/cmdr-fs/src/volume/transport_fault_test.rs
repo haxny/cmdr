@@ -94,6 +94,16 @@ fn a_volume_never_connected_is_not_a_transport_fault() {
     assert_eq!(VolumeError::NotConnected("/smb/nas".into()).transport_fault(), None);
 }
 
+/// A dead link's other server isn't this volume's outage: its own connection is
+/// fine, so waiting for it to come back would wait for nothing.
+#[test]
+fn a_dead_link_target_is_not_a_transport_fault() {
+    assert_eq!(
+        VolumeError::LinkTargetUnreachable("/smb/nas/data".into()).transport_fault(),
+        None
+    );
+}
+
 /// Refusals and facts about the data: asking again fails the same way.
 #[test]
 fn refusals_and_data_facts_are_not_transport_faults() {

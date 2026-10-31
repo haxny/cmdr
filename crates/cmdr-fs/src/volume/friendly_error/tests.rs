@@ -239,6 +239,14 @@ fn volume_error_variants_map_correctly() {
             |r| matches!(r, ListingErrorReason::NotConnected { .. }),
         ),
         (
+            // ❌ Deliberately NOT `DeviceDisconnected`: the share is fine, only
+            // this link's other server isn't, and it may come back.
+            VolumeError::LinkTargetUnreachable("x".into()),
+            ErrorCategory::Transient,
+            true,
+            |r| matches!(r, ListingErrorReason::LinkTargetUnreachable { .. }),
+        ),
+        (
             // ❌ Deliberately NOT the `DeviceDisconnected` classification: the
             // device is still attached and a reopen is already running, so the
             // user needs to wait and retry, not go re-plug anything.

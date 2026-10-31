@@ -873,6 +873,24 @@
   "errors.listing.notConnected.title": "Not connected yet",
   "errors.listing.notConnected.explanation": "Cmdr hasn’t connected to the phone or server holding `{path}` yet, so there’s nothing to show here. Nothing was disconnected, and nothing was deleted.",
   "errors.listing.notConnected.suggestion": "Here’s what to try:\n- Open the phone or server from the volume switcher to connect to it\n- If it’s a phone, unlock it and accept any prompt it shows\n- Navigate here again once it’s connected",
+  "errors.listing.linkTargetUnreachable.title": "This folder’s server is out of reach",
+  "errors.listing.linkTargetUnreachable.explanation": "`{path}` sits behind a link to another server, and Cmdr can’t reach that server right now. The rest of this share is fine, and nothing was deleted.",
+  "errors.listing.linkTargetUnreachable.suggestion": "Here’s what to try:\n- Check that the other server is running and that your network can reach it\n- Navigate here again to retry",
+  "@errors.listing.linkTargetUnreachable.title": {
+    "description": "Title of the listing error panel when a folder on a network share is really a link (a DFS link) to a folder on a different server, and that other server doesn't answer. The share the person opened still works. Plain text.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.linkTargetUnreachable.explanation": {
+    "description": "Body of the listing error panel for a folder that links to a different server which doesn't answer. Markdown. The literal `{path}` is a do-not-translate placeholder replaced at runtime with the folder's path, which Cmdr doesn't control: any length. \"Share\" is a network share, the shared folder on a server. The last sentence reassures that only this folder is affected.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
+  "@errors.listing.linkTargetUnreachable.suggestion": {
+    "description": "Recovery suggestion for a folder that links to a different server which doesn't answer. Markdown bullet list. \"The other server\" is the one the link points to, not the one holding the share the person opened.",
+    "screenshot": "error-message-example.png",
+    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+  },
   "@errors.listing.notConnected.title": {
     "description": "Title of the listing error panel when a phone or server shows in Cmdr's volume list but Cmdr hasn't connected to it yet, so there's nothing to list. Deliberately distinct from \"Device disconnected\": nothing dropped. Plain text.",
     "screenshot": "error-message-example.png",
