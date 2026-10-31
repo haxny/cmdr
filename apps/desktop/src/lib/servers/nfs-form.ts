@@ -97,15 +97,6 @@ export function withTypedIdentity(
   return { ...fields, ...typed, identityFromGuess: false, identitySource: null }
 }
 
-/** Whether every id reads as ids, which Connect needs. */
-export function nfsIdentityIsComplete(fields: NfsFormFields): boolean {
-  return (
-    parseNfsId(fields.uid) !== null &&
-    parseNfsId(fields.gid) !== null &&
-    readNfsOtherGids(fields.otherGids).kind === 'ids'
-  )
-}
-
 /**
  * Whether to warn under the ids: user ID 0, which most servers squash to `nobody`
  * (`root_squash`, the Linux default). ❌ Never a block: on an export with

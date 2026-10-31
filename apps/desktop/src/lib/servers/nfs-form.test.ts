@@ -10,7 +10,6 @@ import { parseServerAddress } from './address-parser'
 import {
   emptyNfsFields,
   nfsFieldsFromAppPath,
-  nfsIdentityIsComplete,
   nfsIdentityWarns,
   parseNfsId,
   readNfsOtherGids,
@@ -98,21 +97,9 @@ describe('the guessed identity', () => {
     expect(withGuessedIdentity(typed, guess)).toEqual(typed)
   })
 
-  it('is complete once both ids read as ids', () => {
-    expect(nfsIdentityIsComplete(emptyNfsFields())).toBe(false)
-    expect(
-      nfsIdentityIsComplete(withTypedIdentity(withGuessedIdentity(emptyNfsFields(), guess), { otherGids: 'x' })),
-    ).toBe(false)
-    expect(nfsIdentityIsComplete(withGuessedIdentity(emptyNfsFields(), guess))).toBe(true)
-    expect(nfsIdentityIsComplete(withTypedIdentity(withGuessedIdentity(emptyNfsFields(), guess), { gid: 'x' }))).toBe(
-      false,
-    )
-  })
-
   it('warns about user ID 0, which most servers squash to nobody, and blocks nothing', () => {
     const root = withTypedIdentity(emptyNfsFields(), { uid: '0', gid: '0' })
     expect(nfsIdentityWarns(root)).toBe(true)
-    expect(nfsIdentityIsComplete(root)).toBe(true)
     expect(nfsIdentityWarns(withTypedIdentity(emptyNfsFields(), { uid: '1000' }))).toBe(false)
   })
 })
