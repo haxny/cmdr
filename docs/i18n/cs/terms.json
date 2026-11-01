@@ -160,7 +160,10 @@
     "confidence": "high",
     "sources": "macOS SystemSettings (Vybrat…, Vybrat jiný svazek); Dolphin (Vybrat…); MS (zvolit)",
     "note": "Shares the verb with select; prefer zvolit when one string has both.",
-    "decision": "Selection words"
+    "decision": "Selection words",
+    "exceptions": {
+      "settings.sync.keep.location.opt.customFolder": "\"A folder I choose\" is the option name Vlastní složka (a custom folder), beside V synchronizované složce; no choose verb is needed"
+    }
   },
   "clear": {
     "chosen": "vymazat",
@@ -863,7 +866,10 @@
     "accept": ["položk", "položek", "položc"],
     "forms": "f.: 1 položka, 2–4 položky, 5+ položek, decimals položky; Copied N items → Zkopírováno položek: N or ICU plural",
     "confidence": "high",
-    "sources": "macOS Finder (Přejmenovat položky, V tomto umístění už existuje položka), CoreTypes (položka); MS terminology (položka); Double Commander (Položka)"
+    "sources": "macOS Finder (Přejmenovat položky, V tomto umístění už existuje položka), CoreTypes (položka); MS terminology (položka); Double Commander (Položka)",
+    "exceptions": {
+      "settings.sync.keep.policy.description": "the skipped items are the replaced or removed files the sentence is about, so soubory is the precise word"
+    }
   },
   "key-combination": {
     "chosen": "kombinace kláves",
@@ -2655,7 +2661,10 @@
     "accept": ["odpov", "reag"],
     "forms": "neodpovídá / nereaguje; didn't answer in time → neodpověděl včas",
     "confidence": "high",
-    "sources": "macOS AppKit (aplikace neodpovídá na žádost o služby)"
+    "sources": "macOS AppKit (aplikace neodpovídá na žádost o služby)",
+    "exceptions": {
+      "sync.error.keepFolderUnreadable": "a folder that doesn’t answer is said to be unavailable (není dostupná), the state the person can act on"
+    }
   },
   "request": {
     "chosen": "požadavek",

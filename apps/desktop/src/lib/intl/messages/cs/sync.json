@@ -59,7 +59,7 @@
   "@sync.dialog.stopped": {
     "sourceHash": "71cbf3a"
   },
-  "sync.dialog.optionsNotSaved": "Synchronizace složek si možnosti pro tyto dvě složky nezapamatovala, takže příště začnou od výchozích.",
+  "sync.dialog.optionsNotSaved": "Synchronizace složek si nezapamatovala možnosti pro tyto dvě složky, takže příště budou výchozí.",
   "@sync.dialog.optionsNotSaved": {
     "sourceHash": "ed2391a"
   },
@@ -599,11 +599,11 @@
   "@sync.summary.removeLeft": {
     "sourceHash": "bc7a9bd"
   },
-  "sync.summary.equal": "{countText} shodných",
+  "sync.summary.equal": "Shodné: {countText}",
   "@sync.summary.equal": {
     "sourceHash": "ba1cdb1"
   },
-  "sync.summary.different": "{countText} odlišných",
+  "sync.summary.different": "Odlišné: {countText}",
   "@sync.summary.different": {
     "sourceHash": "ed162b7"
   },
@@ -615,19 +615,19 @@
   "@sync.summary.uniqueRight": {
     "sourceHash": "117953a"
   },
-  "sync.summary.undecided": "{countText} nerozhodnutých",
+  "sync.summary.undecided": "Nerozhodnuté: {countText}",
   "@sync.summary.undecided": {
     "sourceHash": "6f9b86d"
   },
-  "sync.summary.skipped": "{countText} přeskočených",
+  "sync.summary.skipped": "Přeskočené: {countText}",
   "@sync.summary.skipped": {
     "sourceHash": "6a15f48"
   },
-  "sync.summary.notComparable": "{countText} nelze porovnat",
+  "sync.summary.notComparable": "Nelze porovnat: {countText}",
   "@sync.summary.notComparable": {
     "sourceHash": "1eaadfa"
   },
-  "sync.summary.changedByYou": "{countText} změněno ručně",
+  "sync.summary.changedByYou": "Změněno ručně: {countText}",
   "@sync.summary.changedByYou": {
     "sourceHash": "ac9dbe6"
   },
@@ -731,7 +731,7 @@
   "@sync.error.badSettings": {
     "sourceHash": "598edeb"
   },
-  "sync.error.keepFolderUnreadable": "Složka s verzemi z Nastavení neodpovídá, takže Cmdr nemůže ověřit, že leží mimo tyto složky.",
+  "sync.error.keepFolderUnreadable": "Složka s verzemi z Nastavení není dostupná, takže Cmdr nemůže ověřit, že leží mimo tyto složky.",
   "@sync.error.keepFolderUnreadable": {
     "sourceHash": "6ead151"
   },
@@ -855,7 +855,7 @@
   "@sync.confirm.more": {
     "sourceHash": "a674c4d"
   },
-  "sync.confirm.chosenUnknown": "Akce nastavená u {count, plural, one {{countText} řádku označeného} few {{countText} řádků označených} many {{countText} řádku označeného} other {{countText} řádků označených}} ?, kde porovnání nepoznalo, která strana je novější:",
+  "sync.confirm.chosenUnknown": "Ručně nastavená akce u {count, plural, one {{countText} řádku označeného} few {{countText} řádků označených} many {{countText} řádku označeného} other {{countText} řádků označených}} „?“ (porovnání nepoznalo, která strana je novější):",
   "@sync.confirm.chosenUnknown": {
     "sourceHash": "494bfd6"
   },
@@ -915,7 +915,7 @@
   "@sync.confirm.staleCompare": {
     "sourceHash": "9bb1db7"
   },
-  "sync.confirm.enterRefused": "Pro spuštění stiskni Synchronizovat: odstraňuje soubory, nahrazuje novější, nebo potřebuje druhé potvrzení.",
+  "sync.confirm.enterRefused": "Tuto synchronizaci spusť tlačítkem Synchronizovat: odstraňuje soubory, nahrazuje novější soubory nebo potřebuje druhé potvrzení.",
   "@sync.confirm.enterRefused": {
     "sourceHash": "b4aa1a7"
   },
@@ -1011,23 +1011,23 @@
   "@sync.result.done": {
     "sourceHash": "bee0e61"
   },
-  "sync.result.changedSinceCompare": "{countText} ponecháno beze změny: od porovnání se změnily",
+  "sync.result.changedSinceCompare": "Ponecháno beze změny, protože se od porovnání změnily: {countText}",
   "@sync.result.changedSinceCompare": {
     "sourceHash": "2cfa202"
   },
-  "sync.result.noTrash": "{countText} ponecháno beze změny: ten disk nemá koš a Nastavení ponechává nahrazené soubory jen v koši",
+  "sync.result.noTrash": "Ponecháno beze změny, protože ten disk nemá koš a Nastavení ponechává nahrazené soubory jen v koši: {countText}",
   "@sync.result.noTrash": {
     "sourceHash": "839e3c5"
   },
-  "sync.result.couldNotDo": "{countText} se nepodařilo dokončit, nic se neztratilo",
+  "sync.result.couldNotDo": "Nepodařilo se dokončit (nic se neztratilo): {countText}",
   "@sync.result.couldNotDo": {
     "sourceHash": "5ae6b90"
   },
-  "sync.result.versionsSpotTaken": "{countText} ponecháno beze změny: na místě, kam by se starý soubor zachoval, už něco je",
+  "sync.result.versionsSpotTaken": "Ponecháno beze změny, protože na místě, kam by se starý soubor uložil, už něco je: {countText}",
   "@sync.result.versionsSpotTaken": {
     "sourceHash": "2ddc46e"
   },
-  "sync.result.versionsFolderUnsafe": "{countText} ponecháno beze změny: cesta ke složce s verzemi vede přes odkaz nebo soubor",
+  "sync.result.versionsFolderUnsafe": "Ponecháno beze změny, protože cesta ke složce s verzemi vede přes odkaz nebo soubor: {countText}",
   "@sync.result.versionsFolderUnsafe": {
     "sourceHash": "7bd1069"
   },
@@ -1043,7 +1043,7 @@
   "@sync.result.heldByGuard": {
     "sourceHash": "a452efb"
   },
-  "sync.result.notStarted": "{countText} nestihlo začít před zastavením",
+  "sync.result.notStarted": "Nezačalo před zastavením: {countText}",
   "@sync.result.notStarted": {
     "sourceHash": "2821e6e"
   },
@@ -1172,11 +1172,11 @@
   "@sync.profiles.invalid": {
     "sourceHash": "88aa7fc"
   },
-  "sync.profiles.gone": "That profile changed or is gone. The list now shows what’s saved.",
+  "sync.profiles.gone": "Ten profil se mezitím změnil nebo zmizel. Seznam teď zobrazuje, co je uložené.",
   "@sync.profiles.gone": {
     "sourceHash": "1590042"
   },
-  "sync.profiles.tooLarge": "This profile is too large to save. Shorten its masks or its exclude list.",
+  "sync.profiles.tooLarge": "Tento profil je příliš velký na uložení. Zkrať jeho masky nebo seznam vyloučených.",
   "@sync.profiles.tooLarge": {
     "sourceHash": "fc540eb"
   },

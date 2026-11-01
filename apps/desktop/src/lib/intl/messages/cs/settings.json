@@ -3600,7 +3600,7 @@
   "@settings.sync.keep.policy.label": {
     "sourceHash": "bd8a1cc"
   },
-  "settings.sync.keep.policy.description": "Kam Synchronizace ukládá soubory, které nahradí nebo odstraní. Koš, pokud existuje je ukládá do koše a na discích a serverech bez koše použije složku s verzemi. Vždy složka s verzemi drží všechno na jednom místě. Jen koš tyto položky na discích bez koše přeskočí.",
+  "settings.sync.keep.policy.description": "Kam Synchronizace ukládá soubory, které nahradí nebo odstraní. „Koš, pokud existuje“ je přesune do koše a na discích a serverech bez koše použije složku s verzemi. „Vždy složka s verzemi“ drží všechno na jednom místě. „Jen koš“ tyto soubory na discích bez koše přeskočí.",
   "@settings.sync.keep.policy.description": {
     "sourceHash": "d85d3df"
   },
@@ -3632,7 +3632,7 @@
   "@settings.sync.keep.location.opt.targetRoot": {
     "sourceHash": "bd8dc31"
   },
-  "settings.sync.keep.location.opt.customFolder": "Složka, kterou vyberu",
+  "settings.sync.keep.location.opt.customFolder": "Vlastní složka",
   "@settings.sync.keep.location.opt.customFolder": {
     "sourceHash": "9c1eed7"
   },
@@ -3700,7 +3700,7 @@
   "@settings.sync.compare.ignoreHourShift.label": {
     "sourceHash": "0a9c673"
   },
-  "settings.sync.compare.ignoreHourShift.description": "Soubory vzdálené přesně o hodinu bere jako stejné, což se stává při přechodu na letní čas na discích FAT a exFAT.",
+  "settings.sync.compare.ignoreHourShift.description": "Soubory, jejichž časy se liší přesně o hodinu, se berou jako stejné. Stává se to při přechodu na letní čas na discích FAT a exFAT.",
   "@settings.sync.compare.ignoreHourShift.description": {
     "sourceHash": "249f96d"
   },
