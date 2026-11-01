@@ -1778,6 +1778,7 @@ dependencies = [
  "cmdr-collation",
  "cmdr-fs",
  "cmdr-listing",
+ "cmdr-sync",
  "futures-util",
  "libc",
  "log",
@@ -1992,6 +1993,15 @@ dependencies = [
  "tokio",
  "tokio-util",
  "unicode-normalization",
+]
+
+[[package]]
+name = "cmdr-sync"
+version = "0.0.0"
+dependencies = [
+ "cmdr-fs",
+ "serde",
+ "specta",
 ]
 
 [[package]]

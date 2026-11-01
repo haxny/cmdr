@@ -30,6 +30,9 @@ playwright-e2e = []
 # the scratch-name rules, and the host primitives (poison-free locking, the
 # benchmark log, the fallback runtime).
 cmdr-fs = { path = "../cmdr-fs" }
+# `classify`, the one answer to "is this copy newer?" that Compare folders (⇧F2) shares
+# with Synchronize folders, so the two can never disagree about a pair.
+cmdr-sync = { path = "../cmdr-sync" }
 log = "0.4"
 # The wire shapes the host serializes (sort settings, diff batches, pane
 # answers). The engine only derives; the host decides what crosses to a UI.

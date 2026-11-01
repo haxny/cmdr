@@ -20,16 +20,12 @@ use std::sync::atomic::Ordering;
 use serde::{Deserialize, Serialize};
 
 use cmdr_fs::name_fold::fold_name;
+use cmdr_sync::{Category, CompareBy, CompareRules, ContentState, EntryFacts, EntryKind, classify};
 
 use crate::Inner;
 use crate::ListingLookupError;
 use crate::visible_rows::VisibleRows;
 use cmdr_fs::entry::FileEntry;
-
-/// How far apart two modification times can be and still count as the same, in
-/// seconds. FAT and many network shares store time in 2 s steps, so a faithful
-/// copy can read a second or two off its original.
-const SAME_TIME_TOLERANCE_SECS: u64 = 2;
 
 /// Which copies count as different, beyond the files missing on the other side
 /// (marked in every mode).
@@ -205,15 +201,24 @@ fn rows_to_mark(
 /// Whether `this` copy is marked against its `other` copy. An unknown time or
 /// size never marks: we only claim a difference we can see.
 fn differs(this: &FileEntry, other: &FileEntry, mode: CompareDirectoriesMode) -> bool {
+    // `this` is the LEFT side; kind is forced to File so a symlink beside a file keeps
+    // the date comparison ⇧F2 always did (it never looked at kinds).
+    let facts = |e: &FileEntry| EntryFacts {
+        kind: EntryKind::File,
+        ..EntryFacts::of(e)
+    };
+    let (l, r) = (facts(this), facts(other));
     match mode {
         CompareDirectoriesMode::Missing => false,
-        CompareDirectoriesMode::NewerAndMissing => match (this.modified_at, other.modified_at) {
-            (Some(this), Some(other)) => this > other.saturating_add(SAME_TIME_TOLERANCE_SECS),
-            _ => false,
-        },
-        CompareDirectoriesMode::SizeAndMissing => match (this.size, other.size) {
-            (Some(this), Some(other)) => this != other,
-            _ => false,
-        },
+        CompareDirectoriesMode::NewerAndMissing => {
+            classify(Some(&l), Some(&r), &CompareRules::QUICK, ContentState::NotAsked).category == Category::NewerLeft
+        }
+        CompareDirectoriesMode::SizeAndMissing => {
+            let rules = CompareRules {
+                by: CompareBy::SizeOnly,
+                ..CompareRules::QUICK
+            };
+            classify(Some(&l), Some(&r), &rules, ContentState::NotAsked).category == Category::Different
+        }
     }
 }

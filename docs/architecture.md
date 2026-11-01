@@ -394,12 +394,12 @@ All under `apps/desktop/src-tauri/src/`.
 
 All under `crates/`, alongside the four apps. `cmdr-fs`, `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
 `cmdr-webdav`, `cmdr-s3`, `cmdr-nfs`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-http`, `cmdr-listing`,
-`cmdr-collation`, `cmdr-local`, `cmdr-media-meta`, `cmdr-operation-log`, `cmdr-operations`, `cmdr-tags`, and
-`cmdr-update-trust` carry no `tauri` dependency and no reach into the app; `index-crate-isolation` enforces that against
-the `cargo metadata` graph, and caps the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
-`cmdr-webdav`, `cmdr-s3`, `cmdr-nfs`, `cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-listing`, `cmdr-collation`,
-`cmdr-local`, `cmdr-operation-log`, and `cmdr-operations` at the numbers their audits landed on. The two dev CLIs and
-the vendored fork are ordinary members.
+`cmdr-collation`, `cmdr-sync`, `cmdr-local`, `cmdr-media-meta`, `cmdr-operation-log`, `cmdr-operations`, `cmdr-tags`,
+and `cmdr-update-trust` carry no `tauri` dependency and no reach into the app; `index-crate-isolation` enforces that
+against the `cargo metadata` graph, and caps the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`,
+`cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-nfs`, `cmdr-mtp`, `cmdr-git`, `cmdr-restic`, `cmdr-listing`,
+`cmdr-collation`, `cmdr-local`, `cmdr-operation-log`, and `cmdr-operations` at the numbers their audits landed on. The
+two dev CLIs and the vendored fork are ordinary members.
 
 - `crates/cmdr-fs/`: the filesystem vocabulary and host primitives every layer speaks in — the `Volume` trait and its
   data types, `FileEntry`, typed error classification (`ListingError` / `ListingErrorReason` / `ErrorCategory`, errno →
@@ -431,6 +431,9 @@ the vendored fork are ordinary members.
 - `crates/cmdr-collation/`: how two file names rank (`NameCollator`, ICU4X Unicode collation with numeric ordering, and
   the prebuilt `NameKey` a bulk sort compares). Below the listing engine, which re-exports it, so anything that orders
   names sorts the way a pane does without depending on the listing. See `crates/cmdr-collation/CLAUDE.md`
+- `crates/cmdr-sync/`: Synchronize folders, the pure part: volume capabilities (`SyncCaps`), name keys that pair names
+  across volumes, and `classify`, the one "is this copy newer?" answer Compare folders (⇧F2) shares. See
+  `crates/cmdr-sync/CLAUDE.md`
 - `crates/cmdr-local/`: the local disk: `LocalPosixVolume` (the `Volume` over a `std::fs` root), the `std::fs` reader
   the watcher reads through too, `rename_local_exclusive` (the one no-replace rename), local volume space with the
   live-space memo, and the mount probes (`filesystem_kind`, the macOS mount table and `statfs`, Linux's `/proc/mounts`).

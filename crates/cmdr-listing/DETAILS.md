@@ -282,8 +282,9 @@ copies (`newerAndMissing`, TC's default), nothing more (`missing`), or both copi
   two directions always agree: `Report` and `report` (a case-sensitive volume) against `REPORT` pair nothing.
 - **Runs off the IPC thread with a 10 s deadline** (`blocking_typed_result_with_timeout`), answering a typed
   `CompareDirectoriesError` (`gone` / `timedOut` / `internal`).
-- **Two seconds apart is the same time** (`SAME_TIME_TOLERANCE_SECS`): FAT and many shares store time in 2 s steps. An
-  unknown time or size never marks a copy; only a difference we can see does.
+- **The per-pair answer is `cmdr_sync::classify`** (`CompareRules::QUICK`), shared with Synchronize folders. **Two
+  seconds apart is the same time** (`cmdr_sync::SAME_TIME_TOLERANCE_SECS`): FAT and many shares store time in 2 s steps.
+  An unknown time or size never marks a copy; only a difference we can see does.
 - No content comparison: like TC's ⇧F2, it reads metadata only. Byte comparison belongs to Synchronize directories.
 
 ## Quick filter (name_filter.rs, quick_filter.rs)

@@ -1,0 +1,26 @@
+[package]
+name = "cmdr-sync"
+version = "0.0.0"
+edition = "2024"
+license = "LicenseRef-BSL-1.1"
+publish = false
+
+# The house lint set lives in the workspace root's `[workspace.lints]`, so this
+# crate can't quietly become a lint-free zone. `unused_crate_dependencies` is the
+# one lint that stays at the crate root instead (it's judged per compilation unit).
+[lints]
+workspace = true
+
+[dependencies]
+# The `Volume` trait whose capability answers `SyncCaps` reads, `FileEntry`, and
+# `name_fold`, the one "same name, spelled another way" key.
+cmdr-fs = { path = "../cmdr-fs" }
+# The wire shapes the host serializes (capabilities, rules, verdicts).
+serde = { version = "1", features = ["derive"] }
+# Type export for the Rust↔TS bindings. Pinned to the EXACT same version the app
+# uses: two `specta` crates in one graph would make these `Type` impls stop
+# satisfying `tauri-specta`.
+specta = { version = "=2.0.0-rc.24", features = ["derive"] }
+
+[dev-dependencies]
+cmdr-fs = { path = "../cmdr-fs", features = ["testing"] }
