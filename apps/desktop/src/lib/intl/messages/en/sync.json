@@ -1018,9 +1018,9 @@
   "@sync.confirm.olderBody": {
     "description": "Synchronize folders confirm (before anything is written): explanation under the \"Older replaces newer\" heading."
   },
-  "sync.confirm.olderRow": "{path}: left {leftDate}, right {rightDate}",
-  "@sync.confirm.olderRow": {
-    "description": "Synchronize folders confirm (before anything is written): one row of the \"Older replaces newer\" list: the file and its modification date on each side.",
+  "sync.confirm.row": "{path}: left {leftDate}, right {rightDate}",
+  "@sync.confirm.row": {
+    "description": "Synchronize folders confirm (before anything is written): one row of a list of files the confirm names (\"Older replaces newer\", or \"?\" rows the person gave an action): the file and its modification date on each side.",
     "placeholders": {
       "path": "the file path from the synchronized folder, do not translate",
       "leftDate": "date and time on the left, formatted",
@@ -1031,16 +1031,16 @@
   "@sync.confirm.noDate": {
     "description": "Synchronize folders confirm (before anything is written): stands in for a date in an \"Older replaces newer\" row when that side has no modification time."
   },
-  "sync.confirm.olderMore": "…and {countText} more",
-  "@sync.confirm.olderMore": {
-    "description": "Synchronize folders confirm (before anything is written): last line of the \"Older replaces newer\" list when not every file is listed.",
+  "sync.confirm.more": "…and {countText} more",
+  "@sync.confirm.more": {
+    "description": "Synchronize folders confirm (before anything is written): last line of a list of named files (\"Older replaces newer\", or \"?\" rows the person gave an action) when not every file is listed.",
     "placeholders": {
       "countText": "how many files aren’t listed, formatted"
     }
   },
-  "sync.confirm.chosenUnknown": "You chose an action for {countText} {count, plural, one {row} other {rows}} marked ?, where the compare couldn’t tell which side is newer.",
+  "sync.confirm.chosenUnknown": "You chose an action for {countText} {count, plural, one {row} other {rows}} marked ?, where the compare couldn’t tell which side is newer:",
   "@sync.confirm.chosenUnknown": {
-    "description": "Synchronize folders confirm (before anything is written): note about rows in the \"?\" (undecided) category that the person gave an action anyway, so nothing but that choice decides which side wins. \"?\" is the grid’s symbol, keep it.",
+    "description": "Synchronize folders confirm (before anything is written): heading of the list of rows in the \"?\" (undecided) category that the person gave an action anyway, so nothing but that choice decides which side wins. The files follow. \"?\" is the grid’s symbol, keep it.",
     "placeholders": {
       "countText": "the number, formatted",
       "count": "the same number, for the plural form"
@@ -1130,6 +1130,26 @@
   "@sync.confirm.nothingTicked": {
     "description": "Synchronize folders confirm (before anything is written): said when every group is unticked and the person presses Synchronize."
   },
+  "sync.confirm.waitRemoveAnyway": "{filesText} {files, plural, one {file waits} other {files wait}} for Remove anyway. Tick it, or untick that group.",
+  "@sync.confirm.waitRemoveAnyway": {
+    "description": "Synchronize folders confirm (before anything is written): why the Synchronize button is off: ticked removals pass the removal limit and wait for the \"Remove anyway\" checkbox. \"Remove anyway\" must match that checkbox's label.",
+    "placeholders": {
+      "filesText": "the number, formatted",
+      "files": "the same number, for the plural form"
+    }
+  },
+  "sync.confirm.waitCopyAnyway": "{filesText} {files, plural, one {file waits} other {files wait}} for Copy anyway. Tick it, or untick that group.",
+  "@sync.confirm.waitCopyAnyway": {
+    "description": "Synchronize folders confirm (before anything is written): why the Synchronize button is off: ticked copies would go into an empty folder (maybe a drive that isn't connected) and wait for the \"Copy anyway\" checkbox. \"Copy anyway\" must match that checkbox's label.",
+    "placeholders": {
+      "filesText": "the number, formatted",
+      "files": "the same number, for the plural form"
+    }
+  },
+  "sync.confirm.allHeld": "Nothing here can run: a guard holds every group.",
+  "@sync.confirm.allHeld": {
+    "description": "Synchronize folders confirm (before anything is written): why the Synchronize button is off: a safety guard no button releases (a missing check file, or removals beside an empty folder) holds every group."
+  },
   "sync.confirm.nothing": "Nothing to synchronize: no row copies or removes anything.",
   "@sync.confirm.nothing": {
     "description": "Synchronize folders confirm (before anything is written): shown instead of the groups when the plan has no action at all."
@@ -1176,6 +1196,10 @@
   "@sync.run.paused": {
     "description": "Synchronize folders, while a synchronization runs: status while paused."
   },
+  "sync.run.pausing": "Pausing after this step…",
+  "@sync.run.pausing": {
+    "description": "Synchronize folders, while a synchronization runs: status after Pause was pressed, until the copy or move under way finishes. The ellipsis says it is still happening."
+  },
   "sync.run.pause": "Pause",
   "@sync.run.pause": {
     "description": "Synchronize folders, while a synchronization runs: button that pauses the synchronization after the step under way."
@@ -1187,6 +1211,10 @@
   "sync.run.cancel": "Cancel",
   "@sync.run.cancel": {
     "description": "Synchronize folders, while a synchronization runs: button that stops the synchronization after the step under way. Files it set aside go back."
+  },
+  "sync.run.stopping": "Stopping…",
+  "@sync.run.stopping": {
+    "description": "Synchronize folders, while a synchronization runs: the Cancel button's label after it was pressed, until the run stops after the step under way. The ellipsis says it is still happening."
   },
   "sync.result.title": "Synchronization finished",
   "@sync.result.title": {
@@ -1260,9 +1288,9 @@
       "count": "the same number, for the plural form"
     }
   },
-  "sync.result.heldByGuard": "{countText} {count, plural, one {removal} other {removals}} held by a guard",
+  "sync.result.heldByGuard": "{countText} {count, plural, one {row} other {rows}} held by a guard",
   "@sync.result.heldByGuard": {
-    "description": "Synchronize folders result screen, after a synchronization ended: removals a safety guard held back (removal limit or empty folder).",
+    "description": "Synchronize folders result screen, after a synchronization ended: rows a safety guard held back (a missing check file, the removal limit, or an empty folder); copies and replacements as well as removals.",
     "placeholders": {
       "countText": "the number, formatted",
       "count": "the same number, for the plural form"
@@ -1448,6 +1476,24 @@
   "sync.result.versionsFolderShort": "Replaced and removed files are in {path}",
   "@sync.result.versionsFolderShort": {
     "description": "Synchronize folders result screen, after a synchronization ended: where one of the versions folders of this run is, when the run used more than one (one per drive).",
+    "placeholders": {
+      "path": "the folder path, do not translate"
+    }
+  },
+  "sync.result.foldersStay": "These folders stay; the run never removes them:",
+  "@sync.result.foldersStay": {
+    "description": "Synchronize folders result screen, after a synchronization ended: heading of a list of folders the run made and left behind (empty folders for copies that didn't land, or dated versions folders it couldn't remove again). The paths follow."
+  },
+  "sync.result.emptyFolder": "{path} (empty: its copies didn’t land)",
+  "@sync.result.emptyFolder": {
+    "description": "Synchronize folders result screen: one folder the run made for copies that then didn't land, so it is empty.",
+    "placeholders": {
+      "path": "the folder path, do not translate"
+    }
+  },
+  "sync.result.leftoverFolder": "{path} (made for kept files, couldn’t be removed again)",
+  "@sync.result.leftoverFolder": {
+    "description": "Synchronize folders result screen: one dated versions folder the run made, kept nothing in, and couldn't remove again.",
     "placeholders": {
       "path": "the folder path, do not translate"
     }

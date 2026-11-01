@@ -265,9 +265,8 @@ pub fn summarize(plan: &Plan, filters: &ShowFilters) -> PlanSummary {
     summary
 }
 
-/// Rows nobody could decide (`?`) that the person gave an action anyway: the
-/// confirm names them, since nothing but that choice says which side wins.
-pub fn chosen_unknown(plan: &Plan) -> u64 {
-    let chosen = |item: &&PlanItem| item.verdict.category == Category::Unknown && item.action.target().is_some();
-    plan.items.iter().filter(chosen).count() as u64
+/// A row nobody could decide (`?`) that the person gave an action anyway: the
+/// confirm names it, since nothing but that choice says which side wins.
+pub fn is_chosen_unknown(item: &PlanItem) -> bool {
+    item.verdict.category == Category::Unknown && item.action.target().is_some()
 }

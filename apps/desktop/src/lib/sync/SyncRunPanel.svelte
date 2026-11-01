@@ -65,6 +65,11 @@
         (report?.versionsFolders ?? []).filter((folder): folder is VersionsFolder => folder.type === 'folder'),
     )
     const notDone = $derived(run.notDone)
+    /** Folders the run made and leaves: they stay, since a run never removes anything it can't keep. */
+    const leftBehind = $derived([
+        ...(report?.emptyFolders ?? []).map((folder) => tString('sync.result.emptyFolder', { path: folder.path })),
+        ...(report?.leftoverFolders ?? []).map((folder) => tString('sync.result.leftoverFolder', { path: folder.path })),
+    ])
 </script>
 
 {#if run.phase === 'running' || run.phase === 'paused'}
@@ -78,11 +83,15 @@
         />
         <p aria-live="polite">{progressText}</p>
         {#if eta !== null}<p>{tString('sync.run.eta', { duration: formatDuration(seconds(eta)) })}</p>{/if}
-        <p class="note">{tString(run.phase === 'paused' ? 'sync.run.paused' : 'sync.run.betweenSteps')}</p>
+        <p class="note">
+            {tString(run.pausing ? 'sync.run.pausing' : run.phase === 'paused' ? 'sync.run.paused' : 'sync.run.betweenSteps')}
+        </p>
         {#if run.problem}<p class="problem" role="alert">{syncProblemText(run.problem)}</p>{/if}
         <div class="actions">
-            <Button variant="secondary" onclick={() => void run.cancel()}>{tString('sync.run.cancel')}</Button>
-            <Button variant="primary" onclick={() => void run.setPaused(run.phase !== 'paused')}
+            <Button variant="secondary" disabled={run.cancelling} onclick={() => void run.cancel()}
+                >{tString(run.cancelling ? 'sync.run.stopping' : 'sync.run.cancel')}</Button
+            >
+            <Button variant="primary" disabled={run.cancelling} onclick={() => void run.setPaused(run.phase !== 'paused')}
                 >{tString(run.phase === 'paused' ? 'sync.run.resume' : 'sync.run.pause')}</Button
             >
         </div>
@@ -107,6 +116,14 @@
                 <Button size="mini" onclick={() => { onShowFolder(folder) }}>{tString('sync.result.showInCmdr')}</Button>
             </div>
         {/each}
+        {#if leftBehind.length > 0}
+            <div class="left-behind">
+                <p>{tString('sync.result.foldersStay')}</p>
+                <ul>
+                    {#each leftBehind as line (line)}<li>{line}</li>{/each}
+                </ul>
+            </div>
+        {/if}
         <div class="actions">
             {#if notDone.length > 0}
                 <Button variant="secondary" onclick={() => { onShowInGrid(notDone) }}>{tString('sync.result.showInGrid')}</Button>
@@ -136,6 +153,10 @@
 
     .run ul {
         padding-left: var(--spacing-lg);
+    }
+
+    .left-behind {
+        overflow-wrap: anywhere;
     }
 
     .note {

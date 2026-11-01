@@ -843,16 +843,16 @@
   "@sync.confirm.olderBody": {
     "sourceHash": "9d77caf"
   },
-  "sync.confirm.olderRow": "{path}: left {leftDate}, right {rightDate}",
-  "@sync.confirm.olderRow": {
+  "sync.confirm.row": "{path}: left {leftDate}, right {rightDate}",
+  "@sync.confirm.row": {
     "sourceHash": "22c6bff"
   },
   "sync.confirm.noDate": "no date",
   "@sync.confirm.noDate": {
     "sourceHash": "89be630"
   },
-  "sync.confirm.olderMore": "…and {countText} more",
-  "@sync.confirm.olderMore": {
+  "sync.confirm.more": "…and {countText} more",
+  "@sync.confirm.more": {
     "sourceHash": "a674c4d"
   },
   "sync.confirm.chosenUnknown": "You chose an action for {countText} {count, plural, one {row} other {rows}} marked ?, where the compare couldn’t tell which side is newer.",
@@ -923,6 +923,18 @@
   "@sync.confirm.nothingTicked": {
     "sourceHash": "836ee01"
   },
+  "sync.confirm.waitRemoveAnyway": "{filesText} {files, plural, one {file waits} other {files wait}} for Remove anyway. Tick it, or untick that group.",
+  "@sync.confirm.waitRemoveAnyway": {
+    "sourceHash": "4f3d135"
+  },
+  "sync.confirm.waitCopyAnyway": "{filesText} {files, plural, one {file waits} other {files wait}} for Copy anyway. Tick it, or untick that group.",
+  "@sync.confirm.waitCopyAnyway": {
+    "sourceHash": "608524e"
+  },
+  "sync.confirm.allHeld": "Nothing here can run: a guard holds every group.",
+  "@sync.confirm.allHeld": {
+    "sourceHash": "0102efc"
+  },
   "sync.confirm.nothing": "Nothing to synchronize: no row copies or removes anything.",
   "@sync.confirm.nothing": {
     "sourceHash": "4892e37"
@@ -959,6 +971,10 @@
   "@sync.run.paused": {
     "sourceHash": "b5c61bd"
   },
+  "sync.run.pausing": "Pausing after this step…",
+  "@sync.run.pausing": {
+    "sourceHash": "acd16db"
+  },
   "sync.run.pause": "Pause",
   "@sync.run.pause": {
     "sourceHash": "858e4ba"
@@ -970,6 +986,10 @@
   "sync.run.cancel": "Cancel",
   "@sync.run.cancel": {
     "sourceHash": "19766ed"
+  },
+  "sync.run.stopping": "Stopping…",
+  "@sync.run.stopping": {
+    "sourceHash": "bbe8574"
   },
   "sync.result.title": "Synchronization finished",
   "@sync.result.title": {
@@ -1170,5 +1190,17 @@
   "sync.result.versionsFolderShort": "Replaced and removed files are in {path}",
   "@sync.result.versionsFolderShort": {
     "sourceHash": "f7b7bbd"
+  },
+  "sync.result.foldersStay": "These folders stay; the run never removes them:",
+  "@sync.result.foldersStay": {
+    "sourceHash": "d0381b1"
+  },
+  "sync.result.emptyFolder": "{path} (empty: its copies didn’t land)",
+  "@sync.result.emptyFolder": {
+    "sourceHash": "2c384a4"
+  },
+  "sync.result.leftoverFolder": "{path} (made for kept files, couldn’t be removed again)",
+  "@sync.result.leftoverFolder": {
+    "sourceHash": "39826e3"
   }
 }

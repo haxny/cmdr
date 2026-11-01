@@ -12,8 +12,8 @@ use cmdr_fs::volume::Volume;
 use cmdr_operations::testing::{CollectorEventSink, TestOperations};
 use cmdr_operations::{OperationEventSink, Operations};
 use cmdr_sync::{
-    Acknowledgement, Action, BulkAction, GuardSettings, KeepPlace, KeepPolicy, Mode, ProfileOverrides, RootConflict,
-    RootRef, RunItemResult, ShowFilters, Side, SyncDefaults, SyncOptions,
+    Acknowledgement, Action, BulkAction, GuardBlock, GuardSettings, KeepPlace, KeepPolicy, Mode, Place,
+    ProfileOverrides, RootConflict, RootRef, RunItemResult, RunReport, ShowFilters, Side, SyncDefaults, SyncOptions,
 };
 
 use super::engine::SinkFactory;
@@ -24,8 +24,8 @@ use super::session;
 use super::session_compare;
 use super::session_run;
 use super::wire::{
-    CompareOutcome, CompareRequest, ConfirmGroupKey, RunReportWire, RunRequest, SelectionRef, SideRequest, SyncError,
-    ViewRowWire,
+    CompareOutcome, CompareRequest, ConfirmGroupKey, EmptyFolderWire, LeftoverFolderWire, RunReportWire, RunRequest,
+    SelectionRef, SideRequest, SyncError, ViewRowWire,
 };
 
 struct TestHost {
@@ -632,12 +632,26 @@ async fn run_rechecks_guards_on_the_overridden_plan_and_drops_unaccepted_groups(
         !preview.blocks.is_empty(),
         "three of four files removed trips max remove"
     );
-    assert_eq!(preview.chosen_unknown, 0, "no `?` row was given an action");
+    assert_eq!(preview.chosen_unknown_total, 0, "no `?` row was given an action");
+    assert!(preview.chosen_unknown.is_empty());
 
     // Unticked copies don't run; held removals stay.
     let report = p.run(&id, &[ConfirmGroupKey::RemoveRight], &[]).await;
     assert_eq!(report.held, 3);
     assert_eq!(report.done, 0);
+    assert_eq!(
+        report.held_by_guard.len(),
+        3,
+        "each held row reaches the result, for Show in grid"
+    );
+    assert!(
+        report
+            .held_by_guard
+            .iter()
+            .all(|row| matches!(row.block, GuardBlock::MaxRemove { side: Side::Right, .. })),
+        "{:?}",
+        report.held_by_guard
+    );
     assert!(!p.right.join("new.txt").exists());
     assert!(p.right.join("x.txt").exists());
 
@@ -734,4 +748,32 @@ async fn a_root_swapped_for_a_symlink_after_compare_is_a_stale_compare() {
     std::fs::remove_file(&p.right).expect("drop the link");
     let refused = session_run::start_run(p.host(), &id, &request).await;
     assert_eq!(refused, Err(SyncError::RootUnreachable { side: Side::Right }));
+}
+
+#[test]
+fn the_result_names_the_folders_a_run_leaves_behind() {
+    let report = RunReport {
+        results: Vec::new(),
+        versions_used: Vec::new(),
+        kept_bytes: 0,
+        empty_folders: vec![(Side::Right, PathBuf::from("/b/new"))],
+        leftover_folders: vec![(Place::Target, Side::Left, PathBuf::from("/a/.cmdr-sync/2026-11-01"))],
+        stopped: false,
+    };
+    let (empty, leftover) = session_run::folders_wire(&report);
+    assert_eq!(
+        empty,
+        vec![EmptyFolderWire {
+            side: Side::Right,
+            path: "/b/new".to_owned()
+        }]
+    );
+    assert_eq!(
+        leftover,
+        vec![LeftoverFolderWire {
+            place: Place::Target,
+            side: Side::Left,
+            path: "/a/.cmdr-sync/2026-11-01".to_owned()
+        }]
+    );
 }

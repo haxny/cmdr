@@ -9,8 +9,8 @@ use chrono::{Datelike, Timelike};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_sync::{
     Action, ContentJob, ContentState, EntryKind, KeepDestination, Place, PlanItem, RunContext, RunItemResult,
-    RunReport, RunSide, RunStamp, ShowFilters, Side, SyncControl, SyncDefaults, check, chosen_unknown,
-    compare_contents, effective, execute, gate, keep_destination, reclassify, summarize,
+    RunReport, RunSide, RunStamp, ShowFilters, Side, SyncControl, SyncDefaults, check, compare_contents, effective,
+    execute, gate, is_chosen_unknown, keep_destination, reclassify, summarize,
 };
 
 use super::engine::{EngineAdapter, EngineConfig, EngineSide};
@@ -20,11 +20,12 @@ use super::run_lock::{RootKey, RunLock};
 use super::session::{Compared, Session, SideSetup, session};
 use super::session_compare::check_settings;
 use super::wire::{
-    ConfirmGroup, ConfirmGroupKey, ConfirmPreview, KeepDestinationWire, RunItemWire, RunReportWire, RunRequest,
-    SyncError, SyncRowsChanged, SyncRunFinished, SyncRunProgress, WarnedItem,
+    ConfirmGroup, ConfirmGroupKey, ConfirmPreview, EmptyFolderWire, HeldRowWire, KeepDestinationWire,
+    LeftoverFolderWire, RunItemWire, RunReportWire, RunRequest, SyncError, SyncRowsChanged, SyncRunFinished,
+    SyncRunProgress, WarnedItem,
 };
 
-/// Rows of "Older overwrites newer" the confirm lists by name.
+/// Rows of "Older overwrites newer", and chosen `?` rows, the confirm lists by name.
 const WARNED_LISTED: usize = 200;
 
 /// The confirm's group order.
@@ -175,6 +176,8 @@ pub(crate) async fn confirm(
         let mut groups = Vec::new();
         let mut warned = Vec::new();
         let mut warned_total = 0;
+        let mut unknown = Vec::new();
+        let mut unknown_total = 0;
         for item in &compared.plan.items {
             let (Some(key), Some(target)) = (group_of(item), item.action.target()) else {
                 continue;
@@ -187,6 +190,12 @@ pub(crate) async fn confirm(
                 warned_total += 1;
                 if warned.len() < WARNED_LISTED {
                     warned.push(warned_item(item));
+                }
+            }
+            if is_chosen_unknown(item) {
+                unknown_total += 1;
+                if unknown.len() < WARNED_LISTED {
+                    unknown.push(warned_item(item));
                 }
             }
         }
@@ -203,7 +212,8 @@ pub(crate) async fn confirm(
             blocks: report.blocks,
             skew: report.skew,
             hidden_actions: summarize(&compared.plan, filters).hidden_actions,
-            chosen_unknown: chosen_unknown(&compared.plan),
+            chosen_unknown: unknown,
+            chosen_unknown_total: unknown_total,
             keep_is_slow,
         })
     })
@@ -231,7 +241,7 @@ fn warned_item(item: &PlanItem) -> WarnedItem {
 struct Launch {
     plan: cmdr_sync::Plan,
     run: Vec<u32>,
-    held: u64,
+    held: Vec<HeldRowWire>,
     ctx: RunContext,
     adapter: EngineAdapter,
     control: Arc<SyncControl>,
@@ -296,7 +306,12 @@ fn launch(
     );
     let accepted = |index: u32| group_of(&plan.items[index as usize]).is_some_and(|key| request.groups.contains(&key));
     let run: Vec<u32> = gated.run.iter().copied().filter(|&index| accepted(index)).collect();
-    let held = gated.held.iter().filter(|(index, _)| accepted(*index)).count() as u64;
+    let held = gated
+        .held
+        .iter()
+        .filter(|(index, _)| accepted(*index))
+        .map(|&(item, block)| HeldRowWire { item, block })
+        .collect();
     let control = SyncControl::new();
     let adapter = EngineAdapter::new(EngineConfig {
         operations,
@@ -400,9 +415,37 @@ fn versions_wire(dir: &Path, place: Place, sides: [(&Path, String); 2]) -> KeepD
     }
 }
 
-fn report_wire(report: &RunReport, held: u64, adapter: &EngineAdapter) -> RunReportWire {
+/// The folders a run leaves behind, for the result: they stay, since a run
+/// never removes anything it can't keep.
+pub(crate) fn folders_wire(report: &RunReport) -> (Vec<EmptyFolderWire>, Vec<LeftoverFolderWire>) {
+    let path = |dir: &Path| dir.to_string_lossy().into_owned();
+    let empty = report
+        .empty_folders
+        .iter()
+        .map(|(side, dir)| EmptyFolderWire {
+            side: *side,
+            path: path(dir),
+        })
+        .collect();
+    let leftover = report
+        .leftover_folders
+        .iter()
+        .map(|(place, side, dir)| LeftoverFolderWire {
+            place: *place,
+            side: *side,
+            path: path(dir),
+        })
+        .collect();
+    (empty, leftover)
+}
+
+fn report_wire(report: &RunReport, held: Vec<HeldRowWire>, adapter: &EngineAdapter) -> RunReportWire {
+    let (empty_folders, leftover_folders) = folders_wire(report);
     let mut wire = RunReportWire {
-        held,
+        held: held.len() as u64,
+        held_by_guard: held,
+        empty_folders,
+        leftover_folders,
         kept_bytes: report.kept_bytes,
         operation_ids: adapter.operation_ids(),
         stopped: report.stopped,

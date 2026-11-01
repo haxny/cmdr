@@ -209,7 +209,8 @@ export function preview(patch: Partial<ConfirmPreview> = {}): ConfirmPreview {
     blocks: [],
     skew: null,
     hiddenActions: 0,
-    chosenUnknown: 0,
+    chosenUnknown: [],
+    chosenUnknownTotal: 0,
     keepIsSlow: false,
     ...patch,
   }
@@ -229,6 +230,9 @@ export function report(patch: Partial<RunReportWire> = {}): RunReportWire {
     keptBytes: 0,
     operationIds: [],
     items: [{ item: 0, result: 'done' }],
+    heldByGuard: [],
+    emptyFolders: [],
+    leftoverFolders: [],
     stopped: false,
     ...patch,
   }

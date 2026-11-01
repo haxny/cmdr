@@ -69,7 +69,7 @@ pub use scan::{ScanError, ScanOptions, ScanProgress, Side, scan, subtree_now};
 pub use snapshot::{Entry, Snapshot, SubtreeFacts, UnreadableReason};
 pub use steps::{Step, StepPlan, steps};
 pub use view::{
-    PlanSummary, RowClass, ShowFilters, SideTotals, ViewRow, chosen_unknown, is_visible, row_class, summarize,
+    PlanSummary, RowClass, ShowFilters, SideTotals, ViewRow, is_chosen_unknown, is_visible, row_class, summarize,
     view_rows,
 };
 

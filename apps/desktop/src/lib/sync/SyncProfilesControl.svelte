@@ -38,9 +38,11 @@
         /** What a save keeps: the dialog's roots, options, show-filters, and overrides now. */
         source: () => ProfileSource
         onLoad: (profile: LoadedProfile) => void
+        /** A confirm or a run is up: profiles can't change the folders under it. */
+        disabled?: boolean
     }
 
-    const { profiles, loadedId, source, onLoad }: Props = $props()
+    const { profiles, loadedId, source, onLoad, disabled = false }: Props = $props()
 
     type NameMode = { kind: 'save' } | { kind: 'rename'; id: string }
 
@@ -122,12 +124,13 @@
 
     /** F2: opens or closes the menu under its button. */
     export function toggleMenu(): void {
-        if (nameMode !== null || !buttonEl) return
+        if (disabled || nameMode !== null || !buttonEl) return
         menu.toggleUnder(buttonEl)
     }
 
     /** ⌘S: the name popover, prefilled with the loaded profile's name. */
     export function openSave(): void {
+        if (disabled) return
         menu.close()
         openName({ kind: 'save' }, loadedName ?? '')
     }
@@ -186,6 +189,7 @@
 
 <span class="profiles" bind:this={wrapperEl}>
     <Button
+        {disabled}
         onclick={toggleMenu}
         aria-haspopup="menu"
         tooltipContent={tString('sync.profiles.tooltip')}

@@ -163,7 +163,7 @@ that restores it; a one-sided copy would have to become a removal, so it stays.
 
 Contract: `bulk_outcome` receives only rows the person selected AND can see under the current show-filters. Within that
 selection `→`, `←`, and remove-target also reach `?` rows: selecting them and pressing the key is the explicit choice
-they wait for. `chosen_unknown` counts those `?` rows that now act, for the confirm.
+they wait for. `is_chosen_unknown` picks out those `?` rows that now act, which the confirm lists by name.
 
 ## Finding rows (find.rs)
 

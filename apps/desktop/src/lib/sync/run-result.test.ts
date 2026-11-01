@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resultLines } from './run-result'
+import { notDoneItems, resultLines } from './run-result'
 import { report } from './sync-test-fixtures'
 
 describe('resultLines', () => {
@@ -19,6 +19,10 @@ describe('resultLines', () => {
           { item: 7, result: 'noTrash' },
           { item: 8, result: 'versionsFolderUnsafe' },
         ],
+        heldByGuard: [
+          { item: 9, block: { type: 'maxRemove', side: 'right', removals: 9, targetFiles: 10 } },
+          { item: 10, block: { type: 'emptyRoot', side: 'right' } },
+        ],
       }),
     )
     expect(lines).toEqual([
@@ -37,5 +41,16 @@ describe('resultLines', () => {
 
   it('a clean run is one line', () => {
     expect(resultLines(report())).toEqual([{ kind: 'done', count: 1 }])
+  })
+
+  it('rows a guard held count as not done, for Show in grid', () => {
+    const held = report({
+      items: [
+        { item: 0, result: 'done' },
+        { item: 1, result: 'couldNotDo' },
+      ],
+      heldByGuard: [{ item: 4, block: { type: 'sentinelMissing', side: 'right' } }],
+    })
+    expect(notDoneItems(held)).toEqual([1, 4])
   })
 })

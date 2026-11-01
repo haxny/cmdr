@@ -58,7 +58,8 @@ describe('SyncConfirmDialog a11y', () => {
         ],
         skew: { offsetSecs: 3600, sharePercent: 95 },
         hiddenActions: 12,
-        chosenUnknown: 2,
+        chosenUnknown: [{ item: 5, relPath: 'c.txt', leftMtime: null, rightMtime: 1_700_000_000 }],
+        chosenUnknownTotal: 2,
         keepIsSlow: true,
       }),
     )

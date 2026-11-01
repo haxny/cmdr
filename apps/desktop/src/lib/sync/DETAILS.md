@@ -63,14 +63,20 @@ Phases: `idle` (the grid) → `confirming` → `running` / `paused` → `finishe
 
 - **Confirm.** ⌘↩ or Synchronize (only on a fresh, finished compare) reads `getSyncConfirm` with the Settings as they
   are now and keeps both. `SyncConfirmDialog` (soft dialog `sync-confirm`, `alertdialog` when anything warns) shows, in
-  order: why it's shown again (`planChanged`, `staleCompare`), the "Older replaces newer" rows with both dates, the
-  groups with a checkbox each (all ticked) and where each group's replaced or removed files go (Trash, or the versions
-  folder path; "slower" when `keepIsSlow`), `?` rows the person gave an action (`chosenUnknown`), hidden actions, a
-  clock skew, then every guard in words with its second yes as a checkbox ("Remove anyway", "Copy anyway"). A missing
-  sentinel and an empty root's removals have no button: no acknowledgement releases them (`hardBlocks`).
-- **Enter.** `enterMayConfirm`: something ticked, no sentinel block, no removal group ticked, no replace group ticked
-  while older-replaces-newer rows exist, and no acknowledgement needed. Otherwise Enter says to press Synchronize. These
-  rules only decide what the person must press: the backend's `gate` decides what runs.
+  order: why it's shown again (`planChanged`, `staleCompare`), the "Older replaces newer" rows with both dates, the `?`
+  rows the person gave an action (`chosenUnknown`, by name, same row shape), the groups with a checkbox each and where
+  each group's replaced or removed files go (Trash, or the versions folder path; "slower" when `keepIsSlow`), hidden
+  actions, a clock skew, then every guard in words with its second yes as a checkbox ("Remove anyway", "Copy anyway").
+  Focus lands on the first group: a focused Synchronize would take Enter past `enterMayConfirm` (`ModalDialog` lets a
+  focused button have Enter).
+- **Holds** (`groupHold`, mirroring the backend's `gate`). A missing sentinel holds every group, an empty root every
+  removal: such a group is shown disabled with the guard's reason and never ticked (`isHardHeld`). Removals past the
+  limit wait for "Remove anyway", copies into an empty root for "Copy anyway". `confirmBlock` turns Synchronize
+  `aria-disabled`, with the reason under the groups, while nothing runnable is ticked, every group is held for good, or
+  a ticked group waits for its second yes ("61 files wait for Remove anyway. Tick it, or untick that group.").
+- **Enter.** `enterMayConfirm`: something ticked, nothing ticked held for good, no removal group ticked, no replace
+  group ticked while older-replaces-newer rows exist, and no acknowledgement needed. Otherwise Enter says to press
+  Synchronize. These rules only decide what the person must press: the backend's `gate` decides what runs.
 - **Accept.** `startSyncRun` with the preview's `revision`, the ticked groups, the acknowledgements, and the Settings
   the preview was read with. `planChanged` → the preview is read again, ticks kept for groups still there, and the
   confirm says why; `staleCompare` → "Compare again" (closes the confirm and compares); any other refusal is shown by
@@ -79,15 +85,18 @@ Phases: `idle` (the grid) → `confirming` → `running` / `paused` → `finishe
   leaves the phase `finished`. A confirm marked `staleCompare` never sends again.
 - **Run.** `sync-run-progress` of this session feeds one bar (bytes, else items) with items, bytes, and an ETA from the
   bytes rate so far. Pause and Cancel reach the backend at once but take effect between steps (a step is one engine
-  batch); the panel says so rather than pretending. While a run is up, Esc and × only say "pause or cancel first", the
-  grid's keys rest, and menu claims swallow their key (declining would run the main window's menu item).
+  batch); the panel says so rather than pretending: "Pausing after this step…" until a step ends while paused, and
+  Cancel turns into a disabled "Stopping…" until the report lands. The ETA leaves out time spent paused. While a run is
+  up, Esc and × only say "pause or cancel first", the grid's keys rest, and menu claims swallow their key (declining
+  would run the main window's menu item).
 - **Result.** `sync-run-finished` ends it and refreshes the summary (now `stale`). Lines per typed end (`run-result.ts`
-  over `RunItemResult`; `held` splits into guard holds and holds after a failed copy), the versions folder with "Show in
-  Cmdr" (closes the dialog, then `explorerRef.navigate` opens it in the pane on its volume, the right when unsure),
-  "Show in grid" (back to the stale list with every filter on and the rows that didn't run selected), and "Compare
-  again". Decision: the re-compare (TC's `SyncRecompareAfterCopy`) runs when the person leaves the result, not at once:
-  "Show in grid" needs the plan the run's row indices belong to, which a re-compare would replace. Esc on the result
-  compares again too.
+  over `RunItemResult`, plus `heldByGuard`: rows a guard held never reach the run, copies included), the folders the run
+  leaves (`emptyFolders`, `leftoverFolders`: "these stay"), the versions folder with "Show in Cmdr" (closes the dialog,
+  then `explorerRef.navigate` opens it in the pane on its volume, the right when unsure), "Show in grid" (back to the
+  stale list with every filter on and the rows that didn't run selected, guard holds too), and "Compare again".
+  Decision: the re-compare (TC's `SyncRecompareAfterCopy`) runs when the person leaves the result, not at once: "Show in
+  grid" needs the plan the run's row indices belong to, which a re-compare would replace. Esc on the result compares
+  again too.
 
 ## Profiles (`profiles.svelte.ts`, `SyncProfilesControl`)
 
@@ -119,4 +128,4 @@ Rename, Move up, Move down, Delete, then Save as profile. The palette's "Synchro
 
 Root paths are shown, not edited. The "exact one-hour shift" toggle follows Settings, and a profile's overrides are kept
 but not edited here (the profile editor with inherited values greyed is phase 2). Per-profile palette commands are phase
-2 (`COMMAND_IDS` is static). The confirm doesn't list the empty folders a run would create or leave.
+2 (`COMMAND_IDS` is static). The confirm doesn't list the empty folders a run would create.

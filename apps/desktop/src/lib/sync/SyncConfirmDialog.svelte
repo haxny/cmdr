@@ -6,6 +6,7 @@
      * accepts only what `enterMayConfirm` allows; anything that removes, replaces newer, or needs a second yes takes
      * the Synchronize button. Nothing runs without this dialog: `run.accept()` names the preview shown here.
      */
+    import { onMount, tick } from 'svelte'
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
     import Button from '#lib/ui/Button.svelte'
     import Checkbox from '#lib/ui/Checkbox.svelte'
@@ -14,8 +15,16 @@
     import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
     import { formatDateTime } from '#lib/settings/reactive-settings.svelte.js'
     import { formatByteSize, formatDuration, seconds } from '#lib/units/index.js'
-    import type { Acknowledgement, ConfirmGroup, GuardBlock } from '#lib/tauri-commands/sync.js'
-    import { acknowledgementsNeeded, enterMayConfirm, groupTarget, isRemovalGroup } from './confirm-rules'
+    import type { Acknowledgement, ConfirmGroup, GuardBlock, WarnedItem } from '#lib/tauri-commands/sync.js'
+    import {
+        acknowledgementsNeeded,
+        confirmBlock,
+        enterMayConfirm,
+        groupHold,
+        groupTarget,
+        isRemovalGroup,
+        type ConfirmBlock,
+    } from './confirm-rules'
     import { syncProblemText } from './sync-errors'
     import type { SyncRun } from './sync-run.svelte'
 
@@ -26,6 +35,7 @@
     const { run }: Props = $props()
 
     let notice = $state<string | null>(null)
+    let bodyEl = $state<HTMLDivElement>()
 
     const preview = $derived(run.preview)
     const acks = $derived(preview ? acknowledgementsNeeded(preview) : [])
@@ -46,6 +56,39 @@
         copyRightRecreates: 'sync.confirm.group.copyRightRecreates',
         copyLeftRecreates: 'sync.confirm.group.copyLeftRecreates',
     } as const satisfies Record<ConfirmGroup['key'], MessageKey>
+
+    const block = $derived(preview ? confirmBlock(preview, run.accepted, run.acknowledged) : null)
+    /** What holds Synchronize back, said under the groups; a notice from a key press wins. */
+    const status = $derived(notice ?? (block ? blockNotice(block) : ''))
+
+    const WAIT_KEY = {
+        removeAnyway: 'sync.confirm.waitRemoveAnyway',
+        copyIntoEmpty: 'sync.confirm.waitCopyAnyway',
+    } as const satisfies Record<Acknowledgement, MessageKey>
+
+    function blockNotice(why: ConfirmBlock): string {
+        switch (why.type) {
+            case 'nothingTicked':
+                return tString('sync.confirm.nothingTicked')
+            case 'allHeld':
+                return tString('sync.confirm.allHeld')
+            case 'waiting':
+                return why.waits
+                    .map(({ ack, files }) => tString(WAIT_KEY[ack], { files, filesText: formatNumber(files) }))
+                    .join(' ')
+            default: {
+                const unreachable: never = why
+                return unreachable
+            }
+        }
+    }
+
+    /** The guard that holds a group for good (no button releases it), or `null`. */
+    function hardHold(group: ConfirmGroup): GuardBlock | null {
+        if (!preview) return null
+        const hold = groupHold(preview, group.key, [])
+        return hold?.kind === 'hard' ? hold.block : null
+    }
 
     const ACK_KEY = {
         removeAnyway: 'sync.confirm.removeAnyway',
@@ -106,13 +149,22 @@
     })
 
     function accept(): void {
-        if (run.accepted.length === 0) {
-            notice = tString('sync.confirm.nothingTicked')
+        if (block) {
+            notice = blockNotice(block)
             return
         }
         notice = null
         void run.accept()
     }
+
+    // The first group takes focus: Space unticks it, and Enter stays this dialog's (a focused Synchronize would let
+    // Enter press it past `enterMayConfirm`).
+    onMount(async () => {
+        await tick()
+        requestAnimationFrame(() => {
+            bodyEl?.querySelector<HTMLInputElement>('.groups input[type="checkbox"]:not(:disabled)')?.focus()
+        })
+    })
 
     function handleKeydown(event: KeyboardEvent): void {
         const plain = !event.metaKey && !event.altKey && !event.ctrlKey
@@ -122,6 +174,23 @@
         else notice = tString('sync.confirm.enterRefused')
     }
 </script>
+
+{#snippet rows(listed: WarnedItem[], total: number)}
+    <ul>
+        {#each listed as row (row.item)}
+            <li>
+                {tString('sync.confirm.row', {
+                    path: row.relPath,
+                    leftDate: dateOf(row.leftMtime),
+                    rightDate: dateOf(row.rightMtime),
+                })}
+            </li>
+        {/each}
+        {#if total > listed.length}
+            <li>{tString('sync.confirm.more', { countText: formatNumber(total - listed.length) })}</li>
+        {/if}
+    </ul>
+{/snippet}
 
 <ModalDialog
     dialogId="sync-confirm"
@@ -137,7 +206,7 @@
     {#snippet title()}{tString('sync.confirm.title')}{/snippet}
 
     {#if preview}
-        <div class="confirm">
+        <div class="confirm" bind:this={bodyEl}>
             {#if run.notice === 'planChanged'}
                 <p class="notice" role="alert">{tString('sync.confirm.planChanged')}</p>
             {:else if run.notice === 'staleCompare'}
@@ -152,26 +221,14 @@
                 <section class="older" aria-labelledby="sync-confirm-older">
                     <h3 id="sync-confirm-older">{tString('sync.confirm.olderTitle', count(preview.olderOverwritesNewerTotal))}</h3>
                     <p>{tString('sync.confirm.olderBody')}</p>
-                    <ul>
-                        {#each preview.olderOverwritesNewer as row (row.item)}
-                            <li>
-                                {tString('sync.confirm.olderRow', {
-                                    path: row.relPath,
-                                    leftDate: dateOf(row.leftMtime),
-                                    rightDate: dateOf(row.rightMtime),
-                                })}
-                            </li>
-                        {/each}
-                        {#if preview.olderOverwritesNewerTotal > preview.olderOverwritesNewer.length}
-                            <li>
-                                {tString('sync.confirm.olderMore', {
-                                    countText: formatNumber(
-                                        preview.olderOverwritesNewerTotal - preview.olderOverwritesNewer.length,
-                                    ),
-                                })}
-                            </li>
-                        {/if}
-                    </ul>
+                    {@render rows(preview.olderOverwritesNewer, preview.olderOverwritesNewerTotal)}
+                </section>
+            {/if}
+
+            {#if preview.chosenUnknownTotal > 0}
+                <section class="unknown" aria-labelledby="sync-confirm-unknown">
+                    <h3 id="sync-confirm-unknown">{tString('sync.confirm.chosenUnknown', count(preview.chosenUnknownTotal))}</h3>
+                    {@render rows(preview.chosenUnknown, preview.chosenUnknownTotal)}
                 </section>
             {/if}
 
@@ -181,21 +238,27 @@
                 <ul class="groups" aria-label={tString('sync.confirm.groupsLabel')}>
                     {#each preview.groups as group (group.key)}
                         {@const keep = keepLine(group)}
+                        {@const held = hardHold(group)}
+                        {@const described = [
+                            keep ? `sync-confirm-keep-${group.key}` : null,
+                            held ? `sync-confirm-held-${group.key}` : null,
+                        ].filter((id) => id !== null)}
                         <li>
                             <Checkbox
                                 checked={run.accepted.includes(group.key)}
-                                ariaDescribedBy={keep ? `sync-confirm-keep-${group.key}` : undefined}
+                                disabled={held !== null}
+                                ariaDescribedBy={described.length > 0 ? described.join(' ') : undefined}
                                 onCheckedChange={() => {
                                     run.toggleGroup(group.key)
                                 }}>{groupLabel(group)}</Checkbox
                             >
                             {#if keep}<p class="keep" id="sync-confirm-keep-{group.key}">{keep}</p>{/if}
+                            {#if held}<p class="keep" id="sync-confirm-held-{group.key}">{blockText(held)}</p>{/if}
                         </li>
                     {/each}
                 </ul>
             {/if}
 
-            {#if preview.chosenUnknown > 0}<p>{tString('sync.confirm.chosenUnknown', count(preview.chosenUnknown))}</p>{/if}
             {#if preview.hiddenActions > 0}<p>{tString('sync.confirm.hiddenActions', count(preview.hiddenActions))}</p>{/if}
             {#if skewText}<p>{skewText}</p>{/if}
 
@@ -215,7 +278,7 @@
                 </section>
             {/if}
 
-            <p class="status" aria-live="polite">{notice ?? ''}</p>
+            <p class="status" aria-live="polite">{status}</p>
         </div>
     {/if}
 
@@ -223,7 +286,7 @@
         <Button variant="secondary" onclick={() => { run.dismissConfirm() }}>{tString('sync.confirm.cancel')}</Button>
         <Button
             variant={warns ? 'danger' : 'primary'}
-            ariaDisabled={run.busy || run.notice === 'staleCompare'}
+            ariaDisabled={run.busy || run.notice === 'staleCompare' || block !== null}
             onclick={accept}>{tString('sync.confirm.run')}</Button
         >
     {/snippet}
@@ -244,7 +307,8 @@
         margin: 0;
     }
 
-    .older {
+    .older,
+    .unknown {
         display: flex;
         flex-direction: column;
         gap: var(--spacing-xs);
@@ -254,11 +318,17 @@
         background: var(--color-warning-bg);
     }
 
-    .older h3 {
+    .unknown {
+        background: none;
+    }
+
+    .older h3,
+    .unknown h3 {
         font-size: var(--font-size-md);
     }
 
-    .older ul {
+    .older ul,
+    .unknown ul {
         padding-left: var(--spacing-lg);
         font-size: var(--font-size-sm);
     }

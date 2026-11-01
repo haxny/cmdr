@@ -31,7 +31,8 @@
   `rowLabel`); arrows, icons, and marks repeat it.
 - **Nothing runs without the confirm.** `accept()` sends the preview's `revision` and the Settings it was shown with;
   `planChanged` re-shows the confirm with why, `staleCompare` offers Compare again. ❌ Never retry a run unseen.
-- **Enter accepts only `enterMayConfirm`** (no removal, no older-over-newer, no second yes needed); else the button.
+- **Enter accepts only `enterMayConfirm`** (no removal, no older-over-newer, no second yes needed); else the button,
+  itself off (`confirmBlock`) while a ticked group waits for its second yes. Holds mirror the backend's `gate`.
 - **Pause and Cancel land between steps**, and the panel says so. While the confirm or run is up, menu claims swallow.
 - **Esc stops a running compare first, then closes.** Closing remembers the options for the pair and closes the session;
   a write that didn't land says so.

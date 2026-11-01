@@ -4,8 +4,8 @@
 
 use cmdr_sync::{
     Acknowledgement, Action, Category, ClockSkew, ContentProgress, ContentState, EntryKind, GuardBlock, GuardReport,
-    KeepRefusal, OverrideRefusal, PlanSummary, ProfileOverrides, ProfileProblem, RootConflict, RootRef, RunItemResult,
-    RunProgress, Rung, ScanProgress, Side, SyncDefaults, SyncMaskError, SyncOptions,
+    KeepRefusal, OverrideRefusal, Place, PlanSummary, ProfileOverrides, ProfileProblem, RootConflict, RootRef,
+    RunItemResult, RunProgress, Rung, ScanProgress, Side, SyncDefaults, SyncMaskError, SyncOptions,
 };
 use serde::{Deserialize, Serialize};
 
@@ -286,7 +286,8 @@ pub enum KeepDestinationWire {
     },
 }
 
-/// A row that replaces a newer file with an older one.
+/// A row the confirm names: one that replaces a newer file with an older one,
+/// or a `?` row the person gave an action.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WarnedItem {
@@ -332,8 +333,11 @@ pub struct ConfirmPreview {
     pub skew: Option<ClockSkew>,
     /// Actions that run on rows the show-filters hide.
     pub hidden_actions: u64,
-    /// `?` rows the person gave an action (nothing else says which side wins).
-    pub chosen_unknown: u64,
+    /// The first `?` rows the person gave an action anyway (the compare
+    /// couldn't tell which side is newer, so only that choice decides).
+    pub chosen_unknown: Vec<WarnedItem>,
+    /// How many such rows there are in all.
+    pub chosen_unknown_total: u64,
     /// Kept items go to another volume (a copy, then a removal).
     pub keep_is_slow: bool,
 }
@@ -377,6 +381,38 @@ pub struct RunItemWire {
     pub result: RunItemResult,
 }
 
+/// An accepted row a guard held back at run time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct HeldRowWire {
+    /// The row.
+    pub item: u32,
+    /// The guard that holds it.
+    pub block: GuardBlock,
+}
+
+/// A folder a run made for copies that didn't land.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct EmptyFolderWire {
+    /// The side it is on.
+    pub side: Side,
+    /// The folder.
+    pub path: String,
+}
+
+/// A dated folder a run made and couldn't remove again.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct LeftoverFolderWire {
+    /// Which volume it is on: the side's, or the local disk (a custom versions folder).
+    pub place: Place,
+    /// The side whose items it was made for.
+    pub side: Side,
+    /// The folder.
+    pub path: String,
+}
+
 /// How a run ended, for the result screen.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -391,7 +427,8 @@ pub struct RunReportWire {
     pub could_not_do: u64,
     /// Old files kept whose new copy didn't land: the place is empty.
     pub kept_not_replaced: u64,
-    /// Removals held by a guard or by a copy that didn't land.
+    /// Rows held by a guard (`held_by_guard`), plus removals held because a copy
+    /// beside them didn't land (`HeldAfterFailedCopy` in `items`).
     pub held: u64,
     /// Rows the run never reached.
     pub not_started: u64,
@@ -401,8 +438,17 @@ pub struct RunReportWire {
     pub kept_bytes: u64,
     /// The engine operations the run started (the queue window and undo know them).
     pub operation_ids: Vec<String>,
-    /// Every row of the run and its end, for "Show in grid".
+    /// Every row the run reached and its end, for "Show in grid".
     pub items: Vec<RunItemWire>,
+    /// Accepted rows a guard held back (copies and replacements too, not only
+    /// removals), each with the guard: they never reached the run.
+    pub held_by_guard: Vec<HeldRowWire>,
+    /// Target folders the run made for copies that then didn't land: empty,
+    /// and they stay (the run never removes anything).
+    pub empty_folders: Vec<EmptyFolderWire>,
+    /// Dated folders the run made, kept nothing in, and couldn't remove again:
+    /// they stay.
+    pub leftover_folders: Vec<LeftoverFolderWire>,
     /// Cancelled, or the engine stopped.
     pub stopped: bool,
 }

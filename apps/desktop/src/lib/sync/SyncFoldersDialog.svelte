@@ -352,6 +352,7 @@
             bind:this={profilesControl}
             {profiles}
             loadedId={loadedProfileId}
+            disabled={run.phase !== 'idle'}
             source={() => ({
                 left: session.roots.left.root,
                 right: session.roots.right.root,

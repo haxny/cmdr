@@ -15,7 +15,7 @@ const DEFAULTS = {
   guards: { maxRemovePercent: 50, maxRemoveCount: 0, sentinel: null },
 }
 
-function setup() {
+function setup(opts: { now?: () => number } = {}) {
   let finished: ((p: SyncRunFinished) => void) | undefined
   const ipc: SyncRunIpc = {
     getSyncConfirm: vi.fn(() =>
@@ -52,7 +52,7 @@ function setup() {
     compare: vi.fn(() => Promise.resolve()),
     refresh: vi.fn(),
   }
-  const run = createSyncRun({ ipc, session, readDefaults: () => DEFAULTS })
+  const run = createSyncRun({ ipc, session, readDefaults: () => DEFAULTS, now: opts.now })
   return { run, ipc, session, finish: (p: SyncRunFinished) => finished?.(p) }
 }
 
@@ -161,6 +161,88 @@ describe('sync run', () => {
     await run.accept()
     expect(run.phase).toBe('finished')
     expect(run.report).not.toBeNull()
+  })
+
+  it('a group no button releases is never ticked and can’t be ticked', async () => {
+    const { run, ipc } = setup()
+    vi.mocked(ipc.getSyncConfirm).mockResolvedValueOnce(
+      preview({
+        groups: [
+          { key: 'copyLeft', files: 2, bytes: 20, keep: null },
+          { key: 'removeLeft', files: 1, bytes: 5, keep: { type: 'trash' } },
+        ],
+        blocks: [{ type: 'emptyRoot', side: 'right' }],
+      }),
+    )
+    await run.openConfirm()
+    expect(run.accepted).toEqual(['copyLeft'])
+    run.toggleGroup('removeLeft')
+    expect(run.accepted).toEqual(['copyLeft'])
+  })
+
+  it('Show in grid reaches the rows a guard held too', async () => {
+    const { run, finish } = setup()
+    await run.open()
+    await run.openConfirm()
+    await run.accept()
+    finish({
+      sessionId: 's1',
+      report: report({ heldByGuard: [{ item: 9, block: { type: 'emptyRoot', side: 'right' } }] }),
+    })
+    expect(run.notDone).toEqual([9])
+  })
+
+  it('the ETA leaves out the time the run sat paused', async () => {
+    let now = 0
+    const { run, ipc } = setup({ now: () => now })
+    let progress: ((p: SyncRunProgress) => void) | undefined
+    vi.mocked(ipc.onSyncRunProgress).mockImplementation((h) => {
+      progress = h
+      return Promise.resolve(() => {})
+    })
+    await run.open()
+    await run.openConfirm()
+    await run.accept()
+    now = 10_000
+    await run.setPaused(true)
+    now = 110_000
+    await run.setPaused(false)
+    progress?.({
+      sessionId: 's1',
+      progress: { stepsDone: 1, stepsTotal: 2, itemsDone: 1, itemsTotal: 2, bytesDone: 50, bytesTotal: 100 },
+    })
+    // 10 s running for half the bytes: 10 s left, whatever the 100 s paused.
+    expect(run.etaSeconds).toBe(10)
+  })
+
+  it('a pause says it waits for the step under way until that step ends', async () => {
+    const { run, ipc } = setup()
+    let progress: ((p: SyncRunProgress) => void) | undefined
+    vi.mocked(ipc.onSyncRunProgress).mockImplementation((h) => {
+      progress = h
+      return Promise.resolve(() => {})
+    })
+    await run.open()
+    await run.openConfirm()
+    await run.accept()
+    await run.setPaused(true)
+    expect(run.pausing).toBe(true)
+    progress?.({
+      sessionId: 's1',
+      progress: { stepsDone: 1, stepsTotal: 2, itemsDone: 1, itemsTotal: 2, bytesDone: 50, bytesTotal: 100 },
+    })
+    expect(run.pausing).toBe(false)
+    expect(run.phase).toBe('paused')
+  })
+
+  it('cancel says it is stopping and asks only once', async () => {
+    const { run, ipc } = setup()
+    await run.openConfirm()
+    await run.accept()
+    await run.cancel()
+    expect(run.cancelling).toBe(true)
+    await run.cancel()
+    expect(ipc.cancelSyncRun).toHaveBeenCalledOnce()
   })
 
   it('pause asks the backend and says it lands between steps', async () => {

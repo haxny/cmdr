@@ -245,6 +245,7 @@ fn clash_type_clash_and_unreadable_rows_are_not_comparable() {
 
 #[test]
 fn chosen_unknown_counts_only_question_rows_given_an_action() {
+    let chosen = |plan: &Plan| plan.items.iter().filter(|item| is_chosen_unknown(item)).count();
     let left = Tree::new()
         .entry("unk", EntryKind::File, Some(1), None)
         .entry("left-alone", EntryKind::File, Some(1), None)
@@ -253,7 +254,7 @@ fn chosen_unknown_counts_only_question_rows_given_an_action() {
         .entry("unk", EntryKind::File, None, None)
         .entry("left-alone", EntryKind::File, None, None);
     let plan = plan_of(Mode::Mirror, left, right);
-    assert_eq!(chosen_unknown(&plan), 0, "a `?` row waits for a choice");
+    assert_eq!(chosen(&plan), 0, "a `?` row waits for a choice");
     let plan = apply_overrides(
         &plan,
         &[ActionChange {
@@ -262,5 +263,5 @@ fn chosen_unknown_counts_only_question_rows_given_an_action() {
         }],
     )
     .unwrap();
-    assert_eq!(chosen_unknown(&plan), 1, "the one you chose, not the new copy");
+    assert_eq!(chosen(&plan), 1, "the one you chose, not the new copy");
 }

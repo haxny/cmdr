@@ -7,7 +7,7 @@ import { fakeSyncIpc, profile, settle } from './sync-test-fixtures'
 import { DEFAULT_SHOW_FILTERS, NO_OVERRIDES, defaultSyncOptions } from './sync-options'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-async function mountControl() {
+async function mountControl(disabled = false) {
   const fake = fakeSyncIpc()
   fake.profiles.push(
     { type: 'valid', profile: profile('p1', 'Photos') },
@@ -29,11 +29,12 @@ async function mountControl() {
         overrides: { ...NO_OVERRIDES },
       }),
       onLoad: vi.fn(),
+      disabled,
     },
   })
   await settle()
   await tick()
-  return { target, control: control as unknown as { toggleMenu: () => void } }
+  return { target, control: control as unknown as { toggleMenu: () => void; openSave: () => void } }
 }
 
 describe('SyncProfilesControl a11y', () => {
@@ -50,5 +51,16 @@ describe('SyncProfilesControl a11y', () => {
     const menu = target.ownerDocument.querySelector('[role="menu"]')
     expect(menu?.textContent).toContain('Old backup: this version of Cmdr can’t read it')
     await expectNoA11yViolations(target.ownerDocument.body)
+  })
+
+  it('while a run or its confirm is up, the button is off and F2 and ⌘S do nothing', async () => {
+    const { target, control } = await mountControl(true)
+    expect(target.querySelector('button')?.disabled).toBe(true)
+    control.toggleMenu()
+    control.openSave()
+    await settle()
+    await tick()
+    expect(target.ownerDocument.querySelector('[role="menu"]')).toBeNull()
+    expect(target.ownerDocument.querySelector('[role="dialog"]')).toBeNull()
   })
 })

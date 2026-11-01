@@ -145,4 +145,63 @@ describe('SyncConfirmDialog', () => {
     expect(doc.body.textContent).toContain('Remove anyway')
     expect(doc.body.textContent).toContain('Replaced and removed files go to the Trash.')
   })
+
+  it('names the `?` rows you gave an action, with both dates', async () => {
+    const shown = preview({
+      groups: [{ key: 'copyRight', files: 1, bytes: 20, keep: null }],
+      chosenUnknown: [{ item: 2, relPath: 'notes/draft.txt', leftMtime: null, rightMtime: null }],
+      chosenUnknownTotal: 1,
+    })
+    const { doc } = await mountConfirm(shown)
+    const unknown = doc.querySelector('.unknown')
+    expect(unknown?.textContent).toContain('1 row marked ?')
+    expect(unknown?.querySelector('li')?.textContent).toBe('notes/draft.txt: left no date, right no date')
+  })
+
+  it('while a ticked group waits for its second yes, Synchronize is off and says how many files wait', async () => {
+    const shown = preview({
+      groups: [
+        { key: 'copyRight', files: 2, bytes: 20, keep: null },
+        { key: 'removeRight', files: 61, bytes: 61, keep: { type: 'trash' } },
+      ],
+      blocks: [{ type: 'maxRemove', side: 'right', removals: 61, targetFiles: 100 }],
+    })
+    const { doc, fake } = await mountConfirm(shown)
+    const button = [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Synchronize')
+    expect(button?.getAttribute('aria-disabled')).toBe('true')
+    expect(doc.querySelector('.status')?.textContent).toBe(
+      '61 files wait for Remove anyway. Tick it, or untick that group.',
+    )
+    button?.click()
+    await settle()
+    expect(fake.ipc.startSyncRun).not.toHaveBeenCalled()
+    const ack = [...doc.querySelectorAll<HTMLElement>('.blocks [role="checkbox"], .blocks input[type="checkbox"]')]
+    ack[0]?.click()
+    await settle()
+    await tick()
+    expect(button?.getAttribute('aria-disabled')).toBeNull()
+  })
+
+  it('a group no button releases is shown held, with why, and Synchronize says nothing can run', async () => {
+    const shown = preview({
+      groups: [{ key: 'copyLeft', files: 3, bytes: 30, keep: null }],
+      blocks: [{ type: 'sentinelMissing', side: 'right' }],
+    })
+    const { doc, run } = await mountConfirm(shown)
+    expect(run.accepted).toEqual([])
+    const box = doc.querySelector<HTMLInputElement>('.groups input[type="checkbox"]')
+    expect(box?.disabled).toBe(true)
+    const reason = doc.getElementById(box?.getAttribute('aria-describedby')?.split(' ').at(-1) ?? '')
+    expect(reason?.textContent).toContain('The check file Settings names is missing on the right')
+    const button = [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Synchronize')
+    expect(button?.getAttribute('aria-disabled')).toBe('true')
+    expect(doc.querySelector('.status')?.textContent).toBe('Nothing here can run: a guard holds every group.')
+  })
+
+  it('opens with focus on the first group', async () => {
+    const { doc } = await mountConfirm(MIRROR)
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    const first = doc.querySelector('.groups input[type="checkbox"]')
+    expect(doc.activeElement).toBe(first)
+  })
 })

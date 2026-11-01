@@ -21,6 +21,8 @@ import {
   type SyncRunFinished,
   type SyncRunProgress,
 } from '#lib/tauri-commands/sync.js'
+import { isHardHeld } from './confirm-rules'
+import { notDoneItems } from './run-result'
 import type { SyncProblem } from './sync-session.svelte'
 
 const log = getAppLogger('sync')
@@ -73,11 +75,18 @@ class SyncRunState {
   report = $state.raw<RunReportWire | null>(null)
   /** A pause asked for lands between steps: the run says so until it does. */
   pauseRequested = $state(false)
+  /** A step ended since the pause was asked for, so the run is truly resting. */
+  private pauseLanded = $state(false)
+  /** Cancel was asked for: the run stops after the step under way. */
+  cancelling = $state(false)
   /** The confirm is fetching or the run is starting: the buttons wait. */
   busy = $state(false)
 
   private shownWith: SyncDefaults | null = null
   private startedAt = 0
+  /** Milliseconds spent paused before the current pause, and when that one began. */
+  private pausedMs = 0
+  private pausedSince: number | null = null
   private unlisten: UnlistenFn[] = []
   private closed = false
   /** `startSyncRun` is on its way: the run's events already count. */
@@ -113,7 +122,7 @@ class SyncRunState {
     if (this.phase !== 'idle' || this.busy) return
     this.notice = null
     this.acknowledged = []
-    if (await this.fetchPreview()) this.accepted = this.preview?.groups.map((group) => group.key) ?? []
+    if (await this.fetchPreview()) this.accepted = this.releasable(this.preview?.groups.map((group) => group.key) ?? [])
   }
 
   /** Reads the preview with the Settings as they are now; `false` (with `problem` set) when it can't. */
@@ -136,7 +145,18 @@ class SyncRunState {
     }
   }
 
+  /** `keys` without the groups no button releases (shown held, never ticked). */
+  private releasable(keys: ConfirmGroupKey[]): ConfirmGroupKey[] {
+    const preview = this.preview
+    return preview ? keys.filter((key) => !isHardHeld(preview, key)) : keys
+  }
+
+  private get clock(): () => number {
+    return this.deps.now ?? Date.now
+  }
+
   toggleGroup(key: ConfirmGroupKey): void {
+    if (this.preview && isHardHeld(this.preview, key)) return
     this.accepted = this.accepted.includes(key) ? this.accepted.filter((each) => each !== key) : [...this.accepted, key]
   }
 
@@ -173,10 +193,14 @@ class SyncRunState {
     }
     this.busy = true
     this.problem = null
-    this.startedAt = (this.deps.now ?? Date.now)()
+    this.startedAt = this.clock()
+    this.pausedMs = 0
+    this.pausedSince = null
     this.progress = null
     this.report = null
     this.pauseRequested = false
+    this.pauseLanded = false
+    this.cancelling = false
     // The backend spawns the run, so its progress and even its report can arrive before this call answers.
     this.starting = true
     try {
@@ -204,7 +228,7 @@ class SyncRunState {
       if (await this.fetchPreview()) {
         // Keep the person's ticks for the groups that are still there.
         const keys = this.preview?.groups.map((group) => group.key) ?? []
-        this.accepted = keys.filter((key) => accepted.includes(key))
+        this.accepted = this.releasable(keys.filter((key) => accepted.includes(key)))
         this.acknowledged = []
         this.notice = 'planChanged'
       }
@@ -230,26 +254,42 @@ class SyncRunState {
     try {
       await this.deps.ipc.setSyncRunPaused(id, paused)
       this.pauseRequested = paused
+      this.pauseLanded = false
       this.phase = paused ? 'paused' : 'running'
+      if (paused) this.pausedSince ??= this.clock()
+      else if (this.pausedSince !== null) {
+        this.pausedMs += this.clock() - this.pausedSince
+        this.pausedSince = null
+      }
     } catch (error) {
       this.problem = problemOf(error, 'pausing the run')
     }
   }
 
+  /** Stops after the step under way; until the report lands the panel says it's stopping. */
   async cancel(): Promise<void> {
     const id = this.sessionId
-    if (id === null || (this.phase !== 'running' && this.phase !== 'paused')) return
+    if (id === null || this.cancelling || (this.phase !== 'running' && this.phase !== 'paused')) return
+    this.cancelling = true
     try {
       await this.deps.ipc.cancelSyncRun(id)
     } catch (error) {
+      this.cancelling = false
       this.problem = problemOf(error, 'stopping the run')
     }
+  }
+
+  /** Paused, but the step under way hasn't ended yet. */
+  get pausing(): boolean {
+    return this.phase === 'paused' && !this.pauseLanded
   }
 
   private onProgress(payload: SyncRunProgress): void {
     if (payload.sessionId !== this.sessionId) return
     if (!this.starting && this.phase !== 'running' && this.phase !== 'paused') return
     this.progress = payload.progress
+    // Progress comes after each step: one that ends while paused is the last before the rest.
+    if (this.phase === 'paused') this.pauseLanded = true
   }
 
   private onFinished(payload: SyncRunFinished): void {
@@ -259,6 +299,7 @@ class SyncRunState {
     this.phase = 'finished'
     this.preview = null
     this.pauseRequested = false
+    this.cancelling = false
     // The folders changed: the summary now says the compare is stale.
     this.deps.session.refresh()
   }
@@ -267,14 +308,14 @@ class SyncRunState {
   get etaSeconds(): number | null {
     const progress = this.progress
     if (!progress || progress.bytesDone <= 0 || this.phase !== 'running') return null
-    const elapsed = ((this.deps.now ?? Date.now)() - this.startedAt) / 1000
+    const elapsed = (this.clock() - this.startedAt - this.pausedMs) / 1000
     if (elapsed <= 0) return null
     return Math.max(0, Math.round(((progress.bytesTotal - progress.bytesDone) * elapsed) / progress.bytesDone))
   }
 
   /** Plan indices of the rows that didn't end done, for "Show in grid". */
   get notDone(): number[] {
-    return (this.report?.items ?? []).filter((item) => item.result !== 'done').map((item) => item.item)
+    return this.report ? notDoneItems(this.report) : []
   }
 
   /** Leaves the result and compares again; `keepGrid` leaves the stale grid up instead (Show in grid). */
