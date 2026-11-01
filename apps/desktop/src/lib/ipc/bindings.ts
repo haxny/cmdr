@@ -1647,6 +1647,73 @@ export const commands = {
   saveMultiRenameLastSettings: (spec: MultiRenameSpec, presetId: string | null) =>
     __TAURI_INVOKE<void>('save_multi_rename_last_settings', { spec, presetId }),
   /**
+   *  The saved profiles in the person's order. A profile that can't be used is listed
+   *  with why, never dropped.
+   */
+  getSyncProfiles: () => __TAURI_INVOKE<ProfileEntry[]>('get_sync_profiles'),
+  /**
+   *  Saves a profile at the end of the list; one with the same name (trimmed, any case) is
+   *  replaced where it stands. Answers the list after, or why nothing was saved.
+   */
+  saveSyncProfile: (profile: SyncProfile) =>
+    typedError<ProfileEntry[], ProfileSaveRefusal>(__TAURI_INVOKE('save_sync_profile', { profile })),
+  // Deletes a profile by id. No-op when it isn't there. Answers the list after.
+  deleteSyncProfile: (id: string) => __TAURI_INVOKE<ProfileEntry[]>('delete_sync_profile', { id }),
+  /**
+   *  Renames a profile in place; another profile with that name is replaced. No-op for an
+   *  unknown id or an empty name. Answers the list after.
+   */
+  renameSyncProfile: (id: string, name: string) => __TAURI_INVOKE<ProfileEntry[]>('rename_sync_profile', { id, name }),
+  /**
+   *  Swaps a profile with its neighbor. No-op at that end of the list or for an unknown id.
+   *  Answers the list after.
+   */
+  moveSyncProfile: (id: string, direction: ProfileMove) =>
+    __TAURI_INVOKE<ProfileEntry[]>('move_sync_profile', { id, direction }),
+  // The options the dialog last ran with for this ordered pair of roots.
+  getSyncLastOptions: (left: RootRef, right: RootRef) =>
+    __TAURI_INVOKE<{
+      // How the sides should end up.
+      mode: Mode
+      // What decides that two files differ.
+      compareBy: CompareBy
+      // Descend into folders.
+      subfolders: boolean
+      // Only the selected entries of each pane.
+      onlySelected: boolean
+      // Leave modification times out of the decision.
+      ignoreDate: boolean
+      // Keep folders with nothing admitted inside.
+      emptyFolders: boolean
+      // TC sync masks.
+      masks: string
+      // The editable exclude list.
+      excludes: string[]
+    } | null>('get_sync_last_options', { left, right }),
+  // Remembers the dialog's options for this pair of roots (the newest 50 pairs are kept).
+  saveSyncLastOptions: (left: RootRef, right: RootRef, options: SyncOptions) =>
+    __TAURI_INVOKE<void>('save_sync_last_options', { left, right, options }),
+  /**
+   *  Whether the versions folder these settings name can be used, so Settings can say so
+   *  next to the field. `None` is fine. A custom folder inside a synchronized folder is
+   *  only known to be wrong once a run has roots.
+   */
+  checkSyncKeepPolicy: (policy: KeepPolicy) =>
+    __TAURI_INVOKE<
+      // Trash only, and the volume has no Trash.
+      | 'noTrash'
+      // The path would leave its folder (`..`, an absolute or empty part).
+      | 'escapesFolder'
+      /**
+       *  The custom folder isn't an absolute path or has an unknown or unclosed
+       *  placeholder, or a target-root folder isn't under `.cmdr-sync/`.
+       */
+      | 'badTemplate'
+      // The custom folder lies inside one of the folders being synchronized.
+      | 'insideSyncFolder'
+      | null
+    >('check_sync_keep_policy', { policy }),
+  /**
    *  Starts (or, when `restart` is set, restarts) the tag session of a Multi-Rename session. The
    *  read may take as long as files keep being read; once none was for `SESSION_IO_TIMEOUT` (a
    *  stalled share) it's given up as `ReadTimedOut`.
@@ -7611,6 +7678,15 @@ export type CommitCountPass =
   // Nothing to count: the listing is gone, or every row already has its count.
   | { type: 'nothingToCount' }
 
+// What decides that two files differ.
+export type CompareBy =
+  // Size and modification time.
+  | 'dateAndSize'
+  // Size only.
+  | 'sizeOnly'
+  // Size, then the bytes of equal-size pairs.
+  | 'content'
+
 // Why a comparison didn't answer. Typed, so the frontend never reads a message.
 export type CompareDirectoriesError =
   // A pane's listing is no longer cached (its pane moved on).
@@ -10366,6 +10442,16 @@ export type GoToPathResolution =
   // Defensive: the input was empty or couldn't be turned into a path.
   | { kind: 'invalid'; reason: string }
 
+// The guard settings of a run.
+export type GuardSettings = {
+  // Removals on a side above this percentage of its files block.
+  maxRemovePercent: number
+  // Removals on a side above this count block; 0 turns it off.
+  maxRemoveCount: number
+  // A file name that must exist in both roots, against unmounted paths.
+  sentinel: string | null
+}
+
 // The ids the add form fills "User ID", "Group ID", and "Other group IDs" with.
 export type GuessedNfsIdentity = {
   // The user id.
@@ -11047,6 +11133,37 @@ export type ItemKinds = {
  *  reached — exactly what a rollback needs.
  */
 export type ItemOutcome = 'done' | 'skipped' | 'failed' | 'rolledBack'
+
+// Whether kept items go to the Trash or the versions folder.
+export type KeepPlace =
+  // The Trash where the volume has one, else the versions folder.
+  | 'trashElseVersions'
+  // Always the versions folder.
+  | 'versionsAlways'
+  // The Trash only; on a volume without one, those rows are skipped.
+  | 'trashOnly'
+
+// How a run keeps what it replaces or removes. Nothing is ever deleted.
+export type KeepPolicy = {
+  // Trash or versions folder.
+  place: KeepPlace
+  // Where the versions folder is.
+  location: VersionsLocation
+}
+
+// Why an item can't be kept, so it is left alone.
+export type KeepRefusal =
+  // Trash only, and the volume has no Trash.
+  | 'noTrash'
+  // The path would leave its folder (`..`, an absolute or empty part).
+  | 'escapesFolder'
+  /**
+   *  The custom folder isn't an absolute path or has an unknown or unclosed
+   *  placeholder, or a target-root folder isn't under `.cmdr-sync/`.
+   */
+  | 'badTemplate'
+  // The custom folder lies inside one of the folders being synchronized.
+  | 'insideSyncFolder'
 
 // What a [`LeftoversKeptEvent`] kept.
 export type KeptLeftover =
@@ -13203,6 +13320,20 @@ export type MissToken =
   // The user stopped the turn while the place was being read.
   | 'cancelled'
 
+// How the two sides should end up. Left is the source in `Update` and `Mirror`.
+export type Mode =
+  // Show the differences, do nothing by default.
+  | 'compareOnly'
+  // Copy missing and newer files both ways; never removes.
+  | 'bothWays'
+  // Copy missing and newer files left to right; never removes.
+  | 'update'
+  /**
+   *  Make the right side a copy of the left: copies, replaces, and removes on
+   *  the right.
+   */
+  | 'mirror'
+
 /**
  *  What the chat-memory setting needs to warn honestly: the model the next turn would use,
  *  and the context window we believe it has.
@@ -15222,6 +15353,88 @@ export type PreviewRow = {
   edited: boolean
 }
 
+// One row of the profile list: a profile that works, or one shown greyed with why.
+export type ProfileEntry =
+  // Usable.
+  | {
+      type: 'valid'
+      // The profile (boxed: it is far larger than the greyed variant).
+      profile: SyncProfile
+    }
+  // Kept in the file but not usable until the person fixes it.
+  | {
+      type: 'invalid'
+      // Its id.
+      id: string
+      // Its name, as stored.
+      name: string
+      // What is wrong.
+      problem: ProfileProblem
+    }
+
+// Which way Move up / Move down takes a profile.
+export type ProfileMove = 'up' | 'down'
+
+/**
+ *  What a profile sets for itself. `None` follows Settings, so a change there
+ *  reaches every profile that didn't override it.
+ */
+export type ProfileOverrides = {
+  // Where replaced and removed files go.
+  keep: KeepPolicy | null
+  // Times this close count as equal, in seconds.
+  timeToleranceSecs: number | null
+  // Treat an exact one-hour difference as equal.
+  ignoreHourShift: boolean | null
+  // Seconds added to the right side's time (a remote clock's skew); never inherited.
+  timeOffsetSecs: number
+  // The removal guards.
+  guards: GuardSettings | null
+}
+
+// Why a profile can't be used as it is.
+export type ProfileProblem =
+  // The name is empty.
+  | { type: 'emptyName' }
+  // The masks or the exclude list don't parse.
+  | {
+      type: 'badMask'
+      // What is wrong and where.
+      error: SyncMaskError
+    }
+  // The tolerance override is above the limit.
+  | {
+      type: 'toleranceOutOfRange'
+      // The value asked for.
+      secs: number
+    }
+  // The removal percentage override is outside 1 to 100.
+  | {
+      type: 'percentOutOfRange'
+      // The value asked for.
+      percent: number
+    }
+  /**
+   *  The stored profile doesn't read as a profile (a newer build's value, or a
+   *  damaged entry). Kept as it is, shown greyed, never dropped.
+   */
+  | { type: 'unreadable' }
+
+// Why a save didn't change the list.
+export type ProfileSaveRefusal =
+  // The list holds `max` profiles already, and this name is a new one.
+  | {
+      type: 'listFull'
+      // The limit.
+      max: number
+    }
+  // The profile fails validation.
+  | {
+      type: 'invalid'
+      // What is wrong.
+      problem: ProfileProblem
+    }
+
 /**
  *  What an operation had done at the moment it stopped, so the copy can say how
  *  far it got rather than only that it stopped.
@@ -16464,6 +16677,17 @@ export type RootChangeKind =
    *  old root keeps its place under the new one.
    */
   | 'moved'
+
+/**
+ *  One side of a profile: a volume and a path on it. For a remote volume the id is
+ *  the saved connection's; never a credential.
+ */
+export type RootRef = {
+  // The volume's id.
+  volumeId: string
+  // The folder, `/`-separated.
+  path: string
+}
 
 // Which side of a named row to read: the one before it or the one after it.
 export type RowBeside =
@@ -18554,6 +18778,26 @@ export type SharedValue =
   // The files differ, or only some have the field.
   | 'multiple'
 
+// The show-filter toggles (TC's set plus `?` and warnings).
+export type ShowFilters = {
+  // `→` rows.
+  toRight: boolean
+  // `=` rows (off by default).
+  equal: boolean
+  // `≠` rows: skipped rows that differ.
+  different: boolean
+  // `←` rows, removals on either side included.
+  toLeft: boolean
+  // Rows with both sides present.
+  duplicates: boolean
+  // Rows with one side present.
+  singles: boolean
+  // `?` rows.
+  unknown: boolean
+  // Only rows that carry a warning.
+  warningsOnly: boolean
+}
+
 /**
  *  `show-search-result-in-folder`: a snapshot context-menu click. The primary
  *  right-clicked path travels with the event so the frontend never rereads a
@@ -19210,6 +19454,8 @@ export type StateFile =
   | 'multi_rename_presets'
   // Saved Tags window F4 Replace lists.
   | 'tag_replace_presets'
+  // `sync-profiles.json`: saved Synchronize folders profiles.
+  | 'sync_profiles'
   // The multi-rename dialog's last settings.
   | 'multi_rename_last_settings'
   // The multi-rename dialog's per-field history.
@@ -19510,6 +19756,71 @@ export type SuggestionsChanged = {
    */
   groupId: number | null
   reason: SuggestionChange
+}
+
+/**
+ *  Why a mask list can't be used. (Named for the feature: Multi-Rename has a `MaskError` of its own
+ *  and both reach the one bindings file.) `position` counts characters of the text
+ *  that held the problem (for an entry of the exclude list, its index).
+ */
+export type SyncMaskError =
+  // A mask with nothing in it: `""`, or a `|` with nothing after it.
+  | {
+      type: 'emptyMask'
+      // Where the empty mask sits.
+      position: number
+    }
+  // A `"` that never closes.
+  | {
+      type: 'unclosedQuote'
+      // Where the quote opens.
+      position: number
+    }
+  // More than one `|`.
+  | {
+      type: 'secondBar'
+      // Where the second bar sits.
+      position: number
+    }
+
+// What the dialog's options say; remembered per profile and per pair of roots.
+export type SyncOptions = {
+  // How the sides should end up.
+  mode: Mode
+  // What decides that two files differ.
+  compareBy: CompareBy
+  // Descend into folders.
+  subfolders: boolean
+  // Only the selected entries of each pane.
+  onlySelected: boolean
+  // Leave modification times out of the decision.
+  ignoreDate: boolean
+  // Keep folders with nothing admitted inside.
+  emptyFolders: boolean
+  // TC sync masks.
+  masks: string
+  // The editable exclude list.
+  excludes: string[]
+}
+
+// A saved profile: two roots, the dialog's options, and what it overrides.
+export type SyncProfile = {
+  // Stable id.
+  id: string
+  // The name the person gave it; unique ignoring case and outer spaces.
+  name: string
+  // The left folder.
+  left: RootRef
+  // The right folder.
+  right: RootRef
+  // The dialog's options.
+  options: SyncOptions
+  // The show-filters the profile was saved with.
+  showFilters: ShowFilters
+  // Open with `show_filters` instead of the default filters.
+  restoreShowFilters: boolean
+  // What this profile sets for itself.
+  overrides: ProfileOverrides
 }
 
 // Sync status for a file in a cloud-synced folder (Dropbox, iCloud, etc.).
@@ -21216,6 +21527,26 @@ export type VerifyResult = {
   // The original short code, if the input was a short code.
   shortCode: string | null
 }
+
+// Where the versions folder lives.
+export type VersionsLocation =
+  // Inside the target root, at this relative path.
+  | ({
+      targetRoot: {
+        // A relative path, `/`-separated.
+        folderName: string
+      }
+    } & { custom?: never })
+  /**
+   *  One folder on the local disk for every sync: an absolute path that may
+   *  hold `{root}`, `{profile}`, and `{date}`.
+   */
+  | ({
+      custom: {
+        // The path template.
+        template: string
+      }
+    } & { targetRoot?: never })
 
 /**
  *  `view-mode-changed`: a per-pane view-mode CheckMenuItem (Full / Brief)
