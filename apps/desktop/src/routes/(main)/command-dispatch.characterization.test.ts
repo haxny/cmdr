@@ -230,9 +230,9 @@ describe('characterization — id partition self-check', () => {
   })
 
   // haxny fork: upstream's 150 (v0.58.0, with `pane.quickFilter`) plus the fork's `file.editTags`, plus
-  // `sync.openDialog` (Synchronize folders, ⇧F12).
-  it('dispatchable set is exactly 152 ids', () => {
-    expect(DISPATCHABLE_IDS).toHaveLength(152)
+  // `sync.openDialog` (Synchronize folders, ⇧F12) and `sync.openProfiles` (its profiles, from the palette).
+  it('dispatchable set is exactly 153 ids', () => {
+    expect(DISPATCHABLE_IDS).toHaveLength(153)
   })
 
   it('dispatchable ∪ exempt = COMMAND_IDS, disjoint', () => {

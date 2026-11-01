@@ -1656,5 +1656,9 @@
   "commands.handler.viewDebugLog.unavailable": "Couldn’t open the debug log. Try again.",
   "@commands.handler.viewDebugLog.unavailable": {
     "description": "Toast after the View debug log action cannot get the log path or open the internal viewer window. No diagnostic details or placeholders. Suggest retrying."
+  },
+  "commands.syncOpenProfiles.label": "Synchronize folders: profiles…",
+  "@commands.syncOpenProfiles.label": {
+    "description": "Command name in the command palette: opens the Synchronize folders dialog on the two panes’ folders with its Profiles menu open, to load a saved pair of folders. The ellipsis says a menu follows."
   }
 }

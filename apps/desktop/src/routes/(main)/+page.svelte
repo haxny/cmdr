@@ -18,6 +18,7 @@
     import SelectionDialog from '#lib/selection-dialog/SelectionDialog.svelte'
     import MultiRenameDialog from '#lib/multi-rename/MultiRenameDialog.svelte'
     import SyncFoldersDialog from '#lib/sync/SyncFoldersDialog.svelte'
+    import type { ShowFolder } from '#lib/sync/sync-run-view.js'
     import type { SyncRoots } from '#lib/sync/pane-roots.js'
     import type { MultiRenameRun } from '#lib/multi-rename/last-run.svelte.js'
     import { closeMultiRename as endMultiRenameSession, openMultiRename as openMultiRenameSession } from '#lib/tauri-commands/index.js'
@@ -156,6 +157,7 @@
     let showSelectionDialog = $state<'add' | 'remove' | null>(null)
     let multiRenameSession = $state.raw<MultiRenameOpened | null>(null)
     let syncRoots = $state.raw<SyncRoots | null>(null)
+    let syncOpenProfiles = $state(false)
     let openingMultiRename = false
     const multiRenameLog = getAppLogger('multiRename')
     let selectionDialogSnapshot = $state.raw<{
@@ -715,7 +717,8 @@
             showMultiRename: () => {
                 void openMultiRename()
             },
-            showSyncFolders: () => {
+            showSyncFolders: (options?: { profiles?: boolean }) => {
+                if (!syncRoots) syncOpenProfiles = options?.profiles ?? false
                 syncRoots ??= explorerRef?.getSyncRoots() ?? null
                 if (!syncRoots) addToast(tString('sync.dialog.needsTwoFolders'), { level: 'info' })
             },
@@ -874,7 +877,14 @@
         </DialogBoundary>
 
         <DialogBoundary name="syncFolders" onClose={() => (syncRoots = null)}>
-            {#if syncRoots}<SyncFoldersDialog roots={syncRoots} onClose={() => (syncRoots = null)} />{/if}
+            {#if syncRoots}<SyncFoldersDialog
+                    roots={syncRoots}
+                    openProfiles={syncOpenProfiles}
+                    onClose={() => (syncRoots = null)}
+                    onShowFolder={({ pane, volumeId, path }: ShowFolder) => {
+                        explorerRef?.navigate({ pane, to: { goTo: { volumeId, path } }, source: 'user' })
+                    }}
+                />{/if}
         </DialogBoundary>
 
         <DialogBoundary name="selection" onClose={handleSelectionDialogClose}>

@@ -1379,5 +1379,9 @@
   "commands.handler.viewDebugLog.unavailable": "Không mở được nhật ký gỡ lỗi. Hãy thử lại.",
   "@commands.handler.viewDebugLog.unavailable": {
     "sourceHash": "794a5b3"
+  },
+  "commands.syncOpenProfiles.label": "Synchronize folders: profiles…",
+  "@commands.syncOpenProfiles.label": {
+    "sourceHash": "0d69ae6"
   }
 }

@@ -38,6 +38,10 @@ export interface SyncGridControllerDeps {
     close: () => void
     confirm: () => void
     openRowMenu: () => void
+    /** F2: the Profiles menu. */
+    profiles: () => void
+    /** ⌘S: save as profile. */
+    saveProfile: () => void
   }
   now?: () => number
 }
@@ -92,12 +96,23 @@ export class SyncGridController {
     else this.session.selected.add(item)
   }
 
+  /**
+   * Selects the item rows `from..to`. Rows load page by page, so a view that changes halfway (a filter, a new
+   * compare) would mix rows of two views: the range is dropped then, and the notice says so.
+   */
   private async selectRange(from: number, to: number): Promise<void> {
     const [start, end] = from <= to ? [from, to] : [to, from]
+    const version = this.session.viewVersionNow
+    const items: number[] = []
     for (let index = start; index <= end; index++) {
       const row = await this.session.rowAt(index)
-      if (row?.type === 'item') this.session.selected.add(row.index)
+      if (this.session.viewVersionNow !== version) {
+        this.notice = tString('sync.dialog.selectRangeChanged')
+        return
+      }
+      if (row?.type === 'item') items.push(row.index)
     }
+    for (const item of items) this.session.selected.add(item)
   }
 
   /** ⇧↑ / ⇧↓: extend the selection over the rows the cursor passes. */
@@ -126,8 +141,10 @@ export class SyncGridController {
         this.deps.dialog.openRowMenu()
         return
       case 'profiles':
+        this.deps.dialog.profiles()
+        return
       case 'saveProfile':
-        // Profiles arrive with the profiles menu (F2, ⌘S); until then the keys do nothing.
+        this.deps.dialog.saveProfile()
         return
       case 'filter':
         this.toggleFilter(action.filter)

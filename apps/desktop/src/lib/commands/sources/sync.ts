@@ -17,4 +17,14 @@ export const syncCommands: CommandSource[] = [
     descriptionKey: 'commands.syncOpenDialog.description',
     keywords: ['compare folders', 'mirror folders', 'backup folders', 'sync directories'],
   },
+  {
+    // The dialog on the panes' folders with its Profiles menu open. No key: inside the dialog F2 opens the menu.
+    id: 'sync.openProfiles',
+    nameKey: 'commands.syncOpenProfiles.label',
+    scope: 'Main window',
+    showInPalette: true,
+    shortcuts: [],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    keywords: ['sync profile', 'synclet', 'saved folder pair'],
+  },
 ]

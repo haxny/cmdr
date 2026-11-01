@@ -98,5 +98,9 @@
   "commands.syncOpenDialog.label": "Synchronise folders…",
   "@commands.syncOpenDialog.label": {
     "sourceHash": "6afcd31"
+  },
+  "commands.syncOpenProfiles.label": "Synchronise folders: profiles…",
+  "@commands.syncOpenProfiles.label": {
+    "sourceHash": "0d69ae6"
   }
 }

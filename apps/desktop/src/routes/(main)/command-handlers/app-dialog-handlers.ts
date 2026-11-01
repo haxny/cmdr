@@ -33,6 +33,10 @@ export const appDialogHandlers = {
     ctx.dialogs.showSyncFolders()
   },
 
+  'sync.openProfiles': ({ ctx }) => {
+    ctx.dialogs.showSyncFolders({ profiles: true })
+  },
+
   'search.open': ({ ctx }) => {
     ctx.dialogs.showSearchDialog(true)
   },

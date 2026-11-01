@@ -4,6 +4,17 @@
  */
 import {
   cancelSyncCompare,
+  cancelSyncRun,
+  deleteSyncProfile,
+  getSyncConfirm,
+  getSyncProfiles,
+  moveSyncProfile,
+  onSyncRunFinished,
+  onSyncRunProgress,
+  renameSyncProfile,
+  saveSyncProfile,
+  setSyncRunPaused,
+  startSyncRun,
   closeSyncSession,
   compareSyncItemContent,
   findSyncRow,
@@ -22,8 +33,13 @@ import {
 import { getSetting } from '#lib/settings/settings-store.js'
 import { keepPolicyFromSettings } from '#lib/settings/sync-keep-policy.js'
 import type { SyncIpc } from './sync-session.svelte'
+import type { SyncRunIpc } from './sync-run.svelte'
+import type { SyncProfilesIpc } from './profiles.svelte'
 
-export const syncIpc: SyncIpc = {
+/** Everything the dialog asks of the backend: the compare session, the run, and the profiles. */
+export type SyncDialogIpc = SyncIpc & SyncRunIpc & SyncProfilesIpc
+
+export const syncIpc: SyncDialogIpc = {
   startSyncCompare,
   setSyncComparePaused,
   cancelSyncCompare,
@@ -38,6 +54,17 @@ export const syncIpc: SyncIpc = {
   onSyncCompareProgress,
   onSyncCompareFinished,
   onSyncRowsChanged,
+  getSyncConfirm,
+  startSyncRun,
+  setSyncRunPaused,
+  cancelSyncRun,
+  onSyncRunProgress,
+  onSyncRunFinished,
+  getSyncProfiles,
+  saveSyncProfile,
+  deleteSyncProfile,
+  renameSyncProfile,
+  moveSyncProfile,
 }
 
 /** The Settings values a compare starts from. The sentinel file is a profile override only. */

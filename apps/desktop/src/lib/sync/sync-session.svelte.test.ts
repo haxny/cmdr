@@ -354,4 +354,125 @@ describe('createSyncSession', () => {
     await settle()
     expect(s.state?.summary.changedByYou).toBe(1)
   })
+
+  it('a second compare while the first one has no session yet waits for it, so one session holds both', async () => {
+    const h = harness()
+    let answerFirst: () => void = () => {}
+    vi.mocked(h.ipc.startSyncCompare)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            answerFirst = () => {
+              resolve({ sessionId: 's1', generation: 1 })
+            }
+          }),
+      )
+      .mockImplementationOnce(() => Promise.resolve({ sessionId: 's1', generation: 2 }))
+    const s = session(h)
+    const first = s.compare()
+    const second = s.compare()
+    await settle()
+    expect(h.ipc.startSyncCompare).toHaveBeenCalledOnce()
+    answerFirst()
+    await first
+    await second
+    expect(vi.mocked(h.ipc.startSyncCompare).mock.calls[1][0].sessionId).toBe('s1')
+  })
+
+  it('a superseded compare’s refusal never shows', async () => {
+    const h = harness()
+    const s = await opened(h)
+    let refuseOlder: () => void = () => {}
+    vi.mocked(h.ipc.startSyncCompare)
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            refuseOlder = () => {
+              reject(new SyncCommandFailure({ type: 'compareRunning' }))
+            }
+          }),
+      )
+      .mockImplementationOnce(() => Promise.resolve({ sessionId: 's1', generation: 3 }))
+    const older = s.compare()
+    await s.compare()
+    refuseOlder()
+    await older
+    expect(s.phase).toBe('comparing')
+    expect(s.error).toBeNull()
+  })
+
+  it('a session that answers after the dialog closed is closed too', async () => {
+    const h = harness()
+    let answer: () => void = () => {}
+    vi.mocked(h.ipc.startSyncCompare).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = () => {
+            resolve({ sessionId: 'late', generation: 1 })
+          }
+        }),
+    )
+    const s = session(h)
+    const compare = s.compare()
+    await s.close()
+    answer()
+    await compare
+    expect(h.ipc.closeSyncSession).toHaveBeenCalledWith('late')
+  })
+
+  it('a loaded profile sets the roots, options, overrides, and its name, and shows its filters only when asked', async () => {
+    const h = harness()
+    const s = await opened(h)
+    const overrides = { keep: null, timeToleranceSecs: 4, ignoreHourShift: null, timeOffsetSecs: 0, guards: null }
+    const options = { ...s.options, mode: 'mirror' as const }
+    await s.useProfile({
+      id: 'p1',
+      name: 'Photos',
+      left: { volumeId: 'root', path: '/p' },
+      right: { volumeId: 'nas', path: '/q' },
+      options,
+      showFilters: null,
+      overrides,
+    })
+    const request = vi.mocked(h.ipc.startSyncCompare).mock.calls.at(-1)?.[0]
+    expect(request?.left).toEqual({ root: { volumeId: 'root', path: '/p' }, selection: null })
+    expect(request?.right.root).toEqual({ volumeId: 'nas', path: '/q' })
+    expect(request?.options.mode).toBe('mirror')
+    expect(request?.overrides).toEqual(overrides)
+    expect(request?.profileName).toBe('Photos')
+    expect(s.profileName).toBe('Photos')
+    expect(s.filters).toEqual(DEFAULT_SHOW_FILTERS)
+    await s.useProfile({
+      id: 'p1',
+      name: 'Photos',
+      left: { volumeId: 'root', path: '/p' },
+      right: { volumeId: 'nas', path: '/q' },
+      options,
+      showFilters: { ...DEFAULT_SHOW_FILTERS, equal: true },
+      overrides,
+    })
+    expect(s.filters.equal).toBe(true)
+  })
+
+  it('a profile whose volume is gone says so, and the pane’s own folder can stand in', async () => {
+    const h = harness()
+    const s = await opened(h)
+    vi.mocked(h.ipc.startSyncCompare).mockRejectedValueOnce(
+      new SyncCommandFailure({ type: 'volumeNotConnected', side: 'right', volumeId: 'nas' }),
+    )
+    await s.useProfile({
+      id: 'p1',
+      name: 'Photos',
+      left: { volumeId: 'root', path: '/p' },
+      right: { volumeId: 'nas', path: '/q' },
+      options: s.options,
+      showFilters: null,
+      overrides: { keep: null, timeToleranceSecs: null, ignoreHourShift: null, timeOffsetSecs: 0, guards: null },
+    })
+    expect(s.error).toEqual({ type: 'volumeNotConnected', side: 'right', volumeId: 'nas' })
+    await s.usePaneFolder('right')
+    const request = vi.mocked(h.ipc.startSyncCompare).mock.calls.at(-1)?.[0]
+    expect(request?.right.root).toEqual(ROOTS.right.root)
+    expect(request?.left.root).toEqual({ volumeId: 'root', path: '/p' })
+  })
 })

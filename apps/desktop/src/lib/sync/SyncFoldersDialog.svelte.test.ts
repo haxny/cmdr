@@ -7,7 +7,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount, tick, unmount } from 'svelte'
 import SyncFoldersDialog from './SyncFoldersDialog.svelte'
 import * as syncIpcModule from './sync-ipc'
-import { ROOTS, STATE, settle, type FakeSyncIpc } from './sync-test-fixtures'
+import { ROOTS, STATE, preview, profile, report, settle, type FakeSyncIpc } from './sync-test-fixtures'
+import { SyncCommandFailure } from '#lib/tauri-commands/sync.js'
 import { runMenuClaim } from '#lib/commands/menu-claims.js'
 import { openFileViewer } from '#lib/file-viewer/open-viewer.js'
 
@@ -248,5 +249,109 @@ describe('SyncFoldersDialog', () => {
     again?.click()
     await settle()
     expect(fake.ipc.startSyncCompare).toHaveBeenCalledTimes(2)
+  })
+
+  it('⌘↩ opens the confirm; its accept runs, the result shows, and Compare again compares', async () => {
+    const { target } = await compared()
+    const doc = target.ownerDocument
+    vi.mocked(fake.ipc.getSyncConfirm).mockResolvedValueOnce(
+      preview({ groups: [{ key: 'copyRight', files: 2, bytes: 20, keep: null }] }),
+    )
+    press(grid(target), { key: 'Enter', metaKey: true })
+    await settle()
+    await tick()
+    expect(fake.ipc.getSyncConfirm).toHaveBeenCalledWith('s1', expect.any(Object), expect.any(Object))
+    const confirm = doc.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="sync-confirm-title"]')
+    expect(confirm).not.toBeNull()
+    confirm?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+    await settle()
+    await tick()
+    expect(fake.ipc.startSyncRun).toHaveBeenCalledOnce()
+    expect(doc.body.textContent).toContain('Synchronizing…')
+    // While it runs, the grid's menu claims rest: ⌘I does nothing to the rows.
+    expect(runMenuClaim('file.getInfo')).toBe(true)
+    expect(fake.ipc.setSyncActions).not.toHaveBeenCalled()
+    fake.runFinished(report({ done: 2 }))
+    await settle()
+    await tick()
+    expect(doc.body.textContent).toContain('2 rows done')
+    const again = [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Compare again')
+    again?.click()
+    await settle()
+    expect(fake.ipc.startSyncCompare).toHaveBeenCalledTimes(2)
+  })
+
+  it('Show in grid goes back to the list with the rows that didn’t run selected', async () => {
+    const { target } = await compared()
+    const doc = target.ownerDocument
+    vi.mocked(fake.ipc.getSyncConfirm).mockResolvedValueOnce(
+      preview({ groups: [{ key: 'copyRight', files: 2, bytes: 20, keep: null }] }),
+    )
+    press(grid(target), { key: 'Enter', metaKey: true })
+    await settle()
+    await tick()
+    ;[...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Synchronize')?.click()
+    await settle()
+    fake.runFinished(
+      report({
+        items: [
+          { item: 0, result: 'done' },
+          { item: 3, result: 'couldNotDo' },
+        ],
+      }),
+    )
+    await settle()
+    await tick()
+    ;[...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Show in grid')?.click()
+    await settle()
+    await tick()
+    expect(doc.querySelector('.status')?.textContent).toBe(
+      '1 row that didn’t run is selected. Compare again to see the folders as they are now.',
+    )
+    expect(rowEl(target, 4).getAttribute('aria-label')).toMatch(/, selected$/)
+    expect(fake.ipc.startSyncCompare).toHaveBeenCalledOnce()
+  })
+
+  it('releases its menu claims when it unmounts, and a row claim declines outside the grid', async () => {
+    const { target } = await compared()
+    target.ownerDocument.querySelector<HTMLInputElement>('input')?.focus()
+    expect(runMenuClaim('file.getInfo')).toBe(false)
+    expect(fake.ipc.setSyncActions).not.toHaveBeenCalled()
+    // F2 (File > Rename) is claimed wherever focus is: the dialog's profiles menu takes it.
+    expect(runMenuClaim('file.rename')).toBe(true)
+    if (component) void unmount(component)
+    component = null
+    await settle()
+    expect(runMenuClaim('file.getInfo')).toBe(false)
+    expect(runMenuClaim('file.rename')).toBe(false)
+  })
+
+  it('F2 opens the profiles; a profile whose volume is gone says so, and the pane’s folder can stand in', async () => {
+    fake.profiles.splice(0, fake.profiles.length, { type: 'valid', profile: profile('p1', 'Photos') })
+    const { target } = await compared()
+    const doc = target.ownerDocument
+    press(grid(target), { key: 'F2' })
+    await settle()
+    await tick()
+    const item = [...doc.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((el) =>
+      el.textContent.includes('Photos'),
+    )
+    expect(item).toBeDefined()
+    vi.mocked(fake.ipc.startSyncCompare).mockRejectedValueOnce(
+      new SyncCommandFailure({ type: 'volumeNotConnected', side: 'right', volumeId: 'backup' }),
+    )
+    item?.click()
+    await settle()
+    await tick()
+    const request = vi.mocked(fake.ipc.startSyncCompare).mock.calls.at(-1)?.[0]
+    expect(request?.right.root).toEqual({ volumeId: 'backup', path: '/Volumes/Backup/Photos' })
+    expect(request?.profileName).toBe('Photos')
+    expect(doc.querySelector('.problem')?.textContent).toContain('right')
+    const usePane = [...doc.querySelectorAll('button')].find(
+      (b) => b.textContent.trim() === 'Use the right pane’s folder',
+    )
+    usePane?.click()
+    await settle()
+    expect(vi.mocked(fake.ipc.startSyncCompare).mock.calls.at(-1)?.[0].right.root).toEqual(ROOTS.right.root)
   })
 })

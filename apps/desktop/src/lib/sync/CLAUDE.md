@@ -10,6 +10,8 @@
 - `sync-keys.ts` (what a key means), `sync-grid-controller.svelte.ts` (what it does), `sync-row-menu.ts`.
 - `row-label.ts` (words for a row), `action-refusal.ts`, `sync-errors.ts` (`SyncError` in words), `pane-roots.ts`,
   `sync-row-files.ts` (F3/F4 paths), `sync-menu-claims.ts`, `sync-options.ts` (defaults mirrored from `cmdr-sync`).
+- `sync-run.svelte.ts` (confirm → run → result) with `SyncConfirmDialog`, `SyncRunPanel`, `confirm-rules.ts`,
+  `run-result.ts`; `profiles.svelte.ts` (F2) with `SyncProfilesControl`, `sync-profile-menu.ts`.
 
 ## Must-knows
 
@@ -27,6 +29,10 @@
   while open (`sync-menu-claims.ts`), double fires dropped. ⌘M is Minimize, unclaimable: skip is ⌘N.
 - **Never colour alone.** Every row has an accessible name in words (`rowAccessibleName`, via `ColumnList`'s
   `rowLabel`); arrows, icons, and marks repeat it.
+- **Nothing runs without the confirm.** `accept()` sends the preview's `revision` and the Settings it was shown with;
+  `planChanged` re-shows the confirm with why, `staleCompare` offers Compare again. ❌ Never retry a run unseen.
+- **Enter accepts only `enterMayConfirm`** (no removal, no older-over-newer, no second yes needed); else the button.
+- **Pause and Cancel land between steps**, and the panel says so. While the confirm or run is up, menu claims swallow.
 - **Esc stops a running compare first, then closes.** Closing remembers the options for the pair and closes the session;
   a write that didn't land says so.
 - **Keys match whole combos** and read letters off `code` (⌥ composes). Row keys only count on the grid, so the options'

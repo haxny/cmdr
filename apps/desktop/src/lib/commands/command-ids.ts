@@ -229,6 +229,7 @@ export const COMMAND_IDS = [
   'multiRename.rename',
   // Synchronize folders (⇧F12)
   'sync.openDialog',
+  'sync.openProfiles',
   'file.view',
   'file.edit',
   'file.copy',

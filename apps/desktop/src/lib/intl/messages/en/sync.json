@@ -910,5 +910,546 @@
   "sync.error.unexpected": "Something went wrong. Try again, and if it keeps happening, send an error report from the Help menu.",
   "@sync.error.unexpected": {
     "description": "Message in the Synchronize folders dialog when an unclassified problem. Never say \"error\" or \"failed\"."
+  },
+  "sync.confirm.title": "Synchronize these changes?",
+  "@sync.confirm.title": {
+    "description": "Synchronize folders confirm (before anything is written): title of the confirmation that lists everything the synchronization will copy, replace, or remove. Nothing is written until the person presses Synchronize here."
+  },
+  "sync.confirm.groupsLabel": "Changes to run",
+  "@sync.confirm.groupsLabel": {
+    "description": "Synchronize folders confirm (before anything is written): accessible name of the list of change groups; each group has a checkbox, and unticking one leaves that whole group out of the run (like Total Commander and Krusader)."
+  },
+  "sync.confirm.group.copyRight": "Copy to the right: {filesText} new {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.copyRight": {
+    "description": "Synchronize folders confirm (before anything is written): checkbox label of the group of new files and folders copied to the right side (nothing is replaced there).",
+    "placeholders": {
+      "filesText": "how many files, formatted",
+      "files": "the same number, for the plural form",
+      "size": "their total size, formatted (for example \"3.4 MB\")"
+    }
+  },
+  "sync.confirm.group.replaceRight": "Replace on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.replaceRight": {
+    "description": "Synchronize folders confirm (before anything is written): checkbox label of the group of files on the right side that are replaced by the other side’s newer or different copy. The replaced files are kept (Trash or versions folder), never deleted.",
+    "placeholders": {
+      "filesText": "how many files, formatted",
+      "files": "the same number, for the plural form",
+      "size": "their total size, formatted (for example \"3.4 MB\")"
+    }
+  },
+  "sync.confirm.group.removeRight": "Remove on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.removeRight": {
+    "description": "Synchronize folders confirm (before anything is written): checkbox label of the group of files removed on the right side (Mirror mode). Removed files go to the Trash or the versions folder, never deleted for good.",
+    "placeholders": {
+      "filesText": "how many files, formatted",
+      "files": "the same number, for the plural form",
+      "size": "their total size, formatted (for example \"3.4 MB\")"
+    }
+  },
+  "sync.confirm.group.copyLeft": "Copy to the left: {filesText} new {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.copyLeft": {
+    "description": "Synchronize folders confirm (before anything is written): checkbox label of the group of new files and folders copied to the left side (nothing is replaced there).",
+    "placeholders": {
+      "filesText": "how many files, formatted",
+      "files": "the same number, for the plural form",
+      "size": "their total size, formatted (for example \"3.4 MB\")"
+    }
+  },
+  "sync.confirm.group.replaceLeft": "Replace on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.replaceLeft": {
+    "description": "Synchronize folders confirm (before anything is written): checkbox label of the group of files on the left side that are replaced by the other side’s newer or different copy. The replaced files are kept (Trash or versions folder), never deleted.",
+    "placeholders": {
+      "filesText": "how many files, formatted",
+      "files": "the same number, for the plural form",
+      "size": "their total size, formatted (for example \"3.4 MB\")"
+    }
+  },
+  "sync.confirm.group.removeLeft": "Remove on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.removeLeft": {
+    "description": "Synchronize folders confirm (before anything is written): checkbox label of the group of files removed on the left side (Mirror mode). Removed files go to the Trash or the versions folder, never deleted for good.",
+    "placeholders": {
+      "filesText": "how many files, formatted",
+      "files": "the same number, for the plural form",
+      "size": "their total size, formatted (for example \"3.4 MB\")"
+    }
+  },
+  "sync.confirm.group.copyRightRecreates": "Copy to the right instead of removing on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.copyRightRecreates": {
+    "description": "Synchronize folders confirm (before anything is written): checkbox label of the group of files the mode would have removed on the left side, which the person turned around so they are copied back to the right instead.",
+    "placeholders": {
+      "filesText": "how many files, formatted",
+      "files": "the same number, for the plural form",
+      "size": "their total size, formatted (for example \"3.4 MB\")"
+    }
+  },
+  "sync.confirm.group.copyLeftRecreates": "Copy to the left instead of removing on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.copyLeftRecreates": {
+    "description": "Synchronize folders confirm (before anything is written): checkbox label of the group of files the mode would have removed on the right side, which the person turned around so they are copied back to the left instead.",
+    "placeholders": {
+      "filesText": "how many files, formatted",
+      "files": "the same number, for the plural form",
+      "size": "their total size, formatted (for example \"3.4 MB\")"
+    }
+  },
+  "sync.confirm.keepTrash": "Replaced and removed files go to the Trash.",
+  "@sync.confirm.keepTrash": {
+    "description": "Synchronize folders confirm (before anything is written): line under a replace or remove group: where the files it replaces or removes end up. \"Trash\" is the macOS Trash."
+  },
+  "sync.confirm.keepFolder": "Replaced and removed files go to the versions folder {path}.",
+  "@sync.confirm.keepFolder": {
+    "description": "Synchronize folders confirm (before anything is written): line under a replace or remove group: the files it replaces or removes are moved to this folder (a dated \"versions\" folder), never deleted.",
+    "placeholders": {
+      "path": "the folder path, do not translate"
+    }
+  },
+  "sync.confirm.keepSlow": "This is slower: they move across drives.",
+  "@sync.confirm.keepSlow": {
+    "description": "Synchronize folders confirm (before anything is written): added after the versions-folder line when that folder is on another drive than the files, so each file is copied there and then removed from its place."
+  },
+  "sync.confirm.olderTitle": "Older replaces newer: {countText} {count, plural, one {file} other {files}}",
+  "@sync.confirm.olderTitle": {
+    "description": "Synchronize folders confirm (before anything is written): heading of the warning group listed FIRST: files whose copy on the side being written is NEWER than the copy that replaces it (Mirror makes the target match the source even so). Enter can’t accept the confirm while these run.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.confirm.olderBody": "Each of these files is newer than the copy that replaces it. The newer one is kept in the Trash or the versions folder, but check them before you synchronize.",
+  "@sync.confirm.olderBody": {
+    "description": "Synchronize folders confirm (before anything is written): explanation under the \"Older replaces newer\" heading."
+  },
+  "sync.confirm.olderRow": "{path}: left {leftDate}, right {rightDate}",
+  "@sync.confirm.olderRow": {
+    "description": "Synchronize folders confirm (before anything is written): one row of the \"Older replaces newer\" list: the file and its modification date on each side.",
+    "placeholders": {
+      "path": "the file path from the synchronized folder, do not translate",
+      "leftDate": "date and time on the left, formatted",
+      "rightDate": "date and time on the right, formatted"
+    }
+  },
+  "sync.confirm.noDate": "no date",
+  "@sync.confirm.noDate": {
+    "description": "Synchronize folders confirm (before anything is written): stands in for a date in an \"Older replaces newer\" row when that side has no modification time."
+  },
+  "sync.confirm.olderMore": "…and {countText} more",
+  "@sync.confirm.olderMore": {
+    "description": "Synchronize folders confirm (before anything is written): last line of the \"Older replaces newer\" list when not every file is listed.",
+    "placeholders": {
+      "countText": "how many files aren’t listed, formatted"
+    }
+  },
+  "sync.confirm.chosenUnknown": "You chose an action for {countText} {count, plural, one {row} other {rows}} marked ?, where the compare couldn’t tell which side is newer.",
+  "@sync.confirm.chosenUnknown": {
+    "description": "Synchronize folders confirm (before anything is written): note about rows in the \"?\" (undecided) category that the person gave an action anyway, so nothing but that choice decides which side wins. \"?\" is the grid’s symbol, keep it.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.confirm.hiddenActions": "{countText} hidden {count, plural, one {action} other {actions}} run too: the show-filters hide those rows, but they still synchronize.",
+  "@sync.confirm.hiddenActions": {
+    "description": "Synchronize folders confirm (before anything is written): note: hiding a row in the grid never changes its action, so rows the filters hide still run.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.confirm.skewAhead": "On most files, times on the right run {offset} ahead of the left. If that’s a clock difference, give the profile a time offset.",
+  "@sync.confirm.skewAhead": {
+    "description": "Synchronize folders confirm (before anything is written): note when nearly every file pair differs by the same amount of time, which usually means one computer’s clock is off.",
+    "placeholders": {
+      "offset": "a duration, formatted (for example \"1h\")"
+    }
+  },
+  "sync.confirm.skewBehind": "On most files, times on the right run {offset} behind the left. If that’s a clock difference, give the profile a time offset.",
+  "@sync.confirm.skewBehind": {
+    "description": "Synchronize folders confirm (before anything is written): note when nearly every file pair differs by the same amount of time, which usually means one computer’s clock is off.",
+    "placeholders": {
+      "offset": "a duration, formatted (for example \"1h\")"
+    }
+  },
+  "sync.confirm.maxRemoveRight": "This removes {removalsText} of {targetText} {target, plural, one {file} other {files}} on the right, more than the limit in Settings allows. Those removals wait for Remove anyway.",
+  "@sync.confirm.maxRemoveRight": {
+    "description": "Synchronize folders confirm (before anything is written): guard that holds removals back on the right side because they pass the limit set in Settings. \"Remove anyway\" is the checkbox beside it.",
+    "placeholders": {
+      "removalsText": "files the run would remove, formatted",
+      "targetText": "files on the right side, formatted",
+      "target": "the same number, for the plural form"
+    }
+  },
+  "sync.confirm.emptyRootRight": "The right folder is empty, so nothing beside it is removed: it may be a drive that isn’t connected.",
+  "@sync.confirm.emptyRootRight": {
+    "description": "Synchronize folders confirm (before anything is written): guard: the right folder listed empty, which is how an unmounted drive looks. Removals are always held then; no button releases them."
+  },
+  "sync.confirm.sentinelRight": "The check file Settings names is missing on the right, so nothing runs. It guards against a drive that isn’t connected.",
+  "@sync.confirm.sentinelRight": {
+    "description": "Synchronize folders confirm (before anything is written): hard guard: the profile names a file that must exist in both folders, and it isn’t there on that side."
+  },
+  "sync.confirm.maxRemoveLeft": "This removes {removalsText} of {targetText} {target, plural, one {file} other {files}} on the left, more than the limit in Settings allows. Those removals wait for Remove anyway.",
+  "@sync.confirm.maxRemoveLeft": {
+    "description": "Synchronize folders confirm (before anything is written): guard that holds removals back on the left side because they pass the limit set in Settings. \"Remove anyway\" is the checkbox beside it.",
+    "placeholders": {
+      "removalsText": "files the run would remove, formatted",
+      "targetText": "files on the left side, formatted",
+      "target": "the same number, for the plural form"
+    }
+  },
+  "sync.confirm.emptyRootLeft": "The left folder is empty, so nothing beside it is removed: it may be a drive that isn’t connected.",
+  "@sync.confirm.emptyRootLeft": {
+    "description": "Synchronize folders confirm (before anything is written): guard: the left folder listed empty, which is how an unmounted drive looks. Removals are always held then; no button releases them."
+  },
+  "sync.confirm.sentinelLeft": "The check file Settings names is missing on the left, so nothing runs. It guards against a drive that isn’t connected.",
+  "@sync.confirm.sentinelLeft": {
+    "description": "Synchronize folders confirm (before anything is written): hard guard: the profile names a file that must exist in both folders, and it isn’t there on that side."
+  },
+  "sync.confirm.emptyRootCopies": "Copies into it wait for Copy anyway.",
+  "@sync.confirm.emptyRootCopies": {
+    "description": "Synchronize folders confirm (before anything is written): added after the empty-folder guard when the run would copy files into that empty folder: they need the \"Copy anyway\" checkbox."
+  },
+  "sync.confirm.removeAnyway": "Remove anyway",
+  "@sync.confirm.removeAnyway": {
+    "description": "Synchronize folders confirm (before anything is written): checkbox that releases removals held back by the removal limit. A second yes, on purpose."
+  },
+  "sync.confirm.copyAnyway": "Copy anyway",
+  "@sync.confirm.copyAnyway": {
+    "description": "Synchronize folders confirm (before anything is written): checkbox that releases copies into a folder that listed empty (it might be a drive that isn’t connected)."
+  },
+  "sync.confirm.planChanged": "The list changed since this confirmation opened. Check it again, then synchronize.",
+  "@sync.confirm.planChanged": {
+    "description": "Synchronize folders confirm (before anything is written): notice when the plan changed (an action, a content compare, or a setting) between showing the confirmation and pressing Synchronize; the confirmation now shows the new plan and nothing ran."
+  },
+  "sync.confirm.staleCompare": "A synchronization already changed these folders. Compare again before you synchronize.",
+  "@sync.confirm.staleCompare": {
+    "description": "Synchronize folders confirm (before anything is written): notice when a synchronization ran since this comparison, so the list no longer matches the disk. It has a \"Compare again\" button."
+  },
+  "sync.confirm.enterRefused": "Press Synchronize to run this: it removes files, replaces newer ones, or needs a second yes.",
+  "@sync.confirm.enterRefused": {
+    "description": "Synchronize folders confirm (before anything is written): said when the person presses Enter on a confirmation that Enter can’t accept; only the Synchronize button runs it then."
+  },
+  "sync.confirm.nothingTicked": "Tick at least one group to synchronize.",
+  "@sync.confirm.nothingTicked": {
+    "description": "Synchronize folders confirm (before anything is written): said when every group is unticked and the person presses Synchronize."
+  },
+  "sync.confirm.nothing": "Nothing to synchronize: no row copies or removes anything.",
+  "@sync.confirm.nothing": {
+    "description": "Synchronize folders confirm (before anything is written): shown instead of the groups when the plan has no action at all."
+  },
+  "sync.confirm.cancel": "Cancel",
+  "@sync.confirm.cancel": {
+    "description": "Synchronize folders confirm (before anything is written): button that closes the confirmation and goes back to the list without writing anything."
+  },
+  "sync.confirm.run": "Synchronize",
+  "@sync.confirm.run": {
+    "description": "Synchronize folders confirm (before anything is written): the button that starts the synchronization. Required (Enter isn’t enough) when anything is removed or a newer file is replaced."
+  },
+  "sync.run.title": "Synchronizing…",
+  "@sync.run.title": {
+    "description": "Synchronize folders, while a synchronization runs: heading above the progress bar."
+  },
+  "sync.run.progress": "{doneText} of {totalText} {total, plural, one {item} other {items}}, {bytesDone} of {bytesTotal}",
+  "@sync.run.progress": {
+    "description": "Synchronize folders, while a synchronization runs: the totals so far. An item is a file or a whole folder the run copies, replaces, or removes.",
+    "placeholders": {
+      "doneText": "items done, formatted",
+      "totalText": "items in the run, formatted",
+      "total": "the same number, for the plural form",
+      "bytesDone": "size done, formatted",
+      "bytesTotal": "total size, formatted"
+    }
+  },
+  "sync.run.eta": "About {duration} left",
+  "@sync.run.eta": {
+    "description": "Synchronize folders, while a synchronization runs: estimated time left, from the speed so far.",
+    "placeholders": {
+      "duration": "a duration, formatted (for example \"2m 10s\")"
+    }
+  },
+  "sync.run.progressLabel": "Synchronization progress",
+  "@sync.run.progressLabel": {
+    "description": "Synchronize folders, while a synchronization runs: accessible name of the progress bar."
+  },
+  "sync.run.betweenSteps": "Pause and Cancel take effect between steps: the copy or move under way finishes first.",
+  "@sync.run.betweenSteps": {
+    "description": "Synchronize folders, while a synchronization runs: honest note: the run checks for pause and cancel only between its steps (each step is one batch of copies, moves, or removals)."
+  },
+  "sync.run.paused": "Paused. Nothing new starts until you resume; the step that was running finishes first.",
+  "@sync.run.paused": {
+    "description": "Synchronize folders, while a synchronization runs: status while paused."
+  },
+  "sync.run.pause": "Pause",
+  "@sync.run.pause": {
+    "description": "Synchronize folders, while a synchronization runs: button that pauses the synchronization after the step under way."
+  },
+  "sync.run.resume": "Resume",
+  "@sync.run.resume": {
+    "description": "Synchronize folders, while a synchronization runs: button that continues a paused synchronization."
+  },
+  "sync.run.cancel": "Cancel",
+  "@sync.run.cancel": {
+    "description": "Synchronize folders, while a synchronization runs: button that stops the synchronization after the step under way. Files it set aside go back."
+  },
+  "sync.result.title": "Synchronization finished",
+  "@sync.result.title": {
+    "description": "Synchronize folders result screen, after a synchronization ended: heading."
+  },
+  "sync.result.titleStopped": "Synchronization stopped",
+  "@sync.result.titleStopped": {
+    "description": "Synchronize folders result screen, after a synchronization ended: heading when the person cancelled or the copy engine stopped before every row ran."
+  },
+  "sync.result.done": "{countText} {count, plural, one {row} other {rows}} done",
+  "@sync.result.done": {
+    "description": "Synchronize folders result screen, after a synchronization ended: rows of the list the run carried out.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.result.changedSinceCompare": "{countText} left alone: changed since the compare",
+  "@sync.result.changedSinceCompare": {
+    "description": "Synchronize folders result screen, after a synchronization ended: rows skipped because a file they read or replace changed after the comparison; nothing was overwritten.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.result.noTrash": "{countText} left alone: that drive has no Trash, and Settings keeps replaced files only in the Trash",
+  "@sync.result.noTrash": {
+    "description": "Synchronize folders result screen, after a synchronization ended: rows skipped because the keep setting is \"Trash only\" and the drive has none.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.result.couldNotDo": "{countText} couldn’t be done, and nothing was lost",
+  "@sync.result.couldNotDo": {
+    "description": "Synchronize folders result screen, after a synchronization ended: rows the copy engine couldn’t carry out (or whose versions folder couldn’t be made); every file is where it was.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.result.versionsSpotTaken": "{countText} left alone: something already sits where the old file would be kept",
+  "@sync.result.versionsSpotTaken": {
+    "description": "Synchronize folders result screen, after a synchronization ended: rows skipped because the versions folder already holds an item of that name.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.result.versionsFolderUnsafe": "{countText} left alone: the way to the versions folder runs through a link or a file",
+  "@sync.result.versionsFolderUnsafe": {
+    "description": "Synchronize folders result screen, after a synchronization ended: rows skipped because the path to the versions folder isn’t a plain folder.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.result.keptNotReplaced": "{countText} kept but not replaced: the old file is in the Trash or the versions folder, and its place is empty",
+  "@sync.result.keptNotReplaced": {
+    "description": "Synchronize folders result screen, after a synchronization ended: rows where the old file was set aside but the new copy didn’t land and the old one couldn’t go back.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.result.heldAfterFailedCopy": "{countText} {count, plural, one {removal} other {removals}} held because a copy beside {count, plural, one {it} other {them}} didn’t land",
+  "@sync.result.heldAfterFailedCopy": {
+    "description": "Synchronize folders result screen, after a synchronization ended: removals not done because a copy into the same folder didn’t land (a rename in Mirror is a copy plus a removal).",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.result.heldByGuard": "{countText} {count, plural, one {removal} other {removals}} held by a guard",
+  "@sync.result.heldByGuard": {
+    "description": "Synchronize folders result screen, after a synchronization ended: removals a safety guard held back (removal limit or empty folder).",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.result.notStarted": "{countText} not reached before the run stopped",
+  "@sync.result.notStarted": {
+    "description": "Synchronize folders result screen, after a synchronization ended: rows the run never got to.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.result.versionsFolder": "Replaced and removed files ({size}) are in {path}",
+  "@sync.result.versionsFolder": {
+    "description": "Synchronize folders result screen, after a synchronization ended: where the versions folder of this run is.",
+    "placeholders": {
+      "size": "their total size, formatted",
+      "path": "the folder path, do not translate"
+    }
+  },
+  "sync.result.showInCmdr": "Show in Cmdr",
+  "@sync.result.showInCmdr": {
+    "description": "Synchronize folders result screen, after a synchronization ended: button that closes the dialog and opens the versions folder in a pane. \"Cmdr\" is the app name, do not translate."
+  },
+  "sync.result.showInGrid": "Show in grid",
+  "@sync.result.showInGrid": {
+    "description": "Synchronize folders result screen, after a synchronization ended: button that goes back to the list with the rows that didn’t run selected, so the person can see which they are."
+  },
+  "sync.result.compareAgain": "Compare again",
+  "@sync.result.compareAgain": {
+    "description": "Synchronize folders result screen, after a synchronization ended: button that leaves the result and compares the folders again; after a full run every synchronized row should come back equal."
+  },
+  "sync.result.notRunSelected": "{countText} {count, plural, one {row} other {rows}} that didn’t run {count, plural, one {is} other {are}} selected. Compare again to see the folders as they are now.",
+  "@sync.result.notRunSelected": {
+    "description": "Synchronize folders result screen, after a synchronization ended: status after \"Show in grid\": the list is the one from before the run, with the rows that didn’t run selected.",
+    "placeholders": {
+      "countText": "the number, formatted",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.profiles.title": "Profiles",
+  "@sync.profiles.title": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): button that opens the list of saved profiles. A profile is two folders plus the options to synchronize them with."
+  },
+  "sync.profiles.tooltip": "Saved pairs of folders and their options",
+  "@sync.profiles.tooltip": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): tooltip of the Profiles button."
+  },
+  "sync.profiles.saved": "Saved profiles",
+  "@sync.profiles.saved": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): heading above the saved profiles, numbered 1 to 9."
+  },
+  "sync.profiles.saveAs": "Save as profile…",
+  "@sync.profiles.saveAs": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): menu item (Cmd+S) that saves both folders and the options as a profile. The ellipsis says a name field follows."
+  },
+  "sync.profiles.rename": "Rename…",
+  "@sync.profiles.rename": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): submenu item of a profile: rename it."
+  },
+  "sync.profiles.moveUp": "Move up",
+  "@sync.profiles.moveUp": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): submenu item of a profile: move it one place up the list."
+  },
+  "sync.profiles.moveDown": "Move down",
+  "@sync.profiles.moveDown": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): submenu item of a profile: move it one place down the list."
+  },
+  "sync.profiles.delete": "Delete",
+  "@sync.profiles.delete": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): submenu item of a profile: delete the profile (only the saved settings; no files are touched)."
+  },
+  "sync.profiles.invalidRow": "{name}: {problem}",
+  "@sync.profiles.invalidRow": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): a profile this build can’t use, shown greyed with why.",
+    "placeholders": {
+      "name": "the profile’s name, as saved",
+      "problem": "why it can’t be used (one of the sync.profiles.problem.* texts)"
+    }
+  },
+  "sync.profiles.problem.emptyName": "it has no name",
+  "@sync.profiles.problem.emptyName": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): why a saved profile can’t be used, after its name and a colon (lowercase start on purpose)."
+  },
+  "sync.profiles.problem.badMask": "its masks don’t parse",
+  "@sync.profiles.problem.badMask": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): why a saved profile can’t be used, after its name and a colon (lowercase start on purpose)."
+  },
+  "sync.profiles.problem.toleranceOutOfRange": "its time tolerance is out of range",
+  "@sync.profiles.problem.toleranceOutOfRange": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): why a saved profile can’t be used, after its name and a colon (lowercase start on purpose)."
+  },
+  "sync.profiles.problem.percentOutOfRange": "its removal limit is out of range",
+  "@sync.profiles.problem.percentOutOfRange": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): why a saved profile can’t be used, after its name and a colon (lowercase start on purpose)."
+  },
+  "sync.profiles.problem.countOutOfRange": "its removal limit is out of range",
+  "@sync.profiles.problem.countOutOfRange": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): why a saved profile can’t be used, after its name and a colon (lowercase start on purpose)."
+  },
+  "sync.profiles.problem.badKeep": "its versions folder can’t be used",
+  "@sync.profiles.problem.badKeep": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): why a saved profile can’t be used, after its name and a colon (lowercase start on purpose)."
+  },
+  "sync.profiles.problem.unreadable": "this version of Cmdr can’t read it",
+  "@sync.profiles.problem.unreadable": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): why a saved profile can’t be used, after its name and a colon (lowercase start on purpose)."
+  },
+  "sync.profiles.saveTitle": "Save as profile",
+  "@sync.profiles.saveTitle": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): accessible name of the popover with the name field for a new profile."
+  },
+  "sync.profiles.renameTitle": "Rename profile",
+  "@sync.profiles.renameTitle": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): accessible name of the popover with the name field for renaming a profile."
+  },
+  "sync.profiles.name": "Profile name",
+  "@sync.profiles.name": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): label of the name field."
+  },
+  "sync.profiles.restoreFilters": "Restore the show-filters when loading",
+  "@sync.profiles.restoreFilters": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): checkbox in the save popover: loading this profile also sets the grid’s show-filters it was saved with."
+  },
+  "sync.profiles.save": "Save",
+  "@sync.profiles.save": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): button that saves the profile."
+  },
+  "sync.profiles.renameConfirm": "Rename",
+  "@sync.profiles.renameConfirm": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): button that renames the profile."
+  },
+  "sync.profiles.replace": "Replace",
+  "@sync.profiles.replace": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): button that saves over the profile that already has this name, after the person was told."
+  },
+  "sync.profiles.clash": "A profile named {name} exists. Press Replace to save over it.",
+  "@sync.profiles.clash": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): shown when the typed name is another profile’s.",
+    "placeholders": {
+      "name": "the existing profile’s name"
+    }
+  },
+  "sync.profiles.listFull": "The list holds {maxText} profiles already. Delete one first.",
+  "@sync.profiles.listFull": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): shown when the list is full.",
+    "placeholders": {
+      "maxText": "the limit, formatted"
+    }
+  },
+  "sync.profiles.invalid": "This profile can’t be saved: {problem}.",
+  "@sync.profiles.invalid": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): shown when the options don’t pass the checks (for example a mask that doesn’t parse).",
+    "placeholders": {
+      "problem": "why (one of the sync.profiles.problem.* texts)"
+    }
+  },
+  "sync.profiles.writeFailed": "Cmdr couldn’t write the profiles file, so this change isn’t saved.",
+  "@sync.profiles.writeFailed": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): toast when the profiles file couldn’t be written. \"Cmdr\" is the app name."
+  },
+  "sync.profiles.unexpected": "That profile change didn’t go through. The log has the details.",
+  "@sync.profiles.unexpected": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): toast for a profile change that didn’t land for a reason Cmdr doesn’t name."
+  },
+  "sync.dialog.usePaneFolderLeft": "Use the left pane’s folder",
+  "@sync.dialog.usePaneFolderLeft": {
+    "description": "Synchronize folders: button beside the message that a profile's left volume isn't connected; compares with the folder the left pane shows instead."
+  },
+  "sync.dialog.usePaneFolderRight": "Use the right pane’s folder",
+  "@sync.dialog.usePaneFolderRight": {
+    "description": "Synchronize folders: button beside the message that a profile's right volume isn't connected; compares with the folder the right pane shows instead."
+  },
+  "sync.dialog.selectRangeChanged": "The rows changed while selecting. Select them again.",
+  "@sync.dialog.selectRangeChanged": {
+    "description": "Synchronize folders: status when a Shift-click selection was dropped because the list changed (a filter or a new compare) while it was being read."
+  },
+  "sync.dialog.runEscape": "Pause or cancel the synchronization first.",
+  "@sync.dialog.runEscape": {
+    "description": "Synchronize folders: status when the person presses Esc while a synchronization runs; the dialog stays open."
+  },
+  "sync.result.versionsFolderShort": "Replaced and removed files are in {path}",
+  "@sync.result.versionsFolderShort": {
+    "description": "Synchronize folders result screen, after a synchronization ended: where one of the versions folders of this run is, when the run used more than one (one per drive).",
+    "placeholders": {
+      "path": "the folder path, do not translate"
+    }
   }
 }

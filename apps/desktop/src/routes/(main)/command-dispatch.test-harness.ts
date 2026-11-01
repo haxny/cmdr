@@ -282,7 +282,13 @@ export const DELEGATE_ROWS: DelegateRow[] = [
   {
     id: 'sync.openDialog',
     expect: (_e, d) => {
-      expect(d.showSyncFolders).toHaveBeenCalledOnce()
+      expect(d.showSyncFolders).toHaveBeenCalledExactlyOnceWith()
+    },
+  },
+  {
+    id: 'sync.openProfiles',
+    expect: (_e, d) => {
+      expect(d.showSyncFolders).toHaveBeenCalledExactlyOnceWith({ profiles: true })
     },
   },
   {

@@ -1379,5 +1379,9 @@
   "commands.handler.viewDebugLog.unavailable": "Ladicí protokol se nepodařilo otevřít. Zkus to znovu.",
   "@commands.handler.viewDebugLog.unavailable": {
     "sourceHash": "794a5b3"
+  },
+  "commands.syncOpenProfiles.label": "Synchronize folders: profiles…",
+  "@commands.syncOpenProfiles.label": {
+    "sourceHash": "0d69ae6"
   }
 }

@@ -1379,5 +1379,9 @@
   "commands.handler.viewDebugLog.unavailable": "无法打开调试日志。再试一次。",
   "@commands.handler.viewDebugLog.unavailable": {
     "sourceHash": "794a5b3"
+  },
+  "commands.syncOpenProfiles.label": "Synchronize folders: profiles…",
+  "@commands.syncOpenProfiles.label": {
+    "sourceHash": "0d69ae6"
   }
 }

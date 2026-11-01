@@ -20,6 +20,8 @@ import {
   type CompareRequest,
   type CompareStarted,
   type Mode,
+  type ProfileOverrides,
+  type Side,
   type RowQuery,
   type SkippedRows,
   type SyncActionsOutcome,
@@ -38,6 +40,7 @@ import {
 import { getAppLogger } from '#lib/logging/logger.js'
 import { DEFAULT_SHOW_FILTERS, NO_OVERRIDES, defaultSyncOptions, type SyncOptionKey } from './sync-options'
 import { withoutSelections, type SyncRoots } from './pane-roots'
+import type { LoadedProfile } from './profiles.svelte'
 
 const log = getAppLogger('sync')
 
@@ -109,6 +112,10 @@ class SyncSessionState {
   state = $state.raw<SyncState | null>(null)
   total = $state(0)
   sessionId = $state<string | null>(null)
+  /** The profile the dialog runs as (its name names `{profile}` in a custom versions folder), or `null`. */
+  profileName = $state<string | null>(null)
+  /** The profile's overrides; every value follows Settings without one. */
+  overrides = $state.raw<ProfileOverrides>({ ...NO_OVERRIDES })
   /** The mode the plan on screen was built with (the options may have moved on since). */
   comparedMode = $state<Mode>('bothWays')
   /** Rows as last paged, each with the view version it came from: an older one is for display only. */
@@ -126,6 +133,10 @@ class SyncSessionState {
   private unlisten: UnlistenFn[] = []
   /** A finished event that came before `startSyncCompare` told us its generation. */
   private early: SyncCompareFinished[] = []
+  /** Compares asked for, in order: an answer or refusal of any but the newest is superseded. */
+  private requestSeq = 0
+  /** The compare that will open the session; another one waits for it, so the dialog never holds two. */
+  private firstCompare: Promise<void> | null = null
 
   constructor(private readonly deps: SyncSessionDeps) {
     this.roots = deps.roots
@@ -163,7 +174,26 @@ class SyncSessionState {
     await this.compare()
   }
 
+  /**
+   * Compares the roots with the options. While no session exists yet, a compare asked for meanwhile waits for the
+   * one that opens it, so both land in one session (the backend never holds an orphan). Only the newest compare's
+   * answer or refusal counts.
+   */
   async compare(): Promise<void> {
+    if (this.sessionId === null && this.firstCompare !== null) await this.firstCompare
+    const run = this.compareNow()
+    if (this.sessionId === null) {
+      this.firstCompare = run
+      void run.finally(() => {
+        if (this.firstCompare === run) this.firstCompare = null
+      })
+    }
+    await run
+  }
+
+  private async compareNow(): Promise<void> {
+    if (this.closed) return
+    const seq = ++this.requestSeq
     const roots = this.options.onlySelected ? this.roots : withoutSelections(this.roots)
     const request: CompareRequest = {
       sessionId: this.sessionId,
@@ -171,8 +201,8 @@ class SyncSessionState {
       right: roots.right,
       options: this.options,
       defaults: this.deps.readDefaults(),
-      overrides: { ...NO_OVERRIDES },
-      profileName: null,
+      overrides: this.overrides,
+      profileName: this.profileName,
       includeHidden: this.deps.includeHidden(),
     }
     this.phase = 'comparing'
@@ -180,6 +210,11 @@ class SyncSessionState {
     this.progress = null
     try {
       const started = await this.deps.ipc.startSyncCompare(request)
+      if (this.isClosed() && this.sessionId === null) {
+        // The dialog closed before the session answered: close it too, or it outlives the dialog.
+        void this.deps.ipc.closeSyncSession(started.sessionId)
+        return
+      }
       // A compare that answered after a newer one did is superseded: its session holds the newer one.
       if (started.sessionId === this.sessionId && started.generation < this.generation) return
       this.sessionId = started.sessionId
@@ -190,9 +225,41 @@ class SyncSessionState {
       this.early = []
       if (early) this.onFinished(early)
     } catch (error) {
+      // A newer compare is on its way: this one's refusal is about a request nobody waits for.
+      if (seq !== this.requestSeq) return
       this.phase = 'refused'
       this.error = problemOf(error, 'starting a compare')
     }
+  }
+
+  /** Loads a profile: its roots (no pane selections), options, overrides, and name; its show-filters when it asks. */
+  async useProfile(profile: LoadedProfile): Promise<void> {
+    this.roots = {
+      left: { root: profile.left, selection: null },
+      right: { root: profile.right, selection: null },
+    }
+    this.options = profile.options
+    this.overrides = profile.overrides
+    this.profileName = profile.name
+    if (profile.showFilters) this.filters = profile.showFilters
+    this.selected.clear()
+    await this.compare()
+  }
+
+  /** A root that can't be reached (a profile's volume isn't connected): the pane's own folder stands in. */
+  async usePaneFolder(side: Side): Promise<void> {
+    this.roots = { ...this.roots, [side]: this.deps.roots[side] }
+    await this.compare()
+  }
+
+  /** Read through a call: `closed` can turn true while a compare awaits its answer. */
+  private isClosed(): boolean {
+    return this.closed
+  }
+
+  /** The view version now: an answer read under another one is about rows no longer shown. */
+  get viewVersionNow(): number {
+    return this.viewVersion
   }
 
   private isCurrent(event: { sessionId: string; generation: number }): boolean {

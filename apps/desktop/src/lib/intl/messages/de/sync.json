@@ -782,5 +782,393 @@
   "sync.error.unexpected": "Something went wrong. Try again, and if it keeps happening, send an error report from the Help menu.",
   "@sync.error.unexpected": {
     "sourceHash": "149c6a5"
+  },
+  "sync.confirm.title": "Synchronize these changes?",
+  "@sync.confirm.title": {
+    "sourceHash": "cbc8a73"
+  },
+  "sync.confirm.groupsLabel": "Changes to run",
+  "@sync.confirm.groupsLabel": {
+    "sourceHash": "79bf11c"
+  },
+  "sync.confirm.group.copyRight": "Copy to the right: {filesText} new {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.copyRight": {
+    "sourceHash": "dc27d61"
+  },
+  "sync.confirm.group.replaceRight": "Replace on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.replaceRight": {
+    "sourceHash": "8087763"
+  },
+  "sync.confirm.group.removeRight": "Remove on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.removeRight": {
+    "sourceHash": "dd9ca58"
+  },
+  "sync.confirm.group.copyLeft": "Copy to the left: {filesText} new {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.copyLeft": {
+    "sourceHash": "d7631f2"
+  },
+  "sync.confirm.group.replaceLeft": "Replace on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.replaceLeft": {
+    "sourceHash": "c98fed7"
+  },
+  "sync.confirm.group.removeLeft": "Remove on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.removeLeft": {
+    "sourceHash": "638c4d0"
+  },
+  "sync.confirm.group.copyRightRecreates": "Copy to the right instead of removing on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.copyRightRecreates": {
+    "sourceHash": "4e3a15f"
+  },
+  "sync.confirm.group.copyLeftRecreates": "Copy to the left instead of removing on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.confirm.group.copyLeftRecreates": {
+    "sourceHash": "b5b47bb"
+  },
+  "sync.confirm.keepTrash": "Replaced and removed files go to the Trash.",
+  "@sync.confirm.keepTrash": {
+    "sourceHash": "ddab33c"
+  },
+  "sync.confirm.keepFolder": "Replaced and removed files go to the versions folder {path}.",
+  "@sync.confirm.keepFolder": {
+    "sourceHash": "2e41ea4"
+  },
+  "sync.confirm.keepSlow": "This is slower: they move across drives.",
+  "@sync.confirm.keepSlow": {
+    "sourceHash": "c9bc9ac"
+  },
+  "sync.confirm.olderTitle": "Older replaces newer: {countText} {count, plural, one {file} other {files}}",
+  "@sync.confirm.olderTitle": {
+    "sourceHash": "9aab1a4"
+  },
+  "sync.confirm.olderBody": "Each of these files is newer than the copy that replaces it. The newer one is kept in the Trash or the versions folder, but check them before you synchronize.",
+  "@sync.confirm.olderBody": {
+    "sourceHash": "9d77caf"
+  },
+  "sync.confirm.olderRow": "{path}: left {leftDate}, right {rightDate}",
+  "@sync.confirm.olderRow": {
+    "sourceHash": "22c6bff"
+  },
+  "sync.confirm.noDate": "no date",
+  "@sync.confirm.noDate": {
+    "sourceHash": "89be630"
+  },
+  "sync.confirm.olderMore": "…and {countText} more",
+  "@sync.confirm.olderMore": {
+    "sourceHash": "a674c4d"
+  },
+  "sync.confirm.chosenUnknown": "You chose an action for {countText} {count, plural, one {row} other {rows}} marked ?, where the compare couldn’t tell which side is newer.",
+  "@sync.confirm.chosenUnknown": {
+    "sourceHash": "12a212a"
+  },
+  "sync.confirm.hiddenActions": "{countText} hidden {count, plural, one {action} other {actions}} run too: the show-filters hide those rows, but they still synchronize.",
+  "@sync.confirm.hiddenActions": {
+    "sourceHash": "a159620"
+  },
+  "sync.confirm.skewAhead": "On most files, times on the right run {offset} ahead of the left. If that’s a clock difference, give the profile a time offset.",
+  "@sync.confirm.skewAhead": {
+    "sourceHash": "60eb712"
+  },
+  "sync.confirm.skewBehind": "On most files, times on the right run {offset} behind the left. If that’s a clock difference, give the profile a time offset.",
+  "@sync.confirm.skewBehind": {
+    "sourceHash": "9feafa9"
+  },
+  "sync.confirm.maxRemoveRight": "This removes {removalsText} of {targetText} {target, plural, one {file} other {files}} on the right, more than the limit in Settings allows. Those removals wait for Remove anyway.",
+  "@sync.confirm.maxRemoveRight": {
+    "sourceHash": "f77b5c6"
+  },
+  "sync.confirm.emptyRootRight": "The right folder is empty, so nothing beside it is removed: it may be a drive that isn’t connected.",
+  "@sync.confirm.emptyRootRight": {
+    "sourceHash": "3b17a19"
+  },
+  "sync.confirm.sentinelRight": "The check file Settings names is missing on the right, so nothing runs. It guards against a drive that isn’t connected.",
+  "@sync.confirm.sentinelRight": {
+    "sourceHash": "f72402f"
+  },
+  "sync.confirm.maxRemoveLeft": "This removes {removalsText} of {targetText} {target, plural, one {file} other {files}} on the left, more than the limit in Settings allows. Those removals wait for Remove anyway.",
+  "@sync.confirm.maxRemoveLeft": {
+    "sourceHash": "7422a17"
+  },
+  "sync.confirm.emptyRootLeft": "The left folder is empty, so nothing beside it is removed: it may be a drive that isn’t connected.",
+  "@sync.confirm.emptyRootLeft": {
+    "sourceHash": "7bd4689"
+  },
+  "sync.confirm.sentinelLeft": "The check file Settings names is missing on the left, so nothing runs. It guards against a drive that isn’t connected.",
+  "@sync.confirm.sentinelLeft": {
+    "sourceHash": "1ff2857"
+  },
+  "sync.confirm.emptyRootCopies": "Copies into it wait for Copy anyway.",
+  "@sync.confirm.emptyRootCopies": {
+    "sourceHash": "581edd1"
+  },
+  "sync.confirm.removeAnyway": "Remove anyway",
+  "@sync.confirm.removeAnyway": {
+    "sourceHash": "ec52bdc"
+  },
+  "sync.confirm.copyAnyway": "Copy anyway",
+  "@sync.confirm.copyAnyway": {
+    "sourceHash": "f794181"
+  },
+  "sync.confirm.planChanged": "The list changed since this confirmation opened. Check it again, then synchronize.",
+  "@sync.confirm.planChanged": {
+    "sourceHash": "167480c"
+  },
+  "sync.confirm.staleCompare": "A synchronization already changed these folders. Compare again before you synchronize.",
+  "@sync.confirm.staleCompare": {
+    "sourceHash": "9bb1db7"
+  },
+  "sync.confirm.enterRefused": "Press Synchronize to run this: it removes files, replaces newer ones, or needs a second yes.",
+  "@sync.confirm.enterRefused": {
+    "sourceHash": "b4aa1a7"
+  },
+  "sync.confirm.nothingTicked": "Tick at least one group to synchronize.",
+  "@sync.confirm.nothingTicked": {
+    "sourceHash": "836ee01"
+  },
+  "sync.confirm.nothing": "Nothing to synchronize: no row copies or removes anything.",
+  "@sync.confirm.nothing": {
+    "sourceHash": "4892e37"
+  },
+  "sync.confirm.cancel": "Cancel",
+  "@sync.confirm.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "sync.confirm.run": "Synchronize",
+  "@sync.confirm.run": {
+    "sourceHash": "1600a20"
+  },
+  "sync.run.title": "Synchronizing…",
+  "@sync.run.title": {
+    "sourceHash": "6ab4fbf"
+  },
+  "sync.run.progress": "{doneText} of {totalText} {total, plural, one {item} other {items}}, {bytesDone} of {bytesTotal}",
+  "@sync.run.progress": {
+    "sourceHash": "dbf979a"
+  },
+  "sync.run.eta": "About {duration} left",
+  "@sync.run.eta": {
+    "sourceHash": "06258eb"
+  },
+  "sync.run.progressLabel": "Synchronization progress",
+  "@sync.run.progressLabel": {
+    "sourceHash": "9d1d422"
+  },
+  "sync.run.betweenSteps": "Pause and Cancel take effect between steps: the copy or move under way finishes first.",
+  "@sync.run.betweenSteps": {
+    "sourceHash": "60a0f02"
+  },
+  "sync.run.paused": "Paused. Nothing new starts until you resume; the step that was running finishes first.",
+  "@sync.run.paused": {
+    "sourceHash": "b5c61bd"
+  },
+  "sync.run.pause": "Pause",
+  "@sync.run.pause": {
+    "sourceHash": "858e4ba"
+  },
+  "sync.run.resume": "Resume",
+  "@sync.run.resume": {
+    "sourceHash": "d640c74"
+  },
+  "sync.run.cancel": "Cancel",
+  "@sync.run.cancel": {
+    "sourceHash": "19766ed"
+  },
+  "sync.result.title": "Synchronization finished",
+  "@sync.result.title": {
+    "sourceHash": "951f187"
+  },
+  "sync.result.titleStopped": "Synchronization stopped",
+  "@sync.result.titleStopped": {
+    "sourceHash": "abe2c24"
+  },
+  "sync.result.done": "{countText} {count, plural, one {row} other {rows}} done",
+  "@sync.result.done": {
+    "sourceHash": "bee0e61"
+  },
+  "sync.result.changedSinceCompare": "{countText} left alone: changed since the compare",
+  "@sync.result.changedSinceCompare": {
+    "sourceHash": "2cfa202"
+  },
+  "sync.result.noTrash": "{countText} left alone: that drive has no Trash, and Settings keeps replaced files only in the Trash",
+  "@sync.result.noTrash": {
+    "sourceHash": "839e3c5"
+  },
+  "sync.result.couldNotDo": "{countText} couldn’t be done, and nothing was lost",
+  "@sync.result.couldNotDo": {
+    "sourceHash": "5ae6b90"
+  },
+  "sync.result.versionsSpotTaken": "{countText} left alone: something already sits where the old file would be kept",
+  "@sync.result.versionsSpotTaken": {
+    "sourceHash": "2ddc46e"
+  },
+  "sync.result.versionsFolderUnsafe": "{countText} left alone: the way to the versions folder runs through a link or a file",
+  "@sync.result.versionsFolderUnsafe": {
+    "sourceHash": "7bd1069"
+  },
+  "sync.result.keptNotReplaced": "{countText} kept but not replaced: the old file is in the Trash or the versions folder, and its place is empty",
+  "@sync.result.keptNotReplaced": {
+    "sourceHash": "bbbdafc"
+  },
+  "sync.result.heldAfterFailedCopy": "{countText} {count, plural, one {removal} other {removals}} held because a copy beside {count, plural, one {it} other {them}} didn’t land",
+  "@sync.result.heldAfterFailedCopy": {
+    "sourceHash": "cb58211"
+  },
+  "sync.result.heldByGuard": "{countText} {count, plural, one {removal} other {removals}} held by a guard",
+  "@sync.result.heldByGuard": {
+    "sourceHash": "a7a7add"
+  },
+  "sync.result.notStarted": "{countText} not reached before the run stopped",
+  "@sync.result.notStarted": {
+    "sourceHash": "2821e6e"
+  },
+  "sync.result.versionsFolder": "Replaced and removed files ({size}) are in {path}",
+  "@sync.result.versionsFolder": {
+    "sourceHash": "0eaf91d"
+  },
+  "sync.result.showInCmdr": "Show in Cmdr",
+  "@sync.result.showInCmdr": {
+    "sourceHash": "8390aaf"
+  },
+  "sync.result.showInGrid": "Show in grid",
+  "@sync.result.showInGrid": {
+    "sourceHash": "f646ba9"
+  },
+  "sync.result.compareAgain": "Compare again",
+  "@sync.result.compareAgain": {
+    "sourceHash": "502f6db"
+  },
+  "sync.result.notRunSelected": "{countText} {count, plural, one {row} other {rows}} that didn’t run {count, plural, one {is} other {are}} selected. Compare again to see the folders as they are now.",
+  "@sync.result.notRunSelected": {
+    "sourceHash": "b314612"
+  },
+  "sync.profiles.title": "Profiles",
+  "@sync.profiles.title": {
+    "sourceHash": "535e52e"
+  },
+  "sync.profiles.tooltip": "Saved pairs of folders and their options",
+  "@sync.profiles.tooltip": {
+    "sourceHash": "74f727c"
+  },
+  "sync.profiles.saved": "Saved profiles",
+  "@sync.profiles.saved": {
+    "sourceHash": "81ae667"
+  },
+  "sync.profiles.saveAs": "Save as profile…",
+  "@sync.profiles.saveAs": {
+    "sourceHash": "ef12643"
+  },
+  "sync.profiles.rename": "Rename…",
+  "@sync.profiles.rename": {
+    "sourceHash": "6fa62b3"
+  },
+  "sync.profiles.moveUp": "Move up",
+  "@sync.profiles.moveUp": {
+    "sourceHash": "c66feb5"
+  },
+  "sync.profiles.moveDown": "Move down",
+  "@sync.profiles.moveDown": {
+    "sourceHash": "40bb50d"
+  },
+  "sync.profiles.delete": "Delete",
+  "@sync.profiles.delete": {
+    "sourceHash": "e2d0a54"
+  },
+  "sync.profiles.invalidRow": "{name}: {problem}",
+  "@sync.profiles.invalidRow": {
+    "sourceHash": "340be95"
+  },
+  "sync.profiles.problem.emptyName": "it has no name",
+  "@sync.profiles.problem.emptyName": {
+    "sourceHash": "fb31cc6"
+  },
+  "sync.profiles.problem.badMask": "its masks don’t parse",
+  "@sync.profiles.problem.badMask": {
+    "sourceHash": "d694857"
+  },
+  "sync.profiles.problem.toleranceOutOfRange": "its time tolerance is out of range",
+  "@sync.profiles.problem.toleranceOutOfRange": {
+    "sourceHash": "6424bd9"
+  },
+  "sync.profiles.problem.percentOutOfRange": "its removal limit is out of range",
+  "@sync.profiles.problem.percentOutOfRange": {
+    "sourceHash": "17dcbdf"
+  },
+  "sync.profiles.problem.countOutOfRange": "its removal limit is out of range",
+  "@sync.profiles.problem.countOutOfRange": {
+    "sourceHash": "17dcbdf"
+  },
+  "sync.profiles.problem.badKeep": "its versions folder can’t be used",
+  "@sync.profiles.problem.badKeep": {
+    "sourceHash": "abb8dc7"
+  },
+  "sync.profiles.problem.unreadable": "this version of Cmdr can’t read it",
+  "@sync.profiles.problem.unreadable": {
+    "sourceHash": "ff25cc4"
+  },
+  "sync.profiles.saveTitle": "Save as profile",
+  "@sync.profiles.saveTitle": {
+    "sourceHash": "69abb4d"
+  },
+  "sync.profiles.renameTitle": "Rename profile",
+  "@sync.profiles.renameTitle": {
+    "sourceHash": "c9aaa25"
+  },
+  "sync.profiles.name": "Profile name",
+  "@sync.profiles.name": {
+    "sourceHash": "d366328"
+  },
+  "sync.profiles.restoreFilters": "Restore the show-filters when loading",
+  "@sync.profiles.restoreFilters": {
+    "sourceHash": "1838cb3"
+  },
+  "sync.profiles.save": "Save",
+  "@sync.profiles.save": {
+    "sourceHash": "1509f56"
+  },
+  "sync.profiles.renameConfirm": "Rename",
+  "@sync.profiles.renameConfirm": {
+    "sourceHash": "3064d79"
+  },
+  "sync.profiles.replace": "Replace",
+  "@sync.profiles.replace": {
+    "sourceHash": "95e1543"
+  },
+  "sync.profiles.clash": "A profile named {name} exists. Press Replace to save over it.",
+  "@sync.profiles.clash": {
+    "sourceHash": "0a386a9"
+  },
+  "sync.profiles.listFull": "The list holds {maxText} profiles already. Delete one first.",
+  "@sync.profiles.listFull": {
+    "sourceHash": "91977f6"
+  },
+  "sync.profiles.invalid": "This profile can’t be saved: {problem}.",
+  "@sync.profiles.invalid": {
+    "sourceHash": "88aa7fc"
+  },
+  "sync.profiles.writeFailed": "Cmdr couldn’t write the profiles file, so this change isn’t saved.",
+  "@sync.profiles.writeFailed": {
+    "sourceHash": "8e1fc72"
+  },
+  "sync.profiles.unexpected": "That profile change didn’t go through. The log has the details.",
+  "@sync.profiles.unexpected": {
+    "sourceHash": "cf1520f"
+  },
+  "sync.dialog.usePaneFolderLeft": "Use the left pane’s folder",
+  "@sync.dialog.usePaneFolderLeft": {
+    "sourceHash": "77548e2"
+  },
+  "sync.dialog.usePaneFolderRight": "Use the right pane’s folder",
+  "@sync.dialog.usePaneFolderRight": {
+    "sourceHash": "29bee30"
+  },
+  "sync.dialog.selectRangeChanged": "The rows changed while selecting. Select them again.",
+  "@sync.dialog.selectRangeChanged": {
+    "sourceHash": "8603528"
+  },
+  "sync.dialog.runEscape": "Pause or cancel the synchronization first.",
+  "@sync.dialog.runEscape": {
+    "sourceHash": "5d72261"
+  },
+  "sync.result.versionsFolderShort": "Replaced and removed files are in {path}",
+  "@sync.result.versionsFolderShort": {
+    "sourceHash": "f7b7bbd"
   }
 }

@@ -22,6 +22,12 @@
     import SyncFilterBar from './SyncFilterBar.svelte'
     import SyncGrid from './SyncGrid.svelte'
     import SyncSummaryBar from './SyncSummaryBar.svelte'
+    import SyncConfirmDialog from './SyncConfirmDialog.svelte'
+    import SyncRunPanel from './SyncRunPanel.svelte'
+    import SyncProfilesControl from './SyncProfilesControl.svelte'
+    import { createSyncRun } from './sync-run.svelte'
+    import { createSyncProfiles, type LoadedProfile } from './profiles.svelte'
+    import { showInGridFilters, versionsFolderPane, type ShowFolder } from './sync-run-view'
     import { createSyncSession } from './sync-session.svelte'
     import { SyncGridController } from './sync-grid-controller.svelte'
     import { syncKeyAction, type SyncKeyAction } from './sync-keys'
@@ -31,14 +37,18 @@
     import type { SyncRoots } from './pane-roots'
     import type { SyncGridApi } from './sync-grid-api'
     import { SYNC_MENU_KEYS } from './sync-menu-claims'
-    import type { ShowFilters } from '#lib/tauri-commands/sync.js'
+    import type { KeepDestinationWire, ShowFilters } from '#lib/tauri-commands/sync.js'
 
     interface Props {
         roots: SyncRoots
         onClose: () => void
+        /** Open with the Profiles menu up (the palette's "Synchronize folders: profiles…"). */
+        openProfiles?: boolean
+        /** "Show in Cmdr" on the result: open a versions folder in a pane (the dialog closes first). */
+        onShowFolder?: (place: ShowFolder) => void
     }
 
-    const { roots, onClose }: Props = $props()
+    const { roots, onClose, openProfiles = false, onShowFolder }: Props = $props()
 
     // The roots are the panes' at open; Swap changes the session's own copy.
     const session = createSyncSession({
@@ -47,6 +57,11 @@
         readDefaults: readSyncDefaults,
         includeHidden: getShowHiddenFiles,
     })
+
+    const run = createSyncRun({ ipc: syncIpc, session, readDefaults: readSyncDefaults })
+    const profiles = createSyncProfiles(syncIpc)
+    let profilesControl: { toggleMenu: () => void; openSave: () => void } | undefined = $state()
+    let loadedProfileId = $state<string | null>(null)
 
     let grid: SyncGridApi | undefined = $state()
     let gridAreaEl: HTMLDivElement | undefined = $state()
@@ -67,10 +82,13 @@
             close: () => {
                 void requestClose()
             },
-            // The confirm step (what runs, grouped, with the guards) arrives with the run; until then ⌘Enter has
-            // nothing to open, and the Synchronize button says why.
-            confirm: () => {},
+            confirm: () => {
+                if (canSynchronize) void run.openConfirm()
+                else controller.notice = tString('sync.dialog.synchronizeNeedsCompare')
+            },
             openRowMenu,
+            profiles: () => profilesControl?.toggleMenu(),
+            saveProfile: () => profilesControl?.openSave(),
         },
     })
 
@@ -94,6 +112,8 @@
 
     const comparing = $derived(session.phase === 'comparing' || session.phase === 'paused')
     const canSynchronize = $derived(session.phase === 'done' && !session.stale)
+    /** The run (or its result) has the dialog: the grid's keys and menu claims rest. */
+    const runShown = $derived(run.phase === 'running' || run.phase === 'paused' || run.phase === 'finished')
 
     /** One echo filter per action: the keyboard and menu halves of one press run it once. */
     // eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping per press; nothing renders from it
@@ -112,9 +132,15 @@
 
     onMount(() => {
         void session.open()
-        requestAnimationFrame(() => grid?.focus())
+        void run.open()
+        requestAnimationFrame(() => {
+            if (openProfiles) profilesControl?.toggleMenu()
+            else grid?.focus()
+        })
         const releases = SYNC_MENU_KEYS.map(({ command, action, gridOnly }) =>
             claimMenuCommand(command, () => {
+                // The confirm or the run is up: the key belongs to neither the grid nor the menu item.
+                if (run.phase !== 'idle') return true
                 if (gridOnly && !inGrid(document.activeElement)) return false
                 fire(action, 'menu')
                 return true
@@ -128,11 +154,20 @@
 
     // A crash under the dialog's boundary unmounts it without a close: the session and its listeners go anyway.
     onDestroy(() => {
+        run.close()
         void session.close()
     })
 
     /** Esc: a running compare stops first; the next Esc closes. */
     async function requestClose(): Promise<void> {
+        if (run.phase === 'finished') {
+            await run.dismissResult()
+            return
+        }
+        if (runShown) {
+            controller.notice = tString('sync.dialog.runEscape')
+            return
+        }
         if (comparing) {
             await session.stop()
             return
@@ -141,6 +176,10 @@
     }
 
     async function closeNow(): Promise<void> {
+        if (run.phase === 'running' || run.phase === 'paused') {
+            controller.notice = tString('sync.dialog.runEscape')
+            return
+        }
         if (closing) return
         closing = true
         const saved = await session.close()
@@ -169,6 +208,7 @@
     }
 
     function handleKeydown(event: KeyboardEvent): void {
+        if (runShown) return
         const area = inGrid(event.target) ? 'grid' : 'options'
         if (area === 'grid' && gridOwnKey(event)) {
             event.preventDefault()
@@ -179,6 +219,31 @@
         event.preventDefault()
         fire(action, 'keyboard')
     }
+
+    function loadProfile(profile: LoadedProfile): void {
+        loadedProfileId = profile.id
+        void session.useProfile(profile)
+    }
+
+    /** "Show in grid": the list from before the run, every row visible, the rows that didn't run selected. */
+    function showInGrid(items: number[]): void {
+        void run.dismissResult(true)
+        session.selected.clear()
+        for (const item of items) session.selected.add(item)
+        session.setFilters(showInGridFilters())
+        controller.notice = tString('sync.result.notRunSelected', {
+            count: items.length,
+            countText: formatNumber(items.length),
+        })
+    }
+
+    async function showFolder(folder: Extract<KeepDestinationWire, { type: 'folder' }>): Promise<void> {
+        const place = { pane: versionsFolderPane(session.roots, folder.volumeId), volumeId: folder.volumeId, path: folder.path }
+        await closeNow()
+        onShowFolder?.(place)
+    }
+
+    const problem = $derived(session.error ?? (run.phase === 'idle' ? run.problem : null))
 
     const progressText = $derived.by(() => {
         const progress = session.progress
@@ -235,10 +300,24 @@
                 >
             </div>
         {/if}
-        {#if session.error}
-            <p class="problem" role="alert">{syncProblemText(session.error)}</p>
+        {#if problem}
+            <div class="problem" role="alert">
+                <span>{syncProblemText(problem)}</span>
+                {#if problem.type === 'volumeNotConnected'}
+                    <Button size="mini" onclick={() => void session.usePaneFolder(problem.side)}
+                        >{tString(
+                            problem.side === 'left' ? 'sync.dialog.usePaneFolderLeft' : 'sync.dialog.usePaneFolderRight',
+                        )}</Button
+                    >
+                {/if}
+            </div>
         {/if}
 
+        {#if runShown}
+            <div class="grid-area">
+                <SyncRunPanel {run} onShowFolder={(folder: Extract<KeepDestinationWire, { type: 'folder' }>) => void showFolder(folder)} onShowInGrid={showInGrid} />
+            </div>
+        {:else}
         <div class="grid-area" bind:this={gridAreaEl}>
             <SyncGrid
                 bind:this={grid}
@@ -257,6 +336,7 @@
             />
             {#if emptyText}<p class="empty">{emptyText}</p>{/if}
         </div>
+        {/if}
 
         <p class="status" aria-live="polite">{controller.notice ?? progressText}</p>
         <SyncSummaryBar
@@ -267,8 +347,26 @@
         />
     </div>
 
+    {#snippet footerLeading()}
+        <SyncProfilesControl
+            bind:this={profilesControl}
+            {profiles}
+            loadedId={loadedProfileId}
+            source={() => ({
+                left: session.roots.left.root,
+                right: session.roots.right.root,
+                options: session.options,
+                showFilters: session.filters,
+                overrides: session.overrides,
+            })}
+            onLoad={loadProfile}
+        />
+    {/snippet}
+
     {#snippet footer()}
-        {#if comparing}
+        {#if runShown}
+            <!-- The run panel has its own buttons. -->
+        {:else if comparing}
             <Button variant="secondary" onclick={() => void session.stop()}>{tString('sync.dialog.stop')}</Button>
             <Button
                 variant="primary"
@@ -285,16 +383,15 @@
                 ariaDisabled={!canSynchronize}
                 tooltipContent={tString('sync.dialog.synchronizeNeedsCompare')}
                 keyHint="⌘↩"
-                onclick={() => {
-                    if (canSynchronize) void controller.run({ kind: 'confirm' })
-                    else controller.notice = tString('sync.dialog.synchronizeNeedsCompare')
-                }}>{tString('sync.dialog.synchronize')}</Button
+                onclick={() => void controller.run({ kind: 'confirm' })}>{tString('sync.dialog.synchronize')}</Button
             >
         {/if}
     {/snippet}
 </ModalDialog>
 
 <Menu menu={rowMenu} ariaLabel={tString('sync.menu.label')} minWidth={240} />
+
+{#if run.phase === 'confirming'}<SyncConfirmDialog {run} />{/if}
 
 <style>
     .sync-dialog {
@@ -331,6 +428,9 @@
     }
 
     .problem {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
         margin: 0;
         color: var(--color-error-text);
     }

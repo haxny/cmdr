@@ -68,6 +68,12 @@ export const SOFT_DIALOG_REGISTRY = [
     whileOpen: BLOCKS_OPERATIONS,
   },
   {
+    id: 'sync-confirm',
+    description:
+      'Lists everything a Synchronize folders run would copy, replace, or remove, with its guards, before anything is written',
+    whileOpen: BLOCKS_OPERATIONS,
+  },
+  {
     id: 'commercial-reminder',
     description: 'Periodic reminder for commercial licensing',
     whileOpen: BLOCKS_OPERATIONS,

@@ -236,6 +236,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'selection.selectSameKind': 'Select all of the same kind',
   'selection.compareDirectories': 'Compare folders',
   'sync.openDialog': 'Synchronize folders…',
+  'sync.openProfiles': 'Synchronize folders: profiles…',
   'selection.compareDirectoriesMissing': 'Compare folders: missing files only',
   'selection.compareDirectoriesSize': 'Compare folders: different size',
   'selection.selectFiles': 'Select files…',

@@ -42,5 +42,73 @@
   "sync.error.staleCompare": "A synchronisation changed these folders. Compare again.",
   "@sync.error.staleCompare": {
     "sourceHash": "4706b22"
+  },
+  "sync.confirm.title": "Synchronise these changes?",
+  "@sync.confirm.title": {
+    "sourceHash": "cbc8a73"
+  },
+  "sync.confirm.keepTrash": "Replaced and removed files go to the Bin.",
+  "@sync.confirm.keepTrash": {
+    "sourceHash": "ddab33c"
+  },
+  "sync.confirm.olderBody": "Each of these files is newer than the copy that replaces it. The newer one is kept in the Bin or the versions folder, but check them before you synchronise.",
+  "@sync.confirm.olderBody": {
+    "sourceHash": "9d77caf"
+  },
+  "sync.confirm.hiddenActions": "{countText} hidden {count, plural, one {action} other {actions}} run too: the show-filters hide those rows, but they still synchronise.",
+  "@sync.confirm.hiddenActions": {
+    "sourceHash": "a159620"
+  },
+  "sync.confirm.planChanged": "The list changed since this confirmation opened. Check it again, then synchronise.",
+  "@sync.confirm.planChanged": {
+    "sourceHash": "167480c"
+  },
+  "sync.confirm.staleCompare": "A synchronisation already changed these folders. Compare again before you synchronise.",
+  "@sync.confirm.staleCompare": {
+    "sourceHash": "9bb1db7"
+  },
+  "sync.confirm.enterRefused": "Press Synchronise to run this: it removes files, replaces newer ones, or needs a second yes.",
+  "@sync.confirm.enterRefused": {
+    "sourceHash": "b4aa1a7"
+  },
+  "sync.confirm.nothingTicked": "Tick at least one group to synchronise.",
+  "@sync.confirm.nothingTicked": {
+    "sourceHash": "836ee01"
+  },
+  "sync.confirm.nothing": "Nothing to synchronise: no row copies or removes anything.",
+  "@sync.confirm.nothing": {
+    "sourceHash": "4892e37"
+  },
+  "sync.confirm.run": "Synchronise",
+  "@sync.confirm.run": {
+    "sourceHash": "1600a20"
+  },
+  "sync.run.title": "Synchronising…",
+  "@sync.run.title": {
+    "sourceHash": "6ab4fbf"
+  },
+  "sync.run.progressLabel": "Synchronisation progress",
+  "@sync.run.progressLabel": {
+    "sourceHash": "9d1d422"
+  },
+  "sync.result.title": "Synchronisation finished",
+  "@sync.result.title": {
+    "sourceHash": "951f187"
+  },
+  "sync.result.titleStopped": "Synchronisation stopped",
+  "@sync.result.titleStopped": {
+    "sourceHash": "abe2c24"
+  },
+  "sync.result.noTrash": "{countText} left alone: that drive has no Bin, and Settings keeps replaced files only in the Bin",
+  "@sync.result.noTrash": {
+    "sourceHash": "839e3c5"
+  },
+  "sync.result.keptNotReplaced": "{countText} kept but not replaced: the old file is in the Bin or the versions folder, and its place is empty",
+  "@sync.result.keptNotReplaced": {
+    "sourceHash": "bbbdafc"
+  },
+  "sync.dialog.runEscape": "Pause or cancel the synchronisation first.",
+  "@sync.dialog.runEscape": {
+    "sourceHash": "5d72261"
   }
 }

@@ -136,6 +136,7 @@ const EXPECTED_PALETTE_IDS: readonly CommandId[] = [
   'selection.selectFiles',
   'selection.deselectFiles',
   'sync.openDialog',
+  'sync.openProfiles',
   'network.refresh',
   'share.back',
   'share.selectShare',
@@ -515,5 +516,12 @@ describe('Synchronize folders shortcut', () => {
     const inMainWindow = (id: CommandId) => commands.find((c) => c.id === id)?.scope !== 'Tags window'
     expect(claimants('⇧F12')).toEqual(['sync.openDialog'])
     expect(claimants('⇧F2').filter(inMainWindow)).toEqual(['selection.compareDirectories'])
+  })
+
+  it('sync.openProfiles is a palette command with no key (F2 is the dialog’s own)', () => {
+    const cmd = commands.find((c) => c.id === 'sync.openProfiles')
+    expect(cmd?.shortcuts).toEqual([])
+    expect(cmd?.showInPalette).toBe(true)
+    expect(cmd?.scope).toBe('Main window')
   })
 })

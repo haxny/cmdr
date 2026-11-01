@@ -413,6 +413,15 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
     states: [],
   },
   {
+    dialogId: 'sync-confirm',
+    label: 'Synchronize folders confirm',
+    hostWindow: 'main',
+    status: 'not-triggerable',
+    reason:
+      'Reached only from a real compare: open two folders, press ⇧F12, then ⌘↩ (or Synchronize…). Its groups, guards, and revision are the backend’s plan of those folders, and a run can only name a revision the backend issued, so a fixture couldn’t show or accept anything true. Cancel closes it without writing.',
+    states: [],
+  },
+  {
     dialogId: 'bulk-rename-review',
     label: 'Bulk rename review',
     hostWindow: 'main',

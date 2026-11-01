@@ -4,14 +4,21 @@
  */
 import { vi } from 'vitest'
 import type {
+  ConfirmPreview,
+  RunReportWire,
+  SyncProfile,
   SyncCompareFinished,
   SyncCompareProgress,
   SyncRowsChanged,
+  SyncRunFinished,
+  SyncRunProgress,
   SyncState,
+  ProfileEntry,
   ViewRowWire,
 } from '#lib/tauri-commands/sync.js'
-import type { SyncIpc } from './sync-session.svelte'
+import type { SyncDialogIpc } from './sync-ipc'
 import type { SyncItemRow } from './row-label'
+import { DEFAULT_SHOW_FILTERS, NO_OVERRIDES, defaultSyncOptions } from './sync-options'
 
 export function itemRow(index: number, patch: Partial<SyncItemRow> = {}): SyncItemRow {
   return {
@@ -108,9 +115,13 @@ export const STATE: SyncState = {
 }
 
 export interface FakeSyncIpc {
-  ipc: SyncIpc
+  ipc: SyncDialogIpc
   finish: (outcome?: SyncCompareFinished['outcome']) => void
   progress: (payload: Omit<SyncCompareProgress, 'sessionId' | 'generation'>) => void
+  runProgress: (payload: SyncRunProgress['progress']) => void
+  runFinished: (payload: SyncRunFinished['report']) => void
+  /** The profiles the fake store answers with. */
+  profiles: ProfileEntry[]
 }
 
 export function fakeSyncIpc(view: ViewRowWire[] = VIEW, state: SyncState = STATE): FakeSyncIpc {
@@ -118,9 +129,17 @@ export function fakeSyncIpc(view: ViewRowWire[] = VIEW, state: SyncState = STATE
     finished?: (p: SyncCompareFinished) => void
     progress?: (p: SyncCompareProgress) => void
     rows?: (p: SyncRowsChanged) => void
+    runProgress?: (p: SyncRunProgress) => void
+    runFinished?: (p: SyncRunFinished) => void
   } = {}
   let generation = 0
-  const ipc: SyncIpc = {
+  const profiles: ProfileEntry[] = []
+  const listen = <P>(set: (h: (p: P) => void) => void) =>
+    vi.fn((h: (p: P) => void) => {
+      set(h)
+      return Promise.resolve(() => {})
+    })
+  const ipc: SyncDialogIpc = {
     startSyncCompare: vi.fn(() => Promise.resolve({ sessionId: 's1', generation: ++generation })),
     setSyncComparePaused: vi.fn(() => Promise.resolve()),
     cancelSyncCompare: vi.fn(() => Promise.resolve()),
@@ -149,9 +168,23 @@ export function fakeSyncIpc(view: ViewRowWire[] = VIEW, state: SyncState = STATE
       handlers.rows = h
       return Promise.resolve(() => {})
     }),
+    getSyncConfirm: vi.fn(() => Promise.resolve(preview())),
+    startSyncRun: vi.fn(() => Promise.resolve()),
+    setSyncRunPaused: vi.fn(() => Promise.resolve()),
+    cancelSyncRun: vi.fn(() => Promise.resolve()),
+    onSyncRunProgress: listen<SyncRunProgress>((h) => (handlers.runProgress = h)),
+    onSyncRunFinished: listen<SyncRunFinished>((h) => (handlers.runFinished = h)),
+    getSyncProfiles: vi.fn(() => Promise.resolve([...profiles])),
+    saveSyncProfile: vi.fn((p: SyncProfile) => Promise.resolve([...profiles, { type: 'valid' as const, profile: p }])),
+    deleteSyncProfile: vi.fn(() => Promise.resolve([...profiles])),
+    renameSyncProfile: vi.fn(() => Promise.resolve([...profiles])),
+    moveSyncProfile: vi.fn(() => Promise.resolve([...profiles])),
   }
   return {
     ipc,
+    profiles,
+    runProgress: (progress) => handlers.runProgress?.({ sessionId: 's1', progress }),
+    runFinished: (report) => handlers.runFinished?.({ sessionId: 's1', report }),
     finish: (outcome = { type: 'done' }) => handlers.finished?.({ sessionId: 's1', generation, outcome }),
     progress: (payload) => handlers.progress?.({ sessionId: 's1', generation, ...payload }),
   }
@@ -164,4 +197,53 @@ export const ROOTS = {
 
 export async function settle(): Promise<void> {
   for (let i = 0; i < 8; i++) await Promise.resolve()
+}
+
+/** A confirm preview with nothing in it but what `patch` adds. */
+export function preview(patch: Partial<ConfirmPreview> = {}): ConfirmPreview {
+  return {
+    revision: 7,
+    groups: [],
+    olderOverwritesNewer: [],
+    olderOverwritesNewerTotal: 0,
+    blocks: [],
+    skew: null,
+    hiddenActions: 0,
+    chosenUnknown: 0,
+    keepIsSlow: false,
+    ...patch,
+  }
+}
+
+/** A finished run's report: one row done, nothing else, unless `patch` says so. */
+export function report(patch: Partial<RunReportWire> = {}): RunReportWire {
+  return {
+    done: 1,
+    changedSinceCompare: 0,
+    noTrash: 0,
+    couldNotDo: 0,
+    keptNotReplaced: 0,
+    held: 0,
+    notStarted: 0,
+    versionsFolders: [],
+    keptBytes: 0,
+    operationIds: [],
+    items: [{ item: 0, result: 'done' }],
+    stopped: false,
+    ...patch,
+  }
+}
+
+/** A saved profile over two local folders. */
+export function profile(id: string, name: string): SyncProfile {
+  return {
+    id,
+    name,
+    left: { volumeId: 'root', path: `/Users/me/${name}` },
+    right: { volumeId: 'backup', path: `/Volumes/Backup/${name}` },
+    options: { ...defaultSyncOptions(), mode: 'mirror' },
+    showFilters: { ...DEFAULT_SHOW_FILTERS, equal: true },
+    restoreShowFilters: false,
+    overrides: { ...NO_OVERRIDES },
+  }
 }
