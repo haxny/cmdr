@@ -1738,7 +1738,10 @@ export const commands = {
     typedError<SyncState, SyncError>(__TAURI_INVOKE('get_sync_state', { sessionId, filters })),
   // Applies a key's action to the selected rows the person can see.
   setSyncActions: (sessionId: string, items: number[], bulk: BulkAction, filters: ShowFilters) =>
-    typedError<SyncState, SyncError>(__TAURI_INVOKE('set_sync_actions', { sessionId, items, bulk, filters })),
+    typedError<SyncActionsOutcome, SyncError>(__TAURI_INVOKE('set_sync_actions', { sessionId, items, bulk, filters })),
+  // The grid row a jump lands on: the next or previous folder, or a name typed in the grid.
+  findSyncRow: (sessionId: string, filters: ShowFilters, query: RowQuery) =>
+    typedError<number | null, SyncError>(__TAURI_INVOKE('find_sync_row', { sessionId, filters, query })),
   // Compares one equal-size pair by content; `sync-rows-changed` follows.
   compareSyncItemContent: (sessionId: string, item: number) =>
     typedError<null, SyncError>(__TAURI_INVOKE('compare_sync_item_content', { sessionId, item })),
@@ -17106,12 +17109,79 @@ export type RowBeside =
 // Which way ⇧↑ / ⇧↓ moves a row in the rename order.
 export type RowMove = 'up' | 'down'
 
+// What to look for, from view row `from` (the cursor).
+export type RowQuery =
+  // The first row of the next folder below `from`.
+  | {
+      type: 'nextFolder'
+      // The cursor's view row.
+      from: number
+    }
+  // The first row of the folder before the one `from` is in (the root's rows count as the first folder).
+  | {
+      type: 'previousFolder'
+      // The cursor's view row.
+      from: number
+    }
+  /**
+   *  The next item row, from `from` on and wrapping, whose name on either side starts with `prefix`
+   *  (ignoring case).
+   */
+  | {
+      type: 'name'
+      // Where the search starts (inclusive).
+      from: number
+      // What the person typed.
+      prefix: string
+    }
+
 /**
  *  An item row's role. `RollbackUnit` rows are the reversal
  *  units and are also searchable; `SearchOnly` rows exist purely so leaf
  *  search hits inside a top-level move/trash unit, and are never reversed.
  */
 export type RowRole = 'rollbackUnit' | 'searchOnly'
+
+/**
+ *  Why a bulk key left a row as it was. One per kind of refusal, so the dialog
+ *  can say it once for every row it applies to ("3 rows weren't changed: the
+ *  right side takes no changes").
+ */
+export type RowSkipReason =
+  /**
+   *  The mode doesn't allow the action (a removal outside Mirror, a write to
+   *  the left in Update or Mirror).
+   */
+  | {
+      type: 'illegalForMode'
+      // The action asked for.
+      action: Action
+    }
+  /**
+   *  The row's kind doesn't allow the action (clash and unreadable rows take
+   *  `Skip` only).
+   */
+  | {
+      type: 'illegalForCategory'
+      // The action asked for.
+      action: Action
+    }
+  // The side the action reads from (or removes) has nothing there.
+  | {
+      type: 'nothingToCopy'
+      // The empty side.
+      side: Side
+    }
+  // The action would write to a side that takes no writes.
+  | {
+      type: 'sideReadOnly'
+      // The read-only side.
+      side: Side
+    }
+  // Reverse on a row that has no copy between two present sides and no removal.
+  | { type: 'cantReverse' }
+  // Space on a row with no planned action to skip or restore.
+  | { type: 'nothingToToggle' }
 
 // Whether a row can be renamed to its new name.
 export type RowStatus =
@@ -19613,6 +19683,14 @@ export type SkipReason =
    */
   | 'locked'
 
+// How many rows a bulk key left alone for one reason.
+export type SkippedRows = {
+  // Why.
+  reason: RowSkipReason
+  // How many rows.
+  count: number
+}
+
 // The slot as the rail sees it before a send.
 export type SlotStatus = {
   readiness: ProviderReadiness
@@ -20329,6 +20407,16 @@ export type SuggestionsChanged = {
   reason: SuggestionChange
 }
 
+// What a bulk key did: the state after, and every selected row it left alone.
+export type SyncActionsOutcome = {
+  // The summary and guards after the change.
+  state: SyncState
+  // Rows the key couldn't change, grouped by why.
+  skipped: SkippedRows[]
+  // Selected rows the show-filters hide, which a key never changes.
+  hidden: number
+}
+
 // A compare ended.
 export type SyncCompareFinished = {
   // The session.
@@ -20578,6 +20666,11 @@ export type SyncState = {
   guards: GuardReport
   // A run has changed the folders since this compare: compare again.
   stale: boolean
+  /**
+   *  The plan revision this state is of. Revisions only grow, across
+   *  sessions too, so an answer with a lower one than the dialog holds is late.
+   */
+  revision: number
 }
 
 // Sync status for a file in a cloud-synced folder (Dropbox, iCloud, etc.).
@@ -22337,6 +22430,10 @@ export type ViewRowWire =
       leftName: string | null
       // The right name, in its own spelling.
       rightName: string | null
+      // The left path from the root, in the left's own spelling (F3 and F4 open it).
+      leftRelPath: string | null
+      // The right path from the root, in the right's own spelling.
+      rightRelPath: string | null
       // What the left entry is.
       leftKind: EntryKind | null
       // What the right entry is.
