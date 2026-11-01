@@ -10,6 +10,9 @@ use crate::SyncCaps;
 /// The default versions folder, relative to the target root. Under the app-owned
 /// `.cmdr-sync`, which every compare skips.
 pub const DEFAULT_VERSIONS_FOLDER: &str = ".cmdr-sync/versions";
+/// The app-owned folder every compare skips; a target-root versions folder must
+/// live under it, or the next compare would see the kept items.
+const APP_FOLDER: &str = ".cmdr-sync";
 /// What `{profile}` reads when the run has no profile.
 const NO_PROFILE: &str = "No profile";
 
@@ -96,6 +99,10 @@ pub struct VersionsRoot {
     pub place: Place,
     /// The dated folder itself.
     pub dir: PathBuf,
+    /// The folder the person chose (the target root, or the custom folder's
+    /// part before any placeholder). Everything between it and `dir` is made
+    /// or checked by the run, and must not be a symlink.
+    pub trusted: PathBuf,
 }
 
 /// Why an item can't be kept, so it is left alone.
@@ -106,9 +113,11 @@ pub enum KeepRefusal {
     NoTrash,
     /// The path would leave its folder (`..`, an absolute or empty part).
     EscapesFolder,
-    /// The custom folder isn't an absolute path, or has an unknown or unclosed
-    /// placeholder.
+    /// The custom folder isn't an absolute path or has an unknown or unclosed
+    /// placeholder, or a target-root folder isn't under `.cmdr-sync/`.
     BadTemplate,
+    /// The custom folder lies inside one of the folders being synchronized.
+    InsideSyncFolder,
 }
 
 /// Where one item goes.
@@ -138,6 +147,15 @@ fn relative_parts(rel: &str) -> Result<Vec<&str>, KeepRefusal> {
         return Err(KeepRefusal::EscapesFolder);
     }
     Ok(parts)
+}
+
+/// An absolute path from its non-empty parts, refused on `.` or `..`.
+fn absolute_from(path: &str) -> Result<PathBuf, KeepRefusal> {
+    let parts: Vec<&str> = path.split('/').filter(|part| !part.is_empty()).collect();
+    if parts.iter().any(|part| *part == "." || *part == "..") {
+        return Err(KeepRefusal::EscapesFolder);
+    }
+    Ok(parts.iter().fold(PathBuf::from("/"), |dir, part| dir.join(part)))
 }
 
 fn stamp_folder(stamp: &RunStamp, attempt: u32) -> String {
@@ -180,17 +198,48 @@ fn expand(template: &str, root: &str, profile: &str, date: &str) -> Result<(Stri
     Ok((out, dated))
 }
 
-fn custom_root(template: &str, target_root: &Path, profile: Option<&str>, date: &str) -> Result<PathBuf, KeepRefusal> {
+/// The custom folder's part before its first placeholder: the folder the
+/// person picked.
+fn custom_base(template: &str) -> Result<PathBuf, KeepRefusal> {
+    let literal = match template.find('{') {
+        Some(open) => template[..open].rfind('/').map_or("/", |slash| &template[..slash]),
+        None => template,
+    };
+    absolute_from(literal)
+}
+
+fn custom_root(
+    template: &str,
+    target_root: &Path,
+    profile: Option<&str>,
+    date: &str,
+) -> Result<VersionsRoot, KeepRefusal> {
     if !template.starts_with('/') {
         return Err(KeepRefusal::BadTemplate);
     }
     let root = target_root.to_string_lossy();
     let profile = profile.unwrap_or(NO_PROFILE).replace('/', "-");
-    let (expanded, dated) = expand(template, root.trim_start_matches('/'), &profile, date)?;
-    // Past the leading `/`, every part must be a plain name.
-    relative_parts(expanded.trim_end_matches('/').trim_start_matches('/'))?;
-    let dir = PathBuf::from(expanded);
-    Ok(if dated { dir } else { dir.join(date) })
+    // An empty expansion (`{root}` of `/`) leaves `//`, which collapses here.
+    let (expanded, dated) = expand(template, &root, &profile, date)?;
+    let dir = absolute_from(&expanded)?;
+    Ok(VersionsRoot {
+        place: Place::LocalDisk,
+        dir: if dated { dir } else { dir.join(date) },
+        trusted: custom_base(template)?,
+    })
+}
+
+fn target_root_folder(folder_name: &str, target_root: &Path, date: &str) -> Result<VersionsRoot, KeepRefusal> {
+    let parts = relative_parts(folder_name)?;
+    if parts.len() < 2 || parts[0] != APP_FOLDER {
+        return Err(KeepRefusal::BadTemplate);
+    }
+    let dir = parts.iter().fold(target_root.to_path_buf(), |dir, part| dir.join(part));
+    Ok(VersionsRoot {
+        place: Place::Target,
+        dir: dir.join(date),
+        trusted: target_root.to_path_buf(),
+    })
 }
 
 /// This run's versions folder for a target root. `attempt` above zero names a
@@ -207,19 +256,39 @@ pub fn versions_root(
     }
     let date = stamp_folder(stamp, attempt);
     match &policy.location {
-        VersionsLocation::TargetRoot { folder_name } => {
-            let parts = relative_parts(folder_name)?;
-            let dir = parts.iter().fold(target_root.to_path_buf(), |dir, part| dir.join(part));
-            Ok(VersionsRoot {
-                place: Place::Target,
-                dir: dir.join(date),
-            })
-        }
-        VersionsLocation::Custom { template } => Ok(VersionsRoot {
-            place: Place::LocalDisk,
-            dir: custom_root(template, target_root, profile_name, &date)?,
-        }),
+        VersionsLocation::TargetRoot { folder_name } => target_root_folder(folder_name, target_root, &date),
+        VersionsLocation::Custom { template } => custom_root(template, target_root, profile_name, &date),
     }
+}
+
+/// Where a run sets a replaced file aside before its copy lands: a versions
+/// folder on the target's own volume (a rename, so it can always move back).
+/// The policy's own folder when that is in the target root, else the default.
+pub fn staging_root(
+    policy: &KeepPolicy,
+    target_root: &Path,
+    stamp: &RunStamp,
+    attempt: u32,
+) -> Result<VersionsRoot, KeepRefusal> {
+    let folder_name = match &policy.location {
+        VersionsLocation::TargetRoot { folder_name } => folder_name.as_str(),
+        VersionsLocation::Custom { .. } => DEFAULT_VERSIONS_FOLDER,
+    };
+    let local = KeepPolicy {
+        place: KeepPlace::VersionsAlways,
+        location: VersionsLocation::TargetRoot {
+            folder_name: folder_name.to_owned(),
+        },
+    };
+    versions_root(&local, target_root, None, stamp, attempt)
+}
+
+/// The folder for `rel_path`'s parent under `versions`, or why there is none.
+pub fn kept_dir(versions: &VersionsRoot, rel_path: &str) -> Result<PathBuf, KeepRefusal> {
+    let parts = relative_parts(rel_path)?;
+    Ok(parts[..parts.len() - 1]
+        .iter()
+        .fold(versions.dir.clone(), |dir, part| dir.join(part)))
 }
 
 /// Where the item at `rel_path` (from the target root, `/`-separated) goes
@@ -231,19 +300,16 @@ pub fn keep_destination(
     versions: &VersionsRoot,
     rel_path: &str,
 ) -> KeepDestination {
-    let parts = match relative_parts(rel_path) {
-        Ok(parts) => parts,
+    let dir = match kept_dir(versions, rel_path) {
+        Ok(dir) => dir,
         Err(refusal) => return KeepDestination::Refused(refusal),
-    };
-    let folder = || KeepDestination::Folder {
-        place: versions.place,
-        dir: parts[..parts.len() - 1]
-            .iter()
-            .fold(versions.dir.clone(), |dir, part| dir.join(part)),
     };
     match (policy.place, target.has_trash) {
         (KeepPlace::TrashElseVersions | KeepPlace::TrashOnly, true) => KeepDestination::Trash,
-        (KeepPlace::TrashElseVersions, false) | (KeepPlace::VersionsAlways, _) => folder(),
+        (KeepPlace::TrashElseVersions, false) | (KeepPlace::VersionsAlways, _) => KeepDestination::Folder {
+            place: versions.place,
+            dir,
+        },
         (KeepPlace::TrashOnly, false) => KeepDestination::Refused(KeepRefusal::NoTrash),
     }
 }

@@ -6,16 +6,18 @@ use crate::steps_test::{acting, context, index_of, no_trash};
 use crate::test_tree::{Tree, caps};
 use crate::*;
 
+mod more;
+
 const T: u64 = 1_700_000_000;
 
-struct Setup {
-    left: Snapshot,
-    right: Snapshot,
-    plan: Plan,
-    ctx: RunContext,
+pub(super) struct Setup {
+    pub(super) left: Snapshot,
+    pub(super) right: Snapshot,
+    pub(super) plan: Plan,
+    pub(super) ctx: RunContext,
 }
 
-fn setup(mode: Mode, left: Tree, right: Tree, keep: KeepPolicy, right_caps: SyncCaps) -> Setup {
+pub(super) fn setup(mode: Mode, left: Tree, right: Tree, keep: KeepPolicy, right_caps: SyncCaps) -> Setup {
     let left = left.build();
     let right = right.with_caps(right_caps).build();
     let options = PlanOptions {
@@ -47,11 +49,11 @@ impl Setup {
     }
 }
 
-fn versions(path: &str) -> PathBuf {
+pub(super) fn versions(path: &str) -> PathBuf {
     PathBuf::from("/R/.cmdr-sync/versions/2026-11-01 093000").join(path)
 }
 
-fn file(size: u64, mtime: u64) -> Observed {
+pub(super) fn file(size: u64, mtime: u64) -> Observed {
     Observed {
         facts: EntryFacts {
             kind: EntryKind::File,
@@ -63,12 +65,13 @@ fn file(size: u64, mtime: u64) -> Observed {
 }
 
 /// Every source path any batch handed to the engine.
-fn touched(engine: &FakeEngine) -> Vec<PathBuf> {
+pub(super) fn touched(engine: &FakeEngine) -> Vec<PathBuf> {
     engine
         .batches()
         .into_iter()
         .flat_map(|batch| match batch {
             EngineBatch::MakeFolders { dirs, .. } => dirs,
+            EngineBatch::ClaimFolder { dir, .. } => vec![dir],
             EngineBatch::Copy { sources, .. }
             | EngineBatch::Move { sources, .. }
             | EngineBatch::MoveBack { sources, .. }
@@ -77,7 +80,7 @@ fn touched(engine: &FakeEngine) -> Vec<PathBuf> {
         .collect()
 }
 
-fn assert_clean(engine: &FakeEngine) {
+pub(super) fn assert_clean(engine: &FakeEngine) {
     assert_eq!(engine.violations(), Vec::<String>::new());
     assert_eq!(engine.lost(), Vec::new());
 }
@@ -115,7 +118,8 @@ async fn changed_replacement_target_is_skipped() {
         .changed(Change::Set(Loc::Right, "/R/a.txt".into(), file(4, T + 50)));
     let report = s.run(&engine, &SyncControl::new()).await;
     assert_eq!(s.result(&report, "a.txt"), RunItemResult::ChangedSinceCompare);
-    assert_eq!(engine.batches(), Vec::new());
+    let touched = touched(&engine);
+    assert!(!touched.contains(&PathBuf::from("/R/a.txt")) && !touched.contains(&PathBuf::from("/L/a.txt")));
     assert_eq!(engine.get(Loc::Right, "/R/a.txt"), Some(file(4, T + 50)));
     assert_clean(&engine);
 }
@@ -145,22 +149,36 @@ async fn changed_removal_target_is_skipped() {
 
 #[tokio::test]
 async fn folder_that_gained_files_is_skipped() {
+    // A removal: the folder gained a file nobody saw.
     let s = setup(
         Mode::Mirror,
-        Tree::new().file("k.txt", 1, T).file("new/x.txt", 1, T),
+        Tree::new().file("k.txt", 1, T),
         Tree::new().file("k.txt", 1, T).file("old/y.txt", 2, T),
         KeepPolicy::default(),
         caps(),
     );
     let engine = s
         .engine()
-        .changed(Change::Set(Loc::Right, "/R/old/surprise.txt".into(), file(1, T)))
-        .changed(Change::Set(Loc::Left, "/L/new/surprise.txt".into(), file(1, T)));
+        .changed(Change::Set(Loc::Right, "/R/old/surprise.txt".into(), file(1, T)));
     let report = s.run(&engine, &SyncControl::new()).await;
     assert_eq!(s.result(&report, "old"), RunItemResult::ChangedSinceCompare);
-    assert_eq!(s.result(&report, "new"), RunItemResult::ChangedSinceCompare);
     assert_eq!(engine.batches(), Vec::new());
     assert!(engine.get(Loc::Right, "/R/old/surprise.txt").is_some());
+    assert_clean(&engine);
+    // A whole-folder copy: the source gained a file.
+    let s = setup(
+        Mode::Update,
+        Tree::new().file("k.txt", 1, T).file("new/x.txt", 1, T),
+        Tree::new().file("k.txt", 1, T),
+        KeepPolicy::default(),
+        caps(),
+    );
+    let engine = s
+        .engine()
+        .changed(Change::Set(Loc::Left, "/L/new/surprise.txt".into(), file(1, T)));
+    let report = s.run(&engine, &SyncControl::new()).await;
+    assert_eq!(s.result(&report, "new"), RunItemResult::ChangedSinceCompare);
+    assert_eq!(engine.batches(), Vec::new());
     assert_clean(&engine);
 }
 
@@ -235,7 +253,7 @@ async fn failed_copy_holds_removals_in_its_folder_and_restores_the_kept_file() {
 }
 
 #[tokio::test]
-async fn a_replacement_kept_in_the_trash_that_cannot_land_is_reported() {
+async fn failed_copy_under_a_trash_policy_puts_the_original_back() {
     let s = setup(
         Mode::Mirror,
         Tree::new().file("a.txt", 5, T + 100),
@@ -245,8 +263,9 @@ async fn a_replacement_kept_in_the_trash_that_cannot_land_is_reported() {
     );
     let engine = s.engine().failing("/L/a.txt");
     let report = s.run(&engine, &SyncControl::new()).await;
-    assert_eq!(s.result(&report, "a.txt"), RunItemResult::KeptNotReplaced);
-    assert_eq!(engine.trashed(), vec![(Loc::Right, PathBuf::from("/R/a.txt"))]);
+    assert_eq!(s.result(&report, "a.txt"), RunItemResult::CouldNotDo);
+    assert_eq!(engine.get(Loc::Right, "/R/a.txt"), Some(file(4, T)));
+    assert!(engine.trashed().is_empty());
     assert_clean(&engine);
 }
 
@@ -259,10 +278,10 @@ async fn source_changed_after_the_keep_step_restores_the_kept_file() {
         KeepPolicy::default(),
         no_trash(),
     );
-    // Batch 0 makes the versions folder, batch 1 moves `a.txt` aside.
+    // Batch 0 claims the versions folder, 1 makes it, 2 sets `a.txt` aside.
     let engine = s
         .engine()
-        .after_batch(1, Change::Set(Loc::Left, "/L/a.txt".into(), file(6, T + 200)));
+        .after_batch(2, Change::Set(Loc::Left, "/L/a.txt".into(), file(6, T + 200)));
     let report = s.run(&engine, &SyncControl::new()).await;
     assert_eq!(s.result(&report, "a.txt"), RunItemResult::ChangedSinceCompare);
     assert_eq!(engine.get(Loc::Right, "/R/a.txt"), Some(file(4, T)));
@@ -282,10 +301,12 @@ async fn trash_is_used_when_policy_and_volume_allow() {
     let report = s.run(&engine, &SyncControl::new()).await;
     assert_eq!(s.result(&report, "a.txt"), RunItemResult::Done);
     assert_eq!(s.result(&report, "old.txt"), RunItemResult::Done);
+    // The replaced file waits beside its copy on the same volume, and goes
+    // to the Trash only once the copy landed.
     assert_eq!(
         engine.trashed(),
         vec![
-            (Loc::Right, PathBuf::from("/R/a.txt")),
+            (Loc::Right, versions("a.txt")),
             (Loc::Right, PathBuf::from("/R/old.txt")),
         ]
     );
@@ -380,8 +401,9 @@ async fn cancel_between_batches_marks_the_rest_not_started() {
         no_trash(),
     );
     let control = SyncControl::new();
-    // Batch 0 makes the versions folder, batch 1 moves `a.txt` aside, then Cancel.
-    let engine = s.engine().cancel_after(1, Arc::clone(&control));
+    // Batch 0 claims the versions folder, 1 makes it, 2 sets `a.txt` aside,
+    // then Cancel.
+    let engine = s.engine().cancel_after(2, Arc::clone(&control));
     let report = s.run(&engine, &control).await;
     assert!(report.stopped);
     assert_eq!(s.result(&report, "a.txt"), RunItemResult::NotStarted);
@@ -472,10 +494,11 @@ async fn never_permanently_deletes() {
     let engine = s.engine();
     let report = s.run(&engine, &SyncControl::new()).await;
     assert!(report.results.iter().all(|(_, r)| *r == RunItemResult::Done));
-    /* every recorded batch is MakeFolders | Copy | Move | MoveBack | Trash */
+    /* every recorded batch is ClaimFolder | MakeFolders | Copy | Move | MoveBack | Trash */
     for batch in engine.batches() {
         match batch {
             EngineBatch::MakeFolders { .. }
+            | EngineBatch::ClaimFolder { .. }
             | EngineBatch::Copy { .. }
             | EngineBatch::Move { .. }
             | EngineBatch::MoveBack { .. }

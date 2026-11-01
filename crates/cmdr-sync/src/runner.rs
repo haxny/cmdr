@@ -1,5 +1,8 @@
 //! The state machine behind `execute`: one step at a time, every item
-//! re-checked against the snapshot right before its batch.
+//! re-checked against the snapshot right before its batch. Claims, keeps, and
+//! restores live in `runner/keeping.rs`.
+
+mod keeping;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -7,22 +10,28 @@ use std::path::{Path, PathBuf};
 use crate::steps::{landing, other};
 use crate::{
     BatchOutcome, BoundSource, EngineBatch, Entry, EntryKey, EntryKind, ItemOutcome, KeepDestination, KeepRefusal,
-    Observed, Place, Plan, PlanItem, RunContext, RunItemResult, RunProgress, RunReport, Side, Step, SyncControl,
-    SyncEngine, VersionsRoot, steps,
+    Observed, Place, Plan, PlanItem, RunContext, RunItemResult, RunProgress, RunReport, Side, Step, StepPlan,
+    SyncControl, SyncEngine, VersionsRoot, steps,
 };
 
 pub(crate) struct Runner<'a> {
     plan: &'a Plan,
-    ctx: &'a RunContext,
+    ctx: RunContext,
     engine: &'a dyn SyncEngine,
     control: &'a SyncControl,
     on_progress: &'a (dyn Fn(RunProgress) + Sync),
+    acting: BTreeSet<u32>,
     results: BTreeMap<u32, RunItemResult>,
-    /// Replacement targets set aside, and where they went.
-    kept: BTreeMap<u32, KeepDestination>,
-    failed_dirs: Vec<(Place, Side, PathBuf)>,
-    /// Folders (per side) where a copy failed: removals beneath are held.
-    held_under: Vec<(Side, EntryKey)>,
+    /// Replaced files waiting in their staging folder for the copy.
+    kept: BTreeMap<u32, PathBuf>,
+    /// Folders that couldn't be claimed, made, or trusted, and what that means
+    /// for everything beneath them.
+    blocked: Vec<(Place, Side, PathBuf, RunItemResult)>,
+    /// Folders removals beneath which wait, because a copy there didn't land.
+    held_under: Option<Vec<(Side, EntryKey)>>,
+    /// Target folders made for copies, and where copies landed.
+    made_for_copies: BTreeSet<(Side, PathBuf)>,
+    landed: Vec<(Side, PathBuf)>,
     versions_used: Vec<VersionsRoot>,
     kept_bytes: u64,
     progress: RunProgress,
@@ -54,7 +63,7 @@ fn entry_bytes(entry: &Entry) -> u64 {
 }
 
 /// The engine's word on `path`; a source it never answered for in a batch it
-/// finished counts as failed, never as done.
+/// finished counts as failed, never as done. `None`: the batch stopped first.
 fn read(outcome: &BatchOutcome, path: &Path) -> Option<ItemOutcome> {
     let found = outcome.items.iter().find(|(p, _)| p == path).map(|(_, o)| *o);
     match found {
@@ -76,24 +85,34 @@ fn file_name(rel_path: &str) -> &str {
     rel_path.rsplit('/').next().unwrap_or(rel_path)
 }
 
+fn items_of(step: &Step) -> &[u32] {
+    match step {
+        Step::MakeFolders { .. } => &[],
+        Step::KeepAside { items, .. } | Step::Copy { items, .. } | Step::Remove { items, .. } => items,
+    }
+}
+
 impl<'a> Runner<'a> {
     pub(crate) fn new(
         plan: &'a Plan,
-        ctx: &'a RunContext,
+        ctx: &RunContext,
         engine: &'a dyn SyncEngine,
         control: &'a SyncControl,
         on_progress: &'a (dyn Fn(RunProgress) + Sync),
     ) -> Self {
         Self {
             plan,
-            ctx,
+            ctx: ctx.clone(),
             engine,
             control,
             on_progress,
+            acting: BTreeSet::new(),
             results: BTreeMap::new(),
             kept: BTreeMap::new(),
-            failed_dirs: Vec::new(),
-            held_under: Vec::new(),
+            blocked: Vec::new(),
+            held_under: None,
+            made_for_copies: BTreeSet::new(),
+            landed: Vec::new(),
             versions_used: Vec::new(),
             kept_bytes: 0,
             progress: RunProgress::default(),
@@ -101,28 +120,36 @@ impl<'a> Runner<'a> {
     }
 
     pub(crate) async fn run(mut self, run: &[u32]) -> RunReport {
-        let step_plan = steps(self.plan, run, self.ctx);
-        let acting = self.acting(run);
-        self.start(&acting, &step_plan.steps, &step_plan.refused);
-        let mut stopped = false;
-        for step in &step_plan.steps {
+        self.acting = self.acting_rows(run);
+        let first = steps(self.plan, run, &self.ctx);
+        self.start(&first);
+        // Cancel lands between batches, and between items while re-checking.
+        // TODO(Task 6): forward the cancel into the engine so a long batch
+        // stops mid-way; until then a batch that started runs to its end.
+        let mut stopped = self.halted() || self.claim(&first.steps).await;
+        let plan_steps = steps(self.plan, run, &self.ctx).steps;
+        for step in &plan_steps {
+            if stopped {
+                break;
+            }
             self.control.wait_while_paused().await;
-            if self.control.is_cancelled() {
+            if self.halted() {
                 stopped = true;
                 break;
             }
-            let engine_stopped = self.step(step).await;
+            stopped = self.step(step).await || self.halted();
             self.progress.steps_done += 1;
             (self.on_progress)(self.progress);
-            if engine_stopped {
-                stopped = true;
-                break;
-            }
         }
         let leftovers: Vec<u32> = self.kept.keys().copied().collect();
         self.restore(&leftovers).await;
         (self.on_progress)(self.progress);
-        let results = acting
+        self.report(stopped)
+    }
+
+    fn report(self, stopped: bool) -> RunReport {
+        let results = self
+            .acting
             .iter()
             .map(|index| {
                 (
@@ -131,16 +158,27 @@ impl<'a> Runner<'a> {
                 )
             })
             .collect();
+        let empty_folders = self
+            .made_for_copies
+            .iter()
+            .filter(|(side, dir)| !self.landed.iter().any(|(s, path)| s == side && path.starts_with(dir)))
+            .cloned()
+            .collect();
         RunReport {
             results,
             versions_used: self.versions_used,
             kept_bytes: self.kept_bytes,
+            empty_folders,
             stopped,
         }
     }
 
+    fn halted(&self) -> bool {
+        self.control.is_cancelled()
+    }
+
     /// Rows of the run that do something, in index order.
-    fn acting(&self, run: &[u32]) -> BTreeSet<u32> {
+    fn acting_rows(&self, run: &[u32]) -> BTreeSet<u32> {
         run.iter()
             .copied()
             .filter(|&index| {
@@ -153,29 +191,27 @@ impl<'a> Runner<'a> {
     }
 
     /// Totals, refusals, and rows the steps couldn't place (never silent).
-    fn start(&mut self, acting: &BTreeSet<u32>, steps: &[Step], refused: &[(u32, KeepRefusal)]) {
-        self.progress.steps_total = steps.len() as u32;
-        self.progress.items_total = acting.len() as u64;
-        self.progress.bytes_total = acting.iter().map(|&index| self.item(index).bytes).sum();
-        for &(index, refusal) in refused {
+    fn start(&mut self, plan: &StepPlan) {
+        self.progress.steps_total = plan.steps.len() as u32;
+        self.progress.items_total = self.acting.len() as u64;
+        self.progress.bytes_total = self.acting.iter().map(|&index| self.item(index).bytes).sum();
+        for &(index, refusal) in &plan.refused {
             let result = match refusal {
                 KeepRefusal::NoTrash => RunItemResult::NoTrash,
-                KeepRefusal::EscapesFolder | KeepRefusal::BadTemplate => RunItemResult::CouldNotDo,
+                KeepRefusal::EscapesFolder | KeepRefusal::BadTemplate | KeepRefusal::InsideSyncFolder => {
+                    RunItemResult::CouldNotDo
+                }
             };
             self.settle(index, result);
         }
-        let placed: BTreeSet<u32> = steps
+        let placed: BTreeSet<u32> = plan.steps.iter().flat_map(items_of).copied().collect();
+        let unplaced: Vec<u32> = self
+            .acting
             .iter()
-            .flat_map(|step| match step {
-                Step::MakeFolders { .. } => Vec::new(),
-                Step::KeepAside { items, .. } | Step::Copy { items, .. } | Step::Remove { items, .. } => items.clone(),
-            })
+            .copied()
+            .filter(|index| !placed.contains(index) && !self.results.contains_key(index))
             .collect();
-        for &index in acting {
-            if !placed.contains(&index) && !self.results.contains_key(&index) {
-                self.settle(index, RunItemResult::CouldNotDo);
-            }
-        }
+        self.settle_all(&unplaced, RunItemResult::CouldNotDo);
         (self.on_progress)(self.progress);
     }
 
@@ -183,6 +219,7 @@ impl<'a> Runner<'a> {
         &self.plan.items[index as usize]
     }
 
+    /// Sets a row's result; the first one counts toward progress.
     fn settle(&mut self, index: u32, result: RunItemResult) {
         if self.results.insert(index, result).is_none() {
             self.progress.items_done += 1;
@@ -205,20 +242,26 @@ impl<'a> Runner<'a> {
         }
     }
 
-    fn blocked(&self, place: Place, side: Side, dir: &Path) -> bool {
-        self.failed_dirs
+    /// What a blocked folder at or above `dir` means for items there.
+    fn blocked_at(&self, place: Place, side: Side, dir: &Path) -> Option<RunItemResult> {
+        self.blocked
             .iter()
-            .any(|(p, s, d)| *p == place && *s == side && dir.starts_with(d))
+            .find(|(p, s, d, _)| *p == place && *s == side && dir.starts_with(d))
+            .map(|(_, _, _, result)| *result)
     }
 
     fn path_of(&self, side: Side, entry: &Entry) -> PathBuf {
         self.ctx.root(side).join(&entry.rel_path)
     }
 
+    async fn exists(&self, side: Side, place: Place, path: &Path) -> bool {
+        self.engine.observe(side, place, path, false).await.is_some()
+    }
+
     async fn unchanged(&self, side: Side, entry: &Entry) -> bool {
         let path = self.path_of(side, entry);
         let folder = entry.facts.kind == EntryKind::Folder;
-        let now = self.engine.observe(side, &path, folder).await;
+        let now = self.engine.observe(side, Place::Target, &path, folder).await;
         matches_snapshot(entry, now.as_ref())
     }
 
@@ -229,237 +272,215 @@ impl<'a> Runner<'a> {
         }
     }
 
-    fn note_kept(&mut self, side: Side, entry: &Entry) {
-        let versions = self.ctx.versions(side);
-        if !self.versions_used.contains(versions) {
-            self.versions_used.push(versions.clone());
-        }
-        self.kept_bytes += entry_bytes(entry);
-    }
-
     async fn make_folders(&mut self, place: Place, side: Side, dirs: &[PathBuf]) -> bool {
+        // Never make anything through a folder that was refused.
+        let dirs: Vec<PathBuf> = dirs
+            .iter()
+            .filter(|dir| self.blocked_at(place, side, dir).is_none())
+            .cloned()
+            .collect();
+        if dirs.is_empty() {
+            return false;
+        }
         let batch = EngineBatch::MakeFolders {
             place,
             side,
-            dirs: dirs.to_vec(),
+            dirs: dirs.clone(),
         };
         let outcome = self.engine.run(batch).await;
+        let keeps = [self.ctx.staging(side).dir.clone(), self.ctx.versions(side).dir.clone()];
         for dir in dirs {
-            if read(&outcome, dir) != Some(ItemOutcome::Done) {
-                self.failed_dirs.push((place, side, dir.clone()));
+            if read(&outcome, &dir) != Some(ItemOutcome::Done) {
+                self.blocked.push((place, side, dir, RunItemResult::CouldNotDo));
+            } else if place == Place::Target && !keeps.iter().any(|keep| dir.starts_with(keep)) {
+                self.made_for_copies.insert((side, dir));
             }
         }
         outcome.stopped
-    }
-
-    /// The batch that keeps `sources` at `to`, or `None` when it can't run.
-    fn keep_batch(&self, side: Side, to: &KeepDestination, sources: Vec<BoundSource>) -> Option<EngineBatch> {
-        match to {
-            KeepDestination::Trash => Some(EngineBatch::Trash { side, sources }),
-            KeepDestination::Folder { place, dir } if !self.blocked(*place, side, dir) => Some(EngineBatch::Move {
-                side,
-                sources,
-                place: *place,
-                dest_dir: dir.clone(),
-            }),
-            KeepDestination::Folder { .. } | KeepDestination::Refused(_) => None,
-        }
-    }
-
-    async fn keep_aside(&mut self, side: Side, items: &[u32], to: &KeepDestination) -> bool {
-        if self.keep_batch(side, to, Vec::new()).is_none() {
-            self.settle_all(items, RunItemResult::CouldNotDo);
-            return false;
-        }
-        let mut chosen = Vec::new();
-        for &index in items {
-            let item = self.item(index);
-            let (Some(old), Some(source)) = (item.entry(side), item.entry(other(side))) else {
-                self.settle(index, RunItemResult::CouldNotDo);
-                continue;
-            };
-            // A copy that can't run must not cost the target its file.
-            if !self.unchanged(other(side), source).await || !self.unchanged(side, old).await {
-                self.settle(index, RunItemResult::ChangedSinceCompare);
-                continue;
-            }
-            chosen.push((index, self.bound(side, old)));
-        }
-        let Some(outcome) = self.run_keep(side, to, &chosen).await else {
-            return false;
-        };
-        for (index, source) in &chosen {
-            match read(&outcome, &source.path) {
-                Some(ItemOutcome::Done) => {
-                    self.kept.insert(*index, to.clone());
-                    if let (KeepDestination::Folder { .. }, Some(old)) = (to, self.item(*index).entry(side)) {
-                        self.note_kept(side, old);
-                    }
-                }
-                Some(other) => self.settle(*index, result_of(other)),
-                None => {}
-            }
-        }
-        outcome.stopped
-    }
-
-    async fn run_keep(&self, side: Side, to: &KeepDestination, chosen: &[(u32, BoundSource)]) -> Option<BatchOutcome> {
-        if chosen.is_empty() {
-            return None;
-        }
-        let sources = chosen.iter().map(|(_, source)| source.clone()).collect();
-        let batch = self.keep_batch(side, to, sources)?;
-        Some(self.engine.run(batch).await)
     }
 
     async fn copy(&mut self, from: Side, dest_dir: &Path, items: &[u32]) -> bool {
         let to = other(from);
-        if self.blocked(Place::Target, to, dest_dir) {
-            self.settle_all(items, RunItemResult::CouldNotDo);
+        if let Some(result) = self.blocked_at(Place::Target, to, dest_dir) {
+            let open: Vec<u32> = items
+                .iter()
+                .copied()
+                .filter(|i| !self.results.contains_key(i))
+                .collect();
+            self.settle_all(&open, result);
+            self.restore(items).await;
             return false;
         }
         let mut chosen = Vec::new();
         for &index in items {
+            if self.halted() {
+                break;
+            }
             let item = self.item(index);
             let replaces = item.entry(to).is_some();
             if self.results.contains_key(&index) || (replaces && !self.kept.contains_key(&index)) {
                 continue;
             }
-            let (Some(source), Some(spot)) = (item.entry(from), landing(self.plan, item, from, self.ctx)) else {
+            let (Some(source), Some(spot)) = (item.entry(from), landing(self.plan, item, from, &self.ctx)) else {
                 self.settle(index, RunItemResult::CouldNotDo);
                 continue;
             };
-            let occupied = self
-                .engine
-                .observe(to, &spot.dest_dir.join(&spot.name), false)
-                .await
-                .is_some();
-            if occupied || !self.unchanged(from, source).await {
+            let at = spot.dest_dir.join(&spot.name);
+            if self.exists(to, Place::Target, &at).await || !self.unchanged(from, source).await {
                 self.settle(index, RunItemResult::ChangedSinceCompare);
                 continue;
             }
-            chosen.push((index, self.bound(from, source)));
+            chosen.push((index, self.bound(from, source), at));
+        }
+        if self.halted() {
+            return true;
         }
         let stopped = self.run_copy(from, dest_dir, &chosen).await;
-        self.restore(items).await;
+        self.finish_replacements(items).await;
         stopped
     }
 
-    async fn run_copy(&mut self, from: Side, dest_dir: &Path, chosen: &[(u32, BoundSource)]) -> bool {
+    async fn run_copy(&mut self, from: Side, dest_dir: &Path, chosen: &[(u32, BoundSource, PathBuf)]) -> bool {
         if chosen.is_empty() {
             return false;
         }
+        let to = other(from);
         let batch = EngineBatch::Copy {
             from,
-            sources: chosen.iter().map(|(_, source)| source.clone()).collect(),
+            sources: chosen.iter().map(|(_, source, _)| source.clone()).collect(),
             dest_dir: dest_dir.to_path_buf(),
         };
         let outcome = self.engine.run(batch).await;
-        for (index, source) in chosen {
-            let Some(done) = read(&outcome, &source.path) else {
-                continue;
+        for (index, source, at) in chosen {
+            // A stopped batch may still have landed this one (temp+rename).
+            let done = match read(&outcome, &source.path) {
+                Some(done) => done,
+                None if self.exists(to, Place::Target, at).await => ItemOutcome::Done,
+                None => continue,
             };
-            if done == ItemOutcome::Failed {
-                let folder = self.item(*index).key.parent().unwrap_or_else(EntryKey::root);
-                self.held_under.push((other(from), folder));
+            if done == ItemOutcome::Done {
+                self.landed.push((to, at.clone()));
             }
             self.settle(*index, result_of(done));
         }
         outcome.stopped
     }
 
-    /// Puts back what was set aside for these rows' copies, unless the copy
-    /// landed. From the Trash nothing can come back: `KeptNotReplaced`.
-    async fn restore(&mut self, items: &[u32]) {
-        for &index in items {
-            if self.results.get(&index) == Some(&RunItemResult::Done) {
-                self.kept.remove(&index);
-                continue;
-            }
-            let Some(to) = self.kept.remove(&index) else {
-                continue;
-            };
-            let back = match to {
-                KeepDestination::Folder { place, dir } => self.move_back(index, place, &dir).await,
-                KeepDestination::Trash | KeepDestination::Refused(_) => false,
-            };
-            if !back {
-                self.settle(index, RunItemResult::KeptNotReplaced);
-            }
-        }
-    }
-
-    async fn move_back(&mut self, index: u32, place: Place, dir: &Path) -> bool {
-        let item = self.item(index);
-        let Some(side) = item.action.target() else {
-            return false;
-        };
-        let Some(old) = item.entry(side) else {
-            return false;
-        };
-        let original = self.path_of(side, old);
-        let Some(parent) = original.parent() else {
-            return false;
-        };
-        if self.engine.observe(side, &original, false).await.is_some() {
-            return false;
-        }
-        let kept_at = dir.join(file_name(&old.rel_path));
-        let batch = EngineBatch::MoveBack {
-            side,
-            place,
-            sources: vec![BoundSource {
-                path: kept_at.clone(),
-                expected: old.facts,
-            }],
-            dest_dir: parent.to_path_buf(),
-        };
-        let outcome = self.engine.run(batch).await;
-        let back = read(&outcome, &kept_at) == Some(ItemOutcome::Done);
-        if back {
-            self.kept_bytes = self.kept_bytes.saturating_sub(entry_bytes(old));
-        }
-        back
+    /// Folders where a copy row of this run didn't end `Done`: removals on
+    /// that side beneath them wait (a Mirror rename is a copy plus a removal).
+    fn held_folders(&self) -> Vec<(Side, EntryKey)> {
+        self.acting
+            .iter()
+            .map(|&index| self.item(index))
+            .filter(|item| item.action.is_copy() && self.results.get(&item.index) != Some(&RunItemResult::Done))
+            .filter_map(|item| Some((item.action.target()?, item.key.parent().unwrap_or_else(EntryKey::root))))
+            .collect()
     }
 
     async fn remove(&mut self, side: Side, items: &[u32], to: &KeepDestination) -> bool {
-        if self.keep_batch(side, to, Vec::new()).is_none() {
-            self.settle_all(items, RunItemResult::CouldNotDo);
+        let refused = match to {
+            KeepDestination::Folder { place, dir } => self.blocked_at(*place, side, dir),
+            KeepDestination::Trash => None,
+            KeepDestination::Refused(_) => Some(RunItemResult::CouldNotDo),
+        };
+        if let Some(result) = refused {
+            self.settle_all(items, result);
             return false;
         }
+        let held = match self.held_under.take() {
+            Some(held) => held,
+            None => self.held_folders(),
+        };
         let mut chosen = Vec::new();
         for &index in items {
-            let item = self.item(index);
-            let held = self
-                .held_under
-                .iter()
-                .any(|(s, folder)| *s == side && item.key.is_within(folder));
-            let Some(entry) = item.entry(side) else {
-                self.settle(index, RunItemResult::CouldNotDo);
-                continue;
-            };
-            if held {
-                self.settle(index, RunItemResult::HeldAfterFailedCopy);
-            } else if !self.unchanged(side, entry).await {
-                self.settle(index, RunItemResult::ChangedSinceCompare);
-            } else {
+            if self.halted() {
+                break;
+            }
+            if let Some(result) = self.removal_check(index, side, to, &held).await {
+                self.settle(index, result);
+            } else if let Some(entry) = self.item(index).entry(side) {
                 chosen.push((index, self.bound(side, entry)));
             }
         }
-        let Some(outcome) = self.run_keep(side, to, &chosen).await else {
+        self.held_under = Some(held);
+        if self.halted() {
+            return true;
+        }
+        self.run_removal(side, to, &chosen).await
+    }
+
+    /// Why a removal can't go ahead, if it can't.
+    async fn removal_check(
+        &self,
+        index: u32,
+        side: Side,
+        to: &KeepDestination,
+        held: &[(Side, EntryKey)],
+    ) -> Option<RunItemResult> {
+        let item = self.item(index);
+        let Some(entry) = item.entry(side) else {
+            return Some(RunItemResult::CouldNotDo);
+        };
+        if held.iter().any(|(s, folder)| *s == side && item.key.is_within(folder)) {
+            return Some(RunItemResult::HeldAfterFailedCopy);
+        }
+        if !self.unchanged(side, entry).await {
+            return Some(RunItemResult::ChangedSinceCompare);
+        }
+        if let KeepDestination::Folder { place, dir } = to
+            && self.exists(side, *place, &dir.join(file_name(&entry.rel_path))).await
+        {
+            return Some(RunItemResult::VersionsSpotTaken);
+        }
+        None
+    }
+
+    async fn run_removal(&mut self, side: Side, to: &KeepDestination, chosen: &[(u32, BoundSource)]) -> bool {
+        let Some(outcome) = self.run_keep(side, to, chosen).await else {
             return false;
         };
-        for (index, source) in &chosen {
-            let Some(done) = read(&outcome, &source.path) else {
-                continue;
+        for (index, source) in chosen {
+            let done = match read(&outcome, &source.path) {
+                Some(done) => done,
+                // Stopped: gone from its place means the engine kept it.
+                None if !self.exists(side, Place::Target, &source.path).await => ItemOutcome::Done,
+                None => continue,
             };
             if let (ItemOutcome::Done, KeepDestination::Folder { .. }, Some(entry)) =
                 (done, to, self.item(*index).entry(side))
             {
-                self.note_kept(side, entry);
+                let versions = self.ctx.versions(side).clone();
+                self.note_kept(versions, entry_bytes(entry));
             }
             self.settle(*index, result_of(done));
         }
         outcome.stopped
+    }
+
+    /// Runs the batch that keeps `chosen` at `to`; `None` when there is nothing
+    /// to run.
+    async fn run_keep(&self, side: Side, to: &KeepDestination, chosen: &[(u32, BoundSource)]) -> Option<BatchOutcome> {
+        if chosen.is_empty() {
+            return None;
+        }
+        let sources = chosen.iter().map(|(_, source)| source.clone()).collect();
+        let batch = match to {
+            KeepDestination::Trash => EngineBatch::Trash { side, sources },
+            KeepDestination::Folder { place, dir } => EngineBatch::Move {
+                side,
+                sources,
+                place: *place,
+                dest_dir: dir.clone(),
+            },
+            KeepDestination::Refused(_) => return None,
+        };
+        Some(self.engine.run(batch).await)
+    }
+
+    fn note_kept(&mut self, root: VersionsRoot, bytes: u64) {
+        if !self.versions_used.contains(&root) {
+            self.versions_used.push(root);
+        }
+        self.kept_bytes += bytes;
     }
 }

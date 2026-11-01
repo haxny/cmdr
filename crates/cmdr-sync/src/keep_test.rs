@@ -212,7 +212,9 @@ fn arb_policy() -> impl Strategy<Value = KeepPolicy> {
         KeepPlace::TrashOnly,
     ]);
     let location = prop_oneof![
-        arb_rel().prop_map(|folder_name| VersionsLocation::TargetRoot { folder_name }),
+        arb_rel().prop_map(|rest| VersionsLocation::TargetRoot {
+            folder_name: format!(".cmdr-sync/{rest}")
+        }),
         arb_rel().prop_map(|rest| VersionsLocation::Custom {
             template: format!("/k/{rest}")
         }),
@@ -263,4 +265,56 @@ proptest! {
             }
         }
     }
+}
+
+#[test]
+fn target_root_folder_must_be_under_the_app_folder() {
+    for folder_name in ["versions", ".cmdr-sync", "kept/.cmdr-sync/v"] {
+        let policy = KeepPolicy {
+            place: KeepPlace::VersionsAlways,
+            location: VersionsLocation::TargetRoot {
+                folder_name: folder_name.to_owned(),
+            },
+        };
+        let refused = versions_root(&policy, Path::new("/r"), None, &stamp(), 0);
+        assert_eq!(refused, Err(KeepRefusal::BadTemplate), "{folder_name:?}");
+    }
+}
+
+#[test]
+fn an_empty_root_expansion_collapses() {
+    let policy = custom("/k/{root}/x");
+    let versions = versions_root(&policy, Path::new("/"), None, &stamp(), 0).unwrap();
+    assert_eq!(versions.dir, PathBuf::from("/k/x/2026-11-01 093000"));
+    let plain = versions_root(&custom("/k/{root}"), Path::new("/Volumes/B"), None, &stamp(), 0).unwrap();
+    assert_eq!(plain.dir, PathBuf::from("/k/Volumes/B/2026-11-01 093000"));
+}
+
+#[test]
+fn trusted_is_the_folder_the_person_picked() {
+    let with = versions_root(&custom("/Users/me/Kept/{profile}"), Path::new("/r"), None, &stamp(), 0).unwrap();
+    assert_eq!(with.trusted, PathBuf::from("/Users/me/Kept"));
+    let mid = versions_root(&custom("/Users/me/Kept-{date}"), Path::new("/r"), None, &stamp(), 0).unwrap();
+    assert_eq!(mid.trusted, PathBuf::from("/Users/me"));
+    let plain = versions_root(&custom("/Users/me/Kept/"), Path::new("/r"), None, &stamp(), 0).unwrap();
+    assert_eq!(plain.trusted, PathBuf::from("/Users/me/Kept"));
+    assert_eq!(root_of(&KeepPolicy::default()).trusted, PathBuf::from("/r"));
+}
+
+#[test]
+fn replaced_files_stage_on_the_target_volume() {
+    let staged = staging_root(&custom("/Kept"), Path::new("/r"), &stamp(), 1).unwrap();
+    assert_eq!(staged.place, Place::Target);
+    assert_eq!(
+        staged.dir,
+        PathBuf::from("/r/.cmdr-sync/versions/2026-11-01 093000 (2)")
+    );
+    let own = KeepPolicy {
+        place: KeepPlace::VersionsAlways,
+        location: VersionsLocation::TargetRoot {
+            folder_name: ".cmdr-sync/old".to_owned(),
+        },
+    };
+    let same = staging_root(&own, Path::new("/r"), &stamp(), 0).unwrap();
+    assert_eq!(same, versions_root(&own, Path::new("/r"), None, &stamp(), 0).unwrap());
 }

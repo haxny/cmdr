@@ -1,58 +1,14 @@
-//! A confirmed plan as ordered steps: make folders, keep aside what copies
-//! replace, copy, then remove. Pure; order and grouping in `DETAILS.md` § Run.
+//! A confirmed plan as ordered steps: make folders, then per landing folder
+//! set aside what its copies replace and copy, then remove. Pure; order and
+//! grouping in `DETAILS.md` § Run.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::{
-    Action, Category, EntryKey, KeepDestination, KeepPolicy, KeepRefusal, Place, Plan, PlanItem, Side, SyncCaps,
-    VersionsRoot, keep_destination,
+    Action, Category, EntryKey, KeepDestination, KeepRefusal, Place, Plan, PlanItem, RunContext, Side,
+    keep_destination, kept_dir,
 };
-
-/// Everything a run needs beyond the plan.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RunContext {
-    /// The left folder.
-    pub left_root: PathBuf,
-    /// The right folder.
-    pub right_root: PathBuf,
-    /// What the left volume can do now.
-    pub left_caps: SyncCaps,
-    /// What the right volume can do now.
-    pub right_caps: SyncCaps,
-    /// How replaced and removed items are kept.
-    pub keep: KeepPolicy,
-    /// This run's versions folder for items kept from the left.
-    pub versions_left: VersionsRoot,
-    /// This run's versions folder for items kept from the right.
-    pub versions_right: VersionsRoot,
-}
-
-impl RunContext {
-    /// The root of `side`.
-    pub fn root(&self, side: Side) -> &Path {
-        match side {
-            Side::Left => &self.left_root,
-            Side::Right => &self.right_root,
-        }
-    }
-
-    /// What `side`'s volume can do.
-    pub fn caps(&self, side: Side) -> &SyncCaps {
-        match side {
-            Side::Left => &self.left_caps,
-            Side::Right => &self.right_caps,
-        }
-    }
-
-    /// The versions folder for items kept from `side`.
-    pub fn versions(&self, side: Side) -> &VersionsRoot {
-        match side {
-            Side::Left => &self.versions_left,
-            Side::Right => &self.versions_right,
-        }
-    }
-}
 
 /// One group of like operations, by plan row index.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,7 +23,8 @@ pub enum Step {
         /// Parents before children.
         dirs: Vec<PathBuf>,
     },
-    /// Move the `side` entries these copies would replace out of the way.
+    /// Move the `side` entries the next copy replaces into the staging folder
+    /// on their own volume (`RunContext::staging`), right before that copy.
     KeepAside {
         /// The side whose entries go.
         side: Side,
@@ -174,26 +131,45 @@ fn actable(item: &PlanItem) -> bool {
     acts && !partial && item.action.needs().is_some_and(|side| item.entry(side).is_some())
 }
 
+/// One landing folder's copies, and the files they replace by staging folder.
+#[derive(Default)]
+struct CopyGroup {
+    keeps: BTreeMap<PathBuf, Vec<u32>>,
+    items: Vec<u32>,
+}
+
 #[derive(Default)]
 struct Groups {
     make: BTreeMap<(Place, Side), BTreeSet<PathBuf>>,
-    keep: BTreeMap<(Side, KeepDestination), Vec<u32>>,
-    copy: BTreeMap<(Side, PathBuf), Vec<u32>>,
+    copy: BTreeMap<(Side, PathBuf), CopyGroup>,
     remove: BTreeMap<(Side, KeepDestination), Vec<u32>>,
     refused: Vec<(u32, KeepRefusal)>,
 }
 
 impl Groups {
+    fn make_dir(&mut self, place: Place, side: Side, dir: PathBuf) {
+        self.make.entry((place, side)).or_default().insert(dir);
+    }
+
     /// Where `side`'s entry `rel_path` goes; a folder destination is made first.
     fn keep_place(&mut self, ctx: &RunContext, side: Side, rel_path: &str) -> Result<KeepDestination, KeepRefusal> {
         match keep_destination(&ctx.keep, ctx.caps(side), ctx.versions(side), rel_path) {
             KeepDestination::Refused(refusal) => Err(refusal),
             KeepDestination::Folder { place, dir } => {
-                self.make.entry((place, side)).or_default().insert(dir.clone());
+                self.make_dir(place, side, dir.clone());
                 Ok(KeepDestination::Folder { place, dir })
             }
             KeepDestination::Trash => Ok(KeepDestination::Trash),
         }
+    }
+
+    /// The staging folder for a replaced entry; its final place (checked now,
+    /// used after the copy lands) must exist too.
+    fn stage(&mut self, ctx: &RunContext, side: Side, rel_path: &str) -> Result<PathBuf, KeepRefusal> {
+        let staged = kept_dir(ctx.staging(side), rel_path)?;
+        self.keep_place(ctx, side, rel_path)?;
+        self.make_dir(Place::Target, side, staged.clone());
+        Ok(staged)
     }
 
     fn add_copy(&mut self, plan: &Plan, item: &PlanItem, from: Side, ctx: &RunContext) {
@@ -201,15 +177,18 @@ impl Groups {
             return;
         };
         let to = other(from);
-        if let Some(old) = item.entry(to) {
-            match self.keep_place(ctx, to, &old.rel_path) {
-                Ok(to_place) => self.keep.entry((to, to_place)).or_default().push(item.index),
-                Err(refusal) => return self.refused.push((item.index, refusal)),
-            }
-        }
+        let staged = match item.entry(to).map(|old| self.stage(ctx, to, &old.rel_path)) {
+            Some(Err(refusal)) => return self.refused.push((item.index, refusal)),
+            Some(Ok(dir)) => Some(dir),
+            None => None,
+        };
         let made = self.make.entry((Place::Target, to)).or_default();
         made.extend(landing.missing);
-        self.copy.entry((from, landing.dest_dir)).or_default().push(item.index);
+        let group = self.copy.entry((from, landing.dest_dir)).or_default();
+        if let Some(dir) = staged {
+            group.keeps.entry(dir).or_default().push(item.index);
+        }
+        group.items.push(item.index);
     }
 
     fn add_removal(&mut self, item: &PlanItem, side: Side, ctx: &RunContext) {
@@ -223,7 +202,7 @@ impl Groups {
     }
 
     fn into_plan(self) -> StepPlan {
-        let make = self
+        let mut steps: Vec<Step> = self
             .make
             .into_iter()
             .filter(|(_, dirs)| !dirs.is_empty())
@@ -231,21 +210,30 @@ impl Groups {
                 place,
                 side,
                 dirs: dirs.into_iter().collect(),
+            })
+            .collect();
+        for ((from, dest_dir), group) in self.copy {
+            steps.extend(group.keeps.into_iter().map(|(dir, items)| Step::KeepAside {
+                side: other(from),
+                items,
+                to: KeepDestination::Folder {
+                    place: Place::Target,
+                    dir,
+                },
+            }));
+            steps.push(Step::Copy {
+                from,
+                dest_dir,
+                items: group.items,
             });
-        let keep = self
-            .keep
-            .into_iter()
-            .map(|((side, to), items)| Step::KeepAside { side, items, to });
-        let copy = self
-            .copy
-            .into_iter()
-            .map(|((from, dest_dir), items)| Step::Copy { from, dest_dir, items });
-        let remove = self
-            .remove
-            .into_iter()
-            .map(|((side, to), items)| Step::Remove { side, items, to });
+        }
+        steps.extend(
+            self.remove
+                .into_iter()
+                .map(|((side, to), items)| Step::Remove { side, items, to }),
+        );
         StepPlan {
-            steps: make.chain(keep).chain(copy).chain(remove).collect(),
+            steps,
             refused: self.refused,
         }
     }

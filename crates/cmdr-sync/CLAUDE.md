@@ -12,8 +12,9 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
 - **scan.rs**: `scan()`. **content.rs**: `compare_contents()`, byte-by-byte for equal-size pairs.
 - **plan.rs**: `plan()`, `reclassify()`, the mode table. **overrides.rs**: legal actions, bulk keys. **guards.rs**:
   `check()`, `gate()`. **view.rs**: show-filters, folder headers, summary. Laws: `plan_proptests.rs`.
-- **keep.rs**: Trash or versions folder paths. **steps.rs**: plan → ordered steps. **execute.rs** + **runner.rs**:
-  `execute()` over the `SyncEngine` trait; fake and laws in `execute_fake.rs`, `execute_proptests.rs`.
+- **keep.rs**, **context.rs**: Trash or versions folder paths, `RunContext`. **steps.rs**: plan → ordered steps.
+  **execute.rs** + **runner.rs** (+ `src/runner/keeping.rs`): `execute()` over the `SyncEngine` trait; fake and laws in
+  `execute_fake.rs`, `execute_proptests.rs`.
 
 ## Must-knows
 
@@ -37,7 +38,8 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
 - **The crate never deletes permanently.** `EngineBatch` has no delete variant; replaced and removed items are moved to
   the Trash or a versions folder, or left alone (`KeepRefusal`).
 - **Every item is re-observed right before its batch** (a folder by `subtree_now`, digest included); any difference is
-  `ChangedSinceCompare`, never a widened action. A kept item whose copy didn't land goes back, or is reported.
+  `ChangedSinceCompare`, never a widened action. A replaced file waits on its own volume until its copy lands, else goes
+  back; a copy that didn't land holds removals in its folder.
 - **No `cmdr-operations` dependency** (a package cycle through `cmdr-listing`): the app implements `SyncEngine`.
 - No `tauri`, enforced by `index-crate-isolation`.
 

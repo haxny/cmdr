@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::test_tree::{Tree, caps, key};
 use crate::*;
@@ -12,16 +12,8 @@ pub(crate) fn stamp() -> RunStamp {
 
 /// A run between `/L` and `/R` with the given policy and volumes.
 pub(crate) fn context(keep: KeepPolicy, left_caps: SyncCaps, right_caps: SyncCaps) -> RunContext {
-    let versions = |root: &str| versions_root(&keep, Path::new(root), None, &stamp(), 0).unwrap();
-    RunContext {
-        left_root: PathBuf::from("/L"),
-        right_root: PathBuf::from("/R"),
-        left_caps,
-        right_caps,
-        versions_left: versions("/L"),
-        versions_right: versions("/R"),
-        keep,
-    }
+    let (left, right) = (PathBuf::from("/L"), PathBuf::from("/R"));
+    RunContext::new(left, right, left_caps, right_caps, keep, stamp(), None).unwrap()
 }
 
 pub(crate) fn no_trash() -> SyncCaps {
@@ -255,27 +247,107 @@ fn trash_only_without_a_trash_refuses_replacements_and_removals() {
 }
 
 #[test]
-fn trash_keeps_need_no_folders() {
+fn replacements_stage_on_the_target_volume_even_with_a_trash() {
     let left = Tree::new().file("a.txt", 5, T + 100).build();
     let right = Tree::new().file("a.txt", 4, T).file("old.txt", 3, T).build();
     let plan = plan_of(Mode::Mirror, &left, &right);
     let ctx = context(KeepPolicy::default(), caps(), caps());
     let got = steps(&plan, &acting(&plan), &ctx);
-    assert!(matches!(
-        got.steps[0],
-        Step::KeepAside {
-            to: KeepDestination::Trash,
-            ..
-        }
-    ));
-    assert!(matches!(
-        got.steps.last(),
-        Some(Step::Remove {
-            to: KeepDestination::Trash,
-            ..
+    let staged = KeepDestination::Folder {
+        place: Place::Target,
+        dir: versions_dir("/R", ""),
+    };
+    assert_eq!(
+        got.steps,
+        vec![
+            Step::MakeFolders {
+                place: Place::Target,
+                side: Side::Right,
+                dirs: vec![versions_dir("/R", "")],
+            },
+            Step::KeepAside {
+                side: Side::Right,
+                items: vec![index_of(&plan, "a.txt")],
+                to: staged,
+            },
+            Step::Copy {
+                from: Side::Left,
+                dest_dir: PathBuf::from("/R"),
+                items: vec![index_of(&plan, "a.txt")],
+            },
+            Step::Remove {
+                side: Side::Right,
+                items: vec![index_of(&plan, "old.txt")],
+                to: KeepDestination::Trash,
+            },
+        ]
+    );
+}
+
+#[test]
+fn each_copy_group_sets_aside_right_before_it_copies() {
+    let left = Tree::new()
+        .file("a.txt", 5, T + 100)
+        .file("d/b.txt", 5, T + 100)
+        .build();
+    let right = Tree::new().file("a.txt", 4, T).file("d/b.txt", 4, T).build();
+    let plan = plan_of(Mode::Mirror, &left, &right);
+    let ctx = context(KeepPolicy::default(), no_trash(), no_trash());
+    let got = steps(&plan, &acting(&plan), &ctx);
+    let kinds: Vec<&str> = got
+        .steps
+        .iter()
+        .map(|step| match step {
+            Step::MakeFolders { .. } => "make",
+            Step::KeepAside { .. } => "keep",
+            Step::Copy { .. } => "copy",
+            Step::Remove { .. } => "remove",
         })
-    ));
-    assert!(!got.steps.iter().any(|step| matches!(step, Step::MakeFolders { .. })));
+        .collect();
+    assert_eq!(kinds, ["make", "keep", "copy", "keep", "copy"]);
+}
+
+#[test]
+fn a_custom_folder_inside_a_sync_root_is_refused() {
+    let keep = KeepPolicy {
+        place: KeepPlace::VersionsAlways,
+        location: VersionsLocation::Custom {
+            template: "/R/kept".to_owned(),
+        },
+    };
+    let (left, right) = (PathBuf::from("/L"), PathBuf::from("/R"));
+    let refused = RunContext::new(left, right, caps(), caps(), keep, stamp(), None);
+    assert_eq!(refused, Err(KeepRefusal::InsideSyncFolder));
+}
+
+#[test]
+fn replacements_under_a_custom_folder_stage_on_the_target_and_end_on_the_local_disk() {
+    let left = Tree::new().file("d/a.txt", 5, T + 100).build();
+    let right = Tree::new().file("d/a.txt", 4, T).build();
+    let plan = plan_of(Mode::Mirror, &left, &right);
+    let keep = KeepPolicy {
+        place: KeepPlace::VersionsAlways,
+        location: VersionsLocation::Custom {
+            template: "/Kept".to_owned(),
+        },
+    };
+    let ctx = context(keep, caps(), caps());
+    let got = steps(&plan, &acting(&plan), &ctx);
+    assert_eq!(
+        got.steps[..2],
+        [
+            Step::MakeFolders {
+                place: Place::Target,
+                side: Side::Right,
+                dirs: vec![versions_dir("/R", "d")],
+            },
+            Step::MakeFolders {
+                place: Place::LocalDisk,
+                side: Side::Right,
+                dirs: vec![PathBuf::from("/Kept").join(STAMP_DIR).join("d")],
+            },
+        ]
+    );
 }
 
 #[test]

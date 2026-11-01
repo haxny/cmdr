@@ -13,6 +13,7 @@
 mod caps;
 mod compare;
 mod content;
+mod context;
 mod control;
 mod execute;
 mod filter;
@@ -33,6 +34,7 @@ pub use compare::{
     SAME_TIME_TOLERANCE_SECS, Verdict, classify,
 };
 pub use content::{ContentJob, ContentProgress, compare_contents, content_workers};
+pub use context::RunContext;
 pub use control::SyncControl;
 pub use execute::{
     BatchOutcome, BoundSource, EngineBatch, EngineFuture, ItemOutcome, Observed, RunItemResult, RunProgress, RunReport,
@@ -44,7 +46,7 @@ pub use guards::{
 };
 pub use keep::{
     DEFAULT_VERSIONS_FOLDER, KeepDestination, KeepPlace, KeepPolicy, KeepRefusal, Place, RunStamp, VersionsLocation,
-    VersionsRoot, keep_destination, versions_root,
+    VersionsRoot, keep_destination, kept_dir, staging_root, versions_root,
 };
 pub use key::{EntryKey, NameRule};
 pub use overrides::{ActionChange, BulkAction, OverrideRefusal, apply_overrides, bulk_changes, legal_actions};
@@ -54,7 +56,7 @@ pub use plan::{
 };
 pub use scan::{ScanError, ScanOptions, ScanProgress, Side, scan, subtree_now};
 pub use snapshot::{Entry, Snapshot, SubtreeFacts, UnreadableReason};
-pub use steps::{RunContext, Step, StepPlan, steps};
+pub use steps::{Step, StepPlan, steps};
 pub use view::{PlanSummary, RowClass, ShowFilters, SideTotals, ViewRow, is_visible, row_class, summarize, view_rows};
 
 #[cfg(test)]

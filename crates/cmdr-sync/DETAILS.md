@@ -204,53 +204,77 @@ folders) survive every mode, also after random overrides and bulk keys through t
 Mirror and Update and unchosen `?` rows untouched), the warning flag is exact, overrides never yield an illegal action,
 and guards trip exactly at their thresholds on overridden plans.
 
-## Keep (keep.rs)
+## Keep (keep.rs, context.rs)
 
 `keep_destination(policy, target caps, versions, rel_path)`: `TrashElseVersions` → `Trash` when `has_trash`, else the
 versions folder; `VersionsAlways` → the folder; `TrashOnly` without a Trash → `Refused(NoTrash)` (the row is left alone,
-never deleted). A folder destination is `<versions dir>/<rel parent>`, so names keep their folder structure; a
-`rel_path` with an empty, `.`, or `..` part is `Refused(EscapesFolder)`.
+never deleted). A folder destination is `<versions dir>/<rel parent>` (`kept_dir`), so names keep their folder
+structure; a `rel_path` with an empty, `.`, or `..` part is `Refused(EscapesFolder)`.
 
 `versions_root(policy, target_root, profile, stamp, attempt)`: `TargetRoot` is `<target root>/<folder_name>/<stamp>`
-(`Place::Target`, a rename away); `folder_name` must be a plain relative path. `Custom` is an absolute local-disk
-template (`Place::LocalDisk`) with `{root}` (the target root without its leading `/`), `{profile}` (the name with `/`
-turned into `-`, or "No profile"), and `{date}`; the stamp folder is appended when `{date}` is absent, so runs never
-mix. Unknown or unclosed placeholders and relative templates are `BadTemplate`; a `..` or empty part after expansion (or
-in the target root) is `EscapesFolder`. `attempt > 0` names the stamp folder `<stamp> (attempt+1)`; the caller bumps it
-when the folder already exists. Laws: `kept_paths_never_escape_the_versions_folder` in `keep_test.rs`.
+(`Place::Target`, a rename away); `folder_name` must be a plain relative path (`EscapesFolder`) under `.cmdr-sync/`
+(`BadTemplate`), because the scanner skips only `.cmdr-sync` and Mirror would otherwise see kept items as right-only.
+`Custom` is an absolute local-disk template (`Place::LocalDisk`) with `{root}` (the target root), `{profile}` (the name
+with `/` turned into `-`, or "No profile"), and `{date}`; the stamp folder is appended when `{date}` is absent, so runs
+never mix. Empty parts collapse (so `{root}` of `/` adds nothing); a `.` or `..` part, or a target root that climbs, is
+`EscapesFolder`; unknown or unclosed placeholders and relative templates are `BadTemplate`. `attempt > 0` names the
+stamp folder `<stamp> (attempt+1)`. `VersionsRoot::trusted` is the folder the person picked (the target root, or the
+custom template up to its first placeholder); the run checks everything between it and the dated folder. `staging_root`
+is the same-volume folder replaced files wait in: the policy's own when it is in the target root, else
+`.cmdr-sync/versions` there. Laws: `kept_paths_never_escape_the_versions_folder` in `keep_test.rs`.
 
-Gotcha: a `folder_name` outside `.cmdr-sync` is compared like any other folder (the scanner only skips `.cmdr-sync`), so
-Mirror would see the kept items as right-only. Settings should keep it under `.cmdr-sync`.
+`RunContext::new` resolves both sides' versions and staging folders and refuses a custom folder inside either sync root
+(`InsideSyncFolder`: it would be compared and synchronized like the person's files). The check compares paths only, so a
+remote root whose path happens to prefix the local custom folder is refused too (conservative). `with_attempt(side, n)`
+renames that side's dated folders for a retry.
 
-## Run (steps.rs, execute.rs, runner.rs)
+## Run (steps.rs, execute.rs, runner.rs, runner/keeping.rs)
 
-`steps(plan, run, ctx)` turns the rows `gate` let run into groups, in this order: `MakeFolders` per (place, side)
-(versions folders that will receive something, and target folders of split one-sided folders whose children are copied,
-parents first; made with missing parents), `KeepAside` per (side, destination) (the target of every copy that replaces
-something), `Copy` per (direction, landing folder), `Remove` per (side, destination). Rows whose keep is refused go to
-`refused` and get no step (their copy doesn't run either). Clash, type-clash, and unreadable rows never get a step,
-whatever their action says.
+`steps(plan, run, ctx)` turns the rows `gate` let run into groups: `MakeFolders` per (place, side) first (staging and
+versions subfolders, and target folders of split one-sided folders whose children are copied, parents first; made with
+missing parents), then per landing folder (direction, folder) its `KeepAside` groups (each replaced file into the
+staging folder on its own volume) right before its `Copy`, then `Remove` per (side, destination). Rows whose keep is
+refused (by the final policy or the staging path) go to `refused` and get no step. Clash, type-clash, and unreadable
+rows never get a step, whatever their action says.
 
-`execute` runs the steps one batch each. Pause is awaited and Cancel checked between batches. Before each batch every
-item is observed again and must read exactly as the snapshot did (files: kind, size, time; folders: the whole
-`SubtreeFacts`, digest included, but not the folder's own time, which Finder touches by browsing); a mismatch is
-`ChangedSinceCompare` and the item leaves the batch. Before a keep-aside both the copy's source and the target are
-checked, so a doomed copy never costs the target its file; before a copy the landing spot must be empty. Every source
-goes to the engine as a `BoundSource` with the snapshot's facts, so the engine's own `ExpectedSources` re-check covers
-the window between observe and act, and copies land with `ConflictResolution::Skip`.
+Before any step, `execute` claims every dated folder the steps use with `EngineBatch::ClaimFolder` (made only if absent;
+`Skipped` when something is there), bumping `attempt` (up to 100) until each is fresh, so a run never mixes into an
+older one. First it observes each folder between `VersionsRoot::trusted` and the dated folder: a symlink or a file there
+refuses everything kept in it (`VersionsFolderUnsafe`); `MakeFolders` never makes anything under a refused or failed
+folder, and items kept there read `CouldNotDo`.
+
+Every item is observed again right before its batch and must read exactly as the snapshot did (files: kind, size, time;
+folders: the whole `SubtreeFacts`, digest included, but not the folder's own time, which Finder touches by browsing); a
+mismatch is `ChangedSinceCompare`. File re-checks use size and time only, so on a volume that lists no times (some MTP
+and WebDAV servers) a same-size edit passes. Before a keep-aside both the copy's source and the target are checked;
+before a copy the landing spot must be empty; before any move into a versions folder the spot there must be empty
+(`VersionsSpotTaken`). Every source goes to the engine as a `BoundSource` with the snapshot's facts, so the engine's own
+`ExpectedSources` re-check covers the window between observe and act. `Copy`, `Move`, and `MoveBack` land with
+`ConflictResolution::Skip`: an occupied spot comes back `Skipped`, never overwritten.
+
+Decision: replaced files always go aside first into the staging folder on their own volume (a rename, so `MoveBack` can
+always undo it), and only once the copy has landed does the policy apply (Trash, or a move to the custom folder);
+anything that can't happen then leaves the file in the staging folder, which keeps it too. A copy that doesn't land
+(failure, change, a blocked folder, a cancel or engine stop between keep and copy) moves its file back, unless something
+now sits in its place: then `KeptNotReplaced`. A later engine option (`ConflictResolution::OverwriteKeeping`: copy to a
+temp, then swap) could fold this into one step; deferred past phase 1.
 
 Decision: no `expected_targets` twin in the engine. Every target a run replaces or removes is first the source of a keep
 batch (`Move` or `Trash`), so the binding covers targets too.
 
-A replacement's kept item goes back (`MoveBack`) when its copy doesn't land for any reason, including a cancel between
-the keep and the copy, unless something now sits in its place. From the Trash nothing can come back: the row reads
-`KeptNotReplaced` (the old file is in the Trash, the new one didn't land), as does a move back that couldn't run. A copy
-the engine answers `Failed` holds every removal on that side under the copy's parent folder (`HeldAfterFailedCopy`): in
-Mirror a rename is a copy plus a removal, and the removal must not run alone. A folder `MakeFolders` couldn't make turns
-everything landing or kept beneath it into `CouldNotDo`. A source the engine never answered for in a batch it didn't
-stop counts as `Failed`. Rows the run never reached are `NotStarted`.
+Every copy row of the run that didn't end `Done` (failed, changed, refused, blocked, unplaced) holds every removal on
+its target side under its parent folder (`HeldAfterFailedCopy`): in Mirror a rename is a copy plus a removal, and the
+removal must not run alone. A copy row at the root holds every removal on that side. A source the engine never answered
+for in a batch it didn't stop counts as `Failed`. When the engine stops a batch, unanswered sources are observed: a keep
+or removal source gone from its place counts as kept (a removal is `Done`, a replaced file comes back with the
+leftovers), a copy whose landing spot is filled is `Done`. Rows the run never reached are `NotStarted`.
 
-`RunReport::kept_bytes` counts what went into versions folders (the result screen shows that size), minus anything moved
-back. Law: `execute_proptests.rs` runs random plans in every mode against random edits before or between batches; the
-fake flags any move, trash, or copy of something that differs from the snapshot (anywhere beneath it), any landing on an
-occupied spot, and anything lost.
+Cancel is checked between batches, between items while re-checking, and before each engine call; the rest read
+`NotStarted`. Until the app's adapter forwards the cancel into the engine (Task 6, `TODO(Task 6)` in `runner.rs`), a
+batch that has started runs to its end, so cancel is per batch. Restoring set-aside files runs after a cancel too.
+
+`RunReport::empty_folders` lists target folders the run made for copies that then all didn't land. The run never removes
+them (that would be a delete); the result screen can show them. `kept_bytes` counts what ended in a versions or staging
+folder (the result screen shows that size), not what went to the Trash. Law: `execute_proptests.rs` runs random plans in
+every mode against random edits before or between batches; the fake flags any move, trash, or copy of something that
+differs from the snapshot (anywhere beneath it), any landing on an occupied spot, and anything lost.

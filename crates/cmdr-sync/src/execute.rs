@@ -38,6 +38,18 @@ pub struct BoundSource {
 /// purpose: a sync never destroys anything.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EngineBatch {
+    /// Make `dir` (its parents as needed) only if it doesn't exist: `Done`
+    /// when this call made it, `Skipped` when something was already there.
+    /// The run's dated versions folders are claimed this way, so two runs
+    /// never share one.
+    ClaimFolder {
+        /// Which volume.
+        place: Place,
+        /// The side it belongs to.
+        side: Side,
+        /// The folder.
+        dir: PathBuf,
+    },
     /// Make these folders with any missing parents; one that exists is fine.
     MakeFolders {
         /// Which volume.
@@ -57,7 +69,9 @@ pub enum EngineBatch {
         /// The folder they land in.
         dest_dir: PathBuf,
     },
-    /// Move `side`'s sources into `dest_dir` on `place` (keeping them).
+    /// Move `side`'s sources into `dest_dir` on `place` (keeping them), with
+    /// `ConflictResolution::Skip`: a source whose landing spot is taken is
+    /// `Skipped` and stays where it is, never overwriting what is there.
     Move {
         /// The side the sources are on.
         side: Side,
@@ -113,8 +127,16 @@ pub struct BatchOutcome {
 /// The write engine, as the executor sees it. The app implements it over
 /// `cmdr_operations::Operations`.
 pub trait SyncEngine: Send + Sync {
-    /// What is at `path` on `side` now; `None` when nothing is.
-    fn observe<'a>(&'a self, side: Side, path: &'a Path, with_subtree: bool) -> EngineFuture<'a, Option<Observed>>;
+    /// What is at `path` now, on `side`'s volume (`Place::Target`) or the
+    /// local disk; `None` when nothing is. A symlink reads as `Symlink`, never
+    /// followed.
+    fn observe<'a>(
+        &'a self,
+        side: Side,
+        place: Place,
+        path: &'a Path,
+        with_subtree: bool,
+    ) -> EngineFuture<'a, Option<Observed>>;
     /// Runs one batch to its end.
     fn run<'a>(&'a self, batch: EngineBatch) -> EngineFuture<'a, BatchOutcome>;
 }
@@ -132,8 +154,14 @@ pub enum RunItemResult {
     /// The engine couldn't, or the keep folder couldn't be made: nothing was
     /// lost.
     CouldNotDo,
-    /// A removal held because a copy into the same folder didn't land.
+    /// A removal held because a copy into the same folder didn't land (for any
+    /// reason): in Mirror a rename is a copy plus a removal.
     HeldAfterFailedCopy,
+    /// Something already sits where the item would be kept: left alone.
+    VersionsSpotTaken,
+    /// The way to the versions folder runs through a symlink or a file: left
+    /// alone.
+    VersionsFolderUnsafe,
     /// The old file is kept (Trash or versions folder) but the new copy didn't
     /// land and the old one couldn't go back: the place is empty.
     KeptNotReplaced,
@@ -167,6 +195,9 @@ pub struct RunReport {
     pub versions_used: Vec<VersionsRoot>,
     /// Bytes put in versions folders.
     pub kept_bytes: u64,
+    /// Target folders the run made for copies that then all didn't land; they
+    /// stay (the run never removes anything) and are empty.
+    pub empty_folders: Vec<(Side, PathBuf)>,
     /// Cancelled, or the engine stopped.
     pub stopped: bool,
 }

@@ -54,6 +54,10 @@ struct Inner {
     batches: Vec<EngineBatch>,
     violations: Vec<String>,
     trashed: Vec<(Loc, PathBuf)>,
+    trashed_facts: Vec<Observed>,
+    /// Where the run moved things: sources there are kept items, not
+    /// snapshot entries.
+    kept_paths: BTreeSet<(Loc, PathBuf)>,
     /// Removed by the outside world, not by the run.
     gone: Vec<(Loc, PathBuf)>,
 }
@@ -65,6 +69,8 @@ pub(crate) struct FakeEngine {
     fail: BTreeSet<PathBuf>,
     skip: BTreeSet<PathBuf>,
     stop_at: Option<usize>,
+    stop_after_work: Option<usize>,
+    cancel_on_observe: Option<(PathBuf, Arc<SyncControl>)>,
     changes_after: BTreeMap<usize, Vec<Change>>,
     cancel_after: Option<(usize, Arc<SyncControl>)>,
 }
@@ -141,6 +147,19 @@ impl FakeEngine {
         self
     }
 
+    /// Batch `n` (0-based) does its work, then reports stopped with no
+    /// answers, as an engine cancelled mid-report would.
+    pub(crate) fn stopping_after_work(mut self, n: usize) -> Self {
+        self.stop_after_work = Some(n);
+        self
+    }
+
+    /// The person presses Cancel while the executor looks at `path`.
+    pub(crate) fn cancel_on_observe(mut self, path: impl Into<PathBuf>, control: Arc<SyncControl>) -> Self {
+        self.cancel_on_observe = Some((path.into(), control));
+        self
+    }
+
     /// `change` happens right after batch `n` (0-based) finishes.
     pub(crate) fn after_batch(mut self, n: usize, change: Change) -> Self {
         self.changes_after.entry(n).or_default().push(change);
@@ -179,11 +198,31 @@ impl FakeEngine {
         self.lock().state.get(&(loc, path.as_ref().to_path_buf())).copied()
     }
 
+    /// What a real volume would say: a folder's digest follows what is
+    /// beneath it now, whatever was stored for it.
+    fn read_now(&self, loc: Loc, path: &Path) -> Option<Observed> {
+        let inner = self.lock();
+        let mut now = *inner.state.get(&(loc, path.to_path_buf()))?;
+        if let Some(subtree) = now.subtree.as_mut() {
+            let below = |state: &State| -> Vec<((Loc, PathBuf), Observed)> {
+                beneath(state, loc, path)
+                    .filter(|((_, p), _)| p != path)
+                    .map(|(k, o)| (k.clone(), *o))
+                    .collect()
+            };
+            if below(&inner.state) != below(&inner.snapshot) {
+                subtree.digest = subtree.digest.wrapping_add(0x9e37_79b9);
+            }
+        }
+        Some(now)
+    }
+
     /// Snapshot items that are no longer anywhere: not in place, not moved,
     /// not in the Trash. With no delete in the engine this must stay empty.
     pub(crate) fn lost(&self) -> Vec<(Loc, PathBuf)> {
         let inner = self.lock();
-        let kept_somewhere = |facts: &Observed| inner.state.values().any(|now| now == facts);
+        let kept_somewhere =
+            |facts: &Observed| inner.state.values().chain(&inner.trashed_facts).any(|now| now == facts);
         inner
             .snapshot
             .iter()
@@ -213,6 +252,12 @@ impl FakeEngine {
     fn execute(&self, batch: &EngineBatch) -> Vec<(PathBuf, ItemOutcome)> {
         let mut inner = self.lock();
         match batch {
+            EngineBatch::ClaimFolder { place, side, dir } => {
+                let outcome = self
+                    .outcome(dir)
+                    .unwrap_or_else(|| inner.claim(loc_at(*place, *side), dir));
+                vec![(dir.clone(), outcome)]
+            }
             EngineBatch::MakeFolders { place, side, dirs } => dirs
                 .iter()
                 .map(|dir| {
@@ -270,6 +315,8 @@ impl FakeEngine {
                     let outcome = self.outcome(&source.path).unwrap_or_else(|| {
                         let loc = loc_of(*side);
                         inner.check_snapshot(loc, source, "trashed");
+                        let gone: Vec<Observed> = beneath(&inner.state, loc, &source.path).map(|(_, o)| *o).collect();
+                        inner.trashed_facts.extend(gone);
                         inner
                             .state
                             .retain(|(l, p), _| !(*l == loc && p.starts_with(&source.path)));
@@ -301,6 +348,14 @@ impl Inner {
     /// A source must read exactly as the snapshot did, all the way down, with
     /// nothing added beneath it, and the binding must carry those facts.
     fn check_snapshot(&mut self, loc: Loc, source: &BoundSource, verb: &str) {
+        if self.kept_paths.contains(&(loc, source.path.clone())) {
+            let now = self.state.get(&(loc, source.path.clone())).map(|o| o.facts);
+            if now != Some(source.expected) {
+                self.violations
+                    .push(format!("{verb} kept {:?} that isn't the kept item", source.path));
+            }
+            return;
+        }
         let now: Vec<_> = beneath(&self.state, loc, &source.path).collect();
         let then: Vec<_> = beneath(&self.snapshot, loc, &source.path).collect();
         if now.is_empty() || now != then {
@@ -316,23 +371,47 @@ impl Inner {
         }
     }
 
+    /// `mkdir -p`: through real folders only.
     fn make_folder(&mut self, loc: Loc, dir: &Path) -> ItemOutcome {
+        let mut parents: Vec<&Path> = dir.ancestors().skip(1).collect();
+        parents.reverse();
+        for parent in parents {
+            if let Some(existing) = self.state.get(&(loc, parent.to_path_buf())) {
+                if existing.facts.kind != EntryKind::Folder {
+                    return ItemOutcome::Failed;
+                }
+            } else if parent.parent().is_some() {
+                self.insert_folder(loc, parent);
+            }
+        }
         match self.state.get(&(loc, dir.to_path_buf())) {
             Some(existing) if existing.facts.kind != EntryKind::Folder => ItemOutcome::Failed,
             Some(_) => ItemOutcome::Done,
             None => {
-                let folder = Observed {
-                    facts: EntryFacts {
-                        kind: EntryKind::Folder,
-                        size: None,
-                        mtime: None,
-                    },
-                    subtree: Some(SubtreeFacts::default()),
-                };
-                self.state.insert((loc, dir.to_path_buf()), folder);
+                self.insert_folder(loc, dir);
                 ItemOutcome::Done
             }
         }
+    }
+
+    fn claim(&mut self, loc: Loc, dir: &Path) -> ItemOutcome {
+        if self.state.contains_key(&(loc, dir.to_path_buf())) {
+            ItemOutcome::Skipped
+        } else {
+            self.make_folder(loc, dir)
+        }
+    }
+
+    fn insert_folder(&mut self, loc: Loc, dir: &Path) {
+        let folder = Observed {
+            facts: EntryFacts {
+                kind: EntryKind::Folder,
+                size: None,
+                mtime: None,
+            },
+            subtree: Some(SubtreeFacts::default()),
+        };
+        self.state.insert((loc, dir.to_path_buf()), folder);
     }
 
     fn copy(&mut self, from: Loc, source: &BoundSource, dest_dir: &Path) -> ItemOutcome {
@@ -379,6 +458,7 @@ impl Inner {
         if moved.is_empty() {
             return ItemOutcome::Failed;
         }
+        self.kept_paths.insert((to, dest.clone()));
         for (old, observed) in moved {
             self.state.remove(&(from, old.clone()));
             let rel = old.strip_prefix(path).unwrap_or(Path::new(""));
@@ -403,9 +483,20 @@ impl Inner {
 }
 
 impl SyncEngine for FakeEngine {
-    fn observe<'a>(&'a self, side: Side, path: &'a Path, with_subtree: bool) -> EngineFuture<'a, Option<Observed>> {
+    fn observe<'a>(
+        &'a self,
+        side: Side,
+        place: Place,
+        path: &'a Path,
+        with_subtree: bool,
+    ) -> EngineFuture<'a, Option<Observed>> {
         Box::pin(async move {
-            self.get(loc_of(side), path).map(|observed| Observed {
+            if let Some((at, control)) = &self.cancel_on_observe
+                && at == path
+            {
+                control.cancel();
+            }
+            self.read_now(loc_at(place, side), path).map(|observed| Observed {
                 subtree: if with_subtree { observed.subtree } else { None },
                 ..observed
             })
@@ -420,6 +511,12 @@ impl SyncEngine for FakeEngine {
                 inner.batches.len() - 1
             };
             let outcome = if self.stop_at == Some(n) {
+                BatchOutcome {
+                    items: Vec::new(),
+                    stopped: true,
+                }
+            } else if self.stop_after_work == Some(n) {
+                self.execute(&batch);
                 BatchOutcome {
                     items: Vec::new(),
                     stopped: true,
