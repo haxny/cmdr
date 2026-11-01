@@ -7988,8 +7988,13 @@ export type ConfirmPreview = {
   skew: ClockSkew | null
   // Actions that run on rows the show-filters hide.
   hiddenActions: number
-  // `?` rows the person gave an action (nothing else says which side wins).
-  chosenUnknown: number
+  /**
+   *  The first `?` rows the person gave an action anyway (the compare
+   *  couldn't tell which side is newer, so only that choice decides).
+   */
+  chosenUnknown: WarnedItem[]
+  // How many such rows there are in all.
+  chosenUnknownTotal: number
   // Kept items go to another volume (a copy, then a removal).
   keepIsSlow: boolean
 }
@@ -9575,6 +9580,14 @@ export type EjectStep =
   // Stopping the drive's index, which must finish before any unmount runs.
   | 'indexStop'
 
+// A folder a run made for copies that didn't land.
+export type EmptyFolderWire = {
+  // The side it is on.
+  side: Side
+  // The folder.
+  path: string
+}
+
 /**
  *  The outcome of a per-drive "Turn on indexing" request.
  *
@@ -10782,6 +10795,14 @@ export type GuidProof =
    */
   | 'unauthenticated'
 
+// An accepted row a guard held back at run time.
+export type HeldRowWire = {
+  // The row.
+  item: number
+  // The guard that holds it.
+  block: GuardBlock
+}
+
 // A single recent-search entry, persisted verbatim.
 export type HistoryEntry = {
   id: string
@@ -11814,6 +11835,16 @@ export type LatestDownload = {
   path: string
   parentDir: string
   fileName: string
+}
+
+// A dated folder a run made and couldn't remove again.
+export type LeftoverFolderWire = {
+  // Which volume it is on: the side's, or the local disk (a custom versions folder).
+  place: Place
+  // The side whose items it was made for.
+  side: Side
+  // The folder.
+  path: string
 }
 
 /**
@@ -15626,6 +15657,13 @@ export type PhaseRecord = {
   stats: [string, string][]
 }
 
+// Which volume a path is on.
+export type Place =
+  // The volume of the side being written (a rename away).
+  | 'target'
+  // The local disk (a custom versions folder).
+  | 'localDisk'
+
 // The summary bar's numbers.
 export type PlanSummary = {
   // What lands on, or leaves, the left.
@@ -17290,7 +17328,10 @@ export type RunReportWire = {
   couldNotDo: number
   // Old files kept whose new copy didn't land: the place is empty.
   keptNotReplaced: number
-  // Removals held by a guard or by a copy that didn't land.
+  /**
+   *  Rows held by a guard (`held_by_guard`), plus removals held because a copy
+   *  beside them didn't land (`HeldAfterFailedCopy` in `items`).
+   */
   held: number
   // Rows the run never reached.
   notStarted: number
@@ -17300,8 +17341,23 @@ export type RunReportWire = {
   keptBytes: number
   // The engine operations the run started (the queue window and undo know them).
   operationIds: string[]
-  // Every row of the run and its end, for "Show in grid".
+  // Every row the run reached and its end, for "Show in grid".
   items: RunItemWire[]
+  /**
+   *  Accepted rows a guard held back (copies and replacements too, not only
+   *  removals), each with the guard: they never reached the run.
+   */
+  heldByGuard: HeldRowWire[]
+  /**
+   *  Target folders the run made for copies that then didn't land: empty,
+   *  and they stay (the run never removes anything).
+   */
+  emptyFolders: EmptyFolderWire[]
+  /**
+   *  Dated folders the run made, kept nothing in, and couldn't remove again:
+   *  they stay.
+   */
+  leftoverFolders: LeftoverFolderWire[]
   // Cancelled, or the engine stopped.
   stopped: boolean
 }
@@ -23547,7 +23603,10 @@ export type WalkEnding =
   // Somebody stopped it (Escape, or the dialog closing).
   | 'cancelled'
 
-// A row that replaces a newer file with an older one.
+/**
+ *  A row the confirm names: one that replaces a newer file with an older one,
+ *  or a `?` row the person gave an action.
+ */
 export type WarnedItem = {
   // The row.
   item: number
