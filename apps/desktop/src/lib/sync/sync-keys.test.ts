@@ -49,9 +49,15 @@ describe('syncKeyAction', () => {
     ['l', 'copyRight'],
     ['r', 'copyLeft'],
     ['i', 'reverse'],
-    ['m', 'skip'],
+    ['n', 'skip'],
   ] as const)('⌘%s on rows is the bulk %s', (letter, bulk) => {
     expect(syncKeyAction(k(letter, cmd), 'grid')).toEqual({ kind: 'bulk', bulk })
+  })
+
+  it('skip is ⌘N, never ⌘M (the Window menu’s Minimize takes ⌘M first)', () => {
+    expect(syncKeyAction(k('n', cmd), 'grid')).toEqual({ kind: 'bulk', bulk: 'skip' })
+    expect(syncKeyAction(k('m', cmd), 'grid')).toBeNull()
+    expect(syncKeyAction(k('-'), 'grid')).toEqual({ kind: 'bulk', bulk: 'skip' })
   })
 
   it('→ and ← set the direction, - skips, Space toggles planned and skip, ⌘⌫ removes on the target', () => {
@@ -83,8 +89,10 @@ describe('syncKeyAction', () => {
     expect(syncKeyAction(k('ArrowUp', { metaKey: true, altKey: true }), 'grid')).toEqual({ kind: 'folder', step: -1 })
   })
 
-  it('⌘C copies the rows as text, ⇧F10 opens the row menu', () => {
+  it('⌘C copies the rows as text, ⌘A selects every row, ⇧F10 opens the row menu', () => {
     expect(syncKeyAction(k('c', cmd), 'grid')).toEqual({ kind: 'copyRows' })
+    expect(syncKeyAction(k('a', cmd), 'grid')).toEqual({ kind: 'selectAll' })
+    expect(syncKeyAction(k('a', cmd), 'options')).toBeNull()
     expect(syncKeyAction(k('F10', { shiftKey: true }), 'grid')).toEqual({ kind: 'contextMenu' })
   })
 

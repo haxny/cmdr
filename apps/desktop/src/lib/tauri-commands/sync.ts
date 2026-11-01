@@ -6,6 +6,10 @@ import { type UnlistenFn } from '@tauri-apps/api/event'
 import {
   commands,
   events,
+  type SyncActionsOutcome,
+  type SkippedRows,
+  type RowSkipReason,
+  type RowQuery,
   type Action,
   type Category,
   type CompareBy,
@@ -54,6 +58,10 @@ import {
 import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 
 export type {
+  SyncActionsOutcome,
+  SkippedRows,
+  RowSkipReason,
+  RowQuery,
   Action,
   Category,
   CompareBy,
@@ -233,14 +241,22 @@ export async function getSyncState(sessionId: string, filters: ShowFilters): Pro
   return syncResult(await commands.getSyncState(sessionId, filters))
 }
 
-/** Applies a key's action to the selected rows the person can see; answers the new state. */
+/**
+ * Applies a key's action to the selected rows the person can see; answers the new state and every row it left
+ * alone (grouped by why, plus the hidden ones), so the dialog never drops a key silently.
+ */
 export async function setSyncActions(
   sessionId: string,
   items: number[],
   bulk: BulkAction,
   filters: ShowFilters,
-): Promise<SyncState> {
+): Promise<SyncActionsOutcome> {
   return syncResult(await commands.setSyncActions(sessionId, items, bulk, filters))
+}
+
+/** The grid row a jump lands on (next or previous folder, a typed name), or `null`. */
+export async function findSyncRow(sessionId: string, filters: ShowFilters, query: RowQuery): Promise<number | null> {
+  return syncResult(await commands.findSyncRow(sessionId, filters, query))
 }
 
 /** Compares one equal-size pair by content; `sync-rows-changed` follows. */

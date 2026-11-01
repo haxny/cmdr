@@ -5,7 +5,7 @@
  */
 import type { FilePaneAPI } from '#lib/file-explorer/pane/types.js'
 import { toBackendIndices } from '#lib/file-operations/transfer/transfer-dialog-utils.js'
-import type { SideRequest } from '#lib/tauri-commands/index.js'
+import type { SideRequest } from '#lib/tauri-commands/sync.js'
 
 export interface SyncRoots {
   left: SideRequest

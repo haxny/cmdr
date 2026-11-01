@@ -9,7 +9,7 @@ import type {
   SyncRowsChanged,
   SyncState,
   ViewRowWire,
-} from '#lib/tauri-commands/index.js'
+} from '#lib/tauri-commands/sync.js'
 import type { SyncIpc } from './sync-session.svelte'
 import type { SyncItemRow } from './row-label'
 
@@ -19,6 +19,8 @@ export function itemRow(index: number, patch: Partial<SyncItemRow> = {}): SyncIt
     index,
     leftName: `file-${String(index)}.txt`,
     rightName: `file-${String(index)}.txt`,
+    leftRelPath: `file-${String(index)}.txt`,
+    rightRelPath: `file-${String(index)}.txt`,
     leftKind: 'file',
     rightKind: 'file',
     leftSize: 1200,
@@ -42,6 +44,7 @@ export const VIEW: ViewRowWire[] = [
   itemRow(0),
   itemRow(1, {
     leftName: null,
+    leftRelPath: null,
     leftKind: null,
     leftSize: null,
     leftMtime: null,
@@ -53,6 +56,8 @@ export const VIEW: ViewRowWire[] = [
   { type: 'folder', relDir: 'Photos/2024', ordinal: 1, of: 1 },
   itemRow(2, {
     leftKind: 'folder',
+    leftRelPath: 'Photos/2024/file-2.txt',
+    rightRelPath: null,
     rightKind: null,
     rightName: null,
     rightSize: null,
@@ -61,6 +66,8 @@ export const VIEW: ViewRowWire[] = [
     rung: 'presence',
   }),
   itemRow(3, {
+    leftRelPath: 'Photos/2024/file-3.txt',
+    rightRelPath: 'photos/2024/file-3.txt',
     category: 'newerRight',
     olderOverwritesNewer: true,
     defaultAction: 'skip',
@@ -68,6 +75,8 @@ export const VIEW: ViewRowWire[] = [
     content: 'pending',
   }),
   itemRow(4, {
+    leftRelPath: 'Photos/2024/file-4.txt',
+    rightRelPath: 'Photos/2024/file-4.txt',
     category: 'unknown',
     action: 'undecided',
     defaultAction: 'undecided',
@@ -95,6 +104,7 @@ export const STATE: SyncState = {
     skew: null,
   },
   stale: false,
+  revision: 1,
 }
 
 export interface FakeSyncIpc {
@@ -121,7 +131,8 @@ export function fakeSyncIpc(view: ViewRowWire[] = VIEW, state: SyncState = STATE
       }),
     ),
     getSyncState: vi.fn(() => Promise.resolve(state)),
-    setSyncActions: vi.fn(() => Promise.resolve(state)),
+    setSyncActions: vi.fn(() => Promise.resolve({ state, skipped: [], hidden: 0 })),
+    findSyncRow: vi.fn(() => Promise.resolve(null)),
     compareSyncItemContent: vi.fn(() => Promise.resolve()),
     closeSyncSession: vi.fn(() => Promise.resolve()),
     getSyncLastOptions: vi.fn(() => Promise.resolve(null)),

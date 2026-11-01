@@ -17,10 +17,13 @@
 
 import type { CommandId } from './command-ids'
 
-const claims = new Map<CommandId, () => void>()
+/** A claim's handler. Answering `false` declines this fire, so the command runs as if unclaimed (⌘C in a text field). */
+type MenuClaim = () => unknown
+
+const claims = new Map<CommandId, MenuClaim>()
 
 /** Sends `commandId`'s menu road to `run` until the returned release is called. */
-export function claimMenuCommand(commandId: CommandId, run: () => void): () => void {
+export function claimMenuCommand(commandId: CommandId, run: MenuClaim): () => void {
   claims.set(commandId, run)
   return () => {
     // A newer claim (a remount before the old destroy ran) stays.
@@ -28,10 +31,34 @@ export function claimMenuCommand(commandId: CommandId, run: () => void): () => v
   }
 }
 
-/** Runs `commandId`'s claim, if a dialog holds one. `true` when it did. */
+/** Runs `commandId`'s claim, if a dialog holds one. `true` when it took the fire (it didn't decline). */
 export function runMenuClaim(commandId: CommandId): boolean {
   const run = claims.get(commandId)
   if (!run) return false
-  run()
-  return true
+  return run() !== false
+}
+
+/** The two roads one keypress can arrive by: a dialog's keydown, and a menu item's accelerator. */
+export type KeyRoad = 'keyboard' | 'menu'
+
+/**
+ * The two fires of one keypress land milliseconds apart; a person can't press the key and
+ * pick the menu item inside this. Same window as the dispatch core's (`dispatch-dedup.ts`).
+ */
+const ECHO_WINDOW_MS = 300
+
+/**
+ * Tells the second half of a keyboard + menu double fire from a real press: the OTHER
+ * road within the window is the echo, while a second press on the same road (a quick
+ * double tap, key repeat) always counts. An echo doesn't extend the window. A key that
+ * toggles something would undo itself if an echo got through.
+ */
+export function createKeyRoadEcho(now: () => number = Date.now): (road: KeyRoad) => boolean {
+  let last: { road: KeyRoad; at: number } | null = null
+  return (road) => {
+    const at = now()
+    if (last !== null && last.road !== road && at - last.at < ECHO_WINDOW_MS) return true
+    last = { road, at }
+    return false
+  }
 }

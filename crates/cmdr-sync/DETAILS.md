@@ -155,13 +155,21 @@ An action is legal when the mode allows it (Compare only: any; Both ways: no rem
 Mirror: no `←`, no `←×`; else `IllegalForMode`), the category allows it (`=` only on equal rows, `?` only on unknown
 ones, copies and removals never on clash, type-clash, or unreadable rows; else `IllegalForCategory`), the side it reads
 from or removes has an entry (`NothingToCopy`), and the side it writes to can write (`SideReadOnly`). `apply_overrides`
-is all-or-nothing. `bulk_changes` drops illegal, no-op, and unknown rows silently. `Reverse` flips a copy only when both
-sides exist and turns a removal into the copy that restores it; a one-sided copy would have to become a removal, so it
-stays.
+is all-or-nothing. `bulk_outcome` answers the legal changes plus every row it left alone, grouped by `RowSkipReason`
+(the override refusals, `CantReverse`, `NothingToToggle`), so the dialog can say why; a row that already has the action
+counts in neither, and an unknown index is dropped. `bulk_changes` is its changes alone. `Reverse` flips a copy only
+when both sides exist and turns a removal into the copy that restores it; a one-sided copy would have to become a
+removal, so it stays.
 
-Contract: `bulk_changes` receives only rows the person selected AND can see under the current show-filters. Within that
+Contract: `bulk_outcome` receives only rows the person selected AND can see under the current show-filters. Within that
 selection `→`, `←`, and remove-target also reach `?` rows: selecting them and pressing the key is the explicit choice
 they wait for.
+
+## Finding rows (find.rs)
+
+`find_row` walks a `view_rows` result for the dialog's jumps, so the frontend never pages the whole view: `NextFolder`
+and `PreviousFolder` land on the first row of a folder (the root's own rows count as the first), `Name` on the next item
+row, wrapping, whose name on either side starts with the typed text, ignoring case.
 
 ## Guards (guards.rs)
 

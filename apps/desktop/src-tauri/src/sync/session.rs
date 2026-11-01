@@ -12,12 +12,12 @@ use std::sync::{Arc, LazyLock, Mutex};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::Volume;
 use cmdr_sync::{
-    BulkAction, EntryKind, OverrideRefusal, Plan, PlanItem, RootRef, ScanOptions, ShowFilters, Snapshot, SyncControl,
-    SyncDefaults, ViewRow, apply_overrides, bulk_changes, check, effective, is_visible, legal_actions, summarize,
-    view_rows,
+    BulkAction, EntryKind, OverrideRefusal, Plan, PlanItem, RootRef, RowQuery, ScanOptions, ShowFilters, Snapshot,
+    SyncControl, SyncDefaults, ViewRow, apply_overrides, bulk_outcome, check, effective, find_row, is_visible,
+    legal_actions, summarize, view_rows,
 };
 
-use super::wire::{CompareRequest, SyncError, SyncRowWire, SyncRowsPage, SyncState, ViewRowWire};
+use super::wire::{CompareRequest, SyncActionsOutcome, SyncError, SyncRowWire, SyncRowsPage, SyncState, ViewRowWire};
 
 /// The open sessions, by id.
 static SESSIONS: LazyLock<Mutex<HashMap<String, Arc<Session>>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -236,6 +236,8 @@ fn item_row(plan: &Plan, item: &PlanItem) -> ViewRowWire {
         index: item.index,
         left_name: left.map(|entry| name_of(&entry.rel_path)),
         right_name: right.map(|entry| name_of(&entry.rel_path)),
+        left_rel_path: left.map(|entry| entry.rel_path.clone()),
+        right_rel_path: right.map(|entry| entry.rel_path.clone()),
         left_kind: left.map(|entry| entry.facts.kind),
         right_kind: right.map(|entry| entry.facts.kind),
         left_size: size(left),
@@ -289,6 +291,7 @@ pub(crate) fn state_of(compared: &Compared, filters: &ShowFilters) -> SyncState 
         summary: summarize(&compared.plan, filters),
         guards: check(&compared.plan, &compared.left_snap, &compared.right_snap, &guards),
         stale: compared.stale,
+        revision: compared.revision,
     }
 }
 
@@ -302,7 +305,7 @@ pub(crate) fn set_actions(
     items: &[u32],
     bulk: BulkAction,
     filters: &ShowFilters,
-) -> Result<SyncState, SyncError> {
+) -> Result<SyncActionsOutcome, SyncError> {
     let session = session(id)?;
     if session.is_running() {
         return Err(SyncError::RunInProgress);
@@ -313,16 +316,31 @@ pub(crate) fn set_actions(
             let refusal = OverrideRefusal::NoSuchItem { item };
             return Err(SyncError::Override { refusal });
         }
-        // The contract of `bulk_changes`: only rows the person can see.
+        // The contract of `bulk_outcome`: only rows the person can see.
         let seen: Vec<u32> = items
             .iter()
             .copied()
             .filter(|&item| is_visible(&plan.items[item as usize], filters))
             .collect();
-        let changes = bulk_changes(plan, &seen, bulk);
-        compared.plan = apply_overrides(plan, &changes).map_err(|refusal| SyncError::Override { refusal })?;
-        compared.bump();
-        Ok(state_of(compared, filters))
+        let outcome = bulk_outcome(plan, &seen, bulk);
+        if !outcome.changes.is_empty() {
+            compared.plan =
+                apply_overrides(plan, &outcome.changes).map_err(|refusal| SyncError::Override { refusal })?;
+            compared.bump();
+        }
+        Ok(SyncActionsOutcome {
+            state: state_of(compared, filters),
+            skipped: outcome.skipped,
+            hidden: u32::try_from(items.len() - seen.len()).unwrap_or(u32::MAX),
+        })
+    })
+}
+
+/// The view row `query` lands on under `filters` (next or previous folder, a name), if any.
+pub(crate) fn find(id: &str, filters: &ShowFilters, query: &RowQuery) -> Result<Option<u32>, SyncError> {
+    session(id)?.with_compared(|compared| {
+        let view = compared.view(filters);
+        Ok(find_row(&compared.plan, &view, query))
     })
 }
 

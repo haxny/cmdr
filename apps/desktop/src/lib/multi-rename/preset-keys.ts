@@ -6,6 +6,7 @@
  */
 
 import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+import type { KeyRoad } from '#lib/commands/menu-claims.js'
 
 /** What a keypress in the sheet means for its presets, if anything. */
 export type PresetKey = 'openMenu' | 'save'
@@ -19,7 +20,8 @@ export function presetKeyOf(event: KeyboardEvent): PresetKey | null {
 }
 
 /** The two roads one F2 can arrive by: the sheet's keydown, and File > Rename's accelerator. */
-export type KeyRoad = 'keyboard' | 'menu'
+export type { KeyRoad } from '#lib/commands/menu-claims.js'
+export { createKeyRoadEcho } from '#lib/commands/menu-claims.js'
 
 /**
  * What a `bind:this` ref to `PresetsControl` exposes: the sheet routes F2 and ⌘S to it. A typed
@@ -30,26 +32,4 @@ export interface PresetsControlApi {
   pressOpenKey: (road: KeyRoad) => void
   /** ⌘S: the name popover, to save the fields as a preset. */
   openSave: () => void
-}
-
-/**
- * The two fires of one keypress land milliseconds apart; a person can't press the key and
- * pick the menu item inside this. Same window as the dispatch core's (`dispatch-dedup.ts`).
- */
-const ECHO_WINDOW_MS = 300
-
-/**
- * Tells the second half of a keyboard + menu double fire from a real press: the OTHER
- * road within the window is the echo, while a second press on the same road (a quick
- * double tap, key repeat) always counts. An echo doesn't extend the window. The sheet's
- * F2 toggles its menu, so an echo let through would close what the first half opened.
- */
-export function createKeyRoadEcho(now: () => number = Date.now): (road: KeyRoad) => boolean {
-  let last: { road: KeyRoad; at: number } | null = null
-  return (road) => {
-    const at = now()
-    if (last !== null && last.road !== road && at - last.at < ECHO_WINDOW_MS) return true
-    last = { road, at }
-    return false
-  }
 }

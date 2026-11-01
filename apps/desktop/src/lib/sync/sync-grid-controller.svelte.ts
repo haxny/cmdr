@@ -1,19 +1,24 @@
 /**
  * What the dialog's keys and row menu DO (`sync-keys.ts` says what a key means): the cursor, the selection, the
- * row actions, and the one-line notice that says why something didn't happen. Never silent: a key the cursor row
- * can't take, a refusal from the backend, or a side with no file each leave a notice.
+ * row actions, and the one-line notice that says why something didn't happen. Never silent: rows a key left alone
+ * (the backend says which and why), a refusal, a side with no file, or a key with no row to act on each leave a
+ * notice.
  *
  * Bulk keys act on the selected rows, else the cursor row. The selection holds plan indices; the backend keeps
- * only the ones the show-filters show (hidden rows never change).
+ * only the ones the show-filters show (hidden rows never change, and are counted). Every row this acts on is read
+ * from the CURRENT view (`currentRow` / `rowAt`), never a row kept on screen from an older one.
  */
-import type { BulkAction, ShowFilters, Side } from '#lib/tauri-commands/index.js'
+import type { BulkAction, ShowFilters, Side } from '#lib/tauri-commands/sync.js'
 import { tString } from '#lib/intl/messages.svelte.js'
-import { rowRefusal, rowRefusalText } from './action-refusal'
+import { actionsNotice } from './action-refusal'
 import { ACTION_GLYPH, type SyncItemRow } from './row-label'
 import { syncProblemText } from './sync-errors'
 import type { SyncKeyAction } from './sync-keys'
 import { isSideFile, sideFileOf, type SideFile } from './sync-row-files'
 import type { SyncSession } from './sync-session.svelte'
+
+/** Typed letters within this long of each other build one name to jump to (Cmdr's type-to-jump). */
+const TYPE_TO_JUMP_MS = 1000
 
 export interface SyncFileOpeners {
   view: (file: SideFile) => Promise<void>
@@ -34,12 +39,17 @@ export interface SyncGridControllerDeps {
     confirm: () => void
     openRowMenu: () => void
   }
+  now?: () => number
 }
 
 export class SyncGridController {
   cursor = $state(-1)
   notice = $state<string | null>(null)
+  /** Where ⇧-click and ⇧↑↓ extend from. */
   private anchor = -1
+  /** The anchor before the latest cursor move: a click moves the cursor (`ColumnList`) before it reports itself. */
+  private anchorBeforeMove = -1
+  private typed = { text: '', at: 0 }
 
   constructor(private readonly deps: SyncGridControllerDeps) {}
 
@@ -47,30 +57,34 @@ export class SyncGridController {
     return this.deps.session
   }
 
-  /** The item row under the cursor, if it's loaded and not a folder header. */
+  /** The item row under the cursor in the current view, if it's an item and has arrived. */
   get cursorRow(): SyncItemRow | null {
-    const row = this.session.getRow(this.cursor)
+    const row = this.session.currentRow(this.cursor)
     return row?.type === 'item' ? row : null
   }
 
+  /** The list moved the cursor (a cursor key or a click). */
   moveCursor(index: number): void {
+    this.anchorBeforeMove = this.anchor
     this.cursor = index
     this.anchor = index
   }
 
-  /** A click: plain moves the cursor and drops the selection, ⌘ toggles the row, ⇧ selects from the anchor. */
+  /** A click: plain drops the selection, ⌘ toggles the row, ⇧ selects from the anchor the click found. */
   async click(index: number, event: Pick<MouseEvent, 'metaKey' | 'shiftKey'>): Promise<void> {
-    const row = this.session.getRow(index)
-    if (row?.type !== 'item') return
-    if (event.metaKey) {
-      this.toggle(row.index)
-    } else if (event.shiftKey && this.anchor >= 0) {
-      await this.selectRange(this.anchor, index)
-    } else {
-      this.session.selected.clear()
-    }
+    // `ColumnList` reports the cursor move first; the anchor that counts is the one from before it.
+    const anchor = this.cursor === index && this.anchor === index ? this.anchorBeforeMove : this.anchor
     this.cursor = index
-    if (!event.shiftKey) this.anchor = index
+    if (event.shiftKey && anchor >= 0) {
+      this.anchor = anchor
+      await this.selectRange(anchor, index)
+      return
+    }
+    this.anchor = index
+    const row = this.session.currentRow(index)
+    if (row?.type !== 'item') return
+    if (event.metaKey) this.toggle(row.index)
+    else this.session.selected.clear()
   }
 
   private toggle(item: number): void {
@@ -142,6 +156,8 @@ export class SyncGridController {
         return this.jumpFolder(action.step)
       case 'copyRows':
         return this.copyRows()
+      case 'selectAll':
+        return this.selectAll()
       default:
         return undefined
     }
@@ -151,71 +167,72 @@ export class SyncGridController {
     this.session.setFilters({ ...this.session.filters, [key]: !this.session.filters[key] })
   }
 
-  private async bulk(bulk: BulkAction): Promise<void> {
-    const selected = [...this.session.selected]
+  /** The cursor row, or a notice saying there's no row to act on (a folder header, a row still loading). */
+  private rowOrNotice(): SyncItemRow | null {
     const row = this.cursorRow
-    if (selected.length === 0) {
-      if (!row) return
-      const refusal = rowRefusal(row, bulk, this.session.comparedMode)
-      if (refusal) {
-        this.notice = rowRefusalText(refusal)
-        return
-      }
-    }
-    const problem = await this.session.setActions(selected.length > 0 ? selected : [row?.index ?? -1], bulk)
-    if (problem) this.notice = syncProblemText(problem)
+    if (!row) this.notice = tString('sync.refusal.noRow')
+    return row
   }
 
-  private async sideFile(side: Side): Promise<SideFile | null> {
-    const row = this.cursorRow
-    if (!row) return null
-    const answer = await sideFileOf((index) => this.session.rowAt(index), this.session.roots, {
-      viewIndex: this.cursor,
-      row,
-      side,
-    })
+  private async bulk(bulk: BulkAction): Promise<void> {
+    let items = [...this.session.selected]
+    if (items.length === 0) {
+      const row = this.rowOrNotice()
+      if (!row) return
+      items = [row.index]
+    }
+    const answer = await this.session.setActions(items, bulk)
+    this.notice =
+      answer.type === 'refused' ? syncProblemText(answer.problem) : actionsNotice(answer.skipped, answer.hidden)
+  }
+
+  private sideFile(row: SyncItemRow, side: Side): SideFile | null {
+    const answer = sideFileOf(this.session.roots, row, side)
     if (isSideFile(answer)) return answer
     this.notice = tString(answer.type === 'noFile' ? 'sync.refusal.noFile' : 'sync.refusal.notAFile')
     return null
   }
 
   private async openSide(kind: 'view' | 'edit', side: Side): Promise<void> {
-    const file = await this.sideFile(side)
+    const row = this.rowOrNotice()
+    const file = row && this.sideFile(row, side)
     if (file) await this.deps.files[kind](file)
   }
 
   private async quickLook(): Promise<void> {
-    const row = this.cursorRow
+    const row = this.rowOrNotice()
     if (!row) return
-    const file = await this.sideFile(row.leftName !== null && row.leftKind !== 'folder' ? 'left' : 'right')
+    const file = this.sideFile(row, row.leftRelPath !== null && row.leftKind !== 'folder' ? 'left' : 'right')
     if (file && !(await this.deps.files.quickLook(file))) this.notice = tString('sync.refusal.quickLookUnavailable')
   }
 
   private async compareContent(): Promise<void> {
-    const row = this.cursorRow
+    const row = this.rowOrNotice()
     if (!row) return
     const problem = await this.session.compareContent(row.index)
     if (problem) this.notice = syncProblemText(problem)
   }
 
-  /** ⌘PageDown / ⌘PageUp: the first row of the next or previous folder. */
-  private async jumpFolder(step: 1 | -1): Promise<void> {
-    const total = this.session.total
-    const isHeader = async (index: number) => (await this.session.rowAt(index))?.type === 'folder'
-    let target = -1
-    if (step === 1) {
-      for (let index = Math.max(this.cursor, 0) + 1; index < total && target < 0; index++) {
-        if (await isHeader(index)) target = index + 1
-      }
-    } else {
-      let own = -1
-      for (let index = this.cursor - 1; index >= 0 && own < 0; index--) if (await isHeader(index)) own = index
-      for (let index = own - 1; index >= 0 && target < 0; index--) if (await isHeader(index)) target = index + 1
-      if (own > 0 && target < 0) target = 0
-    }
-    if (target < 0 || target >= total) return
+  private land(target: number | null): void {
+    if (target === null) return
     this.moveCursor(target)
     this.deps.reveal(target)
+  }
+
+  /** ⌘PageDown / ⌘PageUp: the first row of the next or previous folder (the backend walks its own view). */
+  private async jumpFolder(step: 1 | -1): Promise<void> {
+    const from = Math.max(this.cursor, 0)
+    this.land(await this.session.find(step === 1 ? { type: 'nextFolder', from } : { type: 'previousFolder', from }))
+  }
+
+  /** A letter typed on the grid: the next row whose name starts with what was typed lately (TC's quick search). */
+  async typeToJump(char: string): Promise<void> {
+    const now = (this.deps.now ?? Date.now)()
+    const fresh = now - this.typed.at > TYPE_TO_JUMP_MS
+    this.typed = { text: fresh ? char : this.typed.text + char, at: now }
+    // A new search starts below the cursor; a longer one keeps matching the row it's on.
+    const from = Math.max(this.cursor, 0) + (fresh ? 1 : 0)
+    this.land(await this.session.find({ type: 'name', from, prefix: this.typed.text }))
   }
 
   /** ⌘C: the selected rows (else the cursor row) as tab-separated text, TC's columns. */
@@ -225,7 +242,7 @@ export class SyncGridController {
         ? (await this.session.allRows()).filter(
             (row): row is SyncItemRow => row.type === 'item' && this.session.selected.has(row.index),
           )
-        : [this.cursorRow].filter((row): row is SyncItemRow => row !== null)
+        : [this.rowOrNotice()].filter((row): row is SyncItemRow => row !== null)
     if (rows.length === 0) return
     const line = (row: SyncItemRow) =>
       [row.leftName ?? '', row.leftSize ?? '', ACTION_GLYPH[row.action], row.rightSize ?? '', row.rightName ?? '']

@@ -9,7 +9,7 @@
 - `sync-session.svelte.ts`: the backend session (compare, pages, actions, close); `sync-ipc.ts` its app seams.
 - `sync-keys.ts` (what a key means), `sync-grid-controller.svelte.ts` (what it does), `sync-row-menu.ts`.
 - `row-label.ts` (words for a row), `action-refusal.ts`, `sync-errors.ts` (`SyncError` in words), `pane-roots.ts`,
-  `sync-row-files.ts` (F3/F4 paths), `sync-options.ts` (defaults mirrored from `cmdr-sync`).
+  `sync-row-files.ts` (F3/F4 paths), `sync-menu-claims.ts`, `sync-options.ts` (defaults mirrored from `cmdr-sync`).
 
 ## Must-knows
 
@@ -19,8 +19,12 @@
   they re-page the same plan.
 - **Hidden rows never change.** Bulk keys send the selection (else the cursor row); the backend keeps only the visible
   rows. ❌ Never filter that client-side instead: the backend is the guard.
-- **Never silent.** `bulk_changes` drops a row that can't take an action, so a key on ONE row is checked first
-  (`rowRefusal`) and the notice says why; a backend refusal is shown by its variant (`syncProblemText`).
+- **Never silent.** `set_sync_actions` answers the rows it left alone (by `RowSkipReason`) and the hidden ones; the
+  notice says them (`actionsNotice`). ❌ Never re-derive legality here. A refusal shows by variant (`syncProblemText`).
+- **Act only on the current view.** Kept rows draw while a page reloads; selection, keys, and F3/F4 read `currentRow` /
+  `rowAt`. Late answers drop: a lower compare generation, a lower state `revision`.
+- **Menu accelerators win in AppKit**: a key that is also a menu item's (⌘D ⌘I ⌘U ⌘C ⌘A ⌘⇧E F2 F3 F4 ⇧F4) is claimed
+  while open (`sync-menu-claims.ts`), double fires dropped. ⌘M is Minimize, unclaimable: skip is ⌘N.
 - **Never colour alone.** Every row has an accessible name in words (`rowAccessibleName`, via `ColumnList`'s
   `rowLabel`); arrows, icons, and marks repeat it.
 - **Esc stops a running compare first, then closes.** Closing remembers the options for the pair and closes the session;

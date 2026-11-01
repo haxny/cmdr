@@ -519,18 +519,6 @@
   "@sync.refusal.nothingOnRight": {
     "sourceHash": "c59909f"
   },
-  "sync.refusal.cantReverse": "Only a copy between two existing files, or a removal, can be reversed.",
-  "@sync.refusal.cantReverse": {
-    "sourceHash": "c86ff28"
-  },
-  "sync.refusal.nothingToToggle": "This row has no action to skip or restore.",
-  "@sync.refusal.nothingToToggle": {
-    "sourceHash": "00c6e91"
-  },
-  "sync.refusal.notAllowed": "{action} isn’t possible for this row: that side may not take changes.",
-  "@sync.refusal.notAllowed": {
-    "sourceHash": "c74e605"
-  },
   "sync.refusal.sideReadOnlyLeft": "The left side takes no changes.",
   "@sync.refusal.sideReadOnlyLeft": {
     "sourceHash": "d59aec5"
@@ -538,6 +526,10 @@
   "sync.refusal.sideReadOnlyRight": "The right side takes no changes.",
   "@sync.refusal.sideReadOnlyRight": {
     "sourceHash": "0f75aed"
+  },
+  "sync.refusal.noRow": "Move the cursor to a file or folder row first.",
+  "@sync.refusal.noRow": {
+    "sourceHash": "b48d716"
   },
   "sync.refusal.noFile": "There’s no file on that side.",
   "@sync.refusal.noFile": {
@@ -550,6 +542,42 @@
   "sync.refusal.quickLookUnavailable": "Quick Look works only for files on this Mac.",
   "@sync.refusal.quickLookUnavailable": {
     "sourceHash": "3bd6997"
+  },
+  "sync.skipped.illegalForMode": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: {action} isn’t possible in this mode.",
+  "@sync.skipped.illegalForMode": {
+    "sourceHash": "7eb1dbd"
+  },
+  "sync.skipped.illegalForCategory": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: {action} isn’t possible for {count, plural, one {that row} other {those rows}}.",
+  "@sync.skipped.illegalForCategory": {
+    "sourceHash": "a78ce68"
+  },
+  "sync.skipped.nothingOnLeft": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: there’s nothing on the left to copy.",
+  "@sync.skipped.nothingOnLeft": {
+    "sourceHash": "d5943c6"
+  },
+  "sync.skipped.nothingOnRight": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: there’s nothing on the right to copy.",
+  "@sync.skipped.nothingOnRight": {
+    "sourceHash": "33fd9ae"
+  },
+  "sync.skipped.sideReadOnlyLeft": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: the left side takes no changes.",
+  "@sync.skipped.sideReadOnlyLeft": {
+    "sourceHash": "c0d8aca"
+  },
+  "sync.skipped.sideReadOnlyRight": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: the right side takes no changes.",
+  "@sync.skipped.sideReadOnlyRight": {
+    "sourceHash": "2acb0e2"
+  },
+  "sync.skipped.cantReverse": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: only a copy between two existing files, or a removal, can be reversed.",
+  "@sync.skipped.cantReverse": {
+    "sourceHash": "c1b8d39"
+  },
+  "sync.skipped.nothingToToggle": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: there was no action to skip or restore.",
+  "@sync.skipped.nothingToToggle": {
+    "sourceHash": "22d2691"
+  },
+  "sync.skipped.hidden": "{countText} hidden {count, plural, one {row wasn’t} other {rows weren’t}} changed.",
+  "@sync.skipped.hidden": {
+    "sourceHash": "b87676c"
   },
   "sync.summary.label": "Summary",
   "@sync.summary.label": {
@@ -642,6 +670,10 @@
   "sync.error.noSuchSession": "This comparison was closed. Compare again.",
   "@sync.error.noSuchSession": {
     "sourceHash": "60d4518"
+  },
+  "sync.error.noSuchItem": "That row isn’t in the list anymore. Compare again.",
+  "@sync.error.noSuchItem": {
+    "sourceHash": "c1ab646"
   },
   "sync.error.notCompared": "Nothing is compared yet. Press Compare.",
   "@sync.error.notCompared": {

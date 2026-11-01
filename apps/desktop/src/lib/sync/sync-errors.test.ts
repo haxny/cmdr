@@ -19,6 +19,9 @@ describe('syncProblemText', () => {
     expect(
       syncProblemText({ type: 'override', refusal: { type: 'illegalForMode', item: 1, action: 'copyLeft' } }),
     ).toBe('Copy to the left isn’t possible in this mode.')
+    expect(syncProblemText({ type: 'override', refusal: { type: 'noSuchItem', item: 7 } })).toBe(
+      'That row isn’t in the list anymore. Compare again.',
+    )
     expect(syncProblemText({ type: 'override', refusal: { type: 'sideReadOnly', item: 1, side: 'left' } })).toBe(
       'The left side takes no changes.',
     )

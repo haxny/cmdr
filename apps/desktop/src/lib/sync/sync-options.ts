@@ -3,7 +3,7 @@
  * (`crates/cmdr-sync`: `SyncOptions::default`, `ShowFilters::default`, `DEFAULT_EXCLUDES`); these mirror them for a
  * pair of roots the dialog has never seen, and `getSyncLastOptions` replaces them once it answers.
  */
-import type { ProfileOverrides, ShowFilters, SyncOptions } from '#lib/tauri-commands/index.js'
+import type { ProfileOverrides, ShowFilters, SyncOptions } from '#lib/tauri-commands/sync.js'
 
 /** `cmdr_sync::DEFAULT_EXCLUDES`, the folder exclude list a new pair starts with. */
 export const DEFAULT_EXCLUDES: readonly string[] = [

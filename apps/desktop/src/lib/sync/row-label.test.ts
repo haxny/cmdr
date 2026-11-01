@@ -11,6 +11,8 @@ function row(patch: Partial<SyncItemRow> = {}): SyncItemRow {
     index: 0,
     leftName: 'report.pdf',
     rightName: 'report.pdf',
+    leftRelPath: 'report.pdf',
+    rightRelPath: 'report.pdf',
     leftKind: 'file',
     rightKind: 'file',
     leftSize: 10,

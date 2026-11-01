@@ -206,25 +206,115 @@ fn reversed(item: &PlanItem) -> Option<Action> {
     }
 }
 
-/// The changes `bulk` makes to `items`: rows where it is illegal, changes
-/// nothing, or that don't exist are dropped silently.
+/// Why a bulk key left a row as it was. One per kind of refusal, so the dialog
+/// can say it once for every row it applies to ("3 rows weren't changed: the
+/// right side takes no changes").
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum RowSkipReason {
+    /// The mode doesn't allow the action (a removal outside Mirror, a write to
+    /// the left in Update or Mirror).
+    IllegalForMode {
+        /// The action asked for.
+        action: Action,
+    },
+    /// The row's kind doesn't allow the action (clash and unreadable rows take
+    /// `Skip` only).
+    IllegalForCategory {
+        /// The action asked for.
+        action: Action,
+    },
+    /// The side the action reads from (or removes) has nothing there.
+    NothingToCopy {
+        /// The empty side.
+        side: Side,
+    },
+    /// The action would write to a side that takes no writes.
+    SideReadOnly {
+        /// The read-only side.
+        side: Side,
+    },
+    /// Reverse on a row that has no copy between two present sides and no removal.
+    CantReverse,
+    /// Space on a row with no planned action to skip or restore.
+    NothingToToggle,
+}
+
+/// How many rows a bulk key left alone for one reason.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SkippedRows {
+    /// Why.
+    pub reason: RowSkipReason,
+    /// How many rows.
+    pub count: u32,
+}
+
+/// What a bulk key does to a set of rows: the changes, and every row it left
+/// alone grouped by why. A row that already has the action counts in neither.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct BulkOutcome {
+    /// The legal changes, for `apply_overrides`.
+    pub changes: Vec<ActionChange>,
+    /// The rows left alone, by reason, in the order the reasons first came up.
+    pub skipped: Vec<SkippedRows>,
+}
+
+fn skip_reason(refused: OverrideRefusal) -> Option<RowSkipReason> {
+    match refused {
+        OverrideRefusal::NoSuchItem { .. } => None,
+        OverrideRefusal::IllegalForMode { action, .. } => Some(RowSkipReason::IllegalForMode { action }),
+        OverrideRefusal::IllegalForCategory { action, .. } => Some(RowSkipReason::IllegalForCategory { action }),
+        OverrideRefusal::NothingToCopy { side, .. } => Some(RowSkipReason::NothingToCopy { side }),
+        OverrideRefusal::SideReadOnly { side, .. } => Some(RowSkipReason::SideReadOnly { side }),
+    }
+}
+
+/// What `bulk` asks of one row: a change, a reason it can't, or nothing to do.
+fn judge(plan: &Plan, item: &PlanItem, bulk: BulkAction) -> Result<Option<ActionChange>, RowSkipReason> {
+    let Some(action) = wanted(item, bulk) else {
+        return Err(match bulk {
+            BulkAction::Reverse => RowSkipReason::CantReverse,
+            _ => RowSkipReason::NothingToToggle,
+        });
+    };
+    if action == item.action {
+        return Ok(None);
+    }
+    match refusal_in(plan, item, action).and_then(skip_reason) {
+        Some(reason) => Err(reason),
+        None => Ok(Some(ActionChange {
+            item: item.index,
+            action,
+        })),
+    }
+}
+
+/// The changes `bulk` makes to `items`, and the rows it leaves alone with why.
+/// Rows that don't exist are left out of both.
 ///
 /// ❗ `items` must be the rows the person selected AND can see (`is_visible`
 /// under the current show-filters); the caller filters, this function trusts
 /// it. Within that selection, `CopyRight`, `CopyLeft`, and `RemoveTarget` also
 /// reach `?` rows: selecting a row and pressing the key is the explicit choice
 /// those rows wait for.
+pub fn bulk_outcome(plan: &Plan, items: &[u32], bulk: BulkAction) -> BulkOutcome {
+    let mut outcome = BulkOutcome::default();
+    for item in items.iter().filter_map(|&index| plan.items.get(index as usize)) {
+        match judge(plan, item, bulk) {
+            Ok(Some(change)) => outcome.changes.push(change),
+            Ok(None) => {}
+            Err(reason) => match outcome.skipped.iter_mut().find(|rows| rows.reason == reason) {
+                Some(rows) => rows.count += 1,
+                None => outcome.skipped.push(SkippedRows { reason, count: 1 }),
+            },
+        }
+    }
+    outcome
+}
+
+/// The legal changes of [`bulk_outcome`]: rows where `bulk` is illegal, changes
+/// nothing, or that don't exist are left out (the outcome says why).
 pub fn bulk_changes(plan: &Plan, items: &[u32], bulk: BulkAction) -> Vec<ActionChange> {
-    items
-        .iter()
-        .filter_map(|&index| plan.items.get(index as usize))
-        .filter_map(|item| {
-            let action = wanted(item, bulk)?;
-            let legal = action != item.action && refusal_in(plan, item, action).is_none();
-            legal.then_some(ActionChange {
-                item: item.index,
-                action,
-            })
-        })
-        .collect()
+    bulk_outcome(plan, items, bulk).changes
 }

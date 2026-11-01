@@ -310,8 +310,10 @@ async fn compare_rows_override_and_state_round_trip() {
     let before = session::state(&id, &all_rows()).expect("state");
     assert_eq!(before.summary.into_right.copy_files, 2);
     let after = session::set_actions(&id, &[a], BulkAction::Skip, &all_rows()).expect("override");
-    assert_eq!(after.summary.into_right.copy_files, 1);
-    assert_eq!(after.summary.changed_by_you, 1);
+    assert_eq!(after.state.summary.into_right.copy_files, 1);
+    assert_eq!(after.state.summary.changed_by_you, 1);
+    assert!(after.state.revision > before.revision);
+    assert!(after.skipped.is_empty() && after.hidden == 0);
     let page = session::rows(&id, 0, 100, &all_rows()).expect("rows");
     assert!(page.rows.iter().any(|row| matches!(&row.row,
         ViewRowWire::Item { index, action: Action::Skip, default_action: Action::CopyRight, .. } if *index == a)));
@@ -322,6 +324,43 @@ async fn compare_rows_override_and_state_round_trip() {
         session::state(&id, &all_rows()),
         Err(SyncError::NoSuchSession)
     ));
+}
+
+#[tokio::test]
+async fn bulk_keys_say_which_rows_they_left_alone_and_rows_carry_each_sides_path() {
+    let p = pair("sync_session_skipped");
+    write(&p.left.join("a.txt"), "a", 100);
+    write(&p.left.join("d/b.txt"), "b", 100);
+    let id = p.compare(p.request(Mode::BothWays)).await;
+    let a = p.index_of(&id, "a.txt");
+    let before = session::state(&id, &all_rows()).expect("state");
+    // Both ways never removes: the row is left alone, and said so.
+    let refused = session::set_actions(&id, &[a], BulkAction::RemoveTarget, &all_rows()).expect("outcome");
+    assert_eq!(
+        refused.skipped,
+        vec![cmdr_sync::SkippedRows {
+            reason: cmdr_sync::RowSkipReason::IllegalForMode {
+                action: Action::RemoveRight
+            },
+            count: 1
+        }]
+    );
+    assert_eq!(
+        refused.state.revision, before.revision,
+        "nothing changed, so the confirm stays valid"
+    );
+    // A row the filters hide is counted, never changed.
+    let hiding = ShowFilters {
+        to_right: false,
+        ..all_rows()
+    };
+    let hidden = session::set_actions(&id, &[a], BulkAction::Skip, &hiding).expect("outcome");
+    assert_eq!(hidden.hidden, 1);
+    assert_eq!(hidden.state.summary.changed_by_you, 0);
+    let page = session::rows(&id, 0, 100, &all_rows()).expect("rows");
+    assert!(page.rows.iter().any(|row| matches!(&row.row,
+        ViewRowWire::Item { index, left_rel_path: Some(path), right_rel_path: None, .. } if *index == a && path == "a.txt")));
+    session::close(&id);
 }
 
 #[tokio::test]

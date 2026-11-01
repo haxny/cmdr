@@ -50,7 +50,7 @@ export function rowMenuSections(row: SyncItemRow | null): MenuSection<SyncKeyAct
       shortcut: '⌘I',
       action: { kind: 'bulk', bulk: 'reverse' },
     },
-    { value: 'skip', label: actionLabel('skip'), shortcut: '⌘M', action: { kind: 'bulk', bulk: 'skip' } },
+    { value: 'skip', label: actionLabel('skip'), shortcut: '⌘N', action: { kind: 'bulk', bulk: 'skip' } },
     {
       value: 'toggleSkip',
       label: tString('sync.menu.toggleSkip'),

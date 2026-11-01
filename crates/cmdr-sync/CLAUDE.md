@@ -11,7 +11,8 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
 - **filter.rs**: `MaskFilter`, TC sync masks. **snapshot.rs**: `Snapshot`, `Entry`. **control.rs**: `SyncControl`.
 - **scan.rs**: `scan()`. **content.rs**: `compare_contents()`, byte-by-byte for equal-size pairs.
 - **plan.rs**: `plan()`, `reclassify()`, the mode table. **overrides.rs**: legal actions, bulk keys. **guards.rs**:
-  `check()`, `gate()`. **view.rs**: show-filters, folder headers, summary. Laws: `plan_proptests.rs`.
+  `check()`, `gate()`. **view.rs**: show-filters, folder headers, summary; **find.rs**: grid jumps. Laws:
+  `plan_proptests.rs`.
 - **profile.rs**: `SyncProfile`, `effective()` (Settings plus the profile's overrides), `validate()`,
   `roots_conflict()`, `check_keep_policy()`. The store is the app's.
 - **keep.rs**, **context.rs**: Trash or versions folder paths, `RunContext`. **steps.rs**: plan → ordered steps.

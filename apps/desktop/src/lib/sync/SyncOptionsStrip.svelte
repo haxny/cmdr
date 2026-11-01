@@ -10,7 +10,7 @@
     import ToggleGroup from '#lib/ui/ToggleGroup.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
-    import type { CompareBy, Mode, SyncOptions } from '#lib/tauri-commands/index.js'
+    import type { CompareBy, Mode, SyncOptions } from '#lib/tauri-commands/sync.js'
     import { excludesFromText, excludesToText } from './sync-options'
     import type { SyncSession } from './sync-session.svelte'
 

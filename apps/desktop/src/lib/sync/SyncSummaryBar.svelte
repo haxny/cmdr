@@ -9,7 +9,7 @@
     import type { MessageKey } from '#lib/intl/keys.gen.js'
     import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
     import { formatByteSize } from '#lib/units/index.js'
-    import type { GuardBlock, PlanSummary, ShowFilters, SyncState } from '#lib/tauri-commands/index.js'
+    import type { GuardBlock, PlanSummary, ShowFilters, SyncState } from '#lib/tauri-commands/sync.js'
 
     interface Props {
         state: SyncState | null

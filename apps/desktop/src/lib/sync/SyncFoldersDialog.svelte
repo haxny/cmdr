@@ -5,7 +5,8 @@
      * compares at once; Esc stops a running compare first, then closes. Keys: `sync-keys.ts`; what they do:
      * `sync-grid-controller.svelte.ts`; the backend session: `sync-session.svelte.ts`. `lib/sync/CLAUDE.md`.
      */
-    import { onMount } from 'svelte'
+    import { onDestroy, onMount } from 'svelte'
+    import { claimMenuCommand, createKeyRoadEcho, type KeyRoad } from '#lib/commands/menu-claims.js'
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
     import Button from '#lib/ui/Button.svelte'
     import Menu from '#lib/ui/Menu.svelte'
@@ -29,7 +30,8 @@
     import { rowMenuSections } from './sync-row-menu'
     import type { SyncRoots } from './pane-roots'
     import type { SyncGridApi } from './sync-grid-api'
-    import type { ShowFilters } from '#lib/tauri-commands/index.js'
+    import { SYNC_MENU_KEYS } from './sync-menu-claims'
+    import type { ShowFilters } from '#lib/tauri-commands/sync.js'
 
     interface Props {
         roots: SyncRoots
@@ -93,12 +95,40 @@
     const comparing = $derived(session.phase === 'comparing' || session.phase === 'paused')
     const canSynchronize = $derived(session.phase === 'done' && !session.stale)
 
+    /** One echo filter per action: the keyboard and menu halves of one press run it once. */
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping per press; nothing renders from it
+    const echoes = new Map<string, (road: KeyRoad) => boolean>()
+
+    function fire(action: SyncKeyAction, road: KeyRoad): void {
+        const key = JSON.stringify(action)
+        let isEcho = echoes.get(key)
+        if (!isEcho) {
+            isEcho = createKeyRoadEcho()
+            echoes.set(key, isEcho)
+        }
+        if (isEcho(road)) return
+        void controller.run(action)
+    }
+
     onMount(() => {
         void session.open()
         requestAnimationFrame(() => grid?.focus())
+        const releases = SYNC_MENU_KEYS.map(({ command, action, gridOnly }) =>
+            claimMenuCommand(command, () => {
+                if (gridOnly && !inGrid(document.activeElement)) return false
+                fire(action, 'menu')
+                return true
+            }),
+        )
         return () => {
+            for (const release of releases) release()
             rowMenu.destroy()
         }
+    })
+
+    // A crash under the dialog's boundary unmounts it without a close: the session and its listeners go anyway.
+    onDestroy(() => {
+        void session.close()
     })
 
     /** Esc: a running compare stops first; the next Esc closes. */
@@ -113,8 +143,8 @@
     async function closeNow(): Promise<void> {
         if (closing) return
         closing = true
-        const refusal = await session.close()
-        if (refusal) addToast(tString('sync.dialog.optionsNotSaved'), { level: 'warn' })
+        const saved = await session.close()
+        if (!saved) addToast(tString('sync.dialog.optionsNotSaved'), { level: 'warn' })
         onClose()
     }
 
@@ -122,16 +152,17 @@
         return target instanceof Node && Boolean(gridAreaEl?.contains(target))
     }
 
-    /** ⇧↑ ⇧↓ and ⌘A belong to the grid's selection, before the key map. */
-    function selectionKey(event: KeyboardEvent): boolean {
-        const plainShift = event.shiftKey && !event.metaKey && !event.altKey && !event.ctrlKey
-        if (plainShift && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+    /** ⇧↑ ⇧↓ extend the grid's selection; a plain letter or digit jumps to a name (type-to-jump). */
+    function gridOwnKey(event: KeyboardEvent): boolean {
+        const plain = !event.metaKey && !event.altKey && !event.ctrlKey
+        // eslint-disable-next-line cmdr/no-raw-key-match -- the whole combo is pinned: ⇧ alone (`plain` rules out ⌘ ⌥ ⌃)
+        if (plain && event.shiftKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
             const next = grid?.cursorTarget(new KeyboardEvent('keydown', { key: event.key }), controller.cursor)
             if (next !== null && next !== undefined) void controller.extend(next)
             return true
         }
-        if (event.metaKey && !event.shiftKey && !event.altKey && !event.ctrlKey && event.code === 'KeyA') {
-            void controller.selectAll()
+        if (plain && !event.isComposing && /^[\p{L}\p{N}._]$/u.test(event.key)) {
+            void controller.typeToJump(event.key)
             return true
         }
         return false
@@ -139,16 +170,14 @@
 
     function handleKeydown(event: KeyboardEvent): void {
         const area = inGrid(event.target) ? 'grid' : 'options'
-        if (area === 'grid' && selectionKey(event)) {
+        if (area === 'grid' && gridOwnKey(event)) {
             event.preventDefault()
             return
         }
         const action = syncKeyAction(event, area)
         if (!action) return
-        // Enter on a button presses it (ModalDialog already did); only a field's Enter compares.
-        if (action.kind === 'compare' && event.key === 'Enter' && event.target instanceof HTMLButtonElement) return
         event.preventDefault()
-        void controller.run(action)
+        fire(action, 'keyboard')
     }
 
     const progressText = $derived.by(() => {

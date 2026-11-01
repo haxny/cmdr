@@ -6,8 +6,9 @@
      */
     import Chip from '#lib/ui/Chip.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { formatUnitList } from '#lib/intl/list-format.js'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
-    import type { ShowFilters } from '#lib/tauri-commands/index.js'
+    import type { ShowFilters } from '#lib/tauri-commands/sync.js'
     import { filterHides } from './sync-options'
 
     interface Props {
@@ -43,6 +44,7 @@
             variant="toggle"
             pressed={filters[button.key]}
             label={tString(button.label)}
+            ariaLabel={hides ? formatUnitList([tString(button.label), tString('sync.filters.hiddenMark')]) : undefined}
             tooltipContent={{ text: hides ? tString('sync.filters.hiddenMark') : tString(button.label), shortcut: button.shortcut }}
             onActivate={() => {
                 onToggle(button.key)

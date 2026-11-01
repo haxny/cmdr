@@ -17,6 +17,7 @@ mod context;
 mod control;
 mod execute;
 mod filter;
+mod find;
 mod guards;
 mod keep;
 mod key;
@@ -42,6 +43,7 @@ pub use execute::{
     SyncEngine, execute,
 };
 pub use filter::{ALWAYS_EXCLUDED, Admission, DEFAULT_EXCLUDES, JUNK_MASKS, MaskFilter, SyncMaskError};
+pub use find::{RowQuery, find_row};
 pub use guards::{
     Acknowledgement, ClockSkew, DEFAULT_MAX_REMOVE_PERCENT, Gated, GuardBlock, GuardReport, GuardSettings, check, gate,
 };
@@ -50,7 +52,10 @@ pub use keep::{
     VersionsRoot, keep_destination, kept_dir, staging_root, versions_root,
 };
 pub use key::{EntryKey, NameRule};
-pub use overrides::{ActionChange, BulkAction, OverrideRefusal, apply_overrides, bulk_changes, legal_actions};
+pub use overrides::{
+    ActionChange, BulkAction, BulkOutcome, OverrideRefusal, RowSkipReason, SkippedRows, apply_overrides, bulk_changes,
+    bulk_outcome, legal_actions,
+};
 pub use plan::{
     Action, Baseline, HeadFolder, Mode, Plan, PlanItem, PlanOptions, Reclassified, content_jobs, default_action, plan,
     reclassify,
@@ -81,6 +86,8 @@ mod execute_proptests;
 mod execute_test;
 #[cfg(test)]
 mod filter_test;
+#[cfg(test)]
+mod find_test;
 #[cfg(test)]
 mod guards_test;
 #[cfg(test)]

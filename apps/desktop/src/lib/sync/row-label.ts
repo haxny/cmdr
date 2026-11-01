@@ -5,7 +5,7 @@
 import { tString } from '#lib/intl/messages.svelte.js'
 import { formatUnitList } from '#lib/intl/list-format.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
-import type { Action, Category, Rung, ViewRowWire } from '#lib/tauri-commands/index.js'
+import type { Action, Category, Rung, ViewRowWire } from '#lib/tauri-commands/sync.js'
 
 /** A plan row of the grid (the other kind is a folder header). */
 export type SyncItemRow = Extract<ViewRowWire, { type: 'item' }>

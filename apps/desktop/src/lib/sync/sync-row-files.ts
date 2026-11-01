@@ -1,11 +1,9 @@
 /**
- * F3 / F4 / ⌥Space on a grid row: the file on one side as a path on its volume. A row carries only its name, so the
- * folder comes from the header row above it (root rows have none; they come first).
- *
- * Gap: the header names the folder in the LEFT spelling. On a right side whose folder differs only in case or
- * Unicode form, on a case-sensitive volume, the right path can miss; viewing it then says it isn't there.
+ * F3 / F4 / ⌥Space on a grid row: the file on one side as a path on its volume. Each row carries both sides' paths
+ * from the root in their OWN spelling (`leftRelPath`, `rightRelPath`), so a folder that differs in case or Unicode
+ * form between the sides still opens the right file.
  */
-import type { Side, ViewRowWire } from '#lib/tauri-commands/index.js'
+import type { Side } from '#lib/tauri-commands/sync.js'
 import type { SyncRoots } from './pane-roots'
 import type { SyncItemRow } from './row-label'
 
@@ -16,38 +14,19 @@ export interface SideFile {
 
 export type SideFileRefusal = { type: 'noFile' } | { type: 'notAFile' }
 
-/** What `rowAt` gives: a view row, loading its page when needed. */
-export type RowAt = (viewIndex: number) => Promise<ViewRowWire | undefined>
-
-/** The folder a view row sits in, from the nearest header above it; `''` for the root's own rows. */
-export async function relDirOf(rowAt: RowAt, viewIndex: number): Promise<string> {
-  for (let index = viewIndex - 1; index >= 0; index--) {
-    const row = await rowAt(index)
-    if (row?.type === 'folder') return row.relDir
-  }
-  return ''
-}
-
-export function joinPath(root: string, relDir: string, name: string): string {
+export function joinPath(root: string, relPath: string): string {
   const base = root.endsWith('/') ? root.slice(0, -1) : root
-  const below = [relDir, name].filter((part) => part !== '').join('/')
-  return `${base}/${below}`
+  return `${base}/${relPath}`
 }
 
 /** The row's file on `side`, or why there's none to open. */
-export async function sideFileOf(
-  rowAt: RowAt,
-  roots: SyncRoots,
-  at: { viewIndex: number; row: SyncItemRow; side: Side },
-): Promise<SideFile | SideFileRefusal> {
-  const { viewIndex, row, side } = at
-  const name = side === 'left' ? row.leftName : row.rightName
+export function sideFileOf(roots: SyncRoots, row: SyncItemRow, side: Side): SideFile | SideFileRefusal {
+  const relPath = side === 'left' ? row.leftRelPath : row.rightRelPath
   const kind = side === 'left' ? row.leftKind : row.rightKind
-  if (name === null) return { type: 'noFile' }
+  if (relPath === null) return { type: 'noFile' }
   if (kind === 'folder') return { type: 'notAFile' }
-  const relDir = await relDirOf(rowAt, viewIndex)
   const root = roots[side].root
-  return { volumeId: root.volumeId, path: joinPath(root.path, relDir, name) }
+  return { volumeId: root.volumeId, path: joinPath(root.path, relPath) }
 }
 
 export function isSideFile(answer: SideFile | SideFileRefusal): answer is SideFile {

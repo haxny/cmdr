@@ -6,6 +6,7 @@ import {
   cancelSyncCompare,
   closeSyncSession,
   compareSyncItemContent,
+  findSyncRow,
   getSyncLastOptions,
   getSyncRows,
   getSyncState,
@@ -17,7 +18,7 @@ import {
   setSyncComparePaused,
   startSyncCompare,
   type SyncDefaults,
-} from '#lib/tauri-commands/index.js'
+} from '#lib/tauri-commands/sync.js'
 import { getSetting } from '#lib/settings/settings-store.js'
 import { keepPolicyFromSettings } from '#lib/settings/sync-keep-policy.js'
 import type { SyncIpc } from './sync-session.svelte'
@@ -29,6 +30,7 @@ export const syncIpc: SyncIpc = {
   getSyncRows,
   getSyncState,
   setSyncActions,
+  findSyncRow,
   compareSyncItemContent,
   closeSyncSession,
   getSyncLastOptions,

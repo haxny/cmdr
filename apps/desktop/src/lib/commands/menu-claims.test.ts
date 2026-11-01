@@ -34,4 +34,14 @@ describe('menu claims', () => {
     expect(newer).toHaveBeenCalledOnce()
     expect(older).not.toHaveBeenCalled()
   })
+
+  it('a claim that declines lets the command run as if unclaimed (⌘C in a text field)', () => {
+    let inField = true
+    const run = vi.fn(() => !inField)
+    releases.push(claimMenuCommand('edit.copy', run))
+    expect(runMenuClaim('edit.copy')).toBe(false)
+    inField = false
+    expect(runMenuClaim('edit.copy')).toBe(true)
+    expect(run).toHaveBeenCalledTimes(2)
+  })
 })

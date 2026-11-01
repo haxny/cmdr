@@ -1,11 +1,11 @@
 /**
- * Every refusal the backend types (`SyncError`) in words, by variant, never by message. An override refusal speaks
- * as the row refusal it is (`action-refusal.ts`).
+ * Every refusal the backend types (`SyncError`) in words, by variant, never by message. The table is keyed by every
+ * variant, so a new one doesn't compile until it has words.
  */
 import { getMessage } from '#lib/intl/messages.svelte.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
-import type { OverrideRefusal, Side, SyncMaskError } from '#lib/tauri-commands/index.js'
-import { rowRefusalText } from './action-refusal'
+import type { Side, SyncMaskError } from '#lib/tauri-commands/sync.js'
+import { overrideRefusalText } from './action-refusal'
 import type { SyncProblem } from './sync-session.svelte'
 
 const bySide = (side: Side, left: MessageKey, right: MessageKey): string => getMessage(side === 'left' ? left : right)
@@ -18,74 +18,43 @@ function maskText(error: SyncMaskError): string {
       return getMessage('sync.error.maskQuote')
     case 'secondBar':
       return getMessage('sync.error.maskSecondBar')
+    default: {
+      const unreachable: never = error
+      return unreachable
+    }
   }
 }
 
-function overrideText(refusal: OverrideRefusal): string {
-  switch (refusal.type) {
-    case 'noSuchItem':
-      return getMessage('sync.error.noSuchSession')
-    case 'illegalForMode':
-    case 'illegalForCategory':
-      return rowRefusalText(refusal)
-    case 'sideReadOnly':
-      return bySide(refusal.side, 'sync.refusal.sideReadOnlyLeft', 'sync.refusal.sideReadOnlyRight')
-    case 'nothingToCopy':
-      return rowRefusalText({ type: 'nothingToCopy', side: refusal.side })
-  }
-}
+type ProblemText = { [K in SyncProblem['type']]: (problem: Extract<SyncProblem, { type: K }>) => string }
 
-/** The variants whose words depend on nothing but the variant. */
-const PLAIN: Partial<Record<SyncProblem['type'], MessageKey>> = {
-  noSuchSession: 'sync.error.noSuchSession',
-  notCompared: 'sync.error.notCompared',
-  keepFolderUnreadable: 'sync.error.keepFolderUnreadable',
-  keep: 'sync.error.keep',
-  compareRunning: 'sync.error.compareRunning',
-  runInProgress: 'sync.error.runInProgress',
-  planChanged: 'sync.error.planChanged',
-  staleCompare: 'sync.error.staleCompare',
-  notContentComparable: 'sync.error.notContentComparable',
-  notInstalled: 'sync.error.notInstalled',
-  unexpected: 'sync.error.unexpected',
-}
-
-/** The variants that name a side. */
-function sidedText(problem: SyncProblem): string | null {
-  switch (problem.type) {
-    case 'volumeNotConnected':
-      return bySide(problem.side, 'sync.error.volumeNotConnectedLeft', 'sync.error.volumeNotConnectedRight')
-    case 'rootUnreachable':
-      return bySide(problem.side, 'sync.error.rootUnreachableLeft', 'sync.error.rootUnreachableRight')
-    case 'badPath':
-      return bySide(problem.side, 'sync.error.badPathLeft', 'sync.error.badPathRight')
-    case 'sideReadOnly':
-      return bySide(problem.side, 'sync.error.sideReadOnlyLeft', 'sync.error.sideReadOnlyRight')
-    case 'staleSelection':
-      return bySide(problem.side, 'sync.error.staleSelectionLeft', 'sync.error.staleSelectionRight')
-    default:
-      return null
-  }
+const PROBLEM_TEXT: ProblemText = {
+  noSuchSession: () => getMessage('sync.error.noSuchSession'),
+  notCompared: () => getMessage('sync.error.notCompared'),
+  volumeNotConnected: (p) => bySide(p.side, 'sync.error.volumeNotConnectedLeft', 'sync.error.volumeNotConnectedRight'),
+  rootUnreachable: (p) => bySide(p.side, 'sync.error.rootUnreachableLeft', 'sync.error.rootUnreachableRight'),
+  badPath: (p) => bySide(p.side, 'sync.error.badPathLeft', 'sync.error.badPathRight'),
+  rootsConflict: (p) =>
+    p.conflict.type === 'sameFolder'
+      ? getMessage('sync.error.sameFolder')
+      : bySide(p.conflict.outer, 'sync.error.nestedLeft', 'sync.error.nestedRight'),
+  badMask: (p) => maskText(p.error),
+  badSettings: (p) => (p.problem.type === 'badMask' ? maskText(p.problem.error) : getMessage('sync.error.badSettings')),
+  keepFolderUnreadable: () => getMessage('sync.error.keepFolderUnreadable'),
+  keep: () => getMessage('sync.error.keep'),
+  sideReadOnly: (p) => bySide(p.side, 'sync.error.sideReadOnlyLeft', 'sync.error.sideReadOnlyRight'),
+  staleSelection: (p) => bySide(p.side, 'sync.error.staleSelectionLeft', 'sync.error.staleSelectionRight'),
+  compareRunning: () => getMessage('sync.error.compareRunning'),
+  runInProgress: () => getMessage('sync.error.runInProgress'),
+  planChanged: () => getMessage('sync.error.planChanged'),
+  staleCompare: () => getMessage('sync.error.staleCompare'),
+  override: (p) => overrideRefusalText(p.refusal),
+  notContentComparable: () => getMessage('sync.error.notContentComparable'),
+  notInstalled: () => getMessage('sync.error.notInstalled'),
+  unexpected: () => getMessage('sync.error.unexpected'),
 }
 
 /** A refusal in words, by its variant. */
 export function syncProblemText(problem: SyncProblem): string {
-  const plain = PLAIN[problem.type]
-  if (plain) return getMessage(plain)
-  const sided = sidedText(problem)
-  if (sided !== null) return sided
-  switch (problem.type) {
-    case 'rootsConflict':
-      return problem.conflict.type === 'sameFolder'
-        ? getMessage('sync.error.sameFolder')
-        : bySide(problem.conflict.outer, 'sync.error.nestedLeft', 'sync.error.nestedRight')
-    case 'badMask':
-      return maskText(problem.error)
-    case 'badSettings':
-      return problem.problem.type === 'badMask' ? maskText(problem.problem.error) : getMessage('sync.error.badSettings')
-    case 'override':
-      return overrideText(problem.refusal)
-    default:
-      return getMessage('sync.error.unexpected')
-  }
+  const text = PROBLEM_TEXT[problem.type] as (problem: SyncProblem) => string
+  return text(problem)
 }

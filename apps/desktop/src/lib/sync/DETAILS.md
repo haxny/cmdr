@@ -39,11 +39,13 @@ Row keys only count on the grid so a text field keeps them. The keys are not reg
 
 ## Grid
 
-`ColumnList` with `semantics: 'grid'` (no treegrid; expanding a one-sided folder is phase 2). Folder header rows are
-`rowheader`s ("Photos/2024, folder 3 of 12"); root rows come first with no header. Each data row's `aria-label` is
-`rowAccessibleName` plus "selected". The action cell shows the category icon, TC's arrow, a "changed by you" dot, a
-warning triangle for older-replaces-newer, a pending mark for a running content compare, and the rung badge (T size and
-date, S size, C content) with its words in a tooltip and for screen readers.
+`ColumnList` with `semantics: 'grid'` (no treegrid; expanding a one-sided folder is phase 2). Its `aria-selected`
+follows the CURSOR row (the grid's own contract); the person's multi-row selection is said in each row's name ("…,
+selected") and shown by the ✓ column. Folder header rows are `rowheader`s ("Photos/2024, folder 3 of 12"); root rows
+come first with no header. Each data row's `aria-label` is `rowAccessibleName` plus "selected". The action cell shows
+the category icon, TC's arrow, a "changed by you" dot, a warning triangle for older-replaces-newer, a pending mark for a
+running content compare, and the rung badge (T size and date, S size, C content) with its words in a tooltip and for
+screen readers.
 
 F3 / F4 find the file's folder from the header above it (`sync-row-files.ts`). Gap: the header holds the left spelling,
 so a right folder that differs only in case or Unicode form on a case-sensitive volume can miss.

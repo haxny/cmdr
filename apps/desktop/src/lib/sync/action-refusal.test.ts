@@ -1,69 +1,42 @@
-/**
- * A key on the cursor row that the row can't take is said, never silently dropped: the backend's `bulk_changes`
- * leaves such a row alone, so the dialog names why from the row's own facts first.
- */
+/** The words for rows a key left alone; the backend decides which and why (`set_sync_actions`). */
 import { describe, expect, it } from 'vitest'
-import { rowRefusal } from './action-refusal'
-import type { SyncItemRow } from './row-label'
+import { actionsNotice, overrideRefusalText, skippedText } from './action-refusal'
 
-function row(patch: Partial<SyncItemRow> = {}): SyncItemRow {
-  return {
-    type: 'item',
-    index: 4,
-    leftName: 'a.txt',
-    rightName: 'a.txt',
-    leftKind: 'file',
-    rightKind: 'file',
-    leftSize: 1,
-    rightSize: 2,
-    leftMtime: 2,
-    rightMtime: 1,
-    category: 'newerLeft',
-    rung: 'sizeAndTime',
-    content: 'notAsked',
-    sameSize: false,
-    action: 'copyRight',
-    defaultAction: 'copyRight',
-    olderOverwritesNewer: false,
-    legal: ['copyRight', 'skip'],
-    ...patch,
-  }
-}
-
-describe('rowRefusal', () => {
-  it('lets a legal action through', () => {
-    expect(rowRefusal(row(), 'skip', 'update')).toBeNull()
-    expect(rowRefusal(row(), 'defaultDirection', 'update')).toBeNull()
+describe('skippedText', () => {
+  it('counts the rows and says why, per reason', () => {
+    expect(skippedText({ reason: { type: 'sideReadOnly', side: 'right' }, count: 3 })).toBe(
+      '3 rows weren’t changed: the right side takes no changes.',
+    )
+    expect(skippedText({ reason: { type: 'illegalForMode', action: 'removeRight' }, count: 1 })).toBe(
+      '1 row wasn’t changed: Remove on the right isn’t possible in this mode.',
+    )
+    expect(skippedText({ reason: { type: 'illegalForCategory', action: 'copyRight' }, count: 2 })).toBe(
+      '2 rows weren’t changed: Copy to the right isn’t possible for those rows.',
+    )
+    expect(skippedText({ reason: { type: 'nothingToCopy', side: 'left' }, count: 1_200 })).toBe(
+      '1,200 rows weren’t changed: there’s nothing on the left to copy.',
+    )
+    expect(skippedText({ reason: { type: 'cantReverse' }, count: 1 })).toContain('can be reversed')
+    expect(skippedText({ reason: { type: 'nothingToToggle' }, count: 1 })).toContain('no action to skip or restore')
   })
+})
 
-  it('says the mode forbids a write to the left in Update and a removal outside Mirror', () => {
-    expect(rowRefusal(row(), 'copyLeft', 'update')).toEqual({ type: 'illegalForMode', action: 'copyLeft' })
-    expect(rowRefusal(row(), 'removeTarget', 'bothWays')).toEqual({ type: 'illegalForMode', action: 'removeRight' })
+describe('actionsNotice', () => {
+  it('joins every reason and the hidden rows, and says nothing when every row changed', () => {
+    expect(actionsNotice([{ reason: { type: 'sideReadOnly', side: 'left' }, count: 2 }], 1)).toBe(
+      '2 rows weren’t changed: the left side takes no changes. 1 hidden row wasn’t changed.',
+    )
+    expect(actionsNotice([], 0)).toBeNull()
   })
+})
 
-  it('says which side has nothing to copy', () => {
-    const leftOnly = row({ rightName: null, rightKind: null, category: 'leftOnly', legal: ['copyRight', 'skip'] })
-    expect(rowRefusal(leftOnly, 'copyLeft', 'bothWays')).toEqual({ type: 'nothingToCopy', side: 'right' })
-  })
-
-  it('says a clash row takes skip only', () => {
-    const clash = row({ category: 'nameClash', action: 'skip', defaultAction: 'skip', legal: ['skip'] })
-    expect(rowRefusal(clash, 'copyRight', 'bothWays')).toEqual({ type: 'illegalForCategory', action: 'copyRight' })
-  })
-
-  it('says when reverse or toggle have nothing to work on', () => {
-    const one = row({ rightName: null, rightKind: null, category: 'leftOnly' })
-    expect(rowRefusal(one, 'reverse', 'bothWays')).toEqual({ type: 'cantReverse' })
-    const equal = row({ category: 'equal', action: 'equal', defaultAction: 'equal', legal: ['equal', 'skip'] })
-    expect(rowRefusal(equal, 'toggleSkip', 'bothWays')).toEqual({ type: 'nothingToToggle' })
-  })
-
-  it('falls back to a plain "not allowed" when the facts don’t say why (a read-only side)', () => {
-    expect(
-      rowRefusal(row({ action: 'skip', defaultAction: 'skip', legal: ['skip'] }), 'copyRight', 'bothWays'),
-    ).toEqual({
-      type: 'notAllowed',
-      action: 'copyRight',
-    })
+describe('overrideRefusalText', () => {
+  it('words a typed refusal of one row', () => {
+    expect(overrideRefusalText({ type: 'noSuchItem', item: 3 })).toBe(
+      'That row isn’t in the list anymore. Compare again.',
+    )
+    expect(overrideRefusalText({ type: 'sideReadOnly', item: 1, side: 'right' })).toBe(
+      'The right side takes no changes.',
+    )
   })
 })

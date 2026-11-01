@@ -20,7 +20,9 @@ import {
   type CompareRequest,
   type CompareStarted,
   type Mode,
-  type ProfileEditRefusal,
+  type RowQuery,
+  type SkippedRows,
+  type SyncActionsOutcome,
   type RootRef,
   type ShowFilters,
   type SyncCompareFinished,
@@ -51,7 +53,13 @@ export interface SyncIpc {
   // eslint-disable-next-line cmdr/no-confusable-callback-params -- mirrors the `#lib/tauri-commands/sync` wrapper it carries
   getSyncRows: (sessionId: string, start: number, end: number, filters: ShowFilters) => Promise<SyncRowsPage>
   getSyncState: (sessionId: string, filters: ShowFilters) => Promise<SyncState>
-  setSyncActions: (sessionId: string, items: number[], bulk: BulkAction, filters: ShowFilters) => Promise<SyncState>
+  setSyncActions: (
+    sessionId: string,
+    items: number[],
+    bulk: BulkAction,
+    filters: ShowFilters,
+  ) => Promise<SyncActionsOutcome>
+  findSyncRow: (sessionId: string, filters: ShowFilters, query: RowQuery) => Promise<number | null>
   compareSyncItemContent: (sessionId: string, item: number) => Promise<void>
   closeSyncSession: (sessionId: string) => Promise<void>
   // eslint-disable-next-line cmdr/no-confusable-callback-params -- mirrors the `#lib/tauri-commands/sync` wrapper it carries
@@ -77,6 +85,11 @@ export type SyncPhase = 'idle' | 'comparing' | 'paused' | 'done' | 'stopped' | '
 /** A refusal the dialog shows: the backend's typed one, or something it didn't classify (logged). */
 export type SyncProblem = SyncError | { type: 'unexpected' }
 
+/** What a key's action did: the rows it left alone (grouped by why) and the hidden ones, or a refusal. */
+export type ActionsAnswer =
+  | { type: 'done'; skipped: SkippedRows[]; hidden: number }
+  | { type: 'refused'; problem: SyncProblem }
+
 function problemOf(error: unknown, what: string): SyncProblem {
   const typed = asSyncError(error)
   if (typed) return typed
@@ -98,12 +111,16 @@ class SyncSessionState {
   sessionId = $state<string | null>(null)
   /** The mode the plan on screen was built with (the options may have moved on since). */
   comparedMode = $state<Mode>('bothWays')
-  readonly rows = new SvelteMap<number, ViewRowWire>()
+  /** Rows as last paged, each with the view version it came from: an older one is for display only. */
+  readonly rows = new SvelteMap<number, { version: number; row: ViewRowWire }>()
   /** Plan indices of the rows the person selected. */
   readonly selected = new SvelteSet<number>()
 
   private generation = 0
   private viewVersion = 0
+  /** The newest plan revision a state answer brought; a lower one is a late answer. */
+  private stateRevision = 0
+  private closed = false
   private readonly loaded = new Set<number>()
   private lastRange: { start: number; end: number } | null = null
   private unlisten: UnlistenFn[] = []
@@ -132,6 +149,11 @@ class SyncSessionState {
         if (payload.sessionId === this.sessionId) this.refresh()
       }),
     ])
+    if (this.closed) {
+      for (const stop of this.unlisten) stop()
+      this.unlisten = []
+      return
+    }
     try {
       const last = await ipc.getSyncLastOptions(this.roots.left.root, this.roots.right.root)
       if (last) this.options = last
@@ -158,6 +180,8 @@ class SyncSessionState {
     this.progress = null
     try {
       const started = await this.deps.ipc.startSyncCompare(request)
+      // A compare that answered after a newer one did is superseded: its session holds the newer one.
+      if (started.sessionId === this.sessionId && started.generation < this.generation) return
       this.sessionId = started.sessionId
       this.generation = started.generation
       this.comparedMode = request.options.mode
@@ -202,7 +226,7 @@ class SyncSessionState {
     if (id === null) return
     void this.deps.ipc.getSyncState(id, this.filters).then(
       (state) => {
-        this.state = state
+        this.takeState(state)
       },
       (error: unknown) => {
         const problem = problemOf(error, 'reading the summary')
@@ -212,6 +236,13 @@ class SyncSessionState {
       },
     )
     this.invalidate()
+  }
+
+  /** Keeps `state` unless a newer plan revision already arrived (answers can land out of order). */
+  private takeState(state: SyncState): void {
+    if (state.revision < this.stateRevision) return
+    this.stateRevision = state.revision
+    this.state = state
   }
 
   private invalidate(): void {
@@ -258,11 +289,18 @@ class SyncSessionState {
       for (const index of [...this.rows.keys()]) if (index >= answer.total) this.rows.delete(index)
       this.total = answer.total
     }
-    for (const { viewIndex, row } of answer.rows) this.rows.set(viewIndex, row)
+    for (const { viewIndex, row } of answer.rows) this.rows.set(viewIndex, { version: this.viewVersion, row })
   }
 
+  /** What the grid draws at `viewIndex`: the current row, or the last one paged while the new one loads. */
   getRow(viewIndex: number): ViewRowWire | undefined {
-    return this.rows.get(viewIndex)
+    return this.rows.get(viewIndex)?.row
+  }
+
+  /** The row at `viewIndex` in the CURRENT view only. Anything that acts on a row (selection, keys) reads this. */
+  currentRow(viewIndex: number): ViewRowWire | undefined {
+    const entry = this.rows.get(viewIndex)
+    return entry?.version === this.viewVersion ? entry.row : undefined
   }
 
   /** The whole view, in order, for ⌘A and for copying a big selection. */
@@ -280,12 +318,23 @@ class SyncSessionState {
 
   /** A view row, loading its page when it isn't here yet. */
   async rowAt(viewIndex: number): Promise<ViewRowWire | undefined> {
-    const cached = this.rows.get(viewIndex)
-    if (cached || this.sessionId === null) return cached
+    const current = this.currentRow(viewIndex)
+    if (current || this.sessionId === null) return current
     const page = Math.floor(viewIndex / SYNC_PAGE_SIZE)
     this.loaded.delete(page)
     await this.loadPage(page)
-    return this.rows.get(viewIndex)
+    return this.currentRow(viewIndex)
+  }
+
+  /** The view row a jump lands on (next or previous folder, a typed name), asked of the backend's view. */
+  async find(query: RowQuery): Promise<number | null> {
+    if (this.sessionId === null) return null
+    try {
+      return await this.deps.ipc.findSyncRow(this.sessionId, this.filters, query)
+    } catch (error) {
+      this.error = problemOf(error, 'finding a row')
+      return null
+    }
   }
 
   async setPaused(paused: boolean): Promise<void> {
@@ -325,14 +374,15 @@ class SyncSessionState {
   }
 
   /** One key's action on `items` (plan indices); the backend keeps only the ones the filters show. */
-  async setActions(items: number[], bulk: BulkAction): Promise<SyncProblem | null> {
-    if (this.sessionId === null || items.length === 0) return null
+  async setActions(items: number[], bulk: BulkAction): Promise<ActionsAnswer> {
+    if (this.sessionId === null || items.length === 0) return { type: 'done', skipped: [], hidden: 0 }
     try {
-      this.state = await this.deps.ipc.setSyncActions(this.sessionId, items, bulk, this.filters)
+      const outcome = await this.deps.ipc.setSyncActions(this.sessionId, items, bulk, this.filters)
+      this.takeState(outcome.state)
       this.invalidate()
-      return null
+      return { type: 'done', skipped: outcome.skipped, hidden: outcome.hidden }
     } catch (error) {
-      return problemOf(error, 'changing actions')
+      return { type: 'refused', problem: problemOf(error, 'changing actions') }
     }
   }
 
@@ -348,16 +398,21 @@ class SyncSessionState {
     }
   }
 
-  /** Remembers the options for this pair and ends the session. Answers why the options weren't saved, if they weren't. */
-  async close(): Promise<ProfileEditRefusal | null> {
+  /**
+   * Remembers the options for this pair and ends the session; idempotent, so the dialog's destroy can call it after
+   * a close did. Answers `false` when the options couldn't be remembered (any reason; a typed one is logged too).
+   */
+  async close(): Promise<boolean> {
+    if (this.closed) return true
+    this.closed = true
     for (const stop of this.unlisten) stop()
     this.unlisten = []
-    let refusal: ProfileEditRefusal | null = null
+    let saved = true
     try {
       await this.deps.ipc.saveSyncLastOptions(this.roots.left.root, this.roots.right.root, this.options)
     } catch (error) {
-      refusal = asProfileEditRefusal(error)
-      if (!refusal) log.warn("couldn't remember the options: {error}", { error })
+      saved = false
+      log.warn("couldn't remember the options ({kind}): {error}", { kind: asProfileEditRefusal(error)?.type, error })
     }
     if (this.sessionId !== null) {
       try {
@@ -366,7 +421,7 @@ class SyncSessionState {
         log.warn("couldn't close the session: {error}", { error })
       }
     }
-    return refusal
+    return saved
   }
 }
 

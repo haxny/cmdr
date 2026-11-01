@@ -167,6 +167,10 @@ pub enum ViewRowWire {
         left_name: Option<String>,
         /// The right name, in its own spelling.
         right_name: Option<String>,
+        /// The left path from the root, in the left's own spelling (F3 and F4 open it).
+        left_rel_path: Option<String>,
+        /// The right path from the root, in the right's own spelling.
+        right_rel_path: Option<String>,
         /// What the left entry is.
         left_kind: Option<EntryKind>,
         /// What the right entry is.
@@ -228,6 +232,21 @@ pub struct SyncState {
     pub guards: GuardReport,
     /// A run has changed the folders since this compare: compare again.
     pub stale: bool,
+    /// The plan revision this state is of. Revisions only grow, across
+    /// sessions too, so an answer with a lower one than the dialog holds is late.
+    pub revision: u64,
+}
+
+/// What a bulk key did: the state after, and every selected row it left alone.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncActionsOutcome {
+    /// The summary and guards after the change.
+    pub state: SyncState,
+    /// Rows the key couldn't change, grouped by why.
+    pub skipped: Vec<cmdr_sync::SkippedRows>,
+    /// Selected rows the show-filters hide, which a key never changes.
+    pub hidden: u32,
 }
 
 /// A group of the confirm, each with its own checkbox.

@@ -8,7 +8,7 @@
  * A key is matched as its WHOLE combo (`⌘⇧L`), so a superset (`⌥⌘L`) never fires it. Letters are read off the
  * physical key (`code`) where the event has one, because ⌥ composes another character (`⌥⌘R` types `®`).
  */
-import type { BulkAction, ShowFilters, Side } from '#lib/tauri-commands/index.js'
+import type { BulkAction, ShowFilters, Side } from '#lib/tauri-commands/sync.js'
 
 export type SyncKeyAction =
   | { kind: 'bulk'; bulk: BulkAction }
@@ -26,6 +26,7 @@ export type SyncKeyAction =
   | { kind: 'folder'; step: 1 | -1 }
   | { kind: 'copyRows' }
   | { kind: 'contextMenu' }
+  | { kind: 'selectAll' }
 
 /** Where focus is: a field or button of the options strip, or the grid. */
 export type SyncKeyArea = 'options' | 'grid'
@@ -65,7 +66,8 @@ const GRID: Readonly<Partial<Record<string, SyncKeyAction>>> = {
   '⌘R': bulk('copyLeft'),
   ArrowLeft: bulk('copyLeft'),
   '⌘I': bulk('reverse'),
-  '⌘M': bulk('skip'),
+  // TC's Ctrl+M; ⌘M is the Window menu's Minimize, which AppKit takes before any page sees it.
+  '⌘N': bulk('skip'),
   '-': bulk('skip'),
   Space: bulk('toggleSkip'),
   '⌘Backspace': bulk('removeTarget'),
@@ -79,6 +81,7 @@ const GRID: Readonly<Partial<Record<string, SyncKeyAction>>> = {
   '⌘PageUp': { kind: 'folder', step: -1 },
   '⌥⌘ArrowUp': { kind: 'folder', step: -1 },
   '⌘C': { kind: 'copyRows' },
+  '⌘A': { kind: 'selectAll' },
   '⇧F10': { kind: 'contextMenu' },
 }
 

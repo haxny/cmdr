@@ -19,7 +19,7 @@
     import { formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
     import { formatByteSize } from '#lib/units/index.js'
     import { formatDateTime } from '#lib/settings/reactive-settings.svelte.js'
-    import type { Category, ViewRowWire } from '#lib/tauri-commands/index.js'
+    import type { Category, ViewRowWire } from '#lib/tauri-commands/sync.js'
     import {
         ACTION_GLYPH,
         RUNG_BADGE,

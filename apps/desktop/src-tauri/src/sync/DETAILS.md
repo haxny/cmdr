@@ -66,9 +66,14 @@ top pass `validate_defaults` (`BadSettings`, besides the clamp in `effective`), 
 root at that sequence (`StaleSelection`). Both sides scan at once (`tokio::join!`); progress goes out at most every
 100 ms; Content compares run after the plan and `reclassify` folds them in.
 
-The session keeps both snapshots, the plan with every override applied (`set_sync_actions`: `bulk_changes` on the rows
+The session keeps both snapshots, the plan with every override applied (`set_sync_actions`: `bulk_outcome` on the rows
 the person selected AND can see, then `apply_overrides`, all or nothing), and the scan's options without the selection
-(the engine re-checks folders with them). Grid pages are cut from `view_rows` per call. A run marks the session `stale`
+(the engine re-checks folders with them). `set_sync_actions` answers `SyncActionsOutcome`: the new state, the rows it
+left alone grouped by `RowSkipReason`, and how many selected rows the filters hide, so the dialog is never silent; a
+key that changes nothing doesn't bump the revision. Every `SyncState` carries its plan revision (revisions only grow),
+so the dialog drops a late summary. Grid pages are cut from `view_rows` per call; each item row carries both sides'
+paths in their own spelling (`leftRelPath`, `rightRelPath`) for F3/F4. `find_sync_row` answers the dialog's jumps
+(next or previous folder, a typed name) from the same cached view (`cmdr_sync::find_row`). A run marks the session `stale`
 (the folders changed); the dialog compares again.
 
 Decision: the run is tied to the confirm the person saw. `Compared::revision` (unique across sessions) changes with

@@ -1,13 +1,13 @@
 //! IPC for Synchronize folders (⇧F12). Thin: the work is `crate::sync` and `cmdr-sync`.
 
 use cmdr_sync::{
-    BulkAction, KeepPolicy, KeepRefusal, RootRef, ShowFilters, SyncDefaults, SyncOptions, SyncProfile,
+    BulkAction, KeepPolicy, KeepRefusal, RootRef, RowQuery, ShowFilters, SyncDefaults, SyncOptions, SyncProfile,
     check_keep_policy,
 };
 
 use crate::sync::host::AppSyncHost;
 use crate::sync::wire::{
-    CompareRequest, CompareStarted, ConfirmPreview, RunRequest, SyncError, SyncRowsPage, SyncState,
+    CompareRequest, CompareStarted, ConfirmPreview, RunRequest, SyncActionsOutcome, SyncError, SyncRowsPage, SyncState,
 };
 use crate::sync::{session, session_compare, session_run};
 
@@ -180,8 +180,15 @@ pub fn set_sync_actions(
     items: Vec<u32>,
     bulk: BulkAction,
     filters: ShowFilters,
-) -> Result<SyncState, SyncError> {
+) -> Result<SyncActionsOutcome, SyncError> {
     session::set_actions(&session_id, &items, bulk, &filters)
+}
+
+/// The grid row a jump lands on: the next or previous folder, or a name typed in the grid.
+#[tauri::command]
+#[specta::specta]
+pub fn find_sync_row(session_id: String, filters: ShowFilters, query: RowQuery) -> Result<Option<u32>, SyncError> {
+    session::find(&session_id, &filters, &query)
 }
 
 /// Compares one equal-size pair by content; `sync-rows-changed` follows.

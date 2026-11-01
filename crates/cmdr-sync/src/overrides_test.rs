@@ -146,6 +146,44 @@ fn bulk_changes_drop_illegal_rows_silently() {
 }
 
 #[test]
+fn bulk_outcome_says_why_each_row_was_left_alone() {
+    // Update: copies to the left are illegal for the mode; a left-only row has nothing on the right.
+    let left = Tree::new().file("a", 1, T).file("both", 2, T);
+    let right = Tree::new().file("b", 1, T).file("both", 1, T);
+    let plan = plan_of(Mode::Update, left, right);
+    let (a, b, both) = (index(&plan, "a"), index(&plan, "b"), index(&plan, "both"));
+    let outcome = bulk_outcome(&plan, &[a, b, both, 42], BulkAction::CopyLeft);
+    assert!(outcome.changes.is_empty());
+    let total: u32 = outcome.skipped.iter().map(|rows| rows.count).sum();
+    assert_eq!(total, 3, "42 isn't a row: {outcome:?}");
+    assert!(outcome.skipped.iter().any(|rows| rows.reason
+        == RowSkipReason::IllegalForMode {
+            action: Action::CopyLeft
+        }));
+
+    // Reverse on a one-sided copy, Space on an equal row.
+    let mirror = plan_of(
+        Mode::Mirror,
+        Tree::new().file("n", 1, T).file("e", 1, T),
+        Tree::new().file("e", 1, T),
+    );
+    let (n, e) = (index(&mirror, "n"), index(&mirror, "e"));
+    let reversed = bulk_outcome(&mirror, &[n], BulkAction::Reverse);
+    assert_eq!(
+        reversed.skipped,
+        vec![SkippedRows {
+            reason: RowSkipReason::CantReverse,
+            count: 1
+        }]
+    );
+    let toggled = bulk_outcome(&mirror, &[e], BulkAction::ToggleSkip);
+    assert_eq!(toggled.skipped[0].reason, RowSkipReason::NothingToToggle);
+    // A row that already has the action is neither changed nor refused.
+    let same = bulk_outcome(&mirror, &[n], BulkAction::CopyRight);
+    assert!(same.changes.is_empty() && same.skipped.is_empty());
+}
+
+#[test]
 fn toggle_skip_and_default_direction_round_trip() {
     let plan = plan_of(Mode::Mirror, Tree::new().file("a", 1, T), Tree::new().file("a", 1, T));
     let mirror = plan_of(Mode::Mirror, Tree::new().file("n", 1, T), Tree::new());

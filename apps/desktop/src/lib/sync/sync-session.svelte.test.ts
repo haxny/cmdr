@@ -10,7 +10,7 @@ import type {
   SyncRowsChanged,
   SyncRowsPage,
   SyncState,
-} from '#lib/tauri-commands/index.js'
+} from '#lib/tauri-commands/sync.js'
 import { SyncCommandFailure, SyncProfileEditFailure } from '#lib/tauri-commands/sync.js'
 import { createSyncSession, type SyncIpc } from './sync-session.svelte'
 import { DEFAULT_SHOW_FILTERS } from './sync-options'
@@ -31,6 +31,7 @@ const STATE: SyncState = {
   },
   guards: { blocks: [], olderOverwritesNewer: 0, skew: null },
   stale: false,
+  revision: 5,
 }
 
 function itemRow(index: number) {
@@ -39,6 +40,8 @@ function itemRow(index: number) {
     index,
     leftName: `f${String(index)}`,
     rightName: `f${String(index)}`,
+    leftRelPath: `f${String(index)}`,
+    rightRelPath: `f${String(index)}`,
     leftKind: 'file' as const,
     rightKind: 'file' as const,
     leftSize: 1,
@@ -82,7 +85,8 @@ function harness(): Harness {
     cancelSyncCompare: vi.fn(() => Promise.resolve()),
     getSyncRows: vi.fn((_id: string, start: number, end: number) => Promise.resolve(page(start, end))),
     getSyncState: vi.fn(() => Promise.resolve(STATE)),
-    setSyncActions: vi.fn(() => Promise.resolve(STATE)),
+    setSyncActions: vi.fn(() => Promise.resolve({ state: STATE, skipped: [], hidden: 0 })),
+    findSyncRow: vi.fn(() => Promise.resolve(null)),
     compareSyncItemContent: vi.fn(() => Promise.resolve()),
     closeSyncSession: vi.fn(() => Promise.resolve()),
     getSyncLastOptions: vi.fn(() => Promise.resolve(null)),
@@ -223,7 +227,7 @@ describe('createSyncSession', () => {
     const h = harness()
     const s = await opened(h)
     vi.mocked(h.ipc.getSyncRows).mockClear()
-    expect(await s.setActions([0, 2], 'reverse')).toBeNull()
+    expect(await s.setActions([0, 2], 'reverse')).toEqual({ type: 'done', skipped: [], hidden: 0 })
     expect(h.ipc.setSyncActions).toHaveBeenCalledWith('s1', [0, 2], 'reverse', DEFAULT_SHOW_FILTERS)
     await settle()
     expect(h.ipc.getSyncRows).toHaveBeenCalled()
@@ -234,7 +238,7 @@ describe('createSyncSession', () => {
     const s = await opened(h)
     const refusal = { type: 'override' as const, refusal: { type: 'noSuchItem' as const, item: 9 } }
     vi.mocked(h.ipc.setSyncActions).mockRejectedValueOnce(new SyncCommandFailure(refusal))
-    expect(await s.setActions([9], 'skip')).toEqual(refusal)
+    expect(await s.setActions([9], 'skip')).toEqual({ type: 'refused', problem: refusal })
   })
 
   it('re-pages when the backend says rows changed in this session only', async () => {
@@ -277,6 +281,77 @@ describe('createSyncSession', () => {
       expect.objectContaining({ masks: '*.txt' }),
     )
     expect(h.ipc.closeSyncSession).toHaveBeenCalledWith('s1')
-    expect(outcome).toEqual({ type: 'writeFailed' })
+    expect(outcome).toBe(false)
+    // Idempotent: the dialog's destroy may call it again.
+    expect(await s.close()).toBe(true)
+    expect(h.ipc.closeSyncSession).toHaveBeenCalledOnce()
+  })
+
+  it('any save failure is reported, not only a typed refusal', async () => {
+    const h = harness()
+    const s = await opened(h)
+    vi.mocked(h.ipc.saveSyncLastOptions).mockRejectedValueOnce(new Error('disk full'))
+    expect(await s.close()).toBe(false)
+  })
+
+  it('acts only on rows of the current view: after a filter change and after a new compare', async () => {
+    const h = harness()
+    const s = await opened(h)
+    expect(s.currentRow(1)).toMatchObject({ index: 1 })
+    let release: () => void = () => {}
+    vi.mocked(h.ipc.getSyncRows).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => {
+            resolve(page(0, 3))
+          }
+        }),
+    )
+    s.setFilters({ ...DEFAULT_SHOW_FILTERS, equal: true })
+    // The old row still draws, but nothing may act on it.
+    expect(s.getRow(1)).toMatchObject({ index: 1 })
+    expect(s.currentRow(1)).toBeUndefined()
+    release()
+    await settle()
+    expect(s.currentRow(1)).toMatchObject({ index: 1 })
+
+    await s.compare()
+    h.finish({ sessionId: 's1', generation: 2, outcome: { type: 'done' } })
+    expect(s.currentRow(1)).toBeUndefined()
+    expect(await s.rowAt(1)).toMatchObject({ index: 1 })
+  })
+
+  it('a compare that answers after a newer one is ignored, and a late summary never replaces a newer one', async () => {
+    const h = harness()
+    const s = await opened(h)
+    let answerOlder: () => void = () => {}
+    vi.mocked(h.ipc.startSyncCompare)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            answerOlder = () => {
+              resolve({ sessionId: 's1', generation: 2 })
+            }
+          }),
+      )
+      .mockImplementationOnce(() => Promise.resolve({ sessionId: 's1', generation: 3 }))
+    const older = s.compare()
+    await s.compare()
+    answerOlder()
+    await older
+    h.finish({ sessionId: 's1', generation: 3, outcome: { type: 'done' } })
+    await settle()
+    expect(s.phase).toBe('done')
+
+    vi.mocked(h.ipc.setSyncActions).mockResolvedValueOnce({
+      state: { ...STATE, revision: 9, summary: { ...STATE.summary, changedByYou: 1 } },
+      skipped: [],
+      hidden: 0,
+    })
+    await s.setActions([0], 'skip')
+    vi.mocked(h.ipc.getSyncState).mockResolvedValueOnce({ ...STATE, revision: 7 })
+    s.refresh()
+    await settle()
+    expect(s.state?.summary.changedByYou).toBe(1)
   })
 })

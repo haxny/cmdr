@@ -254,6 +254,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::sync::get_sync_rows,
                     crate::commands::sync::get_sync_state,
                     crate::commands::sync::set_sync_actions,
+                    crate::commands::sync::find_sync_row,
                     crate::commands::sync::compare_sync_item_content,
                     crate::commands::sync::get_sync_confirm,
                     crate::commands::sync::start_sync_run,
