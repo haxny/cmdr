@@ -1718,6 +1718,46 @@ export const commands = {
       | null
     >('check_sync_keep_policy', { policy }),
   /**
+   *  Checks every input and starts a compare in the dialog's session (a new one when
+   *  `sessionId` is `None`). Answers the session id; rows follow `sync-compare-finished`.
+   */
+  startSyncCompare: (request: CompareRequest) =>
+    typedError<string, SyncError>(__TAURI_INVOKE('start_sync_compare', { request })),
+  // Pauses or resumes the session's compare.
+  setSyncComparePaused: (sessionId: string, paused: boolean) =>
+    typedError<null, SyncError>(__TAURI_INVOKE('set_sync_compare_paused', { sessionId, paused })),
+  // Stops the session's compare; its rows stay as they were.
+  cancelSyncCompare: (sessionId: string) =>
+    typedError<null, SyncError>(__TAURI_INVOKE('cancel_sync_compare', { sessionId })),
+  // Grid rows `start..end` under the show-filters.
+  getSyncRows: (sessionId: string, start: number, end: number, filters: ShowFilters) =>
+    typedError<SyncRowsPage, SyncError>(__TAURI_INVOKE('get_sync_rows', { sessionId, start, end, filters })),
+  // The summary bar and the guards of the current plan.
+  getSyncState: (sessionId: string, filters: ShowFilters) =>
+    typedError<SyncState, SyncError>(__TAURI_INVOKE('get_sync_state', { sessionId, filters })),
+  // Applies a key's action to the selected rows the person can see.
+  setSyncActions: (sessionId: string, items: number[], bulk: BulkAction, filters: ShowFilters) =>
+    typedError<SyncState, SyncError>(__TAURI_INVOKE('set_sync_actions', { sessionId, items, bulk, filters })),
+  // Compares one equal-size pair by content; `sync-rows-changed` follows.
+  compareSyncItemContent: (sessionId: string, item: number) =>
+    typedError<null, SyncError>(__TAURI_INVOKE('compare_sync_item_content', { sessionId, item })),
+  // What the confirm shows for the current plan.
+  getSyncConfirm: (sessionId: string, defaults: SyncDefaults, filters: ShowFilters) =>
+    typedError<ConfirmPreview, SyncError>(__TAURI_INVOKE('get_sync_confirm', { sessionId, defaults, filters })),
+  /**
+   *  Runs the accepted groups of the current plan; `sync-run-progress` and
+   *  `sync-run-finished` follow.
+   */
+  startSyncRun: (sessionId: string, request: RunRequest) =>
+    typedError<null, SyncError>(__TAURI_INVOKE('start_sync_run', { sessionId, request })),
+  // Pauses or resumes the run between steps.
+  setSyncRunPaused: (sessionId: string, paused: boolean) =>
+    typedError<null, SyncError>(__TAURI_INVOKE('set_sync_run_paused', { sessionId, paused })),
+  // Stops the run; what it set aside goes back.
+  cancelSyncRun: (sessionId: string) => typedError<null, SyncError>(__TAURI_INVOKE('cancel_sync_run', { sessionId })),
+  // Closes the dialog's session, stopping anything it runs.
+  closeSyncSession: (sessionId: string) => __TAURI_INVOKE<void>('close_sync_session', { sessionId }),
+  /**
    *  Starts (or, when `restart` is set, restarts) the tag session of a Multi-Rename session. The
    *  read may take as long as files keep being read; once none was for `SESSION_IO_TIMEOUT` (a
    *  stalled share) it's given up as `ReadTimedOut`.
@@ -6007,6 +6047,11 @@ export const events = {
   smbOsMountNoticeWithdrawn: makeEvent<SmbOsMountNoticeWithdrawn>('smb-os-mount-notice-withdrawn'),
   stateRecoveryQueued: makeEvent<StateRecoveryQueued>('state-recovery-queued'),
   suggestionsChanged: makeEvent<SuggestionsChanged>('suggestions-changed'),
+  syncCompareFinished: makeEvent<SyncCompareFinished>('sync-compare-finished'),
+  syncCompareProgress: makeEvent<SyncCompareProgress>('sync-compare-progress'),
+  syncRowsChanged: makeEvent<SyncRowsChanged>('sync-rows-changed'),
+  syncRunFinished: makeEvent<SyncRunFinished>('sync-run-finished'),
+  syncRunProgress: makeEvent<SyncRunProgress>('sync-run-progress'),
   systemTextSizeChanged: makeEvent<SystemTextSizeChanged>('system-text-size-changed'),
   tabContextAction: makeEvent<TabContextAction>('tab-context-action'),
   tagsClipboard: makeEvent<TagsClipboard>('tags-clipboard'),
@@ -6066,6 +6111,30 @@ export type AccessNotice =
   | { kind: 'smbSignatureRefused'; volumeId: string }
   // An offered update didn't carry Cmdr's signature, so nothing was installed.
   | { kind: 'updateNotGenuine'; version: string; check: SignatureCheck }
+
+// A second yes from the confirm.
+export type Acknowledgement =
+  // Releases `MaxRemove`.
+  | 'removeAnyway'
+  // Releases copies into an empty root.
+  | 'copyIntoEmpty'
+
+// What one row does.
+export type Action =
+  // `→` copy (or replace) left to right.
+  | 'copyRight'
+  // `←` copy (or replace) right to left.
+  | 'copyLeft'
+  // `×→` remove on the right (to the Trash or the versions folder).
+  | 'removeRight'
+  // `←×` remove on the left (overrides only).
+  | 'removeLeft'
+  // `=` nothing to do, the sides are equal.
+  | 'equal'
+  // `·` leave both sides alone.
+  | 'skip'
+  // `?` needs a person.
+  | 'undecided'
 
 // Active settings snapshot cached at startup for inclusion in crash reports.
 export type ActiveSettings = {
@@ -7144,6 +7213,23 @@ export type BriefColumnsIpcError = {
   message: string
 }
 
+// The grid's commands on a set of rows (spec 4.4).
+export type BulkAction =
+  // Back to the mode's action (⌘D).
+  | 'defaultDirection'
+  // Copy left to right (→, ⌘L).
+  | 'copyRight'
+  // Copy right to left (←, ⌘R).
+  | 'copyLeft'
+  // Swap a copy's direction (⌘I); a row that can't flip is left alone.
+  | 'reverse'
+  // Leave alone (⌘M).
+  | 'skip'
+  // Planned ↔ skip (Space).
+  | 'toggleSkip'
+  // Remove on the target, the right side (⌘⌫).
+  | 'removeTarget'
+
 export type BulkRenameBlockReason =
   | 'unknownRow'
   | 'duplicateDestination'
@@ -7372,6 +7458,29 @@ export type CaseTool =
   | 'lower'
   // All upper.
   | 'upper'
+
+// How two sides relate.
+export type Category =
+  // Only on the left.
+  | 'leftOnly'
+  // Only on the right.
+  | 'rightOnly'
+  // Both, the left is newer.
+  | 'newerLeft'
+  // Both, the right is newer.
+  | 'newerRight'
+  // Both, different, no newer side.
+  | 'different'
+  // Both, the same.
+  | 'equal'
+  // Not enough facts to say.
+  | 'unknown'
+  // A file against a folder (or a symlink).
+  | 'typeClash'
+  // Two names on one side collapse to one key (set by the planner, never `classify`).
+  | 'nameClash'
+  // A side couldn't be read (set by the planner, never `classify`).
+  | 'unreadable'
 
 /**
  *  A server certificate the OS refused and a person may trust anyway, and what
@@ -7602,6 +7711,17 @@ export type ClipboardReadResult = {
   isDirectory: (boolean | null)[]
 }
 
+// The right side's clock seems to run off by a fixed step.
+export type ClockSkew = {
+  /**
+   *  How far the right side's times run ahead of the left's, in seconds
+   *  (negative: behind). Its negation is the time offset that cancels it.
+   */
+  offsetSecs: number
+  // The share of paired files that show it.
+  sharePercent: number
+}
+
 // `close-about`: dismiss the about dialog overlay (MCP `dialog close about`).
 export type CloseAbout = null
 
@@ -7752,6 +7872,39 @@ export type CompareDirectoriesResult = {
   settled: boolean
 }
 
+// How a compare ended.
+export type CompareOutcome =
+  // The rows are ready.
+  | { type: 'done' }
+  // Cancelled, or replaced by a newer compare.
+  | { type: 'stopped' }
+  // It couldn't run.
+  | {
+      type: 'refused'
+      // Why.
+      error: SyncError
+    }
+
+// Everything a compare needs.
+export type CompareRequest = {
+  // The dialog's session, to compare again in; `None` opens a new one.
+  sessionId: string | null
+  // The left folder.
+  left: SideRequest
+  // The right folder.
+  right: SideRequest
+  // The dialog's options.
+  options: SyncOptions
+  // The Settings values, read by the dialog.
+  defaults: SyncDefaults
+  // The profile's overrides (all `None` without a profile).
+  overrides: ProfileOverrides
+  // The profile's name, for `{profile}` in a custom versions folder.
+  profileName: string | null
+  // Take hidden entries along.
+  includeHidden: boolean
+}
+
 /**
  *  Estimated compressed output size for a Compress operation, split by
  *  compressibility class so the frontend can re-scale to the selected deflate
@@ -7774,6 +7927,55 @@ export type CompressedSizeEstimate = {
 export type CompressionInfoDto = {
   requested: boolean
   negotiated: boolean
+}
+
+// One group of the confirm.
+export type ConfirmGroup = {
+  // Which.
+  key: ConfirmGroupKey
+  // Files it copies or removes.
+  files: number
+  // Their bytes.
+  bytes: number
+  // Where what it replaces or removes goes; `None` for new copies.
+  keep: KeepDestinationWire | null
+}
+
+// A group of the confirm, each with its own checkbox.
+export type ConfirmGroupKey =
+  // New items copied left to right.
+  | 'copyRight'
+  // New items copied right to left.
+  | 'copyLeft'
+  // Copies to the left of items the mode would have removed on the right.
+  | 'copyLeftRecreates'
+  // Copies to the right of items the mode would have removed on the left.
+  | 'copyRightRecreates'
+  // Files on the right replaced by the left's.
+  | 'replaceRight'
+  // Files on the left replaced by the right's.
+  | 'replaceLeft'
+  // Items removed on the right.
+  | 'removeRight'
+  // Items removed on the left.
+  | 'removeLeft'
+
+// What the confirm shows before a run.
+export type ConfirmPreview = {
+  // The groups, in a fixed order.
+  groups: ConfirmGroup[]
+  // The first rows that replace a newer file with an older one.
+  olderOverwritesNewer: WarnedItem[]
+  // How many such rows there are in all.
+  olderOverwritesNewerTotal: number
+  // Guards that hold actions back.
+  blocks: GuardBlock[]
+  // A uniform clock offset, if one shows.
+  skew: ClockSkew | null
+  // Actions that run on rows the show-filters hide.
+  hiddenActions: number
+  // Kept items go to another volume (a copy, then a removal).
+  keepIsSlow: boolean
 }
 
 // Metadata about a conflicting sibling file.
@@ -7988,6 +8190,31 @@ export type ContentKind =
   | 'audiobook'
   // Music.
   | 'music'
+
+// Running totals, reported as bytes are read and as pairs finish.
+export type ContentProgress = {
+  // Pairs decided.
+  filesDone: number
+  // Pairs asked for.
+  filesTotal: number
+  // Bytes accounted for. A pair that differs early counts in full.
+  bytesDone: number
+  // Sizes of all pairs added up.
+  bytesTotal: number
+}
+
+// What a byte compare said, when one was asked for.
+export type ContentState =
+  // Nobody asked.
+  | 'notAsked'
+  // Asked, no answer yet.
+  | 'pending'
+  // The bytes are equal.
+  | 'same'
+  // The bytes differ.
+  | 'differs'
+  // A side couldn't be read.
+  | 'unreadable'
 
 /**
  *  The user's keyboard shortcuts as they stand right now: command-registry id → the
@@ -9401,6 +9628,15 @@ export type EncryptionInfoDto = {
   cipher: string | null
 }
 
+// What an entry is.
+export type EntryKind =
+  // A regular file.
+  | 'file'
+  // A folder.
+  | 'folder'
+  // A symlink (compared by its own listing facts, never followed).
+  | 'symlink'
+
 // One status entry, surfaced to the frontend as `{ path, code }`.
 export type EntryStatus = {
   // Path relative to the repo's working tree root, with `/` separators.
@@ -10446,6 +10682,44 @@ export type GoToPathResolution =
   // Defensive: the input was empty or couldn't be turned into a path.
   | { kind: 'invalid'; reason: string }
 
+// A guard that fired.
+export type GuardBlock =
+  // Too many removals on `side`; "Remove anyway" releases them.
+  | {
+      type: 'maxRemove'
+      // The side losing files.
+      side: Side
+      // Files the plan removes there.
+      removals: number
+      // Files the side has.
+      targetFiles: number
+    }
+  /**
+   *  `side`'s root listed empty: every removal is held, and copies into it
+   *  wait for "Copy anyway".
+   */
+  | {
+      type: 'emptyRoot'
+      // The empty side.
+      side: Side
+    }
+  // The sentinel file is missing on `side`: nothing runs.
+  | {
+      type: 'sentinelMissing'
+      // The side without it.
+      side: Side
+    }
+
+// Everything the confirm must show about a plan.
+export type GuardReport = {
+  // Guards that hold actions back.
+  blocks: GuardBlock[]
+  // Rows that replace a newer file with an older one (never a block).
+  olderOverwritesNewer: number
+  // A uniform clock offset, if one shows.
+  skew: ClockSkew | null
+}
+
 // The guard settings of a run.
 export type GuardSettings = {
   // Removals on a side above this percentage of its files block.
@@ -11137,6 +11411,19 @@ export type ItemKinds = {
  *  reached — exactly what a rollback needs.
  */
 export type ItemOutcome = 'done' | 'skipped' | 'failed' | 'rolledBack'
+
+// Where replaced or removed items of a group go.
+export type KeepDestinationWire =
+  // The volume's Trash.
+  | { type: 'trash' }
+  // This run's dated versions folder.
+  | {
+      type: 'folder'
+      // The volume it is on.
+      volumeId: string
+      // The folder.
+      path: string
+    }
 
 // Whether kept items go to the Trash or the versions folder.
 export type KeepPlace =
@@ -14887,6 +15174,53 @@ export type OsLocalesChanged = {
   locales: OsLocales
 }
 
+// Why a change was refused. One refusal refuses the whole batch.
+export type OverrideRefusal =
+  // No row has this index.
+  | {
+      type: 'noSuchItem'
+      // The index asked for.
+      item: number
+    }
+  /**
+   *  The mode doesn't allow this action (a removal in Update or Both ways,
+   *  a write to the left in Update or Mirror).
+   */
+  | {
+      type: 'illegalForMode'
+      // The row.
+      item: number
+      // The action refused.
+      action: Action
+    }
+  /**
+   *  The row's category doesn't allow this action: clash and unreadable rows
+   *  take `Skip` only, `=` needs an equal row, `?` an unknown one.
+   */
+  | {
+      type: 'illegalForCategory'
+      // The row.
+      item: number
+      // The action refused.
+      action: Action
+    }
+  // The action would write to a side that takes no writes.
+  | {
+      type: 'sideReadOnly'
+      // The row.
+      item: number
+      // The read-only side.
+      side: Side
+    }
+  // The side the action reads from (or removes) has nothing at this row.
+  | {
+      type: 'nothingToCopy'
+      // The row.
+      item: number
+      // The empty side.
+      side: Side
+    }
+
 /**
  *  A file that exceeds the destination filesystem's per-file size limit.
  *  Carried by [`WriteOperationError::FilesTooLargeForFilesystem`] so the dialog
@@ -15274,6 +15608,32 @@ export type PhaseRecord = {
    *  For example, {"raw_events": "7284", "unique_events": "3836", "dedup_pct": "47"}
    */
   stats: [string, string][]
+}
+
+// The summary bar's numbers.
+export type PlanSummary = {
+  // What lands on, or leaves, the left.
+  intoLeft: SideTotals
+  // What lands on, or leaves, the right.
+  intoRight: SideTotals
+  // Rows skipped (not counting unknown ones).
+  skipped: number
+  // Rows nobody could decide (`?`).
+  undecided: number
+  // Rows whose sides are equal.
+  equal: number
+  // Rows present on both sides that aren't equal.
+  different: number
+  // Rows only on the left.
+  uniqueLeft: number
+  // Rows only on the right.
+  uniqueRight: number
+  // Name clash, type clash, and unreadable rows: no comparison was possible.
+  notComparable: number
+  // Rows that act but are hidden by the filters.
+  hiddenActions: number
+  // Rows whose action you changed.
+  changedByYou: number
 }
 
 // What `open_tags_in_player` answers: the launch was asked for, and whether the chosen app was missing.
@@ -16703,6 +17063,17 @@ export type RootChangeKind =
    */
   | 'moved'
 
+// How two roots on one volume overlap.
+export type RootConflict =
+  // Both roots are one folder.
+  | { type: 'sameFolder' }
+  // One root lies inside the other.
+  | {
+      type: 'nested'
+      // The side that holds the other.
+      outer: Side
+    }
+
 /**
  *  One side of a profile: a volume and a path on it. For a remote volume the id is
  *  the saved connection's; never a credential.
@@ -16766,6 +17137,112 @@ export type RowText =
   | 'raw'
   // Cmdr's own log: log markers hidden, each marked value shown as itself.
   | 'logDisplay'
+
+// How one row of the run ended.
+export type RunItemResult =
+  // Done; anything it replaced or removed is kept.
+  | 'done'
+  // Something it reads or replaces changed since compare: left alone.
+  | 'changedSinceCompare'
+  // Trash only, and the volume has none: left alone.
+  | 'noTrash'
+  /**
+   *  The engine couldn't, or the keep folder couldn't be made: nothing was
+   *  lost.
+   */
+  | 'couldNotDo'
+  /**
+   *  A removal held because a copy into the same folder didn't land (for any
+   *  reason): in Mirror a rename is a copy plus a removal.
+   */
+  | 'heldAfterFailedCopy'
+  // Something already sits where the item would be kept: left alone.
+  | 'versionsSpotTaken'
+  /**
+   *  The way to the versions folder runs through a symlink or a file: left
+   *  alone.
+   */
+  | 'versionsFolderUnsafe'
+  /**
+   *  The old file is kept (Trash or versions folder) but the new copy didn't
+   *  land and the old one couldn't go back: the place is empty.
+   */
+  | 'keptNotReplaced'
+  // The run stopped first.
+  | 'notStarted'
+
+// One row's end in a run.
+export type RunItemWire = {
+  // The row.
+  item: number
+  // How it ended.
+  result: RunItemResult
+}
+
+// Running totals, after each step.
+export type RunProgress = {
+  // Steps finished.
+  stepsDone: number
+  // Steps in the run.
+  stepsTotal: number
+  // Rows with a result.
+  itemsDone: number
+  // Rows in the run.
+  itemsTotal: number
+  // Their bytes.
+  bytesDone: number
+  // All rows' bytes.
+  bytesTotal: number
+}
+
+// How a run ended, for the result screen.
+export type RunReportWire = {
+  // Rows done.
+  done: number
+  // Rows left alone because something changed since compare.
+  changedSinceCompare: number
+  // Rows left alone because the volume has no Trash (Trash only).
+  noTrash: number
+  // Rows the engine couldn't do, or whose keep folder couldn't be used.
+  couldNotDo: number
+  // Old files kept whose new copy didn't land: the place is empty.
+  keptNotReplaced: number
+  // Removals held by a guard or by a copy that didn't land.
+  held: number
+  // Rows the run never reached.
+  notStarted: number
+  // Versions folders that received something.
+  versionsFolders: KeepDestinationWire[]
+  // Bytes put in versions folders.
+  keptBytes: number
+  // The engine operations the run started (the queue window and undo know them).
+  operationIds: string[]
+  // Every row of the run and its end, for "Show in grid".
+  items: RunItemWire[]
+  // Cancelled, or the engine stopped.
+  stopped: boolean
+}
+
+// The confirm's accept.
+export type RunRequest = {
+  // The groups left ticked.
+  groups: ConfirmGroupKey[]
+  // The second yes for each guard the person released.
+  acknowledged: Acknowledgement[]
+  // The Settings values, read again by the dialog.
+  defaults: SyncDefaults
+}
+
+// Which kind of evidence settled the verdict.
+export type Rung =
+  // Present on one side only, or the kinds decided.
+  | 'presence'
+  // Size and time.
+  | 'sizeAndTime'
+  // Size alone.
+  | 'sizeOnly'
+  // The bytes.
+  | 'content'
 
 /**
  *  What an approved group would run as when that differs from its verb, known before the user
@@ -17397,6 +17874,18 @@ export type ScanPreviewTotals = {
   estimatedCompressedBytes?: CompressedSizeEstimate | null
 }
 
+// Running totals, reported after each folder.
+export type ScanProgress = {
+  // Which scan this is.
+  side: Side
+  // Folders listed so far.
+  folders: number
+  // Files and symlinks admitted so far.
+  files: number
+  // Their sizes added up.
+  bytes: number
+}
+
 // Progress event during scanning phase (emitted in dry-run mode).
 export type ScanProgressEvent = {
   operationId: string
@@ -18016,6 +18505,16 @@ export type SelectionHistoryEntry = {
    *  rather than "returns results".
    */
   matchCount: number
+}
+
+// The rows of a pane's listing that "Only selected" compares.
+export type SelectionRef = {
+  // The pane's listing.
+  listingId: string
+  // The selected rows.
+  indices: number[]
+  // The listing state the indices were taken from.
+  expectedSequence: number
 }
 
 // Exact paths and kinds consumed from one guarded backend row space.
@@ -18832,6 +19331,13 @@ export type ShowSearchResultInFolder = {
   path: string
 }
 
+// Which pane a scan belongs to.
+export type Side =
+  // The left folder.
+  | 'left'
+  // The right folder.
+  | 'right'
+
 // Which side file.
 export type SideFile =
   // `reader.txt`: the narrator.
@@ -18868,6 +19374,33 @@ export type SideFileWithheld =
   | 'unreadable'
   // The tracks come from more than one book folder, so no folder is the book's.
   | 'notOneBook'
+
+// One side of a compare.
+export type SideRequest = {
+  // The folder.
+  root: RootRef
+  // The pane's selection, for "Only selected".
+  selection: SelectionRef | null
+}
+
+// Copies and removals headed into one side.
+export type SideTotals = {
+  // New files copied into this side (nothing there yet).
+  copyFiles: number
+  // Their bytes.
+  copyBytes: number
+  /**
+   *  Files copied over an existing file on this side; the old one is kept
+   *  (Trash or versions folder), so the confirm says where it goes.
+   */
+  replaceFiles: number
+  // The incoming bytes of those replacements.
+  replaceBytes: number
+  // Files removed from this side (a folder row counts the files in it).
+  removals: number
+  // Folders removed from this side, empty ones included.
+  removedFolders: number
+}
 
 /**
  *  What a "Sign in" affordance on a volume asks a person for: the FORM the sheet
@@ -19783,6 +20316,125 @@ export type SuggestionsChanged = {
   reason: SuggestionChange
 }
 
+// A compare ended.
+export type SyncCompareFinished = {
+  // The session.
+  sessionId: string
+  // How.
+  outcome: CompareOutcome
+}
+
+// Live counts while a compare runs (at most every 100 ms).
+export type SyncCompareProgress = {
+  // The session.
+  sessionId: string
+  // The left scan.
+  left: ScanProgress
+  // The right scan.
+  right: ScanProgress
+  // The byte compare, once it runs.
+  content: ContentProgress | null
+}
+
+/**
+ *  The Settings values a compare and a run start from. The frontend reads them
+ *  from the settings store and passes them in.
+ */
+export type SyncDefaults = {
+  // Where replaced and removed files go.
+  keep: KeepPolicy
+  // Times this close count as equal, in seconds.
+  timeToleranceSecs: number
+  // Treat an exact one-hour difference as equal.
+  ignoreHourShift: boolean
+  // The removal guards.
+  guards: GuardSettings
+}
+
+// Why a Synchronize folders command was refused. Typed, never a sentence.
+export type SyncError =
+  // No session has this id (closed, or never opened).
+  | { type: 'noSuchSession' }
+  // The session has no finished compare yet.
+  | { type: 'notCompared' }
+  // That volume isn't connected.
+  | {
+      type: 'volumeNotConnected'
+      // Which side names it.
+      side: Side
+      // The id asked for.
+      volumeId: string
+    }
+  // The root won't list: unmounted, gone, or refused.
+  | {
+      type: 'rootUnreachable'
+      // Which side.
+      side: Side
+    }
+  // The root path climbs out of itself (`..`) or is empty.
+  | {
+      type: 'badPath'
+      // Which side.
+      side: Side
+    }
+  // The two roots are one folder, or one holds the other.
+  | {
+      type: 'rootsConflict'
+      // How.
+      conflict: RootConflict
+    }
+  // The masks or the exclude list don't parse.
+  | {
+      type: 'badMask'
+      // What and where.
+      error: SyncMaskError
+    }
+  // A Settings or profile value is out of range.
+  | {
+      type: 'badSettings'
+      // Which.
+      problem: ProfileProblem
+    }
+  // The versions folder can't be used for these roots.
+  | {
+      type: 'keep'
+      // Why.
+      refusal: KeepRefusal
+    }
+  // The mode writes to a side whose volume is read-only.
+  | {
+      type: 'sideReadOnly'
+      // Which side.
+      side: Side
+    }
+  // The pane's selection moved on since the dialog read it.
+  | {
+      type: 'staleSelection'
+      // Which side.
+      side: Side
+    }
+  // A compare is still running in this session.
+  | { type: 'compareRunning' }
+  // A run is going on in this session or for this pair of folders.
+  | { type: 'runInProgress' }
+  // An action change was refused.
+  | {
+      type: 'override'
+      // Why.
+      refusal: OverrideRefusal
+    }
+  /**
+   *  That row can't be compared by content (not two files of one size, or a
+   *  volume that can't be read).
+   */
+  | {
+      type: 'notContentComparable'
+      // The row.
+      item: number
+    }
+  // The write engine isn't ready yet (only before the app has started).
+  | { type: 'notInstalled' }
+
 /**
  *  Why a mask list can't be used. (Named for the feature: Multi-Rename has a `MaskError` of its own
  *  and both reach the one bindings file.) `position` counts characters of the text
@@ -19846,6 +20498,54 @@ export type SyncProfile = {
   restoreShowFilters: boolean
   // What this profile sets for itself.
   overrides: ProfileOverrides
+}
+
+// A grid row with its place in the filtered view.
+export type SyncRowWire = {
+  // Its position in the view.
+  viewIndex: number
+  // The row.
+  row: ViewRowWire
+}
+
+// Rows changed without a new compare (a row's byte compare answered).
+export type SyncRowsChanged = {
+  // The session.
+  sessionId: string
+}
+
+// A window of grid rows.
+export type SyncRowsPage = {
+  // Rows in the whole view.
+  total: number
+  // The rows asked for.
+  rows: SyncRowWire[]
+}
+
+// A run ended.
+export type SyncRunFinished = {
+  // The session.
+  sessionId: string
+  // What happened.
+  report: RunReportWire
+}
+
+// A run's totals after a step.
+export type SyncRunProgress = {
+  // The session.
+  sessionId: string
+  // Steps, rows, and bytes so far.
+  progress: RunProgress
+}
+
+// The summary bar and the guards, after a compare or a change.
+export type SyncState = {
+  // Counts for the summary bar.
+  summary: PlanSummary
+  // What the guards say about the current plan.
+  guards: GuardReport
+  // A run has changed the folders since this compare: compare again.
+  stale: boolean
 }
 
 // Sync status for a file in a cloud-synced folder (Dropbox, iCloud, etc.).
@@ -21584,6 +22284,57 @@ export type ViewModeChanged = {
   pane: string
 }
 
+// One grid row: a folder header, or a plan row with both sides' facts.
+export type ViewRowWire =
+  // "folder `ordinal` of `of`".
+  | {
+      type: 'folder'
+      // The folder's path from the root, in the left spelling when there is one.
+      relDir: string
+      // Its position among the visible headers, from 1.
+      ordinal: number
+      // How many headers are visible.
+      of: number
+    }
+  // A plan row.
+  | {
+      type: 'item'
+      // Its index in the plan.
+      index: number
+      // The left name, in its own spelling.
+      leftName: string | null
+      // The right name, in its own spelling.
+      rightName: string | null
+      // What the left entry is.
+      leftKind: EntryKind | null
+      // What the right entry is.
+      rightKind: EntryKind | null
+      // File size, or a folder's total.
+      leftSize: number | null
+      // File size, or a folder's total.
+      rightSize: number | null
+      // Seconds since the epoch.
+      leftMtime: number | null
+      // Seconds since the epoch.
+      rightMtime: number | null
+      // How the sides relate.
+      category: Category
+      // What settled it.
+      rung: Rung
+      // The byte compare's answer, if one was asked for.
+      content: ContentState
+      // Both sizes known and equal.
+      sameSize: boolean
+      // What the run does with the row.
+      action: Action
+      // What the mode chose (`action != default_action` is "changed by you").
+      defaultAction: Action
+      // Replaces a newer file with an older one.
+      olderOverwritesNewer: boolean
+      // The actions this row may take.
+      legal: Action[]
+    }
+
 /**
  *  What the viewer should render a file as. The frontend branches on this:
  *  `Image` -> `<img>`, `Pdf` -> `<embed>`, `Markdown` -> the backend's sanitized HTML,
@@ -22664,6 +23415,18 @@ export type WalkEnding =
   | 'interrupted'
   // Somebody stopped it (Escape, or the dialog closing).
   | 'cancelled'
+
+// A row that replaces a newer file with an older one.
+export type WarnedItem = {
+  // The row.
+  item: number
+  // Its path from the root.
+  relPath: string
+  // Seconds since the epoch.
+  leftMtime: number | null
+  // Seconds since the epoch.
+  rightMtime: number | null
+}
 
 /**
  *  Typed error returned by [`recheck_downloads_watcher_gate`]. Only one
