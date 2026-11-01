@@ -20412,6 +20412,11 @@ export type SyncError =
       // Which.
       problem: ProfileProblem
     }
+  /**
+   *  A custom versions folder on this Mac didn't answer, so it can't be
+   *  shown to lie outside the synchronized folders.
+   */
+  | { type: 'keepFolderUnreadable' }
   // The versions folder can't be used for these roots.
   | {
       type: 'keep'
