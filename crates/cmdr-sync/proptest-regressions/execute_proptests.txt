@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9a07c103152263c3d8090531c5070e6bc03e9fa97a5ab3d66bec59e34991d0e6 # shrinks to (left, right) = (Snapshot { root: "/root", caps: SyncCaps { case_sensitive: false, names_in_any_unicode_form: true, mtime_precision_secs: 1, can_write: false, has_trash: true, atomic_replace: true, can_read_content: true, renames_can_copy: false }, entries: {Name(["a"]): Entry { key: Name(["a"]), rel_path: "a", facts: EntryFacts { kind: File, size: None, mtime: None }, subtree: None }}, clashes: {}, unreadable: {} }, Snapshot { root: "/root", caps: SyncCaps { case_sensitive: false, names_in_any_unicode_form: true, mtime_precision_secs: 1, can_write: false, has_trash: true, atomic_replace: true, can_read_content: true, renames_can_copy: false }, entries: {}, clashes: {}, unreadable: {} }), mode = Mirror, place = TrashElseVersions, left_trash = false, right_trash = false, edits = [Edit { right: false, pick: 0, what: 2, after: None }]

@@ -4,6 +4,7 @@
 //! folders before listing them, and keeps going past a subfolder that won't list.
 
 use std::collections::{BTreeMap, HashSet};
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -13,12 +14,12 @@ use cmdr_fs::volume::{ScanBoundary, ScanListingClock, ScanStop, ScanStopSignal, 
 
 use crate::filter::is_app_owned;
 use crate::{
-    Admission, Entry, EntryFacts, EntryKey, MaskFilter, NameRule, Snapshot, SubtreeFacts, SyncCaps, SyncControl,
-    UnreadableReason,
+    Admission, Entry, EntryFacts, EntryKey, EntryKind, MaskFilter, NameRule, Snapshot, SubtreeFacts, SyncCaps,
+    SyncControl, UnreadableReason,
 };
 
 /// Which pane a scan belongs to.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Side {
     /// The left folder.
     Left,
@@ -126,6 +127,65 @@ pub async fn scan(
     })
 }
 
+/// What lies under the folder at `path` (`rel` from the sync root, `/`-separated)
+/// now, counted exactly as `scan` with the same `options` counted it, digest
+/// included. The executor's re-check before acting on a folder as a whole.
+pub async fn subtree_now(
+    side: Side,
+    volume: &dyn Volume,
+    path: &Path,
+    rel: &str,
+    options: &ScanOptions,
+    control: &Arc<SyncControl>,
+) -> Result<SubtreeFacts, ScanError> {
+    let signal: Arc<dyn ScanStopSignal> = Arc::clone(control) as Arc<dyn ScanStopSignal>;
+    let key = rel
+        .split('/')
+        .filter(|part| !part.is_empty())
+        .fold(EntryKey::root(), |key, part| key.child(options.name_rule.key(part)));
+    let mut walk = Walk {
+        volume,
+        options,
+        control,
+        boundary: ScanBoundary::new(None).stopping_at(ScanStop::new(signal)),
+        on_progress: &|_| {},
+        only: None,
+        progress: ScanProgress {
+            side,
+            folders: 0,
+            files: 0,
+            bytes: 0,
+        },
+        entries: BTreeMap::new(),
+        clashes: BTreeMap::new(),
+        unreadable: BTreeMap::new(),
+    };
+    match walk.folder(path, rel, &key).await {
+        Ok(folder) => Ok(folder.facts),
+        Err(FolderError::Stopped) => Err(ScanError::Stopped),
+        Err(FolderError::Listing(error)) => Err(ScanError::RootUnreachable { side, error }),
+    }
+}
+
+/// One child's share of its folder's digest. A folder brings its own digest
+/// (`None` marks one that wouldn't list), so a change anywhere below shows.
+fn child_digest(name: &str, facts: &EntryFacts, inner: Option<Option<u64>>) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    name.hash(&mut hasher);
+    match inner {
+        Some(folder) => {
+            EntryKind::Folder.hash(&mut hasher);
+            folder.hash(&mut hasher);
+        }
+        None => {
+            facts.kind.hash(&mut hasher);
+            facts.size.hash(&mut hasher);
+            facts.mtime.hash(&mut hasher);
+        }
+    }
+    hasher.finish()
+}
+
 struct Walk<'a> {
     volume: &'a dyn Volume,
     options: &'a ScanOptions,
@@ -217,10 +277,13 @@ impl<'a> Walk<'a> {
         for (name_key, mut group) in groups {
             let child_key = key.child(name_key);
             if group.len() > 1 {
-                let twins = group
+                let twins: Vec<Entry> = group
                     .iter()
                     .map(|(child, rel)| make_entry(&child_key, rel, child, None))
                     .collect();
+                for (twin, (child, _)) in twins.iter().zip(&group) {
+                    facts.digest = facts.digest.wrapping_add(child_digest(&child.name, &twin.facts, None));
+                }
                 self.clashes.insert(child_key, twins);
                 kept += 1;
                 continue;
@@ -238,6 +301,9 @@ impl<'a> Walk<'a> {
             facts.files += 1;
             facts.bytes += size;
             facts.newest_mtime = facts.newest_mtime.max(child.modified_at);
+            facts.digest = facts
+                .digest
+                .wrapping_add(child_digest(&child.name, &EntryFacts::of(&child), None));
             self.progress.files += 1;
             self.progress.bytes += size;
             self.entries
@@ -249,6 +315,8 @@ impl<'a> Walk<'a> {
             let subtree = match self.folder(Path::new(&child.path), &rel_child, &child_key).await {
                 Ok(inner) => {
                     add(facts, &inner.facts);
+                    let own = child_digest(&child.name, &EntryFacts::of(&child), Some(Some(inner.facts.digest)));
+                    facts.digest = facts.digest.wrapping_add(own);
                     if inner.kept == 0 && !self.options.empty_folders {
                         continue;
                     }
@@ -262,6 +330,10 @@ impl<'a> Walk<'a> {
                         ..SubtreeFacts::default()
                     };
                     add(facts, &unreadable);
+                    facts.digest =
+                        facts
+                            .digest
+                            .wrapping_add(child_digest(&child.name, &EntryFacts::of(&child), Some(None)));
                     unreadable
                 }
             };

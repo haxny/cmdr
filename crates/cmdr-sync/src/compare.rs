@@ -13,7 +13,7 @@ pub const SAME_TIME_TOLERANCE_SECS: u64 = 2;
 pub const HOUR_SHIFT_SECS: u64 = 3600;
 
 /// What an entry is.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum EntryKind {
     /// A regular file.

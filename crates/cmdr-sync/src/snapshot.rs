@@ -29,6 +29,11 @@ pub struct SubtreeFacts {
     /// but a folder with any is non-atomic too: copying or trashing it whole
     /// would carry them along.
     pub app_owned: u64,
+    /// An order-independent digest of every admitted name beneath it, with
+    /// each file's kind, size, and time and each folder's own digest. Two
+    /// counts that agree can still hide a swap or a rename; this can't. Only
+    /// comparable within one process (`subtree_now` against the scan).
+    pub digest: u64,
 }
 
 /// One listed item.

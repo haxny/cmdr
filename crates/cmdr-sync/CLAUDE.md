@@ -12,6 +12,8 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
 - **scan.rs**: `scan()`. **content.rs**: `compare_contents()`, byte-by-byte for equal-size pairs.
 - **plan.rs**: `plan()`, `reclassify()`, the mode table. **overrides.rs**: legal actions, bulk keys. **guards.rs**:
   `check()`, `gate()`. **view.rs**: show-filters, folder headers, summary. Laws: `plan_proptests.rs`.
+- **keep.rs**: Trash or versions folder paths. **steps.rs**: plan → ordered steps. **execute.rs** + **runner.rs**:
+  `execute()` over the `SyncEngine` trait; fake and laws in `execute_fake.rs`, `execute_proptests.rs`.
 
 ## Must-knows
 
@@ -19,23 +21,24 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
   `cargo nextest run -p cmdr-listing compare` with it.
 - **`classify` never yields `NameClash` or `Unreadable`.** The planner sets those.
 - **A missing time never claims "newer"**: sizes decide. Only a difference we can see counts.
-- **Names pair by key, operations use each side's own spelling.** `NameRule::key` is for matching, ❌ never for a path
-  handed to a volume.
+- **Names pair by key, operations use each side's own spelling** (`Plan::heads` for folders). `NameRule::key` is for
+  matching, ❌ never for a path handed to a volume.
 - **The scanner never stats a child**: one listing per folder, and the listing's facts are the facts. Excluded folders
   are pruned before they are listed.
 - **A folder in `Snapshot::unreadable` is unknown, not empty**: nothing beneath it may be removed on this snapshot's
   word.
 - **`Junk` is not `Out`**: junk entries vanish from the snapshot uncounted; every `Out` entry counts as held back.
   `.cmdr-sync` is neither: the scanner skips it silently.
-- **Content compare answers every job**: a job cancel stopped answers `Pending`, never nothing.
 - **Never act on partial knowledge**: rows at or under an unreadable key, name clashes, and type clashes are `Skip` and
   take no other action; a one-sided folder with anything held back, unreadable, app-owned, or clashing beneath it is
   split into its children, never copied or removed whole. `?` rows never get an automatic action.
 - **Hiding a row never changes its action**; the summary counts hidden actions.
 - **Removals are always held beside an empty root**, no acknowledgement releases them. `gate` re-runs `check`.
-- **The crate never deletes permanently.** Phase 1 has no delete step at all.
-- **No `cmdr-operations` dependency**: `cmdr-listing` depends on this crate and the operations test build depends on
-  `cmdr-listing`, so a link back would be a cycle. The executor will sit behind a trait.
+- **The crate never deletes permanently.** `EngineBatch` has no delete variant; replaced and removed items are moved to
+  the Trash or a versions folder, or left alone (`KeepRefusal`).
+- **Every item is re-observed right before its batch** (a folder by `subtree_now`, digest included); any difference is
+  `ChangedSinceCompare`, never a widened action. A kept item whose copy didn't land goes back, or is reported.
+- **No `cmdr-operations` dependency** (a package cycle through `cmdr-listing`): the app implements `SyncEngine`.
 - No `tauri`, enforced by `index-crate-isolation`.
 
 The classify table, the per-backend facts with evidence, and the dependency decision: `DETAILS.md`.

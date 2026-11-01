@@ -43,8 +43,9 @@ the anchor. `FileEntry::modified_at` is whole seconds everywhere, so 1 s is the 
 ## Decision: no `cmdr-operations` dependency
 
 `cmdr-listing` must depend on this crate (shared `classify`), and `cmdr-operations`' test build depends on
-`cmdr-listing`. A direct dependency from here on `cmdr-operations` would close a package cycle. The executor will be
-written against a small trait the app implements over `Operations`.
+`cmdr-listing`. A direct dependency from here on `cmdr-operations` would close a package cycle. The executor runs
+against `SyncEngine` (§ Run), which the app implements over `Operations`. The trait is also what makes the executor
+testable: `execute_fake.rs` records every batch and every broken promise.
 
 ## `EntryKey::is_within`
 
@@ -91,6 +92,13 @@ The scanner skips the app-owned `.cmdr-sync` folder before the filter runs: no e
 every ancestor. A symlink to a folder is filtered as a file, as it is treated. A folder with `held_back`, `unreadable`,
 or `app_owned` above zero is non-atomic: the planner must not copy or remove it whole.
 
+`SubtreeFacts::digest` is a wrapping sum of one hash per admitted child (its own spelling, kind, size, and time; a
+folder hashes its name with its own digest, an unreadable one with a marker), so a rename or a same-size swap that the
+counts can't see still changes every folder above it. `DefaultHasher` is only stable within one build, which is all a
+compare-then-run needs; the digest is never stored. `subtree_now(side, volume, path, rel, options, control)` walks one
+folder with the scan's own code and options and returns the same `SubtreeFacts`, digest included: the app's
+`SyncEngine::observe` answers folders with it.
+
 ## Planner (plan.rs)
 
 The mode table is the phase 1 design's section 6.4 (linked from upstream issue #871), implemented as `default_action`;
@@ -129,6 +137,10 @@ Name clash, type clash, and unreadable rows only ever take `Skip`. `older_overwr
 clash, or unreadable row). A row whose action you changed keeps it while it stays legal; one the answer made illegal
 (`?` on a row that turned out equal) is reset to its new default and listed in `Reclassified::reset`. The rest follow
 the new default.
+
+`Plan::heads` lists every folder that heads rows (on both sides, or split), with each side's own `rel_path`. Every
+ancestor of a row is one, so a copy finds the target's own spelling of each folder on its way (an NFD folder on APFS
+paired with its NFC twin on SMB lands in the twin, not a new folder beside it), and knows which folders are missing.
 
 Decision: `Plan` carries both sides' `SyncCaps`, so `reclassify` keeps defaults off read-only sides without the
 snapshots, and overrides are judged by the plan's own caps (the override API takes none from callers).
@@ -191,3 +203,54 @@ after a run is all `=` (Mirror) or copies nothing (Update, Both ways) when the t
 folders) survive every mode, also after random overrides and bulk keys through the public API (with the source side in
 Mirror and Update and unchosen `?` rows untouched), the warning flag is exact, overrides never yield an illegal action,
 and guards trip exactly at their thresholds on overridden plans.
+
+## Keep (keep.rs)
+
+`keep_destination(policy, target caps, versions, rel_path)`: `TrashElseVersions` → `Trash` when `has_trash`, else the
+versions folder; `VersionsAlways` → the folder; `TrashOnly` without a Trash → `Refused(NoTrash)` (the row is left alone,
+never deleted). A folder destination is `<versions dir>/<rel parent>`, so names keep their folder structure; a
+`rel_path` with an empty, `.`, or `..` part is `Refused(EscapesFolder)`.
+
+`versions_root(policy, target_root, profile, stamp, attempt)`: `TargetRoot` is `<target root>/<folder_name>/<stamp>`
+(`Place::Target`, a rename away); `folder_name` must be a plain relative path. `Custom` is an absolute local-disk
+template (`Place::LocalDisk`) with `{root}` (the target root without its leading `/`), `{profile}` (the name with `/`
+turned into `-`, or "No profile"), and `{date}`; the stamp folder is appended when `{date}` is absent, so runs never
+mix. Unknown or unclosed placeholders and relative templates are `BadTemplate`; a `..` or empty part after expansion (or
+in the target root) is `EscapesFolder`. `attempt > 0` names the stamp folder `<stamp> (attempt+1)`; the caller bumps it
+when the folder already exists. Laws: `kept_paths_never_escape_the_versions_folder` in `keep_test.rs`.
+
+Gotcha: a `folder_name` outside `.cmdr-sync` is compared like any other folder (the scanner only skips `.cmdr-sync`), so
+Mirror would see the kept items as right-only. Settings should keep it under `.cmdr-sync`.
+
+## Run (steps.rs, execute.rs, runner.rs)
+
+`steps(plan, run, ctx)` turns the rows `gate` let run into groups, in this order: `MakeFolders` per (place, side)
+(versions folders that will receive something, and target folders of split one-sided folders whose children are copied,
+parents first; made with missing parents), `KeepAside` per (side, destination) (the target of every copy that replaces
+something), `Copy` per (direction, landing folder), `Remove` per (side, destination). Rows whose keep is refused go to
+`refused` and get no step (their copy doesn't run either). Clash, type-clash, and unreadable rows never get a step,
+whatever their action says.
+
+`execute` runs the steps one batch each. Pause is awaited and Cancel checked between batches. Before each batch every
+item is observed again and must read exactly as the snapshot did (files: kind, size, time; folders: the whole
+`SubtreeFacts`, digest included, but not the folder's own time, which Finder touches by browsing); a mismatch is
+`ChangedSinceCompare` and the item leaves the batch. Before a keep-aside both the copy's source and the target are
+checked, so a doomed copy never costs the target its file; before a copy the landing spot must be empty. Every source
+goes to the engine as a `BoundSource` with the snapshot's facts, so the engine's own `ExpectedSources` re-check covers
+the window between observe and act, and copies land with `ConflictResolution::Skip`.
+
+Decision: no `expected_targets` twin in the engine. Every target a run replaces or removes is first the source of a keep
+batch (`Move` or `Trash`), so the binding covers targets too.
+
+A replacement's kept item goes back (`MoveBack`) when its copy doesn't land for any reason, including a cancel between
+the keep and the copy, unless something now sits in its place. From the Trash nothing can come back: the row reads
+`KeptNotReplaced` (the old file is in the Trash, the new one didn't land), as does a move back that couldn't run. A copy
+the engine answers `Failed` holds every removal on that side under the copy's parent folder (`HeldAfterFailedCopy`): in
+Mirror a rename is a copy plus a removal, and the removal must not run alone. A folder `MakeFolders` couldn't make turns
+everything landing or kept beneath it into `CouldNotDo`. A source the engine never answered for in a batch it didn't
+stop counts as `Failed`. Rows the run never reached are `NotStarted`.
+
+`RunReport::kept_bytes` counts what went into versions folders (the result screen shows that size), minus anything moved
+back. Law: `execute_proptests.rs` runs random plans in every mode against random edits before or between batches; the
+fake flags any move, trash, or copy of something that differs from the snapshot (anywhere beneath it), any landing on an
+occupied spot, and anything lost.

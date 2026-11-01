@@ -1,7 +1,7 @@
 //! The planner: what each row of the grid does, per mode. Pure and
 //! deterministic; rules and rationale in `DETAILS.md` § Planner.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -132,6 +132,27 @@ impl PlanItem {
     }
 }
 
+/// A folder that heads rows instead of being one (on both sides, or split
+/// into its children): each side's own spelling of its path, so a copy lands
+/// in the folder the target already has, and a missing one is made first.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct HeadFolder {
+    /// The left `rel_path`, absent when the folder is only on the right.
+    pub left: Option<String>,
+    /// The right `rel_path`, absent when the folder is only on the left.
+    pub right: Option<String>,
+}
+
+impl HeadFolder {
+    /// The spelling on `side`, if the folder is there.
+    pub fn on(&self, side: Side) -> Option<&str> {
+        match side {
+            Side::Left => self.left.as_deref(),
+            Side::Right => self.right.as_deref(),
+        }
+    }
+}
+
 /// Every row, and how they were decided.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Plan {
@@ -145,6 +166,8 @@ pub struct Plan {
     pub right_caps: SyncCaps,
     /// Sorted by key; `index` is the position.
     pub items: Vec<PlanItem>,
+    /// Every folder that heads rows, by key. Every ancestor of a row is one.
+    pub heads: BTreeMap<EntryKey, HeadFolder>,
 }
 
 /// What the last run left behind (phase 2). Uninhabited, so phase 1 can only
@@ -226,7 +249,7 @@ fn within_unreadable(key: &EntryKey, snap: &Snapshot) -> bool {
 }
 
 /// Whether any key of `map` lies strictly beneath `key`.
-fn any_beneath<V>(map: &std::collections::BTreeMap<EntryKey, V>, key: &EntryKey) -> bool {
+fn any_beneath<V>(map: &BTreeMap<EntryKey, V>, key: &EntryKey) -> bool {
     map.range(key.clone()..)
         .take_while(|(k, _)| k.is_within(key))
         .any(|(k, _)| k != key)
@@ -319,6 +342,7 @@ pub fn plan(left: &Snapshot, right: &Snapshot, _baseline: Option<&Baseline>, opt
         .chain(right.clashes.keys())
         .collect();
     let mut items = Vec::new();
+    let mut heads = BTreeMap::new();
     let mut cover: Option<&EntryKey> = None;
     for key in keys {
         if cover.is_some_and(|covering| key.is_within(covering)) {
@@ -327,6 +351,14 @@ pub fn plan(left: &Snapshot, right: &Snapshot, _baseline: Option<&Baseline>, opt
         cover = None;
         let content = initial_content(key, left, right, &rules);
         let Shape::Row { verdict, covers } = shape(key, left, right, &rules, content) else {
+            let spelling = |snap: &Snapshot| snap.entries.get(key).map(|entry| entry.rel_path.clone());
+            heads.insert(
+                key.clone(),
+                HeadFolder {
+                    left: spelling(left),
+                    right: spelling(right),
+                },
+            );
             continue;
         };
         if covers {
@@ -352,6 +384,7 @@ pub fn plan(left: &Snapshot, right: &Snapshot, _baseline: Option<&Baseline>, opt
         left_caps: left.caps,
         right_caps: right.caps,
         items,
+        heads,
     }
 }
 

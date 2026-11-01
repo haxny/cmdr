@@ -351,3 +351,64 @@ async fn a_symlink_to_a_folder_is_filtered_as_a_file() {
     let snap = run(&volume, &opts).await.unwrap();
     assert_eq!(snap.entries.len(), 1);
 }
+
+fn folder_subtree(snap: &Snapshot, path: &str) -> SubtreeFacts {
+    snap.entries[&key(&path.split('/').collect::<Vec<_>>())]
+        .subtree
+        .unwrap()
+}
+
+#[tokio::test]
+async fn subtree_now_counts_a_folder_exactly_as_the_scan_did() {
+    let volume = tree(
+        &[("/a/x.txt", 3), ("/a/b/y.txt", 4), ("/a/.hidden", 1)],
+        &["/a", "/a/b", "/a/empty"],
+    )
+    .await;
+    let options = ScanOptions {
+        include_hidden: false,
+        ..options()
+    };
+    let snap = run(&volume, &options).await.unwrap();
+    let control = SyncControl::new();
+    let now = subtree_now(Side::Left, &volume, Path::new("/a"), "a", &options, &control)
+        .await
+        .unwrap();
+    assert_eq!(now, folder_subtree(&snap, "a"));
+    assert_eq!((now.files, now.bytes, now.held_back), (2, 7, 1));
+}
+
+#[tokio::test]
+async fn a_rename_inside_a_folder_changes_its_digest_only() {
+    let before = run(&tree(&[("/a/x.txt", 3)], &["/a"]).await, &options()).await.unwrap();
+    let after = run(&tree(&[("/a/y.txt", 3)], &["/a"]).await, &options()).await.unwrap();
+    let (before, after) = (folder_subtree(&before, "a"), folder_subtree(&after, "a"));
+    assert_ne!(before.digest, after.digest);
+    assert_eq!(
+        SubtreeFacts { digest: 0, ..before },
+        SubtreeFacts { digest: 0, ..after }
+    );
+}
+
+#[tokio::test]
+async fn a_change_deep_down_shows_in_every_folder_above() {
+    let before = run(
+        &tree(&[("/a/b/c/x.txt", 3)], &["/a", "/a/b", "/a/b/c"]).await,
+        &options(),
+    )
+    .await
+    .unwrap();
+    let after = run(
+        &tree(&[("/a/b/c/x.txt", 3), ("/a/b/c/new", 0)], &["/a", "/a/b", "/a/b/c"]).await,
+        &options(),
+    )
+    .await
+    .unwrap();
+    for folder in ["a", "a/b", "a/b/c"] {
+        assert_ne!(
+            folder_subtree(&before, folder).digest,
+            folder_subtree(&after, folder).digest,
+            "{folder}"
+        );
+    }
+}

@@ -89,7 +89,7 @@ fn arb_blank() -> impl Strategy<Value = Blank> {
 
 /// Shared operations make equal pairs likely; each side's extras then add,
 /// replace, hide, or break things.
-fn arb_snapshot_pair() -> impl Strategy<Value = (Snapshot, Snapshot)> {
+pub(crate) fn arb_snapshot_pair() -> impl Strategy<Value = (Snapshot, Snapshot)> {
     (arb_ops(10), arb_ops(6), arb_ops(6), arb_caps(), arb_caps(), arb_blank()).prop_map(
         |(shared, left, right, lc, rc, blank)| {
             let side_ops = |extra: &[(String, Op)], blanked: bool| -> Vec<(String, Op)> {
