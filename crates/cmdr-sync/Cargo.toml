@@ -21,6 +21,16 @@ serde = { version = "1", features = ["derive"] }
 # uses: two `specta` crates in one graph would make these `Type` impls stop
 # satisfying `tauri-specta`.
 specta = { version = "=2.0.0-rc.24", features = ["derive"] }
+# The scanner and the content compare are async over `Volume`. `rt` and `macros`
+# are for the `select`-free plumbing and `#[tokio::test]`; `sync` is `Notify` for
+# the pause gate; `time` is the listing clock `Volume` asks for.
+tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
+# `CancellationToken` for `list_directory_for_scan`. Default features off keeps it
+# to `tokio_util::sync`, as `cmdr-fs` does.
+tokio-util = { version = "0.7.18", default-features = false }
+# `buffer_unordered` runs the content compare's workers.
+futures-util = "0.3"
 
 [dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "test-util"] }
 cmdr-fs = { path = "../cmdr-fs", features = ["testing"] }

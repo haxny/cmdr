@@ -2000,8 +2000,11 @@ name = "cmdr-sync"
 version = "0.0.0"
 dependencies = [
  "cmdr-fs",
+ "futures-util",
  "serde",
  "specta",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]

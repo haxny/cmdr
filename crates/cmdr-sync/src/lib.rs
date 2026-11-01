@@ -12,18 +12,36 @@
 
 mod caps;
 mod compare;
+mod content;
+mod control;
+mod filter;
 mod key;
+mod scan;
+mod snapshot;
 
 pub use caps::{BackendFacts, SyncCaps, backend_facts};
 pub use compare::{
     Category, CompareBy, CompareRules, ContentState, EntryFacts, EntryKind, HOUR_SHIFT_SECS, Rung,
     SAME_TIME_TOLERANCE_SECS, Verdict, classify,
 };
+pub use content::{ContentJob, ContentProgress, compare_contents, content_workers};
+pub use control::SyncControl;
+pub use filter::{ALWAYS_EXCLUDED, Admission, DEFAULT_EXCLUDES, JUNK_MASKS, MaskError, MaskFilter};
 pub use key::{EntryKey, NameRule};
+pub use scan::{ScanError, ScanOptions, ScanProgress, Side, scan};
+pub use snapshot::{Entry, Snapshot, SubtreeFacts};
 
 #[cfg(test)]
 mod caps_test;
 #[cfg(test)]
 mod compare_test;
 #[cfg(test)]
+mod content_test;
+#[cfg(test)]
+mod control_test;
+#[cfg(test)]
+mod filter_test;
+#[cfg(test)]
 mod key_test;
+#[cfg(test)]
+mod scan_test;

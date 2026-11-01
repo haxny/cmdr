@@ -49,3 +49,37 @@ written against a small trait the app implements over `Operations`.
 ## `EntryKey::is_within`
 
 Inclusive: a key is within itself. Callers that want strict descendants compare for inequality too.
+
+## Masks (filter.rs)
+
+TC sync syntax. Masks split on spaces or `;`, `"…"` keeps spaces, `*` and `?` are the only wildcards, one `|` starts the
+excludes, the editable exclude list is appended after it. A trailing `/` means folders only; a leading `/` or a `/`
+inside anchors the mask to the whole path from the root, otherwise it matches the name at any depth. Everything is
+compared on `fold_name` of each side's own spelling, so masks ignore case and Unicode form whatever the pair's
+`NameRule`.
+
+Verdict order: `.cmdr-sync` at any level (and under it) is `Out`; an excluded ancestor folder excludes its contents; a
+file that no include matches is `Out` (folders are always walked, so an include like `*.jpg` still reaches
+`photos/a.jpg`); an exclude from `JUNK_MASKS` answers `Junk`, any other exclude `Out`. An empty mask (a bare `|`, `""`,
+a blank entry of the exclude list) is refused with its position rather than read as "match everything".
+
+## Scanner (scan.rs)
+
+Recursive, one `list_directory_for_scan` per folder, asking `ScanBoundary::dir` first so Cancel and Pause land before
+the round trip. Admission per child, in order: `only` (top level), `subfolders` off (folders are not entries at all),
+the filter (`Out` counts held back, `Junk` vanishes), hidden while hidden is off (held back). Survivors group by name
+key: a group of two or more goes to `clashes` and out of `entries`, and a clashing folder is not descended. A symlink to
+a folder is an entry, never followed.
+
+`SubtreeFacts` is recursive: files and symlinks, their sizes, newest mtime, and held-back items beneath. A folder with
+nothing admitted inside, after its own empty subfolders drop, is left out unless `empty_folders`. Its held-back count
+still flows to its parent. A subfolder that won't list keeps its entry, joins `unreadable`, and has zeroed facts; the
+root that won't list is `RootUnreachable`. The root's own held-back count has nowhere to live (no root entry) and is
+dropped. `InMemoryVolume` lists a missing folder as empty, so unreachable-root tests use a double that refuses the path.
+
+## Content compare (content.rs)
+
+Each side keeps the unconsumed rest of its last chunk, since the two streams chunk differently. The loop stops at the
+first differing byte or length mismatch. Cancel and pause are checked before every chunk; a stopped job answers
+`Pending`. Progress counts bytes as read, and a pair decided early adds the rest of its size so the bar ends full.
+Workers: one when both volumes are `Local` (two disks seeking against each other), else four.
