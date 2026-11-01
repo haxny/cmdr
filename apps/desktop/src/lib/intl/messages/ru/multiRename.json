@@ -1448,6 +1448,14 @@
   "@multiRename.tags.editFailed": {
     "sourceHash": "9747a7c"
   },
+  "multiRename.tags.editor.largeKeys": "Enter saves, Esc cancels.",
+  "@multiRename.tags.editor.largeKeys": {
+    "sourceHash": "618854c"
+  },
+  "multiRename.tags.editor.largeKeysLine": "Enter saves, ⌥Enter adds a line, Esc cancels.",
+  "@multiRename.tags.editor.largeKeysLine": {
+    "sourceHash": "94d9915"
+  },
   "multiRename.tags.discard.title": "Discard tag changes?",
   "@multiRename.tags.discard.title": {
     "sourceHash": "fb94558"
