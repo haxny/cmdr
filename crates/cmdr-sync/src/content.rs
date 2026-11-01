@@ -116,7 +116,13 @@ async fn run_job(
         open(left, &job.left, job.size).await,
         open(right, &job.right, job.size).await,
     ) else {
-        return (ContentState::Unreadable, 0);
+        // A failure that follows a cancel is the cancel's, not the file's.
+        let state = if control.is_cancelled() {
+            ContentState::Pending
+        } else {
+            ContentState::Unreadable
+        };
+        return (state, 0);
     };
     let mut read = 0u64;
     let mut sides = (Cursor::default(), Cursor::default());
@@ -125,7 +131,7 @@ async fn run_job(
             return (ContentState::Pending, read);
         }
         for (stream, cursor) in [(&mut a, &mut sides.0), (&mut b, &mut sides.1)] {
-            if let Err(state) = cursor.fill(stream.as_mut()).await {
+            if let Err(state) = cursor.fill(stream.as_mut(), control).await {
                 return (state, read);
             }
         }
@@ -184,13 +190,18 @@ impl Cursor {
 
     /// Reads until bytes are waiting or the stream ends. `Err(Unreadable)` when
     /// the stream breaks.
-    async fn fill(&mut self, stream: &mut dyn VolumeReadStream) -> Result<(), ContentState> {
+    async fn fill(&mut self, stream: &mut dyn VolumeReadStream, control: &SyncControl) -> Result<(), ContentState> {
         while self.available() == 0 && !self.finished {
+            // Inside the loop, so a stream of empty chunks can't outlast a cancel.
+            if !may_continue(control).await {
+                return Err(ContentState::Pending);
+            }
             match stream.next_chunk().await {
                 Some(Ok(chunk)) => {
                     self.chunk = chunk;
                     self.at = 0;
                 }
+                Some(Err(_)) if control.is_cancelled() => return Err(ContentState::Pending),
                 Some(Err(_)) => return Err(ContentState::Unreadable),
                 None => self.finished = true,
             }

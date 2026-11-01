@@ -54,9 +54,9 @@ Inclusive: a key is within itself. Callers that want strict descendants compare 
 
 TC sync syntax. Masks split on spaces or `;`, `"…"` keeps spaces, `*` and `?` are the only wildcards, one `|` starts the
 excludes, the editable exclude list is appended after it. A trailing `/` means folders only; a leading `/` or a `/`
-inside anchors the mask to the whole path from the root, otherwise it matches the name at any depth. Everything is
-compared on `fold_name` of each side's own spelling, so masks ignore case and Unicode form whatever the pair's
-`NameRule`.
+inside anchors the mask to the whole path (backslashes are read as `/`, so masks pasted from Total Commander work) from
+the root, otherwise it matches the name at any depth. Everything is compared on `fold_name` of each side's own spelling,
+so masks ignore case and Unicode form whatever the pair's `NameRule`.
 
 Verdict order: `.cmdr-sync` at any level (and under it) is `Out`; an excluded ancestor folder excludes its contents; a
 file that no include matches is `Out` (folders are always walked, so an include like `*.jpg` still reaches
@@ -73,9 +73,11 @@ a folder is an entry, never followed.
 
 `SubtreeFacts` is recursive: files and symlinks, their sizes, newest mtime, and held-back items beneath. A folder with
 nothing admitted inside, after its own empty subfolders drop, is left out unless `empty_folders`. Its held-back count
-still flows to its parent. A subfolder that won't list keeps its entry, joins `unreadable`, and has zeroed facts; the
-root that won't list is `RootUnreachable`. The root's own held-back count has nowhere to live (no root entry) and is
-dropped. `InMemoryVolume` lists a missing folder as empty, so unreachable-root tests use a double that refuses the path.
+still flows to its parent. A subfolder that won't list keeps its entry, joins `unreadable` with an `UnreadableReason`
+(permission, not found, unreachable, other; mapped from the typed `VolumeError`), and has zeroed facts except
+`unreadable: 1`, which `SubtreeFacts` adds up through every ancestor; the root that won't list is `RootUnreachable`. The
+root's own held-back count has nowhere to live (no root entry) and is dropped. `InMemoryVolume` lists a missing folder
+as empty, so unreachable-root tests use a double that refuses the path.
 
 ## Content compare (content.rs)
 
@@ -83,3 +85,7 @@ Each side keeps the unconsumed rest of its last chunk, since the two streams chu
 first differing byte or length mismatch. Cancel and pause are checked before every chunk; a stopped job answers
 `Pending`. Progress counts bytes as read, and a pair decided early adds the rest of its size so the bar ends full.
 Workers: one when both volumes are `Local` (two disks seeking against each other), else four.
+
+The scanner skips the app-owned `.cmdr-sync` folder before the filter runs: no entry, no held-back count, at any depth
+(`MaskFilter::admits` still answers `Out` for it). A symlink to a folder is filtered as a file, as it is treated. A
+folder with `held_back > 0` or `unreadable > 0` is non-atomic: the planner must not copy or remove it whole.

@@ -138,3 +138,13 @@ fn unclosed_quote_and_second_bar_are_refused() {
         Err(MaskError::SecondBar { position: 8 })
     ));
 }
+
+#[test]
+fn backslashes_from_windows_masks_work() {
+    let f = filter("| temp\\");
+    assert_eq!(f.admits("temp", true), Admission::Out);
+    assert_eq!(f.admits("a/temp", true), Admission::Out);
+    let g = filter("| \\sub\\*.ext");
+    assert_eq!(g.admits("sub/a.ext", false), Admission::Out);
+    assert_eq!(g.admits("x/sub/a.ext", false), Admission::In);
+}

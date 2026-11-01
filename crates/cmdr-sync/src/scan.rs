@@ -3,7 +3,7 @@
 //! Never stats a child (the listing's facts are the facts), prunes excluded
 //! folders before listing them, and keeps going past a subfolder that won't list.
 
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -11,8 +11,10 @@ use std::sync::Arc;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{ScanBoundary, ScanListingClock, ScanStop, ScanStopSignal, Volume, VolumeError};
 
+use crate::filter::is_app_owned;
 use crate::{
     Admission, Entry, EntryFacts, EntryKey, MaskFilter, NameRule, Snapshot, SubtreeFacts, SyncCaps, SyncControl,
+    UnreadableReason,
 };
 
 /// Which pane a scan belongs to.
@@ -108,7 +110,7 @@ pub async fn scan(
         },
         entries: BTreeMap::new(),
         clashes: BTreeMap::new(),
-        unreadable: BTreeSet::new(),
+        unreadable: BTreeMap::new(),
     };
     match walk.folder(root, "", &EntryKey::root()).await {
         Ok(_) => {}
@@ -134,7 +136,7 @@ struct Walk<'a> {
     progress: ScanProgress,
     entries: BTreeMap<EntryKey, Entry>,
     clashes: BTreeMap<EntryKey, Vec<Entry>>,
-    unreadable: BTreeSet<EntryKey>,
+    unreadable: BTreeMap<EntryKey, UnreadableReason>,
 }
 
 type Candidates = BTreeMap<String, Vec<(FileEntry, String)>>;
@@ -174,6 +176,9 @@ impl<'a> Walk<'a> {
         let top = key == &EntryKey::root();
         let mut groups = Candidates::new();
         for child in children {
+            if is_app_owned(&child.name) {
+                continue;
+            }
             let name_key = options.name_rule.key(&child.name);
             if top && self.only.as_ref().is_some_and(|only| !only.contains(&name_key)) {
                 continue;
@@ -186,7 +191,8 @@ impl<'a> Walk<'a> {
             } else {
                 format!("{rel}/{}", child.name)
             };
-            match options.filter.admits(&rel_child, child.is_directory) {
+            let is_folder = child.is_directory && !child.is_symlink;
+            match options.filter.admits(&rel_child, is_folder) {
                 Admission::Out => {
                     facts.held_back += 1;
                     continue;
@@ -248,9 +254,14 @@ impl<'a> Walk<'a> {
                     inner.facts
                 }
                 Err(FolderError::Stopped) => return Err(FolderError::Stopped),
-                Err(FolderError::Listing(_)) => {
-                    self.unreadable.insert(child_key.clone());
-                    SubtreeFacts::default()
+                Err(FolderError::Listing(error)) => {
+                    self.unreadable.insert(child_key.clone(), reason_of(&error));
+                    let unreadable = SubtreeFacts {
+                        unreadable: 1,
+                        ..SubtreeFacts::default()
+                    };
+                    add(facts, &unreadable);
+                    unreadable
                 }
             };
             self.entries.insert(
@@ -277,4 +288,17 @@ fn add(total: &mut SubtreeFacts, inner: &SubtreeFacts) {
     total.bytes += inner.bytes;
     total.newest_mtime = total.newest_mtime.max(inner.newest_mtime);
     total.held_back += inner.held_back;
+    total.unreadable += inner.unreadable;
+}
+
+fn reason_of(error: &VolumeError) -> UnreadableReason {
+    match error {
+        VolumeError::PermissionDenied { .. } => UnreadableReason::PermissionDenied,
+        VolumeError::NotFound(_) => UnreadableReason::NotFound,
+        VolumeError::ConnectionTimeout(_)
+        | VolumeError::DeviceDisconnected(_)
+        | VolumeError::DeviceSessionReset(_)
+        | VolumeError::NotConnected(_) => UnreadableReason::Unreachable,
+        _ => UnreadableReason::Other,
+    }
 }

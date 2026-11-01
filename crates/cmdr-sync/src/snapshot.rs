@@ -1,6 +1,6 @@
 //! What a scan found: one side's tree as comparable entries.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use crate::{EntryFacts, EntryKey, EntryKind, SyncCaps};
@@ -17,6 +17,13 @@ pub struct SubtreeFacts {
     /// Items beneath it the scan left out on purpose (excluded, or hidden while
     /// hidden entries are off). Excluded folders count once, not by contents.
     pub held_back: u64,
+    /// Unreadable folders beneath it, itself included when it is one. Nothing
+    /// about its contents is known.
+    ///
+    /// ❗ The planner must treat a folder with `unreadable > 0` (or
+    /// `held_back > 0`) as non-atomic: never copy or remove it as a whole on
+    /// partial knowledge.
+    pub unreadable: u64,
 }
 
 /// One listed item.
@@ -33,6 +40,19 @@ pub struct Entry {
     pub subtree: Option<SubtreeFacts>,
 }
 
+/// Why a folder wouldn't list, from the volume's typed error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnreadableReason {
+    /// The volume refused access.
+    PermissionDenied,
+    /// The folder is gone.
+    NotFound,
+    /// The device or server timed out, dropped, or isn't connected.
+    Unreachable,
+    /// Anything else.
+    Other,
+}
+
 /// One side of a comparison, as the scan found it.
 #[derive(Debug, Clone)]
 pub struct Snapshot {
@@ -45,9 +65,9 @@ pub struct Snapshot {
     /// Names that fold to one key within a folder: all spellings, and none of
     /// them in `entries`.
     pub clashes: BTreeMap<EntryKey, Vec<Entry>>,
-    /// Folders whose listing failed. Nothing beneath them is known, so nothing
-    /// there may be removed on the strength of this snapshot.
-    pub unreadable: BTreeSet<EntryKey>,
+    /// Folders whose listing failed, with why. Nothing beneath them is known, so
+    /// nothing there may be removed on the strength of this snapshot.
+    pub unreadable: BTreeMap<EntryKey, UnreadableReason>,
 }
 
 impl Snapshot {

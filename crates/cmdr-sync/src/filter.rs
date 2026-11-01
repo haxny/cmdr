@@ -20,6 +20,12 @@ pub const JUNK_MASKS: &[&str] = &[".DS_Store", "._*", "Thumbs.db"];
 /// no setting switches it off.
 pub const ALWAYS_EXCLUDED: &str = ".cmdr-sync";
 
+/// Whether `name` is the app-owned folder. The scanner leaves it out silently,
+/// uncounted, at every level; [`MaskFilter::admits`] still answers `Out` for it.
+pub(crate) fn is_app_owned(name: &str) -> bool {
+    fold_name(name) == fold_name(ALWAYS_EXCLUDED)
+}
+
 /// Why a mask list can't be used. `position` counts characters of the text
 /// that held the problem (for an entry of the exclude list, its index).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,7 +70,8 @@ struct Mask {
 
 impl Mask {
     fn new(text: &str) -> Self {
-        let folded = fold_name(text).into_owned();
+        // TC masks pasted from Windows use backslashes.
+        let folded = fold_name(&text.replace('\\', "/")).into_owned();
         let anchored = folded.starts_with('/');
         let folders_only = folded.len() > 1 && folded.ends_with('/');
         let core = folded.trim_start_matches('/').trim_end_matches('/');

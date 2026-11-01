@@ -91,3 +91,14 @@ fn one_worker_when_both_sides_are_local_else_four() {
     assert_eq!(content_workers(&local, &InMemoryVolume::new("c")), 1);
     assert_eq!(content_workers(&local, &other), 4);
 }
+
+#[tokio::test]
+async fn an_unreadable_side_after_cancel_is_pending() {
+    let l = InMemoryVolume::new("l");
+    let r = InMemoryVolume::new("r");
+    l.create_file(Path::new("/f"), b"abc").await.unwrap();
+    let control = SyncControl::new();
+    control.cancel();
+    let out = compare_contents(&l, &r, vec![job(0, 3)], 1, &control, &|_| {}).await;
+    assert_eq!(out[0].1, ContentState::Pending);
+}

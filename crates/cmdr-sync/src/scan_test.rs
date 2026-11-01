@@ -204,7 +204,10 @@ async fn unreadable_subfolder_is_recorded_and_the_walk_goes_on() {
         error: denied,
     };
     let snap = run(&volume, &options()).await.unwrap();
-    assert!(snap.unreadable.contains(&key(&["bad"])));
+    assert_eq!(
+        snap.unreadable.get(&key(&["bad"])),
+        Some(&UnreadableReason::PermissionDenied)
+    );
     assert!(snap.entries.contains_key(&key(&["bad"])));
     assert!(snap.entries.contains_key(&key(&["good", "y"])));
 }
@@ -298,4 +301,44 @@ async fn progress_reports_running_counts() {
     .unwrap();
     let p = last.lock().unwrap().take().unwrap();
     assert_eq!((p.folders, p.files, p.bytes), (2, 2, 10));
+}
+
+#[tokio::test]
+async fn unreadable_nested_folder_marks_ancestors() {
+    let volume = FailingListVolume {
+        inner: tree(&[("/x/ok.txt", 1), ("/x/y/z", 1)], &["/x", "/x/y"]).await,
+        fail_path: PathBuf::from("/x/y"),
+        error: denied,
+    };
+    let snap = run(&volume, &options()).await.unwrap();
+    assert_eq!(snap.entries[&key(&["x"])].subtree.unwrap().unreadable, 1);
+    assert_eq!(snap.entries[&key(&["x", "y"])].subtree.unwrap().unreadable, 1);
+    assert_eq!(snap.entries[&key(&["x", "ok.txt"])].subtree, None);
+}
+
+#[tokio::test]
+async fn cmdr_sync_folder_is_left_out_uncounted_at_every_level() {
+    let volume = tree(
+        &[("/.cmdr-sync/v", 1), ("/d/.cmdr-sync/v", 1), ("/d/f", 1)],
+        &["/.cmdr-sync", "/d", "/d/.cmdr-sync"],
+    )
+    .await;
+    let snap = run(&volume, &options()).await.unwrap();
+    let names: Vec<_> = snap.entries.values().map(|e| e.rel_path.as_str()).collect();
+    assert_eq!(names, ["d", "d/f"]);
+    assert_eq!(snap.entries[&key(&["d"])].subtree.unwrap().held_back, 0);
+}
+
+#[tokio::test]
+async fn a_symlink_to_a_folder_is_filtered_as_a_file() {
+    let volume = tree(&[("/link", 0)], &[]).await;
+    let mut entries = volume.list_directory(Path::new("/"), None).await.unwrap();
+    entries[0].is_directory = true;
+    entries[0].is_symlink = true;
+    let volume = InMemoryVolume::with_entries("t", entries);
+    let mut opts = options();
+    opts.filter = MaskFilter::parse("| link/", &[]).unwrap();
+    // `link/` matches folders only; the link is not one, so it stays.
+    let snap = run(&volume, &opts).await.unwrap();
+    assert_eq!(snap.entries.len(), 1);
 }

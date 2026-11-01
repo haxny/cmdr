@@ -24,6 +24,7 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
 - **A folder in `Snapshot::unreadable` is unknown, not empty**: nothing beneath it may be removed on this snapshot's
   word.
 - **`Junk` is not `Out`**: junk entries vanish from the snapshot uncounted; every `Out` entry counts as held back.
+  `.cmdr-sync` is neither: the scanner skips it silently.
 - **Content compare answers every job**: a job cancel stopped answers `Pending`, never nothing.
 - **The crate never deletes permanently.** Phase 1 has no delete step at all.
 - **No `cmdr-operations` dependency**: `cmdr-listing` depends on this crate and the operations test build depends on

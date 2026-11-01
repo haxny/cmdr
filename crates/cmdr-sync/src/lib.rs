@@ -29,7 +29,7 @@ pub use control::SyncControl;
 pub use filter::{ALWAYS_EXCLUDED, Admission, DEFAULT_EXCLUDES, JUNK_MASKS, MaskError, MaskFilter};
 pub use key::{EntryKey, NameRule};
 pub use scan::{ScanError, ScanOptions, ScanProgress, Side, scan};
-pub use snapshot::{Entry, Snapshot, SubtreeFacts};
+pub use snapshot::{Entry, Snapshot, SubtreeFacts, UnreadableReason};
 
 #[cfg(test)]
 mod caps_test;
