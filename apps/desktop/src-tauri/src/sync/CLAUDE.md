@@ -1,13 +1,16 @@
 # Synchronize folders (app side)
 
 ⇧F12: two folders on any two volumes, compared and made to match. The pure logic is `crates/cmdr-sync`; this module owns
-what needs the app. Today that is the saved profiles; sessions and the engine adapter join it with the dialog.
+what needs the app: saved profiles, the dialog's compare and run sessions, and the `SyncEngine` adapter.
 
 ## Module map
 
 - `profile_store.rs`: `sync-profiles.json` (`PROFILES`), the profile list in the person's order plus the options last
   used per pair of roots. List operations (`save_in`, `rename_in`, `move_in`, `delete_in`, `remember_options_in`) are
   pure on `ProfileList`; `ProfileStore` caches, locks, and flushes. IPC: the pass-throughs are `apps/desktop/src-tauri/src/commands/sync.rs`.
+- `session.rs` (registry, rows, overrides, run lock), `session_compare.rs`, `session_run.rs` (confirm, run): one session
+  per dialog, over `host.rs`'s `SyncHost` seam (tests bring their own). `wire.rs`: IPC shapes and the five events.
+- `engine.rs` + `engine_ops.rs`: `SyncEngine` over `cmdr-operations`; `settle_sink.rs` wraps the app's sink per op.
 
 ## Must-knows
 
@@ -27,5 +30,10 @@ what needs the app. Today that is the saved profiles; sessions and the engine ad
 - **The Settings the profiles inherit are frontend-read** (`sync.*` in the registry): the dialog passes them as
   `SyncDefaults` at compare and at run, so no applier case exists. The backend's say on a versions folder is
   `check_sync_keep_policy`.
+- **The run gates the CURRENT plan itself** (`gate`, every override applied) at accept time; ❌ never a confirm's report.
+- **The adapter never deletes**: landings are `ConflictResolution::Skip`, claims exclusive, empty-folder removal one
+  `rmdir`, removals go to the Trash or a versions folder through engine operations.
+- **`SettleSink` wraps the app's sink, never replaces it**: the queue window, progress, and Locked/sources-gone questions
+  must reach the person as for any copy.
 
-Schema rules and the decisions: `DETAILS.md`.
+Schema rules, sessions, and the adapter's decisions: `DETAILS.md`.

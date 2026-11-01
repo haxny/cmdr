@@ -1,6 +1,13 @@
 //! IPC for Synchronize folders (⇧F12). Thin: the work is `crate::sync` and `cmdr-sync`.
 
-use cmdr_sync::{KeepPolicy, KeepRefusal, RootRef, SyncOptions, SyncProfile, check_keep_policy};
+use cmdr_sync::{
+    BulkAction, KeepPolicy, KeepRefusal, RootRef, ShowFilters, SyncDefaults, SyncOptions, SyncProfile,
+    check_keep_policy,
+};
+
+use crate::sync::host::AppSyncHost;
+use crate::sync::wire::{CompareRequest, ConfirmPreview, RunRequest, SyncError, SyncRowsPage, SyncState};
+use crate::sync::{session, session_compare, session_run};
 
 use crate::sync::profile_store::{
     NameTaken, PROFILES, ProfileEditRefusal, ProfileEntry, ProfileMove, ProfileSaveRefusal, WriteFailed, delete_in,
@@ -114,4 +121,104 @@ pub fn save_sync_last_options(
 #[specta::specta]
 pub fn check_sync_keep_policy(policy: KeepPolicy) -> Option<KeepRefusal> {
     check_keep_policy(&policy).err()
+}
+
+/// Checks every input and starts a compare in the dialog's session (a new one when
+/// `sessionId` is `None`). Answers the session id; rows follow `sync-compare-finished`.
+#[tauri::command]
+#[specta::specta]
+pub async fn start_sync_compare(app: tauri::AppHandle, request: CompareRequest) -> Result<String, SyncError> {
+    session_compare::start(AppSyncHost::new(app), request)
+}
+
+/// Pauses or resumes the session's compare.
+#[tauri::command]
+#[specta::specta]
+pub fn set_sync_compare_paused(session_id: String, paused: bool) -> Result<(), SyncError> {
+    session::set_paused(&session_id, false, paused)
+}
+
+/// Stops the session's compare; its rows stay as they were.
+#[tauri::command]
+#[specta::specta]
+pub fn cancel_sync_compare(session_id: String) -> Result<(), SyncError> {
+    session::cancel(&session_id, false)
+}
+
+/// Grid rows `start..end` under the show-filters.
+#[tauri::command]
+#[specta::specta]
+pub fn get_sync_rows(
+    session_id: String,
+    start: u32,
+    end: u32,
+    filters: ShowFilters,
+) -> Result<SyncRowsPage, SyncError> {
+    session::rows(&session_id, start, end, &filters)
+}
+
+/// The summary bar and the guards of the current plan.
+#[tauri::command]
+#[specta::specta]
+pub fn get_sync_state(session_id: String, filters: ShowFilters) -> Result<SyncState, SyncError> {
+    session::state(&session_id, &filters)
+}
+
+/// Applies a key's action to the selected rows the person can see.
+#[tauri::command]
+#[specta::specta]
+pub fn set_sync_actions(
+    session_id: String,
+    items: Vec<u32>,
+    bulk: BulkAction,
+    filters: ShowFilters,
+) -> Result<SyncState, SyncError> {
+    session::set_actions(&session_id, &items, bulk, &filters)
+}
+
+/// Compares one equal-size pair by content; `sync-rows-changed` follows.
+#[tauri::command]
+#[specta::specta]
+pub async fn compare_sync_item_content(app: tauri::AppHandle, session_id: String, item: u32) -> Result<(), SyncError> {
+    session_run::compare_item_content(AppSyncHost::new(app), &session_id, item).await
+}
+
+/// What the confirm shows for the current plan.
+#[tauri::command]
+#[specta::specta]
+pub fn get_sync_confirm(
+    session_id: String,
+    defaults: SyncDefaults,
+    filters: ShowFilters,
+) -> Result<ConfirmPreview, SyncError> {
+    session_run::confirm(&session_id, &defaults, &filters)
+}
+
+/// Runs the accepted groups of the current plan; `sync-run-progress` and
+/// `sync-run-finished` follow.
+#[tauri::command]
+#[specta::specta]
+pub async fn start_sync_run(app: tauri::AppHandle, session_id: String, request: RunRequest) -> Result<(), SyncError> {
+    session_run::start_run(AppSyncHost::new(app), &session_id, &request)
+}
+
+/// Pauses or resumes the run between steps.
+#[tauri::command]
+#[specta::specta]
+pub fn set_sync_run_paused(session_id: String, paused: bool) -> Result<(), SyncError> {
+    session::set_paused(&session_id, true, paused)
+}
+
+/// Stops the run; what it set aside goes back.
+#[tauri::command]
+#[specta::specta]
+pub fn cancel_sync_run(session_id: String) -> Result<(), SyncError> {
+    session::cancel(&session_id, true)
+}
+
+/// Closes the dialog's session, stopping anything it runs.
+#[tauri::command]
+#[specta::specta]
+pub fn close_sync_session(session_id: String) {
+    session::close(&session_id);
 }

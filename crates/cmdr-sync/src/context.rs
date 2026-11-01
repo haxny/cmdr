@@ -5,6 +5,30 @@ use std::path::{Path, PathBuf};
 
 use crate::{KeepPolicy, KeepRefusal, Place, RunStamp, Side, SyncCaps, VersionsRoot, staging_root, versions_root};
 
+/// One side of a run, as `RunContext::new` takes it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunSide {
+    /// The folder.
+    pub root: PathBuf,
+    /// What its volume can do now.
+    pub caps: SyncCaps,
+    /// Whether `root` is a path in this Mac's own file namespace (the local
+    /// disk or a mounted share), so a custom folder on the local disk can lie
+    /// inside it. A remote volume's path (`/R` on an SFTP server) never can.
+    pub local_namespace: bool,
+}
+
+impl RunSide {
+    /// A side whose root is in the local file namespace.
+    pub fn local(root: PathBuf, caps: SyncCaps) -> Self {
+        Self {
+            root,
+            caps,
+            local_namespace: true,
+        }
+    }
+}
+
 /// Everything a run needs beyond the plan. Build it with `RunContext::new`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RunContext {
@@ -30,6 +54,9 @@ pub struct RunContext {
     pub staging_left: VersionsRoot,
     /// Where files replaced on the right wait for their copy (same volume).
     pub staging_right: VersionsRoot,
+    /// Which roots are in the local file namespace (left, right): only those
+    /// can hold a custom folder on the local disk.
+    pub local_roots: [bool; 2],
 }
 
 /// The policy's folder and the staging folder for one side.
@@ -39,10 +66,10 @@ fn resolve(
     profile: Option<&str>,
     stamp: &RunStamp,
     attempt: u32,
-    sync_roots: [&Path; 2],
+    local_roots: &[&Path],
 ) -> Result<(VersionsRoot, VersionsRoot), KeepRefusal> {
     let versions = versions_root(keep, root, profile, stamp, attempt)?;
-    let inside = versions.place == Place::LocalDisk && sync_roots.iter().any(|sync| versions.dir.starts_with(sync));
+    let inside = versions.place == Place::LocalDisk && local_roots.iter().any(|sync| versions.dir.starts_with(sync));
     if inside {
         return Err(KeepRefusal::InsideSyncFolder);
     }
@@ -52,25 +79,25 @@ fn resolve(
 impl RunContext {
     /// A context with first-attempt versions folders. A custom folder inside
     /// either root is refused (`InsideSyncFolder`): its contents would be
-    /// compared and synchronized like the person's files.
+    /// compared and synchronized like the person's files. Only a root in the
+    /// local file namespace is checked: a remote path can't hold a local one.
     pub fn new(
-        left_root: PathBuf,
-        right_root: PathBuf,
-        left_caps: SyncCaps,
-        right_caps: SyncCaps,
+        left: RunSide,
+        right: RunSide,
         keep: KeepPolicy,
         stamp: RunStamp,
         profile_name: Option<String>,
     ) -> Result<Self, KeepRefusal> {
-        let roots = [left_root.as_path(), right_root.as_path()];
+        let local_roots = [left.local_namespace, right.local_namespace];
+        let roots = Self::local_paths([&left.root, &right.root], local_roots);
         let profile = profile_name.as_deref();
-        let (versions_left, staging_left) = resolve(&keep, &left_root, profile, &stamp, 0, roots)?;
-        let (versions_right, staging_right) = resolve(&keep, &right_root, profile, &stamp, 0, roots)?;
+        let (versions_left, staging_left) = resolve(&keep, &left.root, profile, &stamp, 0, &roots)?;
+        let (versions_right, staging_right) = resolve(&keep, &right.root, profile, &stamp, 0, &roots)?;
         Ok(Self {
-            left_root,
-            right_root,
-            left_caps,
-            right_caps,
+            left_root: left.root,
+            right_root: right.root,
+            left_caps: left.caps,
+            right_caps: right.caps,
             keep,
             stamp,
             profile_name,
@@ -78,15 +105,25 @@ impl RunContext {
             versions_right,
             staging_left,
             staging_right,
+            local_roots,
         })
+    }
+
+    /// The roots a custom folder on the local disk must stay out of.
+    fn local_paths(roots: [&Path; 2], local: [bool; 2]) -> Vec<&Path> {
+        roots
+            .into_iter()
+            .zip(local)
+            .filter_map(|(root, local)| local.then_some(root))
+            .collect()
     }
 
     /// The same context with `side`'s folders named for `attempt` (a dated
     /// folder that already exists is never reused).
     pub fn with_attempt(&self, side: Side, attempt: u32) -> Result<Self, KeepRefusal> {
-        let roots = [self.left_root.as_path(), self.right_root.as_path()];
+        let roots = Self::local_paths([&self.left_root, &self.right_root], self.local_roots);
         let profile = self.profile_name.as_deref();
-        let (versions, staging) = resolve(&self.keep, self.root(side), profile, &self.stamp, attempt, roots)?;
+        let (versions, staging) = resolve(&self.keep, self.root(side), profile, &self.stamp, attempt, &roots)?;
         let mut next = self.clone();
         match side {
             Side::Left => (next.versions_left, next.staging_left) = (versions, staging),

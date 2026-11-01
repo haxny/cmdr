@@ -49,7 +49,8 @@ pub struct ScanOptions {
 }
 
 /// Running totals, reported after each folder.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct ScanProgress {
     /// Which scan this is.
     pub side: Side,
@@ -210,7 +211,7 @@ impl<'a> Walk<'a> {
         path: &'w Path,
         rel: &'w str,
         key: &'w EntryKey,
-    ) -> Pin<Box<dyn Future<Output = Result<Folder, FolderError>> + 'w>> {
+    ) -> Pin<Box<dyn Future<Output = Result<Folder, FolderError>> + Send + 'w>> {
         Box::pin(async move {
             // Before the round trip, which is the slow part.
             self.boundary.dir(path).await.map_err(|_| FolderError::Stopped)?;

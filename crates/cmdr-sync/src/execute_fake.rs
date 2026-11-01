@@ -65,6 +65,8 @@ struct Inner {
     created: BTreeSet<(Loc, PathBuf)>,
     /// Removed by the outside world, not by the run.
     gone: Vec<(Loc, PathBuf)>,
+    /// Indices of the batches the run asked to finish even after a cancel.
+    to_end: Vec<usize>,
 }
 
 /// The double. Script it before the run, read it after.
@@ -73,6 +75,7 @@ pub(crate) struct FakeEngine {
     inner: Mutex<Inner>,
     fail: BTreeSet<PathBuf>,
     skip: BTreeSet<PathBuf>,
+    rmdir_skip: BTreeSet<PathBuf>,
     stop_at: Option<usize>,
     stop_after_work: Option<usize>,
     cancel_on_observe: Option<(PathBuf, Arc<SyncControl>)>,
@@ -146,6 +149,12 @@ impl FakeEngine {
         self
     }
 
+    /// The engine answers `Skipped` for an `rmdir` of this folder.
+    pub(crate) fn rmdir_skipping(mut self, path: impl Into<PathBuf>) -> Self {
+        self.rmdir_skip.insert(path.into());
+        self
+    }
+
     /// Batch `n` (0-based) is stopped by the engine before doing anything.
     pub(crate) fn stopping_at(mut self, n: usize) -> Self {
         self.stop_at = Some(n);
@@ -189,6 +198,12 @@ impl FakeEngine {
 
     pub(crate) fn batches(&self) -> Vec<EngineBatch> {
         self.lock().batches.clone()
+    }
+
+    /// The batches the run asked to finish even after a cancel (`run_to_end`).
+    pub(crate) fn batches_to_end(&self) -> Vec<EngineBatch> {
+        let inner = self.lock();
+        inner.to_end.iter().map(|&n| inner.batches[n].clone()).collect()
     }
 
     pub(crate) fn violations(&self) -> Vec<String> {
@@ -265,7 +280,12 @@ impl FakeEngine {
         match batch {
             EngineBatch::RemoveEmptyFolders { place, side, dirs } => dirs
                 .iter()
-                .map(|dir| (dir.clone(), inner.remove_empty(loc_at(*place, *side), dir)))
+                .map(|dir| {
+                    if self.rmdir_skip.contains(dir) {
+                        return (dir.clone(), ItemOutcome::Skipped);
+                    }
+                    (dir.clone(), inner.remove_empty(loc_at(*place, *side), dir))
+                })
                 .collect(),
             EngineBatch::ClaimFolder { place, side, dir } => {
                 let outcome = self
@@ -577,6 +597,17 @@ impl SyncEngine for FakeEngine {
                 control.cancel();
             }
             outcome
+        })
+    }
+
+    fn run_to_end<'a>(&'a self, batch: EngineBatch) -> EngineFuture<'a, BatchOutcome> {
+        Box::pin(async move {
+            {
+                let mut inner = self.lock();
+                let n = inner.batches.len();
+                inner.to_end.push(n);
+            }
+            self.run(batch).await
         })
     }
 }

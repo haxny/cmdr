@@ -41,7 +41,8 @@ impl Default for GuardSettings {
 }
 
 /// A guard that fired.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum GuardBlock {
     /// Too many removals on `side`; "Remove anyway" releases them.
     MaxRemove {
@@ -87,7 +88,8 @@ pub struct ClockSkew {
 }
 
 /// Everything the confirm must show about a plan.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct GuardReport {
     /// Guards that hold actions back.
     pub blocks: Vec<GuardBlock>,

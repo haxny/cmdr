@@ -36,7 +36,8 @@ pub enum BulkAction {
 }
 
 /// Why a change was refused. One refusal refuses the whole batch.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum OverrideRefusal {
     /// No row has this index.
     NoSuchItem {

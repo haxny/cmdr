@@ -12,8 +12,9 @@ pub(crate) fn stamp() -> RunStamp {
 
 /// A run between `/L` and `/R` with the given policy and volumes.
 pub(crate) fn context(keep: KeepPolicy, left_caps: SyncCaps, right_caps: SyncCaps) -> RunContext {
-    let (left, right) = (PathBuf::from("/L"), PathBuf::from("/R"));
-    RunContext::new(left, right, left_caps, right_caps, keep, stamp(), None).unwrap()
+    let left = RunSide::local(PathBuf::from("/L"), left_caps);
+    let right = RunSide::local(PathBuf::from("/R"), right_caps);
+    RunContext::new(left, right, keep, stamp(), None).unwrap()
 }
 
 pub(crate) fn no_trash() -> SyncCaps {
@@ -315,9 +316,31 @@ fn a_custom_folder_inside_a_sync_root_is_refused() {
             template: "/R/kept".to_owned(),
         },
     };
-    let (left, right) = (PathBuf::from("/L"), PathBuf::from("/R"));
-    let refused = RunContext::new(left, right, caps(), caps(), keep, stamp(), None);
+    let (left, right) = (RunSide::local("/L".into(), caps()), RunSide::local("/R".into(), caps()));
+    let refused = RunContext::new(left, right, keep, stamp(), None);
     assert_eq!(refused, Err(KeepRefusal::InsideSyncFolder));
+}
+
+#[test]
+fn a_remote_root_never_holds_a_custom_folder_on_the_local_disk() {
+    let keep = KeepPolicy {
+        place: KeepPlace::VersionsAlways,
+        location: VersionsLocation::Custom {
+            template: "/R/kept".to_owned(),
+        },
+    };
+    // `/R` on an SFTP server is not `/R` on this Mac.
+    let right = RunSide {
+        root: "/R".into(),
+        caps: caps(),
+        local_namespace: false,
+    };
+    let ctx = RunContext::new(RunSide::local("/L".into(), caps()), right, keep, stamp(), None);
+    let ctx = ctx.expect("a remote path can't contain a local folder");
+    assert_eq!(
+        ctx.versions(Side::Right).dir,
+        PathBuf::from("/R/kept/2026-11-01 093000")
+    );
 }
 
 #[test]

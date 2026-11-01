@@ -224,8 +224,9 @@ is the same-volume folder replaced files wait in: the policy's own when it is in
 `.cmdr-sync/versions` there. Laws: `kept_paths_never_escape_the_versions_folder` in `keep_test.rs`.
 
 `RunContext::new` resolves both sides' versions and staging folders and refuses a custom folder inside either sync root
-(`InsideSyncFolder`: it would be compared and synchronized like the person's files). The check compares paths only, so a
-remote root whose path happens to prefix the local custom folder is refused too (conservative). `with_attempt(side, n)`
+(`InsideSyncFolder`: it would be compared and synchronized like the person's files). Only a root whose `RunSide` says
+`local_namespace` (the local disk or a mounted share, where the custom folder's path means the same file) takes part: a
+remote root's path (`/R` on an SFTP server) never holds a local folder, whatever its spelling. `with_attempt(side, n)`
 renames that side's dated folders for a retry.
 
 ## Run (steps.rs, execute.rs, runner.rs, runner/keeping.rs)
@@ -275,11 +276,14 @@ kept spot, or whose place no longer reads as the snapshot (gone, or something ne
 `Done`, a replaced file comes back with the leftovers, a staged file trashed by the policy is not counted as kept), a
 copy whose landing spot is filled is `Done`. Rows the run never reached are `NotStarted`. Edge: an engine stop plus an
 edit in place during that batch reads as kept (for a replacement then `KeptNotReplaced`), never as untouched; the report
-errs toward "look in the versions folder".
+errs toward "look in the versions folder". A Trash removal has no kept spot to look at, so after a stopped batch a
+source that is gone for any reason (someone else deleted it too) reads as trashed (`Done`): the report can't tell the
+Trash from another delete, and says `Done` rather than claim the file is still there.
 
 Cancel (the in-process `SyncControl`) is checked between batches, between items while re-checking, and before each
-engine call; the rest read `NotStarted`. Until the app's adapter forwards the cancel into the engine (Task 6,
-`TODO(Task 6)` in `runner.rs`), a batch that has started runs to its end, so cancel is per batch. Restoring set-aside
+engine call; the rest read `NotStarted`. The app's adapter also forwards it into a running engine operation (`run`).
+Decision: a move back (`MoveBack`) and a replaced file's keep policy go through `SyncEngine::run_to_end` instead, which
+never forwards the cancel: stopping either half way could strand the old file in the staging folder. Restoring set-aside
 files runs after a cancel too.
 
 `RunReport::empty_folders` lists target folders this run created (absent when observed just before `MakeFolders`) for
@@ -289,9 +293,11 @@ with `EngineBatch::RemoveEmptyFolders`, children first, one folder per batch. Co
 never the volume's recursive delete, never following a symlink; hidden files (`.DS_Store`, AppleDouble `._*`) count as
 content; a non-empty folder is `Failed` and stays. Before each one the run observes the folder and skips it unless it is
 a real folder with all-zero `SubtreeFacts` (the scan's counts skip OS junk, so this is the second line of defence; the
-engine's `rmdir` is the first). A folder skipped or refused stays and is listed in `RunReport::leftover_folders`. The
-fake flags any `rmdir` of a snapshot folder or of a folder the run didn't make. `kept_bytes` counts what ended in a
-versions or staging folder (the result screen shows that size), not what went to the Trash.
+engine's `rmdir` is the first). Only an engine `Done` counts as removed: `Skipped` (the engine found nothing there,
+right after the observe saw it) is listed as left rather than guessed. A folder skipped or refused stays and is listed
+in `RunReport::leftover_folders`. The fake flags any `rmdir` of a snapshot folder or of a folder the run didn't make.
+`kept_bytes` counts what ended in a versions or staging folder (the result screen shows that size), not what went to the
+Trash.
 
 Crash: a kill between setting a replaced file aside and its copy landing leaves the old file in
 `.cmdr-sync/versions/<stamp>/…`, recorded nowhere, and the next compare shows it missing from its folder (a copy in

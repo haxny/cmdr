@@ -135,9 +135,9 @@ impl<'a> Runner<'a> {
         self.acting = self.acting_rows(run);
         let first = steps(self.plan, run, &self.ctx);
         self.start(&first);
-        // Cancel lands between batches, and between items while re-checking.
-        // TODO(Task 6): forward the cancel into the engine so a long batch
-        // stops mid-way; until then a batch that started runs to its end.
+        // Cancel lands between batches, between items while re-checking, and
+        // (through the app's engine) inside a running batch, except the ones
+        // `run_to_end` keeps going (`keeping.rs`).
         let mut stopped = self.halted() || self.claim(&first.steps).await;
         let plan_steps = steps(self.plan, run, &self.ctx).steps;
         for step in &plan_steps {

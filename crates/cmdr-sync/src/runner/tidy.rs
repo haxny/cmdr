@@ -58,6 +58,8 @@ impl Runner<'_> {
             dirs: vec![dir.to_path_buf()],
         };
         let outcome = self.engine.run(batch).await;
-        matches!(read(&outcome, dir), Some(ItemOutcome::Done | ItemOutcome::Skipped))
+        // Only `Done` is a removal: `Skipped` (already gone, says the engine,
+        // after the observe above saw it) is listed as left rather than guessed.
+        read(&outcome, dir) == Some(ItemOutcome::Done)
     }
 }

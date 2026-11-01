@@ -44,3 +44,57 @@
   delete, rename, and move accept, so it can be removed.
 - **Limits.** `effective` clamps frontend-supplied Settings values (tolerance 0 to 60 s, removal percentage 1 to 99,
   count up to 1,000,000); 100% would disable the guard, so Settings stops at 99.
+
+## Sessions
+
+One session per open dialog (`session.rs`, `SESSIONS`), addressed by a uuid the frontend holds. `start_sync_compare`
+opens one when `sessionId` is `None`, else compares again in that one: the newer compare cancels the older's
+`SyncControl`, and only the newest generation's result is stored (`Session::generation`). A compare checks every input
+before it scans: each volume is connected (`VolumeNotConnected`), each root path is non-empty and never climbs with `..`
+(`BadPath`), `roots_conflict` (`RootsConflict`), the masks parse (`BadMask`), the Settings with the profile's overrides on
+top pass `validate_defaults` (`BadSettings`, besides the clamp in `effective`), the mode can write where it must
+(`SideReadOnly`), and "Only selected" reads each pane's names through the listing engine, which must still show that
+root at that sequence (`StaleSelection`). Both sides scan at once (`tokio::join!`); progress goes out at most every
+100 ms; Content compares run after the plan and `reclassify` folds them in.
+
+The session keeps both snapshots, the plan with every override applied (`set_sync_actions`: `bulk_changes` on the rows
+the person selected AND can see, then `apply_overrides`, all or nothing), and the scan's options without the selection
+(the engine re-checks folders with them). Grid pages are cut from `view_rows` per call. A run marks the session `stale`
+(the folders changed); the dialog compares again.
+
+Decision: the confirm (`get_sync_confirm`) and the run read the plan the session holds now. The run calls `gate` itself
+at accept time, so a report shown before the person changed actions can't wave new removals through, then keeps only
+the rows whose confirm group the person left ticked. Groups: new copies, replacements, removals per side, and copies
+that turn the mode's removal around ("recreates": a right-only row reversed from `×→` to `←`).
+
+**Run lock.** One run per pair of roots at a time, either order, across sessions (`RunLock`, released on drop, so a
+panicking run task releases it too). A second start answers `RunInProgress`.
+
+## Engine adapter
+
+`engine.rs` implements `cmdr_sync::SyncEngine` over `cmdr_operations::Operations`; each batch is ordinary engine
+operations with `Initiator::User`, so the queue window, progress, journal, and undo see them.
+
+- **observe** reads `get_metadata` (lstat: a symlink is a `Symlink`, never followed) and, for a file or link, captures
+  the engine's own `SourceFingerprint` (`capture_local` on a volume with a local path, else `capture_remote`, the rule in
+  `source_binding.rs`). A folder's subtree comes from `subtree_now` with the compare's exact `ScanOptions`; a walk that
+  stops or fails leaves the subtree `None`, which never matches a snapshot and never reads as empty. After a cancel the
+  walks run on a fresh control: restore and tidy need a true answer.
+- **Binding.** Each `BoundSource` is held to the fingerprint the last observe took (or one taken now), which must agree
+  with the snapshot's facts (kind; size and time in whole seconds where both are known; nanoseconds are floored). A
+  source that doesn't is `Skipped` and never reaches the engine; the rest go with `ExpectedSources`, so the engine
+  re-checks the same identity right before acting.
+- **Landing.** Copy, Move, and MoveBack use `ConflictResolution::Skip`; a move or trash is `Done` only when the engine
+  says the source left its place. `ClaimFolder` makes the folder through `create_directory_managed` only if nothing is
+  there (exclusive). `RemoveEmptyFolders` is one `std::fs::remove_dir` (or `Volume::delete_directory`, non-recursive by
+  contract) after an lstat shows a real folder; hidden entries the scan skipped are left to the `rmdir` refusal, not
+  counted. Trash is `trash_files_start`. ❌ Nothing calls a delete.
+- **Cancel.** `run` forwards the run's cancel into the running operation (`cancel_operation`); a queued op is dropped
+  without settling, so after a forwarded cancel the adapter also watches the queue and returns stopped once the op left
+  it. `run_to_end` (move back, keep policy) never forwards it.
+- **Why `SettleSink` wraps the `TauriEventSink`.** Replacing it would hide the op from the queue window and swallow the
+  engine's questions (Locked items, sources gone). The wrapper forwards every event untouched, records each source's
+  last outcome (a cross-volume move speaks twice), and wakes the adapter on `emit_settled`.
+
+Paths: a volume with a local path gets `root_anchored` paths (the engine and the OS see the same file); others pass the
+volume path as is. The custom versions folder's volume is the local disk (`LOCAL_DISK_VOLUME_ID`).

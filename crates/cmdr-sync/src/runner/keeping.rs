@@ -267,7 +267,8 @@ impl Runner<'_> {
         }
     }
 
-    /// Runs a one-source batch; whether it was done.
+    /// Runs a one-source batch to its end, even after a cancel (a policy move
+    /// or a move back must not strand the file half way); whether it was done.
     /// After a stop, a source gone from its place (the staging folder, on the
     /// target's volume) counts as moved, so the report says where it is.
     async fn run_one(&mut self, batch: EngineBatch) -> bool {
@@ -282,7 +283,7 @@ impl Runner<'_> {
             | EngineBatch::ClaimFolder { .. }
             | EngineBatch::RemoveEmptyFolders { .. } => None,
         };
-        let outcome = self.engine.run(batch).await;
+        let outcome = self.engine.run_to_end(batch).await;
         self.engine_stopped |= outcome.stopped;
         let Some((side, path, expected)) = source else {
             return false;

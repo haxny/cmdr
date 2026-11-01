@@ -96,7 +96,7 @@ pub enum EngineBatch {
     },
     /// Remove each of these folders only if it is empty, in list order
     /// (deepest first). Contract: a single non-recursive `rmdir` per folder,
-    /// ❌ never the volume's recursive delete; a symlink is never followed (a
+    /// never the volume's recursive delete; a symlink is never followed (a
     /// symlink at the path is not a folder: `Failed`); hidden files
     /// (`.DS_Store`, AppleDouble `._*`) count as content; a folder with
     /// anything in it is `Failed` and stays. The run asks this only for
@@ -153,8 +153,15 @@ pub trait SyncEngine: Send + Sync {
         path: &'a Path,
         with_subtree: bool,
     ) -> EngineFuture<'a, Option<Observed>>;
-    /// Runs one batch to its end.
+    /// Runs one batch. A cancel of the run may stop it part way (`stopped`).
     fn run<'a>(&'a self, batch: EngineBatch) -> EngineFuture<'a, BatchOutcome>;
+    /// Runs one batch that must finish even when the run is cancelled: moving
+    /// a set-aside file back (`MoveBack`), or a replaced file's keep policy
+    /// once its copy landed. Stopping either part way could strand the old
+    /// file in the staging folder. Defaults to `run`.
+    fn run_to_end<'a>(&'a self, batch: EngineBatch) -> EngineFuture<'a, BatchOutcome> {
+        self.run(batch)
+    }
 }
 
 /// How one row of the run ended.
@@ -186,7 +193,8 @@ pub enum RunItemResult {
 }
 
 /// Running totals, after each step.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct RunProgress {
     /// Steps finished.
     pub steps_done: u32,

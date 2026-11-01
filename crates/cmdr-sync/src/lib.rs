@@ -35,7 +35,7 @@ pub use compare::{
     SAME_TIME_TOLERANCE_SECS, Verdict, classify,
 };
 pub use content::{ContentJob, ContentProgress, compare_contents, content_workers};
-pub use context::RunContext;
+pub use context::{RunContext, RunSide};
 pub use control::SyncControl;
 pub use execute::{
     BatchOutcome, BoundSource, EngineBatch, EngineFuture, ItemOutcome, Observed, RunItemResult, RunProgress, RunReport,

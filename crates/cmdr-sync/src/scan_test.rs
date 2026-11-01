@@ -412,3 +412,14 @@ async fn a_change_deep_down_shows_in_every_folder_above() {
         );
     }
 }
+
+#[test]
+fn scan_and_subtree_now_are_send() {
+    // The app runs both on spawned tasks (compare sessions, the engine adapter).
+    fn assert_send<T: Send>(_: T) {}
+    let volume = InMemoryVolume::new("Send");
+    let control = SyncControl::new();
+    let options = options();
+    assert_send(scan(Side::Left, &volume, Path::new("/"), &options, &control, &|_| {}));
+    assert_send(subtree_now(Side::Left, &volume, Path::new("/"), "", &options, &control));
+}

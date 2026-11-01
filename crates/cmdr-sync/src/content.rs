@@ -26,7 +26,8 @@ pub struct ContentJob {
 }
 
 /// Running totals, reported as bytes are read and as pairs finish.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct ContentProgress {
     /// Pairs decided.
     pub files_done: u64,

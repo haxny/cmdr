@@ -42,6 +42,8 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
 - **Every item is re-observed right before its batch** (a folder by `subtree_now`, digest included); any difference is
   `ChangedSinceCompare`, never a widened action. A replaced file waits on its own volume until its copy lands, else goes
   back; a copy that didn't land holds removals beside it or of its old name.
+- **A move back and a keep policy go through `SyncEngine::run_to_end`**, which a cancel never stops (a stranded old
+  file). Every other batch may stop on cancel.
 - **No `cmdr-operations` dependency** (a package cycle through `cmdr-listing`): the app implements `SyncEngine`.
 - **`profile::effective` is the one place "inherit or override" is decided.** `time_offset_secs` is per profile and
   never inherited. A profile that fails `validate` is shown greyed by the store, never dropped.

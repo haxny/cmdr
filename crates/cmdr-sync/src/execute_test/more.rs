@@ -436,3 +436,44 @@ async fn a_new_file_at_the_old_place_after_a_stop_does_not_hide_the_move() {
     assert_eq!(engine.get(Loc::Right, "/R/old.txt"), Some(file(8, T + 5)));
     assert_clean(&engine);
 }
+
+#[tokio::test]
+async fn keep_policy_and_move_back_batches_run_to_the_end_and_nothing_else_does() {
+    // `a.txt` lands and its old file goes to the Trash by the policy;
+    // `old.txt` is a plain removal.
+    let s = mirror_replacement(caps());
+    let engine = s.engine();
+    s.run(&engine, &SyncControl::new()).await;
+    assert_eq!(
+        engine.batches_to_end(),
+        vec![EngineBatch::Trash {
+            side: Side::Right,
+            sources: vec![BoundSource {
+                path: versions("a.txt"),
+                expected: file(4, T).facts,
+            }],
+        }]
+    );
+    // A copy that doesn't land puts the old file back, to the end too.
+    let s = mirror_replacement(no_trash());
+    let engine = s.engine().failing("/L/a.txt");
+    s.run(&engine, &SyncControl::new()).await;
+    let to_end = engine.batches_to_end();
+    assert_eq!(to_end.len(), 1);
+    assert!(matches!(&to_end[0], EngineBatch::MoveBack { side: Side::Right, .. }));
+    assert_clean(&engine);
+}
+
+#[tokio::test]
+async fn a_dated_folder_the_engine_skipped_removing_is_reported_as_left() {
+    let s = mirror_replacement(caps());
+    // The Trash policy empties the staging folder; the engine then answers
+    // its `rmdir` with `Skipped`, which is not a removal.
+    let engine = s.engine().rmdir_skipping(versions(""));
+    let report = s.run(&engine, &SyncControl::new()).await;
+    assert_eq!(s.result(&report, "a.txt"), RunItemResult::Done);
+    assert_eq!(
+        report.leftover_folders,
+        vec![(Place::Target, Side::Right, versions(""))]
+    );
+}
