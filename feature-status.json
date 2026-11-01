@@ -20,6 +20,13 @@
       "note": "Wildcard and regex matching work well; AI selection is cloud-only and still misses edge cases."
     },
     {
+      "id": "synchronize-folders",
+      "name": "Synchronize folders",
+      "status": "alpha",
+      "note": "Compares two folders on any two volumes and makes them match (both ways, update, or mirror) after you review every change; replaced and removed files go to the Trash or a versions folder, never straight to deletion. Folder rows can't be expanded yet, and a versions folder on another drive or server isn't supported.",
+      "issueUrl": "https://github.com/vdavid/cmdr/issues/871"
+    },
+    {
       "id": "image-search",
       "name": "Image search",
       "status": "alpha",

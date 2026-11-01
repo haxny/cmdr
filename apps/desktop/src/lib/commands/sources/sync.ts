@@ -3,6 +3,7 @@
  * is the one its users bind, and it pairs with ⇧F2 (Compare folders). The dialog's own keys live in
  * `#lib/sync/sync-keys.ts`. See `../command-registry.ts` for how the scope arrays are concatenated.
  */
+import { getBadgeStatus } from '#lib/feature-status.js'
 import type { CommandSource } from '../types'
 import { BLOCKED_BY_DIALOGS } from '../while-dialog-open'
 
@@ -15,6 +16,7 @@ export const syncCommands: CommandSource[] = [
     shortcuts: ['⇧F12'],
     whileDialogOpen: BLOCKED_BY_DIALOGS,
     descriptionKey: 'commands.syncOpenDialog.description',
+    status: getBadgeStatus('synchronize-folders'),
     keywords: ['compare folders', 'mirror folders', 'backup folders', 'sync directories'],
   },
   {

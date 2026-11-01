@@ -29,7 +29,7 @@ selected" is on.
 
 Anywhere: Esc (stop, then close), ⌘↩ (confirm), ⌥⌘R (compare), F2 (profiles menu), ⌘S (save as profile), ⌘U (swap and
 compare), ⌘⇧L / E / N / R / D / S / U / W (show-filters →, =, ≠, ←, both sides, one side, ?, warnings). Options strip:
-Enter compares. Grid: Enter / ⌘F3 / double click (compare content), ⌘D, ⌘L or →, ⌘R or ←, ⌘I, ⌘M or `-`, Space (planned
+Enter compares. Grid: Enter / ⌘F3 / double click (compare content), ⌘D, ⌘L or →, ⌘R or ←, ⌘I, ⌘N or `-`, Space (planned
 ↔ skip), ⌘⌫ (remove on the right), F3 / ⇧F3, F4 / ⇧F4, ⌥Space, ⌘PageDown / ⌥⌘↓, ⌘PageUp / ⌥⌘↑, ⌘C, ⇧F10 (row menu);
 selection: click, ⌘-click, ⇧-click, ⇧↑ / ⇧↓, ⌘A.
 

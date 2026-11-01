@@ -111,6 +111,8 @@ All under `apps/desktop/src/lib/`.
   size/date matcher, cloud AI translation
 - `multi-rename/`: the Multi-Rename sheet (⌃M): spec, debounced live preview, presets, Start.
   `apps/desktop/src/lib/multi-rename/CLAUDE.md`
+- `sync/`: the Synchronize folders dialog (⇧F12): options, arrow grid, confirm, run, result, and profiles.
+  `apps/desktop/src/lib/sync/CLAUDE.md`
 - `mtp/`: MTP (Android device) file browsing UI
 - `adb/`: Everything the app SHOWS about a phone reached over ADB (`crates/cmdr-adb/` is the wire): the
   `adb://<serial>/path` spelling, a row's device readiness, the words for a dial that stopped, the two settings, and the
@@ -282,8 +284,8 @@ All under `apps/desktop/src-tauri/src/`.
   itself runs in JS
 - `multi_rename/`: Multi-Rename Tool engine (Total Commander's masks, search & replace, diacritics), preview, apply
   through the bulk-rename executor, presets. `apps/desktop/src-tauri/src/multi_rename/CLAUDE.md`
-- `sync/`: Synchronize folders, the app's half: the saved profiles file (`PROFILES`); sessions and the engine adapter
-  come with the dialog. `apps/desktop/src-tauri/src/sync/CLAUDE.md`
+- `sync/`: Synchronize folders, the app's half: the saved profiles file, the compare and run sessions, and the
+  `SyncEngine` adapter over `cmdr-operations`. IPC in `commands/sync.rs`. `apps/desktop/src-tauri/src/sync/CLAUDE.md`
 - `tag_editor/`: the opt-in Tags tab of Multi-Rename, an in-memory tag session per rename session over the `cmdr-tags`
   engine. `apps/desktop/src-tauri/src/tag_editor/CLAUDE.md`
 - `go_to_path/`: "Go to folder" backend: pure path resolution + fixed-cap recent-paths store. IPC in
@@ -433,9 +435,9 @@ two dev CLIs and the vendored fork are ordinary members.
 - `crates/cmdr-collation/`: how two file names rank (`NameCollator`, ICU4X Unicode collation with numeric ordering, and
   the prebuilt `NameKey` a bulk sort compares). Below the listing engine, which re-exports it, so anything that orders
   names sorts the way a pane does without depending on the listing. See `crates/cmdr-collation/CLAUDE.md`
-- `crates/cmdr-sync/`: Synchronize folders, the pure part: volume capabilities (`SyncCaps`), name keys that pair names
-  across volumes, and `classify`, the one "is this copy newer?" answer Compare folders (⇧F2) shares. See
-  `crates/cmdr-sync/CLAUDE.md`
+- `crates/cmdr-sync/`: Synchronize folders, the pure part: volume capabilities, name keys that pair names across
+  volumes, `classify` (the one "is this copy newer?" answer Compare folders, ⇧F2, shares), the scanner, planner, guards,
+  and the executor behind the `SyncEngine` trait. See `crates/cmdr-sync/CLAUDE.md`
 - `crates/cmdr-local/`: the local disk: `LocalPosixVolume` (the `Volume` over a `std::fs` root), the `std::fs` reader
   the watcher reads through too, `rename_local_exclusive` (the one no-replace rename), local volume space with the
   live-space memo, and the mount probes (`filesystem_kind`, the macOS mount table and `statfs`, Linux's `/proc/mounts`).
