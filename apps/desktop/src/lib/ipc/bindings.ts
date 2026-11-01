@@ -1653,23 +1653,27 @@ export const commands = {
   getSyncProfiles: () => __TAURI_INVOKE<ProfileEntry[]>('get_sync_profiles'),
   /**
    *  Saves a profile at the end of the list; one with the same name (trimmed, any case) is
-   *  replaced where it stands. Answers the list after, or why nothing was saved.
+   *  replaced where it stands. Answers the list after, or why nothing was saved
+   *  (`writeFailed`: it is in memory only).
    */
   saveSyncProfile: (profile: SyncProfile) =>
     typedError<ProfileEntry[], ProfileSaveRefusal>(__TAURI_INVOKE('save_sync_profile', { profile })),
   // Deletes a profile by id. No-op when it isn't there. Answers the list after.
-  deleteSyncProfile: (id: string) => __TAURI_INVOKE<ProfileEntry[]>('delete_sync_profile', { id }),
+  deleteSyncProfile: (id: string) =>
+    typedError<ProfileEntry[], ProfileEditRefusal>(__TAURI_INVOKE('delete_sync_profile', { id })),
   /**
-   *  Renames a profile in place; another profile with that name is replaced. No-op for an
-   *  unknown id or an empty name. Answers the list after.
+   *  Renames a profile in place. A name another profile has is refused (`nameTaken`); the
+   *  dialog asks whether to replace it and saves instead. No-op for an unknown id or an empty
+   *  name. Answers the list after.
    */
-  renameSyncProfile: (id: string, name: string) => __TAURI_INVOKE<ProfileEntry[]>('rename_sync_profile', { id, name }),
+  renameSyncProfile: (id: string, name: string) =>
+    typedError<ProfileEntry[], ProfileEditRefusal>(__TAURI_INVOKE('rename_sync_profile', { id, name })),
   /**
    *  Swaps a profile with its neighbor. No-op at that end of the list or for an unknown id.
    *  Answers the list after.
    */
   moveSyncProfile: (id: string, direction: ProfileMove) =>
-    __TAURI_INVOKE<ProfileEntry[]>('move_sync_profile', { id, direction }),
+    typedError<ProfileEntry[], ProfileEditRefusal>(__TAURI_INVOKE('move_sync_profile', { id, direction })),
   // The options the dialog last ran with for this ordered pair of roots.
   getSyncLastOptions: (left: RootRef, right: RootRef) =>
     __TAURI_INVOKE<{
@@ -1692,7 +1696,7 @@ export const commands = {
     } | null>('get_sync_last_options', { left, right }),
   // Remembers the dialog's options for this pair of roots (the newest 50 pairs are kept).
   saveSyncLastOptions: (left: RootRef, right: RootRef, options: SyncOptions) =>
-    __TAURI_INVOKE<void>('save_sync_last_options', { left, right, options }),
+    typedError<null, ProfileEditRefusal>(__TAURI_INVOKE('save_sync_last_options', { left, right, options })),
   /**
    *  Whether the versions folder these settings name can be used, so Settings can say so
    *  next to the field. `None` is fine. A custom folder inside a synchronized folder is
@@ -15353,6 +15357,13 @@ export type PreviewRow = {
   edited: boolean
 }
 
+// Why a rename, delete, move, or remembered-options change didn't fully happen.
+export type ProfileEditRefusal =
+  // Another profile already has that name; nothing changed.
+  | { type: 'nameTaken' }
+  // The list changed in memory but couldn't be written to disk.
+  | { type: 'writeFailed' }
+
 // One row of the profile list: a profile that works, or one shown greyed with why.
 export type ProfileEntry =
   // Usable.
@@ -15414,6 +15425,18 @@ export type ProfileProblem =
       // The value asked for.
       percent: number
     }
+  // The removal count override is above the limit.
+  | {
+      type: 'countOutOfRange'
+      // The value asked for.
+      count: number
+    }
+  // The versions folder the keep override names can't be used.
+  | {
+      type: 'badKeep'
+      // Why.
+      refusal: KeepRefusal
+    }
   /**
    *  The stored profile doesn't read as a profile (a newer build's value, or a
    *  damaged entry). Kept as it is, shown greyed, never dropped.
@@ -15434,6 +15457,8 @@ export type ProfileSaveRefusal =
       // What is wrong.
       problem: ProfileProblem
     }
+  // The list changed in memory but couldn't be written to disk.
+  | { type: 'writeFailed' }
 
 /**
  *  What an operation had done at the moment it stopped, so the copy can say how
