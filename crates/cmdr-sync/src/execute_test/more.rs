@@ -333,6 +333,9 @@ async fn an_earlier_attempts_empty_staging_folder_is_removed_again() {
     );
     let kept = "/Kept/2026-11-01 093000 (2)/a.txt";
     assert_eq!(engine.get(Loc::Local, kept), Some(file(4, T)));
+    // The dated folder that was already there is not the run's to remove.
+    assert!(engine.get(Loc::Local, "/Kept/2026-11-01 093000").is_some());
+    assert!(report.leftover_folders.is_empty());
     assert_clean(&engine);
 }
 
@@ -367,5 +370,69 @@ async fn a_policy_trash_the_engine_did_before_it_stopped_is_reported_as_trashed(
     assert_eq!(s.result(&report, "old.txt"), RunItemResult::NotStarted);
     assert!(report.versions_used.is_empty());
     assert_eq!(report.kept_bytes, 0);
+    assert_clean(&engine);
+}
+
+#[tokio::test]
+async fn a_dated_folder_that_is_not_empty_is_left_and_reported() {
+    let s = mirror_replacement(caps());
+    // Batch 0 claims the staging folder, 1 makes it; then someone drops a
+    // file in it. The Trash policy empties the run's own share.
+    let engine = s
+        .engine()
+        .after_batch(1, Change::Set(Loc::Right, versions("intruder.txt"), file(1, T)));
+    let report = s.run(&engine, &SyncControl::new()).await;
+    assert_eq!(s.result(&report, "a.txt"), RunItemResult::Done);
+    assert_eq!(
+        report.leftover_folders,
+        vec![(Place::Target, Side::Right, versions(""))]
+    );
+    assert_eq!(engine.get(Loc::Right, versions("intruder.txt")), Some(file(1, T)));
+    assert!(
+        !engine
+            .batches()
+            .iter()
+            .any(|batch| matches!(batch, EngineBatch::RemoveEmptyFolders { .. }))
+    );
+    assert_clean(&engine);
+}
+
+#[tokio::test]
+async fn a_move_with_an_unknown_time_still_holds_the_old_place() {
+    let s = setup(
+        Mode::Mirror,
+        Tree::new().folder("a").entry("b/x.txt", EntryKind::File, Some(5), None),
+        Tree::new().file("a/x.txt", 5, T).folder("b"),
+        KeepPolicy::default(),
+        caps(),
+    );
+    let engine = s
+        .engine()
+        .changed(Change::Set(Loc::Left, "/L/b/x.txt".into(), file(6, T + 1)));
+    let report = s.run(&engine, &SyncControl::new()).await;
+    assert_eq!(s.result(&report, "b/x.txt"), RunItemResult::ChangedSinceCompare);
+    assert_eq!(s.result(&report, "a/x.txt"), RunItemResult::HeldAfterFailedCopy);
+    assert_clean(&engine);
+}
+
+#[tokio::test]
+async fn a_new_file_at_the_old_place_after_a_stop_does_not_hide_the_move() {
+    let s = setup(
+        Mode::Mirror,
+        Tree::new().file("k.txt", 1, T),
+        Tree::new().file("k.txt", 1, T).file("old.txt", 3, T),
+        KeepPolicy::default(),
+        no_trash(),
+    );
+    // 0 claims, 1 makes, 2 moves `old.txt` and reports stopped; then a new
+    // file takes its name.
+    let engine = s
+        .engine()
+        .stopping_after_work(2)
+        .after_batch(2, Change::Set(Loc::Right, "/R/old.txt".into(), file(8, T + 5)));
+    let report = s.run(&engine, &SyncControl::new()).await;
+    assert_eq!(s.result(&report, "old.txt"), RunItemResult::Done);
+    assert_eq!(engine.get(Loc::Right, versions("old.txt")), Some(file(3, T)));
+    assert_eq!(engine.get(Loc::Right, "/R/old.txt"), Some(file(8, T + 5)));
     assert_clean(&engine);
 }

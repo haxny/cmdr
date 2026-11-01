@@ -13,18 +13,29 @@ pub(super) struct Hold {
     source: Entry,
 }
 
-/// Whether two entries look like the same content: kind, size, and time
-/// (folders: file count and bytes).
+/// Two facts agree, or one is unknown: an unknown never rules a match out, so
+/// a hold errs on the side of waiting.
+fn agrees<T: PartialEq>(a: Option<T>, b: Option<T>) -> bool {
+    match (a, b) {
+        (Some(a), Some(b)) => a == b,
+        _ => true,
+    }
+}
+
+/// Whether two entries could be the same content: kind, size, and time
+/// (folders: file count and bytes), each unknown counting as a match.
 fn same_content(a: &Entry, b: &Entry) -> bool {
     if a.facts.kind != b.facts.kind {
         return false;
     }
     match a.facts.kind {
-        EntryKind::Folder => match (a.subtree, b.subtree) {
-            (Some(x), Some(y)) => x.files == y.files && x.bytes == y.bytes,
-            _ => false,
-        },
-        EntryKind::File | EntryKind::Symlink => a.facts.size == b.facts.size && a.facts.mtime == b.facts.mtime,
+        EntryKind::Folder => {
+            agrees(a.subtree.map(|t| t.files), b.subtree.map(|t| t.files))
+                && agrees(a.subtree.map(|t| t.bytes), b.subtree.map(|t| t.bytes))
+        }
+        EntryKind::File | EntryKind::Symlink => {
+            agrees(a.facts.size, b.facts.size) && agrees(a.facts.mtime, b.facts.mtime)
+        }
     }
 }
 
@@ -51,5 +62,44 @@ impl Runner<'_> {
                 })
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::same_content;
+    use crate::{Entry, EntryFacts, EntryKind, SubtreeFacts};
+
+    fn entry(kind: EntryKind, size: Option<u64>, mtime: Option<u64>, subtree: Option<SubtreeFacts>) -> Entry {
+        Entry {
+            key: crate::EntryKey::root(),
+            rel_path: "x".to_owned(),
+            facts: EntryFacts { kind, size, mtime },
+            subtree,
+        }
+    }
+
+    #[test]
+    fn an_unknown_fact_never_rules_a_match_out() {
+        let known = entry(EntryKind::File, Some(5), Some(9), None);
+        assert!(same_content(&known, &entry(EntryKind::File, Some(5), None, None)));
+        assert!(same_content(&known, &entry(EntryKind::File, None, None, None)));
+        assert!(!same_content(&known, &entry(EntryKind::File, Some(6), None, None)));
+        assert!(!same_content(
+            &known,
+            &entry(EntryKind::Symlink, Some(5), Some(9), None)
+        ));
+        let counted = SubtreeFacts {
+            files: 2,
+            bytes: 7,
+            ..SubtreeFacts::default()
+        };
+        let folder = entry(EntryKind::Folder, None, None, Some(counted));
+        assert!(same_content(&folder, &entry(EntryKind::Folder, None, None, None)));
+        let other = SubtreeFacts { files: 3, ..counted };
+        assert!(!same_content(
+            &folder,
+            &entry(EntryKind::Folder, None, None, Some(other))
+        ));
     }
 }

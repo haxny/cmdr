@@ -496,7 +496,8 @@ async fn never_permanently_deletes() {
     let report = s.run(&engine, &SyncControl::new()).await;
     assert!(report.results.iter().all(|(_, r)| *r == RunItemResult::Done));
     /* every recorded batch is ClaimFolder | MakeFolders | Copy | Move | MoveBack | Trash, or
-     * RemoveEmptyFolders of folders the run made (the fake flags any other) */
+     * RemoveEmptyFolders of folders the run made (the fake flags snapshot folders and any
+     * folder the run didn't make) */
     for batch in engine.batches() {
         match batch {
             EngineBatch::MakeFolders { .. }

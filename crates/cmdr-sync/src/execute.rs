@@ -94,10 +94,14 @@ pub enum EngineBatch {
         /// Their original folder.
         dest_dir: PathBuf,
     },
-    /// Remove these folders only if empty (`rmdir`, children first in the
-    /// list): one with anything in it is `Failed` and stays. The run only asks
-    /// this for folders it made itself and kept nothing in, so it never
-    /// destroys anything.
+    /// Remove each of these folders only if it is empty, in list order
+    /// (deepest first). Contract: a single non-recursive `rmdir` per folder,
+    /// ❌ never the volume's recursive delete; a symlink is never followed (a
+    /// symlink at the path is not a folder: `Failed`); hidden files
+    /// (`.DS_Store`, AppleDouble `._*`) count as content; a folder with
+    /// anything in it is `Failed` and stays. The run asks this only for
+    /// dated folders it made itself and observed empty, so it never destroys
+    /// anything.
     RemoveEmptyFolders {
         /// Which volume.
         place: Place,
@@ -210,6 +214,9 @@ pub struct RunReport {
     /// Target folders the run made for copies that then all didn't land; they
     /// stay (the run never removes anything) and are empty.
     pub empty_folders: Vec<(Side, PathBuf)>,
+    /// Dated folders the run made, kept nothing in, and couldn't remove again
+    /// (not empty when looked at, or the engine refused): they stay.
+    pub leftover_folders: Vec<(Place, Side, PathBuf)>,
     /// Cancelled, or the engine stopped.
     pub stopped: bool,
 }

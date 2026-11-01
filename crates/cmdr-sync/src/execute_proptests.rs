@@ -157,11 +157,12 @@ proptest! {
         prop_assert_eq!(engine.lost(), Vec::new());
         let reported: Vec<u32> = report.results.iter().map(|(index, _)| *index).collect();
         prop_assert_eq!(reported, run);
-        // A replaced file is either replaced, back where it was, or reported.
+        // Interrupted or not: a row that didn't end `Done` (or `KeptNotReplaced`,
+        // which says so) left what it would replace or remove where it was.
         for (index, result) in &report.results {
             let item = &plan.items[*index as usize];
             let Some(side) = item.action.target() else { continue };
-            let Some(old) = item.entry(side).filter(|_| item.action.is_copy()) else { continue };
+            let Some(old) = item.entry(side) else { continue };
             let (loc, root) = match side { Side::Left => (Loc::Left, "/L"), Side::Right => (Loc::Right, "/R") };
             let away = engine.moved_away(loc, PathBuf::from(root).join(&old.rel_path));
             prop_assert!(
@@ -169,12 +170,12 @@ proptest! {
                 "row {} reads {:?} but its old file is gone", index, result
             );
         }
-        if !matches!(interrupt, Interrupt::None) {
-            return Ok(());
+        // Only an interrupt stops a run, and only a stopped run leaves rows unreached.
+        prop_assert!(!report.stopped || !matches!(interrupt, Interrupt::None));
+        if !report.stopped {
+            prop_assert!(report.results.iter().all(|(_, result)| *result != RunItemResult::NotStarted));
         }
-        prop_assert!(!report.stopped);
-        prop_assert!(report.results.iter().all(|(_, result)| *result != RunItemResult::NotStarted));
-        if edits.is_empty() {
+        if matches!(interrupt, Interrupt::None) && edits.is_empty() {
             prop_assert!(report.results.iter().all(|(_, result)| matches!(
                 result,
                 RunItemResult::Done | RunItemResult::NoTrash

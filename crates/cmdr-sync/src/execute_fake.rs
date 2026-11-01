@@ -60,6 +60,9 @@ struct Inner {
     kept_paths: BTreeSet<(Loc, PathBuf)>,
     /// Snapshot paths the run moved or trashed and hasn't moved back.
     away: BTreeSet<(Loc, PathBuf)>,
+    /// Folders the run made (claims, `MakeFolders`, their parents): the only
+    /// ones it may `rmdir`.
+    created: BTreeSet<(Loc, PathBuf)>,
     /// Removed by the outside world, not by the run.
     gone: Vec<(Loc, PathBuf)>,
 }
@@ -415,8 +418,9 @@ impl Inner {
         if !self.state.contains_key(&key) {
             return ItemOutcome::Skipped;
         }
-        if self.snapshot.contains_key(&key) {
-            self.violations.push(format!("removed snapshot folder {dir:?}"));
+        if self.snapshot.contains_key(&key) || !self.created.contains(&key) {
+            self.violations
+                .push(format!("rmdir of {dir:?}, which this run didn't make"));
             return ItemOutcome::Failed;
         }
         if beneath(&self.state, loc, dir).any(|((_, p), _)| p != dir) {
@@ -444,6 +448,7 @@ impl Inner {
             subtree: Some(SubtreeFacts::default()),
         };
         self.state.insert((loc, dir.to_path_buf()), folder);
+        self.created.insert((loc, dir.to_path_buf()));
     }
 
     fn copy(&mut self, from: Loc, source: &BoundSource, dest_dir: &Path) -> ItemOutcome {

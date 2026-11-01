@@ -166,12 +166,15 @@ impl Runner<'_> {
                     self.kept.insert(*index, dir.clone());
                 }
                 Some(other) => self.settle(*index, result_of(other)),
-                // Stopped: gone from its place means it went aside; it comes
-                // back with the other leftovers.
-                None if !self.exists(side, Place::Target, &source.path).await => {
-                    self.kept.insert(*index, dir.clone());
+                // Stopped: if it went aside, it comes back with the leftovers.
+                None => {
+                    let old = self.item(*index).entry(side);
+                    if let Some(old) = old
+                        && self.went_to(side, old, to).await
+                    {
+                        self.kept.insert(*index, dir.clone());
+                    }
                 }
-                None => {}
             }
         }
         outcome.stopped
@@ -271,7 +274,9 @@ impl Runner<'_> {
         let source = match &batch {
             EngineBatch::Trash { side, sources }
             | EngineBatch::Move { side, sources, .. }
-            | EngineBatch::MoveBack { side, sources, .. } => sources.first().map(|source| (*side, source.path.clone())),
+            | EngineBatch::MoveBack { side, sources, .. } => sources
+                .first()
+                .map(|source| (*side, source.path.clone(), source.expected)),
             EngineBatch::Copy { .. }
             | EngineBatch::MakeFolders { .. }
             | EngineBatch::ClaimFolder { .. }
@@ -279,12 +284,18 @@ impl Runner<'_> {
         };
         let outcome = self.engine.run(batch).await;
         self.engine_stopped |= outcome.stopped;
-        let Some((side, path)) = source else {
+        let Some((side, path, expected)) = source else {
             return false;
         };
         match read(&outcome, &path) {
             Some(done) => done == ItemOutcome::Done,
-            None => !self.exists(side, Place::Target, &path).await,
+            // Only a stopped batch leaves a source unanswered (`read` turns any
+            // other silence into `Failed`): not there as it was means moved.
+            None if outcome.stopped => {
+                let now = self.engine.observe(side, Place::Target, &path, false).await;
+                now.is_none_or(|now| now.facts != expected)
+            }
+            None => false,
         }
     }
 

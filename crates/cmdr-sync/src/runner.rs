@@ -36,6 +36,7 @@ pub(crate) struct Runner<'a> {
     /// Dated folders this run claimed, and the folders it made inside them.
     claimed: Vec<(Side, VersionsRoot)>,
     keep_dirs: Vec<(Place, Side, PathBuf)>,
+    leftover_folders: Vec<(Place, Side, PathBuf)>,
     /// A one-item batch (policy or move back) came back stopped.
     engine_stopped: bool,
     landed: Vec<(Side, PathBuf)>,
@@ -121,6 +122,7 @@ impl<'a> Runner<'a> {
             made_for_copies: BTreeSet::new(),
             claimed: Vec::new(),
             keep_dirs: Vec::new(),
+            leftover_folders: Vec::new(),
             engine_stopped: false,
             landed: Vec::new(),
             versions_used: Vec::new(),
@@ -180,6 +182,7 @@ impl<'a> Runner<'a> {
             versions_used: self.versions_used,
             kept_bytes: self.kept_bytes,
             empty_folders,
+            leftover_folders: self.leftover_folders,
             stopped,
         }
     }
@@ -267,6 +270,20 @@ impl<'a> Runner<'a> {
 
     async fn exists(&self, side: Side, place: Place, path: &Path) -> bool {
         self.engine.observe(side, place, path, false).await.is_some()
+    }
+
+    /// After a stopped batch, whether the engine moved `side`'s `entry` to
+    /// `to` before it stopped: found at its kept spot, or its place no longer
+    /// reads as the snapshot (gone, or something new there).
+    async fn went_to(&self, side: Side, entry: &Entry, to: &KeepDestination) -> bool {
+        if let KeepDestination::Folder { place, dir } = to {
+            let spot = dir.join(file_name(&entry.rel_path));
+            let kept = self.engine.observe(side, *place, &spot, false).await;
+            if kept.is_some_and(|kept| kept.facts.kind == entry.facts.kind && kept.facts.size == entry.facts.size) {
+                return true;
+            }
+        }
+        !self.unchanged(side, entry).await
     }
 
     async fn unchanged(&self, side: Side, entry: &Entry) -> bool {
@@ -452,9 +469,10 @@ impl<'a> Runner<'a> {
         for (index, source) in chosen {
             let done = match read(&outcome, &source.path) {
                 Some(done) => done,
-                // Stopped: gone from its place means the engine kept it.
-                None if !self.exists(side, Place::Target, &source.path).await => ItemOutcome::Done,
-                None => continue,
+                None => match self.item(*index).entry(side) {
+                    Some(entry) if self.went_to(side, entry, to).await => ItemOutcome::Done,
+                    _ => continue,
+                },
             };
             if let (ItemOutcome::Done, KeepDestination::Folder { .. }, Some(entry)) =
                 (done, to, self.item(*index).entry(side))
