@@ -56,8 +56,9 @@ pub use plan::{
     reclassify,
 };
 pub use profile::{
-    Effective, ProfileOverrides, ProfileProblem, RootConflict, RootRef, SyncDefaults, SyncOptions, SyncProfile,
-    check_keep_policy, effective, roots_conflict, validate,
+    Effective, MAX_REMOVE_COUNT, MAX_REMOVE_PERCENT, MAX_TOLERANCE_SECS, ProfileOverrides, ProfileProblem,
+    RootConflict, RootRef, SyncDefaults, SyncOptions, SyncProfile, check_keep_policy, effective, roots_conflict,
+    validate, validate_defaults,
 };
 pub use scan::{ScanError, ScanOptions, ScanProgress, Side, scan, subtree_now};
 pub use snapshot::{Entry, Snapshot, SubtreeFacts, UnreadableReason};

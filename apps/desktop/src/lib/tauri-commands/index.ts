@@ -1206,10 +1206,13 @@ export {
   checkSyncKeepPolicy,
   SyncProfileSaveFailure,
   asProfileSaveRefusal,
+  SyncProfileEditFailure,
+  asProfileEditRefusal,
 } from './sync'
 export type {
   KeepPolicy,
   KeepRefusal,
+  ProfileEditRefusal,
   ProfileEntry,
   ProfileMove,
   ProfileSaveRefusal,

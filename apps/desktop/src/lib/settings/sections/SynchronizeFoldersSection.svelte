@@ -188,7 +188,7 @@
         <SectionCard label={tString('settings.sync.card.compare')}>
             {#if shouldShow(TOLERANCE)}
                 <SettingRow id={TOLERANCE} label={toleranceDef.label} description={toleranceDef.description} {searchQuery}>
-                    <SettingNumberInput id={TOLERANCE} unit={tString('settings.network.customTimeoutUnit')} />
+                    <SettingNumberInput id={TOLERANCE} unit={tString('settings.sync.compare.timeTolerance.unit')} />
                 </SettingRow>
             {/if}
             {#if shouldShow(HOUR_SHIFT)}
@@ -208,7 +208,7 @@
                     description={maxPercentDef.description}
                     {searchQuery}
                 >
-                    <SettingNumberInput id={MAX_PERCENT} unit="%" />
+                    <SettingNumberInput id={MAX_PERCENT} unit={tString('settings.sync.guards.maxRemovePercent.unit')} />
                 </SettingRow>
             {/if}
             {#if shouldShow(MAX_COUNT)}

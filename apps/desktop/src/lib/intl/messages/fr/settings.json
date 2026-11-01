@@ -3702,6 +3702,10 @@
   "@settings.sync.compare.timeTolerance.description": {
     "sourceHash": "ef2abe8"
   },
+  "settings.sync.compare.timeTolerance.unit": "seconds",
+  "@settings.sync.compare.timeTolerance.unit": {
+    "sourceHash": "59f006d"
+  },
   "settings.sync.compare.timeTolerance.keywords": "time, tolerance, seconds, modified, date, rounding, newer, same",
   "@settings.sync.compare.timeTolerance.keywords": {
     "sourceHash": "26ca04c"
@@ -3725,6 +3729,10 @@
   "settings.sync.guards.maxRemovePercent.description": "Mirror asks for an extra confirmation when it would remove more than this share of the files on the target.",
   "@settings.sync.guards.maxRemovePercent.description": {
     "sourceHash": "2ccdae6"
+  },
+  "settings.sync.guards.maxRemovePercent.unit": "%",
+  "@settings.sync.guards.maxRemovePercent.unit": {
+    "sourceHash": "bbf3f11"
   },
   "settings.sync.guards.maxRemovePercent.keywords": "mirror, remove, delete, limit, percent, safety, guard, confirm",
   "@settings.sync.guards.maxRemovePercent.keywords": {

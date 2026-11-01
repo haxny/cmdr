@@ -6,7 +6,8 @@
 //! Entries stay `serde_json::Value`s so a field a newer build wrote survives this
 //! build's save, and a profile this build can't read is listed greyed, not dropped.
 //!
-//! The lock discipline is `crate::recents`'s: two locks, never held at once.
+//! Lock order: `disk` first, then `cached`, and `disk` is held across a change and its write
+//! so writes land in the order the changes were made.
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -63,7 +64,23 @@ pub enum ProfileSaveRefusal {
         /// What is wrong.
         problem: ProfileProblem,
     },
+    /// The list changed in memory but couldn't be written to disk.
+    WriteFailed,
 }
+
+/// Why a rename, delete, move, or remembered-options change didn't fully happen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum ProfileEditRefusal {
+    /// Another profile already has that name; nothing changed.
+    NameTaken,
+    /// The list changed in memory but couldn't be written to disk.
+    WriteFailed,
+}
+
+/// The change was made in memory but the file couldn't be written.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WriteFailed;
 
 /// Which way Move up / Move down takes a profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, specta::Type)]
@@ -132,35 +149,38 @@ impl ProfileStore {
     }
 
     pub(crate) fn load_at(&self, path: &Path) {
-        // The disk guard is released before the cache guard is taken.
-        let loaded = {
-            let _disk = self.disk.lock_ignore_poison();
-            read(path)
-        };
+        let _disk = self.disk.lock_ignore_poison();
+        let loaded = read(path);
         *self.cached.lock_ignore_poison() = loaded;
     }
 
-    /// Runs `change` on the list as ONE locked step, flushes it when `change` says it
-    /// changed something, and answers the list after. A `None` path (the app data dir
-    /// didn't resolve) still changes the list in memory.
+    /// Runs `change` on the list as ONE step, flushes it when `change` says it changed
+    /// something, and answers the list after, or `WriteFailed` when the flush didn't land
+    /// (the change stays in memory). A `None` path (the app data dir didn't resolve) still
+    /// changes the list in memory.
+    ///
+    /// Lock order is always `disk`, then `cached`, and `disk` is held across the change and
+    /// the write: two callers can't write out of order, so the file never loses the newer one.
     pub(crate) fn edit_at(
         &self,
         path: Option<&Path>,
         op: &str,
         change: impl FnOnce(&mut ProfileList) -> bool,
-    ) -> Vec<ProfileEntry> {
+    ) -> Result<Vec<ProfileEntry>, WriteFailed> {
+        let _disk = self.disk.lock_ignore_poison();
         let (snapshot, changed) = {
             let mut cached = self.cached.lock_ignore_poison();
             let changed = change(&mut cached);
             (cached.clone(), changed)
         };
-        if changed && let Some(path) = path {
-            let _disk = self.disk.lock_ignore_poison();
-            if let Err(e) = write(path, &snapshot) {
-                log::warn!(target: LOG_TARGET, "Couldn't write the sync profiles after {op}: {e}");
-            }
+        if changed
+            && let Some(path) = path
+            && let Err(e) = write(path, &snapshot)
+        {
+            log::warn!(target: LOG_TARGET, "Couldn't write the sync profiles after {op}: {e}");
+            return Err(WriteFailed);
         }
-        entries_of(&snapshot)
+        Ok(entries_of(&snapshot))
     }
 
     /// Loads the file into the cache. Call once at startup.
@@ -176,7 +196,7 @@ impl ProfileStore {
         app: &tauri::AppHandle<R>,
         op: &str,
         change: impl FnOnce(&mut ProfileList) -> bool,
-    ) -> Vec<ProfileEntry> {
+    ) -> Result<Vec<ProfileEntry>, WriteFailed> {
         self.edit_at(path(app).as_deref(), op, change)
     }
 
@@ -237,15 +257,28 @@ fn text<'a>(entry: &'a Value, field: &str) -> Option<&'a str> {
     entry.get(field)?.as_str()
 }
 
-/// The list as shown: each stored entry read and validated. An entry with no id can't
-/// be addressed and is left out of the answer (it stays in the file).
+/// The key an entry is addressed by: its id, or, for an entry that has none, a key built from
+/// its place, so it can still be listed greyed and deleted.
+fn entry_id(index: usize, stored: &Value) -> String {
+    text(stored, "id").map_or_else(|| format!("no-id-{index}"), str::to_owned)
+}
+
+fn position_of(list: &ProfileList, id: &str) -> Option<usize> {
+    list.entries
+        .iter()
+        .enumerate()
+        .position(|(index, stored)| entry_id(index, stored) == id)
+}
+
+/// The list as shown: each stored entry read and validated.
 pub(crate) fn entries_of(list: &ProfileList) -> Vec<ProfileEntry> {
     list.entries
         .iter()
-        .filter_map(|stored| {
-            let id = text(stored, "id")?.to_owned();
+        .enumerate()
+        .map(|(index, stored)| {
+            let id = entry_id(index, stored);
             let name = text(stored, "name").unwrap_or_default().to_owned();
-            Some(match serde_json::from_value::<SyncProfile>(stored.clone()) {
+            match serde_json::from_value::<SyncProfile>(stored.clone()) {
                 Ok(profile) => match validate(&profile) {
                     Ok(()) => ProfileEntry::Valid {
                         profile: Box::new(profile),
@@ -257,7 +290,7 @@ pub(crate) fn entries_of(list: &ProfileList) -> Vec<ProfileEntry> {
                     name,
                     problem: ProfileProblem::Unreadable,
                 },
-            })
+            }
         })
         .collect()
 }
@@ -335,38 +368,47 @@ pub(crate) fn save_in(list: &mut ProfileList, profile: SyncProfile) -> Result<()
 
 /// Deletes profile `id`. Returns whether anything went.
 pub(crate) fn delete_in(list: &mut ProfileList, id: &str) -> bool {
-    let before = list.entries.len();
-    list.entries.retain(|e| text(e, "id") != Some(id));
-    list.entries.len() != before
+    let Some(at) = position_of(list, id) else {
+        return false;
+    };
+    list.entries.remove(at);
+    true
 }
 
-/// Renames profile `id` where it stands; another profile with that name is replaced.
-/// No-op for an unknown id or an empty name. Returns whether anything changed.
-pub(crate) fn rename_in(list: &mut ProfileList, id: &str, name: &str) -> bool {
+/// A rename that can't happen as asked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct NameTaken;
+
+/// Renames profile `id` where it stands. Another profile with that name refuses the
+/// rename (`NameTaken`) and nothing changes; saving is what replaces. No-op for an unknown
+/// id or an empty name. Returns whether anything changed.
+pub(crate) fn rename_in(list: &mut ProfileList, id: &str, name: &str) -> Result<bool, NameTaken> {
     let name = name.trim();
     if name.is_empty() {
-        return false;
+        return Ok(false);
     }
-    let Some(at) = list.entries.iter().position(|e| text(e, "id") == Some(id)) else {
-        return false;
+    let Some(at) = position_of(list, id) else {
+        return Ok(false);
     };
+    let key = name_key(name);
+    let taken = list
+        .entries
+        .iter()
+        .enumerate()
+        .any(|(index, e)| index != at && text(e, "name").is_some_and(|n| name_key(n) == key));
+    if taken {
+        return Err(NameTaken);
+    }
     let Some(object) = list.entries[at].as_object_mut() else {
-        return false;
+        return Ok(false);
     };
     object.insert("name".to_owned(), Value::String(name.to_owned()));
-    let key = name_key(name);
-    let mut index = 0;
-    list.entries.retain(|e| {
-        let this = index;
-        index += 1;
-        this == at || text(e, "name").is_none_or(|n| name_key(n) != key)
-    });
-    true
+    Ok(true)
 }
 
 /// Swaps profile `id` with its neighbor. Returns whether it moved.
 pub(crate) fn move_in(list: &mut ProfileList, id: &str, direction: ProfileMove) -> bool {
-    let Some(at) = list.entries.iter().position(|e| text(e, "id") == Some(id)) else {
+    let Some(at) = position_of(list, id) else {
         return false;
     };
     let to = match direction {

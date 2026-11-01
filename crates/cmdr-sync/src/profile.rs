@@ -10,7 +10,12 @@ use crate::{
 };
 
 /// The longest time tolerance a setting or profile may ask for, in seconds.
-const MAX_TOLERANCE_SECS: u64 = 60;
+pub const MAX_TOLERANCE_SECS: u64 = 60;
+/// The highest removal percentage a setting or profile may ask for. 100 would turn the
+/// guard off (nothing can exceed all of a side), so the limit is 99.
+pub const MAX_REMOVE_PERCENT: u8 = 99;
+/// The highest removal count a setting or profile may ask for.
+pub const MAX_REMOVE_COUNT: u32 = 1_000_000;
 
 /// One side of a profile: a volume and a path on it. For a remote volume the id is
 /// the saved connection's; never a credential.
@@ -132,12 +137,55 @@ pub fn effective(defaults: &SyncDefaults, options: &SyncOptions, overrides: &Pro
         rules: CompareRules {
             by: options.compare_by,
             ignore_date: options.ignore_date,
-            tolerance_secs: overrides.time_tolerance_secs.unwrap_or(defaults.time_tolerance_secs),
+            // The defaults come from the frontend, so they are clamped here: a huge
+            // tolerance would make every pair equal.
+            tolerance_secs: overrides
+                .time_tolerance_secs
+                .unwrap_or(defaults.time_tolerance_secs)
+                .min(MAX_TOLERANCE_SECS),
             ignore_hour_shift: overrides.ignore_hour_shift.unwrap_or(defaults.ignore_hour_shift),
             right_offset_secs: overrides.time_offset_secs,
         },
-        guards: overrides.guards.clone().unwrap_or_else(|| defaults.guards.clone()),
+        guards: clamped(overrides.guards.clone().unwrap_or_else(|| defaults.guards.clone())),
     }
+}
+
+/// Guards with the percentage inside 1 to 99 and the count inside its limit, so an
+/// out-of-range value from the frontend can't disable a guard.
+fn clamped(guards: GuardSettings) -> GuardSettings {
+    GuardSettings {
+        max_remove_percent: guards.max_remove_percent.clamp(1, MAX_REMOVE_PERCENT),
+        max_remove_count: guards.max_remove_count.min(MAX_REMOVE_COUNT),
+        ..guards
+    }
+}
+
+/// Whether the Settings values a compare is about to use are in range. `effective` clamps
+/// them anyway; this lets the caller say so instead.
+pub fn validate_defaults(defaults: &SyncDefaults) -> Result<(), ProfileProblem> {
+    check_numbers(Some(defaults.time_tolerance_secs), Some(&defaults.guards))?;
+    check_keep_policy(&defaults.keep).map_err(|refusal| ProfileProblem::BadKeep { refusal })
+}
+
+fn check_numbers(tolerance: Option<u64>, guards: Option<&GuardSettings>) -> Result<(), ProfileProblem> {
+    if let Some(secs) = tolerance
+        && secs > MAX_TOLERANCE_SECS
+    {
+        return Err(ProfileProblem::ToleranceOutOfRange { secs });
+    }
+    if let Some(guards) = guards {
+        if !(1..=MAX_REMOVE_PERCENT).contains(&guards.max_remove_percent) {
+            return Err(ProfileProblem::PercentOutOfRange {
+                percent: guards.max_remove_percent,
+            });
+        }
+        if guards.max_remove_count > MAX_REMOVE_COUNT {
+            return Err(ProfileProblem::CountOutOfRange {
+                count: guards.max_remove_count,
+            });
+        }
+    }
+    Ok(())
 }
 
 /// Why a profile can't be used as it is.
@@ -161,6 +209,16 @@ pub enum ProfileProblem {
         /// The value asked for.
         percent: u8,
     },
+    /// The removal count override is above the limit.
+    CountOutOfRange {
+        /// The value asked for.
+        count: u32,
+    },
+    /// The versions folder the keep override names can't be used.
+    BadKeep {
+        /// Why.
+        refusal: KeepRefusal,
+    },
     /// The stored profile doesn't read as a profile (a newer build's value, or a
     /// damaged entry). Kept as it is, shown greyed, never dropped.
     Unreadable,
@@ -173,17 +231,9 @@ pub fn validate(profile: &SyncProfile) -> Result<(), ProfileProblem> {
     }
     MaskFilter::parse(&profile.options.masks, &profile.options.excludes)
         .map_err(|error| ProfileProblem::BadMask { error })?;
-    if let Some(secs) = profile.overrides.time_tolerance_secs
-        && secs > MAX_TOLERANCE_SECS
-    {
-        return Err(ProfileProblem::ToleranceOutOfRange { secs });
-    }
-    if let Some(guards) = &profile.overrides.guards
-        && !(1..=100).contains(&guards.max_remove_percent)
-    {
-        return Err(ProfileProblem::PercentOutOfRange {
-            percent: guards.max_remove_percent,
-        });
+    check_numbers(profile.overrides.time_tolerance_secs, profile.overrides.guards.as_ref())?;
+    if let Some(keep) = &profile.overrides.keep {
+        check_keep_policy(keep).map_err(|refusal| ProfileProblem::BadKeep { refusal })?;
     }
     Ok(())
 }

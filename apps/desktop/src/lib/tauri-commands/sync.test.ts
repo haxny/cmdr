@@ -46,3 +46,13 @@ describe('sync wrappers', () => {
     )
   })
 })
+
+describe('sync edit wrappers', () => {
+  it('throws a typed failure when a rename is refused', async () => {
+    const edit = commands as unknown as { renameSyncProfile: ReturnType<typeof vi.fn> }
+    edit.renameSyncProfile = vi.fn().mockResolvedValue({ status: 'error', error: { type: 'nameTaken' } })
+    const { renameSyncProfile, asProfileEditRefusal } = await import('./sync')
+    const caught = await renameSyncProfile('a', 'Photos').catch((e: unknown) => e)
+    expect(asProfileEditRefusal(caught)).toEqual({ type: 'nameTaken' })
+  })
+})

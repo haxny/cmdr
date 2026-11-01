@@ -884,8 +884,11 @@ describe('Synchronize folders settings', () => {
       validateSettingValue('sync.guards.maxRemovePercent', 0)
     }).toThrow()
     expect(() => {
-      validateSettingValue('sync.guards.maxRemovePercent', 100)
+      validateSettingValue('sync.guards.maxRemovePercent', 99)
     }).not.toThrow()
+    expect(() => {
+      validateSettingValue('sync.guards.maxRemovePercent', 100)
+    }).toThrow()
     expect(() => {
       validateSettingValue('sync.guards.maxRemoveCount', -1)
     }).toThrow()

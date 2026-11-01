@@ -147,10 +147,19 @@ fn tolerance_and_percent_are_range_checked() {
     });
     assert_eq!(validate(&p), Err(ProfileProblem::PercentOutOfRange { percent: 0 }));
     p.overrides.guards = Some(GuardSettings {
-        max_remove_percent: 101,
+        max_remove_percent: 100,
         ..GuardSettings::default()
     });
-    assert_eq!(validate(&p), Err(ProfileProblem::PercentOutOfRange { percent: 101 }));
+    assert_eq!(
+        validate(&p),
+        Err(ProfileProblem::PercentOutOfRange { percent: 100 }),
+        "100 would switch the guard off"
+    );
+    p.overrides.guards = Some(GuardSettings {
+        max_remove_count: 1_000_001,
+        ..GuardSettings::default()
+    });
+    assert_eq!(validate(&p), Err(ProfileProblem::CountOutOfRange { count: 1_000_001 }));
 }
 
 #[test]
@@ -196,4 +205,56 @@ fn keep_policy_check_names_the_refusal() {
         Err(KeepRefusal::BadTemplate)
     );
     assert_eq!(check_keep_policy(&custom("/Backups/{profile}/{root}")), Ok(()));
+}
+
+#[test]
+fn a_bad_keep_override_is_a_typed_problem() {
+    let mut p = profile();
+    p.overrides.keep = Some(KeepPolicy {
+        place: KeepPlace::VersionsAlways,
+        location: VersionsLocation::Custom {
+            template: String::new(),
+        },
+    });
+    assert_eq!(
+        validate(&p),
+        Err(ProfileProblem::BadKeep {
+            refusal: KeepRefusal::BadTemplate
+        })
+    );
+}
+
+#[test]
+fn out_of_range_defaults_are_clamped_not_trusted() {
+    let wild = SyncDefaults {
+        time_tolerance_secs: 86_400,
+        guards: GuardSettings {
+            max_remove_percent: 200,
+            max_remove_count: u32::MAX,
+            ..GuardSettings::default()
+        },
+        ..defaults()
+    };
+    assert_eq!(
+        validate_defaults(&wild),
+        Err(ProfileProblem::ToleranceOutOfRange { secs: 86_400 })
+    );
+    let e = effective(&wild, &SyncOptions::default(), &ProfileOverrides::default());
+    assert_eq!(e.rules.tolerance_secs, MAX_TOLERANCE_SECS);
+    assert_eq!(e.guards.max_remove_percent, MAX_REMOVE_PERCENT);
+    assert_eq!(e.guards.max_remove_count, MAX_REMOVE_COUNT);
+    let zero = SyncDefaults {
+        guards: GuardSettings {
+            max_remove_percent: 0,
+            ..GuardSettings::default()
+        },
+        ..defaults()
+    };
+    assert_eq!(
+        effective(&zero, &SyncOptions::default(), &ProfileOverrides::default())
+            .guards
+            .max_remove_percent,
+        1
+    );
+    assert_eq!(validate_defaults(&defaults()), Ok(()));
 }

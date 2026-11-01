@@ -6,8 +6,8 @@ use serde_json::{Value, json};
 use cmdr_sync::{ProfileOverrides, ProfileProblem, RootRef, ShowFilters, SyncOptions, SyncProfile};
 
 use super::profile_store::{
-    MAX_PROFILES, MAX_REMEMBERED_PAIRS, ProfileEntry, ProfileMove, ProfileSaveRefusal, ProfileStore, delete_in,
-    entries_of, last_options_in, move_in, remember_options_in, rename_in, save_in,
+    MAX_PROFILES, MAX_REMEMBERED_PAIRS, NameTaken, ProfileEntry, ProfileMove, ProfileSaveRefusal, ProfileStore,
+    WriteFailed, delete_in, entries_of, last_options_in, move_in, remember_options_in, rename_in, save_in,
 };
 
 fn root(path: &str) -> RootRef {
@@ -152,20 +152,27 @@ fn rename_delete_and_move_keep_the_order() {
     for (id, name) in [("a", "Photos"), ("b", "Music"), ("c", "Docs")] {
         save_in(&mut list, profile(id, name)).unwrap();
     }
-    assert!(rename_in(&mut list, "b", "  Songs "));
+    assert_eq!(rename_in(&mut list, "b", "  Songs "), Ok(true));
     assert_eq!(names(&list), ["Photos", "Songs", "Docs"]);
-    assert!(
+    assert_eq!(
         rename_in(&mut list, "c", "photos"),
-        "a taken name replaces that profile"
+        Err(NameTaken),
+        "a taken name refuses; it never deletes the other profile"
     );
-    assert_eq!(names(&list), ["Songs", "photos"]);
-    assert!(!rename_in(&mut list, "b", "   "));
+    assert_eq!(names(&list), ["Photos", "Songs", "Docs"]);
+    assert_eq!(
+        rename_in(&mut list, "a", "PHOTOS"),
+        Ok(true),
+        "a profile may change its own name's case"
+    );
+    assert_eq!(rename_in(&mut list, "b", "   "), Ok(false));
     assert!(move_in(&mut list, "c", ProfileMove::Up));
-    assert_eq!(names(&list), ["photos", "Songs"]);
+    assert_eq!(names(&list), ["PHOTOS", "Docs", "Songs"]);
+    assert!(move_in(&mut list, "c", ProfileMove::Up));
     assert!(!move_in(&mut list, "c", ProfileMove::Up), "no move at the top");
     assert!(delete_in(&mut list, "c"));
     assert!(!delete_in(&mut list, "c"));
-    assert_eq!(names(&list), ["Songs"]);
+    assert_eq!(names(&list), ["PHOTOS", "Songs"]);
 }
 
 #[test]
@@ -173,9 +180,11 @@ fn profiles_survive_a_restart() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("sync-profiles.json");
     let writer = ProfileStore::new();
-    writer.edit_at(Some(&path), "a save", |list| {
-        save_in(list, profile("a", "Photos")).is_ok()
-    });
+    writer
+        .edit_at(Some(&path), "a save", |list| {
+            save_in(list, profile("a", "Photos")).is_ok()
+        })
+        .unwrap();
     let reader = ProfileStore::new();
     reader.load_at(&path);
     assert_eq!(reader.entries().len(), 1);
@@ -238,13 +247,72 @@ fn last_options_reach_disk_and_survive_a_restart() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("sync-profiles.json");
     let writer = ProfileStore::new();
-    writer.edit_at(Some(&path), "remembering options", |list| {
-        remember_options_in(list, &root("/l"), &root("/r"), &SyncOptions::default())
-    });
+    writer
+        .edit_at(Some(&path), "remembering options", |list| {
+            remember_options_in(list, &root("/l"), &root("/r"), &SyncOptions::default())
+        })
+        .unwrap();
     let reader = ProfileStore::new();
     reader.load_at(&path);
     assert_eq!(
         reader.last_options(&root("/l"), &root("/r")),
         Some(SyncOptions::default())
     );
+}
+
+#[test]
+fn an_entry_without_an_id_is_listed_greyed_and_can_be_deleted() {
+    let mut list = super::profile_store::ProfileList::default();
+    list.entries.push(json!({ "name": "Orphan" }));
+    save_in(&mut list, profile("a", "Photos")).unwrap();
+    let entries = entries_of(&list);
+    let ProfileEntry::Invalid { id, name, problem } = &entries[0] else {
+        panic!("greyed");
+    };
+    assert_eq!((name.as_str(), *problem), ("Orphan", ProfileProblem::Unreadable));
+    assert!(delete_in(&mut list, id));
+    assert_eq!(names(&list), ["Photos"]);
+}
+
+#[test]
+fn a_write_that_does_not_land_is_reported_not_swallowed() {
+    let dir = tempfile::tempdir().unwrap();
+    let blocker = dir.path().join("a-file");
+    std::fs::write(&blocker, b"x").unwrap();
+    let path = blocker.join("sync-profiles.json");
+    let store = ProfileStore::new();
+    let result = store.edit_at(Some(&path), "a save", |list| {
+        save_in(list, profile("a", "Photos")).is_ok()
+    });
+    assert_eq!(result, Err(WriteFailed));
+    assert_eq!(store.entries().len(), 1, "the change stays in memory");
+}
+
+#[test]
+fn concurrent_edits_never_lose_the_newer_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("sync-profiles.json");
+    let store = std::sync::Arc::new(ProfileStore::new());
+    let threads: Vec<_> = (0..8)
+        .map(|t| {
+            let (store, path) = (store.clone(), path.clone());
+            std::thread::spawn(move || {
+                for i in 0..10 {
+                    let name = format!("P{t}-{i}");
+                    store
+                        .edit_at(Some(&path), "a save", |list| {
+                            save_in(list, profile(&name, &name)).is_ok()
+                        })
+                        .unwrap();
+                }
+            })
+        })
+        .collect();
+    for thread in threads {
+        thread.join().unwrap();
+    }
+    assert_eq!(store.entries().len(), 80);
+    let reader = ProfileStore::new();
+    reader.load_at(&path);
+    assert_eq!(reader.entries(), store.entries(), "the file holds the last change");
 }

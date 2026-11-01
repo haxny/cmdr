@@ -6,6 +6,7 @@ import {
   commands,
   type KeepPolicy,
   type KeepRefusal,
+  type ProfileEditRefusal,
   type ProfileEntry,
   type ProfileMove,
   type ProfileSaveRefusal,
@@ -18,6 +19,7 @@ import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 export type {
   KeepPolicy,
   KeepRefusal,
+  ProfileEditRefusal,
   ProfileEntry,
   ProfileMove,
   ProfileSaveRefusal,
@@ -39,6 +41,24 @@ export function asProfileSaveRefusal(error: unknown): ProfileSaveRefusal | null 
   return failureOf(SyncProfileSaveFailure, error)
 }
 
+/** An `Error` that still carries the backend's typed refusal of a rename, delete, move, or remembered-options write. */
+export class SyncProfileEditFailure extends TypedFailure<ProfileEditRefusal> {
+  constructor(failure: ProfileEditRefusal) {
+    super(failure, `sync profile edit refused: ${failure.type}`)
+    this.name = 'SyncProfileEditFailure'
+  }
+}
+
+/** The typed refusal behind a caught value, or `null` when it isn't one. */
+export function asProfileEditRefusal(error: unknown): ProfileEditRefusal | null {
+  return failureOf(SyncProfileEditFailure, error)
+}
+
+function editResult<T>(res: { status: 'ok'; data: T } | { status: 'error'; error: ProfileEditRefusal }): T {
+  if (res.status === 'error') throw new SyncProfileEditFailure(res.error)
+  return res.data
+}
+
 /** The saved profiles, top to bottom. One that can't be used is listed with why, never dropped. */
 export async function getSyncProfiles(): Promise<ProfileEntry[]> {
   return commands.getSyncProfiles()
@@ -54,19 +74,22 @@ export async function saveSyncProfile(profile: SyncProfile): Promise<ProfileEntr
   return res.data
 }
 
-/** Deletes a profile. Answers the list after. */
+/** Deletes a profile. Answers the list after; throws a {@link SyncProfileEditFailure} when the file couldn't be written. */
 export async function deleteSyncProfile(id: string): Promise<ProfileEntry[]> {
-  return commands.deleteSyncProfile(id)
+  return editResult(await commands.deleteSyncProfile(id))
 }
 
-/** Renames a profile in place; a profile already called `name` is replaced. Answers the list after. */
+/**
+ * Renames a profile in place. Throws a {@link SyncProfileEditFailure} (`nameTaken` when another profile has the name:
+ * ask, then save over it; `writeFailed`). Answers the list after.
+ */
 export async function renameSyncProfile(id: string, name: string): Promise<ProfileEntry[]> {
-  return commands.renameSyncProfile(id, name)
+  return editResult(await commands.renameSyncProfile(id, name))
 }
 
 /** Move up / Move down: swaps a profile with its neighbor. Answers the list after. */
 export async function moveSyncProfile(id: string, direction: ProfileMove): Promise<ProfileEntry[]> {
-  return commands.moveSyncProfile(id, direction)
+  return editResult(await commands.moveSyncProfile(id, direction))
 }
 
 /** The options the dialog last ran with for this ordered pair of roots, if it remembers any. */
@@ -76,7 +99,7 @@ export async function getSyncLastOptions(left: RootRef, right: RootRef): Promise
 
 /** Remembers the dialog's options for this pair of roots. */
 export async function saveSyncLastOptions(left: RootRef, right: RootRef, options: SyncOptions): Promise<void> {
-  await commands.saveSyncLastOptions(left, right, options)
+  editResult(await commands.saveSyncLastOptions(left, right, options))
 }
 
 /** Why the versions folder `policy` names can't be used, or `null` when it can. */

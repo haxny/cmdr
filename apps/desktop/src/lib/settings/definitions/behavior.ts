@@ -717,7 +717,7 @@ export const behaviorSettings: SettingDefinitionSource[] = [
     type: 'number',
     default: 50,
     component: 'number-input',
-    constraints: { min: 1, max: 100, step: 1 },
+    constraints: { min: 1, max: 99, step: 1 },
   },
   {
     id: 'sync.guards.maxRemoveCount',

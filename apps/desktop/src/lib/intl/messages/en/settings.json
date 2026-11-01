@@ -4389,6 +4389,10 @@
   "@settings.sync.compare.timeTolerance.description": {
     "description": "Help text under the time tolerance field in Settings > Behavior > Synchronize folders. \"FAT\" and \"ZIP\" are file system and archive format names; do not translate them. \"2 seconds\" is the default value."
   },
+  "settings.sync.compare.timeTolerance.unit": "seconds",
+  "@settings.sync.compare.timeTolerance.unit": {
+    "description": "Unit shown after the time tolerance number in Settings > Behavior > Synchronize folders. Plural noun, lowercase."
+  },
   "settings.sync.compare.timeTolerance.keywords": "time, tolerance, seconds, modified, date, rounding, newer, same",
   "@settings.sync.compare.timeTolerance.keywords": {
     "description": "Search keywords for the \"Time tolerance\" setting (settings.sync.compare.timeTolerance.label) in Settings > Behavior > Synchronize folders. What it does: how many seconds apart two modified times can be and still count as equal. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
@@ -4412,6 +4416,10 @@
   "settings.sync.guards.maxRemovePercent.description": "Mirror asks for an extra confirmation when it would remove more than this share of the files on the target.",
   "@settings.sync.guards.maxRemovePercent.description": {
     "description": "Help text under the maximum-removal-share field in Settings > Behavior > Synchronize folders. \"Mirror\" is a mode name. \"The target\" is the folder that is changed to match the other."
+  },
+  "settings.sync.guards.maxRemovePercent.unit": "%",
+  "@settings.sync.guards.maxRemovePercent.unit": {
+    "description": "Unit shown after the removal share number in Settings > Behavior > Synchronize folders: the percent sign. Use the locale's own form if it differs (for example with a space)."
   },
   "settings.sync.guards.maxRemovePercent.keywords": "mirror, remove, delete, limit, percent, safety, guard, confirm",
   "@settings.sync.guards.maxRemovePercent.keywords": {
