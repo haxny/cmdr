@@ -165,26 +165,80 @@ async fn prepare(host: &dyn SyncHost, request: &CompareRequest) -> Result<Prepar
     })
 }
 
+/// Whether two requests ask for the same compare (the session they name aside).
+fn same_ask(a: &CompareRequest, b: &CompareRequest) -> bool {
+    let unnamed = |request: &CompareRequest| CompareRequest {
+        session_id: None,
+        ..request.clone()
+    };
+    unnamed(a) == unnamed(b)
+}
+
+/// The session a compare runs in: the one the request names (owned by
+/// `window`, not closed), or a new one owned by `window`, which must still be
+/// open (else a window that closed during `prepare` would leave it behind).
+fn session_for(
+    host: &dyn SyncHost,
+    existing: Option<Arc<Session>>,
+    window: Option<String>,
+) -> Result<Arc<Session>, SyncError> {
+    if let Some(session) = existing {
+        return if session.is_closed() {
+            Err(SyncError::NoSuchSession)
+        } else {
+            Ok(session)
+        };
+    }
+    let label = window.clone();
+    let session = Session::open(window);
+    // After `open`: a window that closes from here on finds the session.
+    if label.is_some_and(|label| !host.window_open(&label)) {
+        super::session::close(&session.id);
+        return Err(SyncError::NoSuchSession);
+    }
+    Ok(session)
+}
+
 /// Validates the request and starts the compare in its session (a new one
 /// unless `session_id` names one; a newer compare there stops the older, whose
-/// events then never go out). `window` owns a new session.
+/// events then never go out). `window` owns a new session and must own an
+/// existing one. A compare that asks something else than the last finished
+/// one marks that plan stale at once, so a stopped or refused new compare never
+/// leaves the old plan runnable.
 pub(crate) async fn start(
     host: Arc<dyn SyncHost>,
     request: CompareRequest,
     window: Option<String>,
 ) -> Result<CompareStarted, SyncError> {
     let existing = request.session_id.as_deref().map(session).transpose()?;
+    if let (Some(session), Some(window)) = (&existing, &window) {
+        session.owned_by(window)?;
+    }
     if existing.as_ref().is_some_and(|session| session.is_running()) {
         return Err(SyncError::RunInProgress);
     }
+    if let Some(session) = &existing
+        && let Some(compared) = session.compared.lock_ignore_poison().as_mut()
+        && !same_ask(&compared.request, &request)
+    {
+        compared.stale = true;
+    }
     // Checked before a new session opens, so a refused request leaves none behind.
     let prepared = prepare(host.as_ref(), &request).await?;
-    let session = existing.unwrap_or_else(|| Session::open(window));
+    let session = session_for(host.as_ref(), existing, window)?;
     let control = SyncControl::new();
-    let generation = session.next_generation();
-    if let Some(older) = session.compare.lock_ignore_poison().replace(Arc::clone(&control)) {
-        older.cancel();
-    }
+    let generation = {
+        let mut slot = session.compare.lock_ignore_poison();
+        // Under the slot's lock: `close` sets the flag before it looks here.
+        if session.is_closed() {
+            return Err(SyncError::NoSuchSession);
+        }
+        let generation = session.next_generation();
+        if let Some(older) = slot.replace(Arc::clone(&control)) {
+            older.cancel();
+        }
+        generation
+    };
     let id = session.id.clone();
     tokio::spawn(async move {
         let outcome = run(host.as_ref(), &session, generation, prepared, request, &control).await;
@@ -308,10 +362,13 @@ async fn run(
     if prepared.plan_options.rules.by == CompareBy::Content {
         planned = compare_content(&prepared, &left_snap, &right_snap, planned, control, &progress).await;
     }
+    // Checked under the lock it stores under, so a newer compare's result is
+    // never overwritten by this one.
+    let mut slot = session.compared.lock_ignore_poison();
     if control.is_cancelled() || !session.is_current(generation) {
         return CompareOutcome::Stopped;
     }
-    *session.compared.lock_ignore_poison() = Some(Compared {
+    *slot = Some(Compared {
         left: prepared.left.clone(),
         right: prepared.right.clone(),
         left_snap: Arc::new(left_snap),

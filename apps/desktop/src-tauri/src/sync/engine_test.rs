@@ -450,3 +450,91 @@ async fn a_folder_that_wont_answer_never_passes_as_free_of_links() {
     let fresh = no_link_below(&side, Some(&f.right), &f.right.join("not/yet/there")).await;
     assert!(fresh, "a path that doesn't exist yet has no link in it");
 }
+
+#[tokio::test]
+async fn a_queued_batch_cancelled_from_the_queue_window_ends_the_wait() {
+    // A parks on the Locked question and holds the disk's lane, so B (a move
+    // back, which the run never cancels itself) waits Queued behind it. The
+    // queue window then cancels B, which drops it unrun: its sink never hears
+    // an end, and the adapter must still stop waiting.
+    let f = fixture("sync_engine_queue_cancel");
+    let locked = f.left.join("locked.txt");
+    std::fs::write(&locked, b"locked").expect("write");
+    let lock = Locked::new(&locked);
+    let aside = f.left.join(".cmdr-sync/versions/aside");
+    std::fs::create_dir_all(&aside).expect("aside");
+    let staged = aside.join("c.txt");
+    std::fs::write(&staged, b"c").expect("staged");
+    let parked = EngineBatch::Move {
+        side: Side::Left,
+        sources: vec![f.bound(Side::Left, &locked).await],
+        place: Place::LocalDisk,
+        dest_dir: aside.clone(),
+    };
+    let back = EngineBatch::MoveBack {
+        side: Side::Left,
+        place: Place::Target,
+        sources: vec![f.bound(Side::Left, &staged).await],
+        dest_dir: f.left.clone(),
+    };
+    let ops = f.adapter.config.operations;
+    let queued_then_cancelled = async {
+        wait_until_async(Duration::from_secs(4), "A asks about the Locked file", || {
+            !f.sink.locked_sources.lock_ignore_poison().is_empty()
+        })
+        .await;
+        let canceller = async {
+            wait_until_async(Duration::from_secs(4), "B is queued", || {
+                f.adapter.operation_ids().len() == 2
+            })
+            .await;
+            let b = f.adapter.operation_ids()[1].clone();
+            ops.cancel_operation(&cmdr_operation_log::types::OperationId::from(b));
+        };
+        let (outcome, ()) = tokio::join!(
+            tokio::time::timeout(Duration::from_secs(10), f.adapter.run_to_end(back)),
+            canceller
+        );
+        f.control.cancel();
+        outcome.expect("the wait ends once B left the queue")
+    };
+    let (_, outcome) = tokio::join!(f.adapter.run(parked), queued_then_cancelled);
+    drop(lock);
+    assert!(outcome.stopped, "a batch dropped unrun reads as stopped: {outcome:?}");
+    assert!(staged.exists(), "nothing moved");
+    assert!(!f.left.join("c.txt").exists());
+}
+
+#[tokio::test]
+async fn a_folder_swapped_for_a_symlink_after_observe_never_leads_a_trash_or_move() {
+    let f = fixture("sync_engine_source_link");
+    let folder = f.right.join("d");
+    std::fs::create_dir(&folder).expect("d");
+    let old = folder.join("old.txt");
+    std::fs::write(&old, b"old").expect("write");
+    let bound = f.bound(Side::Right, &old).await;
+    // The folder moves out of the root and a link takes its place: the same
+    // file, now reached through a symlink.
+    let outside = f._dir.join("outside");
+    std::fs::create_dir(&outside).expect("outside");
+    std::fs::rename(&folder, outside.join("d")).expect("move out");
+    std::os::unix::fs::symlink(outside.join("d"), &folder).expect("symlink");
+    let _cleanup = TrashCleanup::of(&[&old]);
+    let trash = EngineBatch::Trash {
+        side: Side::Right,
+        sources: vec![bound.clone()],
+    };
+    assert_eq!(only(&f.adapter.run(trash).await), ItemOutcome::Failed);
+    assert!(outside.join("d/old.txt").exists());
+    let aside = f.right.join(".cmdr-sync/versions/aside");
+    std::fs::create_dir_all(&aside).expect("aside");
+    let keep = EngineBatch::Move {
+        side: Side::Right,
+        sources: vec![bound],
+        place: Place::Target,
+        dest_dir: aside.clone(),
+    };
+    assert_eq!(only(&f.adapter.run(keep).await), ItemOutcome::Failed);
+    assert!(outside.join("d/old.txt").exists());
+    assert!(!aside.join("old.txt").exists());
+}

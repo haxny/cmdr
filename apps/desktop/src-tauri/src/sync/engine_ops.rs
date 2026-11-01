@@ -9,7 +9,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::volume::VolumeError;
 use cmdr_operation_log::types::{Initiator, OperationId};
 use cmdr_operations::{
@@ -21,8 +20,9 @@ use cmdr_sync::{BatchOutcome, BoundSource, EngineBatch, EntryFacts, EntryKind, I
 use super::engine::{EngineAdapter, EngineSide, agrees};
 use super::settle_sink::{SettleSink, Settled};
 
-/// How often, after a forwarded cancel, the adapter looks whether a queued op
-/// left the queue without settling (a queued op is dropped, never run).
+/// How often, while waiting, the adapter looks whether its op left the queue
+/// without settling: a queued op cancelled (by the run or from the queue
+/// window) is dropped, never run, and its sink never hears an end.
 const GONE_POLL: Duration = Duration::from_millis(100);
 /// How long it then still waits for a settle that may be on its way.
 const SETTLE_GRACE: Duration = Duration::from_millis(500);
@@ -39,6 +39,13 @@ struct Landing<'a> {
     target: &'a EngineSide,
     base: Option<&'a Path>,
     dest_dir: &'a Path,
+}
+
+/// Where a transfer's sources sit. A move takes them away, so no symlink below
+/// `base` may lead there either (`None`: a copy, which only reads them).
+struct Origin<'a> {
+    on: &'a EngineSide,
+    base: Option<&'a Path>,
 }
 
 /// Sources split by whether they still read as the snapshot did.
@@ -94,7 +101,9 @@ impl EngineAdapter {
                     base: base.as_deref(),
                     dest_dir: &dest_dir,
                 };
-                self.transfer(Verb::Copy, source, &landing, &sources, cancellable).await
+                let origin = Origin { on: source, base: None };
+                self.transfer(Verb::Copy, &origin, &landing, &sources, cancellable)
+                    .await
             }
             EngineBatch::Move {
                 side,
@@ -103,13 +112,18 @@ impl EngineAdapter {
                 dest_dir,
             } => {
                 let (source, target) = (self.side(side), self.at(side, place));
-                let base = self.base(side, place);
+                let (base, source_base) = (self.base(side, place), self.base(side, Place::Target));
                 let landing = Landing {
                     target,
                     base: base.as_deref(),
                     dest_dir: &dest_dir,
                 };
-                self.transfer(Verb::Move, source, &landing, &sources, cancellable).await
+                let origin = Origin {
+                    on: source,
+                    base: source_base.as_deref(),
+                };
+                self.transfer(Verb::Move, &origin, &landing, &sources, cancellable)
+                    .await
             }
             EngineBatch::MoveBack {
                 side,
@@ -118,13 +132,18 @@ impl EngineAdapter {
                 dest_dir,
             } => {
                 let (source, target) = (self.at(side, place), self.side(side));
-                let base = self.base(side, Place::Target);
+                let (base, source_base) = (self.base(side, Place::Target), self.base(side, place));
                 let landing = Landing {
                     target,
                     base: base.as_deref(),
                     dest_dir: &dest_dir,
                 };
-                self.transfer(Verb::Move, source, &landing, &sources, cancellable).await
+                let origin = Origin {
+                    on: source,
+                    base: source_base.as_deref(),
+                };
+                self.transfer(Verb::Move, &origin, &landing, &sources, cancellable)
+                    .await
             }
             EngineBatch::RemoveEmptyFolders { place, side, dirs } => {
                 let (on, base) = (self.at(side, place), self.base(side, place));
@@ -135,7 +154,14 @@ impl EngineAdapter {
                 }
                 done(items)
             }
-            EngineBatch::Trash { side, sources } => self.trash(self.side(side), &sources, cancellable).await,
+            EngineBatch::Trash { side, sources } => {
+                let base = self.base(side, Place::Target);
+                let origin = Origin {
+                    on: self.side(side),
+                    base: base.as_deref(),
+                };
+                self.trash(&origin, &sources, cancellable).await
+            }
         }
     }
 
@@ -172,7 +198,7 @@ impl EngineAdapter {
     async fn transfer(
         &self,
         verb: Verb,
-        source: &EngineSide,
+        origin: &Origin<'_>,
         landing: &Landing<'_>,
         sources: &[BoundSource],
         cancellable: bool,
@@ -182,9 +208,11 @@ impl EngineAdapter {
             let items = sources.iter().map(|s| (s.path.clone(), ItemOutcome::Failed)).collect();
             return done(items);
         }
-        let bound = self.bind(source, sources).await;
+        let source = origin.on;
+        let (sources, linked) = unlinked(origin, sources).await;
+        let bound = self.bind(source, &sources).await;
         if bound.kept.is_empty() {
-            return skipped_only(&bound.refused);
+            return with_failed(skipped_only(&bound.refused), linked);
         }
         let ops = self.config.operations;
         let config = VolumeCopyConfig {
@@ -209,19 +237,21 @@ impl EngineAdapter {
                 }
             })
             .await;
-        outcome_of(&bound, settled.as_ref(), verb == Verb::Move)
+        with_failed(outcome_of(&bound, settled.as_ref(), verb == Verb::Move), linked)
     }
 
-    async fn trash(&self, on: &EngineSide, sources: &[BoundSource], cancellable: bool) -> BatchOutcome {
+    async fn trash(&self, origin: &Origin<'_>, sources: &[BoundSource], cancellable: bool) -> BatchOutcome {
+        let on = origin.on;
         // The Trash is the local Mac's; a volume without one never gets here
         // (the keep policy routes it to a versions folder), but is refused anyway.
         if !on.volume.has_trash() || on.volume.local_path().is_none() {
             let items = sources.iter().map(|s| (s.path.clone(), ItemOutcome::Failed)).collect();
             return done(items);
         }
-        let bound = self.bind(on, sources).await;
+        let (sources, linked) = unlinked(origin, sources).await;
+        let bound = self.bind(on, &sources).await;
         if bound.kept.is_empty() {
-            return skipped_only(&bound.refused);
+            return with_failed(skipped_only(&bound.refused), linked);
         }
         let ops = self.config.operations;
         let paths: Vec<PathBuf> = bound.kept.iter().map(|(_, engine)| engine.clone()).collect();
@@ -233,12 +263,14 @@ impl EngineAdapter {
                     .await
             })
             .await;
-        outcome_of(&bound, settled.as_ref(), true)
+        with_failed(outcome_of(&bound, settled.as_ref(), true), linked)
     }
 
     /// Starts one operation with a `SettleSink` over the app's sink and waits
     /// for it to settle. A cancellable one gets the run's cancel forwarded.
-    /// `None`: it refused to start.
+    /// Either way, an op that leaves the queue without settling (cancelled
+    /// while queued, here or from the queue window) ends the wait as
+    /// cancelled. `None`: it refused to start.
     async fn settle<F, Fut>(&self, cancellable: bool, start: F) -> Option<Settled>
     where
         F: FnOnce(Arc<dyn OperationEventSink>) -> Fut,
@@ -253,32 +285,31 @@ impl EngineAdapter {
                 return None;
             }
         };
-        self.operation_ids
-            .lock_ignore_poison()
-            .push(started.operation_id.clone());
-        if !cancellable {
-            return Some(rx.await.unwrap_or_else(|_| sink.heard()));
-        }
-        tokio::select! {
-            settled = &mut rx => return Some(settled.unwrap_or_else(|_| sink.heard())),
-            () = self.config.control.token().cancelled() => {}
-        }
+        let id = started.operation_id;
+        self.operation_ids.lock_ignore_poison().push(id.clone());
         let ops = self.config.operations;
-        ops.cancel_operation(&OperationId::from(started.operation_id.clone()));
+        let token = self.config.control.token();
+        let mut forwarded = !cancellable;
         loop {
             tokio::select! {
                 settled = &mut rx => return Some(settled.unwrap_or_else(|_| sink.heard())),
+                () = token.cancelled(), if !forwarded => {
+                    ops.cancel_operation(&OperationId::from(id.clone()));
+                    forwarded = true;
+                }
                 () = tokio::time::sleep(GONE_POLL) => {}
             }
-            let known = ops
-                .list_operations()
-                .iter()
-                .any(|op| op.operation_id == started.operation_id);
-            if !known {
-                let late = tokio::time::timeout(SETTLE_GRACE, &mut rx).await;
-                let mut heard = late.ok().and_then(Result::ok).unwrap_or_else(|| sink.heard());
-                heard.cancelled = true;
-                return Some(heard);
+            if !ops.list_operations().iter().any(|op| op.operation_id == id) {
+                // A settle may still be on its way (an op that just finished
+                // leaves the list first); it says for itself how it ended.
+                // Silence means it was dropped unrun: cancelled.
+                return Some(match tokio::time::timeout(SETTLE_GRACE, &mut rx).await {
+                    Ok(Ok(settled)) => settled,
+                    Ok(Err(_)) | Err(_) => Settled {
+                        cancelled: true,
+                        ..sink.heard()
+                    },
+                });
             }
         }
     }
@@ -328,8 +359,7 @@ impl EngineAdapter {
                 Err(MutationError::AlreadyExists { .. }) if is_folder(on, folder).await => {}
                 Err(refusal) => {
                     // The refusal names paths; a log line names only its kind.
-                    let kind = kind_of(&refusal);
-                    log::warn!(target: "sync", "a folder for the run couldn't be made: {kind}, {}", LogPrivate::path(folder));
+                    log::warn!(target: "sync", "a folder for the run couldn't be made: {}", kind_of(&refusal));
                     return false;
                 }
             }
@@ -410,6 +440,31 @@ pub(super) async fn no_link_below(on: &EngineSide, base: Option<&Path>, path: &P
         }
     }
     true
+}
+
+/// Splits `sources` into those reached through real folders only (lstat, from
+/// just below the origin's base down to each one's parent) and the paths of
+/// those a symlink leads to, which a move or trash must never take: a folder
+/// swapped for a link since the observe would carry the move outside the root.
+async fn unlinked(origin: &Origin<'_>, sources: &[BoundSource]) -> (Vec<BoundSource>, Vec<PathBuf>) {
+    let mut through = Vec::with_capacity(sources.len());
+    let mut linked = Vec::new();
+    for source in sources {
+        let parent = source.path.parent().unwrap_or(&source.path);
+        if origin.base.is_none() || no_link_below(origin.on, origin.base, parent).await {
+            through.push(source.clone());
+        } else {
+            linked.push(source.path.clone());
+        }
+    }
+    (through, linked)
+}
+
+/// `outcome` with `linked` added as `Failed`.
+fn with_failed(outcome: BatchOutcome, linked: Vec<PathBuf>) -> BatchOutcome {
+    let mut items = outcome.items;
+    items.extend(linked.into_iter().map(|path| (path, ItemOutcome::Failed)));
+    BatchOutcome { items, ..outcome }
 }
 
 /// A refusal's typed kind (its serde tag), for a log line without its paths.

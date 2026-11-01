@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -21,6 +21,9 @@ use super::wire::{CompareRequest, SyncActionsOutcome, SyncError, SyncRowWire, Sy
 
 /// The open sessions, by id.
 static SESSIONS: LazyLock<Mutex<HashMap<String, Arc<Session>>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// The most rows one `get_sync_rows` answers; the dialog pages 200 at a time.
+pub(crate) const MAX_ROWS_PAGE: u32 = 2000;
 
 /// Plan revisions, unique across sessions and compares.
 static REVISIONS: AtomicU64 = AtomicU64::new(0);
@@ -109,6 +112,11 @@ pub(crate) struct Session {
     pub(crate) compared: Mutex<Option<Compared>>,
     /// The running run's control.
     pub(crate) run: Mutex<Option<Arc<SyncControl>>>,
+    /// Single-row content compares under way (F-key "compare by content").
+    pub(crate) row_compares: Mutex<Vec<Arc<SyncControl>>>,
+    /// Set by `close` before it cancels anything: a compare or run that checks
+    /// it under its slot's lock never starts on a closed session.
+    closed: AtomicBool,
 }
 
 impl Session {
@@ -120,6 +128,8 @@ impl Session {
             generation: AtomicU64::new(0),
             compared: Mutex::new(None),
             run: Mutex::new(None),
+            row_compares: Mutex::new(Vec::new()),
+            closed: AtomicBool::new(false),
         });
         SESSIONS
             .lock_ignore_poison()
@@ -139,6 +149,19 @@ impl Session {
 
     pub(crate) fn is_current(&self, generation: u64) -> bool {
         self.generation.load(Ordering::Acquire) == generation
+    }
+
+    /// `close` ran: nothing new may start here.
+    pub(crate) fn is_closed(&self) -> bool {
+        self.closed.load(Ordering::Acquire)
+    }
+
+    /// Refuses a window other than the one whose dialog opened the session.
+    pub(crate) fn owned_by(&self, window: &str) -> Result<(), SyncError> {
+        match &self.window {
+            Some(owner) if owner != window => Err(SyncError::NoSuchSession),
+            _ => Ok(()),
+        }
     }
 
     pub(crate) fn is_running(&self) -> bool {
@@ -174,16 +197,30 @@ pub(crate) fn session(id: &str) -> Result<Arc<Session>, SyncError> {
         .ok_or(SyncError::NoSuchSession)
 }
 
+/// The open session with this id, if `window` owns it: commands that change a
+/// session come only from its own dialog (another window gets `NoSuchSession`).
+pub(crate) fn owned_session(id: &str, window: &str) -> Result<Arc<Session>, SyncError> {
+    let session = session(id)?;
+    session.owned_by(window)?;
+    Ok(session)
+}
+
 /// Stops whatever the session runs and forgets it. A run already under way
 /// stops at its next step and still puts back what it set aside.
 pub(crate) fn close(id: &str) {
     let Some(session) = SESSIONS.lock_ignore_poison().remove(id) else {
         return;
     };
+    // First, so a compare or run starting now sees it under its slot's lock
+    // (and refuses), or stored its control before we look (and is cancelled).
+    session.closed.store(true, Ordering::Release);
     for control in [&session.compare, &session.run] {
         if let Some(control) = control.lock_ignore_poison().as_ref() {
             control.cancel();
         }
+    }
+    for control in session.row_compares.lock_ignore_poison().iter() {
+        control.cancel();
     }
 }
 
@@ -210,12 +247,17 @@ pub(crate) fn set_paused(id: &str, run: bool, paused: bool) -> Result<(), SyncEr
     Ok(())
 }
 
-/// Cancel the session's compare or run.
+/// Cancel the session's compare (with any single-row content compare) or run.
 pub(crate) fn cancel(id: &str, run: bool) -> Result<(), SyncError> {
     let session = session(id)?;
     let slot = if run { &session.run } else { &session.compare };
     if let Some(control) = slot.lock_ignore_poison().as_ref() {
         control.cancel();
+    }
+    if !run {
+        for control in session.row_compares.lock_ignore_poison().iter() {
+            control.cancel();
+        }
     }
     Ok(())
 }
@@ -255,13 +297,14 @@ fn item_row(plan: &Plan, item: &PlanItem) -> ViewRowWire {
     }
 }
 
-/// Rows `start..end` of the grid under `filters`.
+/// Rows `start..end` of the grid under `filters`, at most `MAX_ROWS_PAGE` of them.
 pub(crate) fn rows(id: &str, start: u32, end: u32, filters: &ShowFilters) -> Result<SyncRowsPage, SyncError> {
     session(id)?.with_compared(|compared| {
         let view = compared.view(filters);
         let plan = &compared.plan;
         let total = u32::try_from(view.len()).unwrap_or(u32::MAX);
-        let (start, end) = (start.min(total), end.clamp(start.min(total), total));
+        let start = start.min(total);
+        let end = end.min(start.saturating_add(MAX_ROWS_PAGE)).clamp(start, total);
         let rows = view[start as usize..end as usize]
             .iter()
             .zip(start..)
@@ -344,10 +387,9 @@ pub(crate) fn find(id: &str, filters: &ShowFilters, query: &RowQuery) -> Result<
     })
 }
 
-/// Whether `path` is a usable root: not empty, never climbing with `..`.
+/// Whether `path` is a usable root: absolute (every volume path is, from the
+/// volume's root), never climbing with `..`.
 pub(crate) fn root_path_ok(path: &str) -> bool {
-    !path.is_empty()
-        && Path::new(path)
-            .components()
-            .all(|part| part != std::path::Component::ParentDir)
+    let path = Path::new(path);
+    path.is_absolute() && path.components().all(|part| part != std::path::Component::ParentDir)
 }

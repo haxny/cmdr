@@ -28,7 +28,7 @@ use super::wire::{
     SelectionRef, SideRequest, SyncError, ViewRowWire,
 };
 
-struct TestHost {
+pub(super) struct TestHost {
     engine: &'static TestOperations,
     volumes: Mutex<HashMap<String, Arc<dyn Volume>>>,
     events: Mutex<Vec<SyncEvent>>,
@@ -53,18 +53,24 @@ impl SyncHost for TestHost {
     fn emit(&self, event: SyncEvent) {
         self.events.lock_ignore_poison().push(event);
     }
+    fn window_open(&self, label: &str) -> bool {
+        label != CLOSED_WINDOW
+    }
 }
 
-struct Pair {
+/// A window label the test host reports as closed.
+pub(super) const CLOSED_WINDOW: &str = "closed-window";
+
+pub(super) struct Pair {
     _dir: TestDir,
-    host: Arc<TestHost>,
-    left: PathBuf,
-    right: PathBuf,
+    pub(super) host: Arc<TestHost>,
+    pub(super) left: PathBuf,
+    pub(super) right: PathBuf,
     left_ref: RootRef,
     right_ref: RootRef,
 }
 
-fn pair(label: &str) -> Pair {
+pub(super) fn pair(label: &str) -> Pair {
     let dir = TestDir::new(label);
     let (left, right) = (dir.join("L"), dir.join("R"));
     std::fs::create_dir_all(&left).expect("left");
@@ -98,7 +104,7 @@ fn pair(label: &str) -> Pair {
     }
 }
 
-fn defaults() -> SyncDefaults {
+pub(super) fn defaults() -> SyncDefaults {
     SyncDefaults {
         // Versions folders only: nothing of a test lands in the real Trash.
         keep: KeepPolicy {
@@ -115,7 +121,7 @@ fn defaults() -> SyncDefaults {
     }
 }
 
-fn all_rows() -> ShowFilters {
+pub(super) fn all_rows() -> ShowFilters {
     ShowFilters {
         to_right: true,
         equal: true,
@@ -128,7 +134,7 @@ fn all_rows() -> ShowFilters {
     }
 }
 
-fn write(path: &Path, content: &str, age_secs: u64) {
+pub(super) fn write(path: &Path, content: &str, age_secs: u64) {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).expect("parent");
     }
@@ -139,7 +145,7 @@ fn write(path: &Path, content: &str, age_secs: u64) {
 }
 
 impl Pair {
-    fn request(&self, mode: Mode) -> CompareRequest {
+    pub(super) fn request(&self, mode: Mode) -> CompareRequest {
         CompareRequest {
             session_id: None,
             left: SideRequest {
@@ -161,7 +167,7 @@ impl Pair {
         }
     }
 
-    fn compare_finished(&self, id: &str) -> Option<CompareOutcome> {
+    pub(super) fn compare_finished(&self, id: &str) -> Option<CompareOutcome> {
         self.host
             .events
             .lock_ignore_poison()
@@ -172,11 +178,11 @@ impl Pair {
             })
     }
 
-    fn host(&self) -> Arc<dyn SyncHost> {
+    pub(super) fn host(&self) -> Arc<dyn SyncHost> {
         Arc::clone(&self.host) as Arc<dyn SyncHost>
     }
 
-    async fn compare(&self, request: CompareRequest) -> String {
+    pub(super) async fn compare(&self, request: CompareRequest) -> String {
         let started = session_compare::start(self.host(), request, None)
             .await
             .expect("starts");
@@ -189,7 +195,12 @@ impl Pair {
         id
     }
 
-    async fn run_request(&self, id: &str, groups: &[ConfirmGroupKey], acks: &[Acknowledgement]) -> RunRequest {
+    pub(super) async fn run_request(
+        &self,
+        id: &str,
+        groups: &[ConfirmGroupKey],
+        acks: &[Acknowledgement],
+    ) -> RunRequest {
         let preview = session_run::confirm(id, &defaults(), &all_rows())
             .await
             .expect("confirm");
@@ -286,7 +297,7 @@ fn kept_names(root: &Path) -> Vec<String> {
     found
 }
 
-const ALL_GROUPS: [ConfirmGroupKey; 8] = [
+pub(super) const ALL_GROUPS: [ConfirmGroupKey; 8] = [
     ConfirmGroupKey::CopyRight,
     ConfirmGroupKey::CopyLeft,
     ConfirmGroupKey::CopyLeftRecreates,

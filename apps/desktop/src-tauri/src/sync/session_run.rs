@@ -354,6 +354,10 @@ pub(crate) async fn start_run(host: Arc<dyn SyncHost>, id: &str, request: &RunRe
     paths.verify().await?;
     let launched = {
         let mut running = session.run.lock_ignore_poison();
+        // Under the slot's lock: `close` sets the flag before it looks here.
+        if session.is_closed() {
+            return Err(SyncError::NoSuchSession);
+        }
         if running.is_some() {
             return Err(SyncError::RunInProgress);
         }
@@ -479,6 +483,10 @@ fn report_wire(report: &RunReport, held: Vec<HeldRowWire>, adapter: &EngineAdapt
     wire
 }
 
+/// How long one row's content compare may take before it gives up (the row
+/// stays `?`): a stalled server must not hold the compare forever.
+const ROW_CONTENT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+
 /// What a row's content compare was started on, to check the answer still
 /// belongs to that row.
 pub(crate) struct ContentTicket {
@@ -514,8 +522,28 @@ pub(crate) async fn compare_item_content(host: Arc<dyn SyncHost>, id: &str, item
         ))
     })?;
     let control = SyncControl::new();
-    let answers = compare_contents(left.as_ref(), right.as_ref(), vec![job], 1, &control, &|_| {}).await;
-    let state = answers.first().map_or(ContentState::Pending, |(_, state)| *state);
+    {
+        let mut row_compares = session.row_compares.lock_ignore_poison();
+        // Under the list's lock: `close` sets the flag before it looks here.
+        if session.is_closed() {
+            return Err(SyncError::NoSuchSession);
+        }
+        row_compares.push(Arc::clone(&control));
+    }
+    let compared = compare_contents(left.as_ref(), right.as_ref(), vec![job], 1, &control, &|_| {});
+    let answers = tokio::time::timeout(ROW_CONTENT_TIMEOUT, compared).await;
+    session
+        .row_compares
+        .lock_ignore_poison()
+        .retain(|running| !Arc::ptr_eq(running, &control));
+    // Stopped, closed, or out of time: the row stays waiting (`Pending`).
+    let state = match answers {
+        Ok(answers) => answers.first().map_or(ContentState::Pending, |(_, state)| *state),
+        Err(_) => ContentState::Pending,
+    };
+    if session.is_closed() {
+        return Err(SyncError::NoSuchSession);
+    }
     apply_content(&session, &ticket, state)?;
     host.emit(SyncEvent::RowsChanged(SyncRowsChanged {
         session_id: session.id.clone(),

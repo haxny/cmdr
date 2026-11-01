@@ -112,6 +112,10 @@
                 return tString('sync.profiles.invalid', { problem: profileProblemText(refusal.problem) })
             case 'writeFailed':
                 return tString('sync.profiles.writeFailed')
+            case 'tooLarge':
+                return tString('sync.profiles.tooLarge')
+            // `badRoots` only answers remembering a pair's options, never a menu action.
+            case 'badRoots':
             case 'nameTaken':
             case 'unexpected':
                 return tString('sync.profiles.unexpected')

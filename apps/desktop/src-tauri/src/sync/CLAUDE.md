@@ -23,6 +23,8 @@ pass-throughs: `apps/desktop/src-tauri/src/commands/sync.rs`.
 - **A run is tied to the confirm the person saw**: `RunRequest::revision` and its Settings must match the plan's
   current revision, which every override, content answer, and new Settings bump. The run then calls `gate` itself.
 - **Only the newest compare of a session speaks**: a superseded one emits nothing; events carry the generation.
+- **A session belongs to its window** (`owned_session` in every mutating command), and a closed one starts nothing:
+  check `Session::is_closed` under the slot's lock before storing a control.
 - **The adapter never deletes**: landings are `ConflictResolution::Skip`, claims exclusive, empty-folder removal one
   `rmdir`, removals go to the Trash or a versions folder; no symlink inside a root may lead a write.
 - **`SettleSink` wraps the app's sink, never replaces it**: the queue window and the engine's questions must still

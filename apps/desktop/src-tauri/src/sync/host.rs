@@ -9,7 +9,7 @@ use cmdr_fs::volume::Volume;
 use cmdr_listing::ListingId;
 use cmdr_operations::{OperationEventSink, Operations};
 use cmdr_sync::RootRef;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tauri_specta::Event;
 
 use super::engine::SinkFactory;
@@ -44,6 +44,8 @@ pub(crate) trait SyncHost: Send + Sync {
     fn sinks(&self) -> SinkFactory;
     /// Sends one event to the dialog.
     fn emit(&self, event: SyncEvent);
+    /// Whether the window with this label is still open.
+    fn window_open(&self, label: &str) -> bool;
 }
 
 /// The app's answers: the volume registry, the listing engine, the installed
@@ -98,5 +100,9 @@ impl SyncHost for AppSyncHost {
             SyncEvent::RunProgress(event) => event.emit(&self.app),
             SyncEvent::RunFinished(event) => event.emit(&self.app),
         };
+    }
+
+    fn window_open(&self, label: &str) -> bool {
+        self.app.get_webview_window(label).is_some()
     }
 }

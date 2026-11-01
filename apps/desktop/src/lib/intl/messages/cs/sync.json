@@ -1172,6 +1172,10 @@
   "@sync.profiles.invalid": {
     "sourceHash": "88aa7fc"
   },
+  "sync.profiles.tooLarge": "This profile is too large to save. Shorten its masks or its exclude list.",
+  "@sync.profiles.tooLarge": {
+    "sourceHash": "fc540eb"
+  },
   "sync.profiles.writeFailed": "Cmdr nemohl zapsat soubor s profily, takže se tato změna neuložila.",
   "@sync.profiles.writeFailed": {
     "sourceHash": "8e1fc72"

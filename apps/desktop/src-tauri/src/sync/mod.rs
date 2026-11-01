@@ -19,4 +19,6 @@ mod engine_test;
 #[cfg(test)]
 mod profile_store_test;
 #[cfg(test)]
+mod session_life_test;
+#[cfg(test)]
 mod session_test;

@@ -29,6 +29,16 @@ const SCHEMA_VERSION: u32 = 1;
 pub const MAX_PROFILES: usize = 200;
 /// How many pairs of roots remember their last options.
 pub const MAX_REMEMBERED_PAIRS: usize = 50;
+/// The largest a stored profile or a remembered pair may be, as JSON. Masks
+/// and paths a person types fit many times over; the file stays small.
+pub const MAX_ENTRY_BYTES: usize = 64 * 1024;
+/// The longest volume id a remembered root may carry.
+const MAX_VOLUME_ID_BYTES: usize = 512;
+/// The longest path a remembered root may carry (macOS's `PATH_MAX`).
+const MAX_ROOT_PATH_BYTES: usize = 1024;
+/// Starts the key of an entry stored without an id. Real ids are UUIDs, which
+/// never hold a space, so no real id can take one of these.
+const NO_ID_PREFIX: &str = "no id ";
 
 /// One row of the profile list: a profile that works, or one shown greyed with why.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
@@ -59,6 +69,12 @@ pub enum ProfileSaveRefusal {
         /// The limit.
         max: u32,
     },
+    /// The profile is larger than `max_bytes` stored (masks or paths far longer
+    /// than anyone types).
+    TooLarge {
+        /// The limit.
+        max_bytes: u32,
+    },
     /// The profile fails validation.
     Invalid {
         /// What is wrong.
@@ -74,6 +90,9 @@ pub enum ProfileSaveRefusal {
 pub enum ProfileEditRefusal {
     /// Another profile already has that name; nothing changed.
     NameTaken,
+    /// Options for roots that aren't folder paths (relative, climbing with
+    /// `..`, empty, or far too long), or too large to store; nothing changed.
+    BadRoots,
     /// The list changed in memory but couldn't be written to disk.
     WriteFailed,
 }
@@ -258,9 +277,26 @@ fn text<'a>(entry: &'a Value, field: &str) -> Option<&'a str> {
 }
 
 /// The key an entry is addressed by: its id, or, for an entry that has none, a key built from
-/// its place, so it can still be listed greyed and deleted.
+/// its place, so it can still be listed greyed and deleted. That key starts with
+/// `NO_ID_PREFIX`, which no real id can, so it never addresses another entry.
 fn entry_id(index: usize, stored: &Value) -> String {
-    text(stored, "id").map_or_else(|| format!("no-id-{index}"), str::to_owned)
+    match text(stored, "id") {
+        Some(id) if !id.starts_with(NO_ID_PREFIX) => id.to_owned(),
+        _ => format!("{NO_ID_PREFIX}{index}"),
+    }
+}
+
+/// Whether `value` is small enough to store.
+fn fits(value: &Value) -> bool {
+    serde_json::to_vec(value).is_ok_and(|bytes| bytes.len() <= MAX_ENTRY_BYTES)
+}
+
+/// Whether a root is worth remembering: a volume id and a folder path of sane size.
+fn root_ok(root: &RootRef) -> bool {
+    !root.volume_id.is_empty()
+        && root.volume_id.len() <= MAX_VOLUME_ID_BYTES
+        && root.path.len() <= MAX_ROOT_PATH_BYTES
+        && crate::sync::session::root_path_ok(&root.path)
 }
 
 fn position_of(list: &ProfileList, id: &str) -> Option<usize> {
@@ -327,9 +363,18 @@ fn merged(stored: &Value, profile: &SyncProfile, new: Value) -> Value {
 
 /// Saves `profile`: over the stored entry with its id or, failing that, its name, where
 /// that one stands; else at the end, so no other profile's number moves. Another entry
-/// with the same name is replaced. Refused when it fails validation, or the list is full.
+/// with the same name is replaced. Refused when it fails validation, is larger than
+/// `MAX_ENTRY_BYTES`, or the list is full.
 pub(crate) fn save_in(list: &mut ProfileList, profile: SyncProfile) -> Result<(), ProfileSaveRefusal> {
     validate(&profile).map_err(|problem| ProfileSaveRefusal::Invalid { problem })?;
+    let new = serde_json::to_value(&profile).map_err(|_| ProfileSaveRefusal::Invalid {
+        problem: ProfileProblem::Unreadable,
+    })?;
+    if !fits(&new) {
+        return Err(ProfileSaveRefusal::TooLarge {
+            max_bytes: u32::try_from(MAX_ENTRY_BYTES).unwrap_or(u32::MAX),
+        });
+    }
     let key = name_key(&profile.name);
     let by_id = list
         .entries
@@ -351,9 +396,7 @@ pub(crate) fn save_in(list: &mut ProfileList, profile: SyncProfile) -> Result<()
             list.entries.len() - 1
         }
     };
-    let new = serde_json::to_value(&profile).map_err(|_| ProfileSaveRefusal::Invalid {
-        problem: ProfileProblem::Unreadable,
-    })?;
+
     let merged = merged(&list.entries[at], &profile, new);
     list.entries[at] = merged;
     // A list that grew two entries with one name heals here.
@@ -435,26 +478,35 @@ pub(crate) fn last_options_in(list: &ProfileList, left: &RootRef, right: &RootRe
     serde_json::from_value(stored.get("options")?.clone()).ok()
 }
 
+/// Why options weren't remembered: roots that aren't folder paths, or too much to store.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct BadRoots;
+
 /// Remembers `options` for the pair as the newest, forgetting the oldest pairs past
-/// `MAX_REMEMBERED_PAIRS`. Returns whether anything changed.
+/// `MAX_REMEMBERED_PAIRS`. Returns whether anything changed; roots that aren't
+/// folder paths, or an entry past `MAX_ENTRY_BYTES`, are refused unchanged.
 pub(crate) fn remember_options_in(
     list: &mut ProfileList,
     left: &RootRef,
     right: &RootRef,
     options: &SyncOptions,
-) -> bool {
+) -> Result<bool, BadRoots> {
+    if !root_ok(left) || !root_ok(right) {
+        return Err(BadRoots);
+    }
     let (Ok(left_json), Ok(right_json), Ok(options_json)) = (
         serde_json::to_value(left),
         serde_json::to_value(right),
         serde_json::to_value(options),
     ) else {
-        return false;
+        return Ok(false);
     };
+    let entry = serde_json::json!({ "left": left_json, "right": right_json, "options": options_json });
+    if !fits(&entry) {
+        return Err(BadRoots);
+    }
     list.last_options.retain(|e| !same_pair(e, left, right));
-    list.last_options.insert(
-        0,
-        serde_json::json!({ "left": left_json, "right": right_json, "options": options_json }),
-    );
+    list.last_options.insert(0, entry);
     list.last_options.truncate(MAX_REMEMBERED_PAIRS);
-    true
+    Ok(true)
 }

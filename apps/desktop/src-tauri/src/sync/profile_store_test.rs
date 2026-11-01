@@ -6,8 +6,9 @@ use serde_json::{Value, json};
 use cmdr_sync::{ProfileOverrides, ProfileProblem, RootRef, ShowFilters, SyncOptions, SyncProfile};
 
 use super::profile_store::{
-    MAX_PROFILES, MAX_REMEMBERED_PAIRS, NameTaken, ProfileEntry, ProfileMove, ProfileSaveRefusal, ProfileStore,
-    WriteFailed, delete_in, entries_of, last_options_in, move_in, remember_options_in, rename_in, save_in,
+    BadRoots, MAX_ENTRY_BYTES, MAX_PROFILES, MAX_REMEMBERED_PAIRS, NameTaken, ProfileEntry, ProfileMove,
+    ProfileSaveRefusal, ProfileStore, WriteFailed, delete_in, entries_of, last_options_in, move_in,
+    remember_options_in, rename_in, save_in,
 };
 
 fn root(path: &str) -> RootRef {
@@ -225,7 +226,7 @@ fn last_options_keep_the_newest_fifty_pairs() {
             masks: format!("*.{i}"),
             ..SyncOptions::default()
         };
-        remember_options_in(&mut list, &root(&format!("/l{i}")), &root(&format!("/r{i}")), &options);
+        remember_options_in(&mut list, &root(&format!("/l{i}")), &root(&format!("/r{i}")), &options).unwrap();
     }
     assert_eq!(list.last_options.len(), MAX_REMEMBERED_PAIRS);
     assert_eq!(
@@ -237,7 +238,7 @@ fn last_options_keep_the_newest_fifty_pairs() {
     assert_eq!(newest.masks, "*.54");
     // The pair is ordered, and saving it again replaces and refreshes it.
     assert_eq!(last_options_in(&list, &root("/r54"), &root("/l54")), None);
-    remember_options_in(&mut list, &root("/l5"), &root("/r5"), &SyncOptions::default());
+    remember_options_in(&mut list, &root("/l5"), &root("/r5"), &SyncOptions::default()).unwrap();
     assert_eq!(list.last_options.len(), MAX_REMEMBERED_PAIRS);
     assert_eq!(last_options_in(&list, &root("/l5"), &root("/r5")).unwrap().masks, "");
 }
@@ -249,7 +250,7 @@ fn last_options_reach_disk_and_survive_a_restart() {
     let writer = ProfileStore::new();
     writer
         .edit_at(Some(&path), "remembering options", |list| {
-            remember_options_in(list, &root("/l"), &root("/r"), &SyncOptions::default())
+            remember_options_in(list, &root("/l"), &root("/r"), &SyncOptions::default()).unwrap()
         })
         .unwrap();
     let reader = ProfileStore::new();
@@ -315,4 +316,73 @@ fn concurrent_edits_never_lose_the_newer_write() {
     let reader = ProfileStore::new();
     reader.load_at(&path);
     assert_eq!(reader.entries(), store.entries(), "the file holds the last change");
+}
+
+#[test]
+fn options_for_roots_that_arent_folder_paths_are_refused() {
+    let mut list = super::profile_store::ProfileList::default();
+    let options = SyncOptions::default();
+    let bad = [
+        root("relative/path"),
+        root("/a/../b"),
+        root(""),
+        root(&format!("/{}", "x".repeat(2000))),
+        RootRef {
+            volume_id: String::new(),
+            path: "/l".to_owned(),
+        },
+    ];
+    for left in &bad {
+        assert_eq!(
+            remember_options_in(&mut list, left, &root("/r"), &options),
+            Err(BadRoots)
+        );
+    }
+    let huge = SyncOptions {
+        masks: "*".repeat(MAX_ENTRY_BYTES),
+        ..SyncOptions::default()
+    };
+    assert_eq!(
+        remember_options_in(&mut list, &root("/l"), &root("/r"), &huge),
+        Err(BadRoots)
+    );
+    assert!(list.last_options.is_empty());
+}
+
+#[test]
+fn a_profile_past_the_size_cap_is_refused_and_the_list_stays() {
+    let mut list = super::profile_store::ProfileList::default();
+    save_in(&mut list, profile("a", "A")).unwrap();
+    let huge = SyncProfile {
+        options: SyncOptions {
+            excludes: vec!["x".repeat(MAX_ENTRY_BYTES)],
+            ..SyncOptions::default()
+        },
+        ..profile("b", "B")
+    };
+    assert!(matches!(
+        save_in(&mut list, huge),
+        Err(ProfileSaveRefusal::TooLarge { .. })
+    ));
+    assert_eq!(names(&list), vec!["A".to_owned()]);
+}
+
+#[test]
+fn an_entry_without_an_id_never_shares_a_key_with_a_real_one() {
+    // A stored id that looks like the synthetic key of another entry.
+    let list = super::profile_store::ProfileList {
+        entries: vec![json!({ "name": "No id" }), json!({ "id": "no id 0", "name": "Sneaky" })],
+        last_options: Vec::new(),
+    };
+    let ids: Vec<String> = entries_of(&list)
+        .into_iter()
+        .map(|entry| match entry {
+            ProfileEntry::Valid { profile } => profile.id,
+            ProfileEntry::Invalid { id, .. } => id,
+        })
+        .collect();
+    assert_ne!(ids[0], ids[1]);
+    let mut deleting = list.clone();
+    assert!(delete_in(&mut deleting, &ids[0]));
+    assert_eq!(names(&deleting), vec!["Sneaky".to_owned()]);
 }

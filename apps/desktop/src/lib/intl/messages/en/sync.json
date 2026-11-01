@@ -1457,6 +1457,10 @@
       "problem": "why (one of the sync.profiles.problem.* texts)"
     }
   },
+  "sync.profiles.tooLarge": "This profile is too large to save. Shorten its masks or its exclude list.",
+  "@sync.profiles.tooLarge": {
+    "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): toast when a profile is too large to store (its masks or exclude list are far longer than anyone types). Nothing was saved."
+  },
   "sync.profiles.writeFailed": "Cmdr couldn’t write the profiles file, so this change isn’t saved.",
   "@sync.profiles.writeFailed": {
     "description": "Synchronize folders profiles menu (F2, in the footer of the dialog): toast when the profiles file couldn’t be written. \"Cmdr\" is the app name."

@@ -45,19 +45,23 @@
   `ProfileEditRefusal`); the dialog says it isn't saved.
 - **Rename vs save.** `rename_in` refuses a name another profile has (`NameTaken`); `save_in` replaces in place. The
   dialog asks, then saves over.
-- **No id.** An entry without a string `id` is listed `Invalid`/`Unreadable` under the key `no-id-<place>`, which
-  delete, rename, and move accept, so it can be removed.
+- **No id.** An entry without a string `id` is listed `Invalid`/`Unreadable` under the key `no id <place>`, which
+  delete, rename, and move accept, so it can be removed. Real ids are UUIDs (no spaces); a stored id that starts with
+  `no id ` gets a synthetic key of its own too, so no key ever addresses two entries.
+- **Size.** A profile or a remembered pair larger than `MAX_ENTRY_BYTES` (64 KiB as JSON) is refused (`TooLarge`,
+  `BadRoots`). Remembered roots must be absolute paths that never climb, with a volume id, and of sane length
+  (`BadRoots`); the dialog only logs that (the options aren't remembered).
 - **Limits.** `effective` clamps frontend-supplied Settings values (tolerance 0 to 60 s, removal percentage 1 to 99,
   count up to 1,000,000); 100% would disable the guard, so Settings stops at 99.
 
 ## Sessions
 
 One session per open dialog (`session.rs`, `SESSIONS`), addressed by a uuid the frontend holds. `start_sync_compare`
-opens one (owned by the calling window; `WindowEvent::Destroyed` closes its sessions) when `sessionId` is `None`, else
-compares again in that one: the newer compare cancels the older's `SyncControl`, only the newest generation's result is
+opens one (owned by the calling window; `WindowEvent::Destroyed` closes its sessions; a window gone by the time the
+session opens closes it again at once, `NoSuchSession`) when `sessionId` is `None`, else compares again in that one: the newer compare cancels the older's `SyncControl`, only the newest generation's result is
 stored (`Session::generation`), and a superseded compare emits no progress and no `sync-compare-finished`. Both events
 carry the generation, which `start_sync_compare` answers too. A compare checks every input
-before it scans: each volume is connected (`VolumeNotConnected`), each root path is non-empty and never climbs with `..`
+before it scans: each volume is connected (`VolumeNotConnected`), each root path is absolute and never climbs with `..`
 (`BadPath`), each local-namespace root resolves to its real path (`canonicalize`, 5 s at most, else
 `RootUnreachable`), the roots don't overlap (`RootsConflict`: by real path when both have one, whatever volume ids named
 them, so a symlink to the other root or one folder under two ids is caught; else `roots_conflict` on one volume), the masks parse (`BadMask`), the Settings with the profile's overrides on
@@ -76,6 +80,19 @@ paths in their own spelling (`leftRelPath`, `rightRelPath`) for F3/F4. `find_syn
 (next or previous folder, a typed name) from the same cached view (`cmdr_sync::find_row`). A run marks the session `stale`
 (the folders changed); the dialog compares again.
 
+Decision: a session belongs to its window. Every command that changes one (compare again, pause, cancel, actions,
+content compare, confirm, run, close) carries the calling `tauri::Window`; another window's call is `NoSuchSession`
+(`owned_session`). Reading rows, state, and jumps is not tied.
+
+Decision: a closed session starts nothing. `close` sets `Session::closed` before it cancels the compare, the run, and
+any single-row content compare; a compare, run, or row compare checks the flag under the same slot's lock before it
+stores its control, so it either refuses (`NoSuchSession`) or is cancelled by `close`.
+
+Decision: a compare that asks something else than the finished one (other options, Settings, overrides, roots; the
+session id aside) marks the old plan `stale` before it even checks its inputs, so a refused or stopped new compare
+never leaves the old plan runnable. A new compare stores its result only after checking, under the `compared` lock,
+that it is still the newest.
+
 Decision: the run is tied to the confirm the person saw. `Compared::revision` (unique across sessions) changes with
 every override, content answer, and confirm shown with other Settings; `ConfirmPreview::revision` names it, and
 `start_sync_run` refuses `PlanChanged` unless `RunRequest` names the current revision and the same Settings. A compare a
@@ -83,6 +100,13 @@ run has already changed is `StaleCompare`. The volume a compare read must still 
 (`Arc::ptr_eq`), else `VolumeNotConnected` (compare again). Both local roots are resolved again (`real_paths.rs`, off
 the session lock): a root that now resolves elsewhere (swapped for a symlink since the compare) is `StaleCompare`, one
 that won't resolve is `RootUnreachable`. Below the root, `no_link_below` covers each write.
+
+Gap (residual window): the roots are resolved at compare and again at launch, not before every batch, and writes go
+through the volume path (`RunSide::root`), not the resolved real path. A root swapped for a symlink to elsewhere WHILE a
+run goes on would take that run's remaining batches with it. Every source is still bound to its snapshot facts
+(`ExpectedSources`), so a source that reads differently there is skipped, and landings never overwrite; what remains is
+copies landing in, or files set aside from, the swapped-in folder when it holds identical files. Writing through the
+real path would need the engine to address the local disk volume by real path instead of the volume's own; deferred.
 
 Real paths are resolved on a blocking thread with a 5 s limit and never under a session lock: the roots at compare and
 run, a custom versions folder at confirm and run. For a custom folder only "not there" climbs to the parent (it may be
@@ -107,8 +131,10 @@ namespace, others by volume id and path; paths compare by components, so a trail
 drop, so a panicking run task releases it too.
 
 **Content compare of one row** answers only onto its own row: refused while a run goes on (`RunInProgress`), and an
-answer for an older compare generation or a row whose paths changed under that index is `PlanChanged`. Grid pages are
-cut from a `view_rows` result cached per plan revision and show-filters.
+answer for an older compare generation or a row whose paths changed under that index is `PlanChanged`. Its control sits
+in `Session::row_compares`, so closing the session or cancelling the compare stops it, and it gives up after
+`ROW_CONTENT_TIMEOUT` (10 min); stopped or out of time, the row stays `?`. Grid pages are cut from a `view_rows` result
+cached per plan revision and show-filters, at most `MAX_ROWS_PAGE` (2,000) rows a call.
 
 ## Engine adapter
 
@@ -133,15 +159,23 @@ operations with `Initiator::User`, so the queue window, progress, journal, and u
   counted. Trash is `trash_files_start`. ❌ Nothing calls a delete.
 - **No symlink leads a write.** Right before a copy, move, or move back lands, and before folders are made or an
   empty one removed, every existing folder from just below the side's root down to the destination is lstat'ed; a
-  symlink there, or a folder that won't answer (anything but `NotFound`), refuses the batch (`Failed`). The local disk's custom folder is checked by the run from the folder the
-  person picked (`safe_way`). Roots themselves may be symlinks (resolved once, at compare).
+  symlink there, or a folder that won't answer (anything but `NotFound`), refuses the batch (`Failed`). A move, move
+  back, or trash also lstats each source's path from just below its root down to its parent: a folder swapped for a
+  symlink since the observe would carry the source (and the binding, which follows the link to the same file) outside
+  the root, so that source is `Failed` and never handed to the engine. The local disk's custom folder is checked by the
+  run from the folder the person picked (`safe_way`). Roots themselves may be symlinks (resolved at compare and launch).
 - **Real paths and `RunSide`.** `RunSide::root` stays the volume path (the volume resolves paths under its own root,
   which may itself be a symlinked path); `RunSide::namespace_root` is the real path, so `InsideSyncFolder` sees through
   symlinks, and the app also resolves a custom folder's existing prefix before comparing it with the real roots.
 - Warn logs name a refusal's typed kind (its serde tag), never its paths.
-- **Cancel.** `run` forwards the run's cancel into the running operation (`cancel_operation`); a queued op is dropped
-  without settling, so after a forwarded cancel the adapter also watches the queue and returns stopped once the op left
-  it. `run_to_end` (move back, keep policy) never forwards it.
+- **Cancel.** `run` forwards the run's cancel into the running operation (`cancel_operation`); `run_to_end` (move
+  back, keep policy) never forwards it. A queued op cancelled (by this forward, or by the person in the queue window)
+  is dropped without settling and its sink never hears an end, so while waiting the adapter looks at
+  `list_operations` every `GONE_POLL` (100 ms), whatever the batch: once its op is gone it waits `SETTLE_GRACE`
+  (500 ms) for a settle on its way, else answers stopped. Gotcha/Why: before, only a forwarded cancel started that watch,
+  so a move back cancelled from the queue window waited forever and kept the run lock until restart. The runner then
+  reads a stopped move back honestly: the staged file is still there, so the row is `KeptNotReplaced` with the staging
+  folder listed, and the run stops and releases its lock.
 - **Why `SettleSink` wraps the `TauriEventSink`.** Replacing it would hide the op from the queue window and swallow the
   engine's questions (Locked items, sources gone). The wrapper forwards every event untouched, records each source's
   last outcome (a cross-volume move speaks twice), and wakes the adapter on `emit_settled`.

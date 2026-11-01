@@ -1,4 +1,6 @@
 //! IPC for Synchronize folders (⇧F12). Thin: the work is `crate::sync` and `cmdr-sync`.
+//! A command that changes a session answers only the window whose dialog owns it
+//! (`owned_session`); any other gets `NoSuchSession`.
 
 use cmdr_sync::{
     BulkAction, KeepPolicy, KeepRefusal, RootRef, RowQuery, ShowFilters, SyncDefaults, SyncOptions, SyncProfile,
@@ -12,15 +14,15 @@ use crate::sync::wire::{
 use crate::sync::{session, session_compare, session_run};
 
 use crate::sync::profile_store::{
-    NameTaken, PROFILES, ProfileEditRefusal, ProfileEntry, ProfileMove, ProfileSaveRefusal, WriteFailed, delete_in,
-    move_in, remember_options_in, rename_in, save_in,
+    BadRoots, NameTaken, PROFILES, ProfileEditRefusal, ProfileEntry, ProfileMove, ProfileSaveRefusal, WriteFailed,
+    delete_in, move_in, remember_options_in, rename_in, save_in,
 };
 
 /// The saved profiles in the person's order. A profile that can't be used is listed
 /// with why, never dropped.
 #[tauri::command]
 #[specta::specta]
-pub fn get_sync_profiles(_app: tauri::AppHandle) -> Vec<ProfileEntry> {
+pub fn get_sync_profiles() -> Vec<ProfileEntry> {
     PROFILES.list()
 }
 
@@ -95,7 +97,7 @@ pub fn move_sync_profile(
 /// The options the dialog last ran with for this ordered pair of roots.
 #[tauri::command]
 #[specta::specta]
-pub fn get_sync_last_options(_app: tauri::AppHandle, left: RootRef, right: RootRef) -> Option<SyncOptions> {
+pub fn get_sync_last_options(left: RootRef, right: RootRef) -> Option<SyncOptions> {
     PROFILES.last_options(&left, &right)
 }
 
@@ -108,10 +110,17 @@ pub fn save_sync_last_options(
     right: RootRef,
     options: SyncOptions,
 ) -> Result<(), ProfileEditRefusal> {
-    PROFILES
-        .edit(&app, "remembering options", |list| {
-            remember_options_in(list, &left, &right, &options)
+    let mut refused = false;
+    let written = PROFILES.edit(&app, "remembering options", |list| {
+        remember_options_in(list, &left, &right, &options).unwrap_or_else(|BadRoots| {
+            refused = true;
+            false
         })
+    });
+    if refused {
+        return Err(ProfileEditRefusal::BadRoots);
+    }
+    written
         .map(|_| ())
         .map_err(|WriteFailed| ProfileEditRefusal::WriteFailed)
 }
@@ -142,14 +151,16 @@ pub async fn start_sync_compare(
 /// Pauses or resumes the session's compare.
 #[tauri::command]
 #[specta::specta]
-pub fn set_sync_compare_paused(session_id: String, paused: bool) -> Result<(), SyncError> {
+pub fn set_sync_compare_paused(window: tauri::Window, session_id: String, paused: bool) -> Result<(), SyncError> {
+    session::owned_session(&session_id, window.label())?;
     session::set_paused(&session_id, false, paused)
 }
 
 /// Stops the session's compare; its rows stay as they were.
 #[tauri::command]
 #[specta::specta]
-pub fn cancel_sync_compare(session_id: String) -> Result<(), SyncError> {
+pub fn cancel_sync_compare(window: tauri::Window, session_id: String) -> Result<(), SyncError> {
+    session::owned_session(&session_id, window.label())?;
     session::cancel(&session_id, false)
 }
 
@@ -176,11 +187,13 @@ pub fn get_sync_state(session_id: String, filters: ShowFilters) -> Result<SyncSt
 #[tauri::command]
 #[specta::specta]
 pub fn set_sync_actions(
+    window: tauri::Window,
     session_id: String,
     items: Vec<u32>,
     bulk: BulkAction,
     filters: ShowFilters,
 ) -> Result<SyncActionsOutcome, SyncError> {
+    session::owned_session(&session_id, window.label())?;
     session::set_actions(&session_id, &items, bulk, &filters)
 }
 
@@ -194,7 +207,13 @@ pub fn find_sync_row(session_id: String, filters: ShowFilters, query: RowQuery) 
 /// Compares one equal-size pair by content; `sync-rows-changed` follows.
 #[tauri::command]
 #[specta::specta]
-pub async fn compare_sync_item_content(app: tauri::AppHandle, session_id: String, item: u32) -> Result<(), SyncError> {
+pub async fn compare_sync_item_content(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+    session_id: String,
+    item: u32,
+) -> Result<(), SyncError> {
+    session::owned_session(&session_id, window.label())?;
     session_run::compare_item_content(AppSyncHost::new(app), &session_id, item).await
 }
 
@@ -202,10 +221,12 @@ pub async fn compare_sync_item_content(app: tauri::AppHandle, session_id: String
 #[tauri::command]
 #[specta::specta]
 pub async fn get_sync_confirm(
+    window: tauri::Window,
     session_id: String,
     defaults: SyncDefaults,
     filters: ShowFilters,
 ) -> Result<ConfirmPreview, SyncError> {
+    session::owned_session(&session_id, window.label())?;
     session_run::confirm(&session_id, &defaults, &filters).await
 }
 
@@ -213,27 +234,37 @@ pub async fn get_sync_confirm(
 /// `sync-run-finished` follow.
 #[tauri::command]
 #[specta::specta]
-pub async fn start_sync_run(app: tauri::AppHandle, session_id: String, request: RunRequest) -> Result<(), SyncError> {
+pub async fn start_sync_run(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+    session_id: String,
+    request: RunRequest,
+) -> Result<(), SyncError> {
+    session::owned_session(&session_id, window.label())?;
     session_run::start_run(AppSyncHost::new(app), &session_id, &request).await
 }
 
 /// Pauses or resumes the run between steps.
 #[tauri::command]
 #[specta::specta]
-pub fn set_sync_run_paused(session_id: String, paused: bool) -> Result<(), SyncError> {
+pub fn set_sync_run_paused(window: tauri::Window, session_id: String, paused: bool) -> Result<(), SyncError> {
+    session::owned_session(&session_id, window.label())?;
     session::set_paused(&session_id, true, paused)
 }
 
 /// Stops the run; what it set aside goes back.
 #[tauri::command]
 #[specta::specta]
-pub fn cancel_sync_run(session_id: String) -> Result<(), SyncError> {
+pub fn cancel_sync_run(window: tauri::Window, session_id: String) -> Result<(), SyncError> {
+    session::owned_session(&session_id, window.label())?;
     session::cancel(&session_id, true)
 }
 
 /// Closes the dialog's session, stopping anything it runs.
 #[tauri::command]
 #[specta::specta]
-pub fn close_sync_session(session_id: String) {
-    session::close(&session_id);
+pub fn close_sync_session(window: tauri::Window, session_id: String) {
+    if session::owned_session(&session_id, window.label()).is_ok() {
+        session::close(&session_id);
+    }
 }
