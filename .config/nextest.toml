@@ -103,6 +103,14 @@ s3-fixture = { max-threads = 4 }
 nextcloud-fixture = { max-threads = 1 }
 
 [[profile.default.overrides]]
+# Fork (haxny): the tag editor's cover-likeness test decodes, re-encodes and resizes real JPEG/PNG covers in a debug
+# build. On the shared GitHub macOS runners it lands at 6–9 s, so the global 8 s cap killed two fork builds
+# (runs 41258709708, 41322272975) though it passes in ~1 s locally. Making it smaller would drop the
+# re-encode coverage it exists for.
+filter = 'test(tag_editor::cover_near_test::)'
+slow-timeout = { period = "30s", terminate-after = 1 }
+
+[[profile.default.overrides]]
 # Disk-image fixtures: hdiutil create+attach+detach plus, for the FSEvents
 # probes, a 15 s internal wait for real live delivery — all past the global 8 s
 # cap. 30 s matches the harness runner's per-call SIGKILL deadline, so a
