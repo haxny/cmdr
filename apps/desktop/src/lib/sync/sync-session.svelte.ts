@@ -125,6 +125,8 @@ class SyncSessionState {
   readonly selected = new SvelteSet<number>()
 
   private generation = 0
+  /** The generation of the plan on screen: the last compare that finished `done` (a stopped one leaves the older). */
+  private planGeneration = 0
   private viewVersion = 0
   /** The newest plan revision a state answer brought; a lower one is a late answer. */
   private stateRevision = 0
@@ -287,6 +289,7 @@ class SyncSessionState {
       return
     }
     this.phase = outcome.type === 'done' ? 'done' : 'stopped'
+    if (outcome.type === 'done') this.planGeneration = payload.generation
     this.selected.clear()
     this.refresh()
   }
@@ -448,7 +451,7 @@ class SyncSessionState {
   async setActions(items: number[], bulk: BulkAction): Promise<ActionsAnswer> {
     if (this.sessionId === null || items.length === 0) return { type: 'done', skipped: [], hidden: 0 }
     try {
-      const outcome = await this.deps.ipc.setSyncActions(this.sessionId, this.generation, items, bulk, this.filters)
+      const outcome = await this.deps.ipc.setSyncActions(this.sessionId, this.planGeneration, items, bulk, this.filters)
       this.takeState(outcome.state)
       this.invalidate()
       return { type: 'done', skipped: outcome.skipped, hidden: outcome.hidden }

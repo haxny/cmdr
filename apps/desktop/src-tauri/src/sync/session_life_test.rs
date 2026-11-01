@@ -100,6 +100,12 @@ fn a_root_must_be_an_absolute_path_that_never_climbs() {
     assert!(!root_path_ok("Users/me"));
     assert!(!root_path_ok(""));
     assert!(!root_path_ok("/a/../b"));
+    // Device volumes name their roots by URL.
+    assert!(root_path_ok("mtp://mtp-0-1/65537/DCIM"));
+    assert!(root_path_ok("adb://R5CT123/sdcard"));
+    assert!(!root_path_ok("mtp://"));
+    assert!(!root_path_ok("adb://R5CT123/sdcard/../data"));
+    assert!(!root_path_ok("://no-scheme"));
 }
 
 #[tokio::test]

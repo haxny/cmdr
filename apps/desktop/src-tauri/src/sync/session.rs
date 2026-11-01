@@ -396,9 +396,22 @@ pub(crate) fn find(id: &str, filters: &ShowFilters, query: &RowQuery) -> Result<
     })
 }
 
-/// Whether `path` is a usable root: absolute (every volume path is, from the
-/// volume's root), never climbing with `..`.
+/// Whether `path` is a usable root: an absolute path, or a device volume's URL
+/// (`mtp://mtp-0-1/65537/DCIM`, `adb://SERIAL/sdcard`), never empty, never
+/// climbing with `..`.
 pub(crate) fn root_path_ok(path: &str) -> bool {
+    if let Some((scheme, rest)) = path.split_once("://")
+        && is_scheme(scheme)
+    {
+        return !rest.is_empty() && rest.split('/').all(|part| part != "..");
+    }
     let path = Path::new(path);
     path.is_absolute() && path.components().all(|part| part != std::path::Component::ParentDir)
+}
+
+/// A URL scheme: a letter, then letters, digits, `+`, `-`, or `.`.
+fn is_scheme(scheme: &str) -> bool {
+    let mut chars = scheme.chars();
+    chars.next().is_some_and(|first| first.is_ascii_alphabetic())
+        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
 }

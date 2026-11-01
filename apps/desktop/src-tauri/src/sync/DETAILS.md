@@ -49,7 +49,7 @@
   delete, rename, and move accept, so it can be removed. Real ids are UUIDs (no spaces); a stored id that starts with
   `no id ` gets a synthetic key of its own too, so no key ever addresses two entries.
 - **Size.** A profile or a remembered pair larger than `MAX_ENTRY_BYTES` (64 KiB as JSON) is refused (`TooLarge`,
-  `BadRoots`). Remembered roots must be absolute paths that never climb, with a volume id, and of sane length
+  `BadRoots`). Remembered roots must be absolute paths or device URLs (`mtp://…`, `adb://…`) that never climb, with a volume id, and of sane length
   (`BadRoots`); the dialog only logs that (the options aren't remembered).
 - **Limits.** `effective` clamps frontend-supplied Settings values (tolerance 0 to 60 s, removal percentage 1 to 99,
   count up to 1,000,000); 100% would disable the guard, so Settings stops at 99.
@@ -61,7 +61,7 @@ opens one (owned by the calling window; `WindowEvent::Destroyed` closes its sess
 session opens closes it again at once, `NoSuchSession`) when `sessionId` is `None`, else compares again in that one: the newer compare cancels the older's `SyncControl`, only the newest generation's result is
 stored (`Session::generation`), and a superseded compare emits no progress and no `sync-compare-finished`. Both events
 carry the generation, which `start_sync_compare` answers too. A compare checks every input
-before it scans: each volume is connected (`VolumeNotConnected`), each root path is absolute and never climbs with `..`
+before it scans: each volume is connected (`VolumeNotConnected`), each root path is absolute (or a device volume's URL, `mtp://…`, `adb://…`) and never climbs with `..`
 (`BadPath`), each local-namespace root resolves to its real path (`canonicalize`, 5 s at most, else
 `RootUnreachable`), the roots don't overlap (`RootsConflict`: by real path when both have one, whatever volume ids named
 them, so a symlink to the other root or one folder under two ids is caught; else `roots_conflict` on one volume), the masks parse (`BadMask`), the Settings with the profile's overrides on

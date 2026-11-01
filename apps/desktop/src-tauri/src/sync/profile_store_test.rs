@@ -347,6 +347,17 @@ fn options_for_roots_that_arent_folder_paths_are_refused() {
         Err(BadRoots)
     );
     assert!(list.last_options.is_empty());
+    // A phone's roots are URLs, and are remembered.
+    let phone = RootRef {
+        volume_id: "mtp-0-1".to_owned(),
+        path: "mtp://mtp-0-1/65537/DCIM".to_owned(),
+    };
+    assert_eq!(remember_options_in(&mut list, &phone, &root("/r"), &options), Ok(true));
+    let adb = RootRef {
+        volume_id: "adb-R5CT".to_owned(),
+        path: "adb://R5CT/sdcard".to_owned(),
+    };
+    assert_eq!(remember_options_in(&mut list, &adb, &root("/r"), &options), Ok(true));
 }
 
 #[test]

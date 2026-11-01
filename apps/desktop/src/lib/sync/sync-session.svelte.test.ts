@@ -249,6 +249,16 @@ describe('createSyncSession', () => {
     expect(h.ipc.setSyncActions).toHaveBeenLastCalledWith('s1', 2, [0], 'skip', DEFAULT_SHOW_FILTERS)
   })
 
+  it('keys name the plan on screen: a compare that was stopped leaves the older plan’s generation', async () => {
+    const h = harness()
+    const s = await opened(h)
+    await s.compare()
+    h.finish({ sessionId: 's1', generation: 2, outcome: { type: 'stopped' } })
+    await settle()
+    await s.setActions([0], 'skip')
+    expect(h.ipc.setSyncActions).toHaveBeenLastCalledWith('s1', 1, [0], 'skip', DEFAULT_SHOW_FILTERS)
+  })
+
   it('answers the typed refusal of an action change', async () => {
     const h = harness()
     const s = await opened(h)
