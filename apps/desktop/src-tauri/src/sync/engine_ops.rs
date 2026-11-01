@@ -220,8 +220,9 @@ impl EngineAdapter {
         let (sink, mut rx) = SettleSink::wrap((self.config.sinks)());
         let started = match start(Arc::clone(&sink) as Arc<dyn OperationEventSink>).await {
             Ok(started) => started,
-            Err(refusal) => {
-                log::warn!(target: "sync", "a sync batch didn't start: {refusal:?}");
+            Err(_) => {
+                // The refusal names paths; a log line names none (`LogPrivate`).
+                log::warn!(target: "sync", "a sync batch didn't start");
                 return None;
             }
         };
@@ -269,8 +270,9 @@ impl EngineAdapter {
         match self.mkdir(on, dir).await {
             Ok(()) => ItemOutcome::Done,
             Err(MutationError::AlreadyExists { .. }) => ItemOutcome::Skipped,
-            Err(refusal) => {
-                log::warn!(target: "sync", "a versions folder couldn't be made: {refusal:?}");
+            Err(_) => {
+                // The refusal names paths; a log line names none (`LogPrivate`).
+                log::warn!(target: "sync", "a versions folder couldn't be made");
                 ItemOutcome::Failed
             }
         }
@@ -294,8 +296,9 @@ impl EngineAdapter {
             match self.mkdir(on, folder).await {
                 Ok(()) => {}
                 Err(MutationError::AlreadyExists { .. }) if is_folder(on, folder).await => {}
-                Err(refusal) => {
-                    log::warn!(target: "sync", "a folder for the run couldn't be made: {refusal:?}, {}", LogPrivate::path(folder));
+                Err(_) => {
+                    // The refusal names paths; a log line names none (`LogPrivate`).
+                    log::warn!(target: "sync", "a folder for the run couldn't be made: {}", LogPrivate::path(folder));
                     return false;
                 }
             }
