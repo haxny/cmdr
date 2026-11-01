@@ -201,8 +201,9 @@ fn rows_to_mark(
 /// Whether `this` copy is marked against its `other` copy. An unknown time or
 /// size never marks: we only claim a difference we can see.
 fn differs(this: &FileEntry, other: &FileEntry, mode: CompareDirectoriesMode) -> bool {
-    // `this` is the LEFT side; kind is forced to File so a symlink beside a file keeps
-    // the date comparison ⇧F2 always did (it never looked at kinds).
+    // `this` is the pane being marked (either side) and goes in `classify`'s left
+    // slot, so `NewerLeft` reads "this copy is newer". Kind is forced to File so a
+    // symlink beside a file keeps the date comparison ⇧F2 always did.
     let facts = |e: &FileEntry| EntryFacts {
         kind: EntryKind::File,
         ..EntryFacts::of(e)

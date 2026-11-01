@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Action, Category, EntryKey, EntryKind, HOUR_SHIFT_SECS, NameRule, Plan, PlanItem, Side, Snapshot};
+use crate::{Action, EntryKey, EntryKind, HOUR_SHIFT_SECS, NameRule, Plan, PlanItem, Side, Snapshot};
 
 /// Removals above this share of a side's files block (rclone bisync's default).
 pub const DEFAULT_MAX_REMOVE_PERCENT: u8 = 50;
@@ -99,13 +99,6 @@ pub struct GuardReport {
     pub skew: Option<ClockSkew>,
 }
 
-fn snapshot_of<'a>(side: Side, left: &'a Snapshot, right: &'a Snapshot) -> &'a Snapshot {
-    match side {
-        Side::Left => left,
-        Side::Right => right,
-    }
-}
-
 fn sentinel_missing(name: &str, side: &Snapshot, rule: NameRule) -> bool {
     let key = EntryKey::root().child(rule.key(name));
     side.entries
@@ -114,10 +107,7 @@ fn sentinel_missing(name: &str, side: &Snapshot, rule: NameRule) -> bool {
 }
 
 fn removed_files(plan: &Plan, side: Side) -> u64 {
-    let removal = match side {
-        Side::Left => Action::RemoveLeft,
-        Side::Right => Action::RemoveRight,
-    };
+    let removal = side.pick(Action::RemoveLeft, Action::RemoveRight);
     plan.items
         .iter()
         .filter(|item| item.action == removal)
@@ -144,16 +134,16 @@ pub fn check(plan: &Plan, left: &Snapshot, right: &Snapshot, settings: &GuardSet
     let sentinel = settings.sentinel.as_deref().into_iter().flat_map(|name| {
         sides
             .into_iter()
-            .filter(move |&side| sentinel_missing(name, snapshot_of(side, left, right), rule))
+            .filter(move |&side| sentinel_missing(name, side.pick(left, right), rule))
             .map(|side| GuardBlock::SentinelMissing { side })
     });
     let empty = sides
         .into_iter()
-        .filter(|&side| snapshot_of(side, left, right).is_empty())
+        .filter(|&side| side.pick(left, right).is_empty())
         .map(|side| GuardBlock::EmptyRoot { side });
     let removals = sides
         .into_iter()
-        .filter_map(|side| max_remove(plan, side, snapshot_of(side, left, right), settings));
+        .filter_map(|side| max_remove(plan, side, side.pick(left, right), settings));
     GuardReport {
         blocks: sentinel.chain(empty).chain(removals).collect(),
         older_overwrites_newer: plan.items.iter().filter(|item| item.older_overwrites_newer).count() as u64,
@@ -170,7 +160,7 @@ fn clock_step(gap: i64, tolerance: u64) -> Option<i64> {
 }
 
 fn file_gap(item: &PlanItem, right_offset: i64) -> Option<i64> {
-    if matches!(item.verdict.category, Category::NameClash | Category::Unreadable) {
+    if !item.verdict.category.is_comparable() {
         return None;
     }
     let (l, r) = (item.left.as_ref()?, item.right.as_ref()?);

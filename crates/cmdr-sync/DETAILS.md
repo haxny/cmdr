@@ -13,6 +13,7 @@ Mode-independent; `left` and `right` are `Option<&EntryFacts>`.
 | `DateAndSize`, a time missing        | sizes decide as above, never `Newer*`                    | `SizeOnly`    |
 | `DateAndSize`, dates differ          | `NewerLeft` / `NewerRight`                               | `SizeAndTime` |
 | `DateAndSize`, dates equal           | `Equal` (sizes match or unknown), else `Different`       | `SizeAndTime` |
+| `Content`, two symlinks              | as `DateAndSize` (a link's bytes are never read)         | as there      |
 | `Content`, sizes known and unequal   | as `DateAndSize`                                         | as there      |
 | `Content`, sizes known and equal     | per `ContentState`, see below                            | `Content`     |
 
@@ -73,12 +74,13 @@ key: a group of two or more goes to `clashes` and out of `entries`, and a clashi
 a folder is an entry, never followed.
 
 `SubtreeFacts` is recursive: files and symlinks, their sizes, newest mtime, and held-back items beneath. A folder with
-nothing admitted inside, after its own empty subfolders drop, is left out unless `empty_folders`. Its held-back count
-still flows to its parent. A subfolder that won't list keeps its entry, joins `unreadable` with an `UnreadableReason`
-(permission, not found, unreachable, other; mapped from the typed `VolumeError`), and has zeroed facts except
-`unreadable: 1`, which `SubtreeFacts` adds up through every ancestor; the root that won't list is `RootUnreachable`. The
-root's own held-back count has nowhere to live (no root entry) and is dropped. `InMemoryVolume` lists a missing folder
-as empty, so unreachable-root tests use a double that refuses the path.
+nothing admitted inside, after its own empty subfolders drop, is left out of `entries` unless `empty_folders`, but
+recorded in `Snapshot::present_folders` with its spelling. Its held-back count still flows to its parent. A subfolder
+that won't list keeps its entry, joins `unreadable` with an `UnreadableReason` (permission, not found, unreachable,
+other; mapped from the typed `VolumeError`), and has zeroed facts except `unreadable: 1`, which `SubtreeFacts` adds up
+through every ancestor; the root that won't list is `RootUnreachable`. The root's own held-back count has nowhere to
+live (no root entry) and is dropped. `InMemoryVolume` lists a missing folder as empty, so unreachable-root tests use a
+double that refuses the path.
 
 ## Content compare (content.rs)
 
@@ -102,9 +104,9 @@ folder with the scan's own code and options and returns the same `SubtreeFacts`,
 ## Planner (plan.rs)
 
 The mode table is the phase 1 design's section 6.4 (linked from upstream issue #871), implemented as `default_action`;
-`Mode::ALL` lists the columns. A table action that would write to a side whose `SyncCaps::can_write` is off becomes
-`Skip` (the row's `default_action` already says so). `Undecided` is never a default: `?` rows are `Skip` and show in the
-`?` class.
+`Mode::ALL` (tests) lists the columns. A table action that would write to a side whose `SyncCaps::can_write` is off
+becomes `Skip` (the row's `default_action` already says so). `Undecided` is never a default: `?` rows are `Skip` and
+show in the `?` class.
 
 | Category                               | Compare only | Both ways | Update → | Mirror →                   |
 | -------------------------------------- | ------------ | --------- | -------- | -------------------------- |
@@ -123,14 +125,19 @@ contiguous). Per key, first match wins:
    `Snapshot::clashes`), covering everything beneath.
 3. Both sides folders: no row; the folder heads its children.
 4. Kinds differ: one `TypeClash` row covering the folder side's subtree.
-5. One-sided folder with `held_back`, `unreadable`, or `app_owned` in its subtree, or a clash or unreadable key beneath
+5. One-sided entry where the other side has the folder only in `present_folders` (it holds nothing admitted, say only
+   `.DS_Store` or hidden files): a folder heads its children (they land inside the existing folder), anything else is a
+   `TypeClash` row. Gotcha/Why: without this the folder read as left-only, its whole-folder copy found the landing taken
+   on every run ("changed since compare"), and the pair never converged.
+6. One-sided folder with `held_back`, `unreadable`, or `app_owned` in its subtree, or a clash or unreadable key beneath
    it (checked directly, not only through the counters): no row; its children are rows (non-atomic). Otherwise one row
    for the whole subtree, `bytes = subtree.bytes`.
-6. Anything else: `classify`.
+7. Anything else: `classify`.
 
-Name clash, type clash, and unreadable rows only ever take `Skip`. `older_overwrites_newer` is derived from the action:
-`CopyRight` on `NewerRight` or `CopyLeft` on `NewerLeft` (`settle` recomputes it, and `bytes`, after every change).
-`bytes` is what the action copies or removes; with no action, the larger side.
+Name clash, type clash, and unreadable rows only ever take `Skip` (`Category::is_comparable` is the one test, shared by
+overrides, the planner, steps, the summary, and the clock-skew guard). `older_overwrites_newer` is derived from the
+action: `CopyRight` on `NewerRight` or `CopyLeft` on `NewerLeft` (`settle` recomputes it, and `bytes`, after every
+change). `bytes` is what the action copies or removes; with no action, the larger side.
 
 `Content` rules mark an equal-size file pair `Pending` (an `Unknown` row) when both volumes can read content;
 `content_jobs` lists them and `reclassify` folds the answers in, touching `Pending` rows only (never a clash, type
@@ -234,8 +241,8 @@ is the same-volume folder replaced files wait in: the policy's own when it is in
 `RunContext::new` resolves both sides' versions and staging folders and refuses a custom folder inside either sync root
 (`InsideSyncFolder`: it would be compared and synchronized like the person's files). Only a root whose `RunSide` has a
 `namespace_root` (the local disk or a mounted share, where the custom folder's path means the same file) takes part, and
-it is compared at that real path (the app resolves symlinks; the crate does no I/O): a remote root's path (`/R` on an
-SFTP server) never holds a local folder, whatever its spelling. `with_attempt(side, n)` renames that side's dated
+it is compared at that real path (the app resolves symlinks; `keep.rs` is pure path math): a remote root's path (`/R` on
+an SFTP server) never holds a local folder, whatever its spelling. `with_attempt(side, n)` renames that side's dated
 folders for a retry.
 
 ## Run (steps.rs, execute.rs, runner.rs, runner/keeping.rs)
@@ -244,8 +251,10 @@ folders for a retry.
 versions subfolders, and target folders of split one-sided folders whose children are copied, parents first; made with
 missing parents), then per landing folder (direction, folder) its `KeepAside` groups (each replaced file into the
 staging folder on its own volume) right before its `Copy`, then `Remove` per (side, destination). Rows whose keep is
-refused (by the final policy or the staging path) go to `refused` and get no step. Clash, type-clash, and unreadable
-rows never get a step, whatever their action says.
+refused (by the final policy or the staging path) go to `refused` and get no step. A row gets a step only if its action
+passes the same `refusal` an override must (mode, category, an entry on the side it needs, a writable target), judged
+with the plan's own mode and caps: a hand-built plan with an illegal action (Mirror writing to the source, a copy on a
+clash row) gets no step, whatever its action says.
 
 Before any step, `execute` claims every dated folder the steps use with `EngineBatch::ClaimFolder` (made only if absent;
 `Skipped` when something is there), bumping `attempt` (up to 100) until each is fresh, so a run never mixes into an
@@ -280,14 +289,16 @@ must not run alone (`HeldAfterFailedCopy`, `src/runner/holds.rs`). One changing 
 neighbours, not the whole side.
 
 A source the engine never answered for in a batch it didn't stop counts as `Failed`. When the engine stops a batch (the
-one-item policy and move-back batches included), unanswered sources are observed: a keep or removal source found at its
-kept spot, or whose place no longer reads as the snapshot (gone, or something new there), counts as kept (a removal is
-`Done`, a replaced file comes back with the leftovers, a staged file trashed by the policy is not counted as kept), a
-copy whose landing spot is filled is `Done`. Rows the run never reached are `NotStarted`. Edge: an engine stop plus an
-edit in place during that batch reads as kept (for a replacement then `KeptNotReplaced`), never as untouched; the report
-errs toward "look in the versions folder". A Trash removal has no kept spot to look at, so after a stopped batch a
-source that is gone for any reason (someone else deleted it too) reads as trashed (`Done`): the report can't tell the
-Trash from another delete, and says `Done` rather than claim the file is still there.
+one-item policy and move-back batches included), unanswered sources are observed: a removal source found at its kept
+spot, or whose place no longer reads as the snapshot (gone, or something new there), counts as kept (`Done`); a staged
+file trashed by the policy is not counted as kept; a copy whose landing spot is filled is `Done`. A replaced file counts
+as set aside only when the staging folder has it (then it comes back with the leftovers); gone from its place but not
+there means someone else moved it, so the row is `ChangedSinceCompare` and nothing is moved back (the executor law found
+a move back of a staged file that was never there). Rows the run never reached are `NotStarted`. Edge: an engine stop
+plus an edit in place during that batch reads as kept (for a replacement then `KeptNotReplaced`), never as untouched;
+the report errs toward "look in the versions folder". A Trash removal has no kept spot to look at, so after a stopped
+batch a source that is gone for any reason (someone else deleted it too) reads as trashed (`Done`): the report can't
+tell the Trash from another delete, and says `Done` rather than claim the file is still there.
 
 Cancel (the in-process `SyncControl`) is checked between batches, between items while re-checking, and before each
 engine call; the rest read `NotStarted`. The app's adapter also forwards it into a running engine operation (`run`).
@@ -313,11 +324,12 @@ Crash: a kill between setting a replaced file aside and its copy landing leaves 
 Mirror, a gap in Update). Nothing is lost; the file sits in the versions folder. Finding stale staging folders on the
 next run and offering to put their files back is phase 2.
 
-Law: `execute_proptests.rs` runs random plans in every mode, with the default or a custom versions folder, against
-random edits before or between batches and a random in-process cancel or engine stop; the fake flags any move, trash, or
-copy of something that differs from the snapshot (anywhere beneath it), any landing on an occupied spot, any `rmdir` of
-a snapshot folder, and anything lost, and every replacement row that isn't `Done` must have its old file back in place
-or read `KeptNotReplaced`.
+Law: `execute_proptests.rs` runs random plans in every mode (Compare only included), with random accepted overrides (so
+override-only actions such as `RemoveLeft` or a copy on a `?` row run too), the default or a custom versions folder,
+against random edits before or between batches and a random in-process cancel or engine stop; the fake flags any move,
+trash, or copy of something that differs from the snapshot (anywhere beneath it), any landing on an occupied spot, any
+`rmdir` of a snapshot folder, and anything lost, and every replacement row that isn't `Done` must have its old file back
+in place or read `KeptNotReplaced`.
 
 ## Profiles (profile.rs)
 
@@ -327,7 +339,7 @@ Settings value, so it is the profile's own. Defaults of `SyncOptions` follow the
 size, subfolders on, the OS junk in the exclude list.
 
 `validate` returns the first `ProfileProblem` (empty name, a mask list `MaskFilter::parse` refuses, a tolerance override
-over 60 s, a removal percentage outside 1 to 100); `Unreadable` is the store's, for an entry that doesn't read as a
+over 60 s, a removal percentage outside 1 to 99); `Unreadable` is the store's, for an entry that doesn't read as a
 profile at all. `check_keep_policy` runs the versions-folder rules of `keep.rs` against a stand-in root, so Settings can
 show `BadTemplate` and `EscapesFolder` next to the field; `InsideSyncFolder` needs the real roots and stays a run-time
 refusal. `roots_conflict` compares path components on one volume only (`/a` and `/ab` don't conflict).

@@ -423,3 +423,14 @@ fn scan_and_subtree_now_are_send() {
     assert_send(scan(Side::Left, &volume, Path::new("/"), &options, &control, &|_| {}));
     assert_send(subtree_now(Side::Left, &volume, Path::new("/"), "", &options, &control));
 }
+
+#[test]
+fn scan_errors_are_std_errors_that_name_no_path() {
+    let error = ScanError::RootUnreachable {
+        side: Side::Right,
+        error: VolumeError::NotFound("/private/thing".into()),
+    };
+    assert_eq!(error.to_string(), "the Right root wouldn't list");
+    assert!(std::error::Error::source(&error).is_some());
+    assert_eq!(ScanError::Stopped.to_string(), "the scan was stopped");
+}

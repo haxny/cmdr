@@ -148,3 +148,9 @@ fn backslashes_from_windows_masks_work() {
     assert_eq!(g.admits("sub/a.ext", false), Admission::Out);
     assert_eq!(g.admits("x/sub/a.ext", false), Admission::In);
 }
+
+#[test]
+fn mask_errors_are_std_errors() {
+    let error: Box<dyn std::error::Error> = Box::new(SyncMaskError::SecondBar { position: 4 });
+    assert_eq!(error.to_string(), "second `|` at 4");
+}

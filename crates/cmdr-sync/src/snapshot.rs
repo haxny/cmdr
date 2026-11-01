@@ -50,6 +50,15 @@ pub struct Entry {
     pub subtree: Option<SubtreeFacts>,
 }
 
+impl Entry {
+    /// Bytes an action on it moves: a folder's whole subtree, else its size
+    /// (an unknown size counts as zero).
+    pub fn bytes(&self) -> u64 {
+        self.subtree
+            .map_or_else(|| self.facts.size.unwrap_or(0), |subtree| subtree.bytes)
+    }
+}
+
 /// Why a folder wouldn't list, from the volume's typed error.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnreadableReason {
@@ -78,9 +87,25 @@ pub struct Snapshot {
     /// Folders whose listing failed, with why. Nothing beneath them is known, so
     /// nothing there may be removed on the strength of this snapshot.
     pub unreadable: BTreeMap<EntryKey, UnreadableReason>,
+    /// Folders that are there but left out of `entries` because nothing inside
+    /// was admitted (only junk, hidden, or excluded items, or nothing at all,
+    /// with empty folders off), with this side's spelling. Never rows of their
+    /// own, but the planner treats a folder present on both sides as a head, so
+    /// copies land inside the existing folder instead of over it.
+    pub present_folders: BTreeMap<EntryKey, String>,
 }
 
 impl Snapshot {
+    /// This side's spelling of the folder at `key`, whether an entry or only
+    /// present (`present_folders`).
+    pub fn folder_spelling(&self, key: &EntryKey) -> Option<&str> {
+        match self.entries.get(key) {
+            Some(entry) if entry.facts.kind == EntryKind::Folder => Some(entry.rel_path.as_str()),
+            Some(_) => None,
+            None => self.present_folders.get(key).map(String::as_str),
+        }
+    }
+
     /// Nothing was found, not even a clash.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty() && self.clashes.is_empty()

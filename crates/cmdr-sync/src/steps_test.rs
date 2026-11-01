@@ -450,3 +450,18 @@ fn custom_versions_folder_lives_on_the_local_disk() {
         ]
     );
 }
+
+#[test]
+fn an_illegal_action_in_a_hand_built_plan_never_becomes_a_step() {
+    // Mirror never writes to the source, and an `=` row never acts, even when
+    // a plan is put together around `apply_overrides`.
+    let left = Tree::new().file("a.txt", 5, T + 100).file("e.txt", 1, T).build();
+    let right = Tree::new().file("a.txt", 4, T).file("e.txt", 1, T).build();
+    let mut plan = plan_of(Mode::Mirror, &left, &right);
+    let (a, e) = (index_of(&plan, "a.txt"), index_of(&plan, "e.txt"));
+    plan.items[a as usize].action = Action::CopyLeft;
+    plan.items[e as usize].action = Action::RemoveLeft;
+    let ctx = context(KeepPolicy::default(), caps(), caps());
+    let run = steps(&plan, &[a, e], &ctx);
+    assert!(run.steps.is_empty(), "{:?}", run.steps);
+}

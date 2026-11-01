@@ -3,8 +3,7 @@
 
 use std::path::Path;
 
-use super::{Runner, entry_bytes, file_name, read, result_of};
-use crate::steps::other;
+use super::{Runner, file_name, read, result_of};
 use crate::{
     BoundSource, EngineBatch, EntryKind, ItemOutcome, KeepDestination, Place, RunItemResult, Side, Step, VersionsRoot,
     keep_destination,
@@ -167,12 +166,17 @@ impl Runner<'_> {
                 }
                 Some(other) => self.settle(*index, result_of(other)),
                 // Stopped: if it went aside, it comes back with the leftovers.
+                // Only the staging folder says so: a file gone from its place
+                // but not there was moved by someone else, and there is
+                // nothing of ours to move back.
                 None => {
-                    let old = self.item(*index).entry(side);
-                    if let Some(old) = old
-                        && self.went_to(side, old, to).await
-                    {
+                    let Some(old) = self.item(*index).entry(side) else {
+                        continue;
+                    };
+                    if self.at_spot(side, old, *place, dir).await {
                         self.kept.insert(*index, dir.clone());
+                    } else if !self.unchanged(side, old).await {
+                        self.settle(*index, RunItemResult::ChangedSinceCompare);
                     }
                 }
             }
@@ -182,10 +186,10 @@ impl Runner<'_> {
 
     async fn keep_check(&self, index: u32, side: Side, dir: &Path) -> Result<BoundSource, RunItemResult> {
         let item = self.item(index);
-        let (Some(old), Some(source)) = (item.entry(side), item.entry(other(side))) else {
+        let (Some(old), Some(source)) = (item.entry(side), item.entry(side.other())) else {
             return Err(RunItemResult::CouldNotDo);
         };
-        if !self.unchanged(other(side), source).await || !self.unchanged(side, old).await {
+        if !self.unchanged(side.other(), source).await || !self.unchanged(side, old).await {
             return Err(RunItemResult::ChangedSinceCompare);
         }
         if self
@@ -225,7 +229,7 @@ impl Runner<'_> {
             path: staged.join(name),
             expected: old.facts,
         };
-        let bytes = entry_bytes(old);
+        let bytes = old.bytes();
         let staging = self.ctx.staging(side).clone();
         let destination = keep_destination(
             &self.ctx.keep,
@@ -315,7 +319,7 @@ impl Runner<'_> {
                 let item = self.item(index);
                 if let Some((side, old)) = item.action.target().and_then(|s| Some((s, item.entry(s)?))) {
                     let staging = self.ctx.staging(side).clone();
-                    self.note_kept(staging, entry_bytes(old));
+                    self.note_kept(staging, old.bytes());
                 }
             }
         }

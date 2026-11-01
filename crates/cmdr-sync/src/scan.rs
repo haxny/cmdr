@@ -30,6 +30,24 @@ pub enum Side {
     Right,
 }
 
+impl Side {
+    /// The side across.
+    pub fn other(self) -> Self {
+        match self {
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
+        }
+    }
+
+    /// `left` or `right`, whichever is this side's.
+    pub fn pick<T>(self, left: T, right: T) -> T {
+        match self {
+            Self::Left => left,
+            Self::Right => right,
+        }
+    }
+}
+
 /// What to walk and what to leave out.
 #[derive(Debug, Clone)]
 pub struct ScanOptions {
@@ -76,6 +94,26 @@ pub enum ScanError {
     Stopped,
 }
 
+/// For logs: names the side, never the path (the volume's error, the
+/// `source`, may carry one).
+impl std::fmt::Display for ScanError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::RootUnreachable { side, .. } => write!(f, "the {side:?} root wouldn't list"),
+            Self::Stopped => f.write_str("the scan was stopped"),
+        }
+    }
+}
+
+impl std::error::Error for ScanError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::RootUnreachable { error, .. } => Some(error),
+            Self::Stopped => None,
+        }
+    }
+}
+
 enum FolderError {
     Stopped,
     Listing(VolumeError),
@@ -116,6 +154,7 @@ pub async fn scan(
         entries: BTreeMap::new(),
         clashes: BTreeMap::new(),
         unreadable: BTreeMap::new(),
+        present: BTreeMap::new(),
     };
     match walk.folder(root, "", &EntryKey::root()).await {
         Ok(_) => {}
@@ -128,6 +167,7 @@ pub async fn scan(
         entries: walk.entries,
         clashes: walk.clashes,
         unreadable: walk.unreadable,
+        present_folders: walk.present,
     })
 }
 
@@ -163,6 +203,7 @@ pub async fn subtree_now(
         entries: BTreeMap::new(),
         clashes: BTreeMap::new(),
         unreadable: BTreeMap::new(),
+        present: BTreeMap::new(),
     };
     match walk.folder(path, rel, &key).await {
         Ok(folder) => Ok(folder.facts),
@@ -201,6 +242,8 @@ struct Walk<'a> {
     entries: BTreeMap<EntryKey, Entry>,
     clashes: BTreeMap<EntryKey, Vec<Entry>>,
     unreadable: BTreeMap<EntryKey, UnreadableReason>,
+    /// Folders dropped from `entries` for having nothing admitted inside.
+    present: BTreeMap<EntryKey, String>,
 }
 
 type Candidates = BTreeMap<String, Vec<(FileEntry, String)>>;
@@ -322,6 +365,9 @@ impl<'a> Walk<'a> {
                     let own = child_digest(&child.name, &EntryFacts::of(&child), Some(Some(inner.facts.digest)));
                     facts.digest = facts.digest.wrapping_add(own);
                     if inner.kept == 0 && !self.options.empty_folders {
+                        // Not a row, but there: a copy from the other side
+                        // must land inside it, not over it.
+                        self.present.insert(child_key, rel_child);
                         continue;
                     }
                     inner.facts

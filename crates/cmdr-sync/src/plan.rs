@@ -29,7 +29,8 @@ pub enum Mode {
 
 impl Mode {
     /// Every mode, in the order the dialog lists them.
-    pub const ALL: [Self; 4] = [Self::CompareOnly, Self::BothWays, Self::Update, Self::Mirror];
+    #[cfg(test)]
+    pub(crate) const ALL: [Self; 4] = [Self::CompareOnly, Self::BothWays, Self::Update, Self::Mirror];
 }
 
 /// What one row does.
@@ -211,10 +212,7 @@ fn default_for(mode: Mode, category: Category, left: &SyncCaps, right: &SyncCaps
 }
 
 fn entry_bytes(entry: Option<&Entry>) -> u64 {
-    entry.map_or(0, |entry| match entry.subtree {
-        Some(subtree) => subtree.bytes,
-        None => entry.facts.size.unwrap_or(0),
-    })
+    entry.map_or(0, Entry::bytes)
 }
 
 /// Recomputes what follows from the action: the warning flag and the bytes.
@@ -288,8 +286,21 @@ fn shape(key: &EntryKey, left: &Snapshot, right: &Snapshot, rules: &CompareRules
         };
     }
     let (l, r) = (left.entries.get(key), right.entries.get(key));
-    let one_sided = |entry: &Entry, snap: &Snapshot| {
-        if entry.facts.kind == EntryKind::Folder && is_non_atomic(entry, snap) {
+    let one_sided = |entry: &Entry, own: &Snapshot, other: &Snapshot| {
+        let is_folder = entry.facts.kind == EntryKind::Folder;
+        if other.present_folders.contains_key(key) {
+            // The other side has the folder, only with nothing admitted in it:
+            // a folder heads (its children land inside), anything else clashes.
+            return if is_folder {
+                Shape::Heads
+            } else {
+                Shape::Row {
+                    verdict: planner_verdict(Category::TypeClash),
+                    covers: true,
+                }
+            };
+        }
+        if is_folder && is_non_atomic(entry, own) {
             Shape::Heads
         } else {
             let verdict = classify(l.map(|e| &e.facts), r.map(|e| &e.facts), rules, content);
@@ -306,8 +317,8 @@ fn shape(key: &EntryKey, left: &Snapshot, right: &Snapshot, rules: &CompareRules
                 Shape::Row { verdict, covers: true }
             }
         }
-        (Some(l), None) => one_sided(l, left),
-        (None, Some(r)) => one_sided(r, right),
+        (Some(l), None) => one_sided(l, left, right),
+        (None, Some(r)) => one_sided(r, right, left),
         (None, None) => Shape::Heads,
     }
 }
@@ -351,7 +362,7 @@ pub fn plan(left: &Snapshot, right: &Snapshot, _baseline: Option<&Baseline>, opt
         cover = None;
         let content = initial_content(key, left, right, &rules);
         let Shape::Row { verdict, covers } = shape(key, left, right, &rules, content) else {
-            let spelling = |snap: &Snapshot| snap.entries.get(key).map(|entry| entry.rel_path.clone());
+            let spelling = |snap: &Snapshot| snap.folder_spelling(key).map(str::to_owned);
             heads.insert(
                 key.clone(),
                 HeadFolder {
@@ -400,11 +411,7 @@ pub struct Reclassified {
 
 /// One answered row, or `None` when the row wasn't waiting for this answer.
 fn answered(plan: &Plan, item: &PlanItem, content: ContentState) -> Option<(PlanItem, bool)> {
-    let waiting = item.content == ContentState::Pending
-        && !matches!(
-            item.verdict.category,
-            Category::NameClash | Category::Unreadable | Category::TypeClash
-        );
+    let waiting = item.content == ContentState::Pending && item.verdict.category.is_comparable();
     let (l, r) = (item.left.as_ref()?, item.right.as_ref()?);
     if !waiting {
         return None;

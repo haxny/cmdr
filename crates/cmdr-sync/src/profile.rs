@@ -204,7 +204,7 @@ pub enum ProfileProblem {
         /// The value asked for.
         secs: u64,
     },
-    /// The removal percentage override is outside 1 to 100.
+    /// The removal percentage override is outside 1 to 99.
     PercentOutOfRange {
         /// The value asked for.
         percent: u8,

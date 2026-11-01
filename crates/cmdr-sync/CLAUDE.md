@@ -16,15 +16,15 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
 - **profile.rs**: `SyncProfile`, `effective()` (Settings plus the profile's overrides), `validate()`,
   `roots_conflict()`, `check_keep_policy()`. The store is the app's.
 - **keep.rs**, **context.rs**: Trash or versions folder paths, `RunContext`. **steps.rs**: plan → ordered steps.
-  **execute.rs** + **runner.rs** (+ `src/runner/keeping.rs`): `execute()` over the `SyncEngine` trait; fake and laws in
-  `execute_fake.rs`, `execute_proptests.rs`.
+  **execute.rs** + **runner.rs** (`src/runner/`: `keeping.rs`, `holds.rs`, `tidy.rs`): `execute()` over the `SyncEngine`
+  trait; fake and laws in `execute_fake.rs`, `execute_proptests.rs`.
 
 ## Must-knows
 
 - ❌ **`classify` is shared with ⇧F2** (`cmdr-listing`'s compare). A change here moves Compare folders too; run
   `cargo nextest run -p cmdr-listing compare` with it.
 - **`classify` never yields `NameClash` or `Unreadable`.** The planner sets those.
-- **A missing time never claims "newer"**: sizes decide. Only a difference we can see counts.
+- **A missing time never claims "newer"**: sizes decide.
 - **Names pair by key, operations use each side's own spelling** (`Plan::heads` for folders). `NameRule::key` is for
   matching, ❌ never for a path handed to a volume.
 - **The scanner never stats a child**: one listing per folder, and the listing's facts are the facts. Excluded folders
@@ -32,7 +32,8 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
 - **A folder in `Snapshot::unreadable` is unknown, not empty**: nothing beneath it may be removed on this snapshot's
   word.
 - **`Junk` is not `Out`**: junk entries vanish from the snapshot uncounted; every `Out` entry counts as held back.
-  `.cmdr-sync` is neither: the scanner skips it silently.
+  `.cmdr-sync` is neither: the scanner skips it silently. A folder with nothing admitted stays in
+  `Snapshot::present_folders`, so it heads rows.
 - **Never act on partial knowledge**: rows at or under an unreadable key, name clashes, and type clashes are `Skip` and
   take no other action; a one-sided folder with anything held back, unreadable, app-owned, or clashing beneath it is
   split into its children, never copied or removed whole. `?` rows never get an automatic action.

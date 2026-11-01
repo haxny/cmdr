@@ -27,7 +27,7 @@ pub enum BulkAction {
     CopyLeft,
     /// Swap a copy's direction (⌘I); a row that can't flip is left alone.
     Reverse,
-    /// Leave alone (⌘M).
+    /// Leave alone (⌘N; ⌘M is the system's Minimize).
     Skip,
     /// Planned ↔ skip (Space).
     ToggleSkip,
@@ -93,17 +93,7 @@ fn category_allows(category: Category, action: Action) -> bool {
         Action::Skip => true,
         Action::Equal => category == Category::Equal,
         Action::Undecided => category == Category::Unknown,
-        Action::CopyRight | Action::CopyLeft | Action::RemoveRight | Action::RemoveLeft => !matches!(
-            category,
-            Category::NameClash | Category::Unreadable | Category::TypeClash
-        ),
-    }
-}
-
-fn caps_of<'a>(side: Side, left: &'a SyncCaps, right: &'a SyncCaps) -> &'a SyncCaps {
-    match side {
-        Side::Left => left,
-        Side::Right => right,
+        Action::CopyRight | Action::CopyLeft | Action::RemoveRight | Action::RemoveLeft => category.is_comparable(),
     }
 }
 
@@ -128,7 +118,7 @@ pub(crate) fn refusal(
         return Some(OverrideRefusal::NothingToCopy { item: index, side });
     }
     if let Some(side) = action.target()
-        && !caps_of(side, left, right).can_write
+        && !side.pick(left, right).can_write
     {
         return Some(OverrideRefusal::SideReadOnly { item: index, side });
     }
@@ -218,8 +208,9 @@ pub enum RowSkipReason {
         /// The action asked for.
         action: Action,
     },
-    /// The row's kind doesn't allow the action (clash and unreadable rows take
-    /// `Skip` only).
+    /// The row's category doesn't allow the action: name clash, type clash,
+    /// and unreadable rows take `Skip` only, `=` needs an equal row, `?` an
+    /// unknown one.
     IllegalForCategory {
         /// The action asked for.
         action: Action,
@@ -333,6 +324,7 @@ pub fn bulk_outcome(plan: &Plan, items: &[u32], bulk: BulkAction) -> BulkOutcome
 
 /// The legal changes of [`bulk_outcome`]: rows where `bulk` is illegal, changes
 /// nothing, or that don't exist are left out (the outcome says why).
-pub fn bulk_changes(plan: &Plan, items: &[u32], bulk: BulkAction) -> Vec<ActionChange> {
+#[cfg(test)]
+pub(crate) fn bulk_changes(plan: &Plan, items: &[u32], bulk: BulkAction) -> Vec<ActionChange> {
     bulk_outcome(plan, items, bulk).changes
 }

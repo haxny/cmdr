@@ -263,6 +263,7 @@ impl Tree {
             entries,
             clashes: self.clashes,
             unreadable: self.unreadable,
+            present_folders: BTreeMap::new(),
         }
     }
 

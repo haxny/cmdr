@@ -4,11 +4,14 @@
 #![warn(unreachable_pub)]
 #![deny(missing_docs)]
 
-//! Synchronize folders, the pure part: what a volume can do, how names pair up
-//! across volumes, and the one answer to "is this copy newer?" that Compare
-//! folders (⇧F2) and Synchronize folders share.
+//! Synchronize folders without the app: what a volume can do, how names pair
+//! up across volumes, the one answer to "is this copy newer?" that Compare
+//! folders (⇧F2) and Synchronize folders share, the scan, the planner, and the
+//! run over a `SyncEngine`.
 //!
-//! No `tauri`, no I/O. Rationale and tables: `DETAILS.md`.
+//! No `tauri`. The planner, guards, view, and steps are pure; the scan and
+//! byte compare read through a `Volume`, and the run writes only through the
+//! `SyncEngine` the app supplies. Rationale and tables: `DETAILS.md`.
 
 mod caps;
 mod compare;
@@ -30,10 +33,10 @@ mod snapshot;
 mod steps;
 mod view;
 
-pub use caps::{BackendFacts, SyncCaps, backend_facts};
+pub use caps::SyncCaps;
 pub use compare::{
-    Category, CompareBy, CompareRules, ContentState, EntryFacts, EntryKind, HOUR_SHIFT_SECS, Rung,
-    SAME_TIME_TOLERANCE_SECS, Verdict, classify,
+    Category, CompareBy, CompareRules, ContentState, EntryFacts, EntryKind, Rung, SAME_TIME_TOLERANCE_SECS, Verdict,
+    classify,
 };
 pub use content::{ContentJob, ContentProgress, compare_contents, content_workers};
 pub use context::{RunContext, RunSide};
@@ -42,19 +45,19 @@ pub use execute::{
     BatchOutcome, BoundSource, EngineBatch, EngineFuture, ItemOutcome, Observed, RunItemResult, RunProgress, RunReport,
     SyncEngine, execute,
 };
-pub use filter::{ALWAYS_EXCLUDED, Admission, DEFAULT_EXCLUDES, JUNK_MASKS, MaskFilter, SyncMaskError};
+pub use filter::{Admission, DEFAULT_EXCLUDES, MaskFilter, SyncMaskError};
 pub use find::{RowQuery, find_row};
 pub use guards::{
     Acknowledgement, ClockSkew, DEFAULT_MAX_REMOVE_PERCENT, Gated, GuardBlock, GuardReport, GuardSettings, check, gate,
 };
 pub use keep::{
-    DEFAULT_VERSIONS_FOLDER, KeepDestination, KeepPlace, KeepPolicy, KeepRefusal, Place, RunStamp, VersionsLocation,
-    VersionsRoot, keep_destination, kept_dir, staging_root, versions_root,
+    KeepDestination, KeepPlace, KeepPolicy, KeepRefusal, Place, RunStamp, VersionsLocation, VersionsRoot,
+    keep_destination,
 };
 pub use key::{EntryKey, NameRule};
 pub use overrides::{
-    ActionChange, BulkAction, BulkOutcome, OverrideRefusal, RowSkipReason, SkippedRows, apply_overrides, bulk_changes,
-    bulk_outcome, legal_actions,
+    ActionChange, BulkAction, BulkOutcome, OverrideRefusal, RowSkipReason, SkippedRows, apply_overrides, bulk_outcome,
+    legal_actions,
 };
 pub use plan::{
     Action, Baseline, HeadFolder, Mode, Plan, PlanItem, PlanOptions, Reclassified, content_jobs, default_action, plan,
@@ -69,9 +72,14 @@ pub use scan::{ScanError, ScanOptions, ScanProgress, Side, scan, subtree_now};
 pub use snapshot::{Entry, Snapshot, SubtreeFacts, UnreadableReason};
 pub use steps::{Step, StepPlan, steps};
 pub use view::{
-    PlanSummary, RowClass, ShowFilters, SideTotals, ViewRow, is_chosen_unknown, is_visible, row_class, summarize,
-    view_rows,
+    PlanSummary, RowClass, ShowFilters, SideTotals, ViewRow, is_chosen_unknown, is_visible, summarize, view_rows,
 };
+
+// Internal to the crate: siblings reach them as `crate::…`, tests by glob.
+pub(crate) use compare::HOUR_SHIFT_SECS;
+pub(crate) use keep::{kept_dir, staging_root, versions_root};
+#[cfg(test)]
+pub(crate) use {caps::backend_facts, keep::DEFAULT_VERSIONS_FOLDER, overrides::bulk_changes, view::row_class};
 
 #[cfg(test)]
 mod caps_test;
@@ -105,6 +113,8 @@ mod plan_proptests;
 mod plan_test;
 #[cfg(test)]
 mod profile_test;
+#[cfg(test)]
+mod scan_plan_test;
 #[cfg(test)]
 mod scan_test;
 #[cfg(test)]

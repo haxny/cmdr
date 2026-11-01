@@ -210,3 +210,22 @@ fn facts_of_an_entry_follow_its_flags() {
     e.is_directory = true;
     assert_eq!(EntryFacts::of(&e).kind, EntryKind::Folder);
 }
+
+#[test]
+fn symlinks_under_content_fall_back_to_date_and_size() {
+    let link = |size, mtime| EntryFacts {
+        kind: EntryKind::Symlink,
+        ..file(size, mtime)
+    };
+    let content = CompareRules {
+        by: CompareBy::Content,
+        ..CompareRules::QUICK
+    };
+    assert_eq!(run(&link(5, 100), &link(5, 100), &content).category, Category::Equal);
+    assert_eq!(
+        run(&link(5, 200), &link(5, 100), &content).category,
+        Category::NewerLeft
+    );
+    // Files of equal size still wait for their bytes.
+    assert_eq!(run(&file(5, 100), &file(5, 100), &content).category, Category::Unknown);
+}

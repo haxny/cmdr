@@ -9,7 +9,7 @@ mod tidy;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use crate::steps::{landing, other};
+use crate::steps::landing;
 use crate::{
     BatchOutcome, BoundSource, EngineBatch, Entry, EntryKind, ItemOutcome, KeepDestination, KeepRefusal, Observed,
     Place, Plan, PlanItem, RunContext, RunItemResult, RunProgress, RunReport, Side, Step, StepPlan, SyncControl,
@@ -62,12 +62,6 @@ fn matches_snapshot(entry: &Entry, now: Option<&Observed>) -> bool {
             now.facts.size == entry.facts.size && now.facts.mtime == entry.facts.mtime
         }
     }
-}
-
-fn entry_bytes(entry: &Entry) -> u64 {
-    entry
-        .subtree
-        .map_or_else(|| entry.facts.size.unwrap_or(0), |subtree| subtree.bytes)
 }
 
 /// The engine's word on `path`; a source it never answered for in a batch it
@@ -139,6 +133,9 @@ impl<'a> Runner<'a> {
         // (through the app's engine) inside a running batch, except the ones
         // `run_to_end` keeps going (`keeping.rs`).
         let mut stopped = self.halted() || self.claim(&first.steps).await;
+        // Twice on purpose: the first steps tell `claim` which dated folders the
+        // run uses; claiming may bump the attempt (`<stamp> (2)`), which renames
+        // them in `self.ctx`, so the steps that run are built again from it.
         let plan_steps = steps(self.plan, run, &self.ctx).steps;
         for step in &plan_steps {
             if stopped {
@@ -276,14 +273,19 @@ impl<'a> Runner<'a> {
     /// `to` before it stopped: found at its kept spot, or its place no longer
     /// reads as the snapshot (gone, or something new there).
     async fn went_to(&self, side: Side, entry: &Entry, to: &KeepDestination) -> bool {
-        if let KeepDestination::Folder { place, dir } = to {
-            let spot = dir.join(file_name(&entry.rel_path));
-            let kept = self.engine.observe(side, *place, &spot, false).await;
-            if kept.is_some_and(|kept| kept.facts.kind == entry.facts.kind && kept.facts.size == entry.facts.size) {
-                return true;
-            }
+        if let KeepDestination::Folder { place, dir } = to
+            && self.at_spot(side, entry, *place, dir).await
+        {
+            return true;
         }
         !self.unchanged(side, entry).await
+    }
+
+    /// Whether `entry` sits in `dir` as the run would have put it there.
+    async fn at_spot(&self, side: Side, entry: &Entry, place: Place, dir: &Path) -> bool {
+        let spot = dir.join(file_name(&entry.rel_path));
+        let kept = self.engine.observe(side, place, &spot, false).await;
+        kept.is_some_and(|kept| kept.facts.kind == entry.facts.kind && kept.facts.size == entry.facts.size)
     }
 
     async fn unchanged(&self, side: Side, entry: &Entry) -> bool {
@@ -338,7 +340,7 @@ impl<'a> Runner<'a> {
     }
 
     async fn copy(&mut self, from: Side, dest_dir: &Path, items: &[u32]) -> bool {
-        let to = other(from);
+        let to = from.other();
         if let Some(result) = self.blocked_at(Place::Target, to, dest_dir) {
             let open: Vec<u32> = items
                 .iter()
@@ -382,7 +384,7 @@ impl<'a> Runner<'a> {
         if chosen.is_empty() {
             return false;
         }
-        let to = other(from);
+        let to = from.other();
         let batch = EngineBatch::Copy {
             from,
             sources: chosen.iter().map(|(_, source, _)| source.clone()).collect(),
@@ -478,7 +480,7 @@ impl<'a> Runner<'a> {
                 (done, to, self.item(*index).entry(side))
             {
                 let versions = self.ctx.versions(side).clone();
-                self.note_kept(versions, entry_bytes(entry));
+                self.note_kept(versions, entry.bytes());
             }
             self.settle(*index, result_of(done));
         }

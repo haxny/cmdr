@@ -61,7 +61,7 @@ pub enum RowClass {
 }
 
 /// The class of a row, from its action.
-pub fn row_class(item: &PlanItem) -> RowClass {
+pub(crate) fn row_class(item: &PlanItem) -> RowClass {
     match item.action {
         Action::CopyRight => RowClass::ToRight,
         Action::CopyLeft | Action::RemoveRight | Action::RemoveLeft => RowClass::ToLeft,
@@ -230,11 +230,7 @@ fn add_action(summary: &mut PlanSummary, item: &PlanItem) {
 }
 
 fn add_presence(summary: &mut PlanSummary, item: &PlanItem) {
-    let comparable = !matches!(
-        item.verdict.category,
-        Category::NameClash | Category::TypeClash | Category::Unreadable
-    );
-    if !comparable {
+    if !item.verdict.category.is_comparable() {
         summary.not_comparable += 1;
         return;
     }

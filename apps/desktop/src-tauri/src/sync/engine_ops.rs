@@ -50,13 +50,6 @@ struct Bound {
     expected: ExpectedSources,
 }
 
-fn other(side: Side) -> Side {
-    match side {
-        Side::Left => Side::Right,
-        Side::Right => Side::Left,
-    }
-}
-
 fn stopped_empty() -> BatchOutcome {
     BatchOutcome {
         items: Vec::new(),
@@ -94,8 +87,8 @@ impl EngineAdapter {
                 sources,
                 dest_dir,
             } => {
-                let (source, target) = (self.side(from), self.side(other(from)));
-                let base = self.base(other(from), Place::Target);
+                let (source, target) = (self.side(from), self.side(from.other()));
+                let base = self.base(from.other(), Place::Target);
                 let landing = Landing {
                     target,
                     base: base.as_deref(),

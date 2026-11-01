@@ -5,9 +5,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
+use crate::overrides::refusal;
 use crate::{
-    Action, Category, EntryKey, KeepDestination, KeepRefusal, Place, Plan, PlanItem, RunContext, Side,
-    keep_destination, kept_dir,
+    Action, EntryKey, KeepDestination, KeepRefusal, Place, Plan, PlanItem, RunContext, Side, keep_destination, kept_dir,
 };
 
 /// One group of like operations, by plan row index.
@@ -62,14 +62,6 @@ pub struct StepPlan {
     pub refused: Vec<(u32, KeepRefusal)>,
 }
 
-/// The side across from `side`.
-pub(crate) fn other(side: Side) -> Side {
-    match side {
-        Side::Left => Side::Right,
-        Side::Right => Side::Left,
-    }
-}
-
 /// Where a copy lands on the other side.
 pub(crate) struct Landing {
     /// The folder it lands in.
@@ -84,7 +76,7 @@ pub(crate) struct Landing {
 /// it, else the source's (and then it has to be made).
 pub(crate) fn landing(plan: &Plan, item: &PlanItem, from: Side, ctx: &RunContext) -> Option<Landing> {
     let source = item.entry(from)?;
-    let to = other(from);
+    let to = from.other();
     let EntryKey::Name(keys) = &item.key;
     let names: Vec<&str> = source.rel_path.split('/').collect();
     if names.len() != keys.len() {
@@ -120,15 +112,13 @@ pub(crate) fn landing(plan: &Plan, item: &PlanItem, from: Side, ctx: &RunContext
     })
 }
 
-/// Rows that may act: a copy or removal whose entry is there, never on a row
-/// the planner only lets skip.
-fn actable(item: &PlanItem) -> bool {
-    let partial = matches!(
-        item.verdict.category,
-        Category::NameClash | Category::TypeClash | Category::Unreadable
-    );
+/// Rows that may act: a copy or removal the plan's own mode, the row's
+/// category, and both volumes allow (`refusal`), whose entry is there. Checked
+/// again here so a plan built with an illegal action (Mirror writing to the
+/// source, say) still never acts on it.
+fn actable(plan: &Plan, item: &PlanItem) -> bool {
     let acts = item.action.is_copy() || item.action.is_removal();
-    acts && !partial && item.action.needs().is_some_and(|side| item.entry(side).is_some())
+    acts && refusal(plan.mode, item, item.action, &plan.left_caps, &plan.right_caps).is_none()
 }
 
 /// One landing folder's copies, and the files they replace by staging folder.
@@ -176,7 +166,7 @@ impl Groups {
         let Some(landing) = landing(plan, item, from, ctx) else {
             return;
         };
-        let to = other(from);
+        let to = from.other();
         let staged = match item.entry(to).map(|old| self.stage(ctx, to, &old.rel_path)) {
             Some(Err(refusal)) => return self.refused.push((item.index, refusal)),
             Some(Ok(dir)) => Some(dir),
@@ -214,7 +204,7 @@ impl Groups {
             .collect();
         for ((from, dest_dir), group) in self.copy {
             steps.extend(group.keeps.into_iter().map(|(dir, items)| Step::KeepAside {
-                side: other(from),
+                side: from.other(),
                 items,
                 to: KeepDestination::Folder {
                     place: Place::Target,
@@ -245,7 +235,7 @@ pub fn steps(plan: &Plan, run: &[u32], ctx: &RunContext) -> StepPlan {
     let rows: BTreeSet<u32> = run.iter().copied().collect();
     let mut groups = Groups::default();
     for item in rows.iter().filter_map(|&index| plan.items.get(index as usize)) {
-        if !actable(item) {
+        if !actable(plan, item) {
             continue;
         }
         match item.action {

@@ -10,7 +10,7 @@ use crate::SyncCaps;
 /// copy can read a second or two off its original.
 pub const SAME_TIME_TOLERANCE_SECS: u64 = 2;
 /// The exact shift FAT and exFAT show across a daylight-saving change.
-pub const HOUR_SHIFT_SECS: u64 = 3600;
+pub(crate) const HOUR_SHIFT_SECS: u64 = 3600;
 
 /// What an entry is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, specta::Type)]
@@ -143,6 +143,15 @@ pub enum Category {
     NameClash,
     /// A side couldn't be read (set by the planner, never `classify`).
     Unreadable,
+}
+
+impl Category {
+    /// Whether the two sides could be compared at all: not a name clash, a
+    /// type clash, or an unreadable side. A row that isn't takes `Skip` only,
+    /// never acts, counts as "not comparable", and stays out of clock skew.
+    pub fn is_comparable(self) -> bool {
+        !matches!(self, Self::NameClash | Self::TypeClash | Self::Unreadable)
+    }
 }
 
 /// Which kind of evidence settled the verdict.
@@ -285,6 +294,9 @@ pub fn classify(
     match rules.by {
         CompareBy::SizeOnly => by_size(l, r),
         CompareBy::DateAndSize => by_date_or_size(l, r, rules),
+        // A symlink's bytes are never read (its target may be anywhere), so a
+        // pair of them falls back to date and size instead of staying `?`.
+        CompareBy::Content if l.kind == EntryKind::Symlink => by_date_or_size(l, r, rules),
         CompareBy::Content => by_content(l, r, rules, content),
     }
 }

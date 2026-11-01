@@ -65,7 +65,38 @@ fn arb_location() -> impl Strategy<Value = VersionsLocation> {
 }
 
 fn arb_mode() -> impl Strategy<Value = Mode> {
-    prop::sample::select(vec![Mode::Mirror, Mode::Mirror, Mode::BothWays, Mode::Update])
+    prop::sample::select(vec![
+        Mode::Mirror,
+        Mode::Mirror,
+        Mode::BothWays,
+        Mode::Update,
+        Mode::CompareOnly,
+    ])
+}
+
+/// Overrides as (row, choice) pairs, both wrapping: the choice picks among the
+/// row's legal actions, so every one is accepted, and override-only actions
+/// (`RemoveLeft`, a copy on a `?` row, anything in Compare only) reach the run.
+fn arb_overrides() -> impl Strategy<Value = Vec<(usize, usize)>> {
+    prop::collection::vec((any::<usize>(), any::<usize>()), 0..4)
+}
+
+fn with_overrides(plan: Plan, picks: &[(usize, usize)]) -> Plan {
+    if plan.items.is_empty() {
+        return plan;
+    }
+    let changes: Vec<ActionChange> = picks
+        .iter()
+        .map(|&(row, choice)| {
+            let item = &plan.items[row % plan.items.len()];
+            let legal = legal_actions(&plan, item);
+            ActionChange {
+                item: item.index,
+                action: legal[choice % legal.len()],
+            }
+        })
+        .collect();
+    apply_overrides(&plan, &changes).expect("legal actions are accepted")
 }
 
 fn arb_place() -> impl Strategy<Value = KeepPlace> {
@@ -128,9 +159,10 @@ proptest! {
         edits in prop::collection::vec(arb_edit(), 0..6),
         location in arb_location(),
         interrupt in arb_interrupt(),
+        overrides in arb_overrides(),
     ) {
         let options = PlanOptions { mode, rules: CompareRules::QUICK };
-        let plan = plan(&left, &right, None, &options);
+        let plan = with_overrides(plan(&left, &right, None, &options), &overrides);
         let keep = KeepPolicy { place, location };
         let left_caps = SyncCaps { has_trash: left_trash, ..caps() };
         let right_caps = SyncCaps { has_trash: right_trash, ..caps() };

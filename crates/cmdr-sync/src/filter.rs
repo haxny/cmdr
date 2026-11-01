@@ -14,11 +14,11 @@ pub const DEFAULT_EXCLUDES: &[&str] = &[
 
 /// The excludes that answer [`Admission::Junk`] instead of [`Admission::Out`]:
 /// files nobody put there on purpose, which travel with their folder.
-pub const JUNK_MASKS: &[&str] = &[".DS_Store", "._*", "Thumbs.db"];
+pub(crate) const JUNK_MASKS: &[&str] = &[".DS_Store", "._*", "Thumbs.db"];
 
 /// A folder Synchronize folders keeps its own state in. Out at every level, and
 /// no setting switches it off.
-pub const ALWAYS_EXCLUDED: &str = ".cmdr-sync";
+pub(crate) const ALWAYS_EXCLUDED: &str = ".cmdr-sync";
 
 /// Whether `name` is the app-owned folder. The scanner leaves it out silently,
 /// uncounted, at every level; [`MaskFilter::admits`] still answers `Out` for it.
@@ -48,6 +48,18 @@ pub enum SyncMaskError {
         position: u32,
     },
 }
+
+impl std::fmt::Display for SyncMaskError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EmptyMask { position } => write!(f, "empty mask at {position}"),
+            Self::UnclosedQuote { position } => write!(f, "quote opened at {position} never closes"),
+            Self::SecondBar { position } => write!(f, "second `|` at {position}"),
+        }
+    }
+}
+
+impl std::error::Error for SyncMaskError {}
 
 /// What the filter says about one entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

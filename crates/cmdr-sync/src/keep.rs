@@ -6,13 +6,11 @@ use std::path::{Component, Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::SyncCaps;
+use crate::filter::ALWAYS_EXCLUDED;
 
 /// The default versions folder, relative to the target root. Under the app-owned
 /// `.cmdr-sync`, which every compare skips.
-pub const DEFAULT_VERSIONS_FOLDER: &str = ".cmdr-sync/versions";
-/// The app-owned folder every compare skips; a target-root versions folder must
-/// live under it, or the next compare would see the kept items.
-const APP_FOLDER: &str = ".cmdr-sync";
+pub(crate) const DEFAULT_VERSIONS_FOLDER: &str = ".cmdr-sync/versions";
 /// What `{profile}` reads when the run has no profile.
 const NO_PROFILE: &str = "No profile";
 
@@ -231,7 +229,7 @@ fn custom_root(
 
 fn target_root_folder(folder_name: &str, target_root: &Path, date: &str) -> Result<VersionsRoot, KeepRefusal> {
     let parts = relative_parts(folder_name)?;
-    if parts.len() < 2 || parts[0] != APP_FOLDER {
+    if parts.len() < 2 || parts[0] != ALWAYS_EXCLUDED {
         return Err(KeepRefusal::BadTemplate);
     }
     let dir = parts.iter().fold(target_root.to_path_buf(), |dir, part| dir.join(part));
@@ -244,7 +242,7 @@ fn target_root_folder(folder_name: &str, target_root: &Path, date: &str) -> Resu
 
 /// This run's versions folder for a target root. `attempt` above zero names a
 /// fresh folder when one with this stamp already exists.
-pub fn versions_root(
+pub(crate) fn versions_root(
     policy: &KeepPolicy,
     target_root: &Path,
     profile_name: Option<&str>,
@@ -264,7 +262,7 @@ pub fn versions_root(
 /// Where a run sets a replaced file aside before its copy lands: a versions
 /// folder on the target's own volume (a rename, so it can always move back).
 /// The policy's own folder when that is in the target root, else the default.
-pub fn staging_root(
+pub(crate) fn staging_root(
     policy: &KeepPolicy,
     target_root: &Path,
     stamp: &RunStamp,
@@ -284,7 +282,7 @@ pub fn staging_root(
 }
 
 /// The folder for `rel_path`'s parent under `versions`, or why there is none.
-pub fn kept_dir(versions: &VersionsRoot, rel_path: &str) -> Result<PathBuf, KeepRefusal> {
+pub(crate) fn kept_dir(versions: &VersionsRoot, rel_path: &str) -> Result<PathBuf, KeepRefusal> {
     let parts = relative_parts(rel_path)?;
     Ok(parts[..parts.len() - 1]
         .iter()

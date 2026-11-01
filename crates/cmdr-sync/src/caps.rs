@@ -6,15 +6,15 @@ use serde::{Deserialize, Serialize};
 /// Per-transport facts no `Volume` method reports.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-pub struct BackendFacts {
+pub(crate) struct BackendFacts {
     /// Whether `A.txt` and `a.txt` are two different files here.
-    pub case_sensitive: bool,
+    pub(crate) case_sensitive: bool,
     /// The coarsest step the stored modification time moves in, in seconds.
-    pub mtime_precision_secs: u64,
+    pub(crate) mtime_precision_secs: u64,
 }
 
 /// The facts of one transport. Evidence per row: `DETAILS.md`.
-pub fn backend_facts(kind: BackendKind) -> BackendFacts {
+pub(crate) fn backend_facts(kind: BackendKind) -> BackendFacts {
     let case_sensitive = match kind {
         BackendKind::Local => !cfg!(target_os = "macos"),
         BackendKind::Smb | BackendKind::Mtp | BackendKind::Adb => false,
