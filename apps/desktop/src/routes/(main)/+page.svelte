@@ -17,6 +17,8 @@
     import SearchDialog from '#lib/search/SearchDialog.svelte'
     import SelectionDialog from '#lib/selection-dialog/SelectionDialog.svelte'
     import MultiRenameDialog from '#lib/multi-rename/MultiRenameDialog.svelte'
+    import SyncFoldersDialog from '#lib/sync/SyncFoldersDialog.svelte'
+    import type { SyncRoots } from '#lib/sync/pane-roots.js'
     import type { MultiRenameRun } from '#lib/multi-rename/last-run.svelte.js'
     import { closeMultiRename as endMultiRenameSession, openMultiRename as openMultiRenameSession } from '#lib/tauri-commands/index.js'
     import { openSettled } from '#lib/multi-rename/open-settled.js'
@@ -153,6 +155,7 @@
      */
     let showSelectionDialog = $state<'add' | 'remove' | null>(null)
     let multiRenameSession = $state.raw<MultiRenameOpened | null>(null)
+    let syncRoots = $state.raw<SyncRoots | null>(null)
     let openingMultiRename = false
     const multiRenameLog = getAppLogger('multiRename')
     let selectionDialogSnapshot = $state.raw<{
@@ -712,6 +715,10 @@
             showMultiRename: () => {
                 void openMultiRename()
             },
+            showSyncFolders: () => {
+                syncRoots ??= explorerRef?.getSyncRoots() ?? null
+                if (!syncRoots) addToast(tString('sync.dialog.needsTwoFolders'), { level: 'info' })
+            },
             openOnboarding: () => openOnboardingFromMenuOrPalette(startupGatesCtx, 'menu'),
         },
     }
@@ -864,6 +871,10 @@
                     onClose={closeMultiRename}
                 />
             {/if}
+        </DialogBoundary>
+
+        <DialogBoundary name="syncFolders" onClose={() => (syncRoots = null)}>
+            {#if syncRoots}<SyncFoldersDialog roots={syncRoots} onClose={() => (syncRoots = null)} />{/if}
         </DialogBoundary>
 
         <DialogBoundary name="selection" onClose={handleSelectionDialogClose}>

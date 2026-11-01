@@ -782,6 +782,10 @@
   "@menu.file.editTags": {
     "description": "File menu item (Cmd+Shift+E): opens the selected audio files' tags (artist, album, title, track numbers, cover) in a window of their own. Does nothing unless the opt-in tag editor setting is on. The ellipsis says it opens a window."
   },
+  "menu.file.synchronizeFolders": "Synchronize folders…",
+  "@menu.file.synchronizeFolders": {
+    "description": "File menu item (Shift+F12, like Total Commander users bind it): opens the Synchronize folders dialog, which compares the folders shown in the two side-by-side panes, including their subfolders, and lists what to copy each way so the person can review it before anything is written. The ellipsis says it opens a dialog."
+  },
   "menu.queue.moveUp": "Move up",
   "@menu.queue.moveUp": {
     "description": "VERB phrase (imperative). An item in an operation's right-click menu in the operation queue window (the list of running, paused, and waiting file operations: copies, moves, deletes). Moves a WAITING operation one place earlier in line, so it starts sooner. Greyed out on the first waiting one. Same action as the window's ⌥↑ key. No capture can photograph a native menu, so this description is the whole translator aid."

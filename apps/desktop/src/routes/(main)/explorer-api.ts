@@ -3,6 +3,7 @@
  * Used by +page.svelte, command-dispatch.ts, and mcp-listeners.ts.
  */
 
+import type { SyncRoots } from '#lib/sync/pane-roots.js'
 import type { CompareDirectoriesMode } from '#lib/tauri-commands/index.js'
 import type { ViewMode } from '#lib/app-status-store.js'
 import type { McpSelectMode, McpTabAction, ConfirmDialogType } from '#lib/commands/index.js'
@@ -371,6 +372,8 @@ export interface ExplorerAPI {
   refuseMultiRename: () => boolean
   /** The Multi-Rename Tool's target: the focused pane's listing, selected rows, and their sequence. */
   resolveMultiRenameTarget: () => MultiRenameSelection | null
+  /** Both panes' folders (and selections) as Synchronize folders' sides; `null` when a pane shows no folder. */
+  getSyncRoots: () => SyncRoots | null
   /** Edit tags' target: the focused pane's selection, else its cursor row (none on `..`). */
   getFocusedPaneTagsTarget: () => TagsTarget | null
   /**

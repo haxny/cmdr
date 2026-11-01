@@ -1,0 +1,46 @@
+{
+  "sync.dialog.title": "Synchronise folders",
+  "@sync.dialog.title": {
+    "sourceHash": "1ff942e"
+  },
+  "sync.dialog.synchronize": "Synchronise…",
+  "@sync.dialog.synchronize": {
+    "sourceHash": "39a4e73"
+  },
+  "sync.dialog.synchronizeNeedsCompare": "Compare the folders first, then review the list before you synchronise.",
+  "@sync.dialog.synchronizeNeedsCompare": {
+    "sourceHash": "9ce4882"
+  },
+  "sync.dialog.staleFolders": "A synchronisation changed these folders since this compare.",
+  "@sync.dialog.staleFolders": {
+    "sourceHash": "122cdad"
+  },
+  "sync.dialog.optionsNotSaved": "Synchronise folders couldn’t remember the options for these two folders, so they start from the defaults next time.",
+  "@sync.dialog.optionsNotSaved": {
+    "sourceHash": "ed2391a"
+  },
+  "sync.dialog.needsTwoFolders": "Synchronise folders needs a folder in each pane.",
+  "@sync.dialog.needsTwoFolders": {
+    "sourceHash": "21e8d4a"
+  },
+  "sync.error.badSettings": "A Synchronise folders setting is out of range. Check it in Settings.",
+  "@sync.error.badSettings": {
+    "sourceHash": "598edeb"
+  },
+  "sync.error.staleSelectionLeft": "The selection in the left pane changed. Turn off Only selected, or close and open Synchronise folders again.",
+  "@sync.error.staleSelectionLeft": {
+    "sourceHash": "edbd297"
+  },
+  "sync.error.staleSelectionRight": "The selection in the right pane changed. Turn off Only selected, or close and open Synchronise folders again.",
+  "@sync.error.staleSelectionRight": {
+    "sourceHash": "8f11178"
+  },
+  "sync.error.runInProgress": "A synchronisation is running for these folders. Wait for it to finish.",
+  "@sync.error.runInProgress": {
+    "sourceHash": "72fbbc0"
+  },
+  "sync.error.staleCompare": "A synchronisation changed these folders. Compare again.",
+  "@sync.error.staleCompare": {
+    "sourceHash": "4706b22"
+  }
+}

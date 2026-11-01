@@ -239,7 +239,7 @@ describe('ColumnList cursor and pointer', () => {
     const menu = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
     options[0].dispatchEvent(menu)
     expect(onCursorChange).toHaveBeenCalledWith(2)
-    expect(onRowClick).toHaveBeenCalledWith(2)
+    expect(onRowClick).toHaveBeenCalledWith(2, expect.any(MouseEvent))
     expect(onRowContextMenu).toHaveBeenCalledWith(expect.objectContaining({ index: 0, row: rows[0] }))
     expect(menu.defaultPrevented).toBe(true)
   })
@@ -332,6 +332,24 @@ describe('ColumnList grid semantics', () => {
     expect([...rows].map((row) => row.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false'])
     expect(rows[0].querySelectorAll('[role="gridcell"]')).toHaveLength(2)
     expect(rows[0].hasAttribute('tabindex')).toBe(false)
+  })
+
+  it('names a row by `rowLabel` and reports clicks with their event and double clicks', async () => {
+    const onRowClick = vi.fn()
+    const onRowDoubleClick = vi.fn()
+    const { target } = await mountList({
+      rows: items(3),
+      semantics: 'grid',
+      rowLabel: (row: Item) => `${row.name}, copied to the right`,
+      onRowClick,
+      onRowDoubleClick,
+    })
+    const rows = target.querySelectorAll<HTMLElement>('.column-list-row.is-data')
+    expect(rows[1].getAttribute('aria-label')).toBe('item-1, copied to the right')
+    rows[2].dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }))
+    expect(onRowClick).toHaveBeenCalledWith(2, expect.objectContaining({ metaKey: true }))
+    rows[0].dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+    expect(onRowDoubleClick).toHaveBeenCalledWith(0)
   })
 
   it('answers its cursor keys and claims them, and leaves the rest to bubble', async () => {

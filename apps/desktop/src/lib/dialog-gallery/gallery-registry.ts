@@ -404,6 +404,15 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
     states: [],
   },
   {
+    dialogId: 'sync-folders',
+    label: 'Synchronize folders',
+    hostWindow: 'main',
+    status: 'not-triggerable',
+    reason:
+      'Open two folders and press ⇧F12 (or File > Synchronize folders): the grid is the backend’s compare of the two real folders, so a fixture would show nothing they don’t.',
+    states: [],
+  },
+  {
     dialogId: 'bulk-rename-review',
     label: 'Bulk rename review',
     hostWindow: 'main',

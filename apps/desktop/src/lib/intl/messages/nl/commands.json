@@ -514,6 +514,14 @@
   "@commands.fileEditTags.description": {
     "sourceHash": "9db7159"
   },
+  "commands.syncOpenDialog.label": "Synchronize folders…",
+  "@commands.syncOpenDialog.label": {
+    "sourceHash": "6afcd31"
+  },
+  "commands.syncOpenDialog.description": "Compares two folders on any two volumes, shows what differs, and makes them match after you review every change",
+  "@commands.syncOpenDialog.description": {
+    "sourceHash": "a48da49"
+  },
   "commands.tagsClose.label": "Close the Tags window",
   "@commands.tagsClose.label": {
     "sourceHash": "cff7a3c"

@@ -135,6 +135,7 @@ const EXPECTED_PALETTE_IDS: readonly CommandId[] = [
   'selection.compareDirectoriesSize',
   'selection.selectFiles',
   'selection.deselectFiles',
+  'sync.openDialog',
   'network.refresh',
   'share.back',
   'share.selectShare',
@@ -500,5 +501,19 @@ describe('delete shortcut pairs', () => {
     for (const shortcut of ['⇧F8', '⇧Delete', '⌘⌥Backspace']) {
       expect(claimants(shortcut).filter(inMainWindow), shortcut).toEqual(['file.deletePermanently'])
     }
+  })
+})
+
+describe('Synchronize folders shortcut', () => {
+  // TC has no default for its Synchronize dirs; ⇧F12 pairs with ⇧F2 (Compare folders), which stays as it is.
+  it('⇧F12 is bound to sync.openDialog only', () => {
+    const cmd = commands.find((c) => c.id === 'sync.openDialog')
+    expect(cmd?.shortcuts).toEqual(['⇧F12'])
+    expect(cmd?.scope).toBe('Main window')
+    expect(cmd?.showInPalette).toBe(true)
+    // The Tags window is a window of its own (its ⇧F2 is its own), so its keys never meet the main window's.
+    const inMainWindow = (id: CommandId) => commands.find((c) => c.id === id)?.scope !== 'Tags window'
+    expect(claimants('⇧F12')).toEqual(['sync.openDialog'])
+    expect(claimants('⇧F2').filter(inMainWindow)).toEqual(['selection.compareDirectories'])
   })
 })

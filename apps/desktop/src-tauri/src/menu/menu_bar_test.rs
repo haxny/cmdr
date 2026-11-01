@@ -58,11 +58,12 @@ menu menu.bar.file id=menu_file
   13 item rename menu.file.rename [F2] tracked
   14 item multi_rename menu.file.multiRename [Ctrl+M] tracked
   15 item edit_tags menu.file.editTags [Cmd+Shift+E] disabled tracked
-  16 separator
-  17 item show_in_finder menu.file.showInFinder [Alt+Cmd+O] tracked
-  18 item open_terminal_here menu.file.openTerminalHere [F9] tracked
-  19 item get_info menu.file.getInfo [Cmd+I] tracked
-  20 item quick_look menu.file.quickLook [Shift+Space] tracked
+  16 item sync_folders menu.file.synchronizeFolders [Shift+F12] tracked
+  17 separator
+  18 item show_in_finder menu.file.showInFinder [Alt+Cmd+O] tracked
+  19 item open_terminal_here menu.file.openTerminalHere [F9] tracked
+  20 item get_info menu.file.getInfo [Cmd+I] tracked
+  21 item quick_look menu.file.quickLook [Shift+Space] tracked
 menu menu.bar.edit id=menu_edit
   0 predefined undo menu.edit.undo
   1 predefined redo menu.edit.redo
@@ -182,10 +183,11 @@ menu menu.bar.file
   13 item rename menu.file.rename tracked
   14 item multi_rename menu.file.multiRename [Ctrl+M] tracked
   15 item edit_tags menu.file.editTags disabled tracked
-  16 separator
-  17 item show_in_finder menu.file.showInFileManager [Alt+Ctrl+O] tracked
-  18 item get_info menu.file.getInfo [Ctrl+I] tracked
-  19 item quick_look menu.file.quickLook tracked
+  16 item sync_folders menu.file.synchronizeFolders tracked
+  17 separator
+  18 item show_in_finder menu.file.showInFileManager [Alt+Ctrl+O] tracked
+  19 item get_info menu.file.getInfo [Ctrl+I] tracked
+  20 item quick_look menu.file.quickLook tracked
 menu menu.bar.edit
   0 item undo_trash menu.edit.undoTrash disabled tracked
   1 separator

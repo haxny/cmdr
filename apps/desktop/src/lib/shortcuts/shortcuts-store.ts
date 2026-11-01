@@ -328,6 +328,7 @@ export const menuCommands = [
   'file.rename',
   'file.multiRename',
   'file.editTags',
+  'sync.openDialog',
   'file.showInFinder',
   'file.openTerminalHere',
   'file.getInfo',

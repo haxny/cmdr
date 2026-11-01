@@ -88,6 +88,8 @@ pub const RENAME_ID: &str = "rename";
 pub const MULTI_RENAME_ID: &str = "multi_rename";
 /// Menu item ID for Edit tags (File menu, ⌘⇧E; fork, does nothing with the tag editor setting off).
 pub const EDIT_TAGS_ID: &str = "edit_tags";
+/// Menu item ID for Synchronize folders (File menu, ⇧F12): TC's Synchronize dirs, on the key TC users bind it to.
+pub const SYNC_FOLDERS_ID: &str = "sync_folders";
 pub const SELECT_ALL_ID: &str = "select_all_files";
 pub const DESELECT_ALL_ID: &str = "deselect_all";
 /// "Select all of the same kind". Its label is rewritten from the focused pane's cursor row
@@ -435,6 +437,7 @@ pub fn menu_id_to_command(menu_id: &str) -> Option<(&'static str, CommandScope)>
         RENAME_ID => Some(("file.rename", CommandScope::FileScoped)),
         MULTI_RENAME_ID => Some(("file.multiRename", CommandScope::FileScoped)),
         EDIT_TAGS_ID => Some(("file.editTags", CommandScope::FileScoped)),
+        SYNC_FOLDERS_ID => Some(("sync.openDialog", CommandScope::FileScoped)),
         EDIT_ID => Some(("file.edit", CommandScope::FileScoped)),
         FILE_VIEW_ID => Some(("file.view", CommandScope::FileScoped)),
         FILE_COPY_ID => Some(("file.copy", CommandScope::FileScoped)),
@@ -548,6 +551,7 @@ pub fn command_id_to_menu_id(command_id: &str) -> Option<&'static str> {
         "file.rename" => Some(RENAME_ID),
         "file.multiRename" => Some(MULTI_RENAME_ID),
         "file.editTags" => Some(EDIT_TAGS_ID),
+        "sync.openDialog" => Some(SYNC_FOLDERS_ID),
         "file.edit" => Some(EDIT_ID),
         "file.view" => Some(FILE_VIEW_ID),
         "file.copy" => Some(FILE_COPY_ID),
@@ -749,6 +753,7 @@ mod tests {
             "file.rename",
             "file.multiRename",
             "file.editTags",
+            "sync.openDialog",
             "file.edit",
             "file.view",
             "file.copy",

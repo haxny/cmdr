@@ -136,6 +136,7 @@
     import { createIndexEventHandler } from './index-events'
     import { loadPersistedState } from './initialization'
     import { getDirectorySortMode, getShowHiddenFiles } from '#lib/settings/reactive-settings.svelte.js'
+    import { syncRootsOf, type SyncRoots } from '#lib/sync/pane-roots.js'
     import { getSetting, onSettingChange } from '#lib/settings/index.js'
     import { onMenuBarRebuilt, activateWindowMenu, onListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
     import { resyncSameKindMenu } from './same-kind-target.svelte'
@@ -1120,6 +1121,12 @@
     /** The Multi-Rename Tool's target: the focused pane's listing, selected rows, and their sequence. */
     export function resolveMultiRenameTarget(): MultiRenameSelection | null {
         return paneCommands.resolveMultiRenameTarget()
+    }
+
+    // noinspection JSUnusedGlobalSymbols -- consumed by +page.svelte for Synchronize folders
+    /** Both panes' folders (and selections) as Synchronize folders' sides; `null` when a pane shows no folder. */
+    export function getSyncRoots(): SyncRoots | null {
+        return syncRootsOf({ getPaneRef }, true)
     }
 
     // noinspection JSUnusedGlobalSymbols -- consumed by the Edit tags command (open-tags.ts)

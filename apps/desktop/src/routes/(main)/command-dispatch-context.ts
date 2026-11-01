@@ -58,6 +58,8 @@ export interface CommandDispatchDialogs {
   showSelectionDialog: (mode: 'add' | 'remove' | null) => void
   /** Opens the Multi-Rename Tool on the focused pane's selection (or the file under the cursor). */
   showMultiRename: () => void
+  /** Opens Synchronize folders on the two panes' folders (no-op when it's already open). */
+  showSyncFolders: () => void
   /**
    * Opens the onboarding wizard for re-entry from the `Cmdr > Onboarding…`
    * menu item or the `cmdr.openOnboarding` command palette command. No-op when

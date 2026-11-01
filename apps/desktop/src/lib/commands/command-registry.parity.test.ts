@@ -235,6 +235,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'selection.invert': 'Invert selection',
   'selection.selectSameKind': 'Select all of the same kind',
   'selection.compareDirectories': 'Compare folders',
+  'sync.openDialog': 'Synchronize folders…',
   'selection.compareDirectoriesMissing': 'Compare folders: missing files only',
   'selection.compareDirectoriesSize': 'Compare folders: different size',
   'selection.selectFiles': 'Select files…',
@@ -329,6 +330,8 @@ const EXPECTED_DESCRIPTIONS: Record<string, string | undefined> = {
   'selection.toggleAndDown': 'Selects or deselects the file under the cursor, then moves down (Total Commander style)',
   'selection.invert': 'Selects every unselected file and deselects every selected one',
   'selection.selectSameKind': 'Adds every entry like the one under the cursor to the selection, without clearing it',
+  'sync.openDialog':
+    'Compares two folders on any two volumes, shows what differs, and makes them match after you review every change',
   'selection.compareDirectories':
     'Selects, in each pane, the files the other pane lacks and the newer copies of the rest',
   'selection.compareDirectoriesMissing': 'Selects, in each pane, only the files the other pane lacks',

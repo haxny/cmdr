@@ -615,6 +615,15 @@
   "@commands.fileEditTags.description": {
     "description": "Longer help text for \"Edit tags\", shown as a secondary line in the command palette."
   },
+  "commands.syncOpenDialog.label": "Synchronize folders…",
+  "@commands.syncOpenDialog.label": {
+    "description": "Command name (Shift+F12) in the command palette, the File menu, and the keyboard shortcuts list: opens the Synchronize folders dialog, like Total Commander's Synchronize directories. It compares the two panes' folders with their subfolders and lists what to copy each way. The ellipsis says it opens a dialog.",
+    "screenshot": "settings-keyboard-shortcuts.png"
+  },
+  "commands.syncOpenDialog.description": "Compares two folders on any two volumes, shows what differs, and makes them match after you review every change",
+  "@commands.syncOpenDialog.description": {
+    "description": "Longer help text for \"Synchronize folders…\", shown as a secondary line in the command palette. \"Volumes\" are drives, servers, and phones. Nothing is written until the person confirms."
+  },
   "commands.tagsClose.label": "Close the Tags window",
   "@commands.tagsClose.label": {
     "description": "Row in the Keyboard shortcuts list: what Escape does in the tag editor window. It closes the window, asking first when tag changes aren't written yet. Read-only (the key can't be rebound)."

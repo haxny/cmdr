@@ -94,5 +94,9 @@
   "commands.editUndoTrash.many": "Undo move to Bin of {countText} {count, plural, one {item} other {items}}",
   "@commands.editUndoTrash.many": {
     "sourceHash": "69c4966"
+  },
+  "commands.syncOpenDialog.label": "Synchronise folders…",
+  "@commands.syncOpenDialog.label": {
+    "sourceHash": "6afcd31"
   }
 }

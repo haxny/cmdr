@@ -61,6 +61,7 @@ var messageKeyKnownAreas = map[string]bool{
 	"servers":         true,
 	"securityNotices": true,
 	"stateRecovery":   true,
+	"sync":            true,
 }
 
 // messageKeyNamingViolation is one bad catalog key with why it's bad.

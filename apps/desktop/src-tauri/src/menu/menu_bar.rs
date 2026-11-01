@@ -51,9 +51,9 @@ use super::{
     SELECT_SAME_KIND_ID, SERVERS_CONNECT_ID, SERVERS_SHOW_ID, SETTINGS_ID, SHOW_HIDDEN_FILES_ID, SHOW_IN_FINDER_ID,
     SORT_ASCENDING_ID, SORT_BY_ADDED_ID, SORT_BY_CREATED_ID, SORT_BY_EXTENSION_ID, SORT_BY_MENU_ID,
     SORT_BY_MODIFIED_ID, SORT_BY_NAME_ID, SORT_BY_SIZE_ID, SORT_DESCENDING_ID, SUGGESTED_OPS_ID, SWAP_PANES_ID,
-    SWITCH_PANE_ID, TAB_MENU_ID, UNDO_TRASH_ID, VIEW_MENU_ID, VIEW_MODE_BRIEF_LEFT_ID, VIEW_MODE_BRIEF_RIGHT_ID,
-    VIEW_MODE_FULL_LEFT_ID, VIEW_MODE_FULL_RIGHT_ID, VIEW_ZOOM_75_ID, VIEW_ZOOM_100_ID, VIEW_ZOOM_125_ID,
-    VIEW_ZOOM_150_ID, VIEW_ZOOM_IN_ID, VIEW_ZOOM_OUT_ID, ViewMode, WINDOW_MENU_ID,
+    SWITCH_PANE_ID, SYNC_FOLDERS_ID, TAB_MENU_ID, UNDO_TRASH_ID, VIEW_MENU_ID, VIEW_MODE_BRIEF_LEFT_ID,
+    VIEW_MODE_BRIEF_RIGHT_ID, VIEW_MODE_FULL_LEFT_ID, VIEW_MODE_FULL_RIGHT_ID, VIEW_ZOOM_75_ID, VIEW_ZOOM_100_ID,
+    VIEW_ZOOM_125_ID, VIEW_ZOOM_150_ID, VIEW_ZOOM_IN_ID, VIEW_ZOOM_OUT_ID, ViewMode, WINDOW_MENU_ID,
 };
 use cmdr_listing::{SortColumn, SortOrder};
 
@@ -187,6 +187,7 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
             item(MULTI_RENAME_ID, "menu.file.multiRename", both("Ctrl+M")),
             // Built disabled; `set_edit_tags_enabled` turns it on while the tag editor setting is.
             item(EDIT_TAGS_ID, "menu.file.editTags", macos("Cmd+Shift+E")).disabled(),
+            item(SYNC_FOLDERS_ID, "menu.file.synchronizeFolders", macos("Shift+F12")),
             SEPARATOR,
             labeled_item(
                 SHOW_IN_FINDER_ID,

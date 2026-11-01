@@ -1752,8 +1752,8 @@ itself, which is exactly what this leaves to the parent.
   cursor keys, and `mouseenter` when `hoverMovesCursor` is on. Writing it back to `cursorIndex` is what makes them one
   cursor. **Decision/Why: hover is opt-in.** Search turns it on (the mouse and the arrows share the cursor); the
   Multi-rename preview leaves it off, because its cursor drives the range examples and they mustn't jump while the
-  pointer passes over. `onRowClick(index)` fires after the cursor move, and `onRowContextMenu({ index, row, event })`
-  `preventDefault`s for you.
+  pointer passes over. `onRowClick(index, event)` fires after the cursor move (`onRowDoubleClick(index)` on a double
+  click; `rowLabel` names a data row), and `onRowContextMenu({ index, row, event })` `preventDefault`s for you.
 - **Cursor keys** (`list-cursor.ts`, pure, tested): ↑/↓ step, PageUp/PageDown page by `visibleRowCount() - 1` (the file
   panes' step, so a row of context stays), Home/End go to the ends, and group headings are stepped over (a windowed row
   still loading takes the cursor). Bare keys only: ⇧↓, ⌘↓, ⌥↓, ⌃↓ are somebody else's and pass through, which is why

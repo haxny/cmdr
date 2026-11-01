@@ -1,0 +1,754 @@
+{
+  "sync.dialog.title": "Synchronize folders",
+  "@sync.dialog.title": {
+    "sourceHash": "1ff942e"
+  },
+  "sync.dialog.close": "Close",
+  "@sync.dialog.close": {
+    "sourceHash": "7d9eb7a"
+  },
+  "sync.dialog.compare": "Compare",
+  "@sync.dialog.compare": {
+    "sourceHash": "e888155"
+  },
+  "sync.dialog.compareAgain": "Compare again",
+  "@sync.dialog.compareAgain": {
+    "sourceHash": "502f6db"
+  },
+  "sync.dialog.synchronize": "Synchronize…",
+  "@sync.dialog.synchronize": {
+    "sourceHash": "39a4e73"
+  },
+  "sync.dialog.synchronizeNeedsCompare": "Compare the folders first, then review the list before you synchronize.",
+  "@sync.dialog.synchronizeNeedsCompare": {
+    "sourceHash": "9ce4882"
+  },
+  "sync.dialog.pause": "Pause",
+  "@sync.dialog.pause": {
+    "sourceHash": "858e4ba"
+  },
+  "sync.dialog.resume": "Resume",
+  "@sync.dialog.resume": {
+    "sourceHash": "d640c74"
+  },
+  "sync.dialog.stop": "Stop",
+  "@sync.dialog.stop": {
+    "sourceHash": "cae7d57"
+  },
+  "sync.dialog.stale": "The options changed since the last compare, so this list may be out of date.",
+  "@sync.dialog.stale": {
+    "sourceHash": "f302ca1"
+  },
+  "sync.dialog.staleFolders": "A synchronization changed these folders since this compare.",
+  "@sync.dialog.staleFolders": {
+    "sourceHash": "122cdad"
+  },
+  "sync.dialog.comparing": "Comparing… {leftFilesText} {leftFiles, plural, one {file} other {files}} on the left, {rightFilesText} {rightFiles, plural, one {file} other {files}} on the right",
+  "@sync.dialog.comparing": {
+    "sourceHash": "7aeda14"
+  },
+  "sync.dialog.comparingContent": "Comparing content: {doneText} of {totalText} {total, plural, one {pair} other {pairs}}",
+  "@sync.dialog.comparingContent": {
+    "sourceHash": "357b725"
+  },
+  "sync.dialog.paused": "Compare paused",
+  "@sync.dialog.paused": {
+    "sourceHash": "a352b90"
+  },
+  "sync.dialog.stopped": "Compare stopped",
+  "@sync.dialog.stopped": {
+    "sourceHash": "71cbf3a"
+  },
+  "sync.dialog.optionsNotSaved": "Synchronize folders couldn’t remember the options for these two folders, so they start from the defaults next time.",
+  "@sync.dialog.optionsNotSaved": {
+    "sourceHash": "ed2391a"
+  },
+  "sync.dialog.needsTwoFolders": "Synchronize folders needs a folder in each pane.",
+  "@sync.dialog.needsTwoFolders": {
+    "sourceHash": "21e8d4a"
+  },
+  "sync.dialog.optionsLabel": "Options",
+  "@sync.dialog.optionsLabel": {
+    "sourceHash": "d0db8b5"
+  },
+  "sync.options.left": "Left",
+  "@sync.options.left": {
+    "sourceHash": "58eb903"
+  },
+  "sync.options.right": "Right",
+  "@sync.options.right": {
+    "sourceHash": "883361d"
+  },
+  "sync.options.swap": "Swap sides",
+  "@sync.options.swap": {
+    "sourceHash": "f2059d5"
+  },
+  "sync.options.mode": "Mode",
+  "@sync.options.mode": {
+    "sourceHash": "5e23ec6"
+  },
+  "sync.options.mode.compareOnly": "Compare only",
+  "@sync.options.mode.compareOnly": {
+    "sourceHash": "4216074"
+  },
+  "sync.options.mode.bothWays": "Both ways",
+  "@sync.options.mode.bothWays": {
+    "sourceHash": "843f1d3"
+  },
+  "sync.options.mode.update": "Update →",
+  "@sync.options.mode.update": {
+    "sourceHash": "3388794"
+  },
+  "sync.options.mode.mirror": "Mirror →",
+  "@sync.options.mode.mirror": {
+    "sourceHash": "69024e1"
+  },
+  "sync.options.modeHint.compareOnly": "Shows what differs and changes nothing unless you set an action on a row.",
+  "@sync.options.modeHint.compareOnly": {
+    "sourceHash": "24471be"
+  },
+  "sync.options.modeHint.bothWays": "Copies missing and newer files each way. Never removes anything.",
+  "@sync.options.modeHint.bothWays": {
+    "sourceHash": "ca2cc1e"
+  },
+  "sync.options.modeHint.update": "Copies missing and newer files from left to right. Never removes anything.",
+  "@sync.options.modeHint.update": {
+    "sourceHash": "7e25750"
+  },
+  "sync.options.modeHint.mirror": "Makes the right folder match the left: copies, replaces, and removes on the right. Replaced and removed files are kept.",
+  "@sync.options.modeHint.mirror": {
+    "sourceHash": "f227db6"
+  },
+  "sync.options.compareBy": "Compare by",
+  "@sync.options.compareBy": {
+    "sourceHash": "f551d7e"
+  },
+  "sync.options.compareBy.dateAndSize": "Date and size",
+  "@sync.options.compareBy.dateAndSize": {
+    "sourceHash": "bae1230"
+  },
+  "sync.options.compareBy.sizeOnly": "Size only",
+  "@sync.options.compareBy.sizeOnly": {
+    "sourceHash": "e8ee9bb"
+  },
+  "sync.options.compareBy.content": "Content",
+  "@sync.options.compareBy.content": {
+    "sourceHash": "47bd290"
+  },
+  "sync.options.subfolders": "Subfolders",
+  "@sync.options.subfolders": {
+    "sourceHash": "0e4012d"
+  },
+  "sync.options.onlySelected": "Only selected",
+  "@sync.options.onlySelected": {
+    "sourceHash": "c1792bf"
+  },
+  "sync.options.ignoreDate": "Ignore date",
+  "@sync.options.ignoreDate": {
+    "sourceHash": "34e0197"
+  },
+  "sync.options.emptyFolders": "Empty folders",
+  "@sync.options.emptyFolders": {
+    "sourceHash": "d3c51b8"
+  },
+  "sync.options.masks": "Files",
+  "@sync.options.masks": {
+    "sourceHash": "abc7e98"
+  },
+  "sync.options.masksPlaceholder": "All files",
+  "@sync.options.masksPlaceholder": {
+    "sourceHash": "8669569"
+  },
+  "sync.options.masksHint": "Masks like *.pdf *.docx. Masks after | are left out. A trailing / means a folder.",
+  "@sync.options.masksHint": {
+    "sourceHash": "25df144"
+  },
+  "sync.options.excludes": "Leave out",
+  "@sync.options.excludes": {
+    "sourceHash": "6c6f2d1"
+  },
+  "sync.options.excludesHint": "Names never compared, separated by ;. A trailing / means a folder.",
+  "@sync.options.excludesHint": {
+    "sourceHash": "66bc91d"
+  },
+  "sync.filters.label": "Show",
+  "@sync.filters.label": {
+    "sourceHash": "0df6f1c"
+  },
+  "sync.filters.toRight": "To the right",
+  "@sync.filters.toRight": {
+    "sourceHash": "b829675"
+  },
+  "sync.filters.equal": "Equal",
+  "@sync.filters.equal": {
+    "sourceHash": "374c252"
+  },
+  "sync.filters.different": "Different",
+  "@sync.filters.different": {
+    "sourceHash": "e9cdbd4"
+  },
+  "sync.filters.toLeft": "To the left",
+  "@sync.filters.toLeft": {
+    "sourceHash": "5461597"
+  },
+  "sync.filters.duplicates": "On both sides",
+  "@sync.filters.duplicates": {
+    "sourceHash": "4f6a5ad"
+  },
+  "sync.filters.singles": "On one side",
+  "@sync.filters.singles": {
+    "sourceHash": "b65c16f"
+  },
+  "sync.filters.unknown": "Undecided",
+  "@sync.filters.unknown": {
+    "sourceHash": "00cc364"
+  },
+  "sync.filters.warningsOnly": "Warnings only",
+  "@sync.filters.warningsOnly": {
+    "sourceHash": "5dae172"
+  },
+  "sync.filters.hiddenMark": "Some rows are hidden",
+  "@sync.filters.hiddenMark": {
+    "sourceHash": "2d6e517"
+  },
+  "sync.grid.label": "Files in both folders",
+  "@sync.grid.label": {
+    "sourceHash": "67b70d0"
+  },
+  "sync.grid.col.mark": "Selected",
+  "@sync.grid.col.mark": {
+    "sourceHash": "57fd7a0"
+  },
+  "sync.grid.col.leftName": "Left name",
+  "@sync.grid.col.leftName": {
+    "sourceHash": "0af920c"
+  },
+  "sync.grid.col.rightName": "Right name",
+  "@sync.grid.col.rightName": {
+    "sourceHash": "dcb73ab"
+  },
+  "sync.grid.col.size": "Size",
+  "@sync.grid.col.size": {
+    "sourceHash": "1af8519"
+  },
+  "sync.grid.col.date": "Date",
+  "@sync.grid.col.date": {
+    "sourceHash": "99c40ab"
+  },
+  "sync.grid.col.leftSize": "Left size",
+  "@sync.grid.col.leftSize": {
+    "sourceHash": "7a13f1a"
+  },
+  "sync.grid.col.leftDate": "Left date",
+  "@sync.grid.col.leftDate": {
+    "sourceHash": "3bf8987"
+  },
+  "sync.grid.col.rightSize": "Right size",
+  "@sync.grid.col.rightSize": {
+    "sourceHash": "d845b4d"
+  },
+  "sync.grid.col.rightDate": "Right date",
+  "@sync.grid.col.rightDate": {
+    "sourceHash": "d334f12"
+  },
+  "sync.grid.col.action": "Action",
+  "@sync.grid.col.action": {
+    "sourceHash": "64cff13"
+  },
+  "sync.grid.folderHeading": "{path}, folder {ordinalText} of {ofText}",
+  "@sync.grid.folderHeading": {
+    "sourceHash": "f2fd750"
+  },
+  "sync.grid.empty": "No rows to show. The show buttons above may be hiding some.",
+  "@sync.grid.empty": {
+    "sourceHash": "ce62474"
+  },
+  "sync.grid.identical": "The two folders match.",
+  "@sync.grid.identical": {
+    "sourceHash": "a3b56e4"
+  },
+  "sync.grid.rung.presence": "Decided by which side has it",
+  "@sync.grid.rung.presence": {
+    "sourceHash": "3ee7ed2"
+  },
+  "sync.grid.rung.sizeAndTime": "Decided by size and date",
+  "@sync.grid.rung.sizeAndTime": {
+    "sourceHash": "c17930b"
+  },
+  "sync.grid.rung.sizeOnly": "Decided by size",
+  "@sync.grid.rung.sizeOnly": {
+    "sourceHash": "049f3f5"
+  },
+  "sync.grid.rung.content": "Decided by content",
+  "@sync.grid.rung.content": {
+    "sourceHash": "5cb12f7"
+  },
+  "sync.grid.pending": "Comparing content…",
+  "@sync.grid.pending": {
+    "sourceHash": "7ad9bb8"
+  },
+  "sync.grid.changedMark": "Changed by you",
+  "@sync.grid.changedMark": {
+    "sourceHash": "fa07d9e"
+  },
+  "sync.grid.warningMark": "Older replaces newer",
+  "@sync.grid.warningMark": {
+    "sourceHash": "2cc1863"
+  },
+  "sync.grid.spoken.folder": "folder",
+  "@sync.grid.spoken.folder": {
+    "sourceHash": "034a006"
+  },
+  "sync.grid.spoken.changedByYou": "changed by you",
+  "@sync.grid.spoken.changedByYou": {
+    "sourceHash": "596e389"
+  },
+  "sync.grid.spoken.olderReplacesNewer": "older replaces newer",
+  "@sync.grid.spoken.olderReplacesNewer": {
+    "sourceHash": "ba5af96"
+  },
+  "sync.grid.spoken.comparingContent": "comparing content",
+  "@sync.grid.spoken.comparingContent": {
+    "sourceHash": "780fcd4"
+  },
+  "sync.grid.spoken.selected": "selected",
+  "@sync.grid.spoken.selected": {
+    "sourceHash": "d7cbbb6"
+  },
+  "sync.category.label.leftOnly": "Only on the left",
+  "@sync.category.label.leftOnly": {
+    "sourceHash": "a31c61c"
+  },
+  "sync.category.spoken.leftOnly": "only on the left",
+  "@sync.category.spoken.leftOnly": {
+    "sourceHash": "2bdda3d"
+  },
+  "sync.category.label.rightOnly": "Only on the right",
+  "@sync.category.label.rightOnly": {
+    "sourceHash": "a1c7e1f"
+  },
+  "sync.category.spoken.rightOnly": "only on the right",
+  "@sync.category.spoken.rightOnly": {
+    "sourceHash": "1160a4b"
+  },
+  "sync.category.label.newerLeft": "Newer on the left",
+  "@sync.category.label.newerLeft": {
+    "sourceHash": "7d13a54"
+  },
+  "sync.category.spoken.newerLeft": "newer on the left",
+  "@sync.category.spoken.newerLeft": {
+    "sourceHash": "17ec1e6"
+  },
+  "sync.category.label.newerRight": "Newer on the right",
+  "@sync.category.label.newerRight": {
+    "sourceHash": "eea50f2"
+  },
+  "sync.category.spoken.newerRight": "newer on the right",
+  "@sync.category.spoken.newerRight": {
+    "sourceHash": "1ad1f13"
+  },
+  "sync.category.label.different": "Different",
+  "@sync.category.label.different": {
+    "sourceHash": "e9cdbd4"
+  },
+  "sync.category.spoken.different": "different",
+  "@sync.category.spoken.different": {
+    "sourceHash": "9d6f965"
+  },
+  "sync.category.label.equal": "Equal",
+  "@sync.category.label.equal": {
+    "sourceHash": "374c252"
+  },
+  "sync.category.spoken.equal": "equal",
+  "@sync.category.spoken.equal": {
+    "sourceHash": "f9d6cd1"
+  },
+  "sync.category.label.unknown": "Can’t tell which is newer",
+  "@sync.category.label.unknown": {
+    "sourceHash": "ab7d81e"
+  },
+  "sync.category.spoken.unknown": "can’t tell which is newer",
+  "@sync.category.spoken.unknown": {
+    "sourceHash": "ffaf24f"
+  },
+  "sync.category.label.typeClash": "A file on one side, a folder on the other",
+  "@sync.category.label.typeClash": {
+    "sourceHash": "9d5669e"
+  },
+  "sync.category.spoken.typeClash": "a file on one side and a folder on the other",
+  "@sync.category.spoken.typeClash": {
+    "sourceHash": "b30e82d"
+  },
+  "sync.category.label.nameClash": "Two names here match one name there",
+  "@sync.category.label.nameClash": {
+    "sourceHash": "6a5f493"
+  },
+  "sync.category.spoken.nameClash": "two names here match one name there",
+  "@sync.category.spoken.nameClash": {
+    "sourceHash": "832c002"
+  },
+  "sync.category.label.unreadable": "Couldn’t be read",
+  "@sync.category.label.unreadable": {
+    "sourceHash": "d642844"
+  },
+  "sync.category.spoken.unreadable": "couldn’t be read",
+  "@sync.category.spoken.unreadable": {
+    "sourceHash": "1e9c923"
+  },
+  "sync.action.label.copyRight": "Copy to the right",
+  "@sync.action.label.copyRight": {
+    "sourceHash": "2f8fc99"
+  },
+  "sync.action.spoken.copyRight": "will be copied to the right",
+  "@sync.action.spoken.copyRight": {
+    "sourceHash": "b97219d"
+  },
+  "sync.action.label.copyLeft": "Copy to the left",
+  "@sync.action.label.copyLeft": {
+    "sourceHash": "a79b13e"
+  },
+  "sync.action.spoken.copyLeft": "will be copied to the left",
+  "@sync.action.spoken.copyLeft": {
+    "sourceHash": "60ea4cc"
+  },
+  "sync.action.label.removeRight": "Remove on the right",
+  "@sync.action.label.removeRight": {
+    "sourceHash": "d679378"
+  },
+  "sync.action.spoken.removeRight": "will be removed on the right",
+  "@sync.action.spoken.removeRight": {
+    "sourceHash": "2c32807"
+  },
+  "sync.action.label.removeLeft": "Remove on the left",
+  "@sync.action.label.removeLeft": {
+    "sourceHash": "fdabad9"
+  },
+  "sync.action.spoken.removeLeft": "will be removed on the left",
+  "@sync.action.spoken.removeLeft": {
+    "sourceHash": "71eadb4"
+  },
+  "sync.action.label.equal": "Nothing to do",
+  "@sync.action.label.equal": {
+    "sourceHash": "a288a34"
+  },
+  "sync.action.spoken.equal": "nothing to do",
+  "@sync.action.spoken.equal": {
+    "sourceHash": "86fcff1"
+  },
+  "sync.action.label.skip": "Skip",
+  "@sync.action.label.skip": {
+    "sourceHash": "28d0359"
+  },
+  "sync.action.spoken.skip": "skipped",
+  "@sync.action.spoken.skip": {
+    "sourceHash": "389595a"
+  },
+  "sync.action.label.undecided": "Undecided",
+  "@sync.action.label.undecided": {
+    "sourceHash": "00cc364"
+  },
+  "sync.action.spoken.undecided": "undecided",
+  "@sync.action.spoken.undecided": {
+    "sourceHash": "06be3f2"
+  },
+  "sync.menu.label": "Row actions",
+  "@sync.menu.label": {
+    "sourceHash": "67a1892"
+  },
+  "sync.menu.selected": "On the selected rows",
+  "@sync.menu.selected": {
+    "sourceHash": "b17411a"
+  },
+  "sync.menu.row": "On this row",
+  "@sync.menu.row": {
+    "sourceHash": "f2cd6c0"
+  },
+  "sync.menu.defaultDirection": "Default direction",
+  "@sync.menu.defaultDirection": {
+    "sourceHash": "7c12a68"
+  },
+  "sync.menu.reverse": "Reverse direction",
+  "@sync.menu.reverse": {
+    "sourceHash": "f812330"
+  },
+  "sync.menu.toggleSkip": "Skip or restore",
+  "@sync.menu.toggleSkip": {
+    "sourceHash": "9e09193"
+  },
+  "sync.menu.compareContent": "Compare by content",
+  "@sync.menu.compareContent": {
+    "sourceHash": "91f9b27"
+  },
+  "sync.menu.viewLeft": "View left file",
+  "@sync.menu.viewLeft": {
+    "sourceHash": "c9d88fd"
+  },
+  "sync.menu.viewRight": "View right file",
+  "@sync.menu.viewRight": {
+    "sourceHash": "a69abe3"
+  },
+  "sync.menu.editLeft": "Edit left file",
+  "@sync.menu.editLeft": {
+    "sourceHash": "d1a74ef"
+  },
+  "sync.menu.editRight": "Edit right file",
+  "@sync.menu.editRight": {
+    "sourceHash": "a70a502"
+  },
+  "sync.menu.quickLook": "Quick Look",
+  "@sync.menu.quickLook": {
+    "sourceHash": "371e342"
+  },
+  "sync.menu.copyRows": "Copy rows as text",
+  "@sync.menu.copyRows": {
+    "sourceHash": "dfb526c"
+  },
+  "sync.refusal.illegalForMode": "{action} isn’t possible in this mode.",
+  "@sync.refusal.illegalForMode": {
+    "sourceHash": "4299b36"
+  },
+  "sync.refusal.illegalForCategory": "{action} isn’t possible for this row.",
+  "@sync.refusal.illegalForCategory": {
+    "sourceHash": "f4effb6"
+  },
+  "sync.refusal.nothingOnLeft": "There’s nothing on the left to copy.",
+  "@sync.refusal.nothingOnLeft": {
+    "sourceHash": "212b175"
+  },
+  "sync.refusal.nothingOnRight": "There’s nothing on the right to copy.",
+  "@sync.refusal.nothingOnRight": {
+    "sourceHash": "c59909f"
+  },
+  "sync.refusal.cantReverse": "Only a copy between two existing files, or a removal, can be reversed.",
+  "@sync.refusal.cantReverse": {
+    "sourceHash": "c86ff28"
+  },
+  "sync.refusal.nothingToToggle": "This row has no action to skip or restore.",
+  "@sync.refusal.nothingToToggle": {
+    "sourceHash": "00c6e91"
+  },
+  "sync.refusal.notAllowed": "{action} isn’t possible for this row: that side may not take changes.",
+  "@sync.refusal.notAllowed": {
+    "sourceHash": "c74e605"
+  },
+  "sync.refusal.sideReadOnlyLeft": "The left side takes no changes.",
+  "@sync.refusal.sideReadOnlyLeft": {
+    "sourceHash": "d59aec5"
+  },
+  "sync.refusal.sideReadOnlyRight": "The right side takes no changes.",
+  "@sync.refusal.sideReadOnlyRight": {
+    "sourceHash": "0f75aed"
+  },
+  "sync.refusal.noFile": "There’s no file on that side.",
+  "@sync.refusal.noFile": {
+    "sourceHash": "cac9e8b"
+  },
+  "sync.refusal.notAFile": "Only a file can be opened, not a folder.",
+  "@sync.refusal.notAFile": {
+    "sourceHash": "1d3051a"
+  },
+  "sync.refusal.quickLookUnavailable": "Quick Look works only for files on this Mac.",
+  "@sync.refusal.quickLookUnavailable": {
+    "sourceHash": "3bd6997"
+  },
+  "sync.summary.label": "Summary",
+  "@sync.summary.label": {
+    "sourceHash": "8e76a94"
+  },
+  "sync.summary.toRight": "To the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.summary.toRight": {
+    "sourceHash": "febef53"
+  },
+  "sync.summary.toLeft": "To the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.summary.toLeft": {
+    "sourceHash": "d6450e4"
+  },
+  "sync.summary.removeRight": "{countText} to remove on the right",
+  "@sync.summary.removeRight": {
+    "sourceHash": "6dc7467"
+  },
+  "sync.summary.removeLeft": "{countText} to remove on the left",
+  "@sync.summary.removeLeft": {
+    "sourceHash": "bc7a9bd"
+  },
+  "sync.summary.equal": "{countText} equal",
+  "@sync.summary.equal": {
+    "sourceHash": "ba1cdb1"
+  },
+  "sync.summary.different": "{countText} different",
+  "@sync.summary.different": {
+    "sourceHash": "ed162b7"
+  },
+  "sync.summary.uniqueLeft": "{countText} only on the left",
+  "@sync.summary.uniqueLeft": {
+    "sourceHash": "9e9f562"
+  },
+  "sync.summary.uniqueRight": "{countText} only on the right",
+  "@sync.summary.uniqueRight": {
+    "sourceHash": "117953a"
+  },
+  "sync.summary.undecided": "{countText} undecided",
+  "@sync.summary.undecided": {
+    "sourceHash": "6f9b86d"
+  },
+  "sync.summary.skipped": "{countText} skipped",
+  "@sync.summary.skipped": {
+    "sourceHash": "6a15f48"
+  },
+  "sync.summary.notComparable": "{countText} not comparable",
+  "@sync.summary.notComparable": {
+    "sourceHash": "1eaadfa"
+  },
+  "sync.summary.changedByYou": "{countText} changed by you",
+  "@sync.summary.changedByYou": {
+    "sourceHash": "ac9dbe6"
+  },
+  "sync.summary.hiddenActions": "{countText} hidden {count, plural, one {action} other {actions}}",
+  "@sync.summary.hiddenActions": {
+    "sourceHash": "0a3d807"
+  },
+  "sync.summary.warnings": "{countText} older {count, plural, one {file replaces a newer one} other {files replace newer ones}}",
+  "@sync.summary.warnings": {
+    "sourceHash": "c73c6e3"
+  },
+  "sync.summary.guard.maxRemoveLeft": "Mirror would remove {percentText} of the left side: held until you confirm.",
+  "@sync.summary.guard.maxRemoveLeft": {
+    "sourceHash": "9a1d36e"
+  },
+  "sync.summary.guard.maxRemoveRight": "Mirror would remove {percentText} of the right side: held until you confirm.",
+  "@sync.summary.guard.maxRemoveRight": {
+    "sourceHash": "3791713"
+  },
+  "sync.summary.guard.emptyRootLeft": "The left folder is empty: removals are held, and copies into it wait for your OK.",
+  "@sync.summary.guard.emptyRootLeft": {
+    "sourceHash": "79e52f9"
+  },
+  "sync.summary.guard.emptyRootRight": "The right folder is empty: removals are held, and copies into it wait for your OK.",
+  "@sync.summary.guard.emptyRootRight": {
+    "sourceHash": "9c70bae"
+  },
+  "sync.summary.guard.sentinelMissingLeft": "The check file from Settings is missing on the left, so nothing runs.",
+  "@sync.summary.guard.sentinelMissingLeft": {
+    "sourceHash": "ffcd175"
+  },
+  "sync.summary.guard.sentinelMissingRight": "The check file from Settings is missing on the right, so nothing runs.",
+  "@sync.summary.guard.sentinelMissingRight": {
+    "sourceHash": "38f3312"
+  },
+  "sync.summary.skew": "Most times on the right differ from the left by {secondsText} {seconds, plural, one {second} other {seconds}}. A clock may be off.",
+  "@sync.summary.skew": {
+    "sourceHash": "06306cc"
+  },
+  "sync.error.noSuchSession": "This comparison was closed. Compare again.",
+  "@sync.error.noSuchSession": {
+    "sourceHash": "60d4518"
+  },
+  "sync.error.notCompared": "Nothing is compared yet. Press Compare.",
+  "@sync.error.notCompared": {
+    "sourceHash": "f246639"
+  },
+  "sync.error.volumeNotConnectedLeft": "The left folder’s drive or server isn’t connected. Connect it, then compare again.",
+  "@sync.error.volumeNotConnectedLeft": {
+    "sourceHash": "2840f67"
+  },
+  "sync.error.volumeNotConnectedRight": "The right folder’s drive or server isn’t connected. Connect it, then compare again.",
+  "@sync.error.volumeNotConnectedRight": {
+    "sourceHash": "ae98d41"
+  },
+  "sync.error.rootUnreachableLeft": "The left folder can’t be opened. It may be on a drive that isn’t mounted.",
+  "@sync.error.rootUnreachableLeft": {
+    "sourceHash": "063f078"
+  },
+  "sync.error.rootUnreachableRight": "The right folder can’t be opened. It may be on a drive that isn’t mounted.",
+  "@sync.error.rootUnreachableRight": {
+    "sourceHash": "f738917"
+  },
+  "sync.error.badPathLeft": "The left folder’s path can’t be used.",
+  "@sync.error.badPathLeft": {
+    "sourceHash": "e999afa"
+  },
+  "sync.error.badPathRight": "The right folder’s path can’t be used.",
+  "@sync.error.badPathRight": {
+    "sourceHash": "604ed0c"
+  },
+  "sync.error.sameFolder": "Both sides show the same folder. Open two different folders.",
+  "@sync.error.sameFolder": {
+    "sourceHash": "95aa96b"
+  },
+  "sync.error.nestedLeft": "The right folder is inside the left one. Open two folders apart from each other.",
+  "@sync.error.nestedLeft": {
+    "sourceHash": "821516b"
+  },
+  "sync.error.nestedRight": "The left folder is inside the right one. Open two folders apart from each other.",
+  "@sync.error.nestedRight": {
+    "sourceHash": "c503a70"
+  },
+  "sync.error.maskEmpty": "One of the masks is empty. Check for a | or a ; with nothing after it.",
+  "@sync.error.maskEmpty": {
+    "sourceHash": "cbfdcb6"
+  },
+  "sync.error.maskQuote": "A quote in the masks never closes.",
+  "@sync.error.maskQuote": {
+    "sourceHash": "7346bec"
+  },
+  "sync.error.maskSecondBar": "The masks have more than one |. Put every mask to leave out after one |.",
+  "@sync.error.maskSecondBar": {
+    "sourceHash": "958ad3e"
+  },
+  "sync.error.badSettings": "A Synchronize folders setting is out of range. Check it in Settings.",
+  "@sync.error.badSettings": {
+    "sourceHash": "598edeb"
+  },
+  "sync.error.keepFolderUnreadable": "The versions folder from Settings doesn’t answer, so Cmdr can’t check that it lies outside these folders.",
+  "@sync.error.keepFolderUnreadable": {
+    "sourceHash": "6ead151"
+  },
+  "sync.error.keep": "The versions folder from Settings can’t be used for these folders.",
+  "@sync.error.keep": {
+    "sourceHash": "9d1a597"
+  },
+  "sync.error.sideReadOnlyLeft": "The left side takes no changes, and this mode would write there.",
+  "@sync.error.sideReadOnlyLeft": {
+    "sourceHash": "361b241"
+  },
+  "sync.error.sideReadOnlyRight": "The right side takes no changes, and this mode would write there.",
+  "@sync.error.sideReadOnlyRight": {
+    "sourceHash": "b409e94"
+  },
+  "sync.error.staleSelectionLeft": "The selection in the left pane changed. Turn off Only selected, or close and open Synchronize folders again.",
+  "@sync.error.staleSelectionLeft": {
+    "sourceHash": "edbd297"
+  },
+  "sync.error.staleSelectionRight": "The selection in the right pane changed. Turn off Only selected, or close and open Synchronize folders again.",
+  "@sync.error.staleSelectionRight": {
+    "sourceHash": "8f11178"
+  },
+  "sync.error.compareRunning": "A compare is still running. Wait for it, or stop it.",
+  "@sync.error.compareRunning": {
+    "sourceHash": "dceba22"
+  },
+  "sync.error.runInProgress": "A synchronization is running for these folders. Wait for it to finish.",
+  "@sync.error.runInProgress": {
+    "sourceHash": "72fbbc0"
+  },
+  "sync.error.planChanged": "The list changed since you reviewed it. Review it again.",
+  "@sync.error.planChanged": {
+    "sourceHash": "72ca309"
+  },
+  "sync.error.staleCompare": "A synchronization changed these folders. Compare again.",
+  "@sync.error.staleCompare": {
+    "sourceHash": "4706b22"
+  },
+  "sync.error.notContentComparable": "Only two files of the same size can be compared by content.",
+  "@sync.error.notContentComparable": {
+    "sourceHash": "2bb60e9"
+  },
+  "sync.error.notInstalled": "Cmdr is still starting. Try again in a moment.",
+  "@sync.error.notInstalled": {
+    "sourceHash": "d9d58dc"
+  },
+  "sync.error.unexpected": "Something went wrong. Try again, and if it keeps happening, send an error report from the Help menu.",
+  "@sync.error.unexpected": {
+    "sourceHash": "149c6a5"
+  }
+}

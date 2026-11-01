@@ -38,5 +38,9 @@
   "menu.edit.undoTrashMany": "Undo move to Bin of {countText} items",
   "@menu.edit.undoTrashMany": {
     "sourceHash": "bb9192a"
+  },
+  "menu.file.synchronizeFolders": "Synchronise folders…",
+  "@menu.file.synchronizeFolders": {
+    "sourceHash": "6afcd31"
   }
 }

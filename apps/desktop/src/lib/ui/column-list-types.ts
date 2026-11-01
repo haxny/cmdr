@@ -120,7 +120,15 @@ export interface ColumnListProps<T> {
   hoverMovesCursor?: boolean
   /** A `grid`'s keydown that isn't one of its cursor keys (the Multi-rename preview's ⇧↑ / ⇧↓). */
   onKeydown?: (event: KeyboardEvent) => void
-  onRowClick?: (index: number) => void
+  /** A click on a data row, with its event so a list with its own selection can read ⌘ and ⇧. */
+  onRowClick?: (index: number, event: MouseEvent) => void
+  /** A double click on a data row (Synchronize folders: compare the pair by content). */
+  onRowDoubleClick?: (index: number) => void
+  /**
+   * A data row's own accessible name, for a `grid` whose rows say in words what their cells show with glyphs and
+   * colour (Synchronize folders' arrows). Without it a row is named by its cells.
+   */
+  rowLabel?: (row: T) => string
   /** Right-click on a data row. The list calls `preventDefault` when this is set. */
   onRowContextMenu?: (payload: ColumnListRowEvent<T>) => void
   /** Marks a row as a group heading (a folder name above its files). */

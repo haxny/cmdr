@@ -62,6 +62,12 @@ export const SOFT_DIALOG_REGISTRY = [
     whileOpen: BLOCKS_OPERATIONS,
   },
   {
+    id: 'sync-folders',
+    description:
+      'Compares two folders and lists what to copy each way for review, like Total Commander’s Synchronize directories',
+    whileOpen: BLOCKS_OPERATIONS,
+  },
+  {
     id: 'commercial-reminder',
     description: 'Periodic reminder for commercial licensing',
     whileOpen: BLOCKS_OPERATIONS,

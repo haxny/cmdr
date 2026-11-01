@@ -1,0 +1,847 @@
+{
+  "sync.dialog.title": "Synchronize folders",
+  "@sync.dialog.title": {
+    "description": "Title of the dialog. Synchronize folders (Shift+F12) is a dialog like Total Commander's Synchronize directories: it compares the folder in the left pane with the one in the right pane, subfolders included, and lists each file with an arrow saying what to copy which way."
+  },
+  "sync.dialog.close": "Close",
+  "@sync.dialog.close": {
+    "description": "Button that closes the Synchronize folders dialog without synchronizing anything. The options are remembered for these two folders."
+  },
+  "sync.dialog.compare": "Compare",
+  "@sync.dialog.compare": {
+    "description": "Button in the Synchronize folders dialog that compares the two folders with the options above it. Enter in the options does the same."
+  },
+  "sync.dialog.compareAgain": "Compare again",
+  "@sync.dialog.compareAgain": {
+    "description": "Button in the banner that says the list is out of date: compares the two folders again with the current options."
+  },
+  "sync.dialog.synchronize": "Synchronize…",
+  "@sync.dialog.synchronize": {
+    "description": "Main button of the Synchronize folders dialog (Cmd+Enter): opens the confirmation that lists everything that will be copied or removed. Nothing is written before that confirmation. The ellipsis says a confirmation follows."
+  },
+  "sync.dialog.synchronizeNeedsCompare": "Compare the folders first, then review the list before you synchronize.",
+  "@sync.dialog.synchronizeNeedsCompare": {
+    "description": "Tooltip of the Synchronize… button while it is unavailable because there is no finished, up-to-date comparison yet."
+  },
+  "sync.dialog.pause": "Pause",
+  "@sync.dialog.pause": {
+    "description": "Button that pauses the running comparison of the two folders. It takes the place of the Synchronize… button while a comparison runs, as in Total Commander."
+  },
+  "sync.dialog.resume": "Resume",
+  "@sync.dialog.resume": {
+    "description": "Button that continues a paused comparison of the two folders."
+  },
+  "sync.dialog.stop": "Stop",
+  "@sync.dialog.stop": {
+    "description": "Button that stops the running comparison of the two folders (Escape does the same). The rows already compared stay listed."
+  },
+  "sync.dialog.stale": "The options changed since the last compare, so this list may be out of date.",
+  "@sync.dialog.stale": {
+    "description": "Banner above the grid after the person changed an option that decides how files are paired or compared (subfolders, compare by, masks, mode). The dialog never compares again on its own; the banner has a \"Compare again\" button."
+  },
+  "sync.dialog.staleFolders": "A synchronization changed these folders since this compare.",
+  "@sync.dialog.staleFolders": {
+    "description": "Banner above the grid when a synchronization has already written to the folders after this comparison, so the list no longer matches the disk. It has a \"Compare again\" button."
+  },
+  "sync.dialog.comparing": "Comparing… {leftFilesText} {leftFiles, plural, one {file} other {files}} on the left, {rightFilesText} {rightFiles, plural, one {file} other {files}} on the right",
+  "@sync.dialog.comparing": {
+    "description": "Live status line while the two folders are scanned, updated several times a second.",
+    "placeholders": {
+      "leftFilesText": "how many files the left folder scan found so far, formatted",
+      "leftFiles": "the same number, for the plural form",
+      "rightFilesText": "how many files the right folder scan found so far, formatted",
+      "rightFiles": "the same number, for the plural form"
+    }
+  },
+  "sync.dialog.comparingContent": "Comparing content: {doneText} of {totalText} {total, plural, one {pair} other {pairs}}",
+  "@sync.dialog.comparingContent": {
+    "description": "Live status line while files of equal size are compared byte by byte (\"Compare by: Content\"). A pair is the same file on the left and on the right.",
+    "placeholders": {
+      "doneText": "how many pairs are done, formatted",
+      "totalText": "how many pairs there are, formatted",
+      "total": "the same number, for the plural form"
+    }
+  },
+  "sync.dialog.paused": "Compare paused",
+  "@sync.dialog.paused": {
+    "description": "Status line while the comparison is paused. A short status, no closing period."
+  },
+  "sync.dialog.stopped": "Compare stopped",
+  "@sync.dialog.stopped": {
+    "description": "Status line after the person stopped the comparison. A short status, no closing period."
+  },
+  "sync.dialog.optionsNotSaved": "Synchronize folders couldn’t remember the options for these two folders, so they start from the defaults next time.",
+  "@sync.dialog.optionsNotSaved": {
+    "description": "Notification after the dialog closed, when the options it remembers per pair of folders couldn't be written to disk."
+  },
+  "sync.dialog.needsTwoFolders": "Synchronize folders needs a folder in each pane.",
+  "@sync.dialog.needsTwoFolders": {
+    "description": "Notification when Shift+F12 is pressed while one pane shows something other than a folder (the network list or search results), so there is nothing to compare."
+  },
+  "sync.dialog.optionsLabel": "Options",
+  "@sync.dialog.optionsLabel": {
+    "description": "Accessible name of the area at the top of the Synchronize folders dialog that holds the two folders, the mode, and the compare options."
+  },
+  "sync.options.left": "Left",
+  "@sync.options.left": {
+    "description": "Label before the left folder's path in the Synchronize folders dialog: the folder the left pane shows."
+  },
+  "sync.options.right": "Right",
+  "@sync.options.right": {
+    "description": "Label before the right folder's path in the Synchronize folders dialog: the folder the right pane shows."
+  },
+  "sync.options.swap": "Swap sides",
+  "@sync.options.swap": {
+    "description": "Button (Cmd+U) that swaps the left and right folders and compares again, so the copy direction of the one-way modes turns around."
+  },
+  "sync.options.mode": "Mode",
+  "@sync.options.mode": {
+    "description": "Label of the choice between Compare only, Both ways, Update, and Mirror: what the synchronization does by default."
+  },
+  "sync.options.mode.compareOnly": "Compare only",
+  "@sync.options.mode.compareOnly": {
+    "description": "Mode: show the differences and change nothing unless the person sets an action on a row."
+  },
+  "sync.options.mode.bothWays": "Both ways",
+  "@sync.options.mode.bothWays": {
+    "description": "Mode (the default): copy missing and newer files in both directions. It never removes anything."
+  },
+  "sync.options.mode.update": "Update →",
+  "@sync.options.mode.update": {
+    "description": "Mode: copy missing and newer files from left to right only. It never removes anything. Keep the arrow; it points to the side that changes."
+  },
+  "sync.options.mode.mirror": "Mirror →",
+  "@sync.options.mode.mirror": {
+    "description": "Mode: make the right folder a copy of the left: copies, replaces, and removes on the right. Keep the arrow; it points to the side that changes."
+  },
+  "sync.options.modeHint.compareOnly": "Shows what differs and changes nothing unless you set an action on a row.",
+  "@sync.options.modeHint.compareOnly": {
+    "description": "Tooltip of the Compare only mode."
+  },
+  "sync.options.modeHint.bothWays": "Copies missing and newer files each way. Never removes anything.",
+  "@sync.options.modeHint.bothWays": {
+    "description": "Tooltip of the Both ways mode."
+  },
+  "sync.options.modeHint.update": "Copies missing and newer files from left to right. Never removes anything.",
+  "@sync.options.modeHint.update": {
+    "description": "Tooltip of the Update mode."
+  },
+  "sync.options.modeHint.mirror": "Makes the right folder match the left: copies, replaces, and removes on the right. Replaced and removed files are kept.",
+  "@sync.options.modeHint.mirror": {
+    "description": "Tooltip of the Mirror mode. \"Kept\" means moved to the Trash or a versions folder, never deleted."
+  },
+  "sync.options.compareBy": "Compare by",
+  "@sync.options.compareBy": {
+    "description": "Label of the choice of what decides that two files differ."
+  },
+  "sync.options.compareBy.dateAndSize": "Date and size",
+  "@sync.options.compareBy.dateAndSize": {
+    "description": "Compare-by option (the default): files differ when their size or modification date differs."
+  },
+  "sync.options.compareBy.sizeOnly": "Size only",
+  "@sync.options.compareBy.sizeOnly": {
+    "description": "Compare-by option: files differ only when their size differs; dates are left out."
+  },
+  "sync.options.compareBy.content": "Content",
+  "@sync.options.compareBy.content": {
+    "description": "Compare-by option: files of the same size are also compared byte by byte, which reads both files and takes longer."
+  },
+  "sync.options.subfolders": "Subfolders",
+  "@sync.options.subfolders": {
+    "description": "Checkbox: compare the folders inside the two folders too, all the way down."
+  },
+  "sync.options.onlySelected": "Only selected",
+  "@sync.options.onlySelected": {
+    "description": "Checkbox, as in Total Commander: compare only the items selected in each pane (a pane with nothing selected takes its whole folder)."
+  },
+  "sync.options.ignoreDate": "Ignore date",
+  "@sync.options.ignoreDate": {
+    "description": "Checkbox: leave modification dates out, so files differ only by size (or content)."
+  },
+  "sync.options.emptyFolders": "Empty folders",
+  "@sync.options.emptyFolders": {
+    "description": "Checkbox, Total Commander's \"Empty directories\": also list folders that have nothing in them."
+  },
+  "sync.options.masks": "Files",
+  "@sync.options.masks": {
+    "description": "Label of the field that says which files to compare, as wildcard masks such as *.pdf. After a | come the masks to leave out."
+  },
+  "sync.options.masksPlaceholder": "All files",
+  "@sync.options.masksPlaceholder": {
+    "description": "Placeholder of the empty Files field: every file is compared."
+  },
+  "sync.options.masksHint": "Masks like *.pdf *.docx. Masks after | are left out. A trailing / means a folder.",
+  "@sync.options.masksHint": {
+    "description": "Tooltip of the Files field explaining its syntax. Keep *.pdf, *.docx, |, and / as they are."
+  },
+  "sync.options.excludes": "Leave out",
+  "@sync.options.excludes": {
+    "description": "Label of the field listing names never compared, such as .DS_Store, separated by semicolons."
+  },
+  "sync.options.excludesHint": "Names never compared, separated by ;. A trailing / means a folder.",
+  "@sync.options.excludesHint": {
+    "description": "Tooltip of the Leave out field. Keep ; and / as they are."
+  },
+  "sync.filters.label": "Show",
+  "@sync.filters.label": {
+    "description": "Accessible name of the row of toggle buttons that show or hide kinds of rows in the grid. Hiding a row never changes what happens to it."
+  },
+  "sync.filters.toRight": "To the right",
+  "@sync.filters.toRight": {
+    "description": "Toggle button above the grid that shows or hides rows that will be copied from left to right. Short: eight of these share one row."
+  },
+  "sync.filters.equal": "Equal",
+  "@sync.filters.equal": {
+    "description": "Toggle button above the grid that shows or hides rows whose two files are the same (hidden by default). Short: eight of these share one row."
+  },
+  "sync.filters.different": "Different",
+  "@sync.filters.different": {
+    "description": "Toggle button above the grid that shows or hides rows whose files differ but are skipped. Short: eight of these share one row."
+  },
+  "sync.filters.toLeft": "To the left",
+  "@sync.filters.toLeft": {
+    "description": "Toggle button above the grid that shows or hides rows that will be copied from right to left, or removed. Short: eight of these share one row."
+  },
+  "sync.filters.duplicates": "On both sides",
+  "@sync.filters.duplicates": {
+    "description": "Toggle button above the grid that shows or hides rows present in both folders. Short: eight of these share one row."
+  },
+  "sync.filters.singles": "On one side",
+  "@sync.filters.singles": {
+    "description": "Toggle button above the grid that shows or hides rows present in only one folder. Short: eight of these share one row."
+  },
+  "sync.filters.unknown": "Undecided",
+  "@sync.filters.unknown": {
+    "description": "Toggle button above the grid that shows or hides rows the comparison couldn't decide, marked ?. Short: eight of these share one row."
+  },
+  "sync.filters.warningsOnly": "Warnings only",
+  "@sync.filters.warningsOnly": {
+    "description": "Toggle button above the grid that shows or hides only the rows where an older file would replace a newer one; turning it on hides every other row. Short: eight of these share one row."
+  },
+  "sync.filters.hiddenMark": "Some rows are hidden",
+  "@sync.filters.hiddenMark": {
+    "description": "Accessible text of the \"!\" mark on a show-filter button that currently hides rows, so hidden rows are never a surprise. Hidden rows still run."
+  },
+  "sync.grid.label": "Files in both folders",
+  "@sync.grid.label": {
+    "description": "Accessible name of the grid listing every file of the two folders side by side with what will happen to it."
+  },
+  "sync.grid.col.mark": "Selected",
+  "@sync.grid.col.mark": {
+    "description": "Accessible name of the narrow first column of the grid, where a checkmark shows a selected row."
+  },
+  "sync.grid.col.leftName": "Left name",
+  "@sync.grid.col.leftName": {
+    "description": "Column header: the file's name in the left folder."
+  },
+  "sync.grid.col.rightName": "Right name",
+  "@sync.grid.col.rightName": {
+    "description": "Column header: the file's name in the right folder."
+  },
+  "sync.grid.col.size": "Size",
+  "@sync.grid.col.size": {
+    "description": "Visible column header for a file size; the grid has one on each side. Short."
+  },
+  "sync.grid.col.date": "Date",
+  "@sync.grid.col.date": {
+    "description": "Visible column header for a modification date; the grid has one on each side. Short."
+  },
+  "sync.grid.col.leftSize": "Left size",
+  "@sync.grid.col.leftSize": {
+    "description": "Column header as screen readers hear it: the size of the file on the left."
+  },
+  "sync.grid.col.leftDate": "Left date",
+  "@sync.grid.col.leftDate": {
+    "description": "Column header as screen readers hear it: the modification date of the file on the left."
+  },
+  "sync.grid.col.rightSize": "Right size",
+  "@sync.grid.col.rightSize": {
+    "description": "Column header as screen readers hear it: the size of the file on the right."
+  },
+  "sync.grid.col.rightDate": "Right date",
+  "@sync.grid.col.rightDate": {
+    "description": "Column header as screen readers hear it: the modification date of the file on the right."
+  },
+  "sync.grid.col.action": "Action",
+  "@sync.grid.col.action": {
+    "description": "Column header of the middle column: an arrow or mark saying what the synchronization does with the row. Short."
+  },
+  "sync.grid.folderHeading": "{path}, folder {ordinalText} of {ofText}",
+  "@sync.grid.folderHeading": {
+    "description": "Heading row in the grid above the files of one subfolder, as Total Commander's grey bars, e.g. \"Photos/2024, folder 3 of 12\".",
+    "placeholders": {
+      "path": "the subfolder's path inside the compared folder, e.g. Photos/2024",
+      "ordinalText": "its position among the listed folders, formatted",
+      "ofText": "how many folders are listed, formatted"
+    }
+  },
+  "sync.grid.empty": "No rows to show. The show buttons above may be hiding some.",
+  "@sync.grid.empty": {
+    "description": "Shown in place of the grid when the comparison finished but every row is hidden by the show buttons, or the folders hold nothing."
+  },
+  "sync.grid.identical": "The two folders match.",
+  "@sync.grid.identical": {
+    "description": "Shown in place of the grid when the comparison found nothing to do and no difference."
+  },
+  "sync.grid.rung.presence": "Decided by which side has it",
+  "@sync.grid.rung.presence": {
+    "description": "Tooltip of a row: the row's category comes from the file being on one side only (or a file against a folder)."
+  },
+  "sync.grid.rung.sizeAndTime": "Decided by size and date",
+  "@sync.grid.rung.sizeAndTime": {
+    "description": "Tooltip and screen-reader text of the small T badge on a row: size and modification date decided it."
+  },
+  "sync.grid.rung.sizeOnly": "Decided by size",
+  "@sync.grid.rung.sizeOnly": {
+    "description": "Tooltip and screen-reader text of the small S badge on a row: the size alone decided it."
+  },
+  "sync.grid.rung.content": "Decided by content",
+  "@sync.grid.rung.content": {
+    "description": "Tooltip and screen-reader text of the small C badge on a row: the bytes of both files decided it."
+  },
+  "sync.grid.pending": "Comparing content…",
+  "@sync.grid.pending": {
+    "description": "Tooltip of the mark on a row whose two files are being compared byte by byte right now."
+  },
+  "sync.grid.changedMark": "Changed by you",
+  "@sync.grid.changedMark": {
+    "description": "Tooltip of the small mark on a row whose action the person set by hand."
+  },
+  "sync.grid.warningMark": "Older replaces newer",
+  "@sync.grid.warningMark": {
+    "description": "Tooltip of the warning mark on a row where the synchronization would replace a newer file with an older one (possible in Mirror)."
+  },
+  "sync.grid.spoken.folder": "folder",
+  "@sync.grid.spoken.folder": {
+    "description": "Part of a grid row's screen-reader name, after the name: the row is a folder. Lowercase; it follows a comma."
+  },
+  "sync.grid.spoken.changedByYou": "changed by you",
+  "@sync.grid.spoken.changedByYou": {
+    "description": "Part of a grid row's screen-reader name: the person set this row's action by hand. Lowercase; it follows a comma."
+  },
+  "sync.grid.spoken.olderReplacesNewer": "older replaces newer",
+  "@sync.grid.spoken.olderReplacesNewer": {
+    "description": "Part of a grid row's screen-reader name: the run would replace a newer file with an older one. Lowercase; it follows a comma."
+  },
+  "sync.grid.spoken.comparingContent": "comparing content",
+  "@sync.grid.spoken.comparingContent": {
+    "description": "Part of a grid row's screen-reader name: the two files are being compared byte by byte. Lowercase; it follows a comma."
+  },
+  "sync.grid.spoken.selected": "selected",
+  "@sync.grid.spoken.selected": {
+    "description": "Part of a grid row's screen-reader name: the row is selected, so keys act on it. Lowercase; it follows a comma."
+  },
+  "sync.category.label.leftOnly": "Only on the left",
+  "@sync.category.label.leftOnly": {
+    "description": "Tooltip of a grid row's category mark: the file exists only in the left folder. Sentence case."
+  },
+  "sync.category.spoken.leftOnly": "only on the left",
+  "@sync.category.spoken.leftOnly": {
+    "description": "Part of a grid row's screen-reader name, after the file name: the file exists only in the left folder. Lowercase; it follows a comma."
+  },
+  "sync.category.label.rightOnly": "Only on the right",
+  "@sync.category.label.rightOnly": {
+    "description": "Tooltip of a grid row's category mark: the file exists only in the right folder. Sentence case."
+  },
+  "sync.category.spoken.rightOnly": "only on the right",
+  "@sync.category.spoken.rightOnly": {
+    "description": "Part of a grid row's screen-reader name, after the file name: the file exists only in the right folder. Lowercase; it follows a comma."
+  },
+  "sync.category.label.newerLeft": "Newer on the left",
+  "@sync.category.label.newerLeft": {
+    "description": "Tooltip of a grid row's category mark: the left copy is newer. Sentence case."
+  },
+  "sync.category.spoken.newerLeft": "newer on the left",
+  "@sync.category.spoken.newerLeft": {
+    "description": "Part of a grid row's screen-reader name, after the file name: the left copy is newer. Lowercase; it follows a comma."
+  },
+  "sync.category.label.newerRight": "Newer on the right",
+  "@sync.category.label.newerRight": {
+    "description": "Tooltip of a grid row's category mark: the right copy is newer. Sentence case."
+  },
+  "sync.category.spoken.newerRight": "newer on the right",
+  "@sync.category.spoken.newerRight": {
+    "description": "Part of a grid row's screen-reader name, after the file name: the right copy is newer. Lowercase; it follows a comma."
+  },
+  "sync.category.label.different": "Different",
+  "@sync.category.label.different": {
+    "description": "Tooltip of a grid row's category mark: the two copies differ but neither is newer. Sentence case."
+  },
+  "sync.category.spoken.different": "different",
+  "@sync.category.spoken.different": {
+    "description": "Part of a grid row's screen-reader name, after the file name: the two copies differ but neither is newer. Lowercase; it follows a comma."
+  },
+  "sync.category.label.equal": "Equal",
+  "@sync.category.label.equal": {
+    "description": "Tooltip of a grid row's category mark: the two copies are the same. Sentence case."
+  },
+  "sync.category.spoken.equal": "equal",
+  "@sync.category.spoken.equal": {
+    "description": "Part of a grid row's screen-reader name, after the file name: the two copies are the same. Lowercase; it follows a comma."
+  },
+  "sync.category.label.unknown": "Can’t tell which is newer",
+  "@sync.category.label.unknown": {
+    "description": "Tooltip of a grid row's category mark: the comparison lacks the facts to decide (a missing date, say), marked ?. Sentence case."
+  },
+  "sync.category.spoken.unknown": "can’t tell which is newer",
+  "@sync.category.spoken.unknown": {
+    "description": "Part of a grid row's screen-reader name, after the file name: the comparison lacks the facts to decide (a missing date, say), marked ?. Lowercase; it follows a comma."
+  },
+  "sync.category.label.typeClash": "A file on one side, a folder on the other",
+  "@sync.category.label.typeClash": {
+    "description": "Tooltip of a grid row's category mark: one side has a file and the other a folder of the same name. Sentence case."
+  },
+  "sync.category.spoken.typeClash": "a file on one side and a folder on the other",
+  "@sync.category.spoken.typeClash": {
+    "description": "Part of a grid row's screen-reader name, after the file name: one side has a file and the other a folder of the same name. Lowercase; it follows a comma."
+  },
+  "sync.category.label.nameClash": "Two names here match one name there",
+  "@sync.category.label.nameClash": {
+    "description": "Tooltip of a grid row's category mark: two names on one side, such as A.txt and a.txt, match a single name on the other side, which ignores letter case. Sentence case."
+  },
+  "sync.category.spoken.nameClash": "two names here match one name there",
+  "@sync.category.spoken.nameClash": {
+    "description": "Part of a grid row's screen-reader name, after the file name: two names on one side, such as A.txt and a.txt, match a single name on the other side, which ignores letter case. Lowercase; it follows a comma."
+  },
+  "sync.category.label.unreadable": "Couldn’t be read",
+  "@sync.category.label.unreadable": {
+    "description": "Tooltip of a grid row's category mark: one side couldn't be read. Sentence case."
+  },
+  "sync.category.spoken.unreadable": "couldn’t be read",
+  "@sync.category.spoken.unreadable": {
+    "description": "Part of a grid row's screen-reader name, after the file name: one side couldn't be read. Lowercase; it follows a comma."
+  },
+  "sync.action.label.copyRight": "Copy to the right",
+  "@sync.action.label.copyRight": {
+    "description": "Name of a row action, in tooltips, the row menu, and refusal messages: the file is copied from left to right (→)."
+  },
+  "sync.action.spoken.copyRight": "will be copied to the right",
+  "@sync.action.spoken.copyRight": {
+    "description": "Part of a grid row's screen-reader name, after its category: the file is copied from left to right (→). Lowercase; it follows a comma."
+  },
+  "sync.action.label.copyLeft": "Copy to the left",
+  "@sync.action.label.copyLeft": {
+    "description": "Name of a row action, in tooltips, the row menu, and refusal messages: the file is copied from right to left (←)."
+  },
+  "sync.action.spoken.copyLeft": "will be copied to the left",
+  "@sync.action.spoken.copyLeft": {
+    "description": "Part of a grid row's screen-reader name, after its category: the file is copied from right to left (←). Lowercase; it follows a comma."
+  },
+  "sync.action.label.removeRight": "Remove on the right",
+  "@sync.action.label.removeRight": {
+    "description": "Name of a row action, in tooltips, the row menu, and refusal messages: the right copy is moved to the Trash or the versions folder (×→)."
+  },
+  "sync.action.spoken.removeRight": "will be removed on the right",
+  "@sync.action.spoken.removeRight": {
+    "description": "Part of a grid row's screen-reader name, after its category: the right copy is moved to the Trash or the versions folder (×→). Lowercase; it follows a comma."
+  },
+  "sync.action.label.removeLeft": "Remove on the left",
+  "@sync.action.label.removeLeft": {
+    "description": "Name of a row action, in tooltips, the row menu, and refusal messages: the left copy is moved to the Trash or the versions folder (←×)."
+  },
+  "sync.action.spoken.removeLeft": "will be removed on the left",
+  "@sync.action.spoken.removeLeft": {
+    "description": "Part of a grid row's screen-reader name, after its category: the left copy is moved to the Trash or the versions folder (←×). Lowercase; it follows a comma."
+  },
+  "sync.action.label.equal": "Nothing to do",
+  "@sync.action.label.equal": {
+    "description": "Name of a row action, in tooltips, the row menu, and refusal messages: both copies are the same (=)."
+  },
+  "sync.action.spoken.equal": "nothing to do",
+  "@sync.action.spoken.equal": {
+    "description": "Part of a grid row's screen-reader name, after its category: both copies are the same (=). Lowercase; it follows a comma."
+  },
+  "sync.action.label.skip": "Skip",
+  "@sync.action.label.skip": {
+    "description": "Name of a row action, in tooltips, the row menu, and refusal messages: the row is left alone (·)."
+  },
+  "sync.action.spoken.skip": "skipped",
+  "@sync.action.spoken.skip": {
+    "description": "Part of a grid row's screen-reader name, after its category: the row is left alone (·). Lowercase; it follows a comma."
+  },
+  "sync.action.label.undecided": "Undecided",
+  "@sync.action.label.undecided": {
+    "description": "Name of a row action, in tooltips, the row menu, and refusal messages: nobody decided yet; the run leaves it alone until the person sets an action (?)."
+  },
+  "sync.action.spoken.undecided": "undecided",
+  "@sync.action.spoken.undecided": {
+    "description": "Part of a grid row's screen-reader name, after its category: nobody decided yet; the run leaves it alone until the person sets an action (?). Lowercase; it follows a comma."
+  },
+  "sync.menu.label": "Row actions",
+  "@sync.menu.label": {
+    "description": "Accessible name of the menu that opens on a right-click (or Shift+F10) on a grid row."
+  },
+  "sync.menu.selected": "On the selected rows",
+  "@sync.menu.selected": {
+    "description": "Section heading in the row menu: these actions apply to every selected row (or the row under the cursor when none is selected)."
+  },
+  "sync.menu.row": "On this row",
+  "@sync.menu.row": {
+    "description": "Section heading in the row menu: these actions apply to the row under the cursor."
+  },
+  "sync.menu.defaultDirection": "Default direction",
+  "@sync.menu.defaultDirection": {
+    "description": "Row menu item that puts the actions back to what the mode chose (Cmd+D)."
+  },
+  "sync.menu.reverse": "Reverse direction",
+  "@sync.menu.reverse": {
+    "description": "Row menu item that turns a copy around, or a removal into a copy back (Cmd+I)."
+  },
+  "sync.menu.toggleSkip": "Skip or restore",
+  "@sync.menu.toggleSkip": {
+    "description": "Row menu item that skips a planned action, or restores a skipped one (Space)."
+  },
+  "sync.menu.compareContent": "Compare by content",
+  "@sync.menu.compareContent": {
+    "description": "Row menu item that compares the two files byte by byte (Enter)."
+  },
+  "sync.menu.viewLeft": "View left file",
+  "@sync.menu.viewLeft": {
+    "description": "Row menu item that opens the left file in the viewer (F3)."
+  },
+  "sync.menu.viewRight": "View right file",
+  "@sync.menu.viewRight": {
+    "description": "Row menu item that opens the right file in the viewer (Shift+F3)."
+  },
+  "sync.menu.editLeft": "Edit left file",
+  "@sync.menu.editLeft": {
+    "description": "Row menu item that opens the left file in the text editor (F4)."
+  },
+  "sync.menu.editRight": "Edit right file",
+  "@sync.menu.editRight": {
+    "description": "Row menu item that opens the right file in the text editor (Shift+F4)."
+  },
+  "sync.menu.quickLook": "Quick Look",
+  "@sync.menu.quickLook": {
+    "description": "Row menu item that shows the left file (or the right one when there is no left one) in macOS Quick Look (Option+Space). Use Apple's name for Quick Look in your language."
+  },
+  "sync.menu.copyRows": "Copy rows as text",
+  "@sync.menu.copyRows": {
+    "description": "Row menu item that copies the selected rows to the clipboard as tab-separated text (Cmd+C)."
+  },
+  "sync.refusal.illegalForMode": "{action} isn’t possible in this mode.",
+  "@sync.refusal.illegalForMode": {
+    "description": "Notice when the person presses a key the current mode doesn't allow on the row, e.g. \"Remove on the right isn’t possible in this mode.\" (only Mirror removes; Update and Mirror never write to the left).",
+    "placeholders": {
+      "action": "the action's name, e.g. Copy to the left"
+    }
+  },
+  "sync.refusal.illegalForCategory": "{action} isn’t possible for this row.",
+  "@sync.refusal.illegalForCategory": {
+    "description": "Notice when the row's kind doesn't allow the action, e.g. a name clash only takes Skip.",
+    "placeholders": {
+      "action": "the action's name, e.g. Copy to the right"
+    }
+  },
+  "sync.refusal.nothingOnLeft": "There’s nothing on the left to copy.",
+  "@sync.refusal.nothingOnLeft": {
+    "description": "Notice when the person asks to copy from the left on a row that exists only on the right."
+  },
+  "sync.refusal.nothingOnRight": "There’s nothing on the right to copy.",
+  "@sync.refusal.nothingOnRight": {
+    "description": "Notice when the person asks to copy from the right on a row that exists only on the left."
+  },
+  "sync.refusal.cantReverse": "Only a copy between two existing files, or a removal, can be reversed.",
+  "@sync.refusal.cantReverse": {
+    "description": "Notice when Cmd+I (reverse) can't turn the row's action around."
+  },
+  "sync.refusal.nothingToToggle": "This row has no action to skip or restore.",
+  "@sync.refusal.nothingToToggle": {
+    "description": "Notice when Space (skip or restore) is pressed on a row with nothing planned, such as an equal row."
+  },
+  "sync.refusal.notAllowed": "{action} isn’t possible for this row: that side may not take changes.",
+  "@sync.refusal.notAllowed": {
+    "description": "Notice when a row can't take the action for a reason other than the mode or its kind, usually a side that is read-only.",
+    "placeholders": {
+      "action": "the action's name"
+    }
+  },
+  "sync.refusal.sideReadOnlyLeft": "The left side takes no changes.",
+  "@sync.refusal.sideReadOnlyLeft": {
+    "description": "Notice when an action would write to a left folder on a read-only volume."
+  },
+  "sync.refusal.sideReadOnlyRight": "The right side takes no changes.",
+  "@sync.refusal.sideReadOnlyRight": {
+    "description": "Notice when an action would write to a right folder on a read-only volume."
+  },
+  "sync.refusal.noFile": "There’s no file on that side.",
+  "@sync.refusal.noFile": {
+    "description": "Notice when F3 or F4 is pressed for a side where the row has no file."
+  },
+  "sync.refusal.notAFile": "Only a file can be opened, not a folder.",
+  "@sync.refusal.notAFile": {
+    "description": "Notice when F3, F4, or Quick Look is pressed on a folder row."
+  },
+  "sync.refusal.quickLookUnavailable": "Quick Look works only for files on this Mac.",
+  "@sync.refusal.quickLookUnavailable": {
+    "description": "Notice when Quick Look can't show a file because it is on a server or phone. Use Apple's name for Quick Look."
+  },
+  "sync.summary.label": "Summary",
+  "@sync.summary.label": {
+    "description": "Accessible name of the bar under the grid that counts what the synchronization will do."
+  },
+  "sync.summary.toRight": "To the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.summary.toRight": {
+    "description": "Summary bar: what will be copied from left to right, new files and replacements together.",
+    "placeholders": {
+      "filesText": "how many files, formatted",
+      "files": "the same number, for the plural form",
+      "size": "their total size, formatted, e.g. 3.4 MB"
+    }
+  },
+  "sync.summary.toLeft": "To the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "@sync.summary.toLeft": {
+    "description": "Summary bar: what will be copied from right to left, new files and replacements together.",
+    "placeholders": {
+      "filesText": "how many files, formatted",
+      "files": "the same number, for the plural form",
+      "size": "their total size, formatted, e.g. 3.4 MB"
+    }
+  },
+  "sync.summary.removeRight": "{countText} to remove on the right",
+  "@sync.summary.removeRight": {
+    "description": "Summary bar: how many files will leave the right folder (to the Trash or the versions folder).",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.removeLeft": "{countText} to remove on the left",
+  "@sync.summary.removeLeft": {
+    "description": "Summary bar: how many files will leave the left folder (to the Trash or the versions folder).",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.equal": "{countText} equal",
+  "@sync.summary.equal": {
+    "description": "Count in the summary bar: rows whose two files are the same; clicking it shows them.",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.different": "{countText} different",
+  "@sync.summary.different": {
+    "description": "Count in the summary bar: rows present on both sides that differ; clicking it shows them.",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.uniqueLeft": "{countText} only on the left",
+  "@sync.summary.uniqueLeft": {
+    "description": "Count in the summary bar: rows only in the left folder; clicking it shows the rows on one side.",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.uniqueRight": "{countText} only on the right",
+  "@sync.summary.uniqueRight": {
+    "description": "Count in the summary bar: rows only in the right folder; clicking it shows the rows on one side.",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.undecided": "{countText} undecided",
+  "@sync.summary.undecided": {
+    "description": "Count in the summary bar: rows marked ? that wait for the person; clicking it shows them.",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.skipped": "{countText} skipped",
+  "@sync.summary.skipped": {
+    "description": "Count in the summary bar: rows that will be left alone.",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.notComparable": "{countText} not comparable",
+  "@sync.summary.notComparable": {
+    "description": "Count in the summary bar: name clash, type clash, and unreadable rows.",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.changedByYou": "{countText} changed by you",
+  "@sync.summary.changedByYou": {
+    "description": "Count in the summary bar: rows whose action the person set by hand.",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.hiddenActions": "{countText} hidden {count, plural, one {action} other {actions}}",
+  "@sync.summary.hiddenActions": {
+    "description": "Count in the summary bar: rows that will run but are hidden by the show buttons; clicking it shows every row again.",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.warnings": "{countText} older {count, plural, one {file replaces a newer one} other {files replace newer ones}}",
+  "@sync.summary.warnings": {
+    "description": "Count in the summary bar: rows where an older file would replace a newer one; clicking it shows only those.",
+    "placeholders": {
+      "countText": "the number, already formatted with thousands separators",
+      "count": "the same number, for the plural form"
+    }
+  },
+  "sync.summary.guard.maxRemoveLeft": "Mirror would remove {percentText} of the left side: held until you confirm.",
+  "@sync.summary.guard.maxRemoveLeft": {
+    "description": "Summary bar, said at once to screen readers: a safety limit holds back removals on the left.",
+    "placeholders": {
+      "percentText": "the share of the side's files, formatted with its percent sign, e.g. 61%"
+    }
+  },
+  "sync.summary.guard.maxRemoveRight": "Mirror would remove {percentText} of the right side: held until you confirm.",
+  "@sync.summary.guard.maxRemoveRight": {
+    "description": "Summary bar, said at once to screen readers: a safety limit holds back removals on the right (more than Settings allows).",
+    "placeholders": {
+      "percentText": "the share of the side's files, formatted with its percent sign, e.g. 61%"
+    }
+  },
+  "sync.summary.guard.emptyRootLeft": "The left folder is empty: removals are held, and copies into it wait for your OK.",
+  "@sync.summary.guard.emptyRootLeft": {
+    "description": "Summary bar, said at once to screen readers: the left folder listed empty (maybe a drive that isn't mounted), so nothing is removed and copying into it needs a confirmation."
+  },
+  "sync.summary.guard.emptyRootRight": "The right folder is empty: removals are held, and copies into it wait for your OK.",
+  "@sync.summary.guard.emptyRootRight": {
+    "description": "Summary bar, said at once to screen readers: the right folder listed empty (maybe a drive that isn't mounted), so nothing is removed and copying into it needs a confirmation."
+  },
+  "sync.summary.guard.sentinelMissingLeft": "The check file from Settings is missing on the left, so nothing runs.",
+  "@sync.summary.guard.sentinelMissingLeft": {
+    "description": "Summary bar, said at once to screen readers: a file name Settings requires in both folders is missing on the left."
+  },
+  "sync.summary.guard.sentinelMissingRight": "The check file from Settings is missing on the right, so nothing runs.",
+  "@sync.summary.guard.sentinelMissingRight": {
+    "description": "Summary bar, said at once to screen readers: a file name Settings requires in both folders is missing on the right."
+  },
+  "sync.summary.skew": "Most times on the right differ from the left by {secondsText} {seconds, plural, one {second} other {seconds}}. A clock may be off.",
+  "@sync.summary.skew": {
+    "description": "Summary bar: nearly every pair of files differs by the same time offset, which usually means one computer's clock is wrong.",
+    "placeholders": {
+      "secondsText": "the offset in seconds, formatted",
+      "seconds": "the same number, for the plural form"
+    }
+  },
+  "sync.error.noSuchSession": "This comparison was closed. Compare again.",
+  "@sync.error.noSuchSession": {
+    "description": "Message in the Synchronize folders dialog when the dialog's comparison no longer exists on the backend. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.notCompared": "Nothing is compared yet. Press Compare.",
+  "@sync.error.notCompared": {
+    "description": "Message in the Synchronize folders dialog when an action was asked for before any comparison finished. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.volumeNotConnectedLeft": "The left folder’s drive or server isn’t connected. Connect it, then compare again.",
+  "@sync.error.volumeNotConnectedLeft": {
+    "description": "Message in the Synchronize folders dialog when the left folder's volume isn't connected. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.volumeNotConnectedRight": "The right folder’s drive or server isn’t connected. Connect it, then compare again.",
+  "@sync.error.volumeNotConnectedRight": {
+    "description": "Message in the Synchronize folders dialog when the right folder's volume isn't connected. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.rootUnreachableLeft": "The left folder can’t be opened. It may be on a drive that isn’t mounted.",
+  "@sync.error.rootUnreachableLeft": {
+    "description": "Message in the Synchronize folders dialog when the left folder won't list. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.rootUnreachableRight": "The right folder can’t be opened. It may be on a drive that isn’t mounted.",
+  "@sync.error.rootUnreachableRight": {
+    "description": "Message in the Synchronize folders dialog when the right folder won't list. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.badPathLeft": "The left folder’s path can’t be used.",
+  "@sync.error.badPathLeft": {
+    "description": "Message in the Synchronize folders dialog when the left path is empty or climbs out with ... Never say \"error\" or \"failed\"."
+  },
+  "sync.error.badPathRight": "The right folder’s path can’t be used.",
+  "@sync.error.badPathRight": {
+    "description": "Message in the Synchronize folders dialog when the right path is empty or climbs out with ... Never say \"error\" or \"failed\"."
+  },
+  "sync.error.sameFolder": "Both sides show the same folder. Open two different folders.",
+  "@sync.error.sameFolder": {
+    "description": "Message in the Synchronize folders dialog when the two roots are one folder. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.nestedLeft": "The right folder is inside the left one. Open two folders apart from each other.",
+  "@sync.error.nestedLeft": {
+    "description": "Message in the Synchronize folders dialog when the right root lies inside the left root. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.nestedRight": "The left folder is inside the right one. Open two folders apart from each other.",
+  "@sync.error.nestedRight": {
+    "description": "Message in the Synchronize folders dialog when the left root lies inside the right root. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.maskEmpty": "One of the masks is empty. Check for a | or a ; with nothing after it.",
+  "@sync.error.maskEmpty": {
+    "description": "Message in the Synchronize folders dialog when a mask in the Files or Leave out field is empty. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.maskQuote": "A quote in the masks never closes.",
+  "@sync.error.maskQuote": {
+    "description": "Message in the Synchronize folders dialog when a \" in the masks has no closing \". Never say \"error\" or \"failed\"."
+  },
+  "sync.error.maskSecondBar": "The masks have more than one |. Put every mask to leave out after one |.",
+  "@sync.error.maskSecondBar": {
+    "description": "Message in the Synchronize folders dialog when the Files field has two | characters. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.badSettings": "A Synchronize folders setting is out of range. Check it in Settings.",
+  "@sync.error.badSettings": {
+    "description": "Message in the Synchronize folders dialog when a Settings value is out of range. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.keepFolderUnreadable": "The versions folder from Settings doesn’t answer, so Cmdr can’t check that it lies outside these folders.",
+  "@sync.error.keepFolderUnreadable": {
+    "description": "Message in the Synchronize folders dialog when the custom versions folder can't be read. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.keep": "The versions folder from Settings can’t be used for these folders.",
+  "@sync.error.keep": {
+    "description": "Message in the Synchronize folders dialog when the versions folder can't be used, e.g. it lies inside one of the folders. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.sideReadOnlyLeft": "The left side takes no changes, and this mode would write there.",
+  "@sync.error.sideReadOnlyLeft": {
+    "description": "Message in the Synchronize folders dialog when the mode would write to a read-only left side. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.sideReadOnlyRight": "The right side takes no changes, and this mode would write there.",
+  "@sync.error.sideReadOnlyRight": {
+    "description": "Message in the Synchronize folders dialog when the mode would write to a read-only right side. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.staleSelectionLeft": "The selection in the left pane changed. Turn off Only selected, or close and open Synchronize folders again.",
+  "@sync.error.staleSelectionLeft": {
+    "description": "Message in the Synchronize folders dialog when the left pane's selection moved on since the dialog read it. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.staleSelectionRight": "The selection in the right pane changed. Turn off Only selected, or close and open Synchronize folders again.",
+  "@sync.error.staleSelectionRight": {
+    "description": "Message in the Synchronize folders dialog when the right pane's selection moved on since the dialog read it. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.compareRunning": "A compare is still running. Wait for it, or stop it.",
+  "@sync.error.compareRunning": {
+    "description": "Message in the Synchronize folders dialog when something was asked while a compare runs. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.runInProgress": "A synchronization is running for these folders. Wait for it to finish.",
+  "@sync.error.runInProgress": {
+    "description": "Message in the Synchronize folders dialog when a run holds these folders. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.planChanged": "The list changed since you reviewed it. Review it again.",
+  "@sync.error.planChanged": {
+    "description": "Message in the Synchronize folders dialog when the plan changed since the confirmation. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.staleCompare": "A synchronization changed these folders. Compare again.",
+  "@sync.error.staleCompare": {
+    "description": "Message in the Synchronize folders dialog when a run already changed the folders. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.notContentComparable": "Only two files of the same size can be compared by content.",
+  "@sync.error.notContentComparable": {
+    "description": "Message in the Synchronize folders dialog when Enter on a row that isn't two files of one size. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.notInstalled": "Cmdr is still starting. Try again in a moment.",
+  "@sync.error.notInstalled": {
+    "description": "Message in the Synchronize folders dialog when the write engine isn't ready yet. Never say \"error\" or \"failed\"."
+  },
+  "sync.error.unexpected": "Something went wrong. Try again, and if it keeps happening, send an error report from the Help menu.",
+  "@sync.error.unexpected": {
+    "description": "Message in the Synchronize folders dialog when an unclassified problem. Never say \"error\" or \"failed\"."
+  }
+}

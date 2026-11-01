@@ -41,6 +41,8 @@
         hoverMovesCursor = false,
         onKeydown,
         onRowClick,
+        onRowDoubleClick,
+        rowLabel,
         onRowContextMenu,
         isGroupHeading,
         groupHeading,
@@ -381,11 +383,17 @@
                         aria-setsize={isTable ? undefined : count}
                         aria-posinset={isTable ? undefined : index + 1}
                         aria-rowindex={isTable ? index + 2 : undefined}
+                        aria-label={rowLabel?.(row)}
                         data-index={index}
-                        onclick={() => {
+                        onclick={(event) => {
                             onCursorChange?.(index)
-                            onRowClick?.(index)
+                            onRowClick?.(index, event)
                         }}
+                        ondblclick={onRowDoubleClick
+                            ? () => {
+                                  onRowDoubleClick(index)
+                              }
+                            : undefined}
                         oncontextmenu={(event) => {
                             if (!onRowContextMenu) return
                             event.preventDefault()

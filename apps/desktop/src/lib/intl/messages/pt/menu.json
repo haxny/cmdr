@@ -751,6 +751,10 @@
   "@menu.file.editTags": {
     "sourceHash": "ca536ed"
   },
+  "menu.file.synchronizeFolders": "Synchronize folders…",
+  "@menu.file.synchronizeFolders": {
+    "sourceHash": "6afcd31"
+  },
   "menu.queue.moveUp": "Mover para cima",
   "@menu.queue.moveUp": {
     "sourceHash": "c66feb5"

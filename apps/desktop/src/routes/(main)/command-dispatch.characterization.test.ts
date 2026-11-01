@@ -229,9 +229,10 @@ describe('characterization — id partition self-check', () => {
     for (const id of EXEMPT_IDS) expect(COMMAND_IDS).toContain(id)
   })
 
-  // haxny fork: upstream's 150 (v0.58.0, with `pane.quickFilter`) plus the fork's `file.editTags`.
-  it('dispatchable set is exactly 151 ids', () => {
-    expect(DISPATCHABLE_IDS).toHaveLength(151)
+  // haxny fork: upstream's 150 (v0.58.0, with `pane.quickFilter`) plus the fork's `file.editTags`, plus
+  // `sync.openDialog` (Synchronize folders, ⇧F12).
+  it('dispatchable set is exactly 152 ids', () => {
+    expect(DISPATCHABLE_IDS).toHaveLength(152)
   })
 
   it('dispatchable ∪ exempt = COMMAND_IDS, disjoint', () => {

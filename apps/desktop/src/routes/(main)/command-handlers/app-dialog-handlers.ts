@@ -1,7 +1,7 @@
 /**
  * Handlers for the app-level dialog and window openers: the command palette,
  * search, "Go to path", settings, about, license key, error report, feedback,
- * "What's new", updates, onboarding re-entry, the `cmdr` command's install
+ * "What's new", Synchronize folders, updates, onboarding re-entry, the `cmdr` command's install
  * toggle, and the about-window website/upgrade/close actions.
  *
  * The selection-dialog openers (`selection.selectFiles` / `selection.deselectFiles`)
@@ -27,6 +27,10 @@ import type { CommandHandlerRecord } from './types'
 export const appDialogHandlers = {
   'app.commandPalette': ({ ctx }) => {
     ctx.dialogs.showCommandPalette(true)
+  },
+
+  'sync.openDialog': ({ ctx }) => {
+    ctx.dialogs.showSyncFolders()
   },
 
   'search.open': ({ ctx }) => {
