@@ -9,8 +9,8 @@ use chrono::{Datelike, Timelike};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_sync::{
     Action, ContentJob, ContentState, EntryKind, KeepDestination, Place, PlanItem, RunContext, RunItemResult,
-    RunReport, RunSide, RunStamp, ShowFilters, Side, SyncControl, SyncDefaults, check, compare_contents, effective,
-    execute, gate, keep_destination, reclassify, summarize,
+    RunReport, RunSide, RunStamp, ShowFilters, Side, SyncControl, SyncDefaults, check, chosen_unknown,
+    compare_contents, effective, execute, gate, keep_destination, reclassify, summarize,
 };
 
 use super::engine::{EngineAdapter, EngineConfig, EngineSide};
@@ -203,6 +203,7 @@ pub(crate) async fn confirm(
             blocks: report.blocks,
             skew: report.skew,
             hidden_actions: summarize(&compared.plan, filters).hidden_actions,
+            chosen_unknown: chosen_unknown(&compared.plan),
             keep_is_slow,
         })
     })

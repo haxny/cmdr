@@ -231,3 +231,28 @@ fn bulk_copy_and_remove_reach_selected_unknown_rows() {
         vec![change(u, Action::RemoveRight)]
     );
 }
+
+#[test]
+fn a_bulk_row_refused_as_missing_is_dropped_never_changed() {
+    use crate::overrides::{RowVerdict, row_verdict};
+    let change = ActionChange {
+        item: 3,
+        action: Action::Skip,
+    };
+    assert_eq!(
+        row_verdict(Some(OverrideRefusal::NoSuchItem { item: 3 }), change),
+        RowVerdict::Drop,
+        "a row that isn't there is neither changed nor counted"
+    );
+    assert_eq!(row_verdict(None, change), RowVerdict::Change(change));
+    assert_eq!(
+        row_verdict(
+            Some(OverrideRefusal::SideReadOnly {
+                item: 3,
+                side: Side::Right
+            }),
+            change
+        ),
+        RowVerdict::Skip(RowSkipReason::SideReadOnly { side: Side::Right })
+    );
+}

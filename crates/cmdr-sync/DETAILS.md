@@ -157,13 +157,13 @@ ones, copies and removals never on clash, type-clash, or unreadable rows; else `
 from or removes has an entry (`NothingToCopy`), and the side it writes to can write (`SideReadOnly`). `apply_overrides`
 is all-or-nothing. `bulk_outcome` answers the legal changes plus every row it left alone, grouped by `RowSkipReason`
 (the override refusals, `CantReverse`, `NothingToToggle`), so the dialog can say why; a row that already has the action
-counts in neither, and an unknown index is dropped. `bulk_changes` is its changes alone. `Reverse` flips a copy only
-when both sides exist and turns a removal into the copy that restores it; a one-sided copy would have to become a
-removal, so it stays.
+counts in neither, and an unknown index is dropped (a `NoSuchItem` refusal too, via `row_verdict`: never read as legal).
+`bulk_changes` is its changes alone. `Reverse` flips a copy only when both sides exist and turns a removal into the copy
+that restores it; a one-sided copy would have to become a removal, so it stays.
 
 Contract: `bulk_outcome` receives only rows the person selected AND can see under the current show-filters. Within that
 selection `→`, `←`, and remove-target also reach `?` rows: selecting them and pressing the key is the explicit choice
-they wait for.
+they wait for. `chosen_unknown` counts those `?` rows that now act, for the confirm.
 
 ## Finding rows (find.rs)
 

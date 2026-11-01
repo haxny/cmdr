@@ -332,6 +332,8 @@ pub struct ConfirmPreview {
     pub skew: Option<ClockSkew>,
     /// Actions that run on rows the show-filters hide.
     pub hidden_actions: u64,
+    /// `?` rows the person gave an action (nothing else says which side wins).
+    pub chosen_unknown: u64,
     /// Kept items go to another volume (a copy, then a removal).
     pub keep_is_slow: bool,
 }

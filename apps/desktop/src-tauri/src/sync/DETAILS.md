@@ -96,7 +96,9 @@ same-or-nested check and the run lock can't match the two.
 The confirm (`get_sync_confirm`) and the run read the plan the session holds now. The run calls `gate` itself
 at accept time, so a report shown before the person changed actions can't wave new removals through, then keeps only
 the rows whose confirm group the person left ticked. Groups: new copies, replacements, removals per side, and copies
-that turn the mode's removal around ("recreates": a right-only row reversed from `×→` to `←`).
+that turn the mode's removal around ("recreates": a right-only row reversed from `×→` to `←`). The preview also counts the `?`
+rows the person gave an action (`chosen_unknown`): nothing but that choice says which side wins, so the confirm names
+them.
 
 **Run lock** (`run_lock.rs`). A run holds both its roots across sessions; a new run is refused (`RunInProgress`) when
 either of its roots is, holds, or lies inside a held root. Local-namespace roots compare by real path in one shared

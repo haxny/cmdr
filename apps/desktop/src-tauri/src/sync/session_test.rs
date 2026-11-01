@@ -632,6 +632,7 @@ async fn run_rechecks_guards_on_the_overridden_plan_and_drops_unaccepted_groups(
         !preview.blocks.is_empty(),
         "three of four files removed trips max remove"
     );
+    assert_eq!(preview.chosen_unknown, 0, "no `?` row was given an action");
 
     // Unticked copies don't run; held removals stay.
     let report = p.run(&id, &[ConfirmGroupKey::RemoveRight], &[]).await;

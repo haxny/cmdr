@@ -260,14 +260,30 @@ pub struct BulkOutcome {
     pub skipped: Vec<SkippedRows>,
 }
 
-fn skip_reason(refused: OverrideRefusal) -> Option<RowSkipReason> {
-    match refused {
-        OverrideRefusal::NoSuchItem { .. } => None,
-        OverrideRefusal::IllegalForMode { action, .. } => Some(RowSkipReason::IllegalForMode { action }),
-        OverrideRefusal::IllegalForCategory { action, .. } => Some(RowSkipReason::IllegalForCategory { action }),
-        OverrideRefusal::NothingToCopy { side, .. } => Some(RowSkipReason::NothingToCopy { side }),
-        OverrideRefusal::SideReadOnly { side, .. } => Some(RowSkipReason::SideReadOnly { side }),
-    }
+/// What a bulk key does with one row, given why it may not take the action.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RowVerdict {
+    /// The row takes the change.
+    Change(ActionChange),
+    /// The row is left alone, counted under this reason.
+    Skip(RowSkipReason),
+    /// The row isn't there: neither changed nor counted.
+    Drop,
+}
+
+/// A refusal turned into what happens to the row. ❗ A row that doesn't exist
+/// is dropped, never treated as legal.
+pub(crate) fn row_verdict(refused: Option<OverrideRefusal>, change: ActionChange) -> RowVerdict {
+    let Some(refused) = refused else {
+        return RowVerdict::Change(change);
+    };
+    RowVerdict::Skip(match refused {
+        OverrideRefusal::NoSuchItem { .. } => return RowVerdict::Drop,
+        OverrideRefusal::IllegalForMode { action, .. } => RowSkipReason::IllegalForMode { action },
+        OverrideRefusal::IllegalForCategory { action, .. } => RowSkipReason::IllegalForCategory { action },
+        OverrideRefusal::NothingToCopy { side, .. } => RowSkipReason::NothingToCopy { side },
+        OverrideRefusal::SideReadOnly { side, .. } => RowSkipReason::SideReadOnly { side },
+    })
 }
 
 /// What `bulk` asks of one row: a change, a reason it can't, or nothing to do.
@@ -281,12 +297,14 @@ fn judge(plan: &Plan, item: &PlanItem, bulk: BulkAction) -> Result<Option<Action
     if action == item.action {
         return Ok(None);
     }
-    match refusal_in(plan, item, action).and_then(skip_reason) {
-        Some(reason) => Err(reason),
-        None => Ok(Some(ActionChange {
-            item: item.index,
-            action,
-        })),
+    let change = ActionChange {
+        item: item.index,
+        action,
+    };
+    match row_verdict(refusal_in(plan, item, action), change) {
+        RowVerdict::Change(change) => Ok(Some(change)),
+        RowVerdict::Skip(reason) => Err(reason),
+        RowVerdict::Drop => Ok(None),
     }
 }
 
