@@ -7988,6 +7988,8 @@ export type ConfirmPreview = {
   skew: ClockSkew | null
   // Actions that run on rows the show-filters hide.
   hiddenActions: number
+  // `?` rows the person gave an action (nothing else says which side wins).
+  chosenUnknown: number
   // Kept items go to another volume (a copy, then a removal).
   keepIsSlow: boolean
 }
