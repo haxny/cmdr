@@ -228,9 +228,25 @@ describe('createSyncSession', () => {
     const s = await opened(h)
     vi.mocked(h.ipc.getSyncRows).mockClear()
     expect(await s.setActions([0, 2], 'reverse')).toEqual({ type: 'done', skipped: [], hidden: 0 })
-    expect(h.ipc.setSyncActions).toHaveBeenCalledWith('s1', [0, 2], 'reverse', DEFAULT_SHOW_FILTERS)
+    expect(h.ipc.setSyncActions).toHaveBeenCalledWith('s1', expect.any(Number), [0, 2], 'reverse', DEFAULT_SHOW_FILTERS)
     await settle()
     expect(h.ipc.getSyncRows).toHaveBeenCalled()
+  })
+
+  it('drops the old plan’s selection and rows the moment a new compare starts, and keys name their compare', async () => {
+    const h = harness()
+    const s = await opened(h)
+    s.selected.add(0)
+    s.selected.add(2)
+    const before = s.viewVersionNow
+    const again = s.compare()
+    expect(s.selected.size).toBe(0)
+    expect(s.viewVersionNow).toBeGreaterThan(before)
+    await again
+    h.finish({ sessionId: 's1', generation: 2, outcome: { type: 'done' } })
+    await settle()
+    await s.setActions([0], 'skip')
+    expect(h.ipc.setSyncActions).toHaveBeenLastCalledWith('s1', 2, [0], 'skip', DEFAULT_SHOW_FILTERS)
   })
 
   it('answers the typed refusal of an action change', async () => {

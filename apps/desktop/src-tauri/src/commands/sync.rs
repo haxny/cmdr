@@ -183,18 +183,20 @@ pub fn get_sync_state(session_id: String, filters: ShowFilters) -> Result<SyncSt
     session::state(&session_id, &filters)
 }
 
-/// Applies a key's action to the selected rows the person can see.
+/// Applies a key's action to the selected rows the person can see, on the plan of compare
+/// `generation` (another one's is `planChanged`).
 #[tauri::command]
 #[specta::specta]
 pub fn set_sync_actions(
     window: tauri::Window,
     session_id: String,
+    generation: u64,
     items: Vec<u32>,
     bulk: BulkAction,
     filters: ShowFilters,
 ) -> Result<SyncActionsOutcome, SyncError> {
     session::owned_session(&session_id, window.label())?;
-    session::set_actions(&session_id, &items, bulk, &filters)
+    session::set_actions(&session_id, generation, &items, bulk, &filters)
 }
 
 /// The grid row a jump lands on: the next or previous folder, or a name typed in the grid.

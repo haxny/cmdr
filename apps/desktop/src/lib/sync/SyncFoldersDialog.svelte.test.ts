@@ -136,7 +136,13 @@ describe('SyncFoldersDialog', () => {
     press(grid(target), { key: 'Backspace', metaKey: true })
     await settle()
     await tick()
-    expect(fake.ipc.setSyncActions).toHaveBeenLastCalledWith('s1', [0], 'removeTarget', expect.any(Object))
+    expect(fake.ipc.setSyncActions).toHaveBeenLastCalledWith(
+      's1',
+      expect.any(Number),
+      [0],
+      'removeTarget',
+      expect.any(Object),
+    )
     expect(target.ownerDocument.querySelector('.status')?.textContent).toBe(
       '1 row wasn’t changed: Remove on the right isn’t possible in this mode.',
     )
@@ -162,7 +168,13 @@ describe('SyncFoldersDialog', () => {
     await tick()
     press(grid(target), { key: 'n', code: 'KeyN', metaKey: true })
     await settle()
-    expect(fake.ipc.setSyncActions).toHaveBeenLastCalledWith('s1', [0, 1, 2, 3], 'skip', expect.any(Object))
+    expect(fake.ipc.setSyncActions).toHaveBeenLastCalledWith(
+      's1',
+      expect.any(Number),
+      [0, 1, 2, 3],
+      'skip',
+      expect.any(Object),
+    )
   })
 
   it('a menu accelerator for a dialog key runs it once, even when the key also arrives', async () => {
@@ -176,7 +188,13 @@ describe('SyncFoldersDialog', () => {
     expect(runMenuClaim('file.getInfo')).toBe(true)
     await settle()
     expect(fake.ipc.setSyncActions).toHaveBeenCalledOnce()
-    expect(fake.ipc.setSyncActions).toHaveBeenLastCalledWith('s1', [0], 'reverse', expect.any(Object))
+    expect(fake.ipc.setSyncActions).toHaveBeenLastCalledWith(
+      's1',
+      expect.any(Number),
+      [0],
+      'reverse',
+      expect.any(Object),
+    )
     // ⌘C with focus in a text field declines, so the field copies as usual.
     target.ownerDocument.querySelector<HTMLInputElement>('input')?.focus()
     expect(runMenuClaim('edit.copy')).toBe(false)
@@ -214,13 +232,25 @@ describe('SyncFoldersDialog', () => {
     await tick()
     press(grid(target), { key: 'r', code: 'KeyR', metaKey: true })
     await settle()
-    expect(fake.ipc.setSyncActions).toHaveBeenLastCalledWith('s1', [0], 'copyLeft', expect.any(Object))
+    expect(fake.ipc.setSyncActions).toHaveBeenLastCalledWith(
+      's1',
+      expect.any(Number),
+      [0],
+      'copyLeft',
+      expect.any(Object),
+    )
     rowEl(target, 3).dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }))
     rowEl(target, 4).dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }))
     await tick()
     press(grid(target), { key: 'n', code: 'KeyN', metaKey: true })
     await settle()
-    expect(fake.ipc.setSyncActions).toHaveBeenLastCalledWith('s1', [2, 3], 'skip', expect.any(Object))
+    expect(fake.ipc.setSyncActions).toHaveBeenLastCalledWith(
+      's1',
+      expect.any(Number),
+      [2, 3],
+      'skip',
+      expect.any(Object),
+    )
     expect(rowEl(target, 3).getAttribute('aria-label')).toMatch(/, selected$/)
   })
 

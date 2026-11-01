@@ -382,7 +382,7 @@
             <Button
                 variant="primary"
                 ariaDisabled={!canSynchronize}
-                tooltipContent={tString('sync.dialog.synchronizeNeedsCompare')}
+                tooltipContent={canSynchronize ? undefined : tString('sync.dialog.synchronizeNeedsCompare')}
                 keyHint="⌘↩"
                 onclick={() => void controller.run({ kind: 'confirm' })}>{tString('sync.dialog.synchronize')}</Button
             >

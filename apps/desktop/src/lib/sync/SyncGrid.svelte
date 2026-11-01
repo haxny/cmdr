@@ -76,9 +76,10 @@
     const sizeText = (size: number | null): string => (size === null ? '' : formatByteSize(size))
     const dateText = (mtime: number | null): string => (mtime === null ? '' : formatDateTime(mtime))
 
-    function rowLabel(row: ViewRowWire): string {
+    /** A folder header's own text names it; an empty `aria-label` would hide that text instead. */
+    function rowLabel(row: ViewRowWire): string | undefined {
         const it = item(row)
-        if (!it) return ''
+        if (!it) return undefined
         const name = rowAccessibleName(it)
         return session.selected.has(it.index) ? `${name}, ${tString('sync.grid.spoken.selected')}` : name
     }

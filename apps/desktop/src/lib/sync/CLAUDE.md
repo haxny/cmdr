@@ -24,7 +24,8 @@
 - **Never silent.** `set_sync_actions` answers the rows it left alone (by `RowSkipReason`) and the hidden ones; the
   notice says them (`actionsNotice`). ❌ Never re-derive legality here. A refusal shows by variant (`syncProblemText`).
 - **Act only on the current view.** Kept rows draw while a page reloads; selection, keys, and F3/F4 read `currentRow` /
-  `rowAt`. Late answers drop: a lower compare generation, a lower state `revision`.
+  `rowAt`. Late answers drop: a lower compare generation, a lower state `revision`. A new compare clears the selection
+  at once, and `set_sync_actions` names its generation (`planChanged` for another's rows).
 - **Menu accelerators win in AppKit**: a key that is also a menu item's (⌘D ⌘I ⌘U ⌘C ⌘A ⌘⇧E F2 F3 F4 ⇧F4) is claimed
   while open (`sync-menu-claims.ts`), double fires dropped. ⌘M is Minimize, unclaimable: skip is ⌘N.
 - **Never colour alone.** Every row has an accessible name in words (`rowAccessibleName`, via `ColumnList`'s

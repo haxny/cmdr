@@ -58,6 +58,7 @@ export interface SyncIpc {
   getSyncState: (sessionId: string, filters: ShowFilters) => Promise<SyncState>
   setSyncActions: (
     sessionId: string,
+    generation: number,
     items: number[],
     bulk: BulkAction,
     filters: ShowFilters,
@@ -193,6 +194,9 @@ class SyncSessionState {
 
   private async compareNow(): Promise<void> {
     if (this.closed) return
+    // The selection and the kept rows are the old plan's: a key must never reach the new plan by their indices.
+    this.selected.clear()
+    this.viewVersion++
     const seq = ++this.requestSeq
     const roots = this.options.onlySelected ? this.roots : withoutSelections(this.roots)
     const request: CompareRequest = {
@@ -444,7 +448,7 @@ class SyncSessionState {
   async setActions(items: number[], bulk: BulkAction): Promise<ActionsAnswer> {
     if (this.sessionId === null || items.length === 0) return { type: 'done', skipped: [], hidden: 0 }
     try {
-      const outcome = await this.deps.ipc.setSyncActions(this.sessionId, items, bulk, this.filters)
+      const outcome = await this.deps.ipc.setSyncActions(this.sessionId, this.generation, items, bulk, this.filters)
       this.takeState(outcome.state)
       this.invalidate()
       return { type: 'done', skipped: outcome.skipped, hidden: outcome.hidden }

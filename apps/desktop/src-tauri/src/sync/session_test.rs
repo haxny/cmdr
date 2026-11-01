@@ -279,6 +279,11 @@ impl Pair {
     }
 }
 
+/// The generation of the session's newest compare.
+pub(super) fn current(id: &str) -> u64 {
+    session::session(id).expect("open").generation()
+}
+
 /// Every file under `root`'s versions folders, by name.
 fn kept_names(root: &Path) -> Vec<String> {
     fn walk(dir: &Path, found: &mut Vec<String>) {
@@ -320,7 +325,7 @@ async fn compare_rows_override_and_state_round_trip() {
         ViewRowWire::Item { index, action: Action::CopyRight, default_action: Action::CopyRight, .. } if *index == a)));
     let before = session::state(&id, &all_rows()).expect("state");
     assert_eq!(before.summary.into_right.copy_files, 2);
-    let after = session::set_actions(&id, &[a], BulkAction::Skip, &all_rows()).expect("override");
+    let after = session::set_actions(&id, current(&id), &[a], BulkAction::Skip, &all_rows()).expect("override");
     assert_eq!(after.state.summary.into_right.copy_files, 1);
     assert_eq!(after.state.summary.changed_by_you, 1);
     assert!(after.state.revision > before.revision);
@@ -328,7 +333,7 @@ async fn compare_rows_override_and_state_round_trip() {
     let page = session::rows(&id, 0, 100, &all_rows()).expect("rows");
     assert!(page.rows.iter().any(|row| matches!(&row.row,
         ViewRowWire::Item { index, action: Action::Skip, default_action: Action::CopyRight, .. } if *index == a)));
-    let refused = session::set_actions(&id, &[999], BulkAction::Skip, &all_rows());
+    let refused = session::set_actions(&id, current(&id), &[999], BulkAction::Skip, &all_rows());
     assert!(matches!(refused, Err(SyncError::Override { .. })));
     session::close(&id);
     assert!(matches!(
@@ -346,7 +351,8 @@ async fn bulk_keys_say_which_rows_they_left_alone_and_rows_carry_each_sides_path
     let a = p.index_of(&id, "a.txt");
     let before = session::state(&id, &all_rows()).expect("state");
     // Both ways never removes: the row is left alone, and said so.
-    let refused = session::set_actions(&id, &[a], BulkAction::RemoveTarget, &all_rows()).expect("outcome");
+    let refused =
+        session::set_actions(&id, current(&id), &[a], BulkAction::RemoveTarget, &all_rows()).expect("outcome");
     assert_eq!(
         refused.skipped,
         vec![cmdr_sync::SkippedRows {
@@ -365,7 +371,7 @@ async fn bulk_keys_say_which_rows_they_left_alone_and_rows_carry_each_sides_path
         to_right: false,
         ..all_rows()
     };
-    let hidden = session::set_actions(&id, &[a], BulkAction::Skip, &hiding).expect("outcome");
+    let hidden = session::set_actions(&id, current(&id), &[a], BulkAction::Skip, &hiding).expect("outcome");
     assert_eq!(hidden.hidden, 1);
     assert_eq!(hidden.state.summary.changed_by_you, 0);
     let page = session::rows(&id, 0, 100, &all_rows()).expect("rows");
@@ -514,7 +520,7 @@ async fn a_run_needs_the_confirm_the_person_saw() {
     let request = p.run_request(&id, &ALL_GROUPS, &[]).await;
     // A change after the confirm.
     let a = p.index_of(&id, "a.txt");
-    session::set_actions(&id, &[a], BulkAction::Skip, &all_rows()).expect("override");
+    session::set_actions(&id, current(&id), &[a], BulkAction::Skip, &all_rows()).expect("override");
     assert_eq!(
         session_run::start_run(p.host(), &id, &request).await,
         Err(SyncError::PlanChanged)
@@ -670,7 +676,7 @@ async fn run_rechecks_guards_on_the_overridden_plan_and_drops_unaccepted_groups(
     // time (not the confirm's earlier report) lets it through.
     let id = p.compare(p.request(Mode::Mirror)).await;
     let (x, y) = (p.index_of(&id, "x.txt"), p.index_of(&id, "y.txt"));
-    session::set_actions(&id, &[x, y], BulkAction::Skip, &all_rows()).expect("override");
+    session::set_actions(&id, current(&id), &[x, y], BulkAction::Skip, &all_rows()).expect("override");
     let report = p.run(&id, &ALL_GROUPS, &[]).await;
     assert_eq!(report.held, 0);
     assert!(p.right.join("x.txt").exists() && p.right.join("y.txt").exists());

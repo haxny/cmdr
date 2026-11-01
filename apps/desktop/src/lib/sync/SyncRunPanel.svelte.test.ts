@@ -41,4 +41,22 @@ describe('SyncRunPanel', () => {
     expect(text).toContain('/b/new (empty: its copies didn’t land)')
     expect(text).toContain('/b/.cmdr-sync/versions/2026-10-31 (made for kept files, couldn’t be removed again)')
   })
+
+  it('Pause takes focus while running, and the progress text is no live region', async () => {
+    const { target } = await running()
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    expect(document.activeElement).toBe(buttons(target)[1])
+    expect(target.querySelector('[aria-live]')).toBeNull()
+  })
+
+  it('the result focuses its first button', async () => {
+    const { fake } = await running()
+    fake.runFinished(
+      report({ versionsFolders: [{ type: 'folder', volumeId: 'root', path: '/b/.cmdr-sync/versions/x' }] }),
+    )
+    await settle()
+    await tick()
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    expect(document.activeElement?.textContent.trim()).toBe('Show in Cmdr')
+  })
 })

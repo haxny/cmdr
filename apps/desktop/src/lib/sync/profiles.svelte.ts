@@ -109,10 +109,16 @@ class SyncProfilesState {
     return this.entries.map(profileView).find((view) => view.id !== exceptId && nameKey(view.name) === nameKey(name))
   }
 
-  /** The profile to apply, or `null` (gone, or greyed). Show-filters only when the profile asks for them. */
+  /**
+   * The profile to apply, or `null` when the list on screen is out of date (gone, or greyed since): the list is read
+   * again then, so the menu shows what's saved. Show-filters only when the profile asks for them.
+   */
   load(id: string): LoadedProfile | null {
     const profile = this.valid(id)
-    if (!profile) return null
+    if (!profile) {
+      void this.refresh()
+      return null
+    }
     const { restoreShowFilters, showFilters, ...rest } = profile
     return { ...rest, showFilters: restoreShowFilters ? showFilters : null }
   }

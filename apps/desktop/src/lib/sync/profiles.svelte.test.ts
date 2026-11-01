@@ -33,6 +33,15 @@ function setup(entries: ProfileEntry[]) {
 }
 
 describe('sync profiles', () => {
+  it('loading a profile the list no longer has reads the list again', async () => {
+    const { ipc, profiles } = setup([{ type: 'valid', profile: profile('p1', 'Photos') }])
+    await profiles.refresh()
+    expect(profiles.load('gone')).toBeNull()
+    expect(ipc.getSyncProfiles).toHaveBeenCalledTimes(2)
+    expect(profiles.load('p1')?.name).toBe('Photos')
+    expect(ipc.getSyncProfiles).toHaveBeenCalledTimes(2)
+  })
+
   it('save as with a taken name asks before replacing', async () => {
     const { ipc, profiles } = setup([{ type: 'valid', profile: profile('p1', 'Photos') }])
     await profiles.refresh()

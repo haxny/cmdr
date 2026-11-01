@@ -128,7 +128,7 @@ export interface ColumnListProps<T> {
    * A data row's own accessible name, for a `grid` whose rows say in words what their cells show with glyphs and
    * colour (Synchronize folders' arrows). Without it a row is named by its cells.
    */
-  rowLabel?: (row: T) => string
+  rowLabel?: (row: T) => string | undefined
   /** Right-click on a data row. The list calls `preventDefault` when this is set. */
   onRowContextMenu?: (payload: ColumnListRowEvent<T>) => void
   /** Marks a row as a group heading (a folder name above its files). */

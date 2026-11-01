@@ -84,6 +84,7 @@
             case 'load': {
                 const loaded = profiles.load(action.id)
                 if (loaded) onLoad(loaded)
+                else addToast(tString('sync.profiles.gone'), { level: 'info' })
                 return
             }
             case 'invalid':

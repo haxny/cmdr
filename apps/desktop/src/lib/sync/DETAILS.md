@@ -52,10 +52,16 @@ so a right folder that differs only in case or Unicode form on a case-sensitive 
 
 ## Notices and errors
 
-A key the cursor row can't take is checked locally first (`rowRefusal`: nothing on that side, the mode, the category,
-else "that side may not take changes"), because `bulk_changes` silently leaves such rows alone. With a selection the
-backend decides per row (TC's behaviour). Backend refusals are `SyncError` variants mapped one by one in
-`syncProblemText`; anything untyped is logged and shown as `unexpected`.
+The backend decides every row. A key sends the selection (else the cursor row) with the compare's generation to
+`set_sync_actions`, which acts on the visible rows of that compare's plan only and answers the rows it left alone,
+grouped by `RowSkipReason`, plus how many the filters hide; `actionsNotice` words that, one line per reason
+(`skippedText`). A whole call refused because of one row is `SyncError::Override` with its `OverrideRefusal`
+(`overrideRefusalText`); a key on an older compare's rows is `planChanged`. Nothing here re-derives legality. Other
+backend refusals are `SyncError` variants mapped one by one in `syncProblemText`; anything untyped is logged and shown
+as `unexpected`.
+
+A new compare clears the selection and bumps the view version the moment it starts, so neither the old selection nor
+rows drawn from the old plan can reach the new plan by index.
 
 ## Confirm, run, and result (`sync-run.svelte.ts`)
 

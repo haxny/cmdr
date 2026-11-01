@@ -69,6 +69,9 @@ pub(crate) struct Compared {
     pub(crate) confirmed: Option<SyncDefaults>,
     /// What the compare was asked (options, Settings, overrides).
     pub(crate) request: CompareRequest,
+    /// The generation of the compare that made this plan: a key pressed on
+    /// another compare's rows names another one and is refused.
+    pub(crate) generation: u64,
     /// The scan's options without the top-level selection: a re-check before
     /// a batch counts a folder exactly as the scan did.
     pub(crate) scan: ScanOptions,
@@ -342,9 +345,12 @@ pub(crate) fn state(id: &str, filters: &ShowFilters) -> Result<SyncState, SyncEr
     session(id)?.with_compared(|compared| Ok(state_of(compared, filters)))
 }
 
-/// Applies `bulk` to the rows the person selected and can see.
+/// Applies `bulk` to the rows the person selected and can see, on the plan of
+/// compare `generation` only: rows picked on an older compare's grid are
+/// `PlanChanged`, never applied by index to the new plan.
 pub(crate) fn set_actions(
     id: &str,
+    generation: u64,
     items: &[u32],
     bulk: BulkAction,
     filters: &ShowFilters,
@@ -354,6 +360,9 @@ pub(crate) fn set_actions(
         return Err(SyncError::RunInProgress);
     }
     session.with_compared(|compared| {
+        if compared.generation != generation {
+            return Err(SyncError::PlanChanged);
+        }
         let plan = &compared.plan;
         if let Some(&item) = items.iter().find(|&&item| plan.items.get(item as usize).is_none()) {
             let refusal = OverrideRefusal::NoSuchItem { item };

@@ -74,6 +74,26 @@ describe('sync run', () => {
     expect(run.phase).toBe('running')
   })
 
+  it('a refusal that lands after the person closed the confirm never reopens it', async () => {
+    const { run, ipc } = setup()
+    await run.openConfirm()
+    let reject: (error: unknown) => void = () => {}
+    vi.mocked(ipc.startSyncRun).mockImplementationOnce(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail
+        }),
+    )
+    const accepting = run.accept()
+    expect(run.busy).toBe(true)
+    run.dismissConfirm()
+    reject(new SyncCommandFailure({ type: 'planChanged' }))
+    await accepting
+    expect(run.phase).toBe('idle')
+    expect(run.preview).toBeNull()
+    expect(ipc.getSyncConfirm).toHaveBeenCalledTimes(1)
+  })
+
   it('a plan changed since the confirm shows it again with why, and runs nothing', async () => {
     const { run, ipc } = setup()
     await run.openConfirm()

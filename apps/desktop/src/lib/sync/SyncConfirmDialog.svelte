@@ -299,7 +299,9 @@
     {/if}
 
     {#snippet footer()}
-        <Button variant="secondary" onclick={() => { run.dismissConfirm() }}>{tString('sync.confirm.cancel')}</Button>
+        <Button variant="secondary" disabled={run.busy} onclick={() => { run.dismissConfirm() }}
+            >{tString('sync.confirm.cancel')}</Button
+        >
         <Button
             variant={warns ? 'danger' : 'primary'}
             ariaDisabled={run.busy || run.notice === 'staleCompare' || block !== null}

@@ -65,6 +65,8 @@
         (report?.versionsFolders ?? []).filter((folder): folder is VersionsFolder => folder.type === 'folder'),
     )
     const notDone = $derived(run.notDone)
+    /** The result's first button takes focus: a versions folder's "Show in Cmdr", else "Show in grid", else "Compare again". */
+    const firstButton = $derived(folders.length > 0 ? 'folder' : notDone.length > 0 ? 'grid' : 'again')
     /** Folders the run made and leaves: they stay, since a run never removes anything it can't keep. */
     const leftBehind = $derived([
         ...(report?.emptyFolders ?? []).map((folder) => tString('sync.result.emptyFolder', { path: folder.path })),
@@ -81,7 +83,8 @@
             ariaLabel={tString('sync.run.progressLabel')}
             ariaValuetext={progressText}
         />
-        <p aria-live="polite">{progressText}</p>
+        <!-- No live region: the progress bar's value text carries it, and a step-by-step live text floods a screen reader. -->
+        <p>{progressText}</p>
         {#if eta !== null}<p>{tString('sync.run.eta', { duration: formatDuration(seconds(eta)) })}</p>{/if}
         <p class="note">
             {tString(run.pausing ? 'sync.run.pausing' : run.phase === 'paused' ? 'sync.run.paused' : 'sync.run.betweenSteps')}
@@ -91,7 +94,11 @@
             <Button variant="secondary" disabled={run.cancelling} onclick={() => void run.cancel()}
                 >{tString(run.cancelling ? 'sync.run.stopping' : 'sync.run.cancel')}</Button
             >
-            <Button variant="primary" disabled={run.cancelling} onclick={() => void run.setPaused(run.phase !== 'paused')}
+            <Button
+                variant="primary"
+                autoFocus
+                disabled={run.cancelling}
+                onclick={() => void run.setPaused(run.phase !== 'paused')}
                 >{tString(run.phase === 'paused' ? 'sync.run.resume' : 'sync.run.pause')}</Button
             >
         </div>
@@ -106,14 +113,16 @@
                 {/each}
             </ul>
         </div>
-        {#each folders as folder (folder.path)}
+        {#each folders as folder, at (folder.path)}
             <div class="folder">
                 <span
                     >{folders.length === 1
                         ? tString('sync.result.versionsFolder', { size: formatByteSize(report.keptBytes), path: folder.path })
                         : tString('sync.result.versionsFolderShort', { path: folder.path })}</span
                 >
-                <Button size="mini" onclick={() => { onShowFolder(folder) }}>{tString('sync.result.showInCmdr')}</Button>
+                <Button size="mini" autoFocus={firstButton === 'folder' && at === 0} onclick={() => { onShowFolder(folder) }}
+                    >{tString('sync.result.showInCmdr')}</Button
+                >
             </div>
         {/each}
         {#if leftBehind.length > 0}
@@ -126,9 +135,11 @@
         {/if}
         <div class="actions">
             {#if notDone.length > 0}
-                <Button variant="secondary" onclick={() => { onShowInGrid(notDone) }}>{tString('sync.result.showInGrid')}</Button>
+                <Button variant="secondary" autoFocus={firstButton === 'grid'} onclick={() => { onShowInGrid(notDone) }}
+                    >{tString('sync.result.showInGrid')}</Button
+                >
             {/if}
-            <Button variant="primary" autoFocus onclick={() => void run.dismissResult()}
+            <Button variant="primary" autoFocus={firstButton === 'again'} onclick={() => void run.dismissResult()}
                 >{tString('sync.result.compareAgain')}</Button
             >
         </div>

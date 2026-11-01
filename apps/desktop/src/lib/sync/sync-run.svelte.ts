@@ -230,6 +230,8 @@ class SyncRunState {
   }
 
   private async refused(problem: SyncProblem): Promise<void> {
+    // The person closed the confirm meanwhile: a refusal of a run they walked away from reopens nothing.
+    if (this.phase !== 'confirming') return
     if (problem.type === 'planChanged') {
       const accepted = this.accepted
       if (await this.fetchPreview()) {

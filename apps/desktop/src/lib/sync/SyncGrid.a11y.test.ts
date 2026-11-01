@@ -55,6 +55,8 @@ describe('SyncGrid a11y', () => {
     const rows = target.querySelectorAll('[role="row"][aria-label]')
     expect(rows.length).toBe(5)
     expect(target.querySelector('[role="rowheader"]')?.textContent).toContain('Photos/2024')
+    // A folder header is named by its own text: no empty `aria-label` hides it.
+    expect(target.querySelector('[role="rowheader"]')?.closest('[role="row"]')?.hasAttribute('aria-label')).toBe(false)
     expect(target.querySelector('[data-index="4"]')?.getAttribute('aria-label')).toContain('older replaces newer')
     await expectNoA11yViolations(target)
   })

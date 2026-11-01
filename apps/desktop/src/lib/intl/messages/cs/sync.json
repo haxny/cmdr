@@ -1172,6 +1172,10 @@
   "@sync.profiles.invalid": {
     "sourceHash": "88aa7fc"
   },
+  "sync.profiles.gone": "That profile changed or is gone. The list now shows what’s saved.",
+  "@sync.profiles.gone": {
+    "sourceHash": "1590042"
+  },
   "sync.profiles.tooLarge": "This profile is too large to save. Shorten its masks or its exclude list.",
   "@sync.profiles.tooLarge": {
     "sourceHash": "fc540eb"

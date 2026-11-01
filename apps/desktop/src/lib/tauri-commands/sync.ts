@@ -265,11 +265,12 @@ export async function getSyncState(sessionId: string, filters: ShowFilters): Pro
  */
 export async function setSyncActions(
   sessionId: string,
+  generation: number,
   items: number[],
   bulk: BulkAction,
   filters: ShowFilters,
 ): Promise<SyncActionsOutcome> {
-  return syncResult(await commands.setSyncActions(sessionId, items, bulk, filters))
+  return syncResult(await commands.setSyncActions(sessionId, generation, items, bulk, filters))
 }
 
 /** The grid row a jump lands on (next or previous folder, a typed name), or `null`. */

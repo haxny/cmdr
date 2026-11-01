@@ -101,3 +101,24 @@ fn a_root_must_be_an_absolute_path_that_never_climbs() {
     assert!(!root_path_ok(""));
     assert!(!root_path_ok("/a/../b"));
 }
+
+#[tokio::test]
+async fn a_key_pressed_on_an_older_compares_rows_is_refused() {
+    let p = pair("sync_session_old_rows");
+    write(&p.left.join("a.txt"), "a", 100);
+    let id = p.compare(p.request(Mode::Update)).await;
+    let old = super::session_test::current(&id);
+    let again = CompareRequest {
+        session_id: Some(id.clone()),
+        ..p.request(Mode::Update)
+    };
+    let started = session_compare::start(p.host(), again, None).await.expect("starts");
+    cmdr_fs::testing::wait_until_async(std::time::Duration::from_secs(10), "the compare finishes", || {
+        session::state(&id, &all_rows()).is_ok() && super::session_test::current(&id) == started.generation
+    })
+    .await;
+    let refused = session::set_actions(&id, old, &[0], cmdr_sync::BulkAction::Skip, &all_rows());
+    assert_eq!(refused.err(), Some(SyncError::PlanChanged));
+    assert!(session::set_actions(&id, started.generation, &[0], cmdr_sync::BulkAction::Skip, &all_rows()).is_ok());
+    session::close(&id);
+}

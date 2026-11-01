@@ -378,6 +378,7 @@ async fn run(
         confirmed: None,
         view: None,
         request,
+        generation,
         scan: prepared.scan,
         stale: false,
     });
