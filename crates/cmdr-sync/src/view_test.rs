@@ -183,7 +183,6 @@ fn summary_counts_every_kind() {
         .file("gone", 5, T)
         .file("diff", 2, T)
         .file("cl", 1, T);
-    let caps = test_tree::caps();
     let plan = plan_of(Mode::Mirror, left, right);
     let plan = apply_overrides(
         &plan,
@@ -191,8 +190,6 @@ fn summary_counts_every_kind() {
             item: index(&plan, "gone"),
             action: Action::Skip,
         }],
-        &caps,
-        &caps,
     )
     .unwrap();
     let summary = summarize(&plan, &ShowFilters::default());
@@ -201,18 +198,47 @@ fn summary_counts_every_kind() {
         PlanSummary {
             into_left: SideTotals::default(),
             into_right: SideTotals {
-                copy_files: 2,
-                copy_bytes: 7,
-                removals: 0
+                copy_files: 1,
+                copy_bytes: 3,
+                replace_files: 1,
+                replace_bytes: 4,
+                removals: 0,
+                removed_folders: 0,
             },
             skipped: 2,
             undecided: 0,
             equal: 1,
             different: 1,
             unique_left: 1,
-            unique_right: 2,
+            unique_right: 1,
+            not_comparable: 1,
             hidden_actions: 0,
             changed_by_you: 1,
         }
+    );
+}
+
+#[test]
+fn removed_folders_count_as_folders_and_their_files_as_files() {
+    let left = Tree::new().file("keep", 1, T);
+    let right = Tree::new()
+        .file("keep", 1, T)
+        .folder("empty")
+        .file("old/a", 2, T)
+        .file("old/b", 3, T);
+    let summary = summarize(&plan_of(Mode::Mirror, left, right), &ShowFilters::default());
+    assert_eq!(summary.into_right.removals, 2, "files");
+    assert_eq!(summary.into_right.removed_folders, 2, "`empty` and `old`");
+}
+
+#[test]
+fn clash_type_clash_and_unreadable_rows_are_not_comparable() {
+    let left = Tree::new().clash("c").file("t", 1, T).unreadable("u");
+    let right = Tree::new().file("c", 1, T).file("t/x", 1, T).file("u/y", 1, T);
+    let summary = summarize(&plan_of(Mode::CompareOnly, left, right), &ShowFilters::default());
+    assert_eq!(summary.not_comparable, 3);
+    assert_eq!(
+        (summary.different, summary.unique_left, summary.unique_right),
+        (0, 0, 0)
     );
 }

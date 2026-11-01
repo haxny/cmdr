@@ -236,7 +236,6 @@ fn reclassify_keeps_actions_changed_by_you() {
             ..CompareRules::QUICK
         },
     };
-    let caps = test_tree::caps();
     let planned = plan(&left.build(), &right.build(), None, &options);
     let a = item(&planned, "a.txt").index;
     let b = item(&planned, "b.txt").index;
@@ -247,8 +246,6 @@ fn reclassify_keeps_actions_changed_by_you() {
             item: a,
             action: Action::CopyLeft,
         }],
-        &caps,
-        &caps,
     )
     .unwrap();
 
@@ -257,7 +254,8 @@ fn reclassify_keeps_actions_changed_by_you() {
         (b, ContentState::Differs),
         (c, ContentState::Same),
     ];
-    let after = reclassify(&changed, &results);
+    let Reclassified { plan: after, reset } = reclassify(&changed, &results);
+    assert!(reset.is_empty());
     let (a, b, c) = (
         &after.items[a as usize],
         &after.items[b as usize],
@@ -272,4 +270,84 @@ fn reclassify_keeps_actions_changed_by_you() {
     assert_eq!(c.verdict.category, Category::Equal);
     assert_eq!(c.action, Action::Equal);
     assert!(content_jobs(&after, Path::new("/L"), Path::new("/R")).is_empty());
+}
+
+fn content_rules(mode: Mode) -> PlanOptions {
+    PlanOptions {
+        mode,
+        rules: CompareRules {
+            by: CompareBy::Content,
+            ..CompareRules::QUICK
+        },
+    }
+}
+
+#[test]
+fn reclassify_resets_a_kept_action_the_answer_made_illegal() {
+    let left = Tree::new().file("a.txt", 5, T);
+    let right = Tree::new().file("a.txt", 5, T);
+    let planned = plan(&left.build(), &right.build(), None, &content_rules(Mode::BothWays));
+    let a = item(&planned, "a.txt").index;
+    // `?` is a legal choice while the row is unknown…
+    let marked = apply_overrides(
+        &planned,
+        &[ActionChange {
+            item: a,
+            action: Action::Undecided,
+        }],
+    )
+    .unwrap();
+    // …and stops being one once the bytes say equal.
+    let Reclassified { plan: after, reset } = reclassify(&marked, &[(a, ContentState::Same)]);
+    assert_eq!(reset, vec![a]);
+    assert_eq!(after.items[a as usize].action, Action::Equal);
+    assert!(!after.items[a as usize].changed_by_you());
+}
+
+#[test]
+fn reclassify_touches_pending_rows_only() {
+    let left = Tree::new().file("x", 3, T).file("same", 5, T).file("f/inner", 1, T);
+    let right = Tree::new().file("x", 4, T).file("same", 5, T).file("f", 1, T);
+    let planned = plan(&left.build(), &right.build(), None, &content_rules(Mode::Mirror));
+    let x = item(&planned, "x").index;
+    let f = item(&planned, "f").index;
+    assert_eq!(item(&planned, "f").verdict.category, Category::TypeClash);
+    let results = [(x, ContentState::Same), (f, ContentState::Same)];
+    let Reclassified { plan: after, reset } = reclassify(&planned, &results);
+    assert!(reset.is_empty());
+    assert_eq!(after, planned, "no answer was asked for, none is taken");
+}
+
+#[test]
+fn nested_app_owned_folder_splits_a_one_sided_folder() {
+    // Another pair's version history inside `photos`: Mirror must not trash it with the folder.
+    let right = Tree::new().file("photos/a.jpg", 5, T).app_owned("photos/sub");
+    let plan = plan_of(Mode::Mirror, Tree::new().file("keep", 1, T), right);
+    assert!(!has_item(&plan, "photos"));
+    assert!(!has_item(&plan, "photos/sub"));
+    assert_eq!(item(&plan, "photos/a.jpg").action, Action::RemoveRight);
+}
+
+#[test]
+fn unreadable_key_beneath_splits_a_folder_even_without_the_counter() {
+    let mut right = Tree::new().file("d/a", 1, T).unreadable("d/locked").build();
+    let d = key("d");
+    let entry = right.entries.get(&d).cloned().unwrap();
+    let mut subtree = entry.subtree.unwrap();
+    subtree.unreadable = 0;
+    right.entries.insert(
+        d.clone(),
+        Entry {
+            subtree: Some(subtree),
+            ..entry
+        },
+    );
+    let plan = plan(
+        &Tree::new().file("keep", 1, T).build(),
+        &right,
+        None,
+        &options(Mode::Mirror),
+    );
+    assert!(!plan.items.iter().any(|item| item.key == d));
+    assert_eq!(item(&plan, "d/locked").action, Action::Skip);
 }

@@ -177,6 +177,7 @@ impl<'a> Walk<'a> {
         let mut groups = Candidates::new();
         for child in children {
             if is_app_owned(&child.name) {
+                facts.app_owned += 1;
                 continue;
             }
             let name_key = options.name_rule.key(&child.name);
@@ -289,6 +290,7 @@ fn add(total: &mut SubtreeFacts, inner: &SubtreeFacts) {
     total.newest_mtime = total.newest_mtime.max(inner.newest_mtime);
     total.held_back += inner.held_back;
     total.unreadable += inner.unreadable;
+    total.app_owned += inner.app_owned;
 }
 
 fn reason_of(error: &VolumeError) -> UnreadableReason {

@@ -317,16 +317,25 @@ async fn unreadable_nested_folder_marks_ancestors() {
 }
 
 #[tokio::test]
-async fn cmdr_sync_folder_is_left_out_uncounted_at_every_level() {
+async fn cmdr_sync_folder_is_left_out_and_counted_as_app_owned_at_every_level() {
     let volume = tree(
-        &[("/.cmdr-sync/v", 1), ("/d/.cmdr-sync/v", 1), ("/d/f", 1)],
-        &["/.cmdr-sync", "/d", "/d/.cmdr-sync"],
+        &[
+            ("/.cmdr-sync/v", 1),
+            ("/d/.cmdr-sync/v", 1),
+            ("/d/f", 1),
+            ("/d/e/.cmdr-sync/v", 1),
+            ("/d/e/g", 1),
+        ],
+        &["/.cmdr-sync", "/d", "/d/.cmdr-sync", "/d/e", "/d/e/.cmdr-sync"],
     )
     .await;
     let snap = run(&volume, &options()).await.unwrap();
     let names: Vec<_> = snap.entries.values().map(|e| e.rel_path.as_str()).collect();
-    assert_eq!(names, ["d", "d/f"]);
-    assert_eq!(snap.entries[&key(&["d"])].subtree.unwrap().held_back, 0);
+    assert_eq!(names, ["d", "d/e", "d/e/g", "d/f"]);
+    let d = snap.entries[&key(&["d"])].subtree.unwrap();
+    assert_eq!(d.held_back, 0, "not held back: the scan never offers it");
+    assert_eq!(d.app_owned, 2, "its own and `e`'s");
+    assert_eq!(snap.entries[&key(&["d", "e"])].subtree.unwrap().app_owned, 1);
 }
 
 #[tokio::test]

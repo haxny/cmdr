@@ -36,7 +36,9 @@ pub use guards::{
 };
 pub use key::{EntryKey, NameRule};
 pub use overrides::{ActionChange, BulkAction, OverrideRefusal, apply_overrides, bulk_changes, legal_actions};
-pub use plan::{Action, Baseline, Mode, Plan, PlanItem, PlanOptions, content_jobs, default_action, plan, reclassify};
+pub use plan::{
+    Action, Baseline, Mode, Plan, PlanItem, PlanOptions, Reclassified, content_jobs, default_action, plan, reclassify,
+};
 pub use scan::{ScanError, ScanOptions, ScanProgress, Side, scan};
 pub use snapshot::{Entry, Snapshot, SubtreeFacts, UnreadableReason};
 pub use view::{PlanSummary, RowClass, ShowFilters, SideTotals, ViewRow, is_visible, row_class, summarize, view_rows};

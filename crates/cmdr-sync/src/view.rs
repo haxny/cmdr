@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Action, Category, EntryKey, Plan, PlanItem, Side};
+use crate::{Action, Category, EntryKey, EntryKind, Plan, PlanItem, Side};
 
 /// The show-filter toggles (TC's set plus `?` and warnings).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
@@ -160,12 +160,19 @@ pub fn view_rows(plan: &Plan, filters: &ShowFilters) -> Vec<ViewRow> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SideTotals {
-    /// Files copied into this side.
+    /// New files copied into this side (nothing there yet).
     pub copy_files: u64,
     /// Their bytes.
     pub copy_bytes: u64,
-    /// Files removed from this side.
+    /// Files copied over an existing file on this side; the old one is kept
+    /// (Trash or versions folder), so the confirm says where it goes.
+    pub replace_files: u64,
+    /// The incoming bytes of those replacements.
+    pub replace_bytes: u64,
+    /// Files removed from this side (a folder row counts the files in it).
     pub removals: u64,
+    /// Folders removed from this side, empty ones included.
+    pub removed_folders: u64,
 }
 
 /// The summary bar's numbers.
@@ -188,6 +195,8 @@ pub struct PlanSummary {
     pub unique_left: u64,
     /// Rows only on the right.
     pub unique_right: u64,
+    /// Name clash, type clash, and unreadable rows: no comparison was possible.
+    pub not_comparable: u64,
     /// Rows that act but are hidden by the filters.
     pub hidden_actions: u64,
     /// Rows whose action you changed.
@@ -202,15 +211,33 @@ fn add_action(summary: &mut PlanSummary, item: &PlanItem) {
         Side::Left => &mut summary.into_left,
         Side::Right => &mut summary.into_right,
     };
+    let is_folder = |side| {
+        item.entry(side)
+            .is_some_and(|entry| entry.facts.kind == EntryKind::Folder)
+    };
     if item.action.is_removal() {
         totals.removals += item.files_on(target);
+        totals.removed_folders += u64::from(is_folder(target));
     } else if let Some(source) = item.action.needs() {
-        totals.copy_files += item.files_on(source);
-        totals.copy_bytes += item.bytes;
+        if item.entry(target).is_some() {
+            totals.replace_files += item.files_on(source);
+            totals.replace_bytes += item.bytes;
+        } else {
+            totals.copy_files += item.files_on(source);
+            totals.copy_bytes += item.bytes;
+        }
     }
 }
 
 fn add_presence(summary: &mut PlanSummary, item: &PlanItem) {
+    let comparable = !matches!(
+        item.verdict.category,
+        Category::NameClash | Category::TypeClash | Category::Unreadable
+    );
+    if !comparable {
+        summary.not_comparable += 1;
+        return;
+    }
     match (&item.left, &item.right) {
         (Some(_), Some(_)) if item.verdict.category == Category::Equal => summary.equal += 1,
         (Some(_), Some(_)) => summary.different += 1,

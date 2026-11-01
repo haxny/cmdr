@@ -24,6 +24,7 @@ enum Op {
     HeldBack(u64),
     Unreadable,
     Clash,
+    AppOwned,
 }
 
 fn arb_path() -> impl Strategy<Value = String> {
@@ -43,6 +44,7 @@ fn arb_op() -> impl Strategy<Value = Op> {
         1 => (1u64..3).prop_map(Op::HeldBack),
         1 => Just(Op::Unreadable),
         1 => Just(Op::Clash),
+        1 => Just(Op::AppOwned),
     ]
 }
 
@@ -59,13 +61,16 @@ fn build(ops: &[(String, Op)], caps: SyncCaps) -> Snapshot {
             Op::HeldBack(count) => tree.held_back(path, *count),
             Op::Unreadable => tree.unreadable(path),
             Op::Clash => tree.clash(path),
+            Op::AppOwned => tree.app_owned(path),
         });
     tree.build()
 }
 
+/// About one side in seven takes no writes.
 fn arb_caps() -> impl Strategy<Value = SyncCaps> {
-    (1u64..=2).prop_map(|mtime_precision_secs| SyncCaps {
+    (1u64..=2, prop::bool::weighted(0.85)).prop_map(|(mtime_precision_secs, can_write)| SyncCaps {
         mtime_precision_secs,
+        can_write,
         ..caps()
     })
 }
@@ -200,8 +205,16 @@ fn within_unreadable(key: &EntryKey, snap: &Snapshot) -> bool {
 }
 
 fn non_atomic(entry: &Entry, snap: &Snapshot) -> bool {
-    entry.subtree.is_some_and(|s| s.held_back > 0 || s.unreadable > 0)
-        || snap.clashes.keys().any(|k| k != &entry.key && k.is_within(&entry.key))
+    let beneath = |k: &EntryKey| k != &entry.key && k.is_within(&entry.key);
+    entry
+        .subtree
+        .is_some_and(|s| s.held_back > 0 || s.unreadable > 0 || s.app_owned > 0)
+        || snap.clashes.keys().any(beneath)
+        || snap.unreadable.keys().any(beneath)
+}
+
+fn writable(snap: &Snapshot) -> bool {
+    snap.caps.can_write
 }
 
 /// Entries the plan must leave exactly as they are: everything at or under an
@@ -216,6 +229,43 @@ fn protected(snap: &Snapshot) -> Vec<(EntryKey, Entry)> {
 
 fn names(snap: &Snapshot) -> BTreeSet<EntryKey> {
     snap.entries.keys().cloned().collect()
+}
+
+const ALL_ACTIONS: [Action; 7] = [
+    Action::CopyRight,
+    Action::CopyLeft,
+    Action::RemoveRight,
+    Action::RemoveLeft,
+    Action::Equal,
+    Action::Skip,
+    Action::Undecided,
+];
+
+const ALL_BULK: [BulkAction; 7] = [
+    BulkAction::DefaultDirection,
+    BulkAction::CopyRight,
+    BulkAction::CopyLeft,
+    BulkAction::Reverse,
+    BulkAction::Skip,
+    BulkAction::ToggleSkip,
+    BulkAction::RemoveTarget,
+];
+
+fn arb_changes() -> impl Strategy<Value = Vec<ActionChange>> {
+    prop::collection::vec((0u32..12, prop::sample::select(ALL_ACTIONS.to_vec())), 0..8).prop_map(|pairs| {
+        pairs
+            .into_iter()
+            .map(|(item, action)| ActionChange { item, action })
+            .collect()
+    })
+}
+
+/// Applies each change on its own through the public API, keeping the ones it
+/// accepts (what a person clicking around ends up with).
+fn with_accepted(plan: &Plan, changes: &[ActionChange]) -> Plan {
+    changes.iter().fold(plan.clone(), |current, change| {
+        apply_overrides(&current, std::slice::from_ref(change)).unwrap_or(current)
+    })
 }
 
 proptest! {
@@ -260,6 +310,9 @@ proptest! {
 
     #[test]
     fn mirror_replanned_after_apply_is_all_equal((left, right) in arb_snapshot_pair(), rules in arb_rules()) {
+        if !(writable(&right)) {
+            return Ok(()); // a read-only target: the run does nothing to check
+        }
         let options = options(Mode::Mirror, rules);
         let planned = plan(&left, &right, None, &options);
         let (l, r) = apply_plan(&planned, &left, &right);
@@ -274,6 +327,9 @@ proptest! {
 
     #[test]
     fn update_replanned_after_apply_copies_nothing((left, right) in arb_snapshot_pair(), rules in arb_rules()) {
+        if !(writable(&right)) {
+            return Ok(()); // a read-only target: the run does nothing to check
+        }
         let options = options(Mode::Update, rules);
         let planned = plan(&left, &right, None, &options);
         let (l, r) = apply_plan(&planned, &left, &right);
@@ -289,6 +345,9 @@ proptest! {
         let before: BTreeSet<_> = names(&left).union(&names(&right)).cloned().collect();
         let after: BTreeSet<_> = names(&l).union(&names(&r)).cloned().collect();
         prop_assert!(after.is_superset(&before));
+        if !(writable(&left) && writable(&right)) {
+            return Ok(()); // a read-only target: the run does nothing to check
+        }
         let again = plan(&l, &r, None, &options);
         for item in &again.items {
             prop_assert!(
@@ -342,7 +401,7 @@ proptest! {
                 (Action::CopyRight, Category::NewerRight) | (Action::CopyLeft, Category::NewerLeft)
             );
             prop_assert_eq!(item.older_overwrites_newer, expected, "{:?}", item.key);
-            if mode == Mode::Mirror && item.verdict.category == Category::NewerRight {
+            if mode == Mode::Mirror && item.verdict.category == Category::NewerRight && writable(&right) {
                 prop_assert!(item.older_overwrites_newer);
             }
         }
@@ -355,45 +414,67 @@ proptest! {
     fn overrides_never_yield_illegal_actions(
         (left, right) in arb_snapshot_pair(),
         mode in arb_mode(),
-        changes in prop::collection::vec((0u32..12, 0usize..7), 0..6),
-        left_writes in any::<bool>(),
-        right_writes in any::<bool>(),
+        changes in arb_changes(),
     ) {
         let planned = plan(&left, &right, None, &options(mode, CompareRules::QUICK));
-        let lc = SyncCaps { can_write: left_writes, ..caps() };
-        let rc = SyncCaps { can_write: right_writes, ..caps() };
-        let all = [
-            Action::CopyRight, Action::CopyLeft, Action::RemoveRight, Action::RemoveLeft,
-            Action::Equal, Action::Skip, Action::Undecided,
-        ];
-        let changes: Vec<_> = changes.iter().map(|&(item, a)| ActionChange { item, action: all[a] }).collect();
         let every_legal = changes.iter().all(|change| {
             planned.items.get(change.item as usize)
-                .is_some_and(|item| legal_actions(mode, item, &lc, &rc).contains(&change.action))
+                .is_some_and(|item| legal_actions(&planned, item).contains(&change.action))
         });
-        match apply_overrides(&planned, &changes, &lc, &rc) {
+        match apply_overrides(&planned, &changes) {
             Ok(next) => {
                 prop_assert!(every_legal);
                 for item in &next.items {
-                    let changed = changes.iter().any(|change| change.item == item.index);
-                    if changed {
-                        prop_assert!(legal_actions(mode, item, &lc, &rc).contains(&item.action));
+                    if changes.iter().any(|change| change.item == item.index) {
+                        prop_assert!(legal_actions(&next, item).contains(&item.action));
                     }
-                    if mode != Mode::CompareOnly {
-                        prop_assert!(!(matches!(mode, Mode::Update | Mode::BothWays) && removes(item.action)));
-                        prop_assert!(!(matches!(mode, Mode::Update | Mode::Mirror) && left_written(item.action)));
+                    prop_assert!(!(matches!(mode, Mode::Update | Mode::BothWays) && removes(item.action)));
+                    prop_assert!(!(matches!(mode, Mode::Update | Mode::Mirror) && left_written(item.action)));
+                    if let Some(side) = item.action.target() {
+                        let snap = if side == Side::Left { &left } else { &right };
+                        prop_assert!(writable(snap), "wrote to a read-only side");
                     }
                 }
             }
             Err(_) => prop_assert!(!every_legal),
         }
-        for bulk in [
-            BulkAction::DefaultDirection, BulkAction::CopyRight, BulkAction::CopyLeft, BulkAction::Reverse,
-            BulkAction::Skip, BulkAction::ToggleSkip, BulkAction::RemoveTarget,
-        ] {
+        for bulk in ALL_BULK {
             let rows: Vec<u32> = (0..14).collect();
-            let bulk_changes = bulk_changes(&planned, &rows, bulk, &lc, &rc);
-            prop_assert!(apply_overrides(&planned, &bulk_changes, &lc, &rc).is_ok(), "{:?}", bulk);
+            let bulk_changes = bulk_changes(&planned, &rows, bulk);
+            prop_assert!(apply_overrides(&planned, &bulk_changes).is_ok(), "{:?}", bulk);
+        }
+    }
+
+    #[test]
+    fn protected_entries_survive_any_accepted_overrides(
+        (left, right) in arb_snapshot_pair(),
+        mode in arb_mode(),
+        rules in arb_rules(),
+        changes in arb_changes(),
+        bulk in prop::sample::select(ALL_BULK.to_vec()),
+    ) {
+        let planned = plan(&left, &right, None, &options(mode, rules));
+        let rows: Vec<u32> = (0..14).collect();
+        let after_bulk = apply_overrides(&planned, &bulk_changes(&planned, &rows, bulk)).expect("bulk changes are legal");
+        let changed = with_accepted(&after_bulk, &changes);
+        let (l, r) = apply_plan(&changed, &left, &right);
+        for (before, after) in [(&left, &l), (&right, &r)] {
+            for (key, entry) in protected(before) {
+                prop_assert_eq!(after.entries.get(&key), Some(&entry), "{:?}", key);
+            }
+        }
+        if matches!(mode, Mode::Mirror | Mode::Update) {
+            prop_assert_eq!(&l.entries, &left.entries, "the source side is never written");
+        }
+        for item in changed.items.iter().filter(|item| item.verdict.category == Category::Unknown) {
+            if item.changed_by_you() {
+                continue;
+            }
+            for (key_side, before, after) in [(&item.left, &left, &l), (&item.right, &right, &r)] {
+                if key_side.is_some() {
+                    prop_assert_eq!(after.entries.get(&item.key), before.entries.get(&item.key), "`?` row acted on");
+                }
+            }
         }
     }
 
@@ -405,8 +486,11 @@ proptest! {
         count in 0u32..4,
         sentinel in prop::option::weighted(0.2, prop::sample::select(NAMES.to_vec())),
         acknowledged in prop::sample::subsequence(vec![Acknowledgement::RemoveAnyway, Acknowledgement::CopyIntoEmpty], 0..=2),
+        changes in arb_changes(),
     ) {
-        let planned = plan(&left, &right, None, &options(mode, CompareRules::QUICK));
+        // Overrides first: `gate` must judge the plan it is handed, not the one first planned.
+        let first = plan(&left, &right, None, &options(mode, CompareRules::QUICK));
+        let planned = with_accepted(&first, &changes);
         let settings = GuardSettings { max_remove_percent: percent, max_remove_count: count, sentinel: sentinel.map(str::to_owned) };
         let report = check(&planned, &left, &right, &settings);
         let (l, r) = apply_plan(&planned, &left, &right);
@@ -422,7 +506,7 @@ proptest! {
             prop_assert_eq!(report.blocks.contains(&block), trips, "{:?}", side);
             prop_assert_eq!(report.blocks.contains(&GuardBlock::EmptyRoot { side }), before.is_empty());
         }
-        let gated = gate(&planned, &report, &acknowledged);
+        let gated = gate(&planned, &left, &right, &settings, &acknowledged);
         if let Some(name) = sentinel {
             let missing = [&left, &right].iter().any(|snap| {
                 snap.entries.get(&EntryKey::root().child(name.to_owned()))

@@ -29,10 +29,10 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
   `.cmdr-sync` is neither: the scanner skips it silently.
 - **Content compare answers every job**: a job cancel stopped answers `Pending`, never nothing.
 - **Never act on partial knowledge**: rows at or under an unreadable key, name clashes, and type clashes are `Skip` and
-  take no other action; a one-sided folder with anything held back, unreadable, or clashing beneath it is split into its
-  children, never copied or removed whole. `?` rows never get an automatic action.
+  take no other action; a one-sided folder with anything held back, unreadable, app-owned, or clashing beneath it is
+  split into its children, never copied or removed whole. `?` rows never get an automatic action.
 - **Hiding a row never changes its action**; the summary counts hidden actions.
-- **Removals are always held beside an empty root**, no acknowledgement releases them.
+- **Removals are always held beside an empty root**, no acknowledgement releases them. `gate` re-runs `check`.
 - **The crate never deletes permanently.** Phase 1 has no delete step at all.
 - **No `cmdr-operations` dependency**: `cmdr-listing` depends on this crate and the operations test build depends on
   `cmdr-listing`, so a link back would be a cycle. The executor will sit behind a trait.

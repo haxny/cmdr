@@ -6,6 +6,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::overrides::refusal;
 use crate::{
     Category, CompareBy, CompareRules, ContentJob, ContentState, Entry, EntryKey, EntryKind, Rung, Side, Snapshot,
     SyncCaps, Verdict, classify,
@@ -224,18 +225,21 @@ fn within_unreadable(key: &EntryKey, snap: &Snapshot) -> bool {
     (0..=parts.len()).any(|depth| snap.unreadable.contains_key(&EntryKey::Name(parts[..depth].to_vec())))
 }
 
-/// A folder the scan knows only partly (held back, unreadable, or clashing
-/// entries beneath it): never copied or removed whole.
+/// Whether any key of `map` lies strictly beneath `key`.
+fn any_beneath<V>(map: &std::collections::BTreeMap<EntryKey, V>, key: &EntryKey) -> bool {
+    map.range(key.clone()..)
+        .take_while(|(k, _)| k.is_within(key))
+        .any(|(k, _)| k != key)
+}
+
+/// A folder the scan knows only partly (held back, unreadable, app-owned, or
+/// clashing entries beneath it): never copied or removed whole. The unreadable
+/// keys are checked directly too, so a miscounted subtree can't hide one.
 fn is_non_atomic(entry: &Entry, snap: &Snapshot) -> bool {
     let partial = entry
         .subtree
-        .is_some_and(|subtree| subtree.held_back > 0 || subtree.unreadable > 0);
-    let clash_beneath = snap
-        .clashes
-        .range(entry.key.clone()..)
-        .take_while(|(k, _)| k.is_within(&entry.key))
-        .any(|(k, _)| k != &entry.key);
-    partial || clash_beneath
+        .is_some_and(|subtree| subtree.held_back > 0 || subtree.unreadable > 0 || subtree.app_owned > 0);
+    partial || any_beneath(&snap.clashes, &entry.key) || any_beneath(&snap.unreadable, &entry.key)
 }
 
 /// What a key turns into.
@@ -351,36 +355,71 @@ pub fn plan(left: &Snapshot, right: &Snapshot, _baseline: Option<&Baseline>, opt
     }
 }
 
-/// Folds byte-compare answers into the plan. Rows whose action you changed
-/// keep it; the rest follow their new default.
-pub fn reclassify(plan: &Plan, results: &[(u32, ContentState)]) -> Plan {
-    let mut items = plan.items.clone();
-    for &(index, content) in results {
-        let Some(item) = items.get_mut(index as usize) else {
-            continue;
-        };
-        let (Some(l), Some(r)) = (&item.left, &item.right) else {
-            continue;
-        };
-        if matches!(item.verdict.category, Category::NameClash | Category::Unreadable) {
-            continue;
-        }
-        let verdict = classify(Some(&l.facts), Some(&r.facts), &plan.rules, content);
-        let default_action = default_for(plan.mode, verdict.category, &plan.left_caps, &plan.right_caps);
-        let action = if item.changed_by_you() {
-            item.action
-        } else {
-            default_action
-        };
-        *item = settle(PlanItem {
-            verdict,
-            content,
-            default_action,
-            action,
-            ..item.clone()
-        });
+/// A plan with byte-compare answers folded in.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Reclassified {
+    /// The new plan.
+    pub plan: Plan,
+    /// Rows whose action you had changed but the answer made illegal (for
+    /// example `?` on a row that turned out equal): reset to their new default.
+    pub reset: Vec<u32>,
+}
+
+/// One answered row, or `None` when the row wasn't waiting for this answer.
+fn answered(plan: &Plan, item: &PlanItem, content: ContentState) -> Option<(PlanItem, bool)> {
+    let waiting = item.content == ContentState::Pending
+        && !matches!(
+            item.verdict.category,
+            Category::NameClash | Category::Unreadable | Category::TypeClash
+        );
+    let (l, r) = (item.left.as_ref()?, item.right.as_ref()?);
+    if !waiting {
+        return None;
     }
-    Plan { items, ..plan.clone() }
+    let verdict = classify(Some(&l.facts), Some(&r.facts), &plan.rules, content);
+    let default_action = default_for(plan.mode, verdict.category, &plan.left_caps, &plan.right_caps);
+    let answered = PlanItem {
+        verdict,
+        content,
+        default_action,
+        action: default_action,
+        ..item.clone()
+    };
+    let kept = PlanItem {
+        action: item.action,
+        ..answered.clone()
+    };
+    let keep = item.changed_by_you();
+    let legal = refusal(plan.mode, &kept, kept.action, &plan.left_caps, &plan.right_caps).is_none();
+    match (keep, legal) {
+        (true, true) => Some((settle(kept), false)),
+        (true, false) => Some((settle(answered), true)),
+        (false, _) => Some((settle(answered), false)),
+    }
+}
+
+/// Folds byte-compare answers into the plan. Only rows waiting for an answer
+/// (`Pending`) change. A row whose action you changed keeps it while it stays
+/// legal; the rest follow their new default.
+pub fn reclassify(plan: &Plan, results: &[(u32, ContentState)]) -> Reclassified {
+    let mut items = plan.items.clone();
+    let mut reset = Vec::new();
+    for &(index, content) in results {
+        let Some(item) = items.get(index as usize) else {
+            continue;
+        };
+        let Some((next, was_reset)) = answered(plan, item, content) else {
+            continue;
+        };
+        if was_reset {
+            reset.push(index);
+        }
+        items[index as usize] = next;
+    }
+    Reclassified {
+        plan: Plan { items, ..plan.clone() },
+        reset,
+    }
 }
 
 /// The byte compares the plan is waiting for: every row whose content is

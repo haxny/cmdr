@@ -53,6 +53,7 @@ pub(crate) struct Tree {
     caps: SyncCaps,
     entries: BTreeMap<EntryKey, Entry>,
     own_held_back: BTreeMap<EntryKey, u64>,
+    own_app_owned: BTreeMap<EntryKey, u64>,
     clashes: BTreeMap<EntryKey, Vec<Entry>>,
     unreadable: BTreeMap<EntryKey, UnreadableReason>,
 }
@@ -69,6 +70,7 @@ impl Tree {
             caps: caps(),
             entries: BTreeMap::new(),
             own_held_back: BTreeMap::new(),
+            own_app_owned: BTreeMap::new(),
             clashes: BTreeMap::new(),
             unreadable: BTreeMap::new(),
         }
@@ -140,6 +142,19 @@ impl Tree {
         tree
     }
 
+    /// A `.cmdr-sync` folder the scan skipped inside folder `path` (made a
+    /// folder if new).
+    pub(crate) fn app_owned(self, path: &str) -> Self {
+        let tree = self.folder(path);
+        let key = key(path);
+        if tree.entries.get(&key).is_none_or(|e| e.facts.kind != EntryKind::Folder) {
+            return tree;
+        }
+        let mut tree = tree;
+        *tree.own_app_owned.entry(key).or_insert(0) += 1;
+        tree
+    }
+
     /// A folder that wouldn't list: an entry, nothing beneath it.
     pub(crate) fn unreadable(self, path: &str) -> Self {
         let mut tree = self.folder(path);
@@ -163,6 +178,7 @@ impl Tree {
         self.drop_beneath(&key);
         self.entries.remove(&key);
         self.own_held_back.remove(&key);
+        self.own_app_owned.remove(&key);
         let twin = |upper| Entry {
             key: key.clone(),
             rel_path: spelled(&key, upper),
@@ -227,6 +243,7 @@ impl Tree {
     fn drop_beneath(&mut self, key: &EntryKey) {
         self.entries.retain(|k, _| k == key || !k.is_within(key));
         self.own_held_back.retain(|k, _| k == key || !k.is_within(key));
+        self.own_app_owned.retain(|k, _| k == key || !k.is_within(key));
         self.clashes.retain(|k, _| k == key || !k.is_within(key));
         self.unreadable.retain(|k, _| k == key || !k.is_within(key));
     }
@@ -259,6 +276,7 @@ impl Tree {
                 facts.newest_mtime = facts.newest_mtime.max(entry.facts.mtime);
             }
             facts.held_back += self.own_held_back.get(k).copied().unwrap_or(0);
+            facts.app_owned += self.own_app_owned.get(k).copied().unwrap_or(0);
             facts.unreadable += u64::from(self.unreadable.contains_key(k));
         }
         facts

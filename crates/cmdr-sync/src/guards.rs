@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Action, Category, EntryKey, EntryKind, NameRule, Plan, PlanItem, Side, Snapshot};
+use crate::{Action, Category, EntryKey, EntryKind, HOUR_SHIFT_SECS, NameRule, Plan, PlanItem, Side, Snapshot};
 
 /// Removals above this share of a side's files block (rclone bisync's default).
 pub const DEFAULT_MAX_REMOVE_PERCENT: u8 = 50;
@@ -15,6 +15,8 @@ const SKEW_SHARE_PERCENT: u64 = 90;
 const SKEW_STEP_SECS: i64 = 900;
 /// …up to 26 hours (the widest time-zone gap plus DST).
 const SKEW_MAX_SECS: i64 = 26 * 3600;
+/// Fewer comparable pairs than this say nothing about a clock.
+const SKEW_MIN_PAIRS: u64 = 10;
 
 /// The guard settings of a run.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
@@ -175,27 +177,31 @@ fn file_gap(item: &PlanItem, right_offset: i64) -> Option<i64> {
     files.then_some(rt + right_offset - lt)
 }
 
-/// Spec 5.4: ≥ 90% of paired files with both times differ by one non-zero
-/// quarter-hour step up to 26 h.
+/// Spec 5.4: with at least ten comparable pairs, ≥ 90% of them differ by one
+/// non-zero quarter-hour step up to 26 h. With the hour-shift option on, pairs
+/// an exact hour apart are already equal, so they don't take part.
 fn skew(plan: &Plan) -> Option<ClockSkew> {
+    let rules = &plan.rules;
+    let is_hour = |gap: i64| gap.unsigned_abs() == HOUR_SHIFT_SECS;
     let gaps: Vec<i64> = plan
         .items
         .iter()
-        .filter_map(|item| file_gap(item, plan.rules.right_offset_secs))
+        .filter_map(|item| file_gap(item, rules.right_offset_secs))
+        .filter(|&gap| !(rules.ignore_hour_shift && is_hour(gap)))
         .collect();
+    let pairs = gaps.len() as u64;
+    if pairs < SKEW_MIN_PAIRS {
+        return None;
+    }
     let mut tally: BTreeMap<i64, u64> = BTreeMap::new();
-    for step in gaps
-        .iter()
-        .filter_map(|&gap| clock_step(gap, plan.rules.tolerance_secs))
-    {
+    for step in gaps.iter().filter_map(|&gap| clock_step(gap, rules.tolerance_secs)) {
         *tally.entry(step).or_insert(0) += 1;
     }
-    let pairs = gaps.len() as u64;
     let (&offset_secs, &count) = tally.iter().max_by_key(|&(_, count)| *count)?;
     let share = count * 100 / pairs;
     (count * 100 >= SKEW_SHARE_PERCENT * pairs).then_some(ClockSkew {
         offset_secs,
-        share_percent: share as u8,
+        share_percent: u8::try_from(share).unwrap_or(100),
     })
 }
 
@@ -227,7 +233,17 @@ fn hold(item: &PlanItem, blocks: &[GuardBlock], acknowledged: &[Acknowledgement]
 
 /// Splits the rows that act into those that run and those a guard holds.
 /// Rows that do nothing (`=`, `·`, `?`) are in neither list.
-pub fn gate(plan: &Plan, report: &GuardReport, acknowledged: &[Acknowledgement]) -> Gated {
+///
+/// Runs `check` itself on exactly this plan, so a report made before the
+/// person changed actions can never wave new removals through.
+pub fn gate(
+    plan: &Plan,
+    left: &Snapshot,
+    right: &Snapshot,
+    settings: &GuardSettings,
+    acknowledged: &[Acknowledgement],
+) -> Gated {
+    let report = check(plan, left, right, settings);
     let acting = plan.items.iter().filter(|item| item.action.target().is_some());
     let (run, held) = acting.fold((Vec::new(), Vec::new()), |(mut run, mut held), item| {
         match hold(item, &report.blocks, acknowledged) {

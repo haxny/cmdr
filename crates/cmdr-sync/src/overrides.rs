@@ -43,8 +43,17 @@ pub enum OverrideRefusal {
         /// The index asked for.
         item: u32,
     },
-    /// The mode or the row's category doesn't allow this action.
+    /// The mode doesn't allow this action (a removal in Update or Both ways,
+    /// a write to the left in Update or Mirror).
     IllegalForMode {
+        /// The row.
+        item: u32,
+        /// The action refused.
+        action: Action,
+    },
+    /// The row's category doesn't allow this action: clash and unreadable rows
+    /// take `Skip` only, `=` needs an equal row, `?` an unknown one.
+    IllegalForCategory {
         /// The row.
         item: u32,
         /// The action refused.
@@ -97,10 +106,20 @@ fn caps_of<'a>(side: Side, left: &'a SyncCaps, right: &'a SyncCaps) -> &'a SyncC
     }
 }
 
-fn refusal(mode: Mode, item: &PlanItem, action: Action, left: &SyncCaps, right: &SyncCaps) -> Option<OverrideRefusal> {
+/// Why `item` may not take `action`, if it may not. Shared with `reclassify`.
+pub(crate) fn refusal(
+    mode: Mode,
+    item: &PlanItem,
+    action: Action,
+    left: &SyncCaps,
+    right: &SyncCaps,
+) -> Option<OverrideRefusal> {
     let index = item.index;
-    if !mode_allows(mode, action) || !category_allows(item.verdict.category, action) {
+    if !mode_allows(mode, action) {
         return Some(OverrideRefusal::IllegalForMode { item: index, action });
+    }
+    if !category_allows(item.verdict.category, action) {
+        return Some(OverrideRefusal::IllegalForCategory { item: index, action });
     }
     if let Some(side) = action.needs()
         && item.entry(side).is_none()
@@ -125,27 +144,28 @@ const EVERY_ACTION: [Action; 7] = [
     Action::Undecided,
 ];
 
-/// Every action this row may take in `mode` with these volumes.
-pub fn legal_actions(mode: Mode, item: &PlanItem, left: &SyncCaps, right: &SyncCaps) -> Vec<Action> {
+/// Why a row of `plan` may not take `action`, judged with the plan's own mode
+/// and volume capabilities (never a caller's).
+fn refusal_in(plan: &Plan, item: &PlanItem, action: Action) -> Option<OverrideRefusal> {
+    refusal(plan.mode, item, action, &plan.left_caps, &plan.right_caps)
+}
+
+/// Every action a row of `plan` may take.
+pub fn legal_actions(plan: &Plan, item: &PlanItem) -> Vec<Action> {
     EVERY_ACTION
         .into_iter()
-        .filter(|&action| refusal(mode, item, action, left, right).is_none())
+        .filter(|&action| refusal_in(plan, item, action).is_none())
         .collect()
 }
 
 /// A new plan with `changes` applied, or the first refusal (and no change).
-pub fn apply_overrides(
-    plan: &Plan,
-    changes: &[ActionChange],
-    left: &SyncCaps,
-    right: &SyncCaps,
-) -> Result<Plan, OverrideRefusal> {
+pub fn apply_overrides(plan: &Plan, changes: &[ActionChange]) -> Result<Plan, OverrideRefusal> {
     let mut items = plan.items.clone();
     for change in changes {
         let item = items
             .get(change.item as usize)
             .ok_or(OverrideRefusal::NoSuchItem { item: change.item })?;
-        if let Some(refused) = refusal(plan.mode, item, change.action, left, right) {
+        if let Some(refused) = refusal_in(plan, item, change.action) {
             return Err(refused);
         }
         items[change.item as usize] = settle(PlanItem {
@@ -187,19 +207,19 @@ fn reversed(item: &PlanItem) -> Option<Action> {
 
 /// The changes `bulk` makes to `items`: rows where it is illegal, changes
 /// nothing, or that don't exist are dropped silently.
-pub fn bulk_changes(
-    plan: &Plan,
-    items: &[u32],
-    bulk: BulkAction,
-    left: &SyncCaps,
-    right: &SyncCaps,
-) -> Vec<ActionChange> {
+///
+/// ❗ `items` must be the rows the person selected AND can see (`is_visible`
+/// under the current show-filters); the caller filters, this function trusts
+/// it. Within that selection, `CopyRight`, `CopyLeft`, and `RemoveTarget` also
+/// reach `?` rows: selecting a row and pressing the key is the explicit choice
+/// those rows wait for.
+pub fn bulk_changes(plan: &Plan, items: &[u32], bulk: BulkAction) -> Vec<ActionChange> {
     items
         .iter()
         .filter_map(|&index| plan.items.get(index as usize))
         .filter_map(|item| {
             let action = wanted(item, bulk)?;
-            let legal = action != item.action && refusal(plan.mode, item, action, left, right).is_none();
+            let legal = action != item.action && refusal_in(plan, item, action).is_none();
             legal.then_some(ActionChange {
                 item: item.index,
                 action,

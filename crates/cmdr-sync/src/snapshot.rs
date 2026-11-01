@@ -21,9 +21,14 @@ pub struct SubtreeFacts {
     /// about its contents is known.
     ///
     /// ❗ The planner must treat a folder with `unreadable > 0` (or
-    /// `held_back > 0`) as non-atomic: never copy or remove it as a whole on
+    /// `held_back > 0`, or `app_owned > 0`) as non-atomic: never copy or remove it as a whole on
     /// partial knowledge.
     pub unreadable: u64,
+    /// App-owned `.cmdr-sync` folders the scan skipped beneath it (another
+    /// pair's version history). Never in `entries`, never counted as held back,
+    /// but a folder with any is non-atomic too: copying or trashing it whole
+    /// would carry them along.
+    pub app_owned: u64,
 }
 
 /// One listed item.
