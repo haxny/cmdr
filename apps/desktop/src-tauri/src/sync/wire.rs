@@ -103,6 +103,9 @@ pub enum SyncError {
         /// Which.
         problem: ProfileProblem,
     },
+    /// A custom versions folder on this Mac didn't answer, so it can't be
+    /// shown to lie outside the synchronized folders.
+    KeepFolderUnreadable,
     /// The versions folder can't be used for these roots.
     Keep {
         /// Why.

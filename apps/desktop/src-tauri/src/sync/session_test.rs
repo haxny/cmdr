@@ -189,8 +189,10 @@ impl Pair {
         id
     }
 
-    fn run_request(&self, id: &str, groups: &[ConfirmGroupKey], acks: &[Acknowledgement]) -> RunRequest {
-        let preview = session_run::confirm(id, &defaults(), &all_rows()).expect("confirm");
+    async fn run_request(&self, id: &str, groups: &[ConfirmGroupKey], acks: &[Acknowledgement]) -> RunRequest {
+        let preview = session_run::confirm(id, &defaults(), &all_rows())
+            .await
+            .expect("confirm");
         RunRequest {
             revision: preview.revision,
             groups: groups.to_vec(),
@@ -213,8 +215,10 @@ impl Pair {
 
     async fn run(&self, id: &str, groups: &[ConfirmGroupKey], acks: &[Acknowledgement]) -> RunReportWire {
         let runs_before = self.runs(id);
-        let request = self.run_request(id, groups, acks);
-        session_run::start_run(self.host(), id, &request).expect("the run starts");
+        let request = self.run_request(id, groups, acks).await;
+        session_run::start_run(self.host(), id, &request)
+            .await
+            .expect("the run starts");
         wait_until_async(Duration::from_secs(20), "the run finishes", || {
             self.runs(id) > runs_before
         })
@@ -223,12 +227,12 @@ impl Pair {
     }
 
     /// A second run on the same compare (the folders changed since the first).
-    fn run_after_run(&self, id: &str, acks: &[Acknowledgement]) -> Result<(), SyncError> {
+    async fn run_after_run(&self, id: &str, acks: &[Acknowledgement]) -> Result<(), SyncError> {
         let request = RunRequest {
             acknowledged: acks.to_vec(),
-            ..self.run_request(id, &ALL_GROUPS, &[])
+            ..self.run_request(id, &ALL_GROUPS, &[]).await
         };
-        session_run::start_run(self.host(), id, &request)
+        session_run::start_run(self.host(), id, &request).await
     }
 
     fn runs(&self, id: &str) -> usize {
@@ -424,14 +428,14 @@ async fn second_run_on_the_same_folders_is_refused() {
     let real_left = std::fs::canonicalize(&p.left).expect("real left");
     let inside = format!("{}/sub/", real_left.display());
     let held = RunLock::take([key("local-fs", &inside), key("other-volume", "/x")]).expect("first lock");
-    let request = p.run_request(&id, &ALL_GROUPS, &[]);
-    let refused = session_run::start_run(p.host(), &id, &request);
+    let request = p.run_request(&id, &ALL_GROUPS, &[]).await;
+    let refused = session_run::start_run(p.host(), &id, &request).await;
     assert_eq!(refused, Err(SyncError::RunInProgress));
     drop(held);
     // The right root is empty: copies into it wait for "Copy anyway".
     let report = p.run(&id, &ALL_GROUPS, &[]).await;
     assert_eq!((report.done, report.held), (0, 1));
-    let report = p.run_after_run(&id, &[Acknowledgement::CopyIntoEmpty]);
+    let report = p.run_after_run(&id, &[Acknowledgement::CopyIntoEmpty]).await;
     assert_eq!(report, Err(SyncError::StaleCompare));
 }
 
@@ -457,19 +461,19 @@ async fn a_run_needs_the_confirm_the_person_saw() {
     write(&p.left.join("b.txt"), "b", 100);
     write(&p.right.join("k.txt"), "k", 100);
     let id = p.compare(p.request(Mode::Update)).await;
-    let request = p.run_request(&id, &ALL_GROUPS, &[]);
+    let request = p.run_request(&id, &ALL_GROUPS, &[]).await;
     // A change after the confirm.
     let a = p.index_of(&id, "a.txt");
     session::set_actions(&id, &[a], BulkAction::Skip, &all_rows()).expect("override");
     assert_eq!(
-        session_run::start_run(p.host(), &id, &request),
+        session_run::start_run(p.host(), &id, &request).await,
         Err(SyncError::PlanChanged)
     );
     // Other Settings than the confirm was shown with.
-    let mut request = p.run_request(&id, &ALL_GROUPS, &[]);
+    let mut request = p.run_request(&id, &ALL_GROUPS, &[]).await;
     request.defaults.time_tolerance_secs = 5;
     assert_eq!(
-        session_run::start_run(p.host(), &id, &request),
+        session_run::start_run(p.host(), &id, &request).await,
         Err(SyncError::PlanChanged)
     );
     let report = p.run(&id, &ALL_GROUPS, &[]).await;
@@ -483,13 +487,13 @@ async fn a_volume_that_came_back_as_another_needs_a_new_compare() {
     write(&p.left.join("a.txt"), "a", 100);
     write(&p.right.join("k.txt"), "k", 100);
     let id = p.compare(p.request(Mode::Update)).await;
-    let request = p.run_request(&id, &ALL_GROUPS, &[]);
+    let request = p.run_request(&id, &ALL_GROUPS, &[]).await;
     let again = local_side(p.host.engine, "sync-left-again", &p.left);
     p.host
         .volumes
         .lock_ignore_poison()
         .insert(p.left_ref.volume_id.clone(), again.volume);
-    let refused = session_run::start_run(p.host(), &id, &request);
+    let refused = session_run::start_run(p.host(), &id, &request).await;
     assert_eq!(
         refused,
         Err(SyncError::VolumeNotConnected {
@@ -511,16 +515,15 @@ async fn a_content_answer_lands_only_on_its_own_row_of_the_current_compare() {
         Err(SyncError::NotContentComparable { item: 999 })
     );
     let before = session::session(&id).expect("session");
-    let rev = |id: &str| {
-        session_run::confirm(id, &defaults(), &all_rows())
-            .expect("confirm")
-            .revision
+    let rev = async |id: &str| {
+        let preview = session_run::confirm(id, &defaults(), &all_rows()).await;
+        preview.expect("confirm").revision
     };
-    let first = rev(&id);
+    let first = rev(&id).await;
     session_run::compare_item_content(p.host(), &id, a)
         .await
         .expect("compared");
-    assert!(rev(&id) > first, "a content answer is a plan change");
+    assert!(rev(&id).await > first, "a content answer is a plan change");
     let page = session::rows(&id, 0, 100, &all_rows()).expect("rows");
     assert!(page.rows.iter().any(|row| matches!(&row.row,
         ViewRowWire::Item { index, content: cmdr_sync::ContentState::Same, .. } if *index == a)));
@@ -583,7 +586,9 @@ async fn run_rechecks_guards_on_the_overridden_plan_and_drops_unaccepted_groups(
         write(&p.right.join(name), name, 100);
     }
     let id = p.compare(p.request(Mode::Mirror)).await;
-    let preview = session_run::confirm(&id, &defaults(), &all_rows()).expect("confirm");
+    let preview = session_run::confirm(&id, &defaults(), &all_rows())
+        .await
+        .expect("confirm");
     assert!(
         !preview.blocks.is_empty(),
         "three of four files removed trips max remove"
@@ -669,4 +674,24 @@ async fn mirror_run_keeps_every_replaced_and_removed_file_and_leaves_a_changed_o
     assert_eq!(kept_names(&p.right), vec!["c.txt".to_owned(), "old.txt".to_owned()]);
     assert_eq!(report.versions_folders.len(), 1);
     assert!(report.kept_bytes > 0);
+}
+
+#[tokio::test]
+async fn a_root_swapped_for_a_symlink_after_compare_is_a_stale_compare() {
+    let p = pair("sync_session_root_swap");
+    write(&p.left.join("a.txt"), "a", 100);
+    write(&p.right.join("k.txt"), "k", 100);
+    let id = p.compare(p.request(Mode::Update)).await;
+    let request = p.run_request(&id, &ALL_GROUPS, &[]).await;
+    // The right root is now a symlink to another folder with the same name in it.
+    let elsewhere = p.right.with_file_name("elsewhere");
+    std::fs::rename(&p.right, &elsewhere).expect("move the root away");
+    std::os::unix::fs::symlink(&elsewhere, &p.right).expect("symlink in its place");
+    let refused = session_run::start_run(p.host(), &id, &request).await;
+    assert_eq!(refused, Err(SyncError::StaleCompare));
+    assert!(!elsewhere.join("a.txt").exists());
+    // A root that is gone is unreachable.
+    std::fs::remove_file(&p.right).expect("drop the link");
+    let refused = session_run::start_run(p.host(), &id, &request).await;
+    assert_eq!(refused, Err(SyncError::RootUnreachable { side: Side::Right }));
 }

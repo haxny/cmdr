@@ -194,12 +194,12 @@ pub async fn compare_sync_item_content(app: tauri::AppHandle, session_id: String
 /// What the confirm shows for the current plan.
 #[tauri::command]
 #[specta::specta]
-pub fn get_sync_confirm(
+pub async fn get_sync_confirm(
     session_id: String,
     defaults: SyncDefaults,
     filters: ShowFilters,
 ) -> Result<ConfirmPreview, SyncError> {
-    session_run::confirm(&session_id, &defaults, &filters)
+    session_run::confirm(&session_id, &defaults, &filters).await
 }
 
 /// Runs the accepted groups of the current plan; `sync-run-progress` and
@@ -207,7 +207,7 @@ pub fn get_sync_confirm(
 #[tauri::command]
 #[specta::specta]
 pub async fn start_sync_run(app: tauri::AppHandle, session_id: String, request: RunRequest) -> Result<(), SyncError> {
-    session_run::start_run(AppSyncHost::new(app), &session_id, &request)
+    session_run::start_run(AppSyncHost::new(app), &session_id, &request).await
 }
 
 /// Pauses or resumes the run between steps.

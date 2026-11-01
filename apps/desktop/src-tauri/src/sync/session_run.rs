@@ -15,6 +15,7 @@ use cmdr_sync::{
 
 use super::engine::{EngineAdapter, EngineConfig, EngineSide};
 use super::host::{LOCAL_DISK_VOLUME_ID, SyncEvent, SyncHost};
+use super::real_paths::PathCheck;
 use super::run_lock::{RootKey, RunLock};
 use super::session::{Compared, Session, SideSetup, session};
 use super::session_compare::check_settings;
@@ -76,42 +77,6 @@ fn run_side(setup: &SideSetup, snap_caps: cmdr_sync::SyncCaps) -> RunSide {
     }
 }
 
-/// `path` with its deepest existing ancestor resolved (symlinks, `/tmp` as
-/// `/private/tmp`), so it compares with the roots' real paths.
-fn real_path(path: &Path) -> PathBuf {
-    let mut rest = Vec::new();
-    for ancestor in path.ancestors() {
-        if let Ok(real) = std::fs::canonicalize(ancestor) {
-            return rest.iter().rev().fold(real, |path: PathBuf, part| path.join(part));
-        }
-        if let Some(name) = ancestor.file_name() {
-            rest.push(name.to_owned());
-        }
-    }
-    path.to_path_buf()
-}
-
-/// A custom versions folder reached through a symlink into a sync root is
-/// still inside it.
-fn check_custom_folders(compared: &Compared, ctx: &RunContext) -> Result<(), SyncError> {
-    let roots: Vec<&PathBuf> = [&compared.left.real_root, &compared.right.real_root]
-        .into_iter()
-        .flatten()
-        .collect();
-    for side in [Side::Left, Side::Right] {
-        let versions = ctx.versions(side);
-        if versions.place != Place::LocalDisk {
-            continue;
-        }
-        let real = real_path(&versions.dir);
-        if roots.iter().any(|root| real.starts_with(root)) {
-            let refusal = cmdr_sync::KeepRefusal::InsideSyncFolder;
-            return Err(SyncError::Keep { refusal });
-        }
-    }
-    Ok(())
-}
-
 fn context(compared: &Compared, defaults: &SyncDefaults) -> Result<RunContext, SyncError> {
     let request = &compared.request;
     let keep = effective(defaults, &request.options, &request.overrides).keep;
@@ -119,7 +84,6 @@ fn context(compared: &Compared, defaults: &SyncDefaults) -> Result<RunContext, S
     let right = run_side(&compared.right, compared.plan.right_caps);
     let ctx = RunContext::new(left, right, keep, run_stamp(), request.profile_name.clone())
         .map_err(|refusal| SyncError::Keep { refusal })?;
-    check_custom_folders(compared, &ctx)?;
     Ok(ctx)
 }
 
@@ -183,9 +147,20 @@ fn keeps_something(key: ConfirmGroupKey) -> bool {
     )
 }
 
-/// What the confirm shows for the current plan.
-pub(crate) fn confirm(id: &str, defaults: &SyncDefaults, filters: &ShowFilters) -> Result<ConfirmPreview, SyncError> {
-    session(id)?.with_compared(|compared| {
+/// What the confirm shows for the current plan. A custom versions folder is
+/// resolved off the session lock first.
+pub(crate) async fn confirm(
+    id: &str,
+    defaults: &SyncDefaults,
+    filters: &ShowFilters,
+) -> Result<ConfirmPreview, SyncError> {
+    let session = session(id)?;
+    let paths = session.with_compared(|compared| {
+        check_settings(defaults, &compared.request.overrides)?;
+        Ok(PathCheck::of(compared, &context(compared, defaults)?, false))
+    })?;
+    paths.verify().await?;
+    session.with_compared(|compared| {
         check_settings(defaults, &compared.request.overrides)?;
         let ctx = context(compared, defaults)?;
         // The run must be shown with exactly these Settings: other ones are a
@@ -281,22 +256,33 @@ fn still_connected(host: &dyn SyncHost, side: Side, setup: &SideSetup) -> Result
     }
 }
 
-/// Gates the current plan, keeps the accepted groups, and builds the engine.
-fn launch(host: &dyn SyncHost, compared: &Compared, request: &RunRequest) -> Result<Launch, SyncError> {
+/// Whether `request` still names the plan the session holds: not stale, the
+/// revision and Settings of the confirm the person saw.
+fn still_confirmed(compared: &Compared, request: &RunRequest) -> Result<(), SyncError> {
     if compared.stale {
         return Err(SyncError::StaleCompare);
     }
     if request.revision != compared.revision || compared.confirmed.as_ref() != Some(&request.defaults) {
         return Err(SyncError::PlanChanged);
     }
-    check_settings(&request.defaults, &compared.request.overrides)?;
+    check_settings(&request.defaults, &compared.request.overrides)
+}
+
+/// Gates the current plan, keeps the accepted groups, and builds the engine.
+/// `ctx` and the real paths were checked off the lock, for this same revision.
+fn launch(
+    host: &dyn SyncHost,
+    compared: &Compared,
+    request: &RunRequest,
+    ctx: RunContext,
+) -> Result<Launch, SyncError> {
+    still_confirmed(compared, request)?;
     let operations = host.operations().ok_or(SyncError::NotInstalled)?;
     let local = host.volume(LOCAL_DISK_VOLUME_ID).ok_or(SyncError::NotInstalled)?;
     for side in [Side::Left, Side::Right] {
         still_connected(host, side, setup_of(compared, side))?;
     }
     let lock = RunLock::take([RootKey::of(&compared.left), RootKey::of(&compared.right)])?;
-    let ctx = context(compared, &request.defaults)?;
     let settings = &compared.request;
     let guards = effective(&request.defaults, &settings.options, &settings.overrides).guards;
     let plan = compared.plan.clone();
@@ -335,15 +321,34 @@ fn launch(host: &dyn SyncHost, compared: &Compared, request: &RunRequest) -> Res
     })
 }
 
-/// Starts the run of the accepted groups on a task of its own.
-pub(crate) fn start_run(host: Arc<dyn SyncHost>, id: &str, request: &RunRequest) -> Result<(), SyncError> {
+/// Starts the run of the accepted groups on a task of its own. Both roots are
+/// resolved again first, off the session lock: a root swapped since the compare
+/// (for a symlink to elsewhere, say) is a stale compare.
+pub(crate) async fn start_run(host: Arc<dyn SyncHost>, id: &str, request: &RunRequest) -> Result<(), SyncError> {
     let session = session(id)?;
+    if session.is_running() {
+        return Err(SyncError::RunInProgress);
+    }
+    let (ctx, paths) = session.with_compared(|compared| {
+        still_confirmed(compared, request)?;
+        let ctx = context(compared, &request.defaults)?;
+        let paths = PathCheck::of(compared, &ctx, true);
+        Ok((ctx, paths))
+    })?;
+    paths.verify().await?;
     let launched = {
         let mut running = session.run.lock_ignore_poison();
         if running.is_some() {
             return Err(SyncError::RunInProgress);
         }
-        let launched = session.with_compared(|compared| launch(host.as_ref(), compared, request))?;
+        // `launch` checks the revision again, so a change during the checks above
+        // is `PlanChanged`, and a compare already running is `CompareRunning`.
+        // A compare can still slip in while this run starts (its own checks
+        // passed before `run` was set): that is safe. The run executes its own
+        // copy of the plan, and at its end marks whatever compare the session
+        // then holds as stale, so no later run can use a plan scanned while
+        // this one was writing.
+        let launched = session.with_compared(|compared| launch(host.as_ref(), compared, request, ctx))?;
         *running = Some(Arc::clone(&launched.control));
         launched
     };

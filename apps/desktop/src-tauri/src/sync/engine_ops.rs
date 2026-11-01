@@ -395,8 +395,9 @@ async fn remove_empty(on: &EngineSide, base: Option<&Path>, dir: &Path) -> ItemO
 
 /// Whether every folder from just below `base` down to `path` that exists is
 /// not a symlink (lstat), so a write there can't be led out of the root. A
-/// path outside `base` is refused; `None` checks nothing.
-async fn no_link_below(on: &EngineSide, base: Option<&Path>, path: &Path) -> bool {
+/// path outside `base`, or a folder that won't answer, is refused; `None`
+/// checks nothing.
+pub(super) async fn no_link_below(on: &EngineSide, base: Option<&Path>, path: &Path) -> bool {
     let Some(base) = base else {
         return true;
     };
@@ -410,7 +411,9 @@ async fn no_link_below(on: &EngineSide, base: Option<&Path>, path: &Path) -> boo
             Ok(entry) if EntryFacts::of(&entry).kind == EntryKind::Symlink => return false,
             Ok(_) => {}
             // Nothing there yet: nothing further down exists either.
-            Err(_) => return true,
+            Err(VolumeError::NotFound(_)) => return true,
+            // A folder that won't answer can't be shown not to be a link.
+            Err(_) => return false,
         }
     }
     true

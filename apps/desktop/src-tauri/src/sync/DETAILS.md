@@ -75,7 +75,18 @@ Decision: the run is tied to the confirm the person saw. `Compared::revision` (u
 every override, content answer, and confirm shown with other Settings; `ConfirmPreview::revision` names it, and
 `start_sync_run` refuses `PlanChanged` unless `RunRequest` names the current revision and the same Settings. A compare a
 run has already changed is `StaleCompare`. The volume a compare read must still be the instance under its id
-(`Arc::ptr_eq`), else `VolumeNotConnected` (compare again).
+(`Arc::ptr_eq`), else `VolumeNotConnected` (compare again). Both local roots are resolved again (`real_paths.rs`, off
+the session lock): a root that now resolves elsewhere (swapped for a symlink since the compare) is `StaleCompare`, one
+that won't resolve is `RootUnreachable`. Below the root, `no_link_below` covers each write.
+
+Real paths are resolved on a blocking thread with a 5 s limit and never under a session lock: the roots at compare and
+run, a custom versions folder at confirm and run. For a custom folder only "not there" climbs to the parent (it may be
+made later); any other error is `KeepFolderUnreadable`, since a folder that won't answer can't be shown to lie outside
+the roots.
+
+Gap: a protocol volume (Cmdr's own SMB client, SFTP, WebDAV…) has no local path, so its roots compare by volume id and
+path only. The same share mounted in Finder (a local path under `/Volumes`) is not recognised as the same folder: the
+same-or-nested check and the run lock can't match the two.
 
 The confirm (`get_sync_confirm`) and the run read the plan the session holds now. The run calls `gate` itself
 at accept time, so a report shown before the person changed actions can't wave new removals through, then keeps only
@@ -114,7 +125,7 @@ operations with `Initiator::User`, so the queue window, progress, journal, and u
   counted. Trash is `trash_files_start`. ❌ Nothing calls a delete.
 - **No symlink leads a write.** Right before a copy, move, or move back lands, and before folders are made or an
   empty one removed, every existing folder from just below the side's root down to the destination is lstat'ed; a
-  symlink there refuses the batch (`Failed`). The local disk's custom folder is checked by the run from the folder the
+  symlink there, or a folder that won't answer (anything but `NotFound`), refuses the batch (`Failed`). The local disk's custom folder is checked by the run from the folder the
   person picked (`safe_way`). Roots themselves may be symlinks (resolved once, at compare).
 - **Real paths and `RunSide`.** `RunSide::root` stays the volume path (the volume resolves paths under its own root,
   which may itself be a symlinked path); `RunSide::namespace_root` is the real path, so `InsideSyncFolder` sees through

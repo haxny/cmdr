@@ -2,12 +2,11 @@
 //! Settings, the panes' selections), then both sides scanned at once, planned,
 //! and byte-compared where asked. Progress goes out at most every 100 ms.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::volume::{Volume, root_anchored};
 use cmdr_sync::{
     CompareBy, ContentProgress, MaskFilter, Mode, NameRule, PlanOptions, ProfileOverrides, RootConflict, RootRef,
     ScanError, ScanOptions, ScanProgress, Side, Snapshot, SyncCaps, SyncControl, SyncDefaults, compare_contents,
@@ -15,6 +14,7 @@ use cmdr_sync::{
 };
 
 use super::host::{SyncEvent, SyncHost};
+use super::real_paths::{Unresolved, real_root};
 use super::session::{Compared, Session, SideSetup, next_revision, root_path_ok, session};
 use super::wire::{
     CompareOutcome, CompareRequest, CompareStarted, SideRequest, SyncCompareFinished, SyncCompareProgress, SyncError,
@@ -22,27 +22,6 @@ use super::wire::{
 
 /// The shortest gap between two progress events.
 const PROGRESS_EVERY: Duration = Duration::from_millis(100);
-/// How long resolving a root's real path may take (a hung mount blocks it).
-const REAL_PATH_WAIT: Duration = Duration::from_secs(5);
-
-/// Where `root` really is in this Mac's namespace (symlinks and aliases
-/// resolved), for a volume with a local path; `Ok(None)` for a remote one.
-async fn real_root(volume: &Arc<dyn Volume>, root: &Path) -> Result<Option<PathBuf>, ()> {
-    let Some(local) = volume.local_path() else {
-        return Ok(None);
-    };
-    let os_path = root_anchored(&local, root);
-    let resolved = tokio::time::timeout(
-        REAL_PATH_WAIT,
-        tokio::task::spawn_blocking(move || std::fs::canonicalize(os_path)),
-    )
-    .await;
-    match resolved {
-        Ok(Ok(Ok(real))) => Ok(Some(real)),
-        _ => Err(()),
-    }
-}
-
 /// Same folder or nested: by real path when both sides are in this Mac's
 /// namespace (whatever volume ids named them), else on one volume by path.
 fn roots_overlap(left: &SideSetup, right: &SideSetup) -> Option<RootConflict> {
@@ -96,7 +75,7 @@ async fn resolve_side(host: &dyn SyncHost, side: Side, request: &SideRequest) ->
     let root = PathBuf::from(&request.root.path);
     let real_root = real_root(&volume, &root)
         .await
-        .map_err(|()| SyncError::RootUnreachable { side })?;
+        .map_err(|Unresolved::Unreadable| SyncError::RootUnreachable { side })?;
     Ok(SideSetup {
         root_ref: request.root.clone(),
         volume,

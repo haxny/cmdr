@@ -16,6 +16,7 @@ use cmdr_sync::{
 };
 
 use super::engine::{EngineAdapter, EngineConfig, EngineSide};
+use super::engine_ops::no_link_below;
 
 pub(super) fn scan_options() -> ScanOptions {
     ScanOptions {
@@ -433,4 +434,19 @@ async fn a_path_that_wont_read_is_never_taken_for_absent() {
         .observe(Side::Right, Place::Target, &f.right.join("nothing"), false)
         .await;
     assert!(gone.is_none());
+}
+
+#[tokio::test]
+async fn a_folder_that_wont_answer_never_passes_as_free_of_links() {
+    let f = fixture("sync_engine_link_unreadable");
+    let closed = f.right.join("closed");
+    std::fs::create_dir_all(closed.join("inner")).expect("mkdir");
+    let mode = <std::fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode;
+    std::fs::set_permissions(&closed, mode(0o000)).expect("chmod");
+    let side = local_side(test_engine(), "sync-right-check", &f.right);
+    let through = no_link_below(&side, Some(&f.right), &closed.join("inner/new")).await;
+    std::fs::set_permissions(&closed, mode(0o755)).expect("chmod back");
+    assert!(!through, "an unreadable folder fails closed");
+    let fresh = no_link_below(&side, Some(&f.right), &f.right.join("not/yet/there")).await;
+    assert!(fresh, "a path that doesn't exist yet has no link in it");
 }

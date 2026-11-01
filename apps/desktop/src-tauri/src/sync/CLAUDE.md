@@ -9,6 +9,7 @@ pass-throughs: `apps/desktop/src-tauri/src/commands/sync.rs`.
 - `profile_store.rs`: `sync-profiles.json`, the profiles in the person's order plus last options per pair of roots.
 - `session.rs` (registry, rows, overrides), `session_compare.rs`, `session_run.rs` (confirm, run), `run_lock.rs`: one
   session per dialog over `host.rs`'s `SyncHost` seam. `wire.rs`: IPC shapes and the five events.
+- `real_paths.rs`: real paths off the session lock (roots at compare and run, custom versions folders).
 - `engine.rs` + `engine_ops.rs`: `SyncEngine` over `cmdr-operations`; `settle_sink.rs` wraps the app's sink per op.
 
 ## Must-knows
