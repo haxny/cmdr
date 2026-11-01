@@ -1718,11 +1718,12 @@ export const commands = {
       | null
     >('check_sync_keep_policy', { policy }),
   /**
-   *  Checks every input and starts a compare in the dialog's session (a new one when
-   *  `sessionId` is `None`). Answers the session id; rows follow `sync-compare-finished`.
+   *  Checks every input and starts a compare in the dialog's session (a new one, owned by
+   *  this window, when `sessionId` is `None`). Answers the session and the compare's
+   *  generation; rows follow `sync-compare-finished` of that generation.
    */
   startSyncCompare: (request: CompareRequest) =>
-    typedError<string, SyncError>(__TAURI_INVOKE('start_sync_compare', { request })),
+    typedError<CompareStarted, SyncError>(__TAURI_INVOKE('start_sync_compare', { request })),
   // Pauses or resumes the session's compare.
   setSyncComparePaused: (sessionId: string, paused: boolean) =>
     typedError<null, SyncError>(__TAURI_INVOKE('set_sync_compare_paused', { sessionId, paused })),
@@ -7905,6 +7906,14 @@ export type CompareRequest = {
   includeHidden: boolean
 }
 
+// A compare that started.
+export type CompareStarted = {
+  // Its session.
+  sessionId: string
+  // Its generation: compare events of any other generation are stale.
+  generation: number
+}
+
 /**
  *  Estimated compressed output size for a Compress operation, split by
  *  compressibility class so the frontend can re-scale to the selected deflate
@@ -7962,6 +7971,8 @@ export type ConfirmGroupKey =
 
 // What the confirm shows before a run.
 export type ConfirmPreview = {
+  // The plan revision this preview shows; the run must name it.
+  revision: number
   // The groups, in a fixed order.
   groups: ConfirmGroup[]
   // The first rows that replace a newer file with an older one.
@@ -17225,11 +17236,13 @@ export type RunReportWire = {
 
 // The confirm's accept.
 export type RunRequest = {
+  // The revision of the confirm the person accepted.
+  revision: number
   // The groups left ticked.
   groups: ConfirmGroupKey[]
   // The second yes for each guard the person released.
   acknowledged: Acknowledgement[]
-  // The Settings values, read again by the dialog.
+  // The Settings values the confirm was shown with (any other is `PlanChanged`).
   defaults: SyncDefaults
 }
 
@@ -20320,6 +20333,8 @@ export type SuggestionsChanged = {
 export type SyncCompareFinished = {
   // The session.
   sessionId: string
+  // Which compare of the session.
+  generation: number
   // How.
   outcome: CompareOutcome
 }
@@ -20328,6 +20343,8 @@ export type SyncCompareFinished = {
 export type SyncCompareProgress = {
   // The session.
   sessionId: string
+  // Which compare of the session.
+  generation: number
   // The left scan.
   left: ScanProgress
   // The right scan.
@@ -20415,8 +20432,18 @@ export type SyncError =
     }
   // A compare is still running in this session.
   | { type: 'compareRunning' }
-  // A run is going on in this session or for this pair of folders.
+  /**
+   *  A run is going on in this session, or for one of these folders, one
+   *  inside them, or one around them.
+   */
   | { type: 'runInProgress' }
+  /**
+   *  The plan or the Settings changed since the confirm the person saw:
+   *  show the confirm again.
+   */
+  | { type: 'planChanged' }
+  // A run has changed the folders since this compare: compare again.
+  | { type: 'staleCompare' }
   // An action change was refused.
   | {
       type: 'override'
