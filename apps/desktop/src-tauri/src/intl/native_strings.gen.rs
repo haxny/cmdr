@@ -109,7 +109,7 @@ pub(crate) const NATIVE_STRINGS: &[LocaleStrings] = &[
             ("menu.file.rename", "Přejmenovat"),
             ("menu.file.showInFileManager", "Zobrazit ve správci souborů"),
             ("menu.file.showInFinder", "Zobrazit ve Finderu"),
-            ("menu.file.synchronizeFolders", "Synchronize folders…"),
+            ("menu.file.synchronizeFolders", "Synchronizovat složky…"),
             ("menu.file.view", "Zobrazit"),
             ("menu.go.addToFavorites", "Přidat do oblíbených"),
             ("menu.go.back", "Zpět"),
