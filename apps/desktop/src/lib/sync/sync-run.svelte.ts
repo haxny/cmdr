@@ -145,6 +145,11 @@ class SyncRunState {
     }
   }
 
+  /** A tick changed after "the list changed": the person is checking it, so the banner has said its piece. */
+  private lookedAgain(): void {
+    if (this.notice === 'planChanged') this.notice = null
+  }
+
   /** `keys` without the groups no button releases (shown held, never ticked). */
   private releasable(keys: ConfirmGroupKey[]): ConfirmGroupKey[] {
     const preview = this.preview
@@ -157,11 +162,13 @@ class SyncRunState {
 
   toggleGroup(key: ConfirmGroupKey): void {
     if (this.preview && isHardHeld(this.preview, key)) return
+    this.lookedAgain()
     this.accepted = this.accepted.includes(key) ? this.accepted.filter((each) => each !== key) : [...this.accepted, key]
   }
 
   /** A guard's second yes ("Remove anyway", "Copy anyway"), or taking it back. */
   toggleAcknowledgement(ack: Acknowledgement): void {
+    this.lookedAgain()
     this.acknowledged = this.acknowledged.includes(ack)
       ? this.acknowledged.filter((each) => each !== ack)
       : [...this.acknowledged, ack]

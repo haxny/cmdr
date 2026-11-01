@@ -34,7 +34,8 @@
 
     const { run }: Props = $props()
 
-    let notice = $state<string | null>(null)
+    /** The person pressed Enter on a run Enter may not accept; the text follows the ticks as they change. */
+    let enterRefused = $state(false)
     let bodyEl = $state<HTMLDivElement>()
 
     const preview = $derived(run.preview)
@@ -58,12 +59,21 @@
     } as const satisfies Record<ConfirmGroup['key'], MessageKey>
 
     const block = $derived(preview ? confirmBlock(preview, run.accepted, run.acknowledged) : null)
-    /** What holds Synchronize back, said under the groups; a notice from a key press wins. */
-    const status = $derived(notice ?? (block ? blockNotice(block) : ''))
+    /** What holds Synchronize back, said under the groups, always from the ticks as they are now. */
+    const status = $derived.by(() => {
+        if (!preview) return ''
+        if (enterRefused && !enterMayConfirm(preview, run.accepted)) return tString('sync.confirm.enterRefused')
+        return block ? blockNotice(block) : ''
+    })
 
     const WAIT_KEY = {
         removeAnyway: 'sync.confirm.waitRemoveAnyway',
         copyIntoEmpty: 'sync.confirm.waitCopyAnyway',
+    } as const satisfies Record<Acknowledgement, MessageKey>
+
+    const WAIT_ROWS_KEY = {
+        removeAnyway: 'sync.confirm.waitRemoveAnywayRows',
+        copyIntoEmpty: 'sync.confirm.waitCopyAnywayRows',
     } as const satisfies Record<Acknowledgement, MessageKey>
 
     function blockNotice(why: ConfirmBlock): string {
@@ -73,8 +83,13 @@
             case 'allHeld':
                 return tString('sync.confirm.allHeld')
             case 'waiting':
+                // A group of folders alone counts no files: say "rows" rather than "0 files".
                 return why.waits
-                    .map(({ ack, files }) => tString(WAIT_KEY[ack], { files, filesText: formatNumber(files) }))
+                    .map(({ ack, files }) =>
+                        files > 0
+                            ? tString(WAIT_KEY[ack], { files, filesText: formatNumber(files) })
+                            : tString(WAIT_ROWS_KEY[ack]),
+                    )
                     .join(' ')
             default: {
                 const unreachable: never = why
@@ -115,7 +130,8 @@
         return preview?.keepIsSlow ? `${line} ${tString('sync.confirm.keepSlow')}` : line
     }
 
-    function blockText(block: GuardBlock): string {
+    /** A guard in words; `forRemovals` when it explains a held removal group (no copy wording then). */
+    function blockText(block: GuardBlock, forRemovals = false): string {
         const right = block.side === 'right'
         switch (block.type) {
             case 'maxRemove':
@@ -126,7 +142,9 @@
                 })
             case 'emptyRoot': {
                 const text = tString(right ? 'sync.confirm.emptyRootRight' : 'sync.confirm.emptyRootLeft')
-                const copiesInto = preview?.groups.some((group) => groupTarget(group.key) === block.side)
+                const copiesInto =
+                    !forRemovals &&
+                    preview?.groups.some((group) => groupTarget(group.key) === block.side && !isRemovalGroup(group.key))
                 return copiesInto ? `${text} ${tString('sync.confirm.emptyRootCopies')}` : text
             }
             case 'sentinelMissing':
@@ -149,11 +167,9 @@
     })
 
     function accept(): void {
-        if (block) {
-            notice = blockNotice(block)
-            return
-        }
-        notice = null
+        // The status already says why; a press doesn't run, and the button is `aria-disabled`.
+        if (block) return
+        enterRefused = false
         void run.accept()
     }
 
@@ -171,7 +187,7 @@
         if (event.key !== 'Enter' || event.isComposing || !plain) return
         event.preventDefault()
         if (preview && enterMayConfirm(preview, run.accepted)) accept()
-        else notice = tString('sync.confirm.enterRefused')
+        else enterRefused = true
     }
 </script>
 
@@ -253,7 +269,7 @@
                                 }}>{groupLabel(group)}</Checkbox
                             >
                             {#if keep}<p class="keep" id="sync-confirm-keep-{group.key}">{keep}</p>{/if}
-                            {#if held}<p class="keep" id="sync-confirm-held-{group.key}">{blockText(held)}</p>{/if}
+                            {#if held}<p class="keep" id="sync-confirm-held-{group.key}">{blockText(held, isRemovalGroup(group.key))}</p>{/if}
                         </li>
                     {/each}
                 </ul>
@@ -278,7 +294,7 @@
                 </section>
             {/if}
 
-            <p class="status" aria-live="polite">{status}</p>
+            <p class="status" id="sync-confirm-status" aria-live="polite">{status}</p>
         </div>
     {/if}
 
@@ -287,6 +303,7 @@
         <Button
             variant={warns ? 'danger' : 'primary'}
             ariaDisabled={run.busy || run.notice === 'staleCompare' || block !== null}
+            aria-describedby="sync-confirm-status"
             onclick={accept}>{tString('sync.confirm.run')}</Button
         >
     {/snippet}

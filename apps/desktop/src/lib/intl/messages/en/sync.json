@@ -1146,6 +1146,14 @@
       "files": "the same number, for the plural form"
     }
   },
+  "sync.confirm.waitRemoveAnywayRows": "Ticked rows wait for Remove anyway. Tick it, or untick that group.",
+  "@sync.confirm.waitRemoveAnywayRows": {
+    "description": "Synchronize folders confirm (before anything is written): why the Synchronize button is off, when the waiting removals are folders only (so a file count would read 0): they pass the removal limit and wait for the \"Remove anyway\" checkbox. \"Remove anyway\" must match that checkbox's label."
+  },
+  "sync.confirm.waitCopyAnywayRows": "Ticked rows wait for Copy anyway. Tick it, or untick that group.",
+  "@sync.confirm.waitCopyAnywayRows": {
+    "description": "Synchronize folders confirm (before anything is written): why the Synchronize button is off, when the waiting copies are folders only (so a file count would read 0): they would go into an empty folder and wait for the \"Copy anyway\" checkbox. \"Copy anyway\" must match that checkbox's label."
+  },
   "sync.confirm.allHeld": "Nothing here can run: a guard holds every group.",
   "@sync.confirm.allHeld": {
     "description": "Synchronize folders confirm (before anything is written): why the Synchronize button is off: a safety guard no button releases (a missing check file, or removals beside an empty folder) holds every group."

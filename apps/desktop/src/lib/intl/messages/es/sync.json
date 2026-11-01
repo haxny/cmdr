@@ -931,6 +931,14 @@
   "@sync.confirm.waitCopyAnyway": {
     "sourceHash": "608524e"
   },
+  "sync.confirm.waitRemoveAnywayRows": "Ticked rows wait for Remove anyway. Tick it, or untick that group.",
+  "@sync.confirm.waitRemoveAnywayRows": {
+    "sourceHash": "d89123d"
+  },
+  "sync.confirm.waitCopyAnywayRows": "Ticked rows wait for Copy anyway. Tick it, or untick that group.",
+  "@sync.confirm.waitCopyAnywayRows": {
+    "sourceHash": "a024ab1"
+  },
   "sync.confirm.allHeld": "Nothing here can run: a guard holds every group.",
   "@sync.confirm.allHeld": {
     "sourceHash": "0102efc"

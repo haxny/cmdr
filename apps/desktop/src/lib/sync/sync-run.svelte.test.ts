@@ -88,6 +88,8 @@ describe('sync run', () => {
     expect(run.preview?.revision).toBe(8)
     expect(run.accepted).toEqual(['copyRight'])
     expect(ipc.getSyncConfirm).toHaveBeenCalledTimes(2)
+    run.toggleGroup('copyRight')
+    expect(run.notice).toBeNull()
   })
 
   it('a stale compare says compare again, which closes the confirm and compares', async () => {

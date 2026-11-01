@@ -73,7 +73,10 @@ Phases: `idle` (the grid) → `confirming` → `running` / `paused` → `finishe
   removal: such a group is shown disabled with the guard's reason and never ticked (`isHardHeld`). Removals past the
   limit wait for "Remove anyway", copies into an empty root for "Copy anyway". `confirmBlock` turns Synchronize
   `aria-disabled`, with the reason under the groups, while nothing runnable is ticked, every group is held for good, or
-  a ticked group waits for its second yes ("61 files wait for Remove anyway. Tick it, or untick that group.").
+  a ticked group waits for its second yes ("61 files wait for Remove anyway. Tick it, or untick that group."; "Ticked
+  rows" when the group is folders only). That status (`sync-confirm-status`, the button's `aria-describedby`) is derived
+  from the ticks as they are now, never stored at press time, so it can't go stale; changing a tick also retires the
+  "list changed" banner.
 - **Enter.** `enterMayConfirm`: something ticked, nothing ticked held for good, no removal group ticked, no replace
   group ticked while older-replaces-newer rows exist, and no acknowledgement needed. Otherwise Enter says to press
   Synchronize. These rules only decide what the person must press: the backend's `gate` decides what runs.

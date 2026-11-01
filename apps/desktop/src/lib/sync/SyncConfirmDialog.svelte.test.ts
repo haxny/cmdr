@@ -180,6 +180,39 @@ describe('SyncConfirmDialog', () => {
     await settle()
     await tick()
     expect(button?.getAttribute('aria-disabled')).toBeNull()
+    expect(doc.querySelector('.status')?.textContent).toBe('')
+    expect(button?.getAttribute('aria-describedby')).toBe(doc.querySelector('.status')?.id)
+  })
+
+  it('the Enter refusal goes once the ticks make Enter fine, and a group of folders only isn’t counted as 0 files', async () => {
+    const shown = preview({
+      groups: [
+        { key: 'copyRight', files: 2, bytes: 20, keep: null },
+        { key: 'removeRight', files: 0, bytes: 0, keep: { type: 'trash' } },
+      ],
+      blocks: [{ type: 'maxRemove', side: 'right', removals: 3, targetFiles: 4 }],
+    })
+    const { doc } = await mountConfirm(shown)
+    expect(doc.querySelector('.status')?.textContent).toBe(
+      'Ticked rows wait for Remove anyway. Tick it, or untick that group.',
+    )
+    press(doc, { key: 'Enter' })
+    await settle()
+    expect(doc.querySelector('.status')?.textContent).toContain('Press Synchronize to run this')
+    const removal = [...doc.querySelectorAll<HTMLElement>('.groups input[type="checkbox"]')].at(-1)
+    removal?.click()
+    await settle()
+    await tick()
+    expect(doc.querySelector('.status')?.textContent).toBe('')
+  })
+
+  it('a removal held beside an empty root never reads as waiting for Copy anyway', async () => {
+    const shown = preview({
+      groups: [{ key: 'removeRight', files: 2, bytes: 2, keep: { type: 'trash' } }],
+      blocks: [{ type: 'emptyRoot', side: 'right' }],
+    })
+    const { doc } = await mountConfirm(shown)
+    expect(doc.body.textContent).not.toContain('Copy anyway')
   })
 
   it('a group no button releases is shown held, with why, and Synchronize says nothing can run', async () => {
