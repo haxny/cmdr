@@ -745,7 +745,7 @@
   "@menu.file.editTags": {
     "sourceHash": "ca536ed"
   },
-  "menu.file.synchronizeFolders": "Synchronize folders…",
+  "menu.file.synchronizeFolders": "Synchronizovat složky…",
   "@menu.file.synchronizeFolders": {
     "sourceHash": "6afcd31"
   },

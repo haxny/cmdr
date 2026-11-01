@@ -1071,6 +1071,8 @@
     "confidence": "high",
     "sources": "macOS Finder (Název:, Zadejte nový název položky), SystemSettings (Název); Double Commander (Název); MC; MS (název)",
     "exceptions": {
+      "sync.confirm.sentinelLeft": "names is the verb (the file Settings names), not a file name",
+      "sync.confirm.sentinelRight": "names is the verb (the file Settings names), not a file name",
       "multiRename.tags.write.sideWhy.readerDisagree": "\"name\" is the verb (the tracks name different narrators → uvádějí), not a file name."
     }
   },
@@ -1115,6 +1117,10 @@
     "forms": "f.: shares on {server} → sdílené složky na serveru {server}; SMB share → sdílená složka SMB; Connect to share → Připojit se ke sdílené složce",
     "confidence": "high",
     "sources": "macOS Finder (Get Info Sdílená složka; Určitě chcete tyto sdílené složky smazat?); MS terminology (shared folder → sdílená složka); TC (Sdílet složku)",
+    "exceptions": {
+      "settings.sync.guards.maxRemovePercent.label": "share means a proportion of the files here, not an SMB share (podíl)",
+      "settings.sync.guards.maxRemovePercent.description": "share means a proportion of the files here, not an SMB share (podíl)"
+    },
     "note": "English-sense exclusion: share as a verb meaning pass along; consider a notMatch on the concept"
   },
   "new-file": {
@@ -1501,7 +1507,11 @@
     "accept": ["ulož", "uklád"],
     "forms": "button → Uložit; saved → uloženo",
     "confidence": "high",
-    "sources": "macOS AppKit/SystemSettings (Uložit); DC; MS (uložit)"
+    "sources": "macOS AppKit/SystemSettings (Uložit); DC; MS (uložit)",
+    "exceptions": {
+      "settings.sync.compare.ignoreHourShift.description": "daylight saving time (letní čas), not saving a file",
+      "sync.profiles.clash": "save over it is rendered as přepsat, the action the Replace button performs"
+    }
   },
   "scan": {
     "chosen": "prohledávání",
@@ -1968,7 +1978,10 @@
     "accept": ["verz"],
     "forms": "f.: gen. pl. verzí",
     "confidence": "high",
-    "sources": "macOS Finder/SystemSettings (Verze); DC; Dolphin; MS (verze)"
+    "sources": "macOS Finder/SystemSettings (Verze); DC; Dolphin; MS (verze)",
+    "exceptions": {
+      "settings.sync.keep.problem.targetFolder": "versions is the literal example folder name .cmdr-sync/versions"
+    }
   },
   "view-mode": {
     "chosen": "režim zobrazení",
@@ -2278,6 +2291,8 @@
     "confidence": "high",
     "sources": "standard Czech; macOS SystemSettings durations",
     "exceptions": {
+      "settings.sync.compare.timeTolerance.unit": "unit suffix after a number input; the abbreviation s stays correct for any count",
+      "sync.confirm.enterRefused": "a second yes means a second confirmation, not a duration",
       "errors.listing.temporarilyUnavailable.explanation": "the string names seconds (během několika sekund), not hours",
       "settings.network.customTimeoutUnit": "unit suffix after a number input; the abbreviation s stays correct for any count, where sekund/sekundy would need the number"
     },
@@ -2429,7 +2444,10 @@
     "accept": ["synchroniz"],
     "forms": "live-synced → průběžně synchronizované",
     "confidence": "high",
-    "sources": "Finder Sync Desktop & Documents folders → Synchronizovat složky Plocha a Dokumenty; MS sync → synchronizovat"
+    "sources": "Finder Sync Desktop & Documents folders → Synchronizovat složky Plocha a Dokumenty; MS sync → synchronizovat",
+    "exceptions": {
+      "settings.sync.keep.problem.targetFolder": "sync is part of the literal folder name .cmdr-sync/"
+    }
   },
   "technical-details": {
     "chosen": "technické podrobnosti",

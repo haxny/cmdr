@@ -1,1213 +1,1214 @@
 {
-  "sync.dialog.title": "Synchronize folders",
+  "sync.dialog.title": "Synchronizovat složky",
   "@sync.dialog.title": {
     "sourceHash": "1ff942e"
   },
-  "sync.dialog.close": "Close",
+  "sync.dialog.close": "Zavřít",
   "@sync.dialog.close": {
     "sourceHash": "7d9eb7a"
   },
-  "sync.dialog.compare": "Compare",
+  "sync.dialog.compare": "Porovnat",
   "@sync.dialog.compare": {
     "sourceHash": "e888155"
   },
-  "sync.dialog.compareAgain": "Compare again",
+  "sync.dialog.compareAgain": "Porovnat znovu",
   "@sync.dialog.compareAgain": {
     "sourceHash": "502f6db"
   },
-  "sync.dialog.synchronize": "Synchronize…",
+  "sync.dialog.synchronize": "Synchronizovat…",
   "@sync.dialog.synchronize": {
     "sourceHash": "39a4e73"
   },
-  "sync.dialog.synchronizeNeedsCompare": "Compare the folders first, then review the list before you synchronize.",
+  "sync.dialog.synchronizeNeedsCompare": "Nejdřív složky porovnej, pak seznam posuď a synchronizuj.",
   "@sync.dialog.synchronizeNeedsCompare": {
     "sourceHash": "9ce4882"
   },
-  "sync.dialog.pause": "Pause",
+  "sync.dialog.pause": "Pozastavit",
   "@sync.dialog.pause": {
     "sourceHash": "858e4ba"
   },
-  "sync.dialog.resume": "Resume",
+  "sync.dialog.resume": "Pokračovat",
   "@sync.dialog.resume": {
     "sourceHash": "d640c74"
   },
-  "sync.dialog.stop": "Stop",
+  "sync.dialog.stop": "Zastavit",
   "@sync.dialog.stop": {
     "sourceHash": "cae7d57"
   },
-  "sync.dialog.stale": "The options changed since the last compare, so this list may be out of date.",
+  "sync.dialog.stale": "Od posledního porovnání se změnily možnosti, takže seznam může být zastaralý.",
   "@sync.dialog.stale": {
     "sourceHash": "f302ca1"
   },
-  "sync.dialog.staleFolders": "A synchronization changed these folders since this compare.",
+  "sync.dialog.staleFolders": "Od tohoto porovnání tyto složky změnila synchronizace.",
   "@sync.dialog.staleFolders": {
     "sourceHash": "122cdad"
   },
-  "sync.dialog.comparing": "Comparing… {leftFilesText} {leftFiles, plural, one {file} other {files}} on the left, {rightFilesText} {rightFiles, plural, one {file} other {files}} on the right",
+  "sync.dialog.comparing": "Porovnávání… {leftFilesText} {leftFiles, plural, one {soubor} few {soubory} many {souboru} other {souborů}} vlevo, {rightFilesText} {rightFiles, plural, one {soubor} few {soubory} many {souboru} other {souborů}} vpravo",
   "@sync.dialog.comparing": {
     "sourceHash": "7aeda14"
   },
-  "sync.dialog.comparingContent": "Comparing content: {doneText} of {totalText} {total, plural, one {pair} other {pairs}}",
+  "sync.dialog.comparingContent": "Porovnávání obsahu: {doneText} z {totalText} {total, plural, one {dvojice} few {dvojic} many {dvojice} other {dvojic}}",
   "@sync.dialog.comparingContent": {
     "sourceHash": "357b725"
   },
-  "sync.dialog.paused": "Compare paused",
+  "sync.dialog.paused": "Porovnávání pozastaveno",
   "@sync.dialog.paused": {
     "sourceHash": "a352b90"
   },
-  "sync.dialog.stopped": "Compare stopped",
+  "sync.dialog.stopped": "Porovnávání zastaveno",
   "@sync.dialog.stopped": {
     "sourceHash": "71cbf3a"
   },
-  "sync.dialog.optionsNotSaved": "Synchronize folders couldn’t remember the options for these two folders, so they start from the defaults next time.",
+  "sync.dialog.optionsNotSaved": "Synchronizace složek si možnosti pro tyto dvě složky nezapamatovala, takže příště začnou od výchozích.",
   "@sync.dialog.optionsNotSaved": {
     "sourceHash": "ed2391a"
   },
-  "sync.dialog.needsTwoFolders": "Synchronize folders needs a folder in each pane.",
+  "sync.dialog.needsTwoFolders": "Synchronizace složek potřebuje složku v každém panelu.",
   "@sync.dialog.needsTwoFolders": {
     "sourceHash": "21e8d4a"
   },
-  "sync.dialog.optionsLabel": "Options",
+  "sync.dialog.optionsLabel": "Možnosti",
   "@sync.dialog.optionsLabel": {
     "sourceHash": "d0db8b5"
   },
-  "sync.options.left": "Left",
+  "sync.options.left": "Vlevo",
   "@sync.options.left": {
     "sourceHash": "58eb903"
   },
-  "sync.options.right": "Right",
+  "sync.options.right": "Vpravo",
   "@sync.options.right": {
     "sourceHash": "883361d"
   },
-  "sync.options.swap": "Swap sides",
+  "sync.options.swap": "Zaměnit strany",
   "@sync.options.swap": {
     "sourceHash": "f2059d5"
   },
-  "sync.options.mode": "Mode",
+  "sync.options.mode": "Režim",
   "@sync.options.mode": {
     "sourceHash": "5e23ec6"
   },
-  "sync.options.mode.compareOnly": "Compare only",
+  "sync.options.mode.compareOnly": "Jen porovnat",
   "@sync.options.mode.compareOnly": {
     "sourceHash": "4216074"
   },
-  "sync.options.mode.bothWays": "Both ways",
+  "sync.options.mode.bothWays": "Obousměrně",
   "@sync.options.mode.bothWays": {
     "sourceHash": "843f1d3"
   },
-  "sync.options.mode.update": "Update →",
+  "sync.options.mode.update": "Aktualizovat →",
   "@sync.options.mode.update": {
     "sourceHash": "3388794"
   },
-  "sync.options.mode.mirror": "Mirror →",
+  "sync.options.mode.mirror": "Zrcadlit →",
   "@sync.options.mode.mirror": {
     "sourceHash": "69024e1"
   },
-  "sync.options.modeHint.compareOnly": "Shows what differs and changes nothing unless you set an action on a row.",
+  "sync.options.modeHint.compareOnly": "Ukáže rozdíly a nic nezmění, dokud u řádku nenastavíš akci.",
   "@sync.options.modeHint.compareOnly": {
     "sourceHash": "24471be"
   },
-  "sync.options.modeHint.bothWays": "Copies missing and newer files each way. Never removes anything.",
+  "sync.options.modeHint.bothWays": "Zkopíruje chybějící a novější soubory oběma směry. Nikdy nic neodstraní.",
   "@sync.options.modeHint.bothWays": {
     "sourceHash": "ca2cc1e"
   },
-  "sync.options.modeHint.update": "Copies missing and newer files from left to right. Never removes anything.",
+  "sync.options.modeHint.update": "Zkopíruje chybějící a novější soubory zleva doprava. Nikdy nic neodstraní.",
   "@sync.options.modeHint.update": {
     "sourceHash": "7e25750"
   },
-  "sync.options.modeHint.mirror": "Makes the right folder match the left: copies, replaces, and removes on the right. Replaced and removed files are kept.",
+  "sync.options.modeHint.mirror": "Upraví pravou složku tak, aby odpovídala levé: vpravo kopíruje, nahrazuje a odstraňuje. Nahrazené a odstraněné soubory se zachovají.",
   "@sync.options.modeHint.mirror": {
     "sourceHash": "f227db6"
   },
-  "sync.options.compareBy": "Compare by",
+  "sync.options.compareBy": "Způsob porovnání",
   "@sync.options.compareBy": {
     "sourceHash": "f551d7e"
   },
-  "sync.options.compareBy.dateAndSize": "Date and size",
+  "sync.options.compareBy.dateAndSize": "Datum a velikost",
   "@sync.options.compareBy.dateAndSize": {
     "sourceHash": "bae1230"
   },
-  "sync.options.compareBy.sizeOnly": "Size only",
+  "sync.options.compareBy.sizeOnly": "Jen velikost",
   "@sync.options.compareBy.sizeOnly": {
     "sourceHash": "e8ee9bb"
   },
-  "sync.options.compareBy.content": "Content",
+  "sync.options.compareBy.content": "Obsah",
   "@sync.options.compareBy.content": {
     "sourceHash": "47bd290"
   },
-  "sync.options.subfolders": "Subfolders",
+  "sync.options.subfolders": "Podsložky",
   "@sync.options.subfolders": {
     "sourceHash": "0e4012d"
   },
-  "sync.options.onlySelected": "Only selected",
+  "sync.options.onlySelected": "Jen vybrané",
   "@sync.options.onlySelected": {
     "sourceHash": "c1792bf"
   },
-  "sync.options.ignoreDate": "Ignore date",
+  "sync.options.ignoreDate": "Ignorovat datum",
   "@sync.options.ignoreDate": {
     "sourceHash": "34e0197"
   },
-  "sync.options.emptyFolders": "Empty folders",
+  "sync.options.emptyFolders": "Prázdné složky",
   "@sync.options.emptyFolders": {
     "sourceHash": "d3c51b8"
   },
-  "sync.options.masks": "Files",
+  "sync.options.masks": "Soubory",
   "@sync.options.masks": {
     "sourceHash": "abc7e98"
   },
-  "sync.options.masksPlaceholder": "All files",
+  "sync.options.masksPlaceholder": "Všechny soubory",
   "@sync.options.masksPlaceholder": {
     "sourceHash": "8669569"
   },
-  "sync.options.masksHint": "Masks like *.pdf *.docx. Masks after | are left out. A trailing / means a folder.",
+  "sync.options.masksHint": "Masky jako *.pdf *.docx. Masky za | se vynechají. Lomítko na konci znamená složku.",
   "@sync.options.masksHint": {
     "sourceHash": "25df144"
   },
-  "sync.options.excludes": "Leave out",
+  "sync.options.excludes": "Vynechat",
   "@sync.options.excludes": {
     "sourceHash": "6c6f2d1"
   },
-  "sync.options.excludesHint": "Names never compared, separated by ;. A trailing / means a folder.",
+  "sync.options.excludesHint": "Názvy, které se nikdy neporovnávají, oddělené znakem ;. Lomítko na konci znamená složku.",
   "@sync.options.excludesHint": {
     "sourceHash": "66bc91d"
   },
-  "sync.filters.label": "Show",
+  "sync.filters.label": "Zobrazit",
   "@sync.filters.label": {
     "sourceHash": "0df6f1c"
   },
-  "sync.filters.toRight": "To the right",
+  "sync.filters.toRight": "Doprava",
   "@sync.filters.toRight": {
     "sourceHash": "b829675"
   },
-  "sync.filters.equal": "Equal",
+  "sync.filters.equal": "Shodné",
   "@sync.filters.equal": {
     "sourceHash": "374c252"
   },
-  "sync.filters.different": "Different",
+  "sync.filters.different": "Odlišné",
   "@sync.filters.different": {
     "sourceHash": "e9cdbd4"
   },
-  "sync.filters.toLeft": "To the left",
+  "sync.filters.toLeft": "Doleva",
   "@sync.filters.toLeft": {
     "sourceHash": "5461597"
   },
-  "sync.filters.duplicates": "On both sides",
+  "sync.filters.duplicates": "Na obou stranách",
   "@sync.filters.duplicates": {
     "sourceHash": "4f6a5ad"
   },
-  "sync.filters.singles": "On one side",
+  "sync.filters.singles": "Na jedné straně",
   "@sync.filters.singles": {
     "sourceHash": "b65c16f"
   },
-  "sync.filters.unknown": "Undecided",
+  "sync.filters.unknown": "Nerozhodnuto",
   "@sync.filters.unknown": {
     "sourceHash": "00cc364"
   },
-  "sync.filters.warningsOnly": "Warnings only",
+  "sync.filters.warningsOnly": "Jen varování",
   "@sync.filters.warningsOnly": {
     "sourceHash": "5dae172"
   },
-  "sync.filters.hiddenMark": "Some rows are hidden",
+  "sync.filters.hiddenMark": "Některé řádky jsou skryté",
   "@sync.filters.hiddenMark": {
     "sourceHash": "2d6e517"
   },
-  "sync.grid.label": "Files in both folders",
+  "sync.grid.label": "Soubory v obou složkách",
   "@sync.grid.label": {
     "sourceHash": "67b70d0"
   },
-  "sync.grid.col.mark": "Selected",
+  "sync.grid.col.mark": "Vybráno",
   "@sync.grid.col.mark": {
     "sourceHash": "57fd7a0"
   },
-  "sync.grid.col.leftName": "Left name",
+  "sync.grid.col.leftName": "Název vlevo",
   "@sync.grid.col.leftName": {
     "sourceHash": "0af920c"
   },
-  "sync.grid.col.rightName": "Right name",
+  "sync.grid.col.rightName": "Název vpravo",
   "@sync.grid.col.rightName": {
     "sourceHash": "dcb73ab"
   },
-  "sync.grid.col.size": "Size",
+  "sync.grid.col.size": "Velikost",
   "@sync.grid.col.size": {
     "sourceHash": "1af8519"
   },
-  "sync.grid.col.date": "Date",
+  "sync.grid.col.date": "Datum",
   "@sync.grid.col.date": {
     "sourceHash": "99c40ab"
   },
-  "sync.grid.col.leftSize": "Left size",
+  "sync.grid.col.leftSize": "Velikost vlevo",
   "@sync.grid.col.leftSize": {
     "sourceHash": "7a13f1a"
   },
-  "sync.grid.col.leftDate": "Left date",
+  "sync.grid.col.leftDate": "Datum vlevo",
   "@sync.grid.col.leftDate": {
     "sourceHash": "3bf8987"
   },
-  "sync.grid.col.rightSize": "Right size",
+  "sync.grid.col.rightSize": "Velikost vpravo",
   "@sync.grid.col.rightSize": {
     "sourceHash": "d845b4d"
   },
-  "sync.grid.col.rightDate": "Right date",
+  "sync.grid.col.rightDate": "Datum vpravo",
   "@sync.grid.col.rightDate": {
     "sourceHash": "d334f12"
   },
-  "sync.grid.col.action": "Action",
+  "sync.grid.col.action": "Akce",
   "@sync.grid.col.action": {
     "sourceHash": "64cff13"
   },
-  "sync.grid.folderHeading": "{path}, folder {ordinalText} of {ofText}",
+  "sync.grid.folderHeading": "{path}, složka {ordinalText} z {ofText}",
   "@sync.grid.folderHeading": {
     "sourceHash": "f2fd750"
   },
-  "sync.grid.empty": "No rows to show. The show buttons above may be hiding some.",
+  "sync.grid.empty": "Žádné řádky k zobrazení. Některé mohou skrývat tlačítka Zobrazit nahoře.",
   "@sync.grid.empty": {
     "sourceHash": "ce62474"
   },
-  "sync.grid.identical": "The two folders match.",
+  "sync.grid.identical": "Obě složky se shodují.",
   "@sync.grid.identical": {
     "sourceHash": "a3b56e4"
   },
-  "sync.grid.rung.presence": "Decided by which side has it",
+  "sync.grid.rung.presence": "Rozhodnuto podle toho, na které straně soubor je",
   "@sync.grid.rung.presence": {
     "sourceHash": "3ee7ed2"
   },
-  "sync.grid.rung.sizeAndTime": "Decided by size and date",
+  "sync.grid.rung.sizeAndTime": "Rozhodnuto podle velikosti a data",
   "@sync.grid.rung.sizeAndTime": {
     "sourceHash": "c17930b"
   },
-  "sync.grid.rung.sizeOnly": "Decided by size",
+  "sync.grid.rung.sizeOnly": "Rozhodnuto podle velikosti",
   "@sync.grid.rung.sizeOnly": {
     "sourceHash": "049f3f5"
   },
-  "sync.grid.rung.content": "Decided by content",
+  "sync.grid.rung.content": "Rozhodnuto podle obsahu",
   "@sync.grid.rung.content": {
     "sourceHash": "5cb12f7"
   },
-  "sync.grid.pending": "Comparing content…",
+  "sync.grid.pending": "Porovnává se obsah…",
   "@sync.grid.pending": {
     "sourceHash": "7ad9bb8"
   },
-  "sync.grid.changedMark": "Changed by you",
+  "sync.grid.changedMark": "Změněno ručně",
   "@sync.grid.changedMark": {
     "sourceHash": "fa07d9e"
   },
-  "sync.grid.warningMark": "Older replaces newer",
+  "sync.grid.warningMark": "Starší nahrazuje novější",
   "@sync.grid.warningMark": {
     "sourceHash": "2cc1863"
   },
-  "sync.grid.spoken.folder": "folder",
+  "sync.grid.spoken.folder": "složka",
   "@sync.grid.spoken.folder": {
     "sourceHash": "034a006"
   },
-  "sync.grid.spoken.changedByYou": "changed by you",
+  "sync.grid.spoken.changedByYou": "změněno ručně",
   "@sync.grid.spoken.changedByYou": {
     "sourceHash": "596e389"
   },
-  "sync.grid.spoken.olderReplacesNewer": "older replaces newer",
+  "sync.grid.spoken.olderReplacesNewer": "starší nahrazuje novější",
   "@sync.grid.spoken.olderReplacesNewer": {
     "sourceHash": "ba5af96"
   },
-  "sync.grid.spoken.comparingContent": "comparing content",
+  "sync.grid.spoken.comparingContent": "porovnává se obsah",
   "@sync.grid.spoken.comparingContent": {
     "sourceHash": "780fcd4"
   },
-  "sync.grid.spoken.selected": "selected",
+  "sync.grid.spoken.selected": "vybráno",
   "@sync.grid.spoken.selected": {
     "sourceHash": "d7cbbb6"
   },
-  "sync.category.label.leftOnly": "Only on the left",
+  "sync.category.label.leftOnly": "Jen vlevo",
   "@sync.category.label.leftOnly": {
     "sourceHash": "a31c61c"
   },
-  "sync.category.spoken.leftOnly": "only on the left",
+  "sync.category.spoken.leftOnly": "jen vlevo",
   "@sync.category.spoken.leftOnly": {
     "sourceHash": "2bdda3d"
   },
-  "sync.category.label.rightOnly": "Only on the right",
+  "sync.category.label.rightOnly": "Jen vpravo",
   "@sync.category.label.rightOnly": {
     "sourceHash": "a1c7e1f"
   },
-  "sync.category.spoken.rightOnly": "only on the right",
+  "sync.category.spoken.rightOnly": "jen vpravo",
   "@sync.category.spoken.rightOnly": {
     "sourceHash": "1160a4b"
   },
-  "sync.category.label.newerLeft": "Newer on the left",
+  "sync.category.label.newerLeft": "Novější vlevo",
   "@sync.category.label.newerLeft": {
     "sourceHash": "7d13a54"
   },
-  "sync.category.spoken.newerLeft": "newer on the left",
+  "sync.category.spoken.newerLeft": "novější vlevo",
   "@sync.category.spoken.newerLeft": {
     "sourceHash": "17ec1e6"
   },
-  "sync.category.label.newerRight": "Newer on the right",
+  "sync.category.label.newerRight": "Novější vpravo",
   "@sync.category.label.newerRight": {
     "sourceHash": "eea50f2"
   },
-  "sync.category.spoken.newerRight": "newer on the right",
+  "sync.category.spoken.newerRight": "novější vpravo",
   "@sync.category.spoken.newerRight": {
     "sourceHash": "1ad1f13"
   },
-  "sync.category.label.different": "Different",
+  "sync.category.label.different": "Odlišné",
   "@sync.category.label.different": {
     "sourceHash": "e9cdbd4"
   },
-  "sync.category.spoken.different": "different",
+  "sync.category.spoken.different": "odlišné",
   "@sync.category.spoken.different": {
     "sourceHash": "9d6f965"
   },
-  "sync.category.label.equal": "Equal",
+  "sync.category.label.equal": "Shodné",
   "@sync.category.label.equal": {
     "sourceHash": "374c252"
   },
-  "sync.category.spoken.equal": "equal",
+  "sync.category.spoken.equal": "shodné",
   "@sync.category.spoken.equal": {
     "sourceHash": "f9d6cd1"
   },
-  "sync.category.label.unknown": "Can’t tell which is newer",
+  "sync.category.label.unknown": "Nelze určit, který je novější",
   "@sync.category.label.unknown": {
     "sourceHash": "ab7d81e"
   },
-  "sync.category.spoken.unknown": "can’t tell which is newer",
+  "sync.category.spoken.unknown": "nelze určit, který je novější",
   "@sync.category.spoken.unknown": {
     "sourceHash": "ffaf24f"
   },
-  "sync.category.label.typeClash": "A file on one side, a folder on the other",
+  "sync.category.label.typeClash": "Na jedné straně soubor, na druhé složka",
   "@sync.category.label.typeClash": {
     "sourceHash": "9d5669e"
   },
-  "sync.category.spoken.typeClash": "a file on one side and a folder on the other",
+  "sync.category.spoken.typeClash": "na jedné straně soubor a na druhé složka",
   "@sync.category.spoken.typeClash": {
     "sourceHash": "b30e82d"
   },
-  "sync.category.label.nameClash": "Two names here match one name there",
+  "sync.category.label.nameClash": "Dva názvy na jedné straně odpovídají jednomu na druhé",
   "@sync.category.label.nameClash": {
     "sourceHash": "6a5f493"
   },
-  "sync.category.spoken.nameClash": "two names here match one name there",
+  "sync.category.spoken.nameClash": "dva názvy na jedné straně odpovídají jednomu na druhé",
   "@sync.category.spoken.nameClash": {
     "sourceHash": "832c002"
   },
-  "sync.category.label.unreadable": "Couldn’t be read",
+  "sync.category.label.unreadable": "Nelze přečíst",
   "@sync.category.label.unreadable": {
     "sourceHash": "d642844"
   },
-  "sync.category.spoken.unreadable": "couldn’t be read",
+  "sync.category.spoken.unreadable": "nelze přečíst",
   "@sync.category.spoken.unreadable": {
     "sourceHash": "1e9c923"
   },
-  "sync.action.label.copyRight": "Copy to the right",
+  "sync.action.label.copyRight": "Kopírovat doprava",
   "@sync.action.label.copyRight": {
     "sourceHash": "2f8fc99"
   },
-  "sync.action.spoken.copyRight": "will be copied to the right",
+  "sync.action.spoken.copyRight": "bude zkopírováno doprava",
   "@sync.action.spoken.copyRight": {
     "sourceHash": "b97219d"
   },
-  "sync.action.label.copyLeft": "Copy to the left",
+  "sync.action.label.copyLeft": "Kopírovat doleva",
   "@sync.action.label.copyLeft": {
     "sourceHash": "a79b13e"
   },
-  "sync.action.spoken.copyLeft": "will be copied to the left",
+  "sync.action.spoken.copyLeft": "bude zkopírováno doleva",
   "@sync.action.spoken.copyLeft": {
     "sourceHash": "60ea4cc"
   },
-  "sync.action.label.removeRight": "Remove on the right",
+  "sync.action.label.removeRight": "Odstranit vpravo",
   "@sync.action.label.removeRight": {
     "sourceHash": "d679378"
   },
-  "sync.action.spoken.removeRight": "will be removed on the right",
+  "sync.action.spoken.removeRight": "bude odstraněno vpravo",
   "@sync.action.spoken.removeRight": {
     "sourceHash": "2c32807"
   },
-  "sync.action.label.removeLeft": "Remove on the left",
+  "sync.action.label.removeLeft": "Odstranit vlevo",
   "@sync.action.label.removeLeft": {
     "sourceHash": "fdabad9"
   },
-  "sync.action.spoken.removeLeft": "will be removed on the left",
+  "sync.action.spoken.removeLeft": "bude odstraněno vlevo",
   "@sync.action.spoken.removeLeft": {
     "sourceHash": "71eadb4"
   },
-  "sync.action.label.equal": "Nothing to do",
+  "sync.action.label.equal": "Není co dělat",
   "@sync.action.label.equal": {
     "sourceHash": "a288a34"
   },
-  "sync.action.spoken.equal": "nothing to do",
+  "sync.action.spoken.equal": "není co dělat",
   "@sync.action.spoken.equal": {
     "sourceHash": "86fcff1"
   },
-  "sync.action.label.skip": "Skip",
+  "sync.action.label.skip": "Přeskočit",
   "@sync.action.label.skip": {
     "sourceHash": "28d0359"
   },
-  "sync.action.spoken.skip": "skipped",
+  "sync.action.spoken.skip": "přeskočeno",
   "@sync.action.spoken.skip": {
     "sourceHash": "389595a"
   },
-  "sync.action.label.undecided": "Undecided",
+  "sync.action.label.undecided": "Nerozhodnuto",
   "@sync.action.label.undecided": {
     "sourceHash": "00cc364"
   },
-  "sync.action.spoken.undecided": "undecided",
+  "sync.action.spoken.undecided": "nerozhodnuto",
   "@sync.action.spoken.undecided": {
     "sourceHash": "06be3f2"
   },
-  "sync.menu.label": "Row actions",
+  "sync.menu.label": "Akce s řádky",
   "@sync.menu.label": {
     "sourceHash": "67a1892"
   },
-  "sync.menu.selected": "On the selected rows",
+  "sync.menu.selected": "U vybraných řádků",
   "@sync.menu.selected": {
     "sourceHash": "b17411a"
   },
-  "sync.menu.row": "On this row",
+  "sync.menu.row": "U tohoto řádku",
   "@sync.menu.row": {
     "sourceHash": "f2cd6c0"
   },
-  "sync.menu.defaultDirection": "Default direction",
+  "sync.menu.defaultDirection": "Výchozí směr",
   "@sync.menu.defaultDirection": {
     "sourceHash": "7c12a68"
   },
-  "sync.menu.reverse": "Reverse direction",
+  "sync.menu.reverse": "Obrátit směr",
   "@sync.menu.reverse": {
     "sourceHash": "f812330"
   },
-  "sync.menu.toggleSkip": "Skip or restore",
+  "sync.menu.toggleSkip": "Přeskočit nebo obnovit",
   "@sync.menu.toggleSkip": {
     "sourceHash": "9e09193"
   },
-  "sync.menu.compareContent": "Compare by content",
+  "sync.menu.compareContent": "Porovnat podle obsahu",
   "@sync.menu.compareContent": {
     "sourceHash": "91f9b27"
   },
-  "sync.menu.viewLeft": "View left file",
+  "sync.menu.viewLeft": "Zobrazit levý soubor",
   "@sync.menu.viewLeft": {
     "sourceHash": "c9d88fd"
   },
-  "sync.menu.viewRight": "View right file",
+  "sync.menu.viewRight": "Zobrazit pravý soubor",
   "@sync.menu.viewRight": {
     "sourceHash": "a69abe3"
   },
-  "sync.menu.editLeft": "Edit left file",
+  "sync.menu.editLeft": "Upravit levý soubor",
   "@sync.menu.editLeft": {
     "sourceHash": "d1a74ef"
   },
-  "sync.menu.editRight": "Edit right file",
+  "sync.menu.editRight": "Upravit pravý soubor",
   "@sync.menu.editRight": {
     "sourceHash": "a70a502"
   },
-  "sync.menu.quickLook": "Quick Look",
+  "sync.menu.quickLook": "Rychlý náhled",
   "@sync.menu.quickLook": {
     "sourceHash": "371e342"
   },
-  "sync.menu.copyRows": "Copy rows as text",
+  "sync.menu.copyRows": "Kopírovat řádky jako text",
   "@sync.menu.copyRows": {
     "sourceHash": "dfb526c"
   },
-  "sync.refusal.illegalForMode": "{action} isn’t possible in this mode.",
+  "sync.refusal.illegalForMode": "Akce „{action}“ není v tomto režimu možná.",
   "@sync.refusal.illegalForMode": {
     "sourceHash": "4299b36"
   },
-  "sync.refusal.illegalForCategory": "{action} isn’t possible for this row.",
+  "sync.refusal.illegalForCategory": "Akce „{action}“ není u tohoto řádku možná.",
   "@sync.refusal.illegalForCategory": {
     "sourceHash": "f4effb6"
   },
-  "sync.refusal.nothingOnLeft": "There’s nothing on the left to copy.",
+  "sync.refusal.nothingOnLeft": "Vlevo není co kopírovat.",
   "@sync.refusal.nothingOnLeft": {
     "sourceHash": "212b175"
   },
-  "sync.refusal.nothingOnRight": "There’s nothing on the right to copy.",
+  "sync.refusal.nothingOnRight": "Vpravo není co kopírovat.",
   "@sync.refusal.nothingOnRight": {
     "sourceHash": "c59909f"
   },
-  "sync.refusal.sideReadOnlyLeft": "The left side takes no changes.",
+  "sync.refusal.sideReadOnlyLeft": "Levá strana nepřijímá změny.",
   "@sync.refusal.sideReadOnlyLeft": {
     "sourceHash": "d59aec5"
   },
-  "sync.refusal.sideReadOnlyRight": "The right side takes no changes.",
+  "sync.refusal.sideReadOnlyRight": "Pravá strana nepřijímá změny.",
   "@sync.refusal.sideReadOnlyRight": {
     "sourceHash": "0f75aed"
   },
-  "sync.refusal.noRow": "Move the cursor to a file or folder row first.",
+  "sync.refusal.noRow": "Nejdřív přesuň kurzor na řádek se souborem nebo složkou.",
   "@sync.refusal.noRow": {
     "sourceHash": "b48d716"
   },
-  "sync.refusal.noFile": "There’s no file on that side.",
+  "sync.refusal.noFile": "Na té straně není žádný soubor.",
   "@sync.refusal.noFile": {
     "sourceHash": "cac9e8b"
   },
-  "sync.refusal.notAFile": "Only a file can be opened, not a folder.",
+  "sync.refusal.notAFile": "Otevřít lze jen soubor, ne složku.",
   "@sync.refusal.notAFile": {
     "sourceHash": "1d3051a"
   },
-  "sync.refusal.quickLookUnavailable": "Quick Look works only for files on this Mac.",
+  "sync.refusal.quickLookUnavailable": "Rychlý náhled funguje jen u souborů na tomto Macu.",
   "@sync.refusal.quickLookUnavailable": {
     "sourceHash": "3bd6997"
   },
-  "sync.skipped.illegalForMode": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: {action} isn’t possible in this mode.",
+  "sync.skipped.illegalForMode": "{count, plural, one {{countText} řádek nebyl změněn} few {{countText} řádky nebyly změněny} many {{countText} řádku nebylo změněno} other {{countText} řádků nebylo změněno}}: akce „{action}“ není v tomto režimu možná.",
   "@sync.skipped.illegalForMode": {
     "sourceHash": "7eb1dbd"
   },
-  "sync.skipped.illegalForCategory": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: {action} isn’t possible for {count, plural, one {that row} other {those rows}}.",
+  "sync.skipped.illegalForCategory": "{count, plural, one {{countText} řádek nebyl změněn} few {{countText} řádky nebyly změněny} many {{countText} řádku nebylo změněno} other {{countText} řádků nebylo změněno}}: akce „{action}“ není u {count, plural, one {tohoto řádku} few {těchto řádků} many {těchto řádků} other {těchto řádků}} možná.",
   "@sync.skipped.illegalForCategory": {
     "sourceHash": "a78ce68"
   },
-  "sync.skipped.nothingOnLeft": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: there’s nothing on the left to copy.",
+  "sync.skipped.nothingOnLeft": "{count, plural, one {{countText} řádek nebyl změněn} few {{countText} řádky nebyly změněny} many {{countText} řádku nebylo změněno} other {{countText} řádků nebylo změněno}}: vlevo není co kopírovat.",
   "@sync.skipped.nothingOnLeft": {
     "sourceHash": "d5943c6"
   },
-  "sync.skipped.nothingOnRight": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: there’s nothing on the right to copy.",
+  "sync.skipped.nothingOnRight": "{count, plural, one {{countText} řádek nebyl změněn} few {{countText} řádky nebyly změněny} many {{countText} řádku nebylo změněno} other {{countText} řádků nebylo změněno}}: vpravo není co kopírovat.",
   "@sync.skipped.nothingOnRight": {
     "sourceHash": "33fd9ae"
   },
-  "sync.skipped.sideReadOnlyLeft": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: the left side takes no changes.",
+  "sync.skipped.sideReadOnlyLeft": "{count, plural, one {{countText} řádek nebyl změněn} few {{countText} řádky nebyly změněny} many {{countText} řádku nebylo změněno} other {{countText} řádků nebylo změněno}}: levá strana nepřijímá změny.",
   "@sync.skipped.sideReadOnlyLeft": {
     "sourceHash": "c0d8aca"
   },
-  "sync.skipped.sideReadOnlyRight": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: the right side takes no changes.",
+  "sync.skipped.sideReadOnlyRight": "{count, plural, one {{countText} řádek nebyl změněn} few {{countText} řádky nebyly změněny} many {{countText} řádku nebylo změněno} other {{countText} řádků nebylo změněno}}: pravá strana nepřijímá změny.",
   "@sync.skipped.sideReadOnlyRight": {
     "sourceHash": "2acb0e2"
   },
-  "sync.skipped.cantReverse": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: only a copy between two existing files, or a removal, can be reversed.",
+  "sync.skipped.cantReverse": "{count, plural, one {{countText} řádek nebyl změněn} few {{countText} řádky nebyly změněny} many {{countText} řádku nebylo změněno} other {{countText} řádků nebylo změněno}}: obrátit lze jen kopírování mezi dvěma existujícími soubory nebo odstranění.",
   "@sync.skipped.cantReverse": {
     "sourceHash": "c1b8d39"
   },
-  "sync.skipped.nothingToToggle": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: there was no action to skip or restore.",
+  "sync.skipped.nothingToToggle": "{count, plural, one {{countText} řádek nebyl změněn} few {{countText} řádky nebyly změněny} many {{countText} řádku nebylo změněno} other {{countText} řádků nebylo změněno}}: nebyla tu žádná akce k přeskočení nebo obnovení.",
   "@sync.skipped.nothingToToggle": {
     "sourceHash": "22d2691"
   },
-  "sync.skipped.hidden": "{countText} hidden {count, plural, one {row wasn’t} other {rows weren’t}} changed.",
+  "sync.skipped.hidden": "{count, plural, one {{countText} skrytý řádek nebyl změněn} few {{countText} skryté řádky nebyly změněny} many {{countText} skrytého řádku nebylo změněno} other {{countText} skrytých řádků nebylo změněno}}.",
   "@sync.skipped.hidden": {
     "sourceHash": "b87676c"
   },
-  "sync.summary.label": "Summary",
+  "sync.summary.label": "Souhrn",
   "@sync.summary.label": {
     "sourceHash": "8e76a94"
   },
-  "sync.summary.toRight": "To the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.summary.toRight": "Doprava: {filesText} {files, plural, one {soubor} few {soubory} many {souboru} other {souborů}}, {size}",
   "@sync.summary.toRight": {
     "sourceHash": "febef53"
   },
-  "sync.summary.toLeft": "To the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.summary.toLeft": "Doleva: {filesText} {files, plural, one {soubor} few {soubory} many {souboru} other {souborů}}, {size}",
   "@sync.summary.toLeft": {
     "sourceHash": "d6450e4"
   },
-  "sync.summary.removeRight": "{countText} to remove on the right",
+  "sync.summary.removeRight": "{countText} k odstranění vpravo",
   "@sync.summary.removeRight": {
     "sourceHash": "6dc7467"
   },
-  "sync.summary.removeLeft": "{countText} to remove on the left",
+  "sync.summary.removeLeft": "{countText} k odstranění vlevo",
   "@sync.summary.removeLeft": {
     "sourceHash": "bc7a9bd"
   },
-  "sync.summary.equal": "{countText} equal",
+  "sync.summary.equal": "{countText} shodných",
   "@sync.summary.equal": {
     "sourceHash": "ba1cdb1"
   },
-  "sync.summary.different": "{countText} different",
+  "sync.summary.different": "{countText} odlišných",
   "@sync.summary.different": {
     "sourceHash": "ed162b7"
   },
-  "sync.summary.uniqueLeft": "{countText} only on the left",
+  "sync.summary.uniqueLeft": "{countText} jen vlevo",
   "@sync.summary.uniqueLeft": {
     "sourceHash": "9e9f562"
   },
-  "sync.summary.uniqueRight": "{countText} only on the right",
+  "sync.summary.uniqueRight": "{countText} jen vpravo",
   "@sync.summary.uniqueRight": {
     "sourceHash": "117953a"
   },
-  "sync.summary.undecided": "{countText} undecided",
+  "sync.summary.undecided": "{countText} nerozhodnutých",
   "@sync.summary.undecided": {
     "sourceHash": "6f9b86d"
   },
-  "sync.summary.skipped": "{countText} skipped",
+  "sync.summary.skipped": "{countText} přeskočených",
   "@sync.summary.skipped": {
     "sourceHash": "6a15f48"
   },
-  "sync.summary.notComparable": "{countText} not comparable",
+  "sync.summary.notComparable": "{countText} nelze porovnat",
   "@sync.summary.notComparable": {
     "sourceHash": "1eaadfa"
   },
-  "sync.summary.changedByYou": "{countText} changed by you",
+  "sync.summary.changedByYou": "{countText} změněno ručně",
   "@sync.summary.changedByYou": {
     "sourceHash": "ac9dbe6"
   },
-  "sync.summary.hiddenActions": "{countText} hidden {count, plural, one {action} other {actions}}",
+  "sync.summary.hiddenActions": "{count, plural, one {{countText} skrytá akce} few {{countText} skryté akce} many {{countText} skryté akce} other {{countText} skrytých akcí}}",
   "@sync.summary.hiddenActions": {
     "sourceHash": "0a3d807"
   },
-  "sync.summary.warnings": "{countText} older {count, plural, one {file replaces a newer one} other {files replace newer ones}}",
+  "sync.summary.warnings": "{count, plural, one {{countText} starší soubor nahrazuje novější} few {{countText} starší soubory nahrazují novější} many {{countText} staršího souboru nahrazuje novější} other {{countText} starších souborů nahrazuje novější}}",
   "@sync.summary.warnings": {
     "sourceHash": "c73c6e3"
   },
-  "sync.summary.guard.maxRemoveLeft": "Mirror would remove {percentText} of the left side: held until you confirm.",
+  "sync.summary.guard.maxRemoveLeft": "Zrcadlení by odstranilo {percentText} obsahu levé strany: čeká na tvé potvrzení.",
   "@sync.summary.guard.maxRemoveLeft": {
     "sourceHash": "9a1d36e"
   },
-  "sync.summary.guard.maxRemoveRight": "Mirror would remove {percentText} of the right side: held until you confirm.",
+  "sync.summary.guard.maxRemoveRight": "Zrcadlení by odstranilo {percentText} obsahu pravé strany: čeká na tvé potvrzení.",
   "@sync.summary.guard.maxRemoveRight": {
     "sourceHash": "3791713"
   },
-  "sync.summary.guard.emptyRootLeft": "The left folder is empty: removals are held, and copies into it wait for your OK.",
+  "sync.summary.guard.emptyRootLeft": "Levá složka je prázdná: odstranění jsou zadržena a kopírování do ní čeká na tvé potvrzení.",
   "@sync.summary.guard.emptyRootLeft": {
     "sourceHash": "79e52f9"
   },
-  "sync.summary.guard.emptyRootRight": "The right folder is empty: removals are held, and copies into it wait for your OK.",
+  "sync.summary.guard.emptyRootRight": "Pravá složka je prázdná: odstranění jsou zadržena a kopírování do ní čeká na tvé potvrzení.",
   "@sync.summary.guard.emptyRootRight": {
     "sourceHash": "9c70bae"
   },
-  "sync.summary.guard.sentinelMissingLeft": "The check file from Settings is missing on the left, so nothing runs.",
+  "sync.summary.guard.sentinelMissingLeft": "Kontrolní soubor z Nastavení vlevo chybí, takže se nespustí nic.",
   "@sync.summary.guard.sentinelMissingLeft": {
     "sourceHash": "ffcd175"
   },
-  "sync.summary.guard.sentinelMissingRight": "The check file from Settings is missing on the right, so nothing runs.",
+  "sync.summary.guard.sentinelMissingRight": "Kontrolní soubor z Nastavení vpravo chybí, takže se nespustí nic.",
   "@sync.summary.guard.sentinelMissingRight": {
     "sourceHash": "38f3312"
   },
-  "sync.summary.skew": "Most times on the right differ from the left by {secondsText} {seconds, plural, one {second} other {seconds}}. A clock may be off.",
+  "sync.summary.skew": "Většina časů vpravo se od levých liší o {secondsText} {seconds, plural, one {sekundu} few {sekundy} many {sekundy} other {sekund}}. Možná jdou hodiny špatně.",
   "@sync.summary.skew": {
     "sourceHash": "06306cc"
   },
-  "sync.error.noSuchSession": "This comparison was closed. Compare again.",
+  "sync.error.noSuchSession": "Toto porovnání bylo zavřeno. Porovnej znovu.",
   "@sync.error.noSuchSession": {
     "sourceHash": "60d4518"
   },
-  "sync.error.noSuchItem": "That row isn’t in the list anymore. Compare again.",
+  "sync.error.noSuchItem": "Tento řádek už v seznamu není. Porovnej znovu.",
   "@sync.error.noSuchItem": {
     "sourceHash": "c1ab646"
   },
-  "sync.error.notCompared": "Nothing is compared yet. Press Compare.",
+  "sync.error.notCompared": "Zatím nic není porovnáno. Stiskni Porovnat.",
   "@sync.error.notCompared": {
     "sourceHash": "f246639"
   },
-  "sync.error.volumeNotConnectedLeft": "The left folder’s drive or server isn’t connected. Connect it, then compare again.",
+  "sync.error.volumeNotConnectedLeft": "Disk nebo server levé složky není připojený. Připoj ho a porovnej znovu.",
   "@sync.error.volumeNotConnectedLeft": {
     "sourceHash": "2840f67"
   },
-  "sync.error.volumeNotConnectedRight": "The right folder’s drive or server isn’t connected. Connect it, then compare again.",
+  "sync.error.volumeNotConnectedRight": "Disk nebo server pravé složky není připojený. Připoj ho a porovnej znovu.",
   "@sync.error.volumeNotConnectedRight": {
     "sourceHash": "ae98d41"
   },
-  "sync.error.rootUnreachableLeft": "The left folder can’t be opened. It may be on a drive that isn’t mounted.",
+  "sync.error.rootUnreachableLeft": "Levou složku nelze otevřít. Možná je na disku, který není připojený.",
   "@sync.error.rootUnreachableLeft": {
     "sourceHash": "063f078"
   },
-  "sync.error.rootUnreachableRight": "The right folder can’t be opened. It may be on a drive that isn’t mounted.",
+  "sync.error.rootUnreachableRight": "Pravou složku nelze otevřít. Možná je na disku, který není připojený.",
   "@sync.error.rootUnreachableRight": {
     "sourceHash": "f738917"
   },
-  "sync.error.badPathLeft": "The left folder’s path can’t be used.",
+  "sync.error.badPathLeft": "Cestu k levé složce nelze použít.",
   "@sync.error.badPathLeft": {
     "sourceHash": "e999afa"
   },
-  "sync.error.badPathRight": "The right folder’s path can’t be used.",
+  "sync.error.badPathRight": "Cestu k pravé složce nelze použít.",
   "@sync.error.badPathRight": {
     "sourceHash": "604ed0c"
   },
-  "sync.error.sameFolder": "Both sides show the same folder. Open two different folders.",
+  "sync.error.sameFolder": "Obě strany zobrazují stejnou složku. Otevři dvě různé složky.",
   "@sync.error.sameFolder": {
     "sourceHash": "95aa96b"
   },
-  "sync.error.nestedLeft": "The right folder is inside the left one. Open two folders apart from each other.",
+  "sync.error.nestedLeft": "Pravá složka je uvnitř levé. Otevři dvě složky, které nejsou jedna v druhé.",
   "@sync.error.nestedLeft": {
     "sourceHash": "821516b"
   },
-  "sync.error.nestedRight": "The left folder is inside the right one. Open two folders apart from each other.",
+  "sync.error.nestedRight": "Levá složka je uvnitř pravé. Otevři dvě složky, které nejsou jedna v druhé.",
   "@sync.error.nestedRight": {
     "sourceHash": "c503a70"
   },
-  "sync.error.maskEmpty": "One of the masks is empty. Check for a | or a ; with nothing after it.",
+  "sync.error.maskEmpty": "Jedna z masek je prázdná. Zkontroluj, jestli za znakem | nebo ; něco nechybí.",
   "@sync.error.maskEmpty": {
     "sourceHash": "cbfdcb6"
   },
-  "sync.error.maskQuote": "A quote in the masks never closes.",
+  "sync.error.maskQuote": "V maskách je neuzavřená uvozovka.",
   "@sync.error.maskQuote": {
     "sourceHash": "7346bec"
   },
-  "sync.error.maskSecondBar": "The masks have more than one |. Put every mask to leave out after one |.",
+  "sync.error.maskSecondBar": "V maskách je víc než jeden znak |. Všechny masky k vynechání dej za jediný znak |.",
   "@sync.error.maskSecondBar": {
     "sourceHash": "958ad3e"
   },
-  "sync.error.badSettings": "A Synchronize folders setting is out of range. Check it in Settings.",
+  "sync.error.badSettings": "Některé nastavení Synchronizace složek je mimo povolený rozsah. Zkontroluj ho v Nastavení.",
   "@sync.error.badSettings": {
     "sourceHash": "598edeb"
   },
-  "sync.error.keepFolderUnreadable": "The versions folder from Settings doesn’t answer, so Cmdr can’t check that it lies outside these folders.",
+  "sync.error.keepFolderUnreadable": "Složka s verzemi z Nastavení neodpovídá, takže Cmdr nemůže ověřit, že leží mimo tyto složky.",
   "@sync.error.keepFolderUnreadable": {
     "sourceHash": "6ead151"
   },
-  "sync.error.keep": "The versions folder from Settings can’t be used for these folders.",
+  "sync.error.keep": "Složku s verzemi z Nastavení nelze pro tyto složky použít.",
   "@sync.error.keep": {
     "sourceHash": "9d1a597"
   },
-  "sync.error.sideReadOnlyLeft": "The left side takes no changes, and this mode would write there.",
+  "sync.error.sideReadOnlyLeft": "Levá strana nepřijímá změny a tento režim by tam zapisoval.",
   "@sync.error.sideReadOnlyLeft": {
     "sourceHash": "361b241"
   },
-  "sync.error.sideReadOnlyRight": "The right side takes no changes, and this mode would write there.",
+  "sync.error.sideReadOnlyRight": "Pravá strana nepřijímá změny a tento režim by tam zapisoval.",
   "@sync.error.sideReadOnlyRight": {
     "sourceHash": "b409e94"
   },
-  "sync.error.staleSelectionLeft": "The selection in the left pane changed. Turn off Only selected, or close and open Synchronize folders again.",
+  "sync.error.staleSelectionLeft": "Výběr v levém panelu se změnil. Vypni Jen vybrané, nebo Synchronizaci složek zavři a otevři znovu.",
   "@sync.error.staleSelectionLeft": {
     "sourceHash": "edbd297"
   },
-  "sync.error.staleSelectionRight": "The selection in the right pane changed. Turn off Only selected, or close and open Synchronize folders again.",
+  "sync.error.staleSelectionRight": "Výběr v pravém panelu se změnil. Vypni Jen vybrané, nebo Synchronizaci složek zavři a otevři znovu.",
   "@sync.error.staleSelectionRight": {
     "sourceHash": "8f11178"
   },
-  "sync.error.compareRunning": "A compare is still running. Wait for it, or stop it.",
+  "sync.error.compareRunning": "Porovnávání ještě běží. Počkej na něj, nebo ho zastav.",
   "@sync.error.compareRunning": {
     "sourceHash": "dceba22"
   },
-  "sync.error.runInProgress": "A synchronization is running for these folders. Wait for it to finish.",
+  "sync.error.runInProgress": "Pro tyto složky už běží synchronizace. Počkej, až skončí.",
   "@sync.error.runInProgress": {
     "sourceHash": "72fbbc0"
   },
-  "sync.error.planChanged": "The list changed since you reviewed it. Review it again.",
+  "sync.error.planChanged": "Seznam se od tvého posouzení změnil. Posuď ho znovu.",
   "@sync.error.planChanged": {
     "sourceHash": "72ca309"
   },
-  "sync.error.staleCompare": "A synchronization changed these folders. Compare again.",
+  "sync.error.staleCompare": "Synchronizace tyto složky změnila. Porovnej znovu.",
   "@sync.error.staleCompare": {
     "sourceHash": "4706b22"
   },
-  "sync.error.notContentComparable": "Only two files of the same size can be compared by content.",
+  "sync.error.notContentComparable": "Podle obsahu lze porovnat jen dva soubory stejné velikosti.",
   "@sync.error.notContentComparable": {
     "sourceHash": "2bb60e9"
   },
-  "sync.error.notInstalled": "Cmdr is still starting. Try again in a moment.",
+  "sync.error.notInstalled": "Cmdr se ještě spouští. Zkus to za chvilku znovu.",
   "@sync.error.notInstalled": {
     "sourceHash": "d9d58dc"
   },
-  "sync.error.unexpected": "Something went wrong. Try again, and if it keeps happening, send an error report from the Help menu.",
+  "sync.error.unexpected": "Něco se pokazilo. Zkus to znovu, a pokud se to bude opakovat, pošli zprávu o chybě z nabídky Nápověda.",
   "@sync.error.unexpected": {
     "sourceHash": "149c6a5"
   },
-  "sync.confirm.title": "Synchronize these changes?",
+  "sync.confirm.title": "Synchronizovat tyto změny?",
   "@sync.confirm.title": {
     "sourceHash": "cbc8a73"
   },
-  "sync.confirm.groupsLabel": "Changes to run",
+  "sync.confirm.groupsLabel": "Změny ke spuštění",
   "@sync.confirm.groupsLabel": {
     "sourceHash": "79bf11c"
   },
-  "sync.confirm.group.copyRight": "Copy to the right: {filesText} new {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.copyRight": "Kopírování doprava: {filesText} {files, plural, one {nový soubor} few {nové soubory} many {nového souboru} other {nových souborů}}, {size}",
   "@sync.confirm.group.copyRight": {
     "sourceHash": "dc27d61"
   },
-  "sync.confirm.group.replaceRight": "Replace on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.replaceRight": "Nahrazení vpravo: {filesText} {files, plural, one {soubor} few {soubory} many {souboru} other {souborů}}, {size}",
   "@sync.confirm.group.replaceRight": {
     "sourceHash": "8087763"
   },
-  "sync.confirm.group.removeRight": "Remove on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.removeRight": "Odstranění vpravo: {filesText} {files, plural, one {soubor} few {soubory} many {souboru} other {souborů}}, {size}",
   "@sync.confirm.group.removeRight": {
     "sourceHash": "dd9ca58"
   },
-  "sync.confirm.group.copyLeft": "Copy to the left: {filesText} new {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.copyLeft": "Kopírování doleva: {filesText} {files, plural, one {nový soubor} few {nové soubory} many {nového souboru} other {nových souborů}}, {size}",
   "@sync.confirm.group.copyLeft": {
     "sourceHash": "d7631f2"
   },
-  "sync.confirm.group.replaceLeft": "Replace on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.replaceLeft": "Nahrazení vlevo: {filesText} {files, plural, one {soubor} few {soubory} many {souboru} other {souborů}}, {size}",
   "@sync.confirm.group.replaceLeft": {
     "sourceHash": "c98fed7"
   },
-  "sync.confirm.group.removeLeft": "Remove on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.removeLeft": "Odstranění vlevo: {filesText} {files, plural, one {soubor} few {soubory} many {souboru} other {souborů}}, {size}",
   "@sync.confirm.group.removeLeft": {
     "sourceHash": "638c4d0"
   },
-  "sync.confirm.group.copyRightRecreates": "Copy to the right instead of removing on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.copyRightRecreates": "Kopírování doprava místo odstranění vlevo: {filesText} {files, plural, one {soubor} few {soubory} many {souboru} other {souborů}}, {size}",
   "@sync.confirm.group.copyRightRecreates": {
     "sourceHash": "4e3a15f"
   },
-  "sync.confirm.group.copyLeftRecreates": "Copy to the left instead of removing on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.copyLeftRecreates": "Kopírování doleva místo odstranění vpravo: {filesText} {files, plural, one {soubor} few {soubory} many {souboru} other {souborů}}, {size}",
   "@sync.confirm.group.copyLeftRecreates": {
     "sourceHash": "b5b47bb"
   },
-  "sync.confirm.keepTrash": "Replaced and removed files go to the Trash.",
+  "sync.confirm.keepTrash": "Nahrazené a odstraněné soubory se přesunou do koše.",
   "@sync.confirm.keepTrash": {
     "sourceHash": "ddab33c"
   },
-  "sync.confirm.keepFolder": "Replaced and removed files go to the versions folder {path}.",
+  "sync.confirm.keepFolder": "Nahrazené a odstraněné soubory se přesunou do složky s verzemi: {path}",
   "@sync.confirm.keepFolder": {
     "sourceHash": "2e41ea4"
   },
-  "sync.confirm.keepSlow": "This is slower: they move across drives.",
+  "sync.confirm.keepSlow": "Je to pomalejší: přesouvají se mezi disky.",
   "@sync.confirm.keepSlow": {
     "sourceHash": "c9bc9ac"
   },
-  "sync.confirm.olderTitle": "Older replaces newer: {countText} {count, plural, one {file} other {files}}",
+  "sync.confirm.olderTitle": "Starší nahrazuje novější: {countText} {count, plural, one {soubor} few {soubory} many {souboru} other {souborů}}",
   "@sync.confirm.olderTitle": {
     "sourceHash": "9aab1a4"
   },
-  "sync.confirm.olderBody": "Each of these files is newer than the copy that replaces it. The newer one is kept in the Trash or the versions folder, but check them before you synchronize.",
+  "sync.confirm.olderBody": "Každý z těchto souborů je novější než kopie, která ho nahrazuje. Novější soubor se zachová v koši nebo ve složce s verzemi, ale před synchronizací je zkontroluj.",
   "@sync.confirm.olderBody": {
     "sourceHash": "9d77caf"
   },
-  "sync.confirm.row": "{path}: left {leftDate}, right {rightDate}",
+  "sync.confirm.row": "{path}: vlevo {leftDate}, vpravo {rightDate}",
   "@sync.confirm.row": {
     "sourceHash": "22c6bff"
   },
-  "sync.confirm.noDate": "no date",
+  "sync.confirm.noDate": "bez data",
   "@sync.confirm.noDate": {
     "sourceHash": "89be630"
   },
-  "sync.confirm.more": "…and {countText} more",
+  "sync.confirm.more": "…a další: {countText}",
   "@sync.confirm.more": {
     "sourceHash": "a674c4d"
   },
-  "sync.confirm.chosenUnknown": "You chose an action for {countText} {count, plural, one {row} other {rows}} marked ?, where the compare couldn’t tell which side is newer.",
+  "sync.confirm.chosenUnknown": "Akce nastavená u {count, plural, one {{countText} řádku označeného} few {{countText} řádků označených} many {{countText} řádku označeného} other {{countText} řádků označených}} ?, kde porovnání nepoznalo, která strana je novější:",
   "@sync.confirm.chosenUnknown": {
-    "sourceHash": "12a212a"
+    "sourceHash": "494bfd6"
   },
-  "sync.confirm.hiddenActions": "{countText} hidden {count, plural, one {action} other {actions}} run too: the show-filters hide those rows, but they still synchronize.",
+  "sync.confirm.hiddenActions": "{count, plural, one {Spustí se i {countText} skrytá akce} few {Spustí se i {countText} skryté akce} many {Spustí se i {countText} skryté akce} other {Spustí se i {countText} skrytých akcí}}: filtry zobrazení ty řádky skrývají, ale synchronizují se.",
   "@sync.confirm.hiddenActions": {
     "sourceHash": "a159620"
   },
-  "sync.confirm.skewAhead": "On most files, times on the right run {offset} ahead of the left. If that’s a clock difference, give the profile a time offset.",
+  "sync.confirm.skewAhead": "U většiny souborů jdou časy vpravo o {offset} před časy vlevo. Pokud jde o rozdíl hodin, nastav profilu časový posun.",
   "@sync.confirm.skewAhead": {
     "sourceHash": "60eb712"
   },
-  "sync.confirm.skewBehind": "On most files, times on the right run {offset} behind the left. If that’s a clock difference, give the profile a time offset.",
+  "sync.confirm.skewBehind": "U většiny souborů jdou časy vpravo o {offset} za časy vlevo. Pokud jde o rozdíl hodin, nastav profilu časový posun.",
   "@sync.confirm.skewBehind": {
     "sourceHash": "9feafa9"
   },
-  "sync.confirm.maxRemoveRight": "This removes {removalsText} of {targetText} {target, plural, one {file} other {files}} on the right, more than the limit in Settings allows. Those removals wait for Remove anyway.",
+  "sync.confirm.maxRemoveRight": "Tím se vpravo odstraní {removalsText} z {targetText} {target, plural, one {souboru} few {souborů} many {souboru} other {souborů}}, což je víc, než povoluje limit v Nastavení. Tato odstranění čekají na volbu Přesto odstranit.",
   "@sync.confirm.maxRemoveRight": {
     "sourceHash": "f77b5c6"
   },
-  "sync.confirm.emptyRootRight": "The right folder is empty, so nothing beside it is removed: it may be a drive that isn’t connected.",
+  "sync.confirm.emptyRootRight": "Pravá složka je prázdná, takže se nic neodstraní: může jít o nepřipojený disk.",
   "@sync.confirm.emptyRootRight": {
     "sourceHash": "3b17a19"
   },
-  "sync.confirm.sentinelRight": "The check file Settings names is missing on the right, so nothing runs. It guards against a drive that isn’t connected.",
+  "sync.confirm.sentinelRight": "Kontrolní soubor z Nastavení vpravo chybí, takže se nespustí nic. Chrání před nepřipojeným diskem.",
   "@sync.confirm.sentinelRight": {
     "sourceHash": "f72402f"
   },
-  "sync.confirm.maxRemoveLeft": "This removes {removalsText} of {targetText} {target, plural, one {file} other {files}} on the left, more than the limit in Settings allows. Those removals wait for Remove anyway.",
+  "sync.confirm.maxRemoveLeft": "Tím se vlevo odstraní {removalsText} z {targetText} {target, plural, one {souboru} few {souborů} many {souboru} other {souborů}}, což je víc, než povoluje limit v Nastavení. Tato odstranění čekají na volbu Přesto odstranit.",
   "@sync.confirm.maxRemoveLeft": {
     "sourceHash": "7422a17"
   },
-  "sync.confirm.emptyRootLeft": "The left folder is empty, so nothing beside it is removed: it may be a drive that isn’t connected.",
+  "sync.confirm.emptyRootLeft": "Levá složka je prázdná, takže se nic neodstraní: může jít o nepřipojený disk.",
   "@sync.confirm.emptyRootLeft": {
     "sourceHash": "7bd4689"
   },
-  "sync.confirm.sentinelLeft": "The check file Settings names is missing on the left, so nothing runs. It guards against a drive that isn’t connected.",
+  "sync.confirm.sentinelLeft": "Kontrolní soubor z Nastavení vlevo chybí, takže se nespustí nic. Chrání před nepřipojeným diskem.",
   "@sync.confirm.sentinelLeft": {
     "sourceHash": "1ff2857"
   },
-  "sync.confirm.emptyRootCopies": "Copies into it wait for Copy anyway.",
+  "sync.confirm.emptyRootCopies": "Kopírování do ní čeká na volbu Přesto kopírovat.",
   "@sync.confirm.emptyRootCopies": {
     "sourceHash": "581edd1"
   },
-  "sync.confirm.removeAnyway": "Remove anyway",
+  "sync.confirm.removeAnyway": "Přesto odstranit",
   "@sync.confirm.removeAnyway": {
     "sourceHash": "ec52bdc"
   },
-  "sync.confirm.copyAnyway": "Copy anyway",
+  "sync.confirm.copyAnyway": "Přesto kopírovat",
   "@sync.confirm.copyAnyway": {
     "sourceHash": "f794181"
   },
-  "sync.confirm.planChanged": "The list changed since this confirmation opened. Check it again, then synchronize.",
+  "sync.confirm.planChanged": "Seznam se od otevření tohoto potvrzení změnil. Zkontroluj ho znovu a pak synchronizuj.",
   "@sync.confirm.planChanged": {
     "sourceHash": "167480c"
   },
-  "sync.confirm.staleCompare": "A synchronization already changed these folders. Compare again before you synchronize.",
+  "sync.confirm.staleCompare": "Synchronizace už tyto složky změnila. Před další synchronizací porovnej znovu.",
   "@sync.confirm.staleCompare": {
     "sourceHash": "9bb1db7"
   },
-  "sync.confirm.enterRefused": "Press Synchronize to run this: it removes files, replaces newer ones, or needs a second yes.",
+  "sync.confirm.enterRefused": "Pro spuštění stiskni Synchronizovat: odstraňuje soubory, nahrazuje novější, nebo potřebuje druhé potvrzení.",
   "@sync.confirm.enterRefused": {
     "sourceHash": "b4aa1a7"
   },
-  "sync.confirm.nothingTicked": "Tick at least one group to synchronize.",
+  "sync.confirm.nothingTicked": "Pro synchronizaci zaškrtni alespoň jednu skupinu.",
   "@sync.confirm.nothingTicked": {
     "sourceHash": "836ee01"
   },
-  "sync.confirm.waitRemoveAnyway": "{filesText} {files, plural, one {file waits} other {files wait}} for Remove anyway. Tick it, or untick that group.",
+  "sync.confirm.waitRemoveAnyway": "{files, plural, one {{filesText} soubor čeká} few {{filesText} soubory čekají} many {{filesText} souboru čeká} other {{filesText} souborů čeká}} na volbu Přesto odstranit. Zaškrtni ji, nebo zruš zaškrtnutí té skupiny.",
   "@sync.confirm.waitRemoveAnyway": {
     "sourceHash": "4f3d135"
   },
-  "sync.confirm.waitCopyAnyway": "{filesText} {files, plural, one {file waits} other {files wait}} for Copy anyway. Tick it, or untick that group.",
+  "sync.confirm.waitCopyAnyway": "{files, plural, one {{filesText} soubor čeká} few {{filesText} soubory čekají} many {{filesText} souboru čeká} other {{filesText} souborů čeká}} na volbu Přesto kopírovat. Zaškrtni ji, nebo zruš zaškrtnutí té skupiny.",
   "@sync.confirm.waitCopyAnyway": {
     "sourceHash": "608524e"
   },
-  "sync.confirm.waitRemoveAnywayRows": "Ticked rows wait for Remove anyway. Tick it, or untick that group.",
+  "sync.confirm.waitRemoveAnywayRows": "Zaškrtnuté řádky čekají na volbu Přesto odstranit. Zaškrtni ji, nebo zruš zaškrtnutí té skupiny.",
   "@sync.confirm.waitRemoveAnywayRows": {
     "sourceHash": "d89123d"
   },
-  "sync.confirm.waitCopyAnywayRows": "Ticked rows wait for Copy anyway. Tick it, or untick that group.",
+  "sync.confirm.waitCopyAnywayRows": "Zaškrtnuté řádky čekají na volbu Přesto kopírovat. Zaškrtni ji, nebo zruš zaškrtnutí té skupiny.",
   "@sync.confirm.waitCopyAnywayRows": {
     "sourceHash": "a024ab1"
   },
-  "sync.confirm.allHeld": "Nothing here can run: a guard holds every group.",
+  "sync.confirm.allHeld": "Nic tu nemůže proběhnout: každou skupinu zadržuje pojistka.",
   "@sync.confirm.allHeld": {
     "sourceHash": "0102efc"
   },
-  "sync.confirm.nothing": "Nothing to synchronize: no row copies or removes anything.",
+  "sync.confirm.nothing": "Není co synchronizovat: žádný řádek nic nekopíruje ani neodstraňuje.",
   "@sync.confirm.nothing": {
     "sourceHash": "4892e37"
   },
-  "sync.confirm.cancel": "Cancel",
+  "sync.confirm.cancel": "Zrušit",
   "@sync.confirm.cancel": {
     "sourceHash": "19766ed"
   },
-  "sync.confirm.run": "Synchronize",
+  "sync.confirm.run": "Synchronizovat",
   "@sync.confirm.run": {
     "sourceHash": "1600a20"
   },
-  "sync.run.title": "Synchronizing…",
+  "sync.run.title": "Synchronizuje se…",
   "@sync.run.title": {
     "sourceHash": "6ab4fbf"
   },
-  "sync.run.progress": "{doneText} of {totalText} {total, plural, one {item} other {items}}, {bytesDone} of {bytesTotal}",
+  "sync.run.progress": "{doneText} z {totalText} {total, plural, one {položky} few {položek} many {položky} other {položek}}, {bytesDone} z {bytesTotal}",
   "@sync.run.progress": {
     "sourceHash": "dbf979a"
   },
-  "sync.run.eta": "About {duration} left",
+  "sync.run.eta": "Zbývá asi {duration}",
   "@sync.run.eta": {
     "sourceHash": "06258eb"
   },
-  "sync.run.progressLabel": "Synchronization progress",
+  "sync.run.progressLabel": "Průběh synchronizace",
   "@sync.run.progressLabel": {
     "sourceHash": "9d1d422"
   },
-  "sync.run.betweenSteps": "Pause and Cancel take effect between steps: the copy or move under way finishes first.",
+  "sync.run.betweenSteps": "Pozastavení a zrušení se projeví mezi kroky: rozdělané kopírování nebo přesun se nejdřív dokončí.",
   "@sync.run.betweenSteps": {
     "sourceHash": "60a0f02"
   },
-  "sync.run.paused": "Paused. Nothing new starts until you resume; the step that was running finishes first.",
+  "sync.run.paused": "Pozastaveno. Nic nového nezačne, dokud nepokračuješ; probíhající krok se nejdřív dokončí.",
   "@sync.run.paused": {
     "sourceHash": "b5c61bd"
   },
-  "sync.run.pausing": "Pausing after this step…",
+  "sync.run.pausing": "Pozastavuje se po tomto kroku…",
   "@sync.run.pausing": {
     "sourceHash": "acd16db"
   },
-  "sync.run.pause": "Pause",
+  "sync.run.pause": "Pozastavit",
   "@sync.run.pause": {
     "sourceHash": "858e4ba"
   },
-  "sync.run.resume": "Resume",
+  "sync.run.resume": "Pokračovat",
   "@sync.run.resume": {
     "sourceHash": "d640c74"
   },
-  "sync.run.cancel": "Cancel",
+  "sync.run.cancel": "Zrušit",
   "@sync.run.cancel": {
     "sourceHash": "19766ed"
   },
-  "sync.run.stopping": "Stopping…",
+  "sync.run.stopping": "Zastavuje se…",
   "@sync.run.stopping": {
     "sourceHash": "bbe8574"
   },
-  "sync.result.title": "Synchronization finished",
+  "sync.result.title": "Synchronizace skončila",
   "@sync.result.title": {
     "sourceHash": "951f187"
   },
-  "sync.result.titleStopped": "Synchronization stopped",
+  "sync.result.titleStopped": "Synchronizace byla zastavena",
   "@sync.result.titleStopped": {
     "sourceHash": "abe2c24"
   },
-  "sync.result.done": "{countText} {count, plural, one {row} other {rows}} done",
+  "sync.result.done": "Hotovo: {countText} {count, plural, one {řádek} few {řádky} many {řádku} other {řádků}}",
   "@sync.result.done": {
     "sourceHash": "bee0e61"
   },
-  "sync.result.changedSinceCompare": "{countText} left alone: changed since the compare",
+  "sync.result.changedSinceCompare": "{countText} ponecháno beze změny: od porovnání se změnily",
   "@sync.result.changedSinceCompare": {
     "sourceHash": "2cfa202"
   },
-  "sync.result.noTrash": "{countText} left alone: that drive has no Trash, and Settings keeps replaced files only in the Trash",
+  "sync.result.noTrash": "{countText} ponecháno beze změny: ten disk nemá koš a Nastavení ponechává nahrazené soubory jen v koši",
   "@sync.result.noTrash": {
     "sourceHash": "839e3c5"
   },
-  "sync.result.couldNotDo": "{countText} couldn’t be done, and nothing was lost",
+  "sync.result.couldNotDo": "{countText} se nepodařilo dokončit, nic se neztratilo",
   "@sync.result.couldNotDo": {
     "sourceHash": "5ae6b90"
   },
-  "sync.result.versionsSpotTaken": "{countText} left alone: something already sits where the old file would be kept",
+  "sync.result.versionsSpotTaken": "{countText} ponecháno beze změny: na místě, kam by se starý soubor zachoval, už něco je",
   "@sync.result.versionsSpotTaken": {
     "sourceHash": "2ddc46e"
   },
-  "sync.result.versionsFolderUnsafe": "{countText} left alone: the way to the versions folder runs through a link or a file",
+  "sync.result.versionsFolderUnsafe": "{countText} ponecháno beze změny: cesta ke složce s verzemi vede přes odkaz nebo soubor",
   "@sync.result.versionsFolderUnsafe": {
     "sourceHash": "7bd1069"
   },
-  "sync.result.keptNotReplaced": "{countText} kept but not replaced: the old file is in the Trash or the versions folder, and its place is empty",
+  "sync.result.keptNotReplaced": "{countText} zachováno, ale nenahrazeno: starý soubor je v koši nebo ve složce s verzemi a jeho místo je prázdné",
   "@sync.result.keptNotReplaced": {
     "sourceHash": "bbbdafc"
   },
-  "sync.result.heldAfterFailedCopy": "{countText} {count, plural, one {removal} other {removals}} held because a copy beside {count, plural, one {it} other {them}} didn’t land",
+  "sync.result.heldAfterFailedCopy": "Zadržená odstranění: {countText}, protože se {count, plural, one {kopie vedle něj nepodařila} few {kopie vedle nich nepodařily} many {kopie vedle nich nepodařily} other {kopie vedle nich nepodařily}}",
   "@sync.result.heldAfterFailedCopy": {
     "sourceHash": "cb58211"
   },
-  "sync.result.heldByGuard": "{countText} {count, plural, one {removal} other {removals}} held by a guard",
+  "sync.result.heldByGuard": "Zadrženo pojistkou: {countText} {count, plural, one {řádek} few {řádky} many {řádku} other {řádků}}",
   "@sync.result.heldByGuard": {
-    "sourceHash": "a7a7add"
+    "sourceHash": "a452efb"
   },
-  "sync.result.notStarted": "{countText} not reached before the run stopped",
+  "sync.result.notStarted": "{countText} nestihlo začít před zastavením",
   "@sync.result.notStarted": {
     "sourceHash": "2821e6e"
   },
-  "sync.result.versionsFolder": "Replaced and removed files ({size}) are in {path}",
+  "sync.result.versionsFolder": "Nahrazené a odstraněné soubory ({size}) jsou ve složce {path}",
   "@sync.result.versionsFolder": {
     "sourceHash": "0eaf91d"
   },
-  "sync.result.showInCmdr": "Show in Cmdr",
+  "sync.result.showInCmdr": "Zobrazit v Cmdru",
   "@sync.result.showInCmdr": {
     "sourceHash": "8390aaf"
   },
-  "sync.result.showInGrid": "Show in grid",
+  "sync.result.showInGrid": "Zobrazit v mřížce",
   "@sync.result.showInGrid": {
     "sourceHash": "f646ba9"
   },
-  "sync.result.compareAgain": "Compare again",
+  "sync.result.compareAgain": "Porovnat znovu",
   "@sync.result.compareAgain": {
     "sourceHash": "502f6db"
   },
-  "sync.result.notRunSelected": "{countText} {count, plural, one {row} other {rows}} that didn’t run {count, plural, one {is} other {are}} selected. Compare again to see the folders as they are now.",
+  "sync.result.notRunSelected": "{count, plural, one {{countText} řádek, který neproběhl, je vybraný} few {{countText} řádky, které neproběhly, jsou vybrané} many {{countText} řádku, který neproběhl, je vybraný} other {{countText} řádků, které neproběhly, jsou vybrané}}. Porovnáním znovu uvidíš složky v aktuálním stavu.",
   "@sync.result.notRunSelected": {
     "sourceHash": "b314612"
   },
-  "sync.profiles.title": "Profiles",
+  "sync.profiles.title": "Profily",
   "@sync.profiles.title": {
     "sourceHash": "535e52e"
   },
-  "sync.profiles.tooltip": "Saved pairs of folders and their options",
+  "sync.profiles.tooltip": "Uložené dvojice složek a jejich možnosti",
   "@sync.profiles.tooltip": {
     "sourceHash": "74f727c"
   },
-  "sync.profiles.saved": "Saved profiles",
+  "sync.profiles.saved": "Uložené profily",
   "@sync.profiles.saved": {
     "sourceHash": "81ae667"
   },
-  "sync.profiles.saveAs": "Save as profile…",
+  "sync.profiles.saveAs": "Uložit jako profil…",
   "@sync.profiles.saveAs": {
     "sourceHash": "ef12643"
   },
-  "sync.profiles.rename": "Rename…",
+  "sync.profiles.rename": "Přejmenovat…",
   "@sync.profiles.rename": {
     "sourceHash": "6fa62b3"
   },
-  "sync.profiles.moveUp": "Move up",
+  "sync.profiles.moveUp": "Posunout nahoru",
   "@sync.profiles.moveUp": {
     "sourceHash": "c66feb5"
   },
-  "sync.profiles.moveDown": "Move down",
+  "sync.profiles.moveDown": "Posunout dolů",
   "@sync.profiles.moveDown": {
     "sourceHash": "40bb50d"
   },
-  "sync.profiles.delete": "Delete",
+  "sync.profiles.delete": "Smazat",
   "@sync.profiles.delete": {
     "sourceHash": "e2d0a54"
   },
   "sync.profiles.invalidRow": "{name}: {problem}",
   "@sync.profiles.invalidRow": {
-    "sourceHash": "340be95"
+    "sourceHash": "340be95",
+    "sameAsSourceJustification": "Placeholder-only string: a profile name, a colon, and the problem text, nothing to translate."
   },
-  "sync.profiles.problem.emptyName": "it has no name",
+  "sync.profiles.problem.emptyName": "nemá název",
   "@sync.profiles.problem.emptyName": {
     "sourceHash": "fb31cc6"
   },
-  "sync.profiles.problem.badMask": "its masks don’t parse",
+  "sync.profiles.problem.badMask": "jeho masky nelze zpracovat",
   "@sync.profiles.problem.badMask": {
     "sourceHash": "d694857"
   },
-  "sync.profiles.problem.toleranceOutOfRange": "its time tolerance is out of range",
+  "sync.profiles.problem.toleranceOutOfRange": "jeho časová tolerance je mimo rozsah",
   "@sync.profiles.problem.toleranceOutOfRange": {
     "sourceHash": "6424bd9"
   },
-  "sync.profiles.problem.percentOutOfRange": "its removal limit is out of range",
+  "sync.profiles.problem.percentOutOfRange": "jeho limit odstranění je mimo rozsah",
   "@sync.profiles.problem.percentOutOfRange": {
     "sourceHash": "17dcbdf"
   },
-  "sync.profiles.problem.countOutOfRange": "its removal limit is out of range",
+  "sync.profiles.problem.countOutOfRange": "jeho limit odstranění je mimo rozsah",
   "@sync.profiles.problem.countOutOfRange": {
     "sourceHash": "17dcbdf"
   },
-  "sync.profiles.problem.badKeep": "its versions folder can’t be used",
+  "sync.profiles.problem.badKeep": "jeho složku s verzemi nelze použít",
   "@sync.profiles.problem.badKeep": {
     "sourceHash": "abb8dc7"
   },
-  "sync.profiles.problem.unreadable": "this version of Cmdr can’t read it",
+  "sync.profiles.problem.unreadable": "tato verze Cmdru ho nedokáže přečíst",
   "@sync.profiles.problem.unreadable": {
     "sourceHash": "ff25cc4"
   },
-  "sync.profiles.saveTitle": "Save as profile",
+  "sync.profiles.saveTitle": "Uložit jako profil",
   "@sync.profiles.saveTitle": {
     "sourceHash": "69abb4d"
   },
-  "sync.profiles.renameTitle": "Rename profile",
+  "sync.profiles.renameTitle": "Přejmenovat profil",
   "@sync.profiles.renameTitle": {
     "sourceHash": "c9aaa25"
   },
-  "sync.profiles.name": "Profile name",
+  "sync.profiles.name": "Název profilu",
   "@sync.profiles.name": {
     "sourceHash": "d366328"
   },
-  "sync.profiles.restoreFilters": "Restore the show-filters when loading",
+  "sync.profiles.restoreFilters": "Při načtení obnovit filtry zobrazení",
   "@sync.profiles.restoreFilters": {
     "sourceHash": "1838cb3"
   },
-  "sync.profiles.save": "Save",
+  "sync.profiles.save": "Uložit",
   "@sync.profiles.save": {
     "sourceHash": "1509f56"
   },
-  "sync.profiles.renameConfirm": "Rename",
+  "sync.profiles.renameConfirm": "Přejmenovat",
   "@sync.profiles.renameConfirm": {
     "sourceHash": "3064d79"
   },
-  "sync.profiles.replace": "Replace",
+  "sync.profiles.replace": "Nahradit",
   "@sync.profiles.replace": {
     "sourceHash": "95e1543"
   },
-  "sync.profiles.clash": "A profile named {name} exists. Press Replace to save over it.",
+  "sync.profiles.clash": "Profil s názvem „{name}“ už existuje. Stisknutím Nahradit ho přepíšeš.",
   "@sync.profiles.clash": {
     "sourceHash": "0a386a9"
   },
-  "sync.profiles.listFull": "The list holds {maxText} profiles already. Delete one first.",
+  "sync.profiles.listFull": "V seznamu je už nejvyšší počet profilů ({maxText}). Nejdřív některý smaž.",
   "@sync.profiles.listFull": {
     "sourceHash": "91977f6"
   },
-  "sync.profiles.invalid": "This profile can’t be saved: {problem}.",
+  "sync.profiles.invalid": "Tento profil nelze uložit: {problem}.",
   "@sync.profiles.invalid": {
     "sourceHash": "88aa7fc"
   },
-  "sync.profiles.writeFailed": "Cmdr couldn’t write the profiles file, so this change isn’t saved.",
+  "sync.profiles.writeFailed": "Cmdr nemohl zapsat soubor s profily, takže se tato změna neuložila.",
   "@sync.profiles.writeFailed": {
     "sourceHash": "8e1fc72"
   },
-  "sync.profiles.unexpected": "That profile change didn’t go through. The log has the details.",
+  "sync.profiles.unexpected": "Změna profilu neproběhla. Podrobnosti jsou v protokolu.",
   "@sync.profiles.unexpected": {
     "sourceHash": "cf1520f"
   },
-  "sync.dialog.usePaneFolderLeft": "Use the left pane’s folder",
+  "sync.dialog.usePaneFolderLeft": "Použít složku levého panelu",
   "@sync.dialog.usePaneFolderLeft": {
     "sourceHash": "77548e2"
   },
-  "sync.dialog.usePaneFolderRight": "Use the right pane’s folder",
+  "sync.dialog.usePaneFolderRight": "Použít složku pravého panelu",
   "@sync.dialog.usePaneFolderRight": {
     "sourceHash": "29bee30"
   },
-  "sync.dialog.selectRangeChanged": "The rows changed while selecting. Select them again.",
+  "sync.dialog.selectRangeChanged": "Řádky se během výběru změnily. Vyber je znovu.",
   "@sync.dialog.selectRangeChanged": {
     "sourceHash": "8603528"
   },
-  "sync.dialog.runEscape": "Pause or cancel the synchronization first.",
+  "sync.dialog.runEscape": "Nejdřív synchronizaci pozastav nebo zruš.",
   "@sync.dialog.runEscape": {
     "sourceHash": "5d72261"
   },
-  "sync.result.versionsFolderShort": "Replaced and removed files are in {path}",
+  "sync.result.versionsFolderShort": "Nahrazené a odstraněné soubory jsou ve složce {path}",
   "@sync.result.versionsFolderShort": {
     "sourceHash": "f7b7bbd"
   },
-  "sync.result.foldersStay": "These folders stay; the run never removes them:",
+  "sync.result.foldersStay": "Tyto složky zůstávají; synchronizace je nikdy neodstraňuje:",
   "@sync.result.foldersStay": {
     "sourceHash": "d0381b1"
   },
-  "sync.result.emptyFolder": "{path} (empty: its copies didn’t land)",
+  "sync.result.emptyFolder": "{path} (prázdná: kopie nedoběhly)",
   "@sync.result.emptyFolder": {
     "sourceHash": "2c384a4"
   },
-  "sync.result.leftoverFolder": "{path} (made for kept files, couldn’t be removed again)",
+  "sync.result.leftoverFolder": "{path} (vytvořená pro zachované soubory, nepodařilo se ji znovu odstranit)",
   "@sync.result.leftoverFolder": {
     "sourceHash": "39826e3"
   }

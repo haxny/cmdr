@@ -512,11 +512,11 @@
   "@commands.fileEditTags.description": {
     "sourceHash": "b4ba371"
   },
-  "commands.syncOpenDialog.label": "Synchronize folders…",
+  "commands.syncOpenDialog.label": "Synchronizovat složky…",
   "@commands.syncOpenDialog.label": {
     "sourceHash": "6afcd31"
   },
-  "commands.syncOpenDialog.description": "Compares two folders on any two volumes, shows what differs, and makes them match after you review every change",
+  "commands.syncOpenDialog.description": "Porovná dvě složky na libovolných dvou svazcích, ukáže rozdíly a sjednotí je, až posoudíš každou změnu",
   "@commands.syncOpenDialog.description": {
     "sourceHash": "a48da49"
   },
@@ -1380,7 +1380,7 @@
   "@commands.handler.viewDebugLog.unavailable": {
     "sourceHash": "794a5b3"
   },
-  "commands.syncOpenProfiles.label": "Synchronize folders: profiles…",
+  "commands.syncOpenProfiles.label": "Synchronizovat složky: profily…",
   "@commands.syncOpenProfiles.label": {
     "sourceHash": "0d69ae6"
   }

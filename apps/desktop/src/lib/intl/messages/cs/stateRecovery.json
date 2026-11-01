@@ -135,7 +135,7 @@
   "@stateRecovery.smbLinkConsents.title": {
     "sourceHash": "2e0f9fd"
   },
-  "stateRecovery.syncProfiles.title": "Cmdr couldn’t read your saved synchronization profiles, so the list starts empty",
+  "stateRecovery.syncProfiles.title": "Cmdr nedokázal přečíst tvoje uložené profily synchronizace, takže seznam začíná prázdný",
   "@stateRecovery.syncProfiles.title": {
     "sourceHash": "1a0cafa"
   }
