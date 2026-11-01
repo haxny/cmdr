@@ -2,16 +2,18 @@
 //! re-checked against the snapshot right before its batch. Claims, keeps, and
 //! restores live in `runner/keeping.rs`.
 
+mod holds;
 mod keeping;
+mod tidy;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use crate::steps::{landing, other};
 use crate::{
-    BatchOutcome, BoundSource, EngineBatch, Entry, EntryKey, EntryKind, ItemOutcome, KeepDestination, KeepRefusal,
-    Observed, Place, Plan, PlanItem, RunContext, RunItemResult, RunProgress, RunReport, Side, Step, StepPlan,
-    SyncControl, SyncEngine, VersionsRoot, steps,
+    BatchOutcome, BoundSource, EngineBatch, Entry, EntryKind, ItemOutcome, KeepDestination, KeepRefusal, Observed,
+    Place, Plan, PlanItem, RunContext, RunItemResult, RunProgress, RunReport, Side, Step, StepPlan, SyncControl,
+    SyncEngine, VersionsRoot, steps,
 };
 
 pub(crate) struct Runner<'a> {
@@ -27,10 +29,15 @@ pub(crate) struct Runner<'a> {
     /// Folders that couldn't be claimed, made, or trusted, and what that means
     /// for everything beneath them.
     blocked: Vec<(Place, Side, PathBuf, RunItemResult)>,
-    /// Folders removals beneath which wait, because a copy there didn't land.
-    held_under: Option<Vec<(Side, EntryKey)>>,
-    /// Target folders made for copies, and where copies landed.
+    /// Copies that didn't land, which hold related removals (`holds.rs`).
+    holds: Option<Vec<holds::Hold>>,
+    /// Target folders this run created for copies, and where copies landed.
     made_for_copies: BTreeSet<(Side, PathBuf)>,
+    /// Dated folders this run claimed, and the folders it made inside them.
+    claimed: Vec<(Side, VersionsRoot)>,
+    keep_dirs: Vec<(Place, Side, PathBuf)>,
+    /// A one-item batch (policy or move back) came back stopped.
+    engine_stopped: bool,
     landed: Vec<(Side, PathBuf)>,
     versions_used: Vec<VersionsRoot>,
     kept_bytes: u64,
@@ -110,8 +117,11 @@ impl<'a> Runner<'a> {
             results: BTreeMap::new(),
             kept: BTreeMap::new(),
             blocked: Vec::new(),
-            held_under: None,
+            holds: None,
             made_for_copies: BTreeSet::new(),
+            claimed: Vec::new(),
+            keep_dirs: Vec::new(),
+            engine_stopped: false,
             landed: Vec::new(),
             versions_used: Vec::new(),
             kept_bytes: 0,
@@ -137,12 +147,13 @@ impl<'a> Runner<'a> {
                 stopped = true;
                 break;
             }
-            stopped = self.step(step).await || self.halted();
+            stopped = self.step(step).await || self.halted() || self.engine_stopped;
             self.progress.steps_done += 1;
             (self.on_progress)(self.progress);
         }
         let leftovers: Vec<u32> = self.kept.keys().copied().collect();
         self.restore(&leftovers).await;
+        self.tidy().await;
         (self.on_progress)(self.progress);
         self.report(stopped)
     }
@@ -282,17 +293,27 @@ impl<'a> Runner<'a> {
         if dirs.is_empty() {
             return false;
         }
+        let keeps = [self.ctx.staging(side).dir.clone(), self.ctx.versions(side).dir.clone()];
+        let for_copies = |dir: &PathBuf| place == Place::Target && !keeps.iter().any(|keep| dir.starts_with(keep));
+        // Which target folders are new, so only those count as made by this run.
+        let mut absent = BTreeSet::new();
+        for dir in dirs.iter().filter(|dir| for_copies(dir)) {
+            if !self.exists(side, place, dir).await {
+                absent.insert(dir.clone());
+            }
+        }
         let batch = EngineBatch::MakeFolders {
             place,
             side,
             dirs: dirs.clone(),
         };
         let outcome = self.engine.run(batch).await;
-        let keeps = [self.ctx.staging(side).dir.clone(), self.ctx.versions(side).dir.clone()];
         for dir in dirs {
             if read(&outcome, &dir) != Some(ItemOutcome::Done) {
                 self.blocked.push((place, side, dir, RunItemResult::CouldNotDo));
-            } else if place == Place::Target && !keeps.iter().any(|keep| dir.starts_with(keep)) {
+            } else if !for_copies(&dir) {
+                self.keep_dirs.push((place, side, dir));
+            } else if absent.contains(&dir) {
                 self.made_for_copies.insert((side, dir));
             }
         }
@@ -366,17 +387,6 @@ impl<'a> Runner<'a> {
         outcome.stopped
     }
 
-    /// Folders where a copy row of this run didn't end `Done`: removals on
-    /// that side beneath them wait (a Mirror rename is a copy plus a removal).
-    fn held_folders(&self) -> Vec<(Side, EntryKey)> {
-        self.acting
-            .iter()
-            .map(|&index| self.item(index))
-            .filter(|item| item.action.is_copy() && self.results.get(&item.index) != Some(&RunItemResult::Done))
-            .filter_map(|item| Some((item.action.target()?, item.key.parent().unwrap_or_else(EntryKey::root))))
-            .collect()
-    }
-
     async fn remove(&mut self, side: Side, items: &[u32], to: &KeepDestination) -> bool {
         let refused = match to {
             KeepDestination::Folder { place, dir } => self.blocked_at(*place, side, dir),
@@ -387,9 +397,9 @@ impl<'a> Runner<'a> {
             self.settle_all(items, result);
             return false;
         }
-        let held = match self.held_under.take() {
+        let held = match self.holds.take() {
             Some(held) => held,
-            None => self.held_folders(),
+            None => self.unlanded_copies(),
         };
         let mut chosen = Vec::new();
         for &index in items {
@@ -402,7 +412,7 @@ impl<'a> Runner<'a> {
                 chosen.push((index, self.bound(side, entry)));
             }
         }
-        self.held_under = Some(held);
+        self.holds = Some(held);
         if self.halted() {
             return true;
         }
@@ -415,13 +425,13 @@ impl<'a> Runner<'a> {
         index: u32,
         side: Side,
         to: &KeepDestination,
-        held: &[(Side, EntryKey)],
+        held: &[holds::Hold],
     ) -> Option<RunItemResult> {
         let item = self.item(index);
         let Some(entry) = item.entry(side) else {
             return Some(RunItemResult::CouldNotDo);
         };
-        if held.iter().any(|(s, folder)| *s == side && item.key.is_within(folder)) {
+        if held.iter().any(|hold| hold.holds(side, &item.key, entry)) {
             return Some(RunItemResult::HeldAfterFailedCopy);
         }
         if !self.unchanged(side, entry).await {

@@ -35,11 +35,11 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
   split into its children, never copied or removed whole. `?` rows never get an automatic action.
 - **Hiding a row never changes its action**; the summary counts hidden actions.
 - **Removals are always held beside an empty root**, no acknowledgement releases them. `gate` re-runs `check`.
-- **The crate never deletes permanently.** `EngineBatch` has no delete variant; replaced and removed items are moved to
-  the Trash or a versions folder, or left alone (`KeepRefusal`).
+- **The crate never deletes permanently.** `EngineBatch` has no delete variant (only `rmdir` of empty folders the run
+  made); replaced and removed items go to the Trash or a versions folder, or are left alone (`KeepRefusal`).
 - **Every item is re-observed right before its batch** (a folder by `subtree_now`, digest included); any difference is
   `ChangedSinceCompare`, never a widened action. A replaced file waits on its own volume until its copy lands, else goes
-  back; a copy that didn't land holds removals in its folder.
+  back; a copy that didn't land holds removals beside it or of its old name.
 - **No `cmdr-operations` dependency** (a package cycle through `cmdr-listing`): the app implements `SyncEngine`.
 - No `tauri`, enforced by `index-crate-isolation`.
 

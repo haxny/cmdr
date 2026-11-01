@@ -253,3 +253,119 @@ async fn a_custom_folder_receives_replaced_files_once_the_copy_landed() {
     assert_eq!(report.kept_bytes, 4);
     assert_clean(&engine);
 }
+
+#[tokio::test]
+async fn a_root_file_whose_copy_was_skipped_holds_only_its_neighbours() {
+    let s = setup(
+        Mode::Mirror,
+        Tree::new().file("log.txt", 5, T + 100).folder("d"),
+        Tree::new()
+            .file("log.txt", 4, T)
+            .file("stale.txt", 2, T)
+            .file("d/old.txt", 3, T),
+        KeepPolicy::default(),
+        caps(),
+    );
+    let engine = s
+        .engine()
+        .changed(Change::Set(Loc::Left, "/L/log.txt".into(), file(6, T + 200)));
+    let report = s.run(&engine, &SyncControl::new()).await;
+    assert_eq!(s.result(&report, "log.txt"), RunItemResult::ChangedSinceCompare);
+    assert_eq!(s.result(&report, "stale.txt"), RunItemResult::HeldAfterFailedCopy);
+    assert_eq!(s.result(&report, "d/old.txt"), RunItemResult::Done);
+    assert_clean(&engine);
+}
+
+#[tokio::test]
+async fn a_move_between_folders_whose_copy_was_skipped_keeps_the_old_place() {
+    let s = setup(
+        Mode::Mirror,
+        Tree::new().folder("a").file("b/x.txt", 5, T),
+        Tree::new().file("a/x.txt", 5, T).folder("b"),
+        KeepPolicy::default(),
+        caps(),
+    );
+    let engine = s
+        .engine()
+        .changed(Change::Set(Loc::Left, "/L/b/x.txt".into(), file(6, T + 1)));
+    let report = s.run(&engine, &SyncControl::new()).await;
+    assert_eq!(s.result(&report, "b/x.txt"), RunItemResult::ChangedSinceCompare);
+    assert_eq!(s.result(&report, "a/x.txt"), RunItemResult::HeldAfterFailedCopy);
+    assert_eq!(engine.get(Loc::Right, "/R/a/x.txt"), Some(file(5, T)));
+    assert_clean(&engine);
+}
+
+#[tokio::test]
+async fn a_staging_folder_the_trash_emptied_is_removed_again() {
+    let s = mirror_replacement(caps());
+    let engine = s.engine();
+    let report = s.run(&engine, &SyncControl::new()).await;
+    assert_eq!(s.result(&report, "a.txt"), RunItemResult::Done);
+    assert_eq!(engine.get(Loc::Right, versions("")), None);
+    assert!(engine.get(Loc::Right, "/R/.cmdr-sync/versions").is_some());
+    assert_clean(&engine);
+}
+
+#[tokio::test]
+async fn an_earlier_attempts_empty_staging_folder_is_removed_again() {
+    let keep = KeepPolicy {
+        place: KeepPlace::VersionsAlways,
+        location: VersionsLocation::Custom {
+            template: "/Kept".to_owned(),
+        },
+    };
+    let s = setup(
+        Mode::Mirror,
+        Tree::new().file("a.txt", 5, T + 100),
+        Tree::new().file("a.txt", 4, T),
+        keep,
+        caps(),
+    );
+    let engine = s
+        .engine()
+        .changed(Change::Set(Loc::Local, "/Kept/2026-11-01 093000".into(), folder()));
+    let report = s.run(&engine, &SyncControl::new()).await;
+    assert_eq!(s.result(&report, "a.txt"), RunItemResult::Done);
+    assert_eq!(engine.get(Loc::Right, versions("")), None);
+    assert_eq!(
+        engine.get(Loc::Right, "/R/.cmdr-sync/versions/2026-11-01 093000 (2)"),
+        None
+    );
+    let kept = "/Kept/2026-11-01 093000 (2)/a.txt";
+    assert_eq!(engine.get(Loc::Local, kept), Some(file(4, T)));
+    assert_clean(&engine);
+}
+
+#[tokio::test]
+async fn a_folder_that_appeared_before_the_run_is_not_reported_as_made() {
+    let s = setup(
+        Mode::Update,
+        Tree::new()
+            .file("k.txt", 1, T)
+            .file("docs/a.txt", 1, T)
+            .held_back("docs", 1),
+        Tree::new().file("k.txt", 1, T),
+        KeepPolicy::default(),
+        caps(),
+    );
+    let engine = s
+        .engine()
+        .changed(Change::Set(Loc::Right, "/R/docs".into(), folder()))
+        .changed(Change::Set(Loc::Left, "/L/docs/a.txt".into(), file(2, T)));
+    let report = s.run(&engine, &SyncControl::new()).await;
+    assert!(report.empty_folders.is_empty());
+}
+
+#[tokio::test]
+async fn a_policy_trash_the_engine_did_before_it_stopped_is_reported_as_trashed() {
+    let s = mirror_replacement(caps());
+    // 0 claims, 1 makes, 2 sets `a.txt` aside, 3 copies, 4 trashes the old one.
+    let engine = s.engine().stopping_after_work(4);
+    let report = s.run(&engine, &SyncControl::new()).await;
+    assert!(report.stopped);
+    assert_eq!(s.result(&report, "a.txt"), RunItemResult::Done);
+    assert_eq!(s.result(&report, "old.txt"), RunItemResult::NotStarted);
+    assert!(report.versions_used.is_empty());
+    assert_eq!(report.kept_bytes, 0);
+    assert_clean(&engine);
+}

@@ -94,6 +94,18 @@ pub enum EngineBatch {
         /// Their original folder.
         dest_dir: PathBuf,
     },
+    /// Remove these folders only if empty (`rmdir`, children first in the
+    /// list): one with anything in it is `Failed` and stays. The run only asks
+    /// this for folders it made itself and kept nothing in, so it never
+    /// destroys anything.
+    RemoveEmptyFolders {
+        /// Which volume.
+        place: Place,
+        /// The side they belong to.
+        side: Side,
+        /// Deepest first.
+        dirs: Vec<PathBuf>,
+    },
     /// Move `side`'s sources to its Trash.
     Trash {
         /// The side the sources are on.

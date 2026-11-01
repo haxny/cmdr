@@ -72,6 +72,7 @@ pub(super) fn touched(engine: &FakeEngine) -> Vec<PathBuf> {
         .flat_map(|batch| match batch {
             EngineBatch::MakeFolders { dirs, .. } => dirs,
             EngineBatch::ClaimFolder { dir, .. } => vec![dir],
+            EngineBatch::RemoveEmptyFolders { dirs, .. } => dirs,
             EngineBatch::Copy { sources, .. }
             | EngineBatch::Move { sources, .. }
             | EngineBatch::MoveBack { sources, .. }
@@ -402,7 +403,7 @@ async fn cancel_between_batches_marks_the_rest_not_started() {
     );
     let control = SyncControl::new();
     // Batch 0 claims the versions folder, 1 makes it, 2 sets `a.txt` aside,
-    // then Cancel.
+    // then an in-process cancel (`SyncControl`).
     let engine = s.engine().cancel_after(2, Arc::clone(&control));
     let report = s.run(&engine, &control).await;
     assert!(report.stopped);
@@ -494,11 +495,13 @@ async fn never_permanently_deletes() {
     let engine = s.engine();
     let report = s.run(&engine, &SyncControl::new()).await;
     assert!(report.results.iter().all(|(_, r)| *r == RunItemResult::Done));
-    /* every recorded batch is ClaimFolder | MakeFolders | Copy | Move | MoveBack | Trash */
+    /* every recorded batch is ClaimFolder | MakeFolders | Copy | Move | MoveBack | Trash, or
+     * RemoveEmptyFolders of folders the run made (the fake flags any other) */
     for batch in engine.batches() {
         match batch {
             EngineBatch::MakeFolders { .. }
             | EngineBatch::ClaimFolder { .. }
+            | EngineBatch::RemoveEmptyFolders { .. }
             | EngineBatch::Copy { .. }
             | EngineBatch::Move { .. }
             | EngineBatch::MoveBack { .. }

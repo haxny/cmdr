@@ -90,7 +90,7 @@ impl Runner<'_> {
         None
     }
 
-    async fn claim_roots(&self, side: Side, roots: &[VersionsRoot]) -> Claim {
+    async fn claim_roots(&mut self, side: Side, roots: &[VersionsRoot]) -> Claim {
         for root in roots {
             if !self.safe_way(side, root).await {
                 return Claim::Refused(root.clone(), RunItemResult::VersionsFolderUnsafe);
@@ -102,7 +102,7 @@ impl Runner<'_> {
             };
             let outcome = self.engine.run(batch).await;
             match read(&outcome, &root.dir) {
-                Some(ItemOutcome::Done) => {}
+                Some(ItemOutcome::Done) => self.claimed.push((side, root.clone())),
                 Some(ItemOutcome::Skipped) => return Claim::Taken,
                 Some(ItemOutcome::Failed) => return Claim::Refused(root.clone(), RunItemResult::CouldNotDo),
                 None => return Claim::Stopped,
@@ -265,16 +265,27 @@ impl Runner<'_> {
     }
 
     /// Runs a one-source batch; whether it was done.
-    async fn run_one(&self, batch: EngineBatch) -> bool {
-        let path = match &batch {
-            EngineBatch::Trash { sources, .. }
-            | EngineBatch::Move { sources, .. }
-            | EngineBatch::MoveBack { sources, .. }
-            | EngineBatch::Copy { sources, .. } => sources.first().map(|source| source.path.clone()),
-            EngineBatch::MakeFolders { .. } | EngineBatch::ClaimFolder { .. } => None,
+    /// After a stop, a source gone from its place (the staging folder, on the
+    /// target's volume) counts as moved, so the report says where it is.
+    async fn run_one(&mut self, batch: EngineBatch) -> bool {
+        let source = match &batch {
+            EngineBatch::Trash { side, sources }
+            | EngineBatch::Move { side, sources, .. }
+            | EngineBatch::MoveBack { side, sources, .. } => sources.first().map(|source| (*side, source.path.clone())),
+            EngineBatch::Copy { .. }
+            | EngineBatch::MakeFolders { .. }
+            | EngineBatch::ClaimFolder { .. }
+            | EngineBatch::RemoveEmptyFolders { .. } => None,
         };
         let outcome = self.engine.run(batch).await;
-        path.is_some_and(|path| read(&outcome, &path) == Some(ItemOutcome::Done))
+        self.engine_stopped |= outcome.stopped;
+        let Some((side, path)) = source else {
+            return false;
+        };
+        match read(&outcome, &path) {
+            Some(done) => done == ItemOutcome::Done,
+            None => !self.exists(side, Place::Target, &path).await,
+        }
     }
 
     /// Puts staged files back for these rows unless their copy landed. Runs

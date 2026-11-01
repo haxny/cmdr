@@ -262,19 +262,37 @@ temp, then swap) could fold this into one step; deferred past phase 1.
 Decision: no `expected_targets` twin in the engine. Every target a run replaces or removes is first the source of a keep
 batch (`Move` or `Trash`), so the binding covers targets too.
 
-Every copy row of the run that didn't end `Done` (failed, changed, refused, blocked, unplaced) holds every removal on
-its target side under its parent folder (`HeldAfterFailedCopy`): in Mirror a rename is a copy plus a removal, and the
-removal must not run alone. A copy row at the root holds every removal on that side. A source the engine never answered
-for in a batch it didn't stop counts as `Failed`. When the engine stops a batch, unanswered sources are observed: a keep
-or removal source gone from its place counts as kept (a removal is `Done`, a replaced file comes back with the
-leftovers), a copy whose landing spot is filled is `Done`. Rows the run never reached are `NotStarted`.
+Every copy row of the run that didn't end `Done` (failed, changed, refused, blocked, unplaced, never started) holds a
+removal on its target side when the removal sits beside it (same parent folder) or reads like its source anywhere on
+that side (kind, size, and time; folders: file count and bytes): in Mirror a rename, or a move to another folder, is a
+copy plus a removal, and the removal must not run alone (`HeldAfterFailedCopy`, `src/runner/holds.rs`). One changing log
+file at the root holds only its neighbours, not the whole side.
 
-Cancel is checked between batches, between items while re-checking, and before each engine call; the rest read
-`NotStarted`. Until the app's adapter forwards the cancel into the engine (Task 6, `TODO(Task 6)` in `runner.rs`), a
-batch that has started runs to its end, so cancel is per batch. Restoring set-aside files runs after a cancel too.
+A source the engine never answered for in a batch it didn't stop counts as `Failed`. When the engine stops a batch (the
+one-item policy and move-back batches included), unanswered sources are observed: a keep or removal source gone from its
+place counts as kept (a removal is `Done`, a replaced file comes back with the leftovers, a staged file trashed by the
+policy is not counted as kept), a copy whose landing spot is filled is `Done`. Rows the run never reached are
+`NotStarted`.
 
-`RunReport::empty_folders` lists target folders the run made for copies that then all didn't land. The run never removes
-them (that would be a delete); the result screen can show them. `kept_bytes` counts what ended in a versions or staging
-folder (the result screen shows that size), not what went to the Trash. Law: `execute_proptests.rs` runs random plans in
-every mode against random edits before or between batches; the fake flags any move, trash, or copy of something that
-differs from the snapshot (anywhere beneath it), any landing on an occupied spot, and anything lost.
+Cancel (the in-process `SyncControl`) is checked between batches, between items while re-checking, and before each
+engine call; the rest read `NotStarted`. Until the app's adapter forwards the cancel into the engine (Task 6,
+`TODO(Task 6)` in `runner.rs`), a batch that has started runs to its end, so cancel is per batch. Restoring set-aside
+files runs after a cancel too.
+
+`RunReport::empty_folders` lists target folders this run created (absent when observed just before `MakeFolders`) for
+copies that then all didn't land; they stay, and the result screen can show them. Dated folders the run claimed but kept
+nothing in (an earlier attempt's staging folder, a staging folder the Trash policy emptied) are removed again at the end
+with `EngineBatch::RemoveEmptyFolders`, children first: `rmdir` semantics, only folders this run made, so nothing is
+destroyed (the fake flags any attempt on a snapshot folder). `kept_bytes` counts what ended in a versions or staging
+folder (the result screen shows that size), not what went to the Trash.
+
+Crash: a kill between setting a replaced file aside and its copy landing leaves the old file in
+`.cmdr-sync/versions/<stamp>/…`, recorded nowhere, and the next compare shows it missing from its folder (a copy in
+Mirror, a gap in Update). Nothing is lost; the file sits in the versions folder. Finding stale staging folders on the
+next run and offering to put their files back is phase 2.
+
+Law: `execute_proptests.rs` runs random plans in every mode, with the default or a custom versions folder, against
+random edits before or between batches and a random in-process cancel or engine stop; the fake flags any move, trash, or
+copy of something that differs from the snapshot (anywhere beneath it), any landing on an occupied spot, any `rmdir` of
+a snapshot folder, and anything lost, and every replacement row that isn't `Done` must have its old file back in place
+or read `KeptNotReplaced`.

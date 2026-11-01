@@ -58,6 +58,8 @@ struct Inner {
     /// Where the run moved things: sources there are kept items, not
     /// snapshot entries.
     kept_paths: BTreeSet<(Loc, PathBuf)>,
+    /// Snapshot paths the run moved or trashed and hasn't moved back.
+    away: BTreeSet<(Loc, PathBuf)>,
     /// Removed by the outside world, not by the run.
     gone: Vec<(Loc, PathBuf)>,
 }
@@ -190,6 +192,12 @@ impl FakeEngine {
         self.lock().violations.clone()
     }
 
+    /// Whether the run moved or trashed this snapshot path and never put it
+    /// back.
+    pub(crate) fn moved_away(&self, loc: Loc, path: impl AsRef<Path>) -> bool {
+        self.lock().away.contains(&(loc, path.as_ref().to_path_buf()))
+    }
+
     pub(crate) fn trashed(&self) -> Vec<(Loc, PathBuf)> {
         self.lock().trashed.clone()
     }
@@ -252,6 +260,10 @@ impl FakeEngine {
     fn execute(&self, batch: &EngineBatch) -> Vec<(PathBuf, ItemOutcome)> {
         let mut inner = self.lock();
         match batch {
+            EngineBatch::RemoveEmptyFolders { place, side, dirs } => dirs
+                .iter()
+                .map(|dir| (dir.clone(), inner.remove_empty(loc_at(*place, *side), dir)))
+                .collect(),
             EngineBatch::ClaimFolder { place, side, dir } => {
                 let outcome = self
                     .outcome(dir)
@@ -321,6 +333,9 @@ impl FakeEngine {
                             .state
                             .retain(|(l, p), _| !(*l == loc && p.starts_with(&source.path)));
                         inner.trashed.push((loc, source.path.clone()));
+                        if !inner.kept_paths.contains(&(loc, source.path.clone())) {
+                            inner.away.insert((loc, source.path.clone()));
+                        }
                         ItemOutcome::Done
                     });
                     (source.path.clone(), outcome)
@@ -394,6 +409,23 @@ impl Inner {
         }
     }
 
+    /// `rmdir`: only an empty folder goes; never one the snapshot listed.
+    fn remove_empty(&mut self, loc: Loc, dir: &Path) -> ItemOutcome {
+        let key = (loc, dir.to_path_buf());
+        if !self.state.contains_key(&key) {
+            return ItemOutcome::Skipped;
+        }
+        if self.snapshot.contains_key(&key) {
+            self.violations.push(format!("removed snapshot folder {dir:?}"));
+            return ItemOutcome::Failed;
+        }
+        if beneath(&self.state, loc, dir).any(|((_, p), _)| p != dir) {
+            return ItemOutcome::Failed;
+        }
+        self.state.remove(&key);
+        ItemOutcome::Done
+    }
+
     fn claim(&mut self, loc: Loc, dir: &Path) -> ItemOutcome {
         if self.state.contains_key(&(loc, dir.to_path_buf())) {
             ItemOutcome::Skipped
@@ -458,6 +490,10 @@ impl Inner {
         if moved.is_empty() {
             return ItemOutcome::Failed;
         }
+        if !self.kept_paths.contains(&(from, path.to_path_buf())) {
+            self.away.insert((from, path.to_path_buf()));
+        }
+        self.away.remove(&(to, dest.clone()));
         self.kept_paths.insert((to, dest.clone()));
         for (old, observed) in moved {
             self.state.remove(&(from, old.clone()));

@@ -4,6 +4,7 @@
 //! lost, and every row that was asked to run is reported.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use proptest::prelude::*;
 
@@ -24,7 +25,7 @@ struct Edit {
 }
 
 fn arb_edit() -> impl Strategy<Value = Edit> {
-    (any::<bool>(), any::<usize>(), 0u8..5, proptest::option::of(0usize..6)).prop_map(|(right, pick, what, after)| {
+    (any::<bool>(), any::<usize>(), 0u8..5, proptest::option::of(0usize..16)).prop_map(|(right, pick, what, after)| {
         Edit {
             right,
             pick,
@@ -32,6 +33,35 @@ fn arb_edit() -> impl Strategy<Value = Edit> {
             after,
         }
     })
+}
+
+/// How the run gets interrupted, if at all, at which batch (0-based).
+#[derive(Debug, Clone, Copy)]
+enum Interrupt {
+    None,
+    /// The person presses Cancel after batch `n` (in-process cancel).
+    Cancel(usize),
+    /// The engine stops batch `n` before doing anything.
+    Stop(usize),
+    /// The engine does batch `n`, then reports stopped without answers.
+    StopAfterWork(usize),
+}
+
+fn arb_interrupt() -> impl Strategy<Value = Interrupt> {
+    prop_oneof![
+        2 => Just(Interrupt::None),
+        1 => (0usize..6).prop_map(Interrupt::Cancel),
+        1 => (0usize..6).prop_map(Interrupt::Stop),
+        1 => (0usize..6).prop_map(Interrupt::StopAfterWork),
+    ]
+}
+
+/// The default target-root folder, or a custom one on the local disk.
+fn arb_location() -> impl Strategy<Value = VersionsLocation> {
+    prop_oneof![
+        2 => Just(KeepPolicy::default().location),
+        1 => Just(VersionsLocation::Custom { template: "/Kept/{profile}".to_owned() }),
+    ]
 }
 
 fn arb_mode() -> impl Strategy<Value = Mode> {
@@ -87,7 +117,7 @@ fn change_of(edit: &Edit, left: &Snapshot, right: &Snapshot) -> Option<Change> {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig { cases: 256, ..ProptestConfig::default() })]
+    #![proptest_config(ProptestConfig { cases: 512, ..ProptestConfig::default() })]
     #[test]
     fn executor_never_touches_what_changed_and_never_loses_anything(
         (left, right) in arb_snapshot_pair(),
@@ -96,10 +126,12 @@ proptest! {
         left_trash in any::<bool>(),
         right_trash in any::<bool>(),
         edits in prop::collection::vec(arb_edit(), 0..6),
+        location in arb_location(),
+        interrupt in arb_interrupt(),
     ) {
         let options = PlanOptions { mode, rules: CompareRules::QUICK };
         let plan = plan(&left, &right, None, &options);
-        let keep = KeepPolicy { place, ..KeepPolicy::default() };
+        let keep = KeepPolicy { place, location };
         let left_caps = SyncCaps { has_trash: left_trash, ..caps() };
         let right_caps = SyncCaps { has_trash: right_trash, ..caps() };
         let ctx = context(keep, left_caps, right_caps);
@@ -113,12 +145,33 @@ proptest! {
         }
         let run = acting(&plan);
         let control = SyncControl::new();
+        engine = match interrupt {
+            Interrupt::None => engine,
+            Interrupt::Cancel(n) => engine.cancel_after(n, Arc::clone(&control)),
+            Interrupt::Stop(n) => engine.stopping_at(n),
+            Interrupt::StopAfterWork(n) => engine.stopping_after_work(n),
+        };
         let runtime = tokio::runtime::Builder::new_current_thread().build().unwrap();
         let report = runtime.block_on(execute(&plan, &run, &ctx, &engine, &control, &|_| {}));
         prop_assert_eq!(engine.violations(), Vec::<String>::new());
         prop_assert_eq!(engine.lost(), Vec::new());
         let reported: Vec<u32> = report.results.iter().map(|(index, _)| *index).collect();
         prop_assert_eq!(reported, run);
+        // A replaced file is either replaced, back where it was, or reported.
+        for (index, result) in &report.results {
+            let item = &plan.items[*index as usize];
+            let Some(side) = item.action.target() else { continue };
+            let Some(old) = item.entry(side).filter(|_| item.action.is_copy()) else { continue };
+            let (loc, root) = match side { Side::Left => (Loc::Left, "/L"), Side::Right => (Loc::Right, "/R") };
+            let away = engine.moved_away(loc, PathBuf::from(root).join(&old.rel_path));
+            prop_assert!(
+                matches!(result, RunItemResult::Done | RunItemResult::KeptNotReplaced) || !away,
+                "row {} reads {:?} but its old file is gone", index, result
+            );
+        }
+        if !matches!(interrupt, Interrupt::None) {
+            return Ok(());
+        }
         prop_assert!(!report.stopped);
         prop_assert!(report.results.iter().all(|(_, result)| *result != RunItemResult::NotStarted));
         if edits.is_empty() {
