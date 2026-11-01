@@ -10,6 +10,8 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
 - **compare.rs**: `EntryFacts`, `CompareRules`, `classify`. Tests sit beside each file as `*_test.rs`.
 - **filter.rs**: `MaskFilter`, TC sync masks. **snapshot.rs**: `Snapshot`, `Entry`. **control.rs**: `SyncControl`.
 - **scan.rs**: `scan()`. **content.rs**: `compare_contents()`, byte-by-byte for equal-size pairs.
+- **plan.rs**: `plan()`, `reclassify()`, the mode table. **overrides.rs**: legal actions, bulk keys. **guards.rs**:
+  `check()`, `gate()`. **view.rs**: show-filters, folder headers, summary. Laws: `plan_proptests.rs`.
 
 ## Must-knows
 
@@ -26,6 +28,11 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
 - **`Junk` is not `Out`**: junk entries vanish from the snapshot uncounted; every `Out` entry counts as held back.
   `.cmdr-sync` is neither: the scanner skips it silently.
 - **Content compare answers every job**: a job cancel stopped answers `Pending`, never nothing.
+- **Never act on partial knowledge**: rows at or under an unreadable key, name clashes, and type clashes are `Skip` and
+  take no other action; a one-sided folder with anything held back, unreadable, or clashing beneath it is split into its
+  children, never copied or removed whole. `?` rows never get an automatic action.
+- **Hiding a row never changes its action**; the summary counts hidden actions.
+- **Removals are always held beside an empty root**, no acknowledgement releases them.
 - **The crate never deletes permanently.** Phase 1 has no delete step at all.
 - **No `cmdr-operations` dependency**: `cmdr-listing` depends on this crate and the operations test build depends on
   `cmdr-listing`, so a link back would be a cycle. The executor will sit behind a trait.

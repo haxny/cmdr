@@ -89,3 +89,83 @@ Workers: one when both volumes are `Local` (two disks seeking against each other
 The scanner skips the app-owned `.cmdr-sync` folder before the filter runs: no entry, no held-back count, at any depth
 (`MaskFilter::admits` still answers `Out` for it). A symlink to a folder is filtered as a file, as it is treated. A
 folder with `held_back > 0` or `unreadable > 0` is non-atomic: the planner must not copy or remove it whole.
+
+## Planner (plan.rs)
+
+The mode table is the phase 1 design's section 6.4 (linked from upstream issue #871), implemented as `default_action`;
+`Mode::ALL` lists the columns. A table action that would write to a side whose `SyncCaps::can_write` is off becomes
+`Skip` (the row's `default_action` already says so). `Undecided` is never a default: `?` rows are `Skip` and show in the
+`?` class.
+
+| Category                               | Compare only | Both ways | Update → | Mirror →                   |
+| -------------------------------------- | ------------ | --------- | -------- | -------------------------- |
+| left only, newer left                  | ·            | →         | →        | →                          |
+| right only                             | ·            | ←         | ·        | ×→ (guarded)               |
+| newer right                            | ·            | ←         | ·        | → (older overwrites newer) |
+| different                              | ·            | ·         | ·        | →                          |
+| equal                                  | =            | =         | =        | =                          |
+| unknown, type / name clash, unreadable | ·            | ·         | ·        | ·                          |
+
+Keys are the union of both sides' entries and clashes, walked in key order (parents before children, each subtree
+contiguous). Per key, first match wins:
+
+1. At or under an `unreadable` key on either side: one `Unreadable` row that covers everything beneath it.
+2. A clash key on either side: one `NameClash` row (the clashing side's entry is `None`; its spellings are in
+   `Snapshot::clashes`), covering everything beneath.
+3. Both sides folders: no row; the folder heads its children.
+4. Kinds differ: one `TypeClash` row covering the folder side's subtree.
+5. One-sided folder with `held_back`, `unreadable`, or a clash beneath it: no row; its children are rows (non-atomic).
+   Otherwise one row for the whole subtree, `bytes = subtree.bytes`.
+6. Anything else: `classify`.
+
+Name clash, type clash, and unreadable rows only ever take `Skip`. `older_overwrites_newer` is derived from the action:
+`CopyRight` on `NewerRight` or `CopyLeft` on `NewerLeft` (`settle` recomputes it, and `bytes`, after every change).
+`bytes` is what the action copies or removes; with no action, the larger side.
+
+`Content` rules mark an equal-size file pair `Pending` (an `Unknown` row) when both volumes can read content;
+`content_jobs` lists them and `reclassify` folds the answers in. A row whose action differs from its default (changed by
+you) keeps it; the rest follow the new default.
+
+Decision: `Plan` also carries both sides' `SyncCaps`, so `reclassify` can keep defaults off read-only sides without the
+snapshots.
+
+## Overrides (overrides.rs)
+
+An action is legal when the mode allows it (Compare only: any; Both ways: no removals; Update: no removals, no `←`;
+Mirror: no `←`, no `←×`), the category allows it (`=` only on equal rows, `?` only on unknown ones, copies and removals
+never on clash or unreadable rows), the side it reads from or removes has an entry, and the side it writes to can write.
+`apply_overrides` is all-or-nothing. `bulk_changes` drops illegal, no-op, and unknown rows silently. `Reverse` flips a
+copy only when both sides exist and turns a removal into the copy that restores it; a one-sided copy would have to
+become a removal, so it stays.
+
+## Guards (guards.rs)
+
+- `MaxRemove { side }`: files removed on a side (a folder row counts its `subtree.files`) above `max_remove_percent` of
+  that side's `file_count()`, or above `max_remove_count` (0 is off). `RemoveAnyway` releases.
+- `EmptyRoot { side }`: `Snapshot::is_empty()`. Holds every removal on either side with no way to release it, and holds
+  copies into that side until `CopyIntoEmpty` (the plan's ruling: an empty root is most likely an unmounted mount
+  point).
+- `SentinelMissing { side }`: the sentinel name (keyed with the pair's `NameRule`) isn't a non-folder entry of that
+  root. Holds every action. The sentinel has to survive the scan's masks and the hidden-files toggle.
+- Skew: pairs of non-folder entries with both times; each gap (right minus left, after the offset) rounds to the nearest
+  900 s step when within the tolerance of one. Reported when one non-zero step up to 26 h covers ≥ 90% of pairs.
+  `offset_secs` is how far the right runs ahead; its negation is the time offset that cancels it.
+- `gate` splits acting rows into `run` and `held` (sentinel first, then empty root, then max remove); `=`, `·`, and `?`
+  rows are in neither.
+
+## View (view.rs)
+
+`row_class` follows the action (`→`, `←` for copies left and removals on either side, `=`, `?` for `Undecided` or a
+skipped unknown row, `≠` for any other skip). A row shows when its class filter, its presence filter (duplicates or
+singles), and the warnings filter all let it. Decision: hiding never changes an action (TC and Krusader drop hidden rows
+from the run); `PlanSummary::hidden_actions` counts what still runs unseen. Rows group under their parent folder; the
+root's rows come first without a header, every other visible group gets "folder n of N".
+
+## Planner laws (plan_proptests.rs)
+
+Generated pairs (up to three levels over three names, files, symlinks, folders, held-back counts, unreadable folders,
+clashes, a tenth of cases with one side blank) and a pure `apply_plan` model of a run check: determinism, no removals in
+Update and Both ways, nothing written left in Update and Mirror, re-planning after a run is all `=` (Mirror), copies
+nothing (Update, Both ways), names only grow (Both ways), no default action on `?`, clash, or unreadable rows, protected
+entries (under unreadable keys, non-atomic folders) survive every mode, the warning flag is exact, overrides and bulk
+keys never yield an illegal action, and guards trip exactly at their thresholds.

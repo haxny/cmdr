@@ -34,3 +34,5 @@ futures-util = "0.3"
 [dev-dependencies]
 tokio = { version = "1", features = ["rt-multi-thread", "test-util"] }
 cmdr-fs = { path = "../cmdr-fs", features = ["testing"] }
+# Planner laws over generated snapshot pairs (`plan_proptests.rs`).
+proptest = "1.12.0"

@@ -15,9 +15,13 @@ mod compare;
 mod content;
 mod control;
 mod filter;
+mod guards;
 mod key;
+mod overrides;
+mod plan;
 mod scan;
 mod snapshot;
+mod view;
 
 pub use caps::{BackendFacts, SyncCaps, backend_facts};
 pub use compare::{
@@ -27,9 +31,15 @@ pub use compare::{
 pub use content::{ContentJob, ContentProgress, compare_contents, content_workers};
 pub use control::SyncControl;
 pub use filter::{ALWAYS_EXCLUDED, Admission, DEFAULT_EXCLUDES, JUNK_MASKS, MaskError, MaskFilter};
+pub use guards::{
+    Acknowledgement, ClockSkew, DEFAULT_MAX_REMOVE_PERCENT, Gated, GuardBlock, GuardReport, GuardSettings, check, gate,
+};
 pub use key::{EntryKey, NameRule};
+pub use overrides::{ActionChange, BulkAction, OverrideRefusal, apply_overrides, bulk_changes, legal_actions};
+pub use plan::{Action, Baseline, Mode, Plan, PlanItem, PlanOptions, content_jobs, default_action, plan, reclassify};
 pub use scan::{ScanError, ScanOptions, ScanProgress, Side, scan};
 pub use snapshot::{Entry, Snapshot, SubtreeFacts, UnreadableReason};
+pub use view::{PlanSummary, RowClass, ShowFilters, SideTotals, ViewRow, is_visible, row_class, summarize, view_rows};
 
 #[cfg(test)]
 mod caps_test;
@@ -42,6 +52,18 @@ mod control_test;
 #[cfg(test)]
 mod filter_test;
 #[cfg(test)]
+mod guards_test;
+#[cfg(test)]
 mod key_test;
 #[cfg(test)]
+mod overrides_test;
+#[cfg(test)]
+mod plan_proptests;
+#[cfg(test)]
+mod plan_test;
+#[cfg(test)]
 mod scan_test;
+#[cfg(test)]
+mod test_tree;
+#[cfg(test)]
+mod view_test;

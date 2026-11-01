@@ -2001,6 +2001,7 @@ version = "0.0.0"
 dependencies = [
  "cmdr-fs",
  "futures-util",
+ "proptest",
  "serde",
  "specta",
  "tokio",
