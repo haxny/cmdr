@@ -43,11 +43,11 @@
   "@sync.dialog.staleFolders": {
     "sourceHash": "122cdad"
   },
-  "sync.dialog.comparing": "Comparing… {leftFilesText} {leftFiles, plural, one {file} other {files}} on the left, {rightFilesText} {rightFiles, plural, one {file} other {files}} on the right",
+  "sync.dialog.comparing": "Comparing… {leftFilesText} {leftFiles, plural, one {file} few {files} many {files} other {files}} on the left, {rightFilesText} {rightFiles, plural, one {file} few {files} many {files} other {files}} on the right",
   "@sync.dialog.comparing": {
     "sourceHash": "7aeda14"
   },
-  "sync.dialog.comparingContent": "Comparing content: {doneText} of {totalText} {total, plural, one {pair} other {pairs}}",
+  "sync.dialog.comparingContent": "Comparing content: {doneText} of {totalText} {total, plural, one {pair} few {pairs} many {pairs} other {pairs}}",
   "@sync.dialog.comparingContent": {
     "sourceHash": "357b725"
   },
@@ -543,39 +543,39 @@
   "@sync.refusal.quickLookUnavailable": {
     "sourceHash": "3bd6997"
   },
-  "sync.skipped.illegalForMode": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: {action} isn’t possible in this mode.",
+  "sync.skipped.illegalForMode": "{countText} {count, plural, one {row wasn’t} few {rows weren’t} many {rows weren’t} other {rows weren’t}} changed: {action} isn’t possible in this mode.",
   "@sync.skipped.illegalForMode": {
     "sourceHash": "7eb1dbd"
   },
-  "sync.skipped.illegalForCategory": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: {action} isn’t possible for {count, plural, one {that row} other {those rows}}.",
+  "sync.skipped.illegalForCategory": "{countText} {count, plural, one {row wasn’t} few {rows weren’t} many {rows weren’t} other {rows weren’t}} changed: {action} isn’t possible for {count, plural, one {that row} few {those rows} many {those rows} other {those rows}}.",
   "@sync.skipped.illegalForCategory": {
     "sourceHash": "a78ce68"
   },
-  "sync.skipped.nothingOnLeft": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: there’s nothing on the left to copy.",
+  "sync.skipped.nothingOnLeft": "{countText} {count, plural, one {row wasn’t} few {rows weren’t} many {rows weren’t} other {rows weren’t}} changed: there’s nothing on the left to copy.",
   "@sync.skipped.nothingOnLeft": {
     "sourceHash": "d5943c6"
   },
-  "sync.skipped.nothingOnRight": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: there’s nothing on the right to copy.",
+  "sync.skipped.nothingOnRight": "{countText} {count, plural, one {row wasn’t} few {rows weren’t} many {rows weren’t} other {rows weren’t}} changed: there’s nothing on the right to copy.",
   "@sync.skipped.nothingOnRight": {
     "sourceHash": "33fd9ae"
   },
-  "sync.skipped.sideReadOnlyLeft": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: the left side takes no changes.",
+  "sync.skipped.sideReadOnlyLeft": "{countText} {count, plural, one {row wasn’t} few {rows weren’t} many {rows weren’t} other {rows weren’t}} changed: the left side takes no changes.",
   "@sync.skipped.sideReadOnlyLeft": {
     "sourceHash": "c0d8aca"
   },
-  "sync.skipped.sideReadOnlyRight": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: the right side takes no changes.",
+  "sync.skipped.sideReadOnlyRight": "{countText} {count, plural, one {row wasn’t} few {rows weren’t} many {rows weren’t} other {rows weren’t}} changed: the right side takes no changes.",
   "@sync.skipped.sideReadOnlyRight": {
     "sourceHash": "2acb0e2"
   },
-  "sync.skipped.cantReverse": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: only a copy between two existing files, or a removal, can be reversed.",
+  "sync.skipped.cantReverse": "{countText} {count, plural, one {row wasn’t} few {rows weren’t} many {rows weren’t} other {rows weren’t}} changed: only a copy between two existing files, or a removal, can be reversed.",
   "@sync.skipped.cantReverse": {
     "sourceHash": "c1b8d39"
   },
-  "sync.skipped.nothingToToggle": "{countText} {count, plural, one {row wasn’t} other {rows weren’t}} changed: there was no action to skip or restore.",
+  "sync.skipped.nothingToToggle": "{countText} {count, plural, one {row wasn’t} few {rows weren’t} many {rows weren’t} other {rows weren’t}} changed: there was no action to skip or restore.",
   "@sync.skipped.nothingToToggle": {
     "sourceHash": "22d2691"
   },
-  "sync.skipped.hidden": "{countText} hidden {count, plural, one {row wasn’t} other {rows weren’t}} changed.",
+  "sync.skipped.hidden": "{countText} hidden {count, plural, one {row wasn’t} few {rows weren’t} many {rows weren’t} other {rows weren’t}} changed.",
   "@sync.skipped.hidden": {
     "sourceHash": "b87676c"
   },
@@ -583,11 +583,11 @@
   "@sync.summary.label": {
     "sourceHash": "8e76a94"
   },
-  "sync.summary.toRight": "To the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.summary.toRight": "To the right: {filesText} {files, plural, one {file} few {files} many {files} other {files}}, {size}",
   "@sync.summary.toRight": {
     "sourceHash": "febef53"
   },
-  "sync.summary.toLeft": "To the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.summary.toLeft": "To the left: {filesText} {files, plural, one {file} few {files} many {files} other {files}}, {size}",
   "@sync.summary.toLeft": {
     "sourceHash": "d6450e4"
   },
@@ -631,11 +631,11 @@
   "@sync.summary.changedByYou": {
     "sourceHash": "ac9dbe6"
   },
-  "sync.summary.hiddenActions": "{countText} hidden {count, plural, one {action} other {actions}}",
+  "sync.summary.hiddenActions": "{countText} hidden {count, plural, one {action} few {actions} many {actions} other {actions}}",
   "@sync.summary.hiddenActions": {
     "sourceHash": "0a3d807"
   },
-  "sync.summary.warnings": "{countText} older {count, plural, one {file replaces a newer one} other {files replace newer ones}}",
+  "sync.summary.warnings": "{countText} older {count, plural, one {file replaces a newer one} few {files replace newer ones} many {files replace newer ones} other {files replace newer ones}}",
   "@sync.summary.warnings": {
     "sourceHash": "c73c6e3"
   },
@@ -663,7 +663,7 @@
   "@sync.summary.guard.sentinelMissingRight": {
     "sourceHash": "38f3312"
   },
-  "sync.summary.skew": "Most times on the right differ from the left by {secondsText} {seconds, plural, one {second} other {seconds}}. A clock may be off.",
+  "sync.summary.skew": "Most times on the right differ from the left by {secondsText} {seconds, plural, one {second} few {seconds} many {seconds} other {seconds}}. A clock may be off.",
   "@sync.summary.skew": {
     "sourceHash": "06306cc"
   },
@@ -791,35 +791,35 @@
   "@sync.confirm.groupsLabel": {
     "sourceHash": "79bf11c"
   },
-  "sync.confirm.group.copyRight": "Copy to the right: {filesText} new {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.copyRight": "Copy to the right: {filesText} new {files, plural, one {file} few {files} many {files} other {files}}, {size}",
   "@sync.confirm.group.copyRight": {
     "sourceHash": "dc27d61"
   },
-  "sync.confirm.group.replaceRight": "Replace on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.replaceRight": "Replace on the right: {filesText} {files, plural, one {file} few {files} many {files} other {files}}, {size}",
   "@sync.confirm.group.replaceRight": {
     "sourceHash": "8087763"
   },
-  "sync.confirm.group.removeRight": "Remove on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.removeRight": "Remove on the right: {filesText} {files, plural, one {file} few {files} many {files} other {files}}, {size}",
   "@sync.confirm.group.removeRight": {
     "sourceHash": "dd9ca58"
   },
-  "sync.confirm.group.copyLeft": "Copy to the left: {filesText} new {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.copyLeft": "Copy to the left: {filesText} new {files, plural, one {file} few {files} many {files} other {files}}, {size}",
   "@sync.confirm.group.copyLeft": {
     "sourceHash": "d7631f2"
   },
-  "sync.confirm.group.replaceLeft": "Replace on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.replaceLeft": "Replace on the left: {filesText} {files, plural, one {file} few {files} many {files} other {files}}, {size}",
   "@sync.confirm.group.replaceLeft": {
     "sourceHash": "c98fed7"
   },
-  "sync.confirm.group.removeLeft": "Remove on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.removeLeft": "Remove on the left: {filesText} {files, plural, one {file} few {files} many {files} other {files}}, {size}",
   "@sync.confirm.group.removeLeft": {
     "sourceHash": "638c4d0"
   },
-  "sync.confirm.group.copyRightRecreates": "Copy to the right instead of removing on the left: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.copyRightRecreates": "Copy to the right instead of removing on the left: {filesText} {files, plural, one {file} few {files} many {files} other {files}}, {size}",
   "@sync.confirm.group.copyRightRecreates": {
     "sourceHash": "4e3a15f"
   },
-  "sync.confirm.group.copyLeftRecreates": "Copy to the left instead of removing on the right: {filesText} {files, plural, one {file} other {files}}, {size}",
+  "sync.confirm.group.copyLeftRecreates": "Copy to the left instead of removing on the right: {filesText} {files, plural, one {file} few {files} many {files} other {files}}, {size}",
   "@sync.confirm.group.copyLeftRecreates": {
     "sourceHash": "b5b47bb"
   },
@@ -835,7 +835,7 @@
   "@sync.confirm.keepSlow": {
     "sourceHash": "c9bc9ac"
   },
-  "sync.confirm.olderTitle": "Older replaces newer: {countText} {count, plural, one {file} other {files}}",
+  "sync.confirm.olderTitle": "Older replaces newer: {countText} {count, plural, one {file} few {files} many {files} other {files}}",
   "@sync.confirm.olderTitle": {
     "sourceHash": "9aab1a4"
   },
@@ -855,11 +855,11 @@
   "@sync.confirm.more": {
     "sourceHash": "a674c4d"
   },
-  "sync.confirm.chosenUnknown": "You chose an action for {countText} {count, plural, one {row} other {rows}} marked ?, where the compare couldn’t tell which side is newer.",
+  "sync.confirm.chosenUnknown": "You chose an action for {countText} {count, plural, one {row} few {rows} many {rows} other {rows}} marked ?, where the compare couldn’t tell which side is newer:",
   "@sync.confirm.chosenUnknown": {
-    "sourceHash": "12a212a"
+    "sourceHash": "494bfd6"
   },
-  "sync.confirm.hiddenActions": "{countText} hidden {count, plural, one {action} other {actions}} run too: the show-filters hide those rows, but they still synchronize.",
+  "sync.confirm.hiddenActions": "{countText} hidden {count, plural, one {action} few {actions} many {actions} other {actions}} run too: the show-filters hide those rows, but they still synchronize.",
   "@sync.confirm.hiddenActions": {
     "sourceHash": "a159620"
   },
@@ -871,7 +871,7 @@
   "@sync.confirm.skewBehind": {
     "sourceHash": "9feafa9"
   },
-  "sync.confirm.maxRemoveRight": "This removes {removalsText} of {targetText} {target, plural, one {file} other {files}} on the right, more than the limit in Settings allows. Those removals wait for Remove anyway.",
+  "sync.confirm.maxRemoveRight": "This removes {removalsText} of {targetText} {target, plural, one {file} few {files} many {files} other {files}} on the right, more than the limit in Settings allows. Those removals wait for Remove anyway.",
   "@sync.confirm.maxRemoveRight": {
     "sourceHash": "f77b5c6"
   },
@@ -883,7 +883,7 @@
   "@sync.confirm.sentinelRight": {
     "sourceHash": "f72402f"
   },
-  "sync.confirm.maxRemoveLeft": "This removes {removalsText} of {targetText} {target, plural, one {file} other {files}} on the left, more than the limit in Settings allows. Those removals wait for Remove anyway.",
+  "sync.confirm.maxRemoveLeft": "This removes {removalsText} of {targetText} {target, plural, one {file} few {files} many {files} other {files}} on the left, more than the limit in Settings allows. Those removals wait for Remove anyway.",
   "@sync.confirm.maxRemoveLeft": {
     "sourceHash": "7422a17"
   },
@@ -923,11 +923,11 @@
   "@sync.confirm.nothingTicked": {
     "sourceHash": "836ee01"
   },
-  "sync.confirm.waitRemoveAnyway": "{filesText} {files, plural, one {file waits} other {files wait}} for Remove anyway. Tick it, or untick that group.",
+  "sync.confirm.waitRemoveAnyway": "{filesText} {files, plural, one {file waits} few {files wait} many {files wait} other {files wait}} for Remove anyway. Tick it, or untick that group.",
   "@sync.confirm.waitRemoveAnyway": {
     "sourceHash": "4f3d135"
   },
-  "sync.confirm.waitCopyAnyway": "{filesText} {files, plural, one {file waits} other {files wait}} for Copy anyway. Tick it, or untick that group.",
+  "sync.confirm.waitCopyAnyway": "{filesText} {files, plural, one {file waits} few {files wait} many {files wait} other {files wait}} for Copy anyway. Tick it, or untick that group.",
   "@sync.confirm.waitCopyAnyway": {
     "sourceHash": "608524e"
   },
@@ -959,7 +959,7 @@
   "@sync.run.title": {
     "sourceHash": "6ab4fbf"
   },
-  "sync.run.progress": "{doneText} of {totalText} {total, plural, one {item} other {items}}, {bytesDone} of {bytesTotal}",
+  "sync.run.progress": "{doneText} of {totalText} {total, plural, one {item} few {items} many {items} other {items}}, {bytesDone} of {bytesTotal}",
   "@sync.run.progress": {
     "sourceHash": "dbf979a"
   },
@@ -1007,7 +1007,7 @@
   "@sync.result.titleStopped": {
     "sourceHash": "abe2c24"
   },
-  "sync.result.done": "{countText} {count, plural, one {row} other {rows}} done",
+  "sync.result.done": "{countText} {count, plural, one {row} few {rows} many {rows} other {rows}} done",
   "@sync.result.done": {
     "sourceHash": "bee0e61"
   },
@@ -1035,13 +1035,13 @@
   "@sync.result.keptNotReplaced": {
     "sourceHash": "bbbdafc"
   },
-  "sync.result.heldAfterFailedCopy": "{countText} {count, plural, one {removal} other {removals}} held because a copy beside {count, plural, one {it} other {them}} didn’t land",
+  "sync.result.heldAfterFailedCopy": "{countText} {count, plural, one {removal} few {removals} many {removals} other {removals}} held because a copy beside {count, plural, one {it} few {them} many {them} other {them}} didn’t land",
   "@sync.result.heldAfterFailedCopy": {
     "sourceHash": "cb58211"
   },
-  "sync.result.heldByGuard": "{countText} {count, plural, one {removal} other {removals}} held by a guard",
+  "sync.result.heldByGuard": "{countText} {count, plural, one {row} few {rows} many {rows} other {rows}} held by a guard",
   "@sync.result.heldByGuard": {
-    "sourceHash": "a7a7add"
+    "sourceHash": "a452efb"
   },
   "sync.result.notStarted": "{countText} not reached before the run stopped",
   "@sync.result.notStarted": {
@@ -1063,7 +1063,7 @@
   "@sync.result.compareAgain": {
     "sourceHash": "502f6db"
   },
-  "sync.result.notRunSelected": "{countText} {count, plural, one {row} other {rows}} that didn’t run {count, plural, one {is} other {are}} selected. Compare again to see the folders as they are now.",
+  "sync.result.notRunSelected": "{countText} {count, plural, one {row} few {rows} many {rows} other {rows}} that didn’t run {count, plural, one {is} few {are} many {are} other {are}} selected. Compare again to see the folders as they are now.",
   "@sync.result.notRunSelected": {
     "sourceHash": "b314612"
   },

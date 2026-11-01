@@ -855,9 +855,9 @@
   "@sync.confirm.more": {
     "sourceHash": "a674c4d"
   },
-  "sync.confirm.chosenUnknown": "You chose an action for {countText} {count, plural, one {row} other {rows}} marked ?, where the compare couldn’t tell which side is newer.",
+  "sync.confirm.chosenUnknown": "You chose an action for {countText} {count, plural, one {row} other {rows}} marked ?, where the compare couldn’t tell which side is newer:",
   "@sync.confirm.chosenUnknown": {
-    "sourceHash": "12a212a"
+    "sourceHash": "494bfd6"
   },
   "sync.confirm.hiddenActions": "{countText} hidden {count, plural, one {action} other {actions}} run too: the show-filters hide those rows, but they still synchronize.",
   "@sync.confirm.hiddenActions": {
@@ -1039,9 +1039,9 @@
   "@sync.result.heldAfterFailedCopy": {
     "sourceHash": "cb58211"
   },
-  "sync.result.heldByGuard": "{countText} {count, plural, one {removal} other {removals}} held by a guard",
+  "sync.result.heldByGuard": "{countText} {count, plural, one {row} other {rows}} held by a guard",
   "@sync.result.heldByGuard": {
-    "sourceHash": "a7a7add"
+    "sourceHash": "a452efb"
   },
   "sync.result.notStarted": "{countText} not reached before the run stopped",
   "@sync.result.notStarted": {
