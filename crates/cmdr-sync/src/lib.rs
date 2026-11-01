@@ -22,6 +22,7 @@ mod keep;
 mod key;
 mod overrides;
 mod plan;
+mod profile;
 mod runner;
 mod scan;
 mod snapshot;
@@ -40,7 +41,7 @@ pub use execute::{
     BatchOutcome, BoundSource, EngineBatch, EngineFuture, ItemOutcome, Observed, RunItemResult, RunProgress, RunReport,
     SyncEngine, execute,
 };
-pub use filter::{ALWAYS_EXCLUDED, Admission, DEFAULT_EXCLUDES, JUNK_MASKS, MaskError, MaskFilter};
+pub use filter::{ALWAYS_EXCLUDED, Admission, DEFAULT_EXCLUDES, JUNK_MASKS, MaskFilter, SyncMaskError};
 pub use guards::{
     Acknowledgement, ClockSkew, DEFAULT_MAX_REMOVE_PERCENT, Gated, GuardBlock, GuardReport, GuardSettings, check, gate,
 };
@@ -53,6 +54,10 @@ pub use overrides::{ActionChange, BulkAction, OverrideRefusal, apply_overrides, 
 pub use plan::{
     Action, Baseline, HeadFolder, Mode, Plan, PlanItem, PlanOptions, Reclassified, content_jobs, default_action, plan,
     reclassify,
+};
+pub use profile::{
+    Effective, ProfileOverrides, ProfileProblem, RootConflict, RootRef, SyncDefaults, SyncOptions, SyncProfile,
+    check_keep_policy, effective, roots_conflict, validate,
 };
 pub use scan::{ScanError, ScanOptions, ScanProgress, Side, scan, subtree_now};
 pub use snapshot::{Entry, Snapshot, SubtreeFacts, UnreadableReason};
@@ -87,6 +92,8 @@ mod overrides_test;
 mod plan_proptests;
 #[cfg(test)]
 mod plan_test;
+#[cfg(test)]
+mod profile_test;
 #[cfg(test)]
 mod scan_test;
 #[cfg(test)]

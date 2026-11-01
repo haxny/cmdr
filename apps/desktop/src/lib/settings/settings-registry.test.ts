@@ -842,3 +842,58 @@ describe('operationLog.enabled (recording on or off)', () => {
     expect(getSettingDefinition('operationLog.enabled')?.mcpSettable).toBe(false)
   })
 })
+
+describe('Synchronize folders settings', () => {
+  const ids = [
+    'sync.keep.policy',
+    'sync.keep.location',
+    'sync.keep.folderName',
+    'sync.keep.customFolder',
+    'sync.compare.timeTolerance',
+    'sync.compare.ignoreHourShift',
+    'sync.guards.maxRemovePercent',
+    'sync.guards.maxRemoveCount',
+  ] as const
+
+  it('registers all eight in Behavior > Synchronize folders, with the decided defaults', () => {
+    for (const id of ids) {
+      expect(getSettingDefinition(id)?.section, id).toEqual(['Behavior', 'Synchronize folders'])
+    }
+    expect(getDefaultValue('sync.keep.policy')).toBe('trashElseVersions')
+    expect(getDefaultValue('sync.keep.location')).toBe('targetRoot')
+    expect(getDefaultValue('sync.keep.folderName')).toBe('.cmdr-sync/versions')
+    expect(getDefaultValue('sync.keep.customFolder')).toBe('')
+    expect(getDefaultValue('sync.compare.timeTolerance')).toBe(2)
+    expect(getDefaultValue('sync.compare.ignoreHourShift')).toBe(false)
+    expect(getDefaultValue('sync.guards.maxRemovePercent')).toBe(50)
+    expect(getDefaultValue('sync.guards.maxRemoveCount')).toBe(0)
+  })
+
+  it('has no setting that turns off keeping replaced files', () => {
+    expect(getSettingDefinition('sync.keep.replacedFiles')).toBeUndefined()
+  })
+
+  it('bounds the numbers', () => {
+    expect(() => {
+      validateSettingValue('sync.compare.timeTolerance', 61)
+    }).toThrow()
+    expect(() => {
+      validateSettingValue('sync.compare.timeTolerance', 60)
+    }).not.toThrow()
+    expect(() => {
+      validateSettingValue('sync.guards.maxRemovePercent', 0)
+    }).toThrow()
+    expect(() => {
+      validateSettingValue('sync.guards.maxRemovePercent', 100)
+    }).not.toThrow()
+    expect(() => {
+      validateSettingValue('sync.guards.maxRemoveCount', -1)
+    }).toThrow()
+  })
+
+  it('lives under Behavior > Synchronize folders in the section tree', () => {
+    const behavior = buildSectionTree().find((s) => s.name === 'Behavior')
+    const sync = behavior?.subsections.find((s) => s.name === 'Synchronize folders')
+    expect((sync?.settings ?? []).map((s) => s.id)).toEqual(ids)
+  })
+})

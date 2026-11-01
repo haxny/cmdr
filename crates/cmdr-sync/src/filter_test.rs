@@ -119,11 +119,11 @@ fn editable_excludes_behave_like_masks_after_the_bar() {
 fn empty_mask_after_bar_is_refused() {
     assert!(matches!(
         MaskFilter::parse("*.jpg | ", &[]),
-        Err(MaskError::EmptyMask { .. })
+        Err(SyncMaskError::EmptyMask { .. })
     ));
     assert!(matches!(
         MaskFilter::parse("*.jpg", &strings(&[" "])),
-        Err(MaskError::EmptyMask { .. })
+        Err(SyncMaskError::EmptyMask { .. })
     ));
 }
 
@@ -131,11 +131,11 @@ fn empty_mask_after_bar_is_refused() {
 fn unclosed_quote_and_second_bar_are_refused() {
     assert!(matches!(
         MaskFilter::parse("\"abc", &[]),
-        Err(MaskError::UnclosedQuote { position: 0 })
+        Err(SyncMaskError::UnclosedQuote { position: 0 })
     ));
     assert!(matches!(
         MaskFilter::parse("*.a | b | c", &[]),
-        Err(MaskError::SecondBar { position: 8 })
+        Err(SyncMaskError::SecondBar { position: 8 })
     ));
 }
 

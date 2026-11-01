@@ -127,6 +127,9 @@ cmdr-operations = { path = "../../../crates/cmdr-operations" }
 # The directory listing engine: every pane's listing, its cache, sort, and diffs,
 # behind one handle (`listing_host::listings()`) the app answers seams for.
 cmdr-listing = { path = "../../../crates/cmdr-listing" }
+# Synchronize folders: the pure compare, plan, and run logic, and the profile
+# types the sync profile store keeps. No `tauri` in its tree.
+cmdr-sync = { path = "../../../crates/cmdr-sync" }
 # The file-name collator the panes sort with. The write engine names it from
 # here rather than through `cmdr-listing`'s re-export, so it never needs the
 # listing engine for one type.

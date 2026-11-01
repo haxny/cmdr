@@ -61,6 +61,7 @@ test.describe('Settings page', () => {
       'Archives',
       'Notifications',
       'Search',
+      'Synchronize folders',
       'Indexing',
       'Drive indexing',
       'Image indexing',

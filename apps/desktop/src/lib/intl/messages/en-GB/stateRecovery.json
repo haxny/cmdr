@@ -10,5 +10,9 @@
   "stateRecovery.favorites.title": "Cmdr couldn’t read your favourites, so the list starts empty",
   "@stateRecovery.favorites.title": {
     "sourceHash": "1048c2b"
+  },
+  "stateRecovery.syncProfiles.title": "Cmdr couldn’t read your saved synchronisation profiles, so the list starts empty",
+  "@stateRecovery.syncProfiles.title": {
+    "sourceHash": "1a0cafa"
   }
 }

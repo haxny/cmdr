@@ -303,3 +303,16 @@ random edits before or between batches and a random in-process cancel or engine 
 copy of something that differs from the snapshot (anywhere beneath it), any landing on an occupied spot, any `rmdir` of
 a snapshot folder, and anything lost, and every replacement row that isn't `Done` must have its old file back in place
 or read `KeptNotReplaced`.
+
+## Profiles (profile.rs)
+
+`effective(defaults, options, overrides)` is the one answer to "what does this compare and run use": the profile's
+override when it has one, else the Settings value the dialog passed as `SyncDefaults`. `time_offset_secs` has no
+Settings value, so it is the profile's own. Defaults of `SyncOptions` follow the user's decisions: both ways, date and
+size, subfolders on, the OS junk in the exclude list.
+
+`validate` returns the first `ProfileProblem` (empty name, a mask list `MaskFilter::parse` refuses, a tolerance override
+over 60 s, a removal percentage outside 1 to 100); `Unreadable` is the store's, for an entry that doesn't read as a
+profile at all. `check_keep_policy` runs the versions-folder rules of `keep.rs` against a stand-in root, so Settings can
+show `BadTemplate` and `EscapesFolder` next to the field; `InsideSyncFolder` needs the real roots and stays a run-time
+refusal. `roots_conflict` compares path components on one volume only (`/a` and `/ab` don't conflict).

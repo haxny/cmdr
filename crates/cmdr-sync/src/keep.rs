@@ -30,7 +30,7 @@ pub enum KeepPlace {
 
 /// Where the versions folder lives.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum VersionsLocation {
     /// Inside the target root, at this relative path.
     TargetRoot {

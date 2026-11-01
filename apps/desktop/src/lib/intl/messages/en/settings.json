@@ -4266,5 +4266,175 @@
       "server": "the server the share is on",
       "target": "the other server the link leads to"
     }
+  },
+  "settings.section.synchronizeFolders": "Synchronize folders",
+  "@settings.section.synchronizeFolders": {
+    "description": "Settings subsection title under Behavior: Synchronize folders. Covers where the files Synchronize folders replaces or removes are kept, how it compares modified times, and when Mirror asks before removing. \"Synchronize folders\" is the feature name; translate it like the command that opens it. Sidebar and page heading."
+  },
+  "settings.summary.synchronizeFolders": "Where replaced and removed files go, time tolerance, and limits on removals.",
+  "@settings.summary.synchronizeFolders": {
+    "description": "One-line summary shown under the \"Synchronize folders\" subsection heading in Settings > Behavior. \"Synchronize folders\" is the feature that makes two folders match."
+  },
+  "settings.sync.card.keep": "Kept files",
+  "@settings.sync.card.keep": {
+    "description": "Card title in Settings > Behavior > Synchronize folders, grouping the settings for where files that Synchronize folders replaces or removes are kept. Short noun phrase."
+  },
+  "settings.sync.card.compare": "Comparing",
+  "@settings.sync.card.compare": {
+    "description": "Card title in Settings > Behavior > Synchronize folders, grouping the settings for how modified times are compared. One word or a short phrase."
+  },
+  "settings.sync.card.guards": "Mirror limits",
+  "@settings.sync.card.guards": {
+    "description": "Card title in Settings > Behavior > Synchronize folders, grouping the limits that make Mirror (the mode that removes files from the target so it matches the source) ask before removing many files. \"Mirror\" is a mode name; translate it like the mode in the Synchronize folders dialog."
+  },
+  "settings.sync.keep.policy.label": "Replaced and removed files",
+  "@settings.sync.keep.policy.label": {
+    "description": "Label for the setting that decides where Synchronize folders puts files it overwrites or removes. In Settings > Behavior > Synchronize folders. \"Synchronize\" is the feature name; translate it like the command."
+  },
+  "settings.sync.keep.policy.description": "Where Synchronize puts files it replaces or removes. Trash where available keeps them in the Trash and uses the versions folder on drives and servers without one. Always use the versions folder keeps everything in one place. Trash only skips those items on drives without a Trash.",
+  "@settings.sync.keep.policy.description": {
+    "description": "Help text under the radio group that decides where replaced and removed files go. In Settings > Behavior > Synchronize folders. The three option names it mentions (Trash where available, Always use the versions folder, Trash only) must match the radio labels exactly. \"Trash\" is the macOS Trash; use the OS's localized name. \"Versions folder\" is a folder Synchronize creates to keep older copies; keep the term consistent with the \"Versions folder location\" setting."
+  },
+  "settings.sync.keep.policy.opt.trashElseVersions": "Trash where available",
+  "@settings.sync.keep.policy.opt.trashElseVersions": {
+    "description": "Radio option in Settings > Behavior > Synchronize folders: replaced and removed files go to the Trash on drives that have one, else to the versions folder. Must match the name used in the help text above it. \"Trash\" is the macOS Trash."
+  },
+  "settings.sync.keep.policy.opt.versionsAlways": "Always use the versions folder",
+  "@settings.sync.keep.policy.opt.versionsAlways": {
+    "description": "Radio option in Settings > Behavior > Synchronize folders: replaced and removed files always go to the versions folder, never the Trash. Must match the name used in the help text above it."
+  },
+  "settings.sync.keep.policy.opt.trashOnly": "Trash only",
+  "@settings.sync.keep.policy.opt.trashOnly": {
+    "description": "Radio option in Settings > Behavior > Synchronize folders: replaced and removed files go to the Trash only; items on drives without a Trash are skipped, never deleted. Must match the name used in the help text above it. \"Trash\" is the macOS Trash."
+  },
+  "settings.sync.keep.policy.keywords": "trash, versions, backup, keep, replace, overwrite, remove, delete, old copies",
+  "@settings.sync.keep.policy.keywords": {
+    "description": "Search keywords for the \"Replaced and removed files\" setting (settings.sync.keep.policy.label) in Settings > Behavior > Synchronize folders. What it does: chooses whether files that Synchronize overwrites or removes go to the Trash or to a versions folder. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.sync.keep.location.label": "Versions folder location",
+  "@settings.sync.keep.location.label": {
+    "description": "Label for the toggle that chooses where the versions folder lives. In Settings > Behavior > Synchronize folders. The versions folder holds older copies of files Synchronize replaced or removed."
+  },
+  "settings.sync.keep.location.description": "Inside the folder being synchronized, or one folder you choose for all synchronizations.",
+  "@settings.sync.keep.location.description": {
+    "description": "Help text under the versions-folder-location toggle in Settings > Behavior > Synchronize folders. \"Synchronized\" refers to the folder a Synchronize run changes (the target)."
+  },
+  "settings.sync.keep.location.opt.targetRoot": "In the synchronized folder",
+  "@settings.sync.keep.location.opt.targetRoot": {
+    "description": "Toggle option in Settings > Behavior > Synchronize folders: the versions folder is created inside the folder being synchronized. Keep it short (one segmented-control cell)."
+  },
+  "settings.sync.keep.location.opt.customFolder": "A folder I choose",
+  "@settings.sync.keep.location.opt.customFolder": {
+    "description": "Toggle option in Settings > Behavior > Synchronize folders: the versions folder is one folder the person chooses, for every synchronization. Keep it short (one segmented-control cell)."
+  },
+  "settings.sync.keep.location.keywords": "versions, folder, location, where, backup, custom, elsewhere",
+  "@settings.sync.keep.location.keywords": {
+    "description": "Search keywords for the \"Versions folder location\" setting (settings.sync.keep.location.label) in Settings > Behavior > Synchronize folders. What it does: puts the versions folder inside the synchronized folder or in one folder of the person's choosing. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats. Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.sync.keep.folderName.label": "Versions folder name",
+  "@settings.sync.keep.folderName.label": {
+    "description": "Label for the text field with the versions folder's name inside the synchronized folder. In Settings > Behavior > Synchronize folders."
+  },
+  "settings.sync.keep.folderName.description": "Used when the versions folder is inside the synchronized folder. It must start with .cmdr-sync/. Each run adds a folder named by its date and time.",
+  "@settings.sync.keep.folderName.description": {
+    "description": "Help text under the versions-folder-name field in Settings > Behavior > Synchronize folders. \".cmdr-sync/\" is a literal folder name; do not translate it. \"Run\" = one execution of Synchronize."
+  },
+  "settings.sync.keep.folderName.keywords": "versions, folder, name, hidden, backup",
+  "@settings.sync.keep.folderName.keywords": {
+    "description": "Search keywords for the \"Versions folder name\" setting (settings.sync.keep.folderName.label) in Settings > Behavior > Synchronize folders. What it does: names the versions folder inside the synchronized folder. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats. Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.sync.keep.customFolder.label": "Custom versions folder",
+  "@settings.sync.keep.customFolder.label": {
+    "description": "Label for the text field with the full path of the versions folder the person chooses. In Settings > Behavior > Synchronize folders."
+  },
+  "settings.sync.keep.customFolder.description": "Used when the location is a folder you choose. Start with a full path.",
+  "@settings.sync.keep.customFolder.description": {
+    "description": "Help text under the custom-versions-folder field in Settings > Behavior > Synchronize folders. A second sentence naming the placeholders follows it (settings.sync.keep.customFolder.placeholders). \"Full path\" = an absolute path."
+  },
+  "settings.sync.keep.customFolder.placeholders": "You can use {root} for the synchronized folder, {profile} for the profile name, and {date} for the date and time of the run.",
+  "@settings.sync.keep.customFolder.placeholders": {
+    "description": "Second help sentence under the custom-versions-folder field in Settings > Behavior > Synchronize folders, after \"Start with a full path.\" The three parameters are replaced by the literal placeholder words the person types into the field, written with curly braces (for example the first is replaced by a word in curly braces); they stay untranslated and you do NOT add braces yourself. \"The run\" = one execution of Synchronize folders.",
+    "placeholders": {
+      "root": "the literal placeholder for the synchronized folder, typed by the person",
+      "profile": "the literal placeholder for the profile name",
+      "date": "the literal placeholder for the date and time of the run"
+    }
+  },
+  "settings.sync.keep.customFolder.keywords": "versions, folder, path, custom, backup, elsewhere, choose",
+  "@settings.sync.keep.customFolder.keywords": {
+    "description": "Search keywords for the \"Custom versions folder\" setting (settings.sync.keep.customFolder.label) in Settings > Behavior > Synchronize folders. What it does: sets one folder where kept files go for every synchronization. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats. Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.sync.keep.problem.targetFolder": "Start the name with .cmdr-sync/, like .cmdr-sync/versions. That keeps kept files out of the next comparison.",
+  "@settings.sync.keep.problem.targetFolder": {
+    "description": "Inline message under the versions folder name field in Settings > Behavior > Synchronize folders, shown while the name is not usable. \".cmdr-sync/\" and \".cmdr-sync/versions\" are literal folder names; do not translate them. Conversational, no blame."
+  },
+  "settings.sync.keep.problem.customFolder": "Use a full path that starts with /, and only the placeholders {root}, {profile}, and {date}.",
+  "@settings.sync.keep.problem.customFolder": {
+    "description": "Inline message under the custom versions folder field in Settings > Behavior > Synchronize folders, shown while the path is not usable. The three parameters are replaced by the literal placeholder words the person types (each shown with curly braces); keep the parameters as they are. Conversational, no blame.",
+    "placeholders": {
+      "root": "the literal placeholder for the synchronized folder",
+      "profile": "the literal placeholder for the profile name",
+      "date": "the literal placeholder for the date and time of the run"
+    }
+  },
+  "settings.sync.keep.problem.escapes": "The folder can’t contain “.” or “..” parts.",
+  "@settings.sync.keep.problem.escapes": {
+    "description": "Inline message under a versions folder field in Settings > Behavior > Synchronize folders, shown when the path has a \".\" or \"..\" part (the current or parent folder). The dots are literal; keep them. Conversational, no blame."
+  },
+  "settings.sync.compare.timeTolerance.label": "Time tolerance",
+  "@settings.sync.compare.timeTolerance.label": {
+    "description": "Label for the number field with how many seconds apart two modified times can be and still count as the same. In Settings > Behavior > Synchronize folders."
+  },
+  "settings.sync.compare.timeTolerance.description": "Files whose modified times differ by up to this many seconds count as the same. 2 seconds covers FAT and ZIP rounding.",
+  "@settings.sync.compare.timeTolerance.description": {
+    "description": "Help text under the time tolerance field in Settings > Behavior > Synchronize folders. \"FAT\" and \"ZIP\" are file system and archive format names; do not translate them. \"2 seconds\" is the default value."
+  },
+  "settings.sync.compare.timeTolerance.keywords": "time, tolerance, seconds, modified, date, rounding, newer, same",
+  "@settings.sync.compare.timeTolerance.keywords": {
+    "description": "Search keywords for the \"Time tolerance\" setting (settings.sync.compare.timeTolerance.label) in Settings > Behavior > Synchronize folders. What it does: how many seconds apart two modified times can be and still count as equal. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats (those match in every language). Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.sync.compare.ignoreHourShift.label": "Ignore exact 1-hour differences",
+  "@settings.sync.compare.ignoreHourShift.label": {
+    "description": "Label for the switch that treats files whose modified times differ by exactly one hour as the same. In Settings > Behavior > Synchronize folders."
+  },
+  "settings.sync.compare.ignoreHourShift.description": "Treats files exactly one hour apart as the same, which happens with daylight saving time on FAT and exFAT drives.",
+  "@settings.sync.compare.ignoreHourShift.description": {
+    "description": "Help text under the ignore-1-hour-differences switch in Settings > Behavior > Synchronize folders. \"FAT\" and \"exFAT\" are file system names; do not translate them."
+  },
+  "settings.sync.compare.ignoreHourShift.keywords": "hour, daylight saving, summer time, winter time, clock, shift, time zone",
+  "@settings.sync.compare.ignoreHourShift.keywords": {
+    "description": "Search keywords for the \"Ignore exact 1-hour differences\" setting (settings.sync.compare.ignoreHourShift.label) in Settings > Behavior > Synchronize folders. What it does: treats files exactly one hour apart as unchanged, for drives that shift times with daylight saving. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats. Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.sync.guards.maxRemovePercent.label": "Stop Mirror above this share of removals",
+  "@settings.sync.guards.maxRemovePercent.label": {
+    "description": "Label for the number field (a percentage, 1 to 100) above which Mirror asks for an extra confirmation. In Settings > Behavior > Synchronize folders. \"Mirror\" is the mode that removes files from the target so it matches the source; translate it like the mode in the Synchronize folders dialog."
+  },
+  "settings.sync.guards.maxRemovePercent.description": "Mirror asks for an extra confirmation when it would remove more than this share of the files on the target.",
+  "@settings.sync.guards.maxRemovePercent.description": {
+    "description": "Help text under the maximum-removal-share field in Settings > Behavior > Synchronize folders. \"Mirror\" is a mode name. \"The target\" is the folder that is changed to match the other."
+  },
+  "settings.sync.guards.maxRemovePercent.keywords": "mirror, remove, delete, limit, percent, safety, guard, confirm",
+  "@settings.sync.guards.maxRemovePercent.keywords": {
+    "description": "Search keywords for the \"Stop Mirror above this share of removals\" setting (settings.sync.guards.maxRemovePercent.label) in Settings > Behavior > Synchronize folders. What it does: Mirror asks for an extra confirmation above a percentage of removals. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats. Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.sync.guards.maxRemoveCount.label": "Stop Mirror above this many removals",
+  "@settings.sync.guards.maxRemoveCount.label": {
+    "description": "Label for the number field (a count of files) above which Mirror asks for an extra confirmation. In Settings > Behavior > Synchronize folders. \"Mirror\" is a mode name."
+  },
+  "settings.sync.guards.maxRemoveCount.description": "0 turns this limit off.",
+  "@settings.sync.guards.maxRemoveCount.description": {
+    "description": "Help text under the maximum-removal-count field in Settings > Behavior > Synchronize folders. \"0\" is the literal value that switches the limit off."
+  },
+  "settings.sync.guards.maxRemoveCount.keywords": "mirror, remove, delete, limit, count, number, safety, guard, confirm",
+  "@settings.sync.guards.maxRemoveCount.keywords": {
+    "description": "Search keywords for the \"Stop Mirror above this many removals\" setting (settings.sync.guards.maxRemoveCount.label) in Settings > Behavior > Synchronize folders. What it does: Mirror asks for an extra confirmation above a number of removals. Never shown. Search already matches its label and description, so add OTHER words people might type: synonyms, everyday words, any count, not a 1:1 translation. Comma-separated; no brand names, protocols, or file formats. Chinese, Japanese, Korean: short, common words, since a query must appear unbroken in one keyword, with no typo tolerance."
+  },
+  "settings.sync.keep.folderName.disabledNote": "Turned off while the versions folder location is a folder you choose.",
+  "@settings.sync.keep.folderName.disabledNote": {
+    "description": "Note under the versions folder name field in Settings > Behavior > Synchronize folders, shown while that field is disabled because the location toggle is set to a folder the person chooses. Refers to the \"Versions folder location\" setting."
+  },
+  "settings.sync.keep.customFolder.disabledNote": "Turned off while the versions folder is inside the synchronized folder.",
+  "@settings.sync.keep.customFolder.disabledNote": {
+    "description": "Note under the custom versions folder field in Settings > Behavior > Synchronize folders, shown while that field is disabled because the location toggle is set to inside the synchronized folder. Refers to the \"Versions folder location\" setting."
   }
 }

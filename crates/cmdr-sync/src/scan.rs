@@ -19,7 +19,10 @@ use crate::{
 };
 
 /// Which pane a scan belongs to.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize, specta::Type,
+)]
+#[serde(rename_all = "camelCase")]
 pub enum Side {
     /// The left folder.
     Left,

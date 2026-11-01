@@ -134,5 +134,9 @@
   "stateRecovery.smbLinkConsents.title": "O Cmdr não conseguiu ler todos os servidores em que você deixou links SMB iniciarem sessão, então pode perguntar de novo sobre alguns",
   "@stateRecovery.smbLinkConsents.title": {
     "sourceHash": "2e0f9fd"
+  },
+  "stateRecovery.syncProfiles.title": "Cmdr couldn’t read your saved synchronization profiles, so the list starts empty",
+  "@stateRecovery.syncProfiles.title": {
+    "sourceHash": "1a0cafa"
   }
 }

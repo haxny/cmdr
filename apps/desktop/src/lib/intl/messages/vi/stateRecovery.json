@@ -134,5 +134,9 @@
   "stateRecovery.smbLinkConsents.title": "Cmdr không đọc được tất cả máy chủ mà bạn cho phép liên kết SMB đăng nhập, nên có thể sẽ hỏi lại về một số máy chủ",
   "@stateRecovery.smbLinkConsents.title": {
     "sourceHash": "2e0f9fd"
+  },
+  "stateRecovery.syncProfiles.title": "Cmdr couldn’t read your saved synchronization profiles, so the list starts empty",
+  "@stateRecovery.syncProfiles.title": {
+    "sourceHash": "1a0cafa"
   }
 }

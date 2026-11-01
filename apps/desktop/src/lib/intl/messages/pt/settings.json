@@ -3579,5 +3579,165 @@
   "settings.servers.smbLinkConsents.confirm": "Na próxima vez que um link em {server} levar a {target}, o Cmdr vai perguntar de novo.",
   "@settings.servers.smbLinkConsents.confirm": {
     "sourceHash": "0218465"
+  },
+  "settings.section.synchronizeFolders": "Synchronize folders",
+  "@settings.section.synchronizeFolders": {
+    "sourceHash": "1ff942e"
+  },
+  "settings.summary.synchronizeFolders": "Where replaced and removed files go, time tolerance, and limits on removals.",
+  "@settings.summary.synchronizeFolders": {
+    "sourceHash": "68398f5"
+  },
+  "settings.sync.card.keep": "Kept files",
+  "@settings.sync.card.keep": {
+    "sourceHash": "9f5f639"
+  },
+  "settings.sync.card.compare": "Comparing",
+  "@settings.sync.card.compare": {
+    "sourceHash": "1fa1aad"
+  },
+  "settings.sync.card.guards": "Mirror limits",
+  "@settings.sync.card.guards": {
+    "sourceHash": "2e4adf7"
+  },
+  "settings.sync.keep.policy.label": "Replaced and removed files",
+  "@settings.sync.keep.policy.label": {
+    "sourceHash": "bd8a1cc"
+  },
+  "settings.sync.keep.policy.description": "Where Synchronize puts files it replaces or removes. Trash where available keeps them in the Trash and uses the versions folder on drives and servers without one. Always use the versions folder keeps everything in one place. Trash only skips those items on drives without a Trash.",
+  "@settings.sync.keep.policy.description": {
+    "sourceHash": "d85d3df"
+  },
+  "settings.sync.keep.policy.opt.trashElseVersions": "Trash where available",
+  "@settings.sync.keep.policy.opt.trashElseVersions": {
+    "sourceHash": "fa8e1af"
+  },
+  "settings.sync.keep.policy.opt.versionsAlways": "Always use the versions folder",
+  "@settings.sync.keep.policy.opt.versionsAlways": {
+    "sourceHash": "6af05dc"
+  },
+  "settings.sync.keep.policy.opt.trashOnly": "Trash only",
+  "@settings.sync.keep.policy.opt.trashOnly": {
+    "sourceHash": "b944dc5"
+  },
+  "settings.sync.keep.policy.keywords": "trash, versions, backup, keep, replace, overwrite, remove, delete, old copies",
+  "@settings.sync.keep.policy.keywords": {
+    "sourceHash": "1243c71"
+  },
+  "settings.sync.keep.location.label": "Versions folder location",
+  "@settings.sync.keep.location.label": {
+    "sourceHash": "19a0d91"
+  },
+  "settings.sync.keep.location.description": "Inside the folder being synchronized, or one folder you choose for all synchronizations.",
+  "@settings.sync.keep.location.description": {
+    "sourceHash": "4248424"
+  },
+  "settings.sync.keep.location.opt.targetRoot": "In the synchronized folder",
+  "@settings.sync.keep.location.opt.targetRoot": {
+    "sourceHash": "bd8dc31"
+  },
+  "settings.sync.keep.location.opt.customFolder": "A folder I choose",
+  "@settings.sync.keep.location.opt.customFolder": {
+    "sourceHash": "9c1eed7"
+  },
+  "settings.sync.keep.location.keywords": "versions, folder, location, where, backup, custom, elsewhere",
+  "@settings.sync.keep.location.keywords": {
+    "sourceHash": "af0fc64"
+  },
+  "settings.sync.keep.folderName.label": "Versions folder name",
+  "@settings.sync.keep.folderName.label": {
+    "sourceHash": "7476af3"
+  },
+  "settings.sync.keep.folderName.description": "Used when the versions folder is inside the synchronized folder. It must start with .cmdr-sync/. Each run adds a folder named by its date and time.",
+  "@settings.sync.keep.folderName.description": {
+    "sourceHash": "37ff5e4"
+  },
+  "settings.sync.keep.folderName.keywords": "versions, folder, name, hidden, backup",
+  "@settings.sync.keep.folderName.keywords": {
+    "sourceHash": "93c72b2"
+  },
+  "settings.sync.keep.customFolder.label": "Custom versions folder",
+  "@settings.sync.keep.customFolder.label": {
+    "sourceHash": "e8e9afd"
+  },
+  "settings.sync.keep.customFolder.description": "Used when the location is a folder you choose. Start with a full path.",
+  "@settings.sync.keep.customFolder.description": {
+    "sourceHash": "eff438f"
+  },
+  "settings.sync.keep.customFolder.placeholders": "You can use {root} for the synchronized folder, {profile} for the profile name, and {date} for the date and time of the run.",
+  "@settings.sync.keep.customFolder.placeholders": {
+    "sourceHash": "0fced02"
+  },
+  "settings.sync.keep.customFolder.keywords": "versions, folder, path, custom, backup, elsewhere, choose",
+  "@settings.sync.keep.customFolder.keywords": {
+    "sourceHash": "3067aa2"
+  },
+  "settings.sync.keep.problem.targetFolder": "Start the name with .cmdr-sync/, like .cmdr-sync/versions. That keeps kept files out of the next comparison.",
+  "@settings.sync.keep.problem.targetFolder": {
+    "sourceHash": "daf0636"
+  },
+  "settings.sync.keep.problem.customFolder": "Use a full path that starts with /, and only the placeholders {root}, {profile}, and {date}.",
+  "@settings.sync.keep.problem.customFolder": {
+    "sourceHash": "e9495d6"
+  },
+  "settings.sync.keep.problem.escapes": "The folder can’t contain “.” or “..” parts.",
+  "@settings.sync.keep.problem.escapes": {
+    "sourceHash": "31f8153"
+  },
+  "settings.sync.compare.timeTolerance.label": "Time tolerance",
+  "@settings.sync.compare.timeTolerance.label": {
+    "sourceHash": "6463bf3"
+  },
+  "settings.sync.compare.timeTolerance.description": "Files whose modified times differ by up to this many seconds count as the same. 2 seconds covers FAT and ZIP rounding.",
+  "@settings.sync.compare.timeTolerance.description": {
+    "sourceHash": "ef2abe8"
+  },
+  "settings.sync.compare.timeTolerance.keywords": "time, tolerance, seconds, modified, date, rounding, newer, same",
+  "@settings.sync.compare.timeTolerance.keywords": {
+    "sourceHash": "26ca04c"
+  },
+  "settings.sync.compare.ignoreHourShift.label": "Ignore exact 1-hour differences",
+  "@settings.sync.compare.ignoreHourShift.label": {
+    "sourceHash": "0a9c673"
+  },
+  "settings.sync.compare.ignoreHourShift.description": "Treats files exactly one hour apart as the same, which happens with daylight saving time on FAT and exFAT drives.",
+  "@settings.sync.compare.ignoreHourShift.description": {
+    "sourceHash": "249f96d"
+  },
+  "settings.sync.compare.ignoreHourShift.keywords": "hour, daylight saving, summer time, winter time, clock, shift, time zone",
+  "@settings.sync.compare.ignoreHourShift.keywords": {
+    "sourceHash": "79fdcc7"
+  },
+  "settings.sync.guards.maxRemovePercent.label": "Stop Mirror above this share of removals",
+  "@settings.sync.guards.maxRemovePercent.label": {
+    "sourceHash": "9d2a65c"
+  },
+  "settings.sync.guards.maxRemovePercent.description": "Mirror asks for an extra confirmation when it would remove more than this share of the files on the target.",
+  "@settings.sync.guards.maxRemovePercent.description": {
+    "sourceHash": "2ccdae6"
+  },
+  "settings.sync.guards.maxRemovePercent.keywords": "mirror, remove, delete, limit, percent, safety, guard, confirm",
+  "@settings.sync.guards.maxRemovePercent.keywords": {
+    "sourceHash": "a073000"
+  },
+  "settings.sync.guards.maxRemoveCount.label": "Stop Mirror above this many removals",
+  "@settings.sync.guards.maxRemoveCount.label": {
+    "sourceHash": "590d288"
+  },
+  "settings.sync.guards.maxRemoveCount.description": "0 turns this limit off.",
+  "@settings.sync.guards.maxRemoveCount.description": {
+    "sourceHash": "8437278"
+  },
+  "settings.sync.guards.maxRemoveCount.keywords": "mirror, remove, delete, limit, count, number, safety, guard, confirm",
+  "@settings.sync.guards.maxRemoveCount.keywords": {
+    "sourceHash": "7372bf4"
+  },
+  "settings.sync.keep.folderName.disabledNote": "Turned off while the versions folder location is a folder you choose.",
+  "@settings.sync.keep.folderName.disabledNote": {
+    "sourceHash": "dd9995a"
+  },
+  "settings.sync.keep.customFolder.disabledNote": "Turned off while the versions folder is inside the synchronized folder.",
+  "@settings.sync.keep.customFolder.disabledNote": {
+    "sourceHash": "5770b9e"
   }
 }

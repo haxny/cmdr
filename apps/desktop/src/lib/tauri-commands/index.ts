@@ -1194,6 +1194,30 @@ export type {
   RenameExample,
 } from './multi-rename'
 
+// Synchronize folders
+export {
+  getSyncProfiles,
+  saveSyncProfile,
+  deleteSyncProfile,
+  renameSyncProfile,
+  moveSyncProfile,
+  getSyncLastOptions,
+  saveSyncLastOptions,
+  checkSyncKeepPolicy,
+  SyncProfileSaveFailure,
+  asProfileSaveRefusal,
+} from './sync'
+export type {
+  KeepPolicy,
+  KeepRefusal,
+  ProfileEntry,
+  ProfileMove,
+  ProfileSaveRefusal,
+  RootRef,
+  SyncOptions,
+  SyncProfile,
+} from './sync'
+
 // The Tags window
 export {
   openTagEditor,

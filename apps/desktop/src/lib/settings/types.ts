@@ -5,6 +5,7 @@
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type { IconName } from '#lib/ui/icons/icon-map.js'
 import type { EnterAction } from '#lib/file-explorer/pane/archive-enter-policy.js'
+import type { SyncSettingsValues } from './sync-settings-values'
 
 // ============================================================================
 // Core Types
@@ -385,7 +386,7 @@ export type AskCmdrSpendPause = '0.5' | '1' | '2' | '5' | '10' | 'never'
  */
 export type LanguageSetting = 'system' | (string & {})
 
-export interface SettingsValues {
+export interface SettingsValues extends SyncSettingsValues {
   // Appearance
   'appearance.language': LanguageSetting
   'appearance.appColor': AppColor

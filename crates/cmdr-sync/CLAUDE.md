@@ -12,6 +12,8 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
 - **scan.rs**: `scan()`. **content.rs**: `compare_contents()`, byte-by-byte for equal-size pairs.
 - **plan.rs**: `plan()`, `reclassify()`, the mode table. **overrides.rs**: legal actions, bulk keys. **guards.rs**:
   `check()`, `gate()`. **view.rs**: show-filters, folder headers, summary. Laws: `plan_proptests.rs`.
+- **profile.rs**: `SyncProfile`, `effective()` (Settings plus the profile's overrides), `validate()`,
+  `roots_conflict()`, `check_keep_policy()`. The store is the app's.
 - **keep.rs**, **context.rs**: Trash or versions folder paths, `RunContext`. **steps.rs**: plan → ordered steps.
   **execute.rs** + **runner.rs** (+ `src/runner/keeping.rs`): `execute()` over the `SyncEngine` trait; fake and laws in
   `execute_fake.rs`, `execute_proptests.rs`.
@@ -41,6 +43,8 @@ copy newer?", and the walk that lists a folder on any `Volume`. No `tauri`, depe
   `ChangedSinceCompare`, never a widened action. A replaced file waits on its own volume until its copy lands, else goes
   back; a copy that didn't land holds removals beside it or of its old name.
 - **No `cmdr-operations` dependency** (a package cycle through `cmdr-listing`): the app implements `SyncEngine`.
+- **`profile::effective` is the one place "inherit or override" is decided.** `time_offset_secs` is per profile and
+  never inherited. A profile that fails `validate` is shown greyed by the store, never dropped.
 - No `tauri`, enforced by `index-crate-isolation`.
 
 The classify table, the per-backend facts with evidence, and the dependency decision: `DETAILS.md`.

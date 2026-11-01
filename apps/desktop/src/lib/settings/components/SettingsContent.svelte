@@ -7,6 +7,7 @@
     import ArchivesSection from '#lib/settings/sections/ArchivesSection.svelte'
     import NotificationsSection from '#lib/settings/sections/NotificationsSection.svelte'
     import SearchSection from '#lib/settings/sections/SearchSection.svelte'
+    import SynchronizeFoldersSection from '#lib/settings/sections/SynchronizeFoldersSection.svelte'
     import DriveIndexingSection from '#lib/settings/sections/DriveIndexingSection.svelte'
     import ImageIndexingSection from '#lib/settings/sections/ImageIndexingSection.svelte'
     import AiSection from '#lib/settings/sections/AiSection.svelte'
@@ -124,6 +125,11 @@
         {#if shouldShowSection(['Behavior', 'Search'])}
             <section data-section-id="behavior-search">
                 <SearchSection {searchQuery} />
+            </section>
+        {/if}
+        {#if shouldShowSection(['Behavior', 'Synchronize folders'])}
+            <section data-section-id="behavior-synchronize-folders">
+                <SynchronizeFoldersSection {searchQuery} />
             </section>
         {/if}
 

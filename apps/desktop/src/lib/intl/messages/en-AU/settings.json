@@ -202,5 +202,49 @@
   "settings.license.getLicense.keywords": "license, licence, buy, purchase, pricing, commercial, personal, upgrade",
   "@settings.license.getLicense.keywords": {
     "sourceHash": "5454f6d"
+  },
+  "settings.section.synchronizeFolders": "Synchronise folders",
+  "@settings.section.synchronizeFolders": {
+    "sourceHash": "1ff942e"
+  },
+  "settings.sync.keep.policy.description": "Where Synchronise puts files it replaces or removes. Bin where available keeps them in the Bin and uses the versions folder on drives and servers without one. Always use the versions folder keeps everything in one place. Bin only skips those items on drives without a Bin.",
+  "@settings.sync.keep.policy.description": {
+    "sourceHash": "d85d3df"
+  },
+  "settings.sync.keep.policy.opt.trashElseVersions": "Bin where available",
+  "@settings.sync.keep.policy.opt.trashElseVersions": {
+    "sourceHash": "fa8e1af"
+  },
+  "settings.sync.keep.policy.opt.trashOnly": "Bin only",
+  "@settings.sync.keep.policy.opt.trashOnly": {
+    "sourceHash": "b944dc5"
+  },
+  "settings.sync.keep.policy.keywords": "bin, versions, backup, keep, replace, overwrite, remove, delete, old copies",
+  "@settings.sync.keep.policy.keywords": {
+    "sourceHash": "1243c71"
+  },
+  "settings.sync.keep.location.description": "Inside the folder being synchronised, or one folder you choose for all synchronisations.",
+  "@settings.sync.keep.location.description": {
+    "sourceHash": "4248424"
+  },
+  "settings.sync.keep.location.opt.targetRoot": "In the synchronised folder",
+  "@settings.sync.keep.location.opt.targetRoot": {
+    "sourceHash": "bd8dc31"
+  },
+  "settings.sync.keep.folderName.description": "Used when the versions folder is inside the synchronised folder. It must start with .cmdr-sync/. Each run adds a folder named by its date and time.",
+  "@settings.sync.keep.folderName.description": {
+    "sourceHash": "37ff5e4"
+  },
+  "settings.sync.keep.customFolder.placeholders": "You can use {root} for the synchronised folder, {profile} for the profile name, and {date} for the date and time of the run.",
+  "@settings.sync.keep.customFolder.placeholders": {
+    "sourceHash": "0fced02"
+  },
+  "settings.sync.guards.maxRemovePercent.keywords": "mirror, remove, delete, limit, per cent, safety, guard, confirm",
+  "@settings.sync.guards.maxRemovePercent.keywords": {
+    "sourceHash": "a073000"
+  },
+  "settings.sync.keep.customFolder.disabledNote": "Turned off while the versions folder is inside the synchronised folder.",
+  "@settings.sync.keep.customFolder.disabledNote": {
+    "sourceHash": "5770b9e"
   }
 }

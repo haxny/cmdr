@@ -29,6 +29,7 @@
         Archives: 'settings.summary.archives',
         Notifications: 'settings.summary.notifications',
         Search: 'settings.summary.search',
+        'Synchronize folders': 'settings.summary.synchronizeFolders',
         'Drive indexing': 'settings.summary.driveIndexing',
         'Image indexing': 'settings.summary.imageIndexing',
         Provider: 'settings.summary.aiProvider',

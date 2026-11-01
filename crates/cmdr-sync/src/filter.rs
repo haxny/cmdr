@@ -26,10 +26,12 @@ pub(crate) fn is_app_owned(name: &str) -> bool {
     fold_name(name) == fold_name(ALWAYS_EXCLUDED)
 }
 
-/// Why a mask list can't be used. `position` counts characters of the text
+/// Why a mask list can't be used. (Named for the feature: Multi-Rename has a `MaskError` of its own
+/// and both reach the one bindings file.) `position` counts characters of the text
 /// that held the problem (for an entry of the exclude list, its index).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MaskError {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum SyncMaskError {
     /// A mask with nothing in it: `""`, or a `|` with nothing after it.
     EmptyMask {
         /// Where the empty mask sits.
@@ -135,12 +137,12 @@ impl MaskFilter {
     /// Parses TC sync syntax: masks split by spaces or `;`, `"…"` keeps spaces,
     /// at most one `|` starts the excludes. `excludes` (the editable list) is
     /// added after the bar. An empty include part admits everything.
-    pub fn parse(masks: &str, excludes: &[String]) -> Result<Self, MaskError> {
+    pub fn parse(masks: &str, excludes: &[String]) -> Result<Self, SyncMaskError> {
         let (include_tokens, exclude_tokens) = split_masks(masks)?;
         let mut exclude_masks: Vec<Mask> = exclude_tokens.iter().map(|t| Mask::new(t)).collect();
         for (index, text) in excludes.iter().enumerate() {
             if text.trim().is_empty() {
-                return Err(MaskError::EmptyMask { position: index as u32 });
+                return Err(SyncMaskError::EmptyMask { position: index as u32 });
             }
             exclude_masks.push(Mask::new(text.trim()));
         }
@@ -192,7 +194,7 @@ impl MaskFilter {
 }
 
 /// Splits the box text into (includes, excludes) mask texts.
-fn split_masks(text: &str) -> Result<(Vec<String>, Vec<String>), MaskError> {
+fn split_masks(text: &str) -> Result<(Vec<String>, Vec<String>), SyncMaskError> {
     let mut sides: [Vec<String>; 2] = [Vec::new(), Vec::new()];
     let mut side = 0;
     let mut bar_position = None;
@@ -201,7 +203,7 @@ fn split_masks(text: &str) -> Result<(Vec<String>, Vec<String>), MaskError> {
     let mut had_quotes = false;
     let flush = |current: &mut String, had_quotes: &mut bool, side: usize, sides: &mut [Vec<String>; 2], at: u32| {
         if current.is_empty() && *had_quotes {
-            return Err(MaskError::EmptyMask { position: at });
+            return Err(SyncMaskError::EmptyMask { position: at });
         }
         if !current.is_empty() {
             sides[side].push(std::mem::take(current));
@@ -228,7 +230,7 @@ fn split_masks(text: &str) -> Result<(Vec<String>, Vec<String>), MaskError> {
             '|' => {
                 flush(&mut current, &mut had_quotes, side, &mut sides, at)?;
                 if bar_position.is_some() {
-                    return Err(MaskError::SecondBar { position: at });
+                    return Err(SyncMaskError::SecondBar { position: at });
                 }
                 bar_position = Some(at);
                 side = 1;
@@ -237,7 +239,7 @@ fn split_masks(text: &str) -> Result<(Vec<String>, Vec<String>), MaskError> {
         }
     }
     if let Some(position) = quoted_from {
-        return Err(MaskError::UnclosedQuote { position });
+        return Err(SyncMaskError::UnclosedQuote { position });
     }
     flush(
         &mut current,
@@ -250,7 +252,7 @@ fn split_masks(text: &str) -> Result<(Vec<String>, Vec<String>), MaskError> {
     if let Some(position) = bar_position
         && excludes.is_empty()
     {
-        return Err(MaskError::EmptyMask { position });
+        return Err(SyncMaskError::EmptyMask { position });
     }
     Ok((includes, excludes))
 }

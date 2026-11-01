@@ -172,6 +172,8 @@ pub enum StateFile {
     MultiRenamePresets,
     /// Saved Tags window F4 Replace lists.
     TagReplacePresets,
+    /// `sync-profiles.json`: saved Synchronize folders profiles.
+    SyncProfiles,
     /// The multi-rename dialog's last settings.
     MultiRenameLastSettings,
     /// The multi-rename dialog's per-field history.

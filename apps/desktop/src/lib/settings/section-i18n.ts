@@ -28,6 +28,7 @@ const SECTION_TITLE_KEY: Partial<Record<string, MessageKey>> = {
   Archives: 'settings.section.archives',
   Notifications: 'settings.section.notifications',
   Search: 'settings.section.search',
+  'Synchronize folders': 'settings.section.synchronizeFolders',
   Indexing: 'settings.section.indexing',
   'Drive indexing': 'settings.section.driveIndexing',
   'Image indexing': 'settings.section.imageIndexing',
