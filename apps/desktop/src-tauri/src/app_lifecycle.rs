@@ -95,6 +95,9 @@ pub fn on_window_event(window: &Window, event: &tauri::WindowEvent) {
     // webview dying), the session is released and closed. Idempotent after the window's own close.
     if let tauri::WindowEvent::Destroyed = event {
         crate::tag_editor::window::end(window.label());
+        // A Synchronize folders dialog's sessions end with its window (a reload or
+        // a crash never sends `close_sync_session`); a run under way stops cleanly.
+        crate::sync::session::close_for_window(window.label());
     }
 }
 

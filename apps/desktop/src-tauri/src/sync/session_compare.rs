@@ -2,23 +2,61 @@
 //! Settings, the panes' selections), then both sides scanned at once, planned,
 //! and byte-compared where asked. Progress goes out at most every 100 ms.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{Volume, root_anchored};
 use cmdr_sync::{
-    CompareBy, ContentProgress, MaskFilter, Mode, NameRule, PlanOptions, ProfileOverrides, ScanError, ScanOptions,
-    ScanProgress, Side, Snapshot, SyncCaps, SyncControl, SyncDefaults, compare_contents, content_jobs, content_workers,
-    effective, plan, reclassify, roots_conflict, scan, validate_defaults,
+    CompareBy, ContentProgress, MaskFilter, Mode, NameRule, PlanOptions, ProfileOverrides, RootConflict, RootRef,
+    ScanError, ScanOptions, ScanProgress, Side, Snapshot, SyncCaps, SyncControl, SyncDefaults, compare_contents,
+    content_jobs, content_workers, effective, plan, reclassify, roots_conflict, scan, validate_defaults,
 };
 
 use super::host::{SyncEvent, SyncHost};
-use super::session::{Compared, Session, SideSetup, root_path_ok, session};
-use super::wire::{CompareOutcome, CompareRequest, SideRequest, SyncCompareFinished, SyncCompareProgress, SyncError};
+use super::session::{Compared, Session, SideSetup, next_revision, root_path_ok, session};
+use super::wire::{
+    CompareOutcome, CompareRequest, CompareStarted, SideRequest, SyncCompareFinished, SyncCompareProgress, SyncError,
+};
 
 /// The shortest gap between two progress events.
 const PROGRESS_EVERY: Duration = Duration::from_millis(100);
+/// How long resolving a root's real path may take (a hung mount blocks it).
+const REAL_PATH_WAIT: Duration = Duration::from_secs(5);
+
+/// Where `root` really is in this Mac's namespace (symlinks and aliases
+/// resolved), for a volume with a local path; `Ok(None)` for a remote one.
+async fn real_root(volume: &Arc<dyn Volume>, root: &Path) -> Result<Option<PathBuf>, ()> {
+    let Some(local) = volume.local_path() else {
+        return Ok(None);
+    };
+    let os_path = root_anchored(&local, root);
+    let resolved = tokio::time::timeout(
+        REAL_PATH_WAIT,
+        tokio::task::spawn_blocking(move || std::fs::canonicalize(os_path)),
+    )
+    .await;
+    match resolved {
+        Ok(Ok(Ok(real))) => Ok(Some(real)),
+        _ => Err(()),
+    }
+}
+
+/// Same folder or nested: by real path when both sides are in this Mac's
+/// namespace (whatever volume ids named them), else on one volume by path.
+fn roots_overlap(left: &SideSetup, right: &SideSetup) -> Option<RootConflict> {
+    match (&left.real_root, &right.real_root) {
+        (Some(left), Some(right)) => {
+            let local = |path: &PathBuf| RootRef {
+                volume_id: String::new(),
+                path: path.to_string_lossy().into_owned(),
+            };
+            roots_conflict(&local(left), &local(right))
+        }
+        _ => roots_conflict(&left.root_ref, &right.root_ref),
+    }
+}
 
 /// The Settings values with the profile's overrides on top, as one
 /// `SyncDefaults`, so one check covers both.
@@ -47,7 +85,7 @@ struct Prepared {
     plan_options: PlanOptions,
 }
 
-fn resolve_side(host: &dyn SyncHost, side: Side, request: &SideRequest) -> Result<SideSetup, SyncError> {
+async fn resolve_side(host: &dyn SyncHost, side: Side, request: &SideRequest) -> Result<SideSetup, SyncError> {
     if !root_path_ok(&request.root.path) {
         return Err(SyncError::BadPath { side });
     }
@@ -55,10 +93,15 @@ fn resolve_side(host: &dyn SyncHost, side: Side, request: &SideRequest) -> Resul
     let volume = host
         .volume(&volume_id)
         .ok_or(SyncError::VolumeNotConnected { side, volume_id })?;
+    let root = PathBuf::from(&request.root.path);
+    let real_root = real_root(&volume, &root)
+        .await
+        .map_err(|()| SyncError::RootUnreachable { side })?;
     Ok(SideSetup {
         root_ref: request.root.clone(),
         volume,
-        root: PathBuf::from(&request.root.path),
+        real_root,
+        root,
     })
 }
 
@@ -95,10 +138,10 @@ fn check_writable(mode: Mode, left: &SyncCaps, right: &SyncCaps) -> Result<(), S
     Ok(())
 }
 
-fn prepare(host: &dyn SyncHost, request: &CompareRequest) -> Result<Prepared, SyncError> {
-    let left = resolve_side(host, Side::Left, &request.left)?;
-    let right = resolve_side(host, Side::Right, &request.right)?;
-    if let Some(conflict) = roots_conflict(&left.root_ref, &right.root_ref) {
+async fn prepare(host: &dyn SyncHost, request: &CompareRequest) -> Result<Prepared, SyncError> {
+    let left = resolve_side(host, Side::Left, &request.left).await?;
+    let right = resolve_side(host, Side::Right, &request.right).await?;
+    if let Some(conflict) = roots_overlap(&left, &right) {
         return Err(SyncError::RootsConflict { conflict });
     }
     let options = &request.options;
@@ -144,15 +187,20 @@ fn prepare(host: &dyn SyncHost, request: &CompareRequest) -> Result<Prepared, Sy
 }
 
 /// Validates the request and starts the compare in its session (a new one
-/// unless `session_id` names one; a newer compare there stops the older).
-pub(crate) fn start(host: Arc<dyn SyncHost>, request: CompareRequest) -> Result<String, SyncError> {
+/// unless `session_id` names one; a newer compare there stops the older, whose
+/// events then never go out). `window` owns a new session.
+pub(crate) async fn start(
+    host: Arc<dyn SyncHost>,
+    request: CompareRequest,
+    window: Option<String>,
+) -> Result<CompareStarted, SyncError> {
     let existing = request.session_id.as_deref().map(session).transpose()?;
     if existing.as_ref().is_some_and(|session| session.is_running()) {
         return Err(SyncError::RunInProgress);
     }
     // Checked before a new session opens, so a refused request leaves none behind.
-    let prepared = prepare(host.as_ref(), &request)?;
-    let session = existing.unwrap_or_else(Session::open);
+    let prepared = prepare(host.as_ref(), &request).await?;
+    let session = existing.unwrap_or_else(|| Session::open(window));
     let control = SyncControl::new();
     let generation = session.next_generation();
     if let Some(older) = session.compare.lock_ignore_poison().replace(Arc::clone(&control)) {
@@ -166,22 +214,31 @@ pub(crate) fn start(host: Arc<dyn SyncHost>, request: CompareRequest) -> Result<
             *slot = None;
         }
         drop(slot);
-        host.emit(SyncEvent::CompareFinished(SyncCompareFinished {
-            session_id: session.id.clone(),
-            outcome,
-        }));
+        // A superseded compare says nothing: the dialog hears only the newest.
+        if session.is_current(generation) {
+            host.emit(SyncEvent::CompareFinished(SyncCompareFinished {
+                session_id: session.id.clone(),
+                generation,
+                outcome,
+            }));
+        }
     });
-    Ok(id)
+    Ok(CompareStarted {
+        session_id: id,
+        generation,
+    })
 }
 
 /// The latest counts, sent at most every `PROGRESS_EVERY`.
 struct Progress<'a> {
     host: &'a dyn SyncHost,
+    session: &'a Session,
+    generation: u64,
     state: Mutex<(SyncCompareProgress, Option<Instant>)>,
 }
 
 impl<'a> Progress<'a> {
-    fn new(host: &'a dyn SyncHost, session_id: &str) -> Self {
+    fn new(host: &'a dyn SyncHost, session: &'a Session, generation: u64) -> Self {
         let zero = |side| ScanProgress {
             side,
             folders: 0,
@@ -189,13 +246,16 @@ impl<'a> Progress<'a> {
             bytes: 0,
         };
         let event = SyncCompareProgress {
-            session_id: session_id.to_owned(),
+            session_id: session.id.clone(),
+            generation,
             left: zero(Side::Left),
             right: zero(Side::Right),
             content: None,
         };
         Self {
             host,
+            session,
+            generation,
             state: Mutex::new((event, None)),
         }
     }
@@ -203,7 +263,8 @@ impl<'a> Progress<'a> {
     fn update(&self, change: impl FnOnce(&mut SyncCompareProgress)) {
         let mut state = self.state.lock_ignore_poison();
         change(&mut state.0);
-        let due = state.1.is_none_or(|last| last.elapsed() >= PROGRESS_EVERY);
+        let due =
+            state.1.is_none_or(|last| last.elapsed() >= PROGRESS_EVERY) && self.session.is_current(self.generation);
         if due {
             state.1 = Some(Instant::now());
             self.host.emit(SyncEvent::CompareProgress(state.0.clone()));
@@ -239,7 +300,7 @@ async fn run(
     request: CompareRequest,
     control: &Arc<SyncControl>,
 ) -> CompareOutcome {
-    let progress = Progress::new(host, &session.id);
+    let progress = Progress::new(host, session, generation);
     let on_scan = |update: ScanProgress| progress.scan(update);
     let (left, right) = (&prepared.left, &prepared.right);
     let (left_snap, right_snap) = tokio::join!(
@@ -277,6 +338,9 @@ async fn run(
         left_snap: Arc::new(left_snap),
         right_snap: Arc::new(right_snap),
         plan: planned,
+        revision: next_revision(),
+        confirmed: None,
+        view: None,
         request,
         scan: prepared.scan,
         stale: false,

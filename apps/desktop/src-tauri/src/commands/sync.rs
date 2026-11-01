@@ -6,7 +6,9 @@ use cmdr_sync::{
 };
 
 use crate::sync::host::AppSyncHost;
-use crate::sync::wire::{CompareRequest, ConfirmPreview, RunRequest, SyncError, SyncRowsPage, SyncState};
+use crate::sync::wire::{
+    CompareRequest, CompareStarted, ConfirmPreview, RunRequest, SyncError, SyncRowsPage, SyncState,
+};
 use crate::sync::{session, session_compare, session_run};
 
 use crate::sync::profile_store::{
@@ -123,12 +125,18 @@ pub fn check_sync_keep_policy(policy: KeepPolicy) -> Option<KeepRefusal> {
     check_keep_policy(&policy).err()
 }
 
-/// Checks every input and starts a compare in the dialog's session (a new one when
-/// `sessionId` is `None`). Answers the session id; rows follow `sync-compare-finished`.
+/// Checks every input and starts a compare in the dialog's session (a new one, owned by
+/// this window, when `sessionId` is `None`). Answers the session and the compare's
+/// generation; rows follow `sync-compare-finished` of that generation.
 #[tauri::command]
 #[specta::specta]
-pub async fn start_sync_compare(app: tauri::AppHandle, request: CompareRequest) -> Result<String, SyncError> {
-    session_compare::start(AppSyncHost::new(app), request)
+pub async fn start_sync_compare(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+    request: CompareRequest,
+) -> Result<CompareStarted, SyncError> {
+    let label = window.label().to_owned();
+    session_compare::start(AppSyncHost::new(app), request, Some(label)).await
 }
 
 /// Pauses or resumes the session's compare.

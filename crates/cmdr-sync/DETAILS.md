@@ -224,10 +224,11 @@ is the same-volume folder replaced files wait in: the policy's own when it is in
 `.cmdr-sync/versions` there. Laws: `kept_paths_never_escape_the_versions_folder` in `keep_test.rs`.
 
 `RunContext::new` resolves both sides' versions and staging folders and refuses a custom folder inside either sync root
-(`InsideSyncFolder`: it would be compared and synchronized like the person's files). Only a root whose `RunSide` says
-`local_namespace` (the local disk or a mounted share, where the custom folder's path means the same file) takes part: a
-remote root's path (`/R` on an SFTP server) never holds a local folder, whatever its spelling. `with_attempt(side, n)`
-renames that side's dated folders for a retry.
+(`InsideSyncFolder`: it would be compared and synchronized like the person's files). Only a root whose `RunSide` has a
+`namespace_root` (the local disk or a mounted share, where the custom folder's path means the same file) takes part, and
+it is compared at that real path (the app resolves symlinks; the crate does no I/O): a remote root's path (`/R` on an
+SFTP server) never holds a local folder, whatever its spelling. `with_attempt(side, n)` renames that side's dated
+folders for a retry.
 
 ## Run (steps.rs, execute.rs, runner.rs, runner/keeping.rs)
 

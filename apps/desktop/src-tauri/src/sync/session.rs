@@ -4,7 +4,7 @@
 //! "Sessions". Compare is `session_compare.rs`, confirm and run are
 //! `session_run.rs`.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
@@ -13,7 +13,8 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::Volume;
 use cmdr_sync::{
     BulkAction, EntryKind, OverrideRefusal, Plan, PlanItem, RootRef, ScanOptions, ShowFilters, Snapshot, SyncControl,
-    ViewRow, apply_overrides, bulk_changes, check, effective, is_visible, legal_actions, summarize, view_rows,
+    SyncDefaults, ViewRow, apply_overrides, bulk_changes, check, effective, is_visible, legal_actions, summarize,
+    view_rows,
 };
 
 use super::wire::{CompareRequest, SyncError, SyncRowWire, SyncRowsPage, SyncState, ViewRowWire};
@@ -21,43 +22,12 @@ use super::wire::{CompareRequest, SyncError, SyncRowWire, SyncRowsPage, SyncStat
 /// The open sessions, by id.
 static SESSIONS: LazyLock<Mutex<HashMap<String, Arc<Session>>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// Pairs of roots with a run going on (either order), across sessions.
-static RUNNING_PAIRS: LazyLock<Mutex<HashSet<PairKey>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
+/// Plan revisions, unique across sessions and compares.
+static REVISIONS: AtomicU64 = AtomicU64::new(0);
 
-/// A pair of roots, order-free: a swapped dialog is the same two folders.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct PairKey([(String, String); 2]);
-
-impl PairKey {
-    fn of(left: &RootRef, right: &RootRef) -> Self {
-        let mut pair = [
-            (left.volume_id.clone(), left.path.clone()),
-            (right.volume_id.clone(), right.path.clone()),
-        ];
-        pair.sort();
-        Self(pair)
-    }
-}
-
-/// Holds a pair's run lock until dropped (a panicking run releases it too).
-pub(crate) struct RunLock(PairKey);
-
-impl RunLock {
-    /// The lock for this pair, or `RunInProgress` when a run holds it.
-    pub(crate) fn take(left: &RootRef, right: &RootRef) -> Result<Self, SyncError> {
-        let key = PairKey::of(left, right);
-        if RUNNING_PAIRS.lock_ignore_poison().insert(key.clone()) {
-            Ok(Self(key))
-        } else {
-            Err(SyncError::RunInProgress)
-        }
-    }
-}
-
-impl Drop for RunLock {
-    fn drop(&mut self) {
-        RUNNING_PAIRS.lock_ignore_poison().remove(&self.0);
-    }
+/// A revision no plan has had yet.
+pub(crate) fn next_revision() -> u64 {
+    REVISIONS.fetch_add(1, Ordering::Relaxed) + 1
 }
 
 /// One side as a compare resolved it.
@@ -69,14 +39,16 @@ pub(crate) struct SideSetup {
     pub(crate) volume: Arc<dyn Volume>,
     /// The root as a path on it.
     pub(crate) root: PathBuf,
+    /// Where the root really is in this Mac's namespace (symlinks resolved),
+    /// for a volume with a local path; `None` for a remote one.
+    pub(crate) real_root: Option<PathBuf>,
 }
 
-impl SideSetup {
-    /// Whether the root is a path in this Mac's own namespace (local disk or a
-    /// mounted share), where a custom versions folder could lie inside it.
-    pub(crate) fn local_namespace(&self) -> bool {
-        self.volume.local_path().is_some()
-    }
+/// The grid rows of one plan revision under one set of show-filters.
+pub(crate) struct ViewCache {
+    revision: u64,
+    filters: ShowFilters,
+    rows: Arc<Vec<ViewRow>>,
 }
 
 /// A finished compare and the person's changes since.
@@ -87,6 +59,11 @@ pub(crate) struct Compared {
     pub(crate) right_snap: Arc<Snapshot>,
     /// The plan, with every override applied.
     pub(crate) plan: Plan,
+    /// Bumped by every change to the plan or to the Settings the confirm read,
+    /// so a run is tied to the confirm the person saw.
+    pub(crate) revision: u64,
+    /// The Settings the last confirm was shown with.
+    pub(crate) confirmed: Option<SyncDefaults>,
     /// What the compare was asked (options, Settings, overrides).
     pub(crate) request: CompareRequest,
     /// The scan's options without the top-level selection: a re-check before
@@ -94,11 +71,37 @@ pub(crate) struct Compared {
     pub(crate) scan: ScanOptions,
     /// A run has changed the folders since.
     pub(crate) stale: bool,
+    pub(crate) view: Option<ViewCache>,
+}
+
+impl Compared {
+    /// The plan changed.
+    pub(crate) fn bump(&mut self) {
+        self.revision = next_revision();
+    }
+
+    fn view(&mut self, filters: &ShowFilters) -> Arc<Vec<ViewRow>> {
+        if let Some(cache) = &self.view
+            && cache.revision == self.revision
+            && cache.filters == *filters
+        {
+            return Arc::clone(&cache.rows);
+        }
+        let rows = Arc::new(view_rows(&self.plan, filters));
+        self.view = Some(ViewCache {
+            revision: self.revision,
+            filters: *filters,
+            rows: Arc::clone(&rows),
+        });
+        rows
+    }
 }
 
 /// One dialog's state.
 pub(crate) struct Session {
     pub(crate) id: String,
+    /// The window whose dialog owns it; its end closes the session.
+    window: Option<String>,
     /// The running compare's control.
     pub(crate) compare: Mutex<Option<Arc<SyncControl>>>,
     /// Bumped by every compare; only the newest one's result is kept.
@@ -109,9 +112,10 @@ pub(crate) struct Session {
 }
 
 impl Session {
-    pub(crate) fn open() -> Arc<Self> {
+    pub(crate) fn open(window: Option<String>) -> Arc<Self> {
         let session = Arc::new(Self {
             id: uuid::Uuid::new_v4().to_string(),
+            window,
             compare: Mutex::new(None),
             generation: AtomicU64::new(0),
             compared: Mutex::new(None),
@@ -126,6 +130,11 @@ impl Session {
     /// The next compare's generation.
     pub(crate) fn next_generation(&self) -> u64 {
         self.generation.fetch_add(1, Ordering::AcqRel) + 1
+    }
+
+    /// The newest compare's generation.
+    pub(crate) fn generation(&self) -> u64 {
+        self.generation.load(Ordering::Acquire)
     }
 
     pub(crate) fn is_current(&self, generation: u64) -> bool {
@@ -175,6 +184,19 @@ pub(crate) fn close(id: &str) {
         if let Some(control) = control.lock_ignore_poison().as_ref() {
             control.cancel();
         }
+    }
+}
+
+/// Closes every session of a window that went away.
+pub(crate) fn close_for_window(label: &str) {
+    let ids: Vec<String> = SESSIONS
+        .lock_ignore_poison()
+        .values()
+        .filter(|session| session.window.as_deref() == Some(label))
+        .map(|session| session.id.clone())
+        .collect();
+    for id in ids {
+        close(&id);
     }
 }
 
@@ -234,8 +256,8 @@ fn item_row(plan: &Plan, item: &PlanItem) -> ViewRowWire {
 /// Rows `start..end` of the grid under `filters`.
 pub(crate) fn rows(id: &str, start: u32, end: u32, filters: &ShowFilters) -> Result<SyncRowsPage, SyncError> {
     session(id)?.with_compared(|compared| {
+        let view = compared.view(filters);
         let plan = &compared.plan;
-        let view = view_rows(plan, filters);
         let total = u32::try_from(view.len()).unwrap_or(u32::MAX);
         let (start, end) = (start.min(total), end.clamp(start.min(total), total));
         let rows = view[start as usize..end as usize]
@@ -299,6 +321,7 @@ pub(crate) fn set_actions(
             .collect();
         let changes = bulk_changes(plan, &seen, bulk);
         compared.plan = apply_overrides(plan, &changes).map_err(|refusal| SyncError::Override { refusal })?;
+        compared.bump();
         Ok(state_of(compared, filters))
     })
 }

@@ -333,7 +333,7 @@ fn a_remote_root_never_holds_a_custom_folder_on_the_local_disk() {
     let right = RunSide {
         root: "/R".into(),
         caps: caps(),
-        local_namespace: false,
+        namespace_root: None,
     };
     let ctx = RunContext::new(RunSide::local("/L".into(), caps()), right, keep, stamp(), None);
     let ctx = ctx.expect("a remote path can't contain a local folder");
@@ -341,6 +341,24 @@ fn a_remote_root_never_holds_a_custom_folder_on_the_local_disk() {
         ctx.versions(Side::Right).dir,
         PathBuf::from("/R/kept/2026-11-01 093000")
     );
+}
+
+#[test]
+fn a_root_reached_through_a_symlink_is_checked_at_its_real_path() {
+    let keep = KeepPolicy {
+        place: KeepPlace::VersionsAlways,
+        location: VersionsLocation::Custom {
+            template: "/real/R/kept".to_owned(),
+        },
+    };
+    // The dialog named `/link/R`; it really is `/real/R`.
+    let right = RunSide {
+        root: "/link/R".into(),
+        caps: caps(),
+        namespace_root: Some("/real/R".into()),
+    };
+    let refused = RunContext::new(RunSide::local("/L".into(), caps()), right, keep, stamp(), None);
+    assert_eq!(refused, Err(KeepRefusal::InsideSyncFolder));
 }
 
 #[test]

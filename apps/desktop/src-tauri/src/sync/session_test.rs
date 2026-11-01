@@ -19,7 +19,8 @@ use cmdr_sync::{
 use super::engine::SinkFactory;
 use super::engine_test::{local_side, test_engine};
 use super::host::{SyncEvent, SyncHost};
-use super::session::{self, RunLock};
+use super::run_lock::{RunLock, key};
+use super::session;
 use super::session_compare;
 use super::session_run;
 use super::wire::{
@@ -171,14 +172,31 @@ impl Pair {
             })
     }
 
+    fn host(&self) -> Arc<dyn SyncHost> {
+        Arc::clone(&self.host) as Arc<dyn SyncHost>
+    }
+
     async fn compare(&self, request: CompareRequest) -> String {
-        let id = session_compare::start(Arc::clone(&self.host) as Arc<dyn SyncHost>, request).expect("starts");
+        let started = session_compare::start(self.host(), request, None)
+            .await
+            .expect("starts");
+        let id = started.session_id;
         wait_until_async(Duration::from_secs(10), "the compare finishes", || {
             self.compare_finished(&id).is_some()
         })
         .await;
         assert_eq!(self.compare_finished(&id), Some(CompareOutcome::Done));
         id
+    }
+
+    fn run_request(&self, id: &str, groups: &[ConfirmGroupKey], acks: &[Acknowledgement]) -> RunRequest {
+        let preview = session_run::confirm(id, &defaults(), &all_rows()).expect("confirm");
+        RunRequest {
+            revision: preview.revision,
+            groups: groups.to_vec(),
+            acknowledged: acks.to_vec(),
+            defaults: defaults(),
+        }
     }
 
     fn run_finished(&self, id: &str) -> Option<RunReportWire> {
@@ -195,18 +213,22 @@ impl Pair {
 
     async fn run(&self, id: &str, groups: &[ConfirmGroupKey], acks: &[Acknowledgement]) -> RunReportWire {
         let runs_before = self.runs(id);
-        let request = RunRequest {
-            groups: groups.to_vec(),
-            acknowledged: acks.to_vec(),
-            defaults: defaults(),
-        };
-        let host = Arc::clone(&self.host) as Arc<dyn SyncHost>;
-        session_run::start_run(host, id, &request).expect("the run starts");
+        let request = self.run_request(id, groups, acks);
+        session_run::start_run(self.host(), id, &request).expect("the run starts");
         wait_until_async(Duration::from_secs(20), "the run finishes", || {
             self.runs(id) > runs_before
         })
         .await;
         self.run_finished(id).expect("a report")
+    }
+
+    /// A second run on the same compare (the folders changed since the first).
+    fn run_after_run(&self, id: &str, acks: &[Acknowledgement]) -> Result<(), SyncError> {
+        let request = RunRequest {
+            acknowledged: acks.to_vec(),
+            ..self.run_request(id, &ALL_GROUPS, &[])
+        };
+        session_run::start_run(self.host(), id, &request)
     }
 
     fn runs(&self, id: &str) -> usize {
@@ -306,22 +328,55 @@ async fn compare_refuses_nested_roots() {
         volume_id: p.left_ref.volume_id.clone(),
         path: p.left.join("inner").to_string_lossy().into_owned(),
     };
-    let error = session_compare::start(Arc::clone(&p.host) as Arc<dyn SyncHost>, request).expect_err("refused");
+    std::fs::create_dir(p.left.join("inner")).expect("inner");
+    let error = session_compare::start(p.host(), request, None)
+        .await
+        .expect_err("refused");
     assert!(matches!(
         error,
         SyncError::RootsConflict {
             conflict: RootConflict::Nested { outer: Side::Left }
         }
     ));
+    // The same folders under another volume id, and through a symlink.
+    let other = local_side(p.host.engine, "sync-parent", p.left.parent().expect("parent"));
+    p.host
+        .volumes
+        .lock_ignore_poison()
+        .insert(other.volume_id.clone(), other.volume);
+    let mut request = p.request(Mode::Mirror);
+    request.right.root = RootRef {
+        volume_id: other.volume_id.clone(),
+        path: p.left.join("inner").to_string_lossy().into_owned(),
+    };
+    let error = session_compare::start(p.host(), request, None)
+        .await
+        .expect_err("refused");
+    assert!(matches!(error, SyncError::RootsConflict { .. }));
+    let link = p.right.join("to-left");
+    std::os::unix::fs::symlink(&p.left, &link).expect("symlink");
+    let mut request = p.request(Mode::Mirror);
+    request.right.root.path = link.to_string_lossy().into_owned();
+    let error = session_compare::start(p.host(), request, None)
+        .await
+        .expect_err("refused");
+    assert_eq!(
+        error,
+        SyncError::RootsConflict {
+            conflict: RootConflict::SameFolder
+        }
+    );
 }
 
 #[tokio::test]
 async fn missing_volume_is_volume_not_connected_and_bad_inputs_are_refused_by_type() {
     let p = pair("sync_session_inputs");
-    let host = || Arc::clone(&p.host) as Arc<dyn SyncHost>;
+    let host = || p.host();
     let mut request = p.request(Mode::Update);
     request.right.root.volume_id = "gone".to_owned();
-    let error = session_compare::start(host(), request).expect_err("refused");
+    let error = session_compare::start(host(), request, None)
+        .await
+        .expect_err("refused");
     assert_eq!(
         error,
         SyncError::VolumeNotConnected {
@@ -332,13 +387,13 @@ async fn missing_volume_is_volume_not_connected_and_bad_inputs_are_refused_by_ty
     let mut request = p.request(Mode::Update);
     request.left.root.path = format!("{}/../R", p.left.display());
     assert_eq!(
-        session_compare::start(host(), request),
+        session_compare::start(host(), request, None).await,
         Err(SyncError::BadPath { side: Side::Left })
     );
     let mut request = p.request(Mode::Update);
     request.defaults.guards.max_remove_percent = 100;
     assert!(matches!(
-        session_compare::start(host(), request),
+        session_compare::start(host(), request, None).await,
         Err(SyncError::BadSettings { .. })
     ));
     let mut request = p.request(Mode::Update);
@@ -349,35 +404,173 @@ async fn missing_volume_is_volume_not_connected_and_bad_inputs_are_refused_by_ty
         expected_sequence: 3,
     });
     assert_eq!(
-        session_compare::start(host(), request),
+        session_compare::start(host(), request, None).await,
         Err(SyncError::StaleSelection { side: Side::Left })
     );
     let mut request = p.request(Mode::Update);
     request.session_id = Some("no-such-session".to_owned());
-    assert_eq!(session_compare::start(host(), request), Err(SyncError::NoSuchSession));
+    assert_eq!(
+        session_compare::start(host(), request, None).await,
+        Err(SyncError::NoSuchSession)
+    );
 }
 
 #[tokio::test]
-async fn second_run_on_the_same_pair_is_refused() {
+async fn second_run_on_the_same_folders_is_refused() {
     let p = pair("sync_session_run_lock");
     write(&p.left.join("a.txt"), "a", 100);
     let id = p.compare(p.request(Mode::Update)).await;
-    // Another session holds the pair (in either order).
-    let held = RunLock::take(&p.right_ref, &p.left_ref).expect("first lock");
-    let request = RunRequest {
-        groups: ALL_GROUPS.to_vec(),
-        acknowledged: Vec::new(),
-        defaults: defaults(),
-    };
-    let host = Arc::clone(&p.host) as Arc<dyn SyncHost>;
-    let refused = session_run::start_run(host, &id, &request);
-    assert!(matches!(refused, Err(SyncError::RunInProgress)));
+    // Another run holds a folder inside the left root (named with a trailing slash).
+    let real_left = std::fs::canonicalize(&p.left).expect("real left");
+    let inside = format!("{}/sub/", real_left.display());
+    let held = RunLock::take([key("local-fs", &inside), key("other-volume", "/x")]).expect("first lock");
+    let request = p.run_request(&id, &ALL_GROUPS, &[]);
+    let refused = session_run::start_run(p.host(), &id, &request);
+    assert_eq!(refused, Err(SyncError::RunInProgress));
     drop(held);
     // The right root is empty: copies into it wait for "Copy anyway".
     let report = p.run(&id, &ALL_GROUPS, &[]).await;
     assert_eq!((report.done, report.held), (0, 1));
-    let report = p.run(&id, &ALL_GROUPS, &[Acknowledgement::CopyIntoEmpty]).await;
+    let report = p.run_after_run(&id, &[Acknowledgement::CopyIntoEmpty]);
+    assert_eq!(report, Err(SyncError::StaleCompare));
+}
+
+#[test]
+fn run_locks_cover_the_same_inner_and_outer_folders_only() {
+    let held = RunLock::take([key("local-fs", "/a/b"), key("v", "/r")]).expect("first");
+    for taken in [
+        key("local-fs", "/a/b/"),
+        key("local-fs", "/a"),
+        key("local-fs", "/a/b/c"),
+    ] {
+        let refused = RunLock::take([taken, key("w", "/elsewhere")]);
+        assert!(matches!(refused, Err(SyncError::RunInProgress)));
+    }
+    let apart = RunLock::take([key("local-fs", "/a/bc"), key("v", "/s")]).expect("apart");
+    drop((held, apart));
+}
+
+#[tokio::test]
+async fn a_run_needs_the_confirm_the_person_saw() {
+    let p = pair("sync_session_revision");
+    write(&p.left.join("a.txt"), "a", 100);
+    write(&p.left.join("b.txt"), "b", 100);
+    write(&p.right.join("k.txt"), "k", 100);
+    let id = p.compare(p.request(Mode::Update)).await;
+    let request = p.run_request(&id, &ALL_GROUPS, &[]);
+    // A change after the confirm.
+    let a = p.index_of(&id, "a.txt");
+    session::set_actions(&id, &[a], BulkAction::Skip, &all_rows()).expect("override");
+    assert_eq!(
+        session_run::start_run(p.host(), &id, &request),
+        Err(SyncError::PlanChanged)
+    );
+    // Other Settings than the confirm was shown with.
+    let mut request = p.run_request(&id, &ALL_GROUPS, &[]);
+    request.defaults.time_tolerance_secs = 5;
+    assert_eq!(
+        session_run::start_run(p.host(), &id, &request),
+        Err(SyncError::PlanChanged)
+    );
+    let report = p.run(&id, &ALL_GROUPS, &[]).await;
     assert_eq!(report.done, 1);
+    assert!(!p.right.join("a.txt").exists());
+}
+
+#[tokio::test]
+async fn a_volume_that_came_back_as_another_needs_a_new_compare() {
+    let p = pair("sync_session_volume_back");
+    write(&p.left.join("a.txt"), "a", 100);
+    write(&p.right.join("k.txt"), "k", 100);
+    let id = p.compare(p.request(Mode::Update)).await;
+    let request = p.run_request(&id, &ALL_GROUPS, &[]);
+    let again = local_side(p.host.engine, "sync-left-again", &p.left);
+    p.host
+        .volumes
+        .lock_ignore_poison()
+        .insert(p.left_ref.volume_id.clone(), again.volume);
+    let refused = session_run::start_run(p.host(), &id, &request);
+    assert_eq!(
+        refused,
+        Err(SyncError::VolumeNotConnected {
+            side: Side::Left,
+            volume_id: p.left_ref.volume_id.clone()
+        })
+    );
+}
+
+#[tokio::test]
+async fn a_content_answer_lands_only_on_its_own_row_of_the_current_compare() {
+    let p = pair("sync_session_content");
+    write(&p.left.join("a.txt"), "same", 100);
+    write(&p.right.join("a.txt"), "same", 300);
+    let id = p.compare(p.request(Mode::BothWays)).await;
+    let a = p.index_of(&id, "a.txt");
+    assert_eq!(
+        session_run::compare_item_content(p.host(), &id, 999).await,
+        Err(SyncError::NotContentComparable { item: 999 })
+    );
+    let before = session::session(&id).expect("session");
+    let rev = |id: &str| {
+        session_run::confirm(id, &defaults(), &all_rows())
+            .expect("confirm")
+            .revision
+    };
+    let first = rev(&id);
+    session_run::compare_item_content(p.host(), &id, a)
+        .await
+        .expect("compared");
+    assert!(rev(&id) > first, "a content answer is a plan change");
+    let page = session::rows(&id, 0, 100, &all_rows()).expect("rows");
+    assert!(page.rows.iter().any(|row| matches!(&row.row,
+        ViewRowWire::Item { index, content: cmdr_sync::ContentState::Same, .. } if *index == a)));
+    // Another row under that index, or a newer compare, refuses the answer.
+    let wrong = session_run::ticket_for(&before, a, ("b.txt", "b.txt"));
+    let same = cmdr_sync::ContentState::Same;
+    assert_eq!(
+        session_run::apply_content(&before, &wrong, same),
+        Err(SyncError::PlanChanged)
+    );
+    let old = session_run::ticket_for(&before, a, ("a.txt", "a.txt"));
+    let mut again = p.request(Mode::BothWays);
+    again.session_id = Some(id.clone());
+    session_compare::start(p.host(), again, None).await.expect("again");
+    assert_eq!(
+        session_run::apply_content(&before, &old, same),
+        Err(SyncError::PlanChanged)
+    );
+    // Not while a run is going.
+    *before.run.lock_ignore_poison() = Some(cmdr_sync::SyncControl::new());
+    assert_eq!(
+        session_run::compare_item_content(p.host(), &id, a).await,
+        Err(SyncError::RunInProgress)
+    );
+    *before.run.lock_ignore_poison() = None;
+}
+
+#[tokio::test]
+async fn a_superseded_compare_never_reports() {
+    let p = pair("sync_session_superseded");
+    write(&p.left.join("a.txt"), "a", 100);
+    let first = session_compare::start(p.host(), p.request(Mode::BothWays), None)
+        .await
+        .expect("first");
+    session::set_paused(&first.session_id, false, true).expect("pause");
+    let mut again = p.request(Mode::BothWays);
+    again.session_id = Some(first.session_id.clone());
+    let second = session_compare::start(p.host(), again, None).await.expect("second");
+    assert!(second.generation > first.generation);
+    wait_until_async(Duration::from_secs(10), "the newer compare finishes", || {
+        p.compare_finished(&first.session_id).is_some()
+    })
+    .await;
+    let events = p.host.events.lock_ignore_poison();
+    let stale = events.iter().any(|event| match event {
+        SyncEvent::CompareFinished(done) => done.generation == first.generation,
+        SyncEvent::CompareProgress(progress) => progress.generation == first.generation,
+        _ => false,
+    });
+    assert!(!stale, "only the newest compare speaks");
 }
 
 #[tokio::test]

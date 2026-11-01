@@ -6,6 +6,7 @@ pub(crate) mod engine;
 mod engine_ops;
 pub(crate) mod host;
 pub(crate) mod profile_store;
+pub(crate) mod run_lock;
 pub(crate) mod session;
 pub(crate) mod session_compare;
 pub(crate) mod session_run;

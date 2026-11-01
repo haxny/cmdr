@@ -8,6 +8,7 @@ import {
   events,
   type BulkAction,
   type CompareRequest,
+  type CompareStarted,
   type ConfirmPreview,
   type KeepPolicy,
   type KeepRefusal,
@@ -35,6 +36,7 @@ import { TypedFailure, failureOf } from '#lib/ipc/typed-failure.js'
 export type {
   BulkAction,
   CompareRequest,
+  CompareStarted,
   ConfirmPreview,
   KeepPolicy,
   KeepRefusal,
@@ -158,10 +160,11 @@ function syncResult<T>(res: { status: 'ok'; data: T } | { status: 'error'; error
 }
 
 /**
- * Checks every input and starts a compare (in `request.sessionId`, or a new session). Answers the session id; the
- * rows are ready on `sync-compare-finished`. Throws a {@link SyncCommandFailure}.
+ * Checks every input and starts a compare (in `request.sessionId`, or a new session). Answers the session and the
+ * compare's generation; the rows are ready on the `sync-compare-finished` of that generation (ignore any other).
+ * Throws a {@link SyncCommandFailure}.
  */
-export async function startSyncCompare(request: CompareRequest): Promise<string> {
+export async function startSyncCompare(request: CompareRequest): Promise<CompareStarted> {
   return syncResult(await commands.startSyncCompare(request))
 }
 
@@ -214,7 +217,11 @@ export async function getSyncConfirm(
   return syncResult(await commands.getSyncConfirm(sessionId, defaults, filters))
 }
 
-/** Runs the accepted groups; `sync-run-progress` and `sync-run-finished` follow. */
+/**
+ * Runs the accepted groups of the confirm the person saw (`request.revision`, `request.defaults` as passed to
+ * {@link getSyncConfirm}); a plan changed since is refused as `planChanged`. `sync-run-progress` and
+ * `sync-run-finished` follow.
+ */
 export async function startSyncRun(sessionId: string, request: RunRequest): Promise<void> {
   syncResult(await commands.startSyncRun(sessionId, request))
 }

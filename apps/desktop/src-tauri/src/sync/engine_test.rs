@@ -112,6 +112,28 @@ impl Fixture {
     }
 }
 
+/// Locks a file (Finder's Locked, `uchg`) and unlocks it on drop, so a
+/// failing test still leaves a folder its scratch dir can remove.
+struct Locked(PathBuf);
+
+impl Locked {
+    fn new(path: &Path) -> Self {
+        let status = std::process::Command::new("chflags").arg("uchg").arg(path).status();
+        assert!(status.is_ok_and(|s| s.success()), "chflags uchg");
+        Self(path.to_path_buf())
+    }
+}
+
+impl Drop for Locked {
+    fn drop(&mut self) {
+        // Best effort: an unlock that can't run leaves only a scratch file behind.
+        let _ = std::process::Command::new("chflags")
+            .arg("nouchg")
+            .arg(&self.0)
+            .status();
+    }
+}
+
 fn only(outcome: &BatchOutcome) -> ItemOutcome {
     assert_eq!(outcome.items.len(), 1, "one source, one answer: {outcome:?}");
     outcome.items[0].1
@@ -228,8 +250,7 @@ async fn cancel_stops_a_running_move_but_never_a_move_back() {
     let f = fixture("sync_engine_cancel");
     let locked = f.left.join("locked.txt");
     std::fs::write(&locked, b"locked").expect("write");
-    let status = std::process::Command::new("chflags").arg("uchg").arg(&locked).status();
-    assert!(status.is_ok_and(|s| s.success()), "chflags uchg");
+    let lock = Locked::new(&locked);
     let aside = f.left.join(".cmdr-sync/versions/aside");
     std::fs::create_dir_all(&aside).expect("aside");
 
@@ -257,10 +278,7 @@ async fn cancel_stops_a_running_move_but_never_a_move_back() {
     canceller.await.expect("canceller");
     assert!(outcome.stopped);
     assert!(locked.exists());
-    let _ = std::process::Command::new("chflags")
-        .arg("nouchg")
-        .arg(&locked)
-        .status();
+    drop(lock);
 
     // Cancelled now: a new copy never starts, a move back still runs.
     let source = f.left.join("b.txt");
@@ -360,4 +378,59 @@ async fn copies_to_a_volume_without_a_local_path_bind_remote_fingerprints() {
         .await;
     assert_eq!(only(&back), ItemOutcome::Done);
     assert_eq!(std::fs::read(&source).expect("back"), b"remote");
+}
+
+#[tokio::test]
+async fn a_symlinked_folder_inside_the_root_never_leads_a_write() {
+    let f = fixture("sync_engine_link_chain");
+    let outside = f._dir.join("outside");
+    std::fs::create_dir(&outside).expect("outside");
+    std::fs::create_dir(outside.join("empty")).expect("empty");
+    let link = f.right.join("d");
+    std::os::unix::fs::symlink(&outside, &link).expect("symlink");
+    let source = f.left.join("a.txt");
+    std::fs::write(&source, b"a").expect("write");
+    let copy = EngineBatch::Copy {
+        from: Side::Left,
+        sources: vec![f.bound(Side::Left, &source).await],
+        dest_dir: link.clone(),
+    };
+    assert_eq!(only(&f.adapter.run(copy).await), ItemOutcome::Failed);
+    assert!(!outside.join("a.txt").exists());
+    let rmdir = EngineBatch::RemoveEmptyFolders {
+        place: Place::Target,
+        side: Side::Right,
+        dirs: vec![link.join("empty")],
+    };
+    assert_eq!(only(&f.adapter.run(rmdir).await), ItemOutcome::Failed);
+    assert!(outside.join("empty").is_dir());
+    let make = EngineBatch::MakeFolders {
+        place: Place::Target,
+        side: Side::Right,
+        dirs: vec![link.join("new")],
+    };
+    assert_eq!(only(&f.adapter.run(make).await), ItemOutcome::Failed);
+    assert!(!outside.join("new").exists());
+}
+
+#[tokio::test]
+async fn a_path_that_wont_read_is_never_taken_for_absent() {
+    let f = fixture("sync_engine_unreadable");
+    let closed = f.right.join("closed");
+    std::fs::create_dir(&closed).expect("mkdir");
+    std::fs::write(closed.join("x.txt"), b"x").expect("write");
+    let mode = <std::fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode;
+    std::fs::set_permissions(&closed, mode(0o000)).expect("chmod");
+    let seen = f
+        .adapter
+        .observe(Side::Right, Place::Target, &closed.join("x.txt"), false)
+        .await;
+    std::fs::set_permissions(&closed, mode(0o755)).expect("chmod back");
+    let seen = seen.expect("a path that won't read is not absent");
+    assert_eq!(seen.subtree, None);
+    let gone = f
+        .adapter
+        .observe(Side::Right, Place::Target, &f.right.join("nothing"), false)
+        .await;
+    assert!(gone.is_none());
 }

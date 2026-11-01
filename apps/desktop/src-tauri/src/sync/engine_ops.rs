@@ -16,7 +16,7 @@ use cmdr_operations::{
     ConflictResolution, ExpectedSources, MutationError, OperationEventSink, SourceItemOutcome, VolumeCopyConfig,
     WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
 };
-use cmdr_sync::{BatchOutcome, BoundSource, EngineBatch, EntryFacts, EntryKind, ItemOutcome, Side};
+use cmdr_sync::{BatchOutcome, BoundSource, EngineBatch, EntryFacts, EntryKind, ItemOutcome, Place, Side};
 
 use super::engine::{EngineAdapter, EngineSide, agrees};
 use super::settle_sink::{SettleSink, Settled};
@@ -32,6 +32,13 @@ const SETTLE_GRACE: Duration = Duration::from_millis(500);
 enum Verb {
     Copy,
     Move,
+}
+
+/// Where a transfer lands, and the root below which no symlink may lead there.
+struct Landing<'a> {
+    target: &'a EngineSide,
+    base: Option<&'a Path>,
+    dest_dir: &'a Path,
 }
 
 /// Sources split by whether they still read as the snapshot did.
@@ -65,14 +72,15 @@ impl EngineAdapter {
         }
         match batch {
             EngineBatch::ClaimFolder { place, side, dir } => {
-                let outcome = self.claim(self.at(side, place), &dir).await;
+                let base = self.base(side, place);
+                let outcome = self.claim(self.at(side, place), base.as_deref(), &dir).await;
                 done(vec![(dir, outcome)])
             }
             EngineBatch::MakeFolders { place, side, dirs } => {
-                let on = self.at(side, place);
+                let (on, base) = (self.at(side, place), self.base(side, place));
                 let mut items = Vec::with_capacity(dirs.len());
                 for dir in dirs {
-                    let outcome = if self.ensure_folder(on, &dir).await {
+                    let outcome = if self.ensure_folder(on, base.as_deref(), &dir).await {
                         ItemOutcome::Done
                     } else {
                         ItemOutcome::Failed
@@ -87,8 +95,13 @@ impl EngineAdapter {
                 dest_dir,
             } => {
                 let (source, target) = (self.side(from), self.side(other(from)));
-                self.transfer(Verb::Copy, source, target, &sources, &dest_dir, cancellable)
-                    .await
+                let base = self.base(other(from), Place::Target);
+                let landing = Landing {
+                    target,
+                    base: base.as_deref(),
+                    dest_dir: &dest_dir,
+                };
+                self.transfer(Verb::Copy, source, &landing, &sources, cancellable).await
             }
             EngineBatch::Move {
                 side,
@@ -97,8 +110,13 @@ impl EngineAdapter {
                 dest_dir,
             } => {
                 let (source, target) = (self.side(side), self.at(side, place));
-                self.transfer(Verb::Move, source, target, &sources, &dest_dir, cancellable)
-                    .await
+                let base = self.base(side, place);
+                let landing = Landing {
+                    target,
+                    base: base.as_deref(),
+                    dest_dir: &dest_dir,
+                };
+                self.transfer(Verb::Move, source, &landing, &sources, cancellable).await
             }
             EngineBatch::MoveBack {
                 side,
@@ -107,14 +125,19 @@ impl EngineAdapter {
                 dest_dir,
             } => {
                 let (source, target) = (self.at(side, place), self.side(side));
-                self.transfer(Verb::Move, source, target, &sources, &dest_dir, cancellable)
-                    .await
+                let base = self.base(side, Place::Target);
+                let landing = Landing {
+                    target,
+                    base: base.as_deref(),
+                    dest_dir: &dest_dir,
+                };
+                self.transfer(Verb::Move, source, &landing, &sources, cancellable).await
             }
             EngineBatch::RemoveEmptyFolders { place, side, dirs } => {
-                let on = self.at(side, place);
+                let (on, base) = (self.at(side, place), self.base(side, place));
                 let mut items = Vec::with_capacity(dirs.len());
                 for dir in dirs {
-                    let outcome = remove_empty(on, &dir).await;
+                    let outcome = remove_empty(on, base.as_deref(), &dir).await;
                     items.push((dir, outcome));
                 }
                 done(items)
@@ -146,15 +169,26 @@ impl EngineAdapter {
         }
     }
 
+    /// The folder under which no symlink may lead a write: the side's root on
+    /// its own volume. The local disk's custom folder is checked by the run
+    /// from the folder the person picked (`safe_way`).
+    fn base(&self, side: Side, place: Place) -> Option<PathBuf> {
+        (place == Place::Target).then(|| self.side(side).root.clone())
+    }
+
     async fn transfer(
         &self,
         verb: Verb,
         source: &EngineSide,
-        target: &EngineSide,
+        landing: &Landing<'_>,
         sources: &[BoundSource],
-        dest_dir: &Path,
         cancellable: bool,
     ) -> BatchOutcome {
+        let (target, dest_dir) = (landing.target, landing.dest_dir);
+        if !no_link_below(target, landing.base, dest_dir).await {
+            let items = sources.iter().map(|s| (s.path.clone(), ItemOutcome::Failed)).collect();
+            return done(items);
+        }
         let bound = self.bind(source, sources).await;
         if bound.kept.is_empty() {
             return skipped_only(&bound.refused);
@@ -220,9 +254,9 @@ impl EngineAdapter {
         let (sink, mut rx) = SettleSink::wrap((self.config.sinks)());
         let started = match start(Arc::clone(&sink) as Arc<dyn OperationEventSink>).await {
             Ok(started) => started,
-            Err(_) => {
-                // The refusal names paths; a log line names none (`LogPrivate`).
-                log::warn!(target: "sync", "a sync batch didn't start");
+            Err(refusal) => {
+                // The refusal names paths; a log line names only its kind.
+                log::warn!(target: "sync", "a sync batch didn't start: {}", kind_of(&refusal));
                 return None;
             }
         };
@@ -257,22 +291,22 @@ impl EngineAdapter {
     }
 
     /// Makes `dir` only if nothing is there: `Skipped` when something is.
-    async fn claim(&self, on: &EngineSide, dir: &Path) -> ItemOutcome {
+    async fn claim(&self, on: &EngineSide, base: Option<&Path>, dir: &Path) -> ItemOutcome {
         if on.volume.get_metadata(dir).await.is_ok() {
             return ItemOutcome::Skipped;
         }
         let Some(parent) = dir.parent() else {
             return ItemOutcome::Failed;
         };
-        if !self.ensure_folder(on, parent).await {
+        if !self.ensure_folder(on, base, parent).await {
             return ItemOutcome::Failed;
         }
         match self.mkdir(on, dir).await {
             Ok(()) => ItemOutcome::Done,
             Err(MutationError::AlreadyExists { .. }) => ItemOutcome::Skipped,
-            Err(_) => {
-                // The refusal names paths; a log line names none (`LogPrivate`).
-                log::warn!(target: "sync", "a versions folder couldn't be made");
+            Err(refusal) => {
+                // The refusal names paths; a log line names only its kind.
+                log::warn!(target: "sync", "a versions folder couldn't be made: {}", kind_of(&refusal));
                 ItemOutcome::Failed
             }
         }
@@ -280,7 +314,10 @@ impl EngineAdapter {
 
     /// `dir` is a real folder afterwards, its missing parents made; a file or
     /// a symlink where a folder belongs refuses.
-    async fn ensure_folder(&self, on: &EngineSide, dir: &Path) -> bool {
+    async fn ensure_folder(&self, on: &EngineSide, base: Option<&Path>, dir: &Path) -> bool {
+        if !no_link_below(on, base, dir).await {
+            return false;
+        }
         let mut missing = Vec::new();
         for ancestor in dir.ancestors() {
             if ancestor.file_name().is_none() {
@@ -296,9 +333,10 @@ impl EngineAdapter {
             match self.mkdir(on, folder).await {
                 Ok(()) => {}
                 Err(MutationError::AlreadyExists { .. }) if is_folder(on, folder).await => {}
-                Err(_) => {
-                    // The refusal names paths; a log line names none (`LogPrivate`).
-                    log::warn!(target: "sync", "a folder for the run couldn't be made: {}", LogPrivate::path(folder));
+                Err(refusal) => {
+                    // The refusal names paths; a log line names only its kind.
+                    let kind = kind_of(&refusal);
+                    log::warn!(target: "sync", "a folder for the run couldn't be made: {kind}, {}", LogPrivate::path(folder));
                     return false;
                 }
             }
@@ -329,7 +367,10 @@ async fn is_folder(on: &EngineSide, path: &Path) -> bool {
 
 /// One non-recursive `rmdir`: a link is not a folder, and anything inside
 /// (hidden files too) refuses.
-async fn remove_empty(on: &EngineSide, dir: &Path) -> ItemOutcome {
+async fn remove_empty(on: &EngineSide, base: Option<&Path>, dir: &Path) -> ItemOutcome {
+    if !no_link_below(on, base, dir.parent().unwrap_or(dir)).await {
+        return ItemOutcome::Failed;
+    }
     match on.volume.get_metadata(dir).await {
         Ok(entry) if EntryFacts::of(&entry).kind == EntryKind::Folder => {}
         Ok(_) => return ItemOutcome::Failed,
@@ -350,6 +391,37 @@ async fn remove_empty(on: &EngineSide, dir: &Path) -> ItemOutcome {
         Err(VolumeError::NotFound(_)) => ItemOutcome::Skipped,
         Err(_) => ItemOutcome::Failed,
     }
+}
+
+/// Whether every folder from just below `base` down to `path` that exists is
+/// not a symlink (lstat), so a write there can't be led out of the root. A
+/// path outside `base` is refused; `None` checks nothing.
+async fn no_link_below(on: &EngineSide, base: Option<&Path>, path: &Path) -> bool {
+    let Some(base) = base else {
+        return true;
+    };
+    let Ok(rest) = path.strip_prefix(base) else {
+        return false;
+    };
+    let mut at = base.to_path_buf();
+    for part in rest.components() {
+        at.push(part);
+        match on.volume.get_metadata(&at).await {
+            Ok(entry) if EntryFacts::of(&entry).kind == EntryKind::Symlink => return false,
+            Ok(_) => {}
+            // Nothing there yet: nothing further down exists either.
+            Err(_) => return true,
+        }
+    }
+    true
+}
+
+/// A refusal's typed kind (its serde tag), for a log line without its paths.
+fn kind_of(refusal: &impl serde::Serialize) -> String {
+    serde_json::to_value(refusal)
+        .ok()
+        .and_then(|value| value.get("type").and_then(|kind| kind.as_str().map(str::to_owned)))
+        .unwrap_or_else(|| "unknown".to_owned())
 }
 
 fn done(items: Vec<(PathBuf, ItemOutcome)>) -> BatchOutcome {

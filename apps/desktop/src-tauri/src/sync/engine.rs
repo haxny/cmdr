@@ -9,11 +9,18 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::volume::{Volume, root_anchored};
+use cmdr_fs::volume::{Volume, VolumeError, root_anchored};
 use cmdr_operations::{LocalContent, OperationEventSink, Operations, RemoteContent, SourceFingerprint};
 use cmdr_sync::{
     BatchOutcome, EngineBatch, EngineFuture, EntryFacts, EntryKind, Observed, Place, ScanOptions, Side, SyncControl,
     SyncEngine, subtree_now,
+};
+
+/// What a path that exists but won't read is taken for.
+const UNKNOWN: EntryFacts = EntryFacts {
+    kind: EntryKind::Folder,
+    size: None,
+    mtime: None,
 };
 
 /// Makes the app's sink for one engine operation (`TauriEventSink` in the app).
@@ -133,7 +140,18 @@ impl EngineAdapter {
 
     async fn observe_now(&self, side: Side, place: Place, path: &Path, with_subtree: bool) -> Option<Observed> {
         let on = self.at(side, place);
-        let entry = on.volume.get_metadata(path).await.ok()?;
+        let entry = match on.volume.get_metadata(path).await {
+            Ok(entry) => entry,
+            Err(VolumeError::NotFound(_)) => return None,
+            // Something there that won't read: a folder of unknown contents
+            // never matches a snapshot, never reads as empty or absent.
+            Err(_) => {
+                return Some(Observed {
+                    facts: UNKNOWN,
+                    subtree: None,
+                });
+            }
+        };
         let facts = EntryFacts::of(&entry);
         let key = (on.volume_id.clone(), path.to_path_buf());
         if facts.kind == EntryKind::Folder {

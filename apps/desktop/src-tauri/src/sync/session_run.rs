@@ -15,7 +15,8 @@ use cmdr_sync::{
 
 use super::engine::{EngineAdapter, EngineConfig, EngineSide};
 use super::host::{LOCAL_DISK_VOLUME_ID, SyncEvent, SyncHost};
-use super::session::{Compared, RunLock, SideSetup, session};
+use super::run_lock::{RootKey, RunLock};
+use super::session::{Compared, Session, SideSetup, session};
 use super::session_compare::check_settings;
 use super::wire::{
     ConfirmGroup, ConfirmGroupKey, ConfirmPreview, KeepDestinationWire, RunItemWire, RunReportWire, RunRequest,
@@ -71,8 +72,44 @@ fn run_side(setup: &SideSetup, snap_caps: cmdr_sync::SyncCaps) -> RunSide {
     RunSide {
         root: setup.root.clone(),
         caps: snap_caps,
-        local_namespace: setup.local_namespace(),
+        namespace_root: setup.real_root.clone(),
     }
+}
+
+/// `path` with its deepest existing ancestor resolved (symlinks, `/tmp` as
+/// `/private/tmp`), so it compares with the roots' real paths.
+fn real_path(path: &Path) -> PathBuf {
+    let mut rest = Vec::new();
+    for ancestor in path.ancestors() {
+        if let Ok(real) = std::fs::canonicalize(ancestor) {
+            return rest.iter().rev().fold(real, |path: PathBuf, part| path.join(part));
+        }
+        if let Some(name) = ancestor.file_name() {
+            rest.push(name.to_owned());
+        }
+    }
+    path.to_path_buf()
+}
+
+/// A custom versions folder reached through a symlink into a sync root is
+/// still inside it.
+fn check_custom_folders(compared: &Compared, ctx: &RunContext) -> Result<(), SyncError> {
+    let roots: Vec<&PathBuf> = [&compared.left.real_root, &compared.right.real_root]
+        .into_iter()
+        .flatten()
+        .collect();
+    for side in [Side::Left, Side::Right] {
+        let versions = ctx.versions(side);
+        if versions.place != Place::LocalDisk {
+            continue;
+        }
+        let real = real_path(&versions.dir);
+        if roots.iter().any(|root| real.starts_with(root)) {
+            let refusal = cmdr_sync::KeepRefusal::InsideSyncFolder;
+            return Err(SyncError::Keep { refusal });
+        }
+    }
+    Ok(())
 }
 
 fn context(compared: &Compared, defaults: &SyncDefaults) -> Result<RunContext, SyncError> {
@@ -80,8 +117,10 @@ fn context(compared: &Compared, defaults: &SyncDefaults) -> Result<RunContext, S
     let keep = effective(defaults, &request.options, &request.overrides).keep;
     let left = run_side(&compared.left, compared.plan.left_caps);
     let right = run_side(&compared.right, compared.plan.right_caps);
-    RunContext::new(left, right, keep, run_stamp(), request.profile_name.clone())
-        .map_err(|refusal| SyncError::Keep { refusal })
+    let ctx = RunContext::new(left, right, keep, run_stamp(), request.profile_name.clone())
+        .map_err(|refusal| SyncError::Keep { refusal })?;
+    check_custom_folders(compared, &ctx)?;
+    Ok(ctx)
 }
 
 fn setup_of(compared: &Compared, side: Side) -> &SideSetup {
@@ -149,6 +188,12 @@ pub(crate) fn confirm(id: &str, defaults: &SyncDefaults, filters: &ShowFilters) 
     session(id)?.with_compared(|compared| {
         check_settings(defaults, &compared.request.overrides)?;
         let ctx = context(compared, defaults)?;
+        // The run must be shown with exactly these Settings: other ones are a
+        // new confirm.
+        if compared.confirmed.as_ref() != Some(defaults) {
+            compared.confirmed = Some(defaults.clone());
+            compared.bump();
+        }
         let request = &compared.request;
         let guards = effective(defaults, &request.options, &request.overrides).guards;
         let report = check(&compared.plan, &compared.left_snap, &compared.right_snap, &guards);
@@ -176,6 +221,7 @@ pub(crate) fn confirm(id: &str, defaults: &SyncDefaults, filters: &ShowFilters) 
                 if group_side(group.key).is_some_and(|side| *volume_id != setup_of(compared, side).root_ref.volume_id))
         });
         Ok(ConfirmPreview {
+            revision: compared.revision,
             groups,
             older_overwrites_newer: warned,
             older_overwrites_newer_total: warned_total,
@@ -224,12 +270,32 @@ fn engine_side(setup: &SideSetup) -> EngineSide {
     }
 }
 
+/// The volume the compare read must still be the one under its id: a volume
+/// that went away and came back (or another one under the id) needs a new
+/// compare.
+fn still_connected(host: &dyn SyncHost, side: Side, setup: &SideSetup) -> Result<(), SyncError> {
+    let volume_id = setup.root_ref.volume_id.clone();
+    match host.volume(&volume_id) {
+        Some(now) if Arc::ptr_eq(&now, &setup.volume) => Ok(()),
+        _ => Err(SyncError::VolumeNotConnected { side, volume_id }),
+    }
+}
+
 /// Gates the current plan, keeps the accepted groups, and builds the engine.
 fn launch(host: &dyn SyncHost, compared: &Compared, request: &RunRequest) -> Result<Launch, SyncError> {
+    if compared.stale {
+        return Err(SyncError::StaleCompare);
+    }
+    if request.revision != compared.revision || compared.confirmed.as_ref() != Some(&request.defaults) {
+        return Err(SyncError::PlanChanged);
+    }
     check_settings(&request.defaults, &compared.request.overrides)?;
     let operations = host.operations().ok_or(SyncError::NotInstalled)?;
     let local = host.volume(LOCAL_DISK_VOLUME_ID).ok_or(SyncError::NotInstalled)?;
-    let lock = RunLock::take(&compared.left.root_ref, &compared.right.root_ref)?;
+    for side in [Side::Left, Side::Right] {
+        still_connected(host, side, setup_of(compared, side))?;
+    }
+    let lock = RunLock::take([RootKey::of(&compared.left), RootKey::of(&compared.right)])?;
     let ctx = context(compared, &request.defaults)?;
     let settings = &compared.request;
     let guards = effective(&request.defaults, &settings.options, &settings.overrides).guards;
@@ -364,18 +430,36 @@ fn report_wire(report: &RunReport, held: u64, adapter: &EngineAdapter) -> RunRep
     wire
 }
 
+/// What a row's content compare was started on, to check the answer still
+/// belongs to that row.
+pub(crate) struct ContentTicket {
+    generation: u64,
+    item: u32,
+    paths: (String, String),
+}
+
 /// Compares one equal-size file pair byte by byte and shows the answer on its row.
 pub(crate) async fn compare_item_content(host: Arc<dyn SyncHost>, id: &str, item: u32) -> Result<(), SyncError> {
     let session = session(id)?;
-    let (job, left, right) = session.with_compared(|compared| {
+    if session.is_running() {
+        return Err(SyncError::RunInProgress);
+    }
+    let generation = session.generation();
+    let (job, ticket, left, right) = session.with_compared(|compared| {
         let row = compared
             .plan
             .items
             .get(item as usize)
             .ok_or(SyncError::NotContentComparable { item })?;
         let job = content_job(compared, row).ok_or(SyncError::NotContentComparable { item })?;
+        let ticket = ContentTicket {
+            generation,
+            item,
+            paths: rel_paths(row),
+        };
         Ok((
             job,
+            ticket,
             Arc::clone(&compared.left.volume),
             Arc::clone(&compared.right.volume),
         ))
@@ -383,18 +467,47 @@ pub(crate) async fn compare_item_content(host: Arc<dyn SyncHost>, id: &str, item
     let control = SyncControl::new();
     let answers = compare_contents(left.as_ref(), right.as_ref(), vec![job], 1, &control, &|_| {}).await;
     let state = answers.first().map_or(ContentState::Pending, |(_, state)| *state);
-    session.with_compared(|compared| {
-        let mut plan = compared.plan.clone();
-        let row = &mut plan.items[item as usize];
-        row.content = ContentState::Pending;
-        let reclassified = reclassify(&plan, &[(item, state)]).plan;
-        compared.plan = reclassified;
-        Ok(())
-    })?;
+    apply_content(&session, &ticket, state)?;
     host.emit(SyncEvent::RowsChanged(SyncRowsChanged {
         session_id: session.id.clone(),
     }));
     Ok(())
+}
+
+fn rel_paths(row: &PlanItem) -> (String, String) {
+    let rel = |entry: Option<&cmdr_sync::Entry>| entry.map(|entry| entry.rel_path.clone()).unwrap_or_default();
+    (rel(row.left.as_ref()), rel(row.right.as_ref()))
+}
+
+/// Folds a content answer into the row it was asked for, unless a run, a newer
+/// compare, or another row under that index came in between.
+pub(crate) fn apply_content(session: &Session, ticket: &ContentTicket, state: ContentState) -> Result<(), SyncError> {
+    if session.is_running() {
+        return Err(SyncError::RunInProgress);
+    }
+    if !session.is_current(ticket.generation) {
+        return Err(SyncError::PlanChanged);
+    }
+    session.with_compared(|compared| {
+        let mut plan = compared.plan.clone();
+        let row = plan.items.get_mut(ticket.item as usize).ok_or(SyncError::PlanChanged)?;
+        if rel_paths(row) != ticket.paths {
+            return Err(SyncError::PlanChanged);
+        }
+        row.content = ContentState::Pending;
+        compared.plan = reclassify(&plan, &[(ticket.item, state)]).plan;
+        compared.bump();
+        Ok(())
+    })
+}
+
+#[cfg(test)]
+pub(crate) fn ticket_for(session: &Session, item: u32, paths: (&str, &str)) -> ContentTicket {
+    ContentTicket {
+        generation: session.generation(),
+        item,
+        paths: (paths.0.to_owned(), paths.1.to_owned()),
+    }
 }
 
 fn content_job(compared: &Compared, row: &PlanItem) -> Option<ContentJob> {

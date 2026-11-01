@@ -25,6 +25,11 @@
   the result back and falls back to the typed value whole when it isn't exactly the saved profile.
 - **Why not `settings.json`.** It is sparse and per-setting (a value exists only when changed, with migrations keyed by
   setting id). Profiles are ordered records with their own lifecycle, validation, and recovery.
+- **Store shape.** The store follows `multi_rename/preset_store.rs`: temp+rename writes, two locks never held at once.
+  An invalid profile is listed greyed with its reason, and `save_in` refuses one that fails `validate`; only an entry
+  with no string `id` is left out of the list (it stays in the file). The list holds `MAX_PROFILES` (200); the newest
+  `MAX_REMEMBERED_PAIRS` (50) ordered pairs of roots keep their last options. The backend's say on a versions folder in
+  Settings is `check_sync_keep_policy`.
 - **Replace rules.** `save_in` finds the target entry by id, else by name (trimmed, lowercased). A match keeps its
   place; any other entry with the saved name is removed, so a list can't hold two profiles with one name.
 - **Recovery.** `StateFile::SyncProfiles` names the file in the recovery notice (`stateRecovery.syncProfiles.title`). A
@@ -48,10 +53,14 @@
 ## Sessions
 
 One session per open dialog (`session.rs`, `SESSIONS`), addressed by a uuid the frontend holds. `start_sync_compare`
-opens one when `sessionId` is `None`, else compares again in that one: the newer compare cancels the older's
-`SyncControl`, and only the newest generation's result is stored (`Session::generation`). A compare checks every input
+opens one (owned by the calling window; `WindowEvent::Destroyed` closes its sessions) when `sessionId` is `None`, else
+compares again in that one: the newer compare cancels the older's `SyncControl`, only the newest generation's result is
+stored (`Session::generation`), and a superseded compare emits no progress and no `sync-compare-finished`. Both events
+carry the generation, which `start_sync_compare` answers too. A compare checks every input
 before it scans: each volume is connected (`VolumeNotConnected`), each root path is non-empty and never climbs with `..`
-(`BadPath`), `roots_conflict` (`RootsConflict`), the masks parse (`BadMask`), the Settings with the profile's overrides on
+(`BadPath`), each local-namespace root resolves to its real path (`canonicalize`, 5 s at most, else
+`RootUnreachable`), the roots don't overlap (`RootsConflict`: by real path when both have one, whatever volume ids named
+them, so a symlink to the other root or one folder under two ids is caught; else `roots_conflict` on one volume), the masks parse (`BadMask`), the Settings with the profile's overrides on
 top pass `validate_defaults` (`BadSettings`, besides the clamp in `effective`), the mode can write where it must
 (`SideReadOnly`), and "Only selected" reads each pane's names through the listing engine, which must still show that
 root at that sequence (`StaleSelection`). Both sides scan at once (`tokio::join!`); progress goes out at most every
@@ -62,20 +71,34 @@ the person selected AND can see, then `apply_overrides`, all or nothing), and th
 (the engine re-checks folders with them). Grid pages are cut from `view_rows` per call. A run marks the session `stale`
 (the folders changed); the dialog compares again.
 
-Decision: the confirm (`get_sync_confirm`) and the run read the plan the session holds now. The run calls `gate` itself
+Decision: the run is tied to the confirm the person saw. `Compared::revision` (unique across sessions) changes with
+every override, content answer, and confirm shown with other Settings; `ConfirmPreview::revision` names it, and
+`start_sync_run` refuses `PlanChanged` unless `RunRequest` names the current revision and the same Settings. A compare a
+run has already changed is `StaleCompare`. The volume a compare read must still be the instance under its id
+(`Arc::ptr_eq`), else `VolumeNotConnected` (compare again).
+
+The confirm (`get_sync_confirm`) and the run read the plan the session holds now. The run calls `gate` itself
 at accept time, so a report shown before the person changed actions can't wave new removals through, then keeps only
 the rows whose confirm group the person left ticked. Groups: new copies, replacements, removals per side, and copies
 that turn the mode's removal around ("recreates": a right-only row reversed from `×→` to `←`).
 
-**Run lock.** One run per pair of roots at a time, either order, across sessions (`RunLock`, released on drop, so a
-panicking run task releases it too). A second start answers `RunInProgress`.
+**Run lock** (`run_lock.rs`). A run holds both its roots across sessions; a new run is refused (`RunInProgress`) when
+either of its roots is, holds, or lies inside a held root. Local-namespace roots compare by real path in one shared
+namespace, others by volume id and path; paths compare by components, so a trailing `/` changes nothing. Released on
+drop, so a panicking run task releases it too.
+
+**Content compare of one row** answers only onto its own row: refused while a run goes on (`RunInProgress`), and an
+answer for an older compare generation or a row whose paths changed under that index is `PlanChanged`. Grid pages are
+cut from a `view_rows` result cached per plan revision and show-filters.
 
 ## Engine adapter
 
 `engine.rs` implements `cmdr_sync::SyncEngine` over `cmdr_operations::Operations`; each batch is ordinary engine
 operations with `Initiator::User`, so the queue window, progress, journal, and undo see them.
 
-- **observe** reads `get_metadata` (lstat: a symlink is a `Symlink`, never followed) and, for a file or link, captures
+- **observe** reads `get_metadata` (lstat: a symlink is a `Symlink`, never followed); only `NotFound` is "nothing
+  there", any other error reads as a folder of unknown contents (never matches a snapshot, never empty, never absent).
+  For a file or link it captures
   the engine's own `SourceFingerprint` (`capture_local` on a volume with a local path, else `capture_remote`, the rule in
   `source_binding.rs`). A folder's subtree comes from `subtree_now` with the compare's exact `ScanOptions`; a walk that
   stops or fails leaves the subtree `None`, which never matches a snapshot and never reads as empty. After a cancel the
@@ -89,6 +112,14 @@ operations with `Initiator::User`, so the queue window, progress, journal, and u
   there (exclusive). `RemoveEmptyFolders` is one `std::fs::remove_dir` (or `Volume::delete_directory`, non-recursive by
   contract) after an lstat shows a real folder; hidden entries the scan skipped are left to the `rmdir` refusal, not
   counted. Trash is `trash_files_start`. ❌ Nothing calls a delete.
+- **No symlink leads a write.** Right before a copy, move, or move back lands, and before folders are made or an
+  empty one removed, every existing folder from just below the side's root down to the destination is lstat'ed; a
+  symlink there refuses the batch (`Failed`). The local disk's custom folder is checked by the run from the folder the
+  person picked (`safe_way`). Roots themselves may be symlinks (resolved once, at compare).
+- **Real paths and `RunSide`.** `RunSide::root` stays the volume path (the volume resolves paths under its own root,
+  which may itself be a symlinked path); `RunSide::namespace_root` is the real path, so `InsideSyncFolder` sees through
+  symlinks, and the app also resolves a custom folder's existing prefix before comparing it with the real roots.
+- Warn logs name a refusal's typed kind (its serde tag), never its paths.
 - **Cancel.** `run` forwards the run's cancel into the running operation (`cancel_operation`); a queued op is dropped
   without settling, so after a forwarded cancel the adapter also watches the queue and returns stopped once the op left
   it. `run_to_end` (move back, keep policy) never forwards it.

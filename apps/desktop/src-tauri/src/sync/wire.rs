@@ -53,6 +53,16 @@ pub struct CompareRequest {
     pub include_hidden: bool,
 }
 
+/// A compare that started.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CompareStarted {
+    /// Its session.
+    pub session_id: String,
+    /// Its generation: compare events of any other generation are stale.
+    pub generation: u64,
+}
+
 /// Why a Synchronize folders command was refused. Typed, never a sentence.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
@@ -110,8 +120,14 @@ pub enum SyncError {
     },
     /// A compare is still running in this session.
     CompareRunning,
-    /// A run is going on in this session or for this pair of folders.
+    /// A run is going on in this session, or for one of these folders, one
+    /// inside them, or one around them.
     RunInProgress,
+    /// The plan or the Settings changed since the confirm the person saw:
+    /// show the confirm again.
+    PlanChanged,
+    /// A run has changed the folders since this compare: compare again.
+    StaleCompare,
     /// An action change was refused.
     Override {
         /// Why.
@@ -280,6 +296,8 @@ pub struct ConfirmGroup {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfirmPreview {
+    /// The plan revision this preview shows; the run must name it.
+    pub revision: u64,
     /// The groups, in a fixed order.
     pub groups: Vec<ConfirmGroup>,
     /// The first rows that replace a newer file with an older one.
@@ -300,11 +318,13 @@ pub struct ConfirmPreview {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct RunRequest {
+    /// The revision of the confirm the person accepted.
+    pub revision: u64,
     /// The groups left ticked.
     pub groups: Vec<ConfirmGroupKey>,
     /// The second yes for each guard the person released.
     pub acknowledged: Vec<Acknowledgement>,
-    /// The Settings values, read again by the dialog.
+    /// The Settings values the confirm was shown with (any other is `PlanChanged`).
     pub defaults: SyncDefaults,
 }
 
@@ -370,6 +390,8 @@ pub struct RunReportWire {
 pub struct SyncCompareProgress {
     /// The session.
     pub session_id: String,
+    /// Which compare of the session.
+    pub generation: u64,
     /// The left scan.
     pub left: ScanProgress,
     /// The right scan.
@@ -385,6 +407,8 @@ pub struct SyncCompareProgress {
 pub struct SyncCompareFinished {
     /// The session.
     pub session_id: String,
+    /// Which compare of the session.
+    pub generation: u64,
     /// How.
     pub outcome: CompareOutcome,
 }
