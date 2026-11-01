@@ -1736,9 +1736,14 @@ export const commands = {
   // The summary bar and the guards of the current plan.
   getSyncState: (sessionId: string, filters: ShowFilters) =>
     typedError<SyncState, SyncError>(__TAURI_INVOKE('get_sync_state', { sessionId, filters })),
-  // Applies a key's action to the selected rows the person can see.
-  setSyncActions: (sessionId: string, items: number[], bulk: BulkAction, filters: ShowFilters) =>
-    typedError<SyncActionsOutcome, SyncError>(__TAURI_INVOKE('set_sync_actions', { sessionId, items, bulk, filters })),
+  /**
+   *  Applies a key's action to the selected rows the person can see, on the plan of compare
+   *  `generation` (another one's is `planChanged`).
+   */
+  setSyncActions: (sessionId: string, generation: number, items: number[], bulk: BulkAction, filters: ShowFilters) =>
+    typedError<SyncActionsOutcome, SyncError>(
+      __TAURI_INVOKE('set_sync_actions', { sessionId, generation, items, bulk, filters }),
+    ),
   // The grid row a jump lands on: the next or previous folder, or a name typed in the grid.
   findSyncRow: (sessionId: string, filters: ShowFilters, query: RowQuery) =>
     typedError<number | null, SyncError>(__TAURI_INVOKE('find_sync_row', { sessionId, filters, query })),
@@ -7227,7 +7232,7 @@ export type BulkAction =
   | 'copyLeft'
   // Swap a copy's direction (⌘I); a row that can't flip is left alone.
   | 'reverse'
-  // Leave alone (⌘M).
+  // Leave alone (⌘N; ⌘M is the system's Minimize).
   | 'skip'
   // Planned ↔ skip (Space).
   | 'toggleSkip'
@@ -15775,6 +15780,11 @@ export type PreviewRow = {
 export type ProfileEditRefusal =
   // Another profile already has that name; nothing changed.
   | { type: 'nameTaken' }
+  /**
+   *  Options for roots that aren't folder paths (relative, climbing with
+   *  `..`, empty, or far too long), or too large to store; nothing changed.
+   */
+  | { type: 'badRoots' }
   // The list changed in memory but couldn't be written to disk.
   | { type: 'writeFailed' }
 
@@ -15833,7 +15843,7 @@ export type ProfileProblem =
       // The value asked for.
       secs: number
     }
-  // The removal percentage override is outside 1 to 100.
+  // The removal percentage override is outside 1 to 99.
   | {
       type: 'percentOutOfRange'
       // The value asked for.
@@ -15864,6 +15874,15 @@ export type ProfileSaveRefusal =
       type: 'listFull'
       // The limit.
       max: number
+    }
+  /**
+   *  The profile is larger than `max_bytes` stored (masks or paths far longer
+   *  than anyone types).
+   */
+  | {
+      type: 'tooLarge'
+      // The limit.
+      maxBytes: number
     }
   // The profile fails validation.
   | {
@@ -17198,8 +17217,9 @@ export type RowSkipReason =
       action: Action
     }
   /**
-   *  The row's kind doesn't allow the action (clash and unreadable rows take
-   *  `Skip` only).
+   *  The row's category doesn't allow the action: name clash, type clash,
+   *  and unreadable rows take `Skip` only, `=` needs an equal row, `?` an
+   *  unknown one.
    */
   | {
       type: 'illegalForCategory'
